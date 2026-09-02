@@ -78,6 +78,7 @@ export interface MenuItem {
   availableEditions?: readonly MenuEdition[];
   underConstruction?: boolean;
   requiresSelfHost?: boolean;
+  requiredPermission?: string;
 }
 
 export interface NavigationSection {
@@ -485,7 +486,13 @@ export const billingNavigationSections: NavigationSection[] = [
     items: [
       { name: 'Usage Tracking', translationKey: 'nav.billing.usageTracking', icon: Gauge, href: '/msp/billing?tab=usage-tracking' },
       { name: 'Reports', translationKey: 'nav.billing.reports', icon: FileBarChart, href: '/msp/billing?tab=reports' },
-      { name: 'Accounting Exports', translationKey: 'nav.billing.accountingExports', icon: FileOutput, href: '/msp/billing?tab=accounting-exports' },
+      {
+        name: 'Accounting Exports',
+        translationKey: 'nav.billing.accountingExports',
+        icon: FileOutput,
+        href: '/msp/billing?tab=accounting-exports',
+        requiredPermission: 'accounting_integrations:exports_execute',
+      },
     ]
   }
 ];

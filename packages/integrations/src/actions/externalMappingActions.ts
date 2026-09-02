@@ -1,7 +1,18 @@
 'use server';
 
 import logger from '@alga-psa/core/logger';
-import { auditLog, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  auditLog,
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED,
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
+  createTenantKnex,
+  lockInvoiceForExternalSync,
+  lockInvoicesForExternalSync,
+  tenantDb,
+  withTransaction,
+  writeAccountingAudit,
+} from '@alga-psa/db';
+import type { AccountingAuditProvider } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -107,11 +118,7 @@ export interface UpdateMappingData {
   metadata?: Record<string, unknown> | null;
 }
 
-/**
- * Entity types the generic mapping UI may write. Invoice / payment / credit
- * mappings move money in the accounting system, so they are only created by
- * the vetted onboarding and reconciliation workflows — never from the browser.
- */
+/** Entity types exposed by the generic catalog-mapping UI. */
 const CATALOG_ENTITY_TYPES = new Set([
   'service',
   'service_category',
@@ -119,6 +126,14 @@ const CATALOG_ENTITY_TYPES = new Set([
   'payment_term',
   'client',
 ]);
+
+/**
+ * Entity types accepted by the mutation actions. Invoice mappings are also
+ * written by onboarding/reconciliation callers through this shared action, so
+ * they remain supported here under the invoice-row lock. The catalog UI does
+ * not expose them, and payment/credit mappings remain rejected.
+ */
+const MUTABLE_MAPPING_ENTITY_TYPES = new Set([...CATALOG_ENTITY_TYPES, 'invoice']);
 
 /** Realms are meaningful for these providers and must name a connected realm. */
 const REALM_BASED_INTEGRATION_TYPES = new Set(['quickbooks_online', 'xero']);
@@ -245,6 +260,15 @@ async function assertLocalEntityOwnership(
       }
       return;
     }
+    case 'invoice': {
+      const row = await db.table('invoices').where({ invoice_id: entityId }).first('invoice_id');
+      if (!row) {
+        throw new ExpectedExternalMappingError(
+          `Cannot map invoice ${entityId}: it does not exist for this tenant.`
+        );
+      }
+      return;
+    }
     default:
       throw new ExpectedExternalMappingError(
         `Mapping entity type ${entityType} is not managed by the mapping screen.`
@@ -318,6 +342,14 @@ function assertCatalogEntityType(entityType: string): void {
   }
 }
 
+function assertMutableMappingEntityType(entityType: string): void {
+  if (!MUTABLE_MAPPING_ENTITY_TYPES.has(entityType)) {
+    throw new ExpectedExternalMappingError(
+      `Mapping entity type ${entityType} is managed by the accounting sync workflow and cannot be edited here.`
+    );
+  }
+}
+
 function assertKnownIntegrationType(integrationType: string): void {
   if (!KNOWN_INTEGRATION_TYPES.has(integrationType)) {
     throw new ExpectedExternalMappingError(`Unknown accounting provider ${integrationType}.`);
@@ -331,6 +363,7 @@ const QBO_REMOTE_ENTITY_TYPE: Record<string, string> = {
   tax_code: 'TaxCode',
   payment_term: 'Term',
   client: 'Customer',
+  invoice: 'Invoice',
 };
 
 /**
@@ -532,7 +565,7 @@ export const getExternalEntityMappings = withAuth(async (
   params: GetMappingsParams
 ): Promise<ExternalEntityMapping[] | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'accounting_catalog', 'read', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read', knex);
   if (!allowed) {
     return permissionError(
       'Permission denied: You do not have permission to view accounting mappings.',
@@ -655,7 +688,7 @@ export const createExternalEntityMapping = withAuth(async (
   mappingData: CreateMappingData
 ): Promise<ExternalEntityMapping | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
     return permissionError(
       'Permission denied: You do not have permission to manage accounting mappings.',
@@ -686,12 +719,20 @@ export const createExternalEntityMapping = withAuth(async (
   });
 
   try {
-    // Provider, entity type, realm and sync state are validated server-side;
-    // money-moving entity types are rejected here entirely.
+    // Provider, entity type, realm and sync state are validated server-side.
+    // Invoice mappings additionally take the shared invoice-row lock below;
+    // other money-moving entity types remain unsupported by this action.
     assertKnownIntegrationType(integration_type);
-    assertCatalogEntityType(alga_entity_type);
+    assertMutableMappingEntityType(alga_entity_type);
 
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Keep invoice-typed writes serialized with invoice void. The persisted
+      // mapping cannot land after a void commits because this guard re-checks
+      // the invoice status while holding the same row lock as the void path.
+      if (alga_entity_type === 'invoice') {
+        await lockInvoiceForExternalSync(trx, tenant, alga_entity_id);
+      }
+
       await assertRealmAllowed(tenant, integration_type, external_realm_id);
       await assertLocalEntityOwnership(trx, tenant, alga_entity_type, alga_entity_id);
 
@@ -816,6 +857,22 @@ export const createExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+
+    await writeAccountingAudit(knex, tenant, 'accounting_mapping_created', {
+      userId: user.user_id,
+      provider: newMapping.integration_type as AccountingAuditProvider,
+      recordId: newMapping.id,
+      details: {
+        alga_entity_type: newMapping.alga_entity_type,
+        alga_entity_id: newMapping.alga_entity_id,
+        external_entity_id: newMapping.external_entity_id,
+        external_realm_id: newMapping.external_realm_id ?? null,
+        relinked: Boolean(relinkedFrom),
+      },
+    }).catch((auditError) => {
+      logger.warn('Failed to write mapping-created audit entry', { tenantId: tenant, error: auditError });
+    });
+
     return cloneMapping(newMapping);
   } catch (error: any) {
     logger.error('Failed to create external entity mapping', {
@@ -832,6 +889,19 @@ export const createExternalEntityMapping = withAuth(async (
       return actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
+      );
+    }
+
+    if (error?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
+      return actionError(
+        'The invoice has been voided and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceCancelled'
+      );
+    }
+    if (error?.code === ACCOUNTING_EXPORT_INVOICE_NOT_FOUND) {
+      return actionError(
+        'The invoice no longer exists and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceNotFound'
       );
     }
 
@@ -855,7 +925,7 @@ export const updateExternalEntityMapping = withAuth(async (
   updates: UpdateMappingData
 ): Promise<ExternalEntityMapping | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
     return permissionError(
       'Permission denied: You do not have permission to manage accounting mappings.',
@@ -866,7 +936,16 @@ export const updateExternalEntityMapping = withAuth(async (
   if (!mappingId) {
     return actionError('Mapping ID is required for update.', 'msp/integrations:errors.mappings.idRequiredForUpdate');
   }
-  if (Object.keys(updates).length === 0) {
+
+  // Pick only the declared editable fields. A direct server-action caller can
+  // send extra JSON keys despite the TypeScript signature; those keys must
+  // never reach the database or turn a catalog mapping into an invoice mapping.
+  const updatePayload: Partial<ExternalEntityMapping> = {};
+  if (updates.alga_entity_id !== undefined) updatePayload.alga_entity_id = updates.alga_entity_id;
+  if (updates.external_entity_id !== undefined) updatePayload.external_entity_id = updates.external_entity_id;
+  if (updates.metadata !== undefined) updatePayload.metadata = updates.metadata ?? null;
+
+  if (Object.keys(updatePayload).length === 0) {
     return actionError('No update data provided.', 'msp/integrations:errors.mappings.noUpdateData');
   }
 
@@ -894,14 +973,22 @@ export const updateExternalEntityMapping = withAuth(async (
         );
       }
 
-      // Money-moving and realm/provider/type fields are not editable here —
-      // they belong to the vetted sync workflow.
-      assertCatalogEntityType(before.alga_entity_type);
+      // Realm, provider and entity-type fields are not editable here. The
+      // persisted entity type determines whether the invoice lock is required.
+      assertMutableMappingEntityType(before.alga_entity_type);
       assertKnownIntegrationType(before.integration_type);
 
-      const updatePayload: Partial<ExternalEntityMapping> = {};
-      if (updates.external_entity_id !== undefined) {
-        if (!updates.external_entity_id) {
+      // Invoice mapping writes share the same invoice-row lock as exports and
+      // voids. The persisted type controls this decision; caller-supplied type
+      // fields were discarded when updatePayload was built above. Lock both
+      // invoice rows in stable order when retargeting the local invoice.
+      if (before.alga_entity_type === 'invoice') {
+        const targetInvoiceId = updatePayload.alga_entity_id ?? before.alga_entity_id;
+        await lockInvoicesForExternalSync(trx, tenant, [before.alga_entity_id, targetInvoiceId]);
+      }
+
+      if (updatePayload.external_entity_id !== undefined) {
+        if (!updatePayload.external_entity_id) {
           throw new ExpectedExternalMappingError('External entity id is required.');
         }
         if (before.external_realm_id) {
@@ -909,21 +996,16 @@ export const updateExternalEntityMapping = withAuth(async (
             tenant,
             before.integration_type,
             before.alga_entity_type,
-            updates.external_entity_id,
+            updatePayload.external_entity_id,
             before.external_realm_id
           );
         }
-        updatePayload.external_entity_id = updates.external_entity_id;
       }
-      if (updates.metadata !== undefined) {
-        updatePayload.metadata = updates.metadata ?? null;
-      }
-      if (updates.alga_entity_id !== undefined) {
-        if (!updates.alga_entity_id) {
+      if (updatePayload.alga_entity_id !== undefined) {
+        if (!updatePayload.alga_entity_id) {
           throw new ExpectedExternalMappingError('Alga entity id is required.');
         }
-        await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updates.alga_entity_id);
-        updatePayload.alga_entity_id = updates.alga_entity_id;
+        await assertLocalEntityOwnership(trx, tenant, before.alga_entity_type, updatePayload.alga_entity_id);
       }
       updatePayload.updated_at = new Date().toISOString();
 
@@ -974,6 +1056,29 @@ export const updateExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+
+    await writeAccountingAudit(knex, tenant, 'accounting_mapping_updated', {
+      userId: user.user_id,
+      provider: after.integration_type as AccountingAuditProvider,
+      recordId: after.id,
+      details: {
+        before: {
+          alga_entity_id: before?.alga_entity_id ?? null,
+          external_entity_id: before?.external_entity_id ?? null,
+          sync_status: before?.sync_status ?? null,
+          external_realm_id: before?.external_realm_id ?? null,
+        },
+        after: {
+          alga_entity_id: after.alga_entity_id,
+          external_entity_id: after.external_entity_id,
+          sync_status: after.sync_status ?? null,
+          external_realm_id: after.external_realm_id ?? null,
+        },
+      },
+    }).catch((auditError) => {
+      logger.warn('Failed to write mapping-updated audit entry', { tenantId: tenant, error: auditError });
+    });
+
     return cloneMapping(after);
   } catch (error: unknown) {
     logger.error('Failed to update external mapping', {
@@ -984,10 +1089,23 @@ export const updateExternalEntityMapping = withAuth(async (
     if (error instanceof ExpectedExternalMappingError) {
       return actionError(error.message);
     }
-    if ((error as { code?: string } | null)?.code === '23505') {
+    const updateError = error as { code?: string } | null;
+    if (updateError?.code === '23505') {
       return actionError(
         'A mapping already exists for this entity. Edit the existing mapping instead.',
         'msp/integrations:errors.mappings.duplicate'
+      );
+    }
+    if (updateError?.code === ACCOUNTING_EXPORT_INVOICE_CANCELLED) {
+      return actionError(
+        'The invoice has been voided and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceCancelled'
+      );
+    }
+    if (updateError?.code === ACCOUNTING_EXPORT_INVOICE_NOT_FOUND) {
+      return actionError(
+        'The invoice no longer exists and cannot be mapped to the accounting integration.',
+        'msp/integrations:errors.mappings.invoiceNotFound'
       );
     }
     return actionError(
@@ -1005,7 +1123,7 @@ export const deleteExternalEntityMapping = withAuth(async (
   mappingId: string
 ): Promise<{ success: true } | ExternalMappingActionError> => {
   const { knex } = await createTenantKnex();
-  const allowed = await hasPermission(user, 'billing_settings', 'update', knex);
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage', knex);
   if (!allowed) {
     return permissionError(
       'Permission denied: You do not have permission to manage accounting mappings.',
@@ -1031,7 +1149,7 @@ export const deleteExternalEntityMapping = withAuth(async (
         throw new ExpectedExternalMappingError('Mapping not found. Refresh mappings and try again.');
       }
 
-      assertCatalogEntityType(before.alga_entity_type);
+      assertMutableMappingEntityType(before.alga_entity_type);
 
       if (before.deleted_at) {
         return { before, after: before };
@@ -1085,6 +1203,21 @@ export const deleteExternalEntityMapping = withAuth(async (
     });
 
     invalidateTenantMappingCache(tenant);
+
+    await writeAccountingAudit(knex, tenant, 'accounting_mapping_deleted', {
+      userId: user.user_id,
+      provider: tombstoned.before.integration_type as AccountingAuditProvider,
+      recordId: tombstoned.before.id,
+      details: {
+        alga_entity_type: tombstoned.before.alga_entity_type,
+        alga_entity_id: tombstoned.before.alga_entity_id,
+        external_entity_id: tombstoned.before.external_entity_id,
+        external_realm_id: tombstoned.before.external_realm_id ?? null,
+      },
+    }).catch((auditError) => {
+      logger.warn('Failed to write mapping-deleted audit entry', { tenantId: tenant, error: auditError });
+    });
+
     return { success: true };
   } catch (error: unknown) {
     logger.error('Failed to unlink external entity mapping', {

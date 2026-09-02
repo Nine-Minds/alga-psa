@@ -69,12 +69,13 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
-vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' })
-}));
-
 vi.mock('next/cache', () => ({
   revalidatePath: revalidatePathMock
+}));
+
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: {}, tenant: 'tenant-1' }),
+  writeAccountingAudit: async () => undefined
 }));
 
 vi.mock('../../lib/providerDisconnect', () => ({
@@ -501,12 +502,12 @@ describe('Xero integration actions', () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: 'Forbidden: You do not have permission to manage Xero integration settings.'
+      error: 'Forbidden: You do not have permission to manage Xero integration connections.'
     });
     await expect(disconnectXero()).resolves.toEqual({
       success: false,
       status: 'failed_permanent',
-      error: 'Forbidden: You do not have permission to manage Xero integration settings.'
+      error: 'Forbidden: You do not have permission to manage Xero integration connections.'
     });
   });
 

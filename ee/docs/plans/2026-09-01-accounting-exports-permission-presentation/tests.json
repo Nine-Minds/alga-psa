@@ -1,0 +1,26 @@
+[
+  {
+    "id": "T001",
+    "description": "Component: an unauthorized user has no billing navigation entry and a direct exports URL renders only the generic denied state",
+    "implemented": true,
+    "featureIds": ["F001", "F002"]
+  },
+  {
+    "id": "T002",
+    "description": "Component: denied export list results do not render the empty state or any export controls",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Component: an exports_execute-capable Finance user retains functional list and create controls",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Component: each accounting integration settings panel shows its Accounting Exports link only with exports_execute",
+    "implemented": true,
+    "featureIds": ["F004"]
+  }
+]

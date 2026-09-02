@@ -73,6 +73,10 @@
         "unavailable": {
           "description": "Diese Integration ist noch nicht verfügbar. Wählen Sie QuickBooks CSV oder Xero CSV aus, um manuelle Exporte zu konfigurieren.",
           "title": "Konfiguration nicht verfügbar"
+        },
+        "noPermission": {
+          "title": "Kein Zugriff auf Buchhaltungsintegrationen",
+          "description": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren. Bitten Sie einen Administrator um Zugriff."
         }
       },
       "modules": {
@@ -215,11 +219,13 @@
           "intro": "Diese Integration bietet eine Alternative zur OAuth-basierten QuickBooks-Anbindung:",
           "mappings": {
             "description": "Ordnen Sie Alga-Kunden, Dienstleistungen, Steuercodes und Zahlungsbedingungen den in Ihrer QuickBooks-Firma verwendeten Kennungen zu. Diese Werte werden beim Generieren des CSV-Exports verwendet.",
-            "title": "QuickBooks-CSV-Zuordnungen"
+            "title": "QuickBooks-CSV-Zuordnungen",
+            "permissionNotice": "Zum Bearbeiten von CSV-Zuordnungen ist die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
           },
           "note": "Hinweis: Konfigurieren Sie die Zuordnungen unten, bevor Sie exportieren. CSV-Exporte und Steuerimporte werden über Abrechnung → Buchhaltungsexporte verwaltet.",
           "title": "QuickBooks-CSV-Integration"
-        }
+        },
+        "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren."
       },
       "taxImport": {
         "actions": {
@@ -1902,7 +1908,8 @@
           "descriptionPrefix": "Konfigurieren Sie Live-QuickBooks-Zuordnungen für das verbundene Unternehmen. Diese Zuordnungen sind begrenzt auf",
           "placeholderAlert": "Der Zuordnungsmanager wird verfügbar, nachdem das erste QuickBooks-Unternehmen verbunden und als Standard-Live-QuickBooks-Kontext festgelegt wurde.",
           "placeholderDescription": "Verbinden Sie ein QuickBooks-Unternehmen, bevor Sie Live-QuickBooks-Artikel- und Steuer-Zuordnungen konfigurieren.",
-          "title": "Live-QuickBooks-Zuordnung & -Konfiguration"
+          "title": "Live-QuickBooks-Zuordnung & -Konfiguration",
+          "permissionNotice": "Sie können das verbundene Unternehmen anzeigen, zum Bearbeiten von Zuordnungen ist jedoch die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         },
         "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
         "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
@@ -1926,6 +1933,9 @@
           "tenant": "Dieser Mandant verbindet sich über seine eigene Intuit-App mit den unten gespeicherten Zugangsdaten."
         },
         "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
+        "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
+        "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
+,
         "disconnectPending": "QuickBooks wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
         "disconnectForceFinalized": "Die Trennung von QuickBooks wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
         "disconnect": {
@@ -3348,7 +3358,8 @@
             "s3": "Nach Änderungen in Xero Kontakte aus Xero exportieren",
             "s4": "Die Xero-Kontakte-CSV zurück in Alga importieren, um Aktualisierungen zu synchronisieren"
           },
-          "workflowTitle": "Workflow zur Kundensynchronisation"
+          "workflowTitle": "Workflow zur Kundensynchronisation",
+          "permissionNotice": "Zum Exportieren und Importieren von Kunden ist die Berechtigung execute-exports erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         },
         "settings": {
           "dateFormat": "Datumsformat",
@@ -3372,7 +3383,8 @@
           "managedSuffix": "um Rechnungen auszuwählen, Xero-CSV-Exporte zu generieren, Steuerberichte zu importieren und Batches zu verwalten.",
           "mappings": {
             "description": "Ordnen Sie Alga-Kunden, Dienstleistungen und Steuercodes den in Ihrer Xero-Organisation verwendeten Kennungen zu. Diese Werte werden beim Generieren des CSV-Exports verwendet.",
-            "title": "Xero-CSV-Zuordnungen"
+            "title": "Xero-CSV-Zuordnungen",
+            "permissionNotice": "Zum Bearbeiten von CSV-Zuordnungen ist die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
           },
           "overview": {
             "description": "Rechnungen als CSV für den manuellen Import in Xero exportieren und Steuerdaten aus Xero-Berichten importieren.",
@@ -3424,7 +3436,9 @@
             "title": "CSV-Workflow",
             "trackingDescription": "Der CSV-Export enthält Tracking-Kategorie-Spalten, die jede Xero-Rechnung mit ihrer Alga-Quelle verknüpfen. Beim Import von Steuern aus Xero werden diese Tracking-Kategorien verwendet, um Rechnungen automatisch zuzuordnen – ohne manuelle Abgleichung.",
             "trackingTitle": "Tracking-Kategorien zur Abgleichung"
-          }
+          },
+          "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
+          "connectionsPermissionNotice": "Sie können die Xero-CSV-Einstellungen anzeigen, zum Ändern ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         }
       },
       "live": {
@@ -3497,7 +3511,8 @@
           "descriptionPrefix": "Konfigurieren Sie Live-Xero-Zuordnungen für die verbundene Standardorganisation. Diese Zuordnungen sind begrenzt auf",
           "placeholderAlert": "Der Zuordnungsmanager wird verfügbar, nachdem die erste Xero-Organisation verbunden und als Standard-Live-Xero-Kontext festgelegt wurde.",
           "placeholderDescription": "Verbinden Sie eine Live-Xero-Organisation, bevor Sie Live-Xero-Artikel- und Steuer-Zuordnungen konfigurieren.",
-          "title": "Live-Xero-Zuordnung & -Konfiguration"
+          "title": "Live-Xero-Zuordnung & -Konfiguration",
+          "permissionNotice": "Sie können die standardmäßig verbundene Organisation anzeigen, zum Bearbeiten von Zuordnungen ist jedoch die Berechtigung manage-mappings erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
         },
         "noClientId": "Für diesen Mandanten ist noch keine Client ID gespeichert.",
         "noClientSecret": "Für diesen Mandanten ist noch kein Client Secret gespeichert.",
@@ -3512,6 +3527,9 @@
         "tenantOauthTitle": "Mandanteneigene OAuth-App",
         "title": "Xero",
         "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
+        "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
+,
         "disconnectPending": "Xero wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
         "disconnectForceFinalized": "Die Trennung von Xero wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
         "disconnect": {
@@ -3706,6 +3724,9 @@
       "idRequiredForDelete": "Für das Löschen ist die Zuordnungs-ID erforderlich.",
       "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
       "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+      "invoiceCancelled": "Die Rechnung wurde storniert und kann nicht der Buchhaltungsintegration zugeordnet werden.",
+      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden."
+,
       "scopeRequired": "Zuordnungsabfragen erfordern eine Integration, einen Entitätstyp und einen Bereichs-Scope."
     },
     "qbo": {

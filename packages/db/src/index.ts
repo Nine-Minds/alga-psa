@@ -35,7 +35,18 @@ export { resolveTenantId, requireTenantId } from './lib/tenantId';
 
 // Audit logging
 export { auditLog } from './lib/auditLog';
+export { writeAccountingAudit } from './lib/accountingAudit';
+export type { AccountingAuditOperation, AccountingAuditProvider, AccountingAuditParams } from './lib/accountingAudit';
 export * from './lib/workDate';
+
+// Shared invoice external-sync row lock (billing adapters + integrations
+// mapping CRUD + invoice void serialize on the same invoice row lock)
+export {
+  lockInvoiceForExternalSync,
+  lockInvoicesForExternalSync,
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED,
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND,
+} from './lib/invoiceExternalSyncLock';
 
 // Tenant Slug utilities
 export { getTenantIdBySlug, getTenantSlugForTenant, buildTenantPortalSlug, isValidTenantSlug, getSlugParts } from './lib/tenantSlug';

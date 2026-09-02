@@ -387,7 +387,10 @@
       "loadingBatches": "Chargement des lots...",
       "empty": "Aucun lot d'exportation pour l'instant.",
       "loadingDetails": "Chargement des détails du lot...",
-      "batchNotFound": "Lot introuvable."
+      "batchNotFound": "Lot introuvable.",
+      "checkingAccess": "Vérification de l'accès...",
+      "accessDeniedTitle": "Accès refusé",
+      "accessDeniedDescription": "Vous n'avez pas l'autorisation d'accéder aux exportations comptables."
     },
     "createDialog": {
       "title": "Nouvel export comptable",

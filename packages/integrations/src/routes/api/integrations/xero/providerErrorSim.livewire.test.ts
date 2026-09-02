@@ -19,6 +19,21 @@ const SIM_PORT = 18792;
 const SIM_BASE = `http://127.0.0.1:${SIM_PORT}`;
 const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 
+// This suite points provider endpoints at the local fault simulator by mutating
+// process.env. Those overrides must not leak into other test files that share
+// the same worker (e.g. providerDisconnect.test.ts, which asserts the real
+// api.xero.com hosts). Snapshot every key we touch and restore it in afterAll.
+const MUTATED_ENV_KEYS = [
+  'EDITION',
+  'NEXTAUTH_URL',
+  'XERO_API_BASE_URL',
+  'XERO_OAUTH_TOKEN_URL',
+  'XERO_CONNECTIONS_URL',
+  'QBO_API_BASE_URL',
+  'QBO_OAUTH_TOKEN_URL'
+] as const;
+const originalEnv: Record<string, string | undefined> = {};
+
 let simProcess: ChildProcess | null = null;
 let sentinels: Record<string, string> = {};
 
@@ -186,6 +201,9 @@ async function importCallback(env: Record<string, string>) {
 
 describe('accounting provider error redaction (live wire)', () => {
   beforeAll(async () => {
+    for (const key of MUTATED_ENV_KEYS) {
+      originalEnv[key] = process.env[key];
+    }
     const simPath = path.resolve(__dirname, '../../../../../../../tools/smoke-sim/accounting-provider-sim.mjs');
     simProcess = spawn(process.execPath, [simPath, String(SIM_PORT)], { stdio: 'ignore' });
     await waitForSim();
@@ -195,6 +213,13 @@ describe('accounting provider error redaction (live wire)', () => {
 
   afterAll(() => {
     simProcess?.kill();
+    for (const key of MUTATED_ENV_KEYS) {
+      if (originalEnv[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = originalEnv[key];
+      }
+    }
   });
 
   afterEach(() => {

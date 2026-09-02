@@ -18,6 +18,7 @@ import {
 } from '../../../actions/integrations/xeroActions';
 import { XeroLiveMappingManager } from '../../xero/XeroLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type XeroStatus = Awaited<ReturnType<typeof getXeroConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -67,6 +68,7 @@ function statusBadgeVariant(status?: 'connected' | 'expired'): 'success' | 'seco
 
 export default function XeroIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<XeroStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -197,6 +199,25 @@ export default function XeroIntegrationSettings() {
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
+  const canManageConnections = caps.connectionsManage;
+  const canManageMappings = caps.mappingsManage;
+
+  // Wait for the capability check to resolve before hiding the panel, so a
+  // capable user never sees a brief "no permission" card while it loads.
+  if (caps.loaded && !caps.hasAny) {
+    return (
+      <div className="space-y-6" id="xero-integration-settings">
+        <Card id="xero-integration-no-permission-card">
+          <CardHeader>
+            <CardTitle>{t('integrations.xero.settings.title', { defaultValue: 'Xero' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.xero.settings.noPermissionDescription', { defaultValue: 'You do not have permission to view or configure accounting integrations.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
   const disconnectPending = Boolean(status?.disconnect && status.disconnect.status !== 'finalized');
   const disconnectFailedPermanent = status?.disconnect?.status === 'failed_permanent';
 
@@ -211,6 +232,14 @@ export default function XeroIntegrationSettings() {
       {error ? (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      {!canManageConnections ? (
+        <Alert variant="info" id="xero-connection-manage-permission-notice">
+          <AlertDescription>
+            {t('integrations.xero.settings.connectionsPermissionNotice', { defaultValue: 'You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.' })}
+          </AlertDescription>
         </Alert>
       ) : null}
 
@@ -297,6 +326,7 @@ export default function XeroIntegrationSettings() {
                   <Input
                     id="xero-client-id"
                     value={clientId}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientId(event.target.value)}
                     placeholder={t('integrations.xero.settings.clientIdPlaceholder', { defaultValue: 'Paste your tenant-owned Xero client ID' })}
                   />
@@ -317,6 +347,7 @@ export default function XeroIntegrationSettings() {
                     id="xero-client-secret"
                     type="password"
                     value={clientSecret}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientSecret(event.target.value)}
                     placeholder={t('integrations.xero.settings.clientSecretPlaceholder', { defaultValue: 'Paste your tenant-owned Xero client secret' })}
                   />
@@ -365,7 +396,7 @@ export default function XeroIntegrationSettings() {
                   id="xero-settings-save"
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={!readyToSave || saving}
+                  disabled={!readyToSave || saving || !canManageConnections}
                 >
                   {saving
                     ? t('integrations.xero.settings.actions.saving', { defaultValue: 'Saving…' })
@@ -451,7 +482,7 @@ export default function XeroIntegrationSettings() {
           <Button
             id="xero-connect-button"
             type="button"
-            disabled={!canConnect || disconnectPending}
+            disabled={!canConnect || !canManageConnections || disconnectPending}
             onClick={() => window.location.assign('/api/integrations/xero/connect')}
           >
             {defaultConnection
@@ -465,7 +496,7 @@ export default function XeroIntegrationSettings() {
                 id="xero-retry-disconnect-button"
                 type="button"
                 variant="outline"
-                disabled={disconnecting}
+                disabled={disconnecting || !canManageConnections}
                 onClick={() => void handleRetryDisconnect()}
               >
                 {t('integrations.xero.settings.actions.retryDisconnect', { defaultValue: 'Retry Disconnect' })}
@@ -476,7 +507,7 @@ export default function XeroIntegrationSettings() {
                 id="xero-force-finalize-disconnect-button"
                 type="button"
                 variant="destructive"
-                disabled={disconnecting}
+                disabled={disconnecting || !canManageConnections}
                 onClick={() => void handleForceFinalize()}
               >
                 {t('integrations.xero.settings.actions.forceFinalizeDisconnect', { defaultValue: 'Force Finalize' })}
@@ -486,7 +517,7 @@ export default function XeroIntegrationSettings() {
               id="xero-disconnect-button"
               type="button"
               variant="destructive"
-              disabled={(!defaultConnection && !disconnectPending) || disconnecting}
+              disabled={(!defaultConnection && !disconnectPending) || disconnecting || !canManageConnections}
               onClick={() => void handleDisconnect()}
             >
               {disconnecting
@@ -494,12 +525,14 @@ export default function XeroIntegrationSettings() {
                 : t('integrations.xero.settings.actions.disconnect', { defaultValue: 'Disconnect Xero' })}
             </Button>
 
-            <Button id="xero-open-accounting-exports" asChild variant="outline">
-              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-                <ExternalLink className="h-4 w-4 opacity-80" />
-              </Link>
-            </Button>
+            {caps.exportsExecute && (
+              <Button id="xero-open-accounting-exports" asChild variant="outline">
+                <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+                  {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
+                  <ExternalLink className="h-4 w-4 opacity-80" />
+                </Link>
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -519,7 +552,15 @@ export default function XeroIntegrationSettings() {
                 {t('integrations.xero.settings.mapping.alert', { defaultValue: 'Xero items, revenue accounts, tax rates, and tracking categories are loaded from the default connected organisation so live exports can keep using the first stored Xero connection in v1.' })}
               </AlertDescription>
             </Alert>
-            <XeroLiveMappingManager defaultConnection={defaultConnection} />
+            {canManageMappings ? (
+              <XeroLiveMappingManager defaultConnection={defaultConnection} />
+            ) : (
+              <Alert variant="info" id="xero-mapping-permission-notice">
+                <AlertDescription>
+                  {t('integrations.xero.settings.mapping.permissionNotice', { defaultValue: 'You can view the default connected organisation, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       ) : (

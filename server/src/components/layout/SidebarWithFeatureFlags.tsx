@@ -108,6 +108,20 @@ export function filterNavigationSectionsByFeatureAccess(
     .filter((section) => section.items.length > 0);
 }
 
+export function filterNavigationSectionsByPermission(
+  sections: readonly NavigationSection[],
+  permissions: readonly string[],
+): NavigationSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => !item.requiredPermission || permissions.includes(item.requiredPermission),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -213,8 +227,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   }, [edition, productCode, selfHostMode]);
 
   const billingSections = useMemo(
-    () => filterNavigationSectionsByEdition(billingNavigationSections, edition),
-    [edition],
+    () => filterNavigationSectionsByPermission(
+      filterNavigationSectionsByEdition(billingNavigationSections, edition),
+      userPermissions,
+    ),
+    [edition, userPermissions],
   );
   const extensionsSections = useMemo(
     () => filterNavigationSectionsByEdition(extensionsNavigationSections, edition),
