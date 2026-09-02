@@ -55,6 +55,83 @@ export interface WasmInvoiceLineItem {
   location?: WasmInvoiceLineItemLocation | null;
 }
 
+/**
+ * Work-item provenance for a billed time entry, as captured in the immutable
+ * invoice-generation snapshot. `ad_hoc` covers time recorded without a ticket
+ * or project task.
+ */
+export type WasmInvoiceTimeWorkItemType = 'ticket' | 'project_task' | 'ad_hoc';
+
+/**
+ * One billed time entry as frozen at invoice generation. All fields come from
+ * the persisted snapshot — never from live ticket / time-entry rows — so a
+ * finalized invoice renders identically after the source records change.
+ * Customer-visible fields only: internal comments and time-entry notes are
+ * never part of the snapshot.
+ */
+export interface WasmInvoiceTimeEntry {
+  /** Source time-entry id, preserved for traceability. */
+  id: string;
+  /** Invoice charge (line item) this entry billed under, when known. */
+  itemId?: string | null;
+  workItemType: WasmInvoiceTimeWorkItemType | null;
+  /** Ticket id or project-task id, per workItemType. */
+  workItemId: string | null;
+  ticketNumber: string | null;
+  /** Ticket title or project-task name. */
+  title: string | null;
+  /** Customer-visible work-item description (ticket description). */
+  description: string | null;
+  /** ISO date the billed work started. */
+  date: string | null;
+  /** Billed duration in whole minutes (after minimum/rounding rules). */
+  billedMinutes: number;
+  /** billedMinutes / 60, for display. */
+  hours: number;
+  /** Effective hourly rate in minor currency units. */
+  rate: number;
+  /** Net (pre-tax) amount in minor currency units. */
+  amount: number;
+  serviceId: string | null;
+  serviceName: string | null;
+}
+
+/**
+ * Billed time grouped by source work item (ticket, project task, or the
+ * ad-hoc fallback). Aggregates use integer minute / minor-unit arithmetic and
+ * deterministic ordering. A group whose entries carry more than one hourly
+ * rate reports `hasMixedRates: true` with `rate: null` — it never invents a
+ * single blended rate.
+ */
+export interface WasmInvoiceTicketGroup {
+  /** Stable group key (e.g. `ticket:<id>`), deterministic across renders. */
+  key: string;
+  workItemType: WasmInvoiceTimeWorkItemType | null;
+  workItemId: string | null;
+  ticketNumber: string | null;
+  title: string | null;
+  description: string | null;
+  /** Display label: "<ticketNumber> — <title>", task name, or fallback text. */
+  label: string;
+  /** Earliest / latest billed date across the group's entries. */
+  dateStart: string | null;
+  dateEnd: string | null;
+  /** Integer sum of billedMinutes. */
+  totalMinutes: number;
+  /** totalMinutes / 60, for display. */
+  totalHours: number;
+  /** Integer sum of entry net amounts, minor currency units. */
+  totalAmount: number;
+  /** True when entries bill at more than one hourly rate. */
+  hasMixedRates: boolean;
+  /** Uniform hourly rate in minor units, or null when hasMixedRates. */
+  rate: number | null;
+  /** Preformatted rate text ("$150.00/hr", or "Mixed rates"). */
+  rateLabel: string;
+  entryCount: number;
+  entries: WasmInvoiceTimeEntry[];
+}
+
 export interface WasmInvoiceViewModel {
   invoiceNumber: string;
   issueDate: string; // Consider using ISO8601String or a specific date format
@@ -99,14 +176,18 @@ export interface WasmInvoiceViewModel {
   groupsByLocation?: WasmInvoiceLocationGroup[];
   /** True when invoice charges span ≥2 distinct locations. */
   hasMultipleLocations?: boolean;
-  // Add sample structure for side report data
-  timeEntries?: Array<{
-    id: string;
-    date: string; // ISO8601String
-    user: string;
-    hours: number;
-    description: string;
-  }>;
+  /**
+   * Flat list of billed time entries from the immutable generation-time
+   * snapshot. Absent on invoices generated before snapshots existed and on
+   * invoices with no snapshot-bearing time charges — templates must treat it
+   * as optional.
+   */
+  timeEntries?: WasmInvoiceTimeEntry[];
+  /**
+   * Billed time grouped by source ticket / project task, derived from
+   * `timeEntries`. Same legacy caveat: absent when no snapshot data exists.
+   */
+  ticketGroups?: WasmInvoiceTicketGroup[];
 }
 
 /**

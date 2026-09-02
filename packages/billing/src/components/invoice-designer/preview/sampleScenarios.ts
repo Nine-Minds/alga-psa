@@ -1,5 +1,9 @@
 import type { WasmInvoiceViewModel } from '@alga-psa/types';
-import { enrichWithGroupedItems } from '../../../lib/adapters/invoiceAdapters';
+import {
+  buildInvoiceTimeCollections,
+  enrichWithGroupedItems,
+  type InvoiceTimeCollectionSource,
+} from '../../../lib/adapters/invoiceAdapters';
 
 export type InvoicePreviewSampleScenario = {
   id: string;
@@ -36,6 +40,97 @@ const enrichScenario = (scenario: InvoicePreviewSampleScenario): InvoicePreviewS
   ...scenario,
   data: enrichWithGroupedItems({ ...scenario.data }),
 });
+
+/**
+ * Billed-time snapshot sources for the ticket-detail sample. Run through the
+ * same `buildInvoiceTimeCollections` the production read path uses, so the
+ * designer preview of `ticketGroups` / `timeEntries` matches generated PDFs
+ * (including the explicit mixed-rate representation on the second ticket).
+ */
+const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
+  {
+    version: 1,
+    entryId: 'entry-a1',
+    itemId: 'time-a1',
+    workItemType: 'ticket',
+    workItemId: 'ticket-a',
+    ticketNumber: 'T-20260118-004',
+    title: 'Email outage — Exchange connector down',
+    description: 'Investigated failed mail flow and restored the Exchange connector.',
+    entryDate: '2026-01-18',
+    billedMinutes: 90,
+    rate: 15000,
+    netAmount: 22500,
+    serviceId: 'svc-remote',
+    serviceName: 'Remote Support',
+  },
+  {
+    version: 1,
+    entryId: 'entry-a2',
+    itemId: 'time-a2',
+    workItemType: 'ticket',
+    workItemId: 'ticket-a',
+    ticketNumber: 'T-20260118-004',
+    title: 'Email outage — Exchange connector down',
+    description: 'Investigated failed mail flow and restored the Exchange connector.',
+    entryDate: '2026-01-19',
+    billedMinutes: 60,
+    rate: 15000,
+    netAmount: 15000,
+    serviceId: 'svc-remote',
+    serviceName: 'Remote Support',
+  },
+  {
+    version: 1,
+    entryId: 'entry-b1',
+    itemId: 'time-b1',
+    workItemType: 'ticket',
+    workItemId: 'ticket-b',
+    ticketNumber: 'T-20260122-011',
+    title: 'Onboard new staff workstation',
+    description: 'Provisioned and configured a new workstation for incoming staff.',
+    entryDate: '2026-01-22',
+    billedMinutes: 120,
+    rate: 12500,
+    netAmount: 25000,
+    serviceId: 'svc-onsite',
+    serviceName: 'Onsite Support',
+  },
+  {
+    version: 1,
+    entryId: 'entry-b2',
+    itemId: 'time-b2',
+    workItemType: 'ticket',
+    workItemId: 'ticket-b',
+    ticketNumber: 'T-20260122-011',
+    title: 'Onboard new staff workstation',
+    description: 'Provisioned and configured a new workstation for incoming staff.',
+    entryDate: '2026-01-23',
+    billedMinutes: 30,
+    rate: 15000,
+    netAmount: 7500,
+    serviceId: 'svc-afterhours',
+    serviceName: 'After Hours Support',
+  },
+  {
+    version: 1,
+    entryId: 'entry-p1',
+    itemId: 'time-p1',
+    workItemType: 'project_task',
+    workItemId: 'task-migration-sync',
+    ticketNumber: null,
+    title: 'Server migration — data sync validation',
+    description: null,
+    entryDate: '2026-01-25',
+    billedMinutes: 120,
+    rate: 14000,
+    netAmount: 28000,
+    serviceId: 'svc-professional',
+    serviceName: 'Professional Services',
+  },
+];
+
+const TICKET_TIME_SAMPLE_COLLECTIONS = buildInvoiceTimeCollections(TICKET_TIME_SAMPLE_SOURCES, 'USD');
 
 export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = [
   enrichScenario({
@@ -227,6 +322,48 @@ export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = 
       subtotal: 180000,
       tax: 10800,
       total: 190800,
+    },
+  }),
+  enrichScenario({
+    id: 'sample-ticket-time-detail',
+    label: 'Ticket Time Detail',
+    description: 'Ticket-backed billed time with per-ticket grouping, a mixed-rate ticket, and project-task time.',
+    data: {
+      ...createBaseInvoice(),
+      invoiceNumber: 'INV-2026-0233',
+      issueDate: '2026-02-02',
+      dueDate: '2026-02-16',
+      poNumber: 'PO-5120',
+      customer: {
+        name: 'EQUIT Manufacturing',
+        address: '48 Foundry Road, Sydney NSW 2000',
+      },
+      items: [
+        {
+          id: 'svc-monitoring',
+          description: 'Managed Endpoint Monitoring',
+          quantity: 15,
+          unitPrice: 4200,
+          total: 63000,
+          taxAmount: 5670,
+          servicePeriodStart: '2026-01-01',
+          servicePeriodEnd: '2026-02-01',
+          billingTiming: 'arrears',
+          recurringDetailPeriods: [
+            { servicePeriodStart: '2026-01-01', servicePeriodEnd: '2026-02-01', billingTiming: 'arrears' },
+          ],
+        },
+        { id: 'time-a1', description: 'Remote Support', quantity: 1.5, unitPrice: 15000, total: 22500, taxAmount: 0 },
+        { id: 'time-a2', description: 'Remote Support', quantity: 1, unitPrice: 15000, total: 15000, taxAmount: 0 },
+        { id: 'time-b1', description: 'Onsite Support', quantity: 2, unitPrice: 12500, total: 25000, taxAmount: 0 },
+        { id: 'time-b2', description: 'After Hours Support', quantity: 0.5, unitPrice: 15000, total: 7500, taxAmount: 0 },
+        { id: 'time-p1', description: 'Professional Services', quantity: 2, unitPrice: 14000, total: 28000, taxAmount: 0 },
+      ],
+      subtotal: 161000,
+      tax: 5670,
+      total: 166670,
+      timeEntries: TICKET_TIME_SAMPLE_COLLECTIONS.timeEntries,
+      ticketGroups: TICKET_TIME_SAMPLE_COLLECTIONS.ticketGroups,
     },
   }),
   enrichScenario({

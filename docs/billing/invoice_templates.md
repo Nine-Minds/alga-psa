@@ -61,6 +61,27 @@ Invoice and quote view models can expose a pre-computed `groupsByLocation` colle
 
 Templates consume the groups through a repeatable `stack` bound to `groupsByLocation` (outer iteration) with an inner `dynamic-table` bound to `group.items` — the pattern used by the `standard-invoice-by-location` and `standard-quote-by-location` templates to render a location header, line items, and a per-location subtotal row. See `buildStandardByLocationAst` in `packages/billing/src/lib/invoice-template-ast/standardTemplates.ts`.
 
+### Ticket-Level Billed-Time Detail
+
+Invoice view models can expose two additional collection bindings built from an **immutable snapshot** captured at invoice generation:
+
+- **`timeEntries`** — one row per billed time entry: `id` (source entry id), `date`, `ticketNumber`, `title` (ticket title or project-task name), `description` (customer-visible ticket description), `billedMinutes`, `hours`, `rate` (minor units/hour), `amount` (net, minor units), `serviceName`.
+- **`ticketGroups`** — the same entries grouped by source work item: `key`, `label` ("`<ticket number> — <title>`"), `ticketNumber`, `title`, `description`, `dateStart`/`dateEnd`, `totalMinutes`, `totalHours`, `totalAmount`, `rate`, `rateLabel`, `hasMixedRates`, `entryCount`, and a nested `entries` array for per-entry detail tables. Grouping and ordering are deterministic (tickets by ticket number, then project tasks by name, then a single "Other billed time" fallback group); sums use integer minutes and minor currency units.
+
+**Snapshot semantics.** When an invoice is generated, each time charge freezes its work-item metadata into `invoice_time_entries.work_item_snapshot` (jsonb, `InvoiceTimeEntrySnapshot` in `@alga-psa/types`). Rendering reads only this snapshot — never the live ticket or time entry — so a finalized invoice and its PDF cannot change when the source records are later edited. Source ids (`entryId`, `workItemId`) are preserved for traceability.
+
+**Legacy invoices.** Invoices generated before snapshot support have no snapshot rows; there is deliberately **no backfill** (deriving detail from today's mutable ticket data would fabricate history). On such invoices both collections are absent, the by-ticket bands render nothing, and every existing layout renders exactly as before.
+
+**Mixed rates.** A ticket whose entries bill at more than one hourly rate reports `hasMixedRates: true`, `rate: null`, and `rateLabel: "Mixed rates"` — templates never display a fabricated blended rate. Show the nested `entries` table for the true per-rate breakdown, or bind `rate`/`rateLabel` for uniform-rate tickets.
+
+**Privacy.** The snapshot carries only the ticket's own customer-visible fields (number, title, description). Internal comments and time-entry notes are never captured, so they can never appear on an invoice by default.
+
+**Fallbacks.** Project-task time groups under the task name with no ticket fields; time recorded without any work item lands in the "Other billed time" group.
+
+In the Invoice Layout designer, bind a table's source to **Billed Time by Ticket** (`ticketGroups`) or **Billed Time Entries** (`timeEntries`); the quick-add presets provide the Ticket | Description | Hours | Rate | Amount columns without editing binding keys by hand. The `standard-invoice-by-ticket` template demonstrates the band pattern (repeatable stack over `ticketGroups`, inner `dynamic-table` over `group.entries`, per-ticket subtotal row).
+
+Accounting note: the snapshot is renderer-only metadata. Canonical `invoice_charges.description` values and the QBO/Xero export pipeline are untouched by this feature.
+
 ### Style Declaration Properties
 
 The `TemplateStyleDeclaration` supports:
@@ -132,6 +153,7 @@ There are two types of invoice layouts:
 | `standard-detailed` | Full branding + party blocks |
 | `standard-grouped` | Recurring / one-time sections |
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
+| `standard-invoice-by-ticket` | Line items plus per-ticket billed-time bands (ticket header + description, per-entry rows, ticket subtotal) using the repeatable stack + `ticketGroups` |
 
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
 

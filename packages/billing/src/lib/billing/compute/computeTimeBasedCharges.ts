@@ -3,6 +3,7 @@ import type {
   IBillingPeriod,
   IClientContractLine,
   ITimeBasedCharge,
+  InvoiceTimeEntrySnapshot,
 } from "@alga-psa/types";
 import type {
   ChargeComputeClient,
@@ -43,6 +44,19 @@ export interface TimeEntryComputeRow {
    * why time is one of only two charge types that can reach step 4.
    */
   work_item_billing_profile_id?: string | null;
+  /**
+   * Work-item identity + customer-visible descriptive fields, selected from
+   * the same ticket / project-task joins. Feed the immutable invoice
+   * snapshot only — they never alter charge math or descriptions. Absent in
+   * callers that predate the snapshot (e.g. the simulator's synthetic rows).
+   */
+  work_item_id?: string | null;
+  work_item_type?: string | null;
+  ticket_number?: string | null;
+  ticket_title?: string | null;
+  /** Customer-visible ticket description (tickets.attributes->>'description'). */
+  ticket_description?: string | null;
+  project_task_name?: string | null;
 }
 
 export interface HourlyServiceConfigEntry {
@@ -113,6 +127,69 @@ function formatCents(cents: number, currencyCode: string): string {
 
 function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
+}
+
+const toIsoDateOrNull = (value: Date | string | null | undefined): string | null => {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+};
+
+const trimmedOrNull = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+/**
+ * Build the immutable work-item snapshot for one billed time entry. Shared by
+ * the contract-line compute path and the engine's unresolved/catalog path so
+ * both persist identical snapshot shapes. All money and duration values are
+ * integers (minor units / whole minutes); customer-visible fields only.
+ */
+export function buildTimeEntryWorkItemSnapshot(
+  entry: Pick<
+    TimeEntryComputeRow,
+    | "start_time"
+    | "work_item_id"
+    | "work_item_type"
+    | "ticket_number"
+    | "ticket_title"
+    | "ticket_description"
+    | "project_task_name"
+  >,
+  billed: {
+    billedMinutes: number;
+    rate: number;
+    netAmount: number;
+    serviceId: string | null;
+    serviceName: string | null;
+  },
+): InvoiceTimeEntrySnapshot {
+  const workItemType: InvoiceTimeEntrySnapshot["workItemType"] =
+    entry.work_item_type === "ticket"
+      ? "ticket"
+      : entry.work_item_type === "project_task"
+        ? "project_task"
+        : "ad_hoc";
+  const isTicket = workItemType === "ticket";
+
+  return {
+    version: 1,
+    workItemType,
+    workItemId: entry.work_item_id ?? null,
+    ticketNumber: isTicket ? trimmedOrNull(entry.ticket_number) : null,
+    title: isTicket
+      ? trimmedOrNull(entry.ticket_title)
+      : trimmedOrNull(entry.project_task_name),
+    description: isTicket ? trimmedOrNull(entry.ticket_description) : null,
+    entryDate: toIsoDateOrNull(entry.start_time),
+    billedMinutes: Math.round(billed.billedMinutes),
+    rate: Math.round(billed.rate),
+    netAmount: Math.round(billed.netAmount),
+    serviceId: billed.serviceId,
+    serviceName: billed.serviceName,
+  };
 }
 
 export function computeTimeBasedCharges(
@@ -316,6 +393,13 @@ export function computeTimeBasedCharges(
       rate,
       total,
       type: "time",
+      workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
+        billedMinutes: durationMinutes,
+        rate,
+        netAmount: total,
+        serviceId: effectiveServiceId ?? null,
+        serviceName: (effectiveServiceName as string) ?? null,
+      }),
       tax_amount: taxAmount,
       tax_rate: taxRate,
       tax_region: effectiveTaxRegion,

@@ -28,6 +28,11 @@ export default defineConfig({
       // Behavioral coverage for realm-exact QBO mapping resolution — listed
       // explicitly for the same reason as the suites above.
       'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Ticket-level billed-time detail: snapshot aggregation, standard-template
+      // bindings, and render parity — listed for the same reason as above.
+      'src/lib/adapters/invoiceAdapters.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

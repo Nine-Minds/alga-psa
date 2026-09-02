@@ -53,6 +53,8 @@ const LABEL_KEYS = {
   Qty: 'labels.qty',
   Rate: 'labels.rate',
   Amount: 'labels.amount',
+  Service: 'labels.service',
+  Hours: 'labels.hours',
   Price: 'labels.price',
   'Project Phase': 'labels.projectPhase',
   Phase: 'labels.phase',

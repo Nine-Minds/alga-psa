@@ -58,6 +58,14 @@ export const buildInvoiceTemplateBindings = (): NonNullable<TemplateAst['binding
     // subtotal). Populated by `enrichInvoiceViewModelWithLocations` on the
     // view model as `groupsByLocation`.
     groupsByLocation: { id: 'groupsByLocation', kind: 'collection', path: 'groupsByLocation' },
+    // Ticket-level billed-time detail from the immutable generation-time
+    // snapshot (buildInvoiceTimeCollections). `ticketGroups` is one row per
+    // ticket / project task with integer-minute + minor-unit aggregates and
+    // an explicit mixed-rate state; `timeEntries` is the flat per-entry list.
+    // Both are absent on invoices generated before snapshot support, so
+    // templates binding them render an empty collection there.
+    ticketGroups: { id: 'ticketGroups', kind: 'collection', path: 'ticketGroups' },
+    timeEntries: { id: 'timeEntries', kind: 'collection', path: 'timeEntries' },
   },
 });
 
@@ -822,11 +830,202 @@ const buildStandardByLocationAst = (): TemplateAst => ({
   },
 });
 
+/**
+ * Standard Invoice By Ticket — the classic line-items table followed by a
+ * "Billed Time by Ticket" detail: one band per ticket (or project task /
+ * ad-hoc fallback) sourced from the `ticketGroups` snapshot collection, with
+ * the ticket's customer-visible description, per-entry date/hours/rate/amount
+ * rows, and a ticket-level hours + amount subtotal. Rate is shown via
+ * `rateLabel`, which reports "Mixed rates" instead of inventing one blended
+ * figure when a ticket bills at more than one rate.
+ *
+ * Invoices without snapshot data (anything generated before the feature)
+ * simply render zero bands — the layout stays valid and totals unchanged.
+ */
+const buildStandardByTicketAst = (): TemplateAst => ({
+  kind: 'invoice-template-ast',
+  version: TEMPLATE_AST_VERSION,
+  metadata: {
+    templateName: 'Standard Invoice By Ticket',
+    printSettings: DEFAULT_INVOICE_PRINT_SETTINGS,
+  },
+  bindings: buildInvoiceTemplateBindings(),
+  layout: {
+    id: 'root',
+    type: 'document',
+    children: [
+      // ── Header: logo + invoice meta card ──────────────────────────
+      {
+        id: 'header-top',
+        type: 'stack',
+        direction: 'row',
+        style: { inline: { justifyContent: 'space-between', alignItems: 'flex-start', gap: '24px', margin: '0 0 20px 0' } },
+        children: [
+          {
+            id: 'issuer-brand',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { gap: '6px' } },
+            children: [
+              {
+                id: 'issuer-logo',
+                type: 'image',
+                src: { type: 'binding', bindingId: 'tenantClientLogo' },
+                alt: { type: 'template', template: '{{name}} logo', args: { name: { type: 'binding', bindingId: 'tenantClientName' } } },
+                style: { inline: { width: '180px', maxHeight: '72px', margin: '0 0 6px 0', objectFit: 'contain', objectPosition: 'left' } },
+              },
+              { id: 'issuer-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '18px', fontWeight: 700, lineHeight: 1.2 } } },
+              { id: 'issuer-address', type: 'text', content: { type: 'binding', bindingId: 'tenantClientAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
+            ],
+          },
+          {
+            id: 'invoice-meta-card',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { minWidth: '280px', border: '1px solid #d1d5db', borderRadius: '10px', padding: '14px 16px', backgroundColor: '#f9fafb', gap: '6px' } },
+            children: [
+              { id: 'invoice-title', type: 'text', content: { type: 'i18n', i18nKey: 'labels.invoiceTitle', defaultValue: 'INVOICE' }, style: { inline: { fontSize: '22px', fontWeight: 700, margin: '0 0 4px 0', lineHeight: 1.1 } } },
+              { id: 'invoice-number', type: 'field', label: { i18nKey: 'labels.invoiceNumber', defaultValue: 'Invoice #' }, binding: { bindingId: 'invoiceNumber' }, style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'issue-date', type: 'field', label: { i18nKey: 'labels.issueDate', defaultValue: 'Issue Date' }, binding: { bindingId: 'issueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'due-date', type: 'field', label: { i18nKey: 'labels.dueDate', defaultValue: 'Due Date' }, binding: { bindingId: 'dueDate' }, format: 'date', style: { inline: { justifyContent: 'space-between' } } },
+              { id: 'po-number', type: 'field', label: { i18nKey: 'labels.poNumber', defaultValue: 'PO #' }, binding: { bindingId: 'poNumber' }, emptyValue: '-', style: { inline: { justifyContent: 'space-between' } } },
+            ],
+          },
+        ],
+      },
+      { id: 'header-divider', type: 'divider', style: { inline: { margin: '0 0 20px 0' } } },
+      // ── Party blocks ──────────────────────────────────────────────
+      {
+        id: 'party-blocks',
+        type: 'stack',
+        direction: 'row',
+        style: { inline: { gap: '24px', margin: '0 0 20px 0' } },
+        children: [
+          {
+            id: 'from-card',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
+            children: [
+              { id: 'from-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.from', defaultValue: 'From' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
+              { id: 'from-name', type: 'text', content: { type: 'binding', bindingId: 'tenantClientName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
+              { id: 'from-address', type: 'text', content: { type: 'binding', bindingId: 'tenantClientAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
+            ],
+          },
+          {
+            id: 'bill-to-card',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { flexGrow: 1, flexShrink: 1, flexBasis: '0%', gap: '4px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px 14px' } },
+            children: [
+              { id: 'bill-to-label', type: 'text', content: { type: 'i18n', i18nKey: 'labels.billTo', defaultValue: 'Bill To' }, style: { inline: { color: '#6b7280', fontSize: '12px', fontWeight: 700, margin: '0 0 2px 0' } } },
+              { id: 'bill-to-name', type: 'text', content: { type: 'binding', bindingId: 'customerName' }, style: { inline: { fontSize: '15px', fontWeight: 600, lineHeight: 1.3 } } },
+              { id: 'bill-to-address', type: 'text', content: { type: 'binding', bindingId: 'customerAddress' }, style: { inline: { color: '#4b5563', lineHeight: 1.4 } } },
+            ],
+          },
+        ],
+      },
+      // ── Line items table (all charges — totals reconcile here) ────
+      {
+        id: 'line-items',
+        type: 'dynamic-table',
+        style: { inline: { margin: '0 0 16px 0', border: '1px solid #e5e7eb', borderRadius: '10px' } },
+        repeat: { sourceBinding: { bindingId: 'lineItems' }, itemBinding: 'item' },
+        emptyStateText: { i18nKey: 'labels.emptyState.noBillableLineItems', defaultValue: 'No billable line items' },
+        columns: [
+          { id: 'description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '50%' } } },
+          { id: 'quantity', header: { i18nKey: 'labels.qty', defaultValue: 'Qty' }, value: { type: 'path', path: 'quantity' }, format: 'number', style: { inline: { textAlign: 'right', width: '14%' } } },
+          { id: 'unit-price', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'unitPrice' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+          { id: 'line-total', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+        ],
+      },
+      // ── Per-ticket billed-time bands ──────────────────────────────
+      // One band per ticketGroups row. Renders nothing at all on invoices
+      // without snapshot data, so legacy invoices are unaffected.
+      {
+        id: 'ticket-bands',
+        type: 'stack',
+        direction: 'column',
+        style: { inline: { gap: '8px', margin: '0 0 16px 0' } },
+        repeat: { sourceBinding: { bindingId: 'ticketGroups' }, itemBinding: 'group' },
+        children: [
+          {
+            id: 'ticket-band-header',
+            type: 'stack',
+            direction: 'column',
+            style: { inline: { gap: '2px', backgroundColor: '#7c45d3', color: '#ffffff', padding: '6px 12px', borderRadius: '6px 6px 0 0' } },
+            children: [
+              { id: 'ticket-band-label', type: 'text', content: { type: 'path', path: 'label' }, style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff' } } },
+              { id: 'ticket-band-description', type: 'text', content: { type: 'path', path: 'description' }, style: { inline: { fontSize: '12px', color: '#ffffff', lineHeight: 1.4 } } },
+            ],
+          },
+          {
+            id: 'ticket-band-entries',
+            type: 'dynamic-table',
+            style: { inline: { margin: '0', border: '1px solid #e5e7eb', borderRadius: '0' } },
+            repeat: { sourceBinding: { bindingId: 'group.entries' }, itemBinding: 'entry' },
+            columns: [
+              { id: 'entry-date', header: { i18nKey: 'labels.date', defaultValue: 'Date' }, value: { type: 'path', path: 'date' }, format: 'date', style: { inline: { width: '22%' } } },
+              { id: 'entry-service', header: { i18nKey: 'labels.service', defaultValue: 'Service' }, value: { type: 'path', path: 'serviceName' }, style: { inline: { width: '32%' } } },
+              { id: 'entry-hours', header: { i18nKey: 'labels.hours', defaultValue: 'Hours' }, value: { type: 'path', path: 'hours' }, format: 'number', style: { inline: { textAlign: 'right', width: '12%' } } },
+              { id: 'entry-rate', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'rate' }, format: 'currency', style: { inline: { textAlign: 'right', width: '16%' } } },
+              { id: 'entry-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'amount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
+            ],
+          },
+          {
+            id: 'ticket-band-subtotal',
+            type: 'stack',
+            direction: 'row',
+            style: { inline: { justifyContent: 'space-between', padding: '6px 12px', backgroundColor: '#f9fafb', borderRadius: '0 0 6px 6px' } },
+            children: [
+              {
+                id: 'ticket-band-subtotal-label',
+                type: 'text',
+                content: {
+                  type: 'template',
+                  template: 'Ticket total — {{hours}} hrs @ {{rate}}',
+                  args: {
+                    hours: { type: 'path', path: 'totalHours' },
+                    rate: { type: 'path', path: 'rateLabel' },
+                  },
+                },
+                style: { inline: { fontWeight: 700 } },
+              },
+              { id: 'ticket-band-subtotal-value', type: 'text', content: { type: 'path', path: 'totalAmount|currency' }, style: { inline: { fontWeight: 700, textAlign: 'right' } } },
+            ],
+          },
+        ],
+      },
+      // ── Grand totals ──────────────────────────────────────────────
+      {
+        id: 'totals-wrap',
+        type: 'stack',
+        direction: 'row',
+        style: { inline: { justifyContent: 'flex-end', margin: '0 0 24px 0' } },
+        children: [
+          {
+            id: 'totals',
+            type: 'totals',
+            style: { inline: { width: '300px', border: '1px solid #e5e7eb', borderRadius: '10px', padding: '10px 12px', backgroundColor: '#f9fafb' } },
+            sourceBinding: { bindingId: 'lineItems' },
+            rows: [
+              { id: 'subtotal', label: { i18nKey: 'labels.subtotal', defaultValue: 'Subtotal' }, value: { type: 'binding', bindingId: 'subtotal' }, format: 'currency' },
+              { id: 'tax', label: { i18nKey: 'labels.tax', defaultValue: 'Tax' }, value: { type: 'binding', bindingId: 'tax' }, format: 'currency' },
+              { id: 'total', label: { i18nKey: 'labels.total', defaultValue: 'Total' }, value: { type: 'binding', bindingId: 'total' }, format: 'currency', emphasize: true },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+});
+
 export const STANDARD_INVOICE_TEMPLATE_ASTS: Readonly<Record<string, TemplateAst>> = {
   'standard-default': buildStandardDefaultAst('Standard Template'),
   'standard-detailed': buildStandardDetailedAst(),
   'standard-grouped': buildStandardGroupedAst(),
   'standard-invoice-by-location': buildStandardByLocationAst(),
+  'standard-invoice-by-ticket': buildStandardByTicketAst(),
 };
 
 export const STANDARD_INVOICE_DEFAULT_CODE = 'standard-default';
