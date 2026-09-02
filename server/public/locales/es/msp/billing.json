@@ -387,7 +387,10 @@
       "loadingBatches": "Cargando lotes...",
       "empty": "Aún no hay lotes de exportación.",
       "loadingDetails": "Cargando detalles del lote...",
-      "batchNotFound": "Lote no encontrado."
+      "batchNotFound": "Lote no encontrado.",
+      "checkingAccess": "Comprobando acceso...",
+      "accessDeniedTitle": "Acceso denegado",
+      "accessDeniedDescription": "No tiene permiso para acceder a las exportaciones contables."
     },
     "createDialog": {
       "title": "Nueva exportación contable",

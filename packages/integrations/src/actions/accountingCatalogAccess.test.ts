@@ -1,14 +1,14 @@
 /**
  * Behavioral coverage for the accounting catalog / mapping read boundary:
  *
- * - catalog reads (QBO + Xero) require accounting_catalog:read, not
+ * - catalog reads (QBO + Xero) require accounting_integrations:catalog_read, not
  *   billing_settings:read, so Project Manager and custom roles are denied by
  *   default while Admin/Finance keep working;
  * - an explicitly requested realm / Xero connection that is not connected
  *   fails closed with no provider contact at all (no fallback query);
  * - a valid request touches exactly the requested realm;
- * - connection diagnostics stay on billing_settings:read with their minimal
- *   response shape;
+ * - connection diagnostics require the same catalog capability and keep their
+ *   minimal response shape;
  * - generic mapping reads demand integration + entity type + realm scope
  *   before touching the database.
  *
@@ -171,8 +171,8 @@ describe('QBO catalog permission boundary', () => {
     expect(qboCreateMock).not.toHaveBeenCalled();
   });
 
-  it('serves a user holding accounting_catalog:read (Admin/Finance default)', async () => {
-    grantOnly('accounting_catalog:read');
+  it('serves a user holding accounting_integrations:catalog_read (Admin/Finance default)', async () => {
+    grantOnly('accounting_integrations:catalog_read');
     seedQboCredentials([CONNECTED_REALM]);
     qboQueryMock.mockResolvedValue([{ Id: 'item-1', Name: 'Consulting' }]);
 
@@ -192,7 +192,7 @@ describe('QBO catalog permission boundary', () => {
     expect(qboCreateMock).not.toHaveBeenCalled();
     expect(qboQueryMock).not.toHaveBeenCalled();
 
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     const firstPage = Array.from({ length: 1000 }, (_, index) => ({
       Id: `customer-${index}`,
       DisplayName: `Customer ${index}`,
@@ -228,7 +228,7 @@ describe('QBO catalog permission boundary', () => {
 
 describe('QBO realm scoping', () => {
   it('fails closed on an explicitly requested realm that is not connected — no provider contact', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     seedQboCredentials([CONNECTED_REALM]);
 
     const result = await getQboItems({ realmId: 'realm-that-is-not-connected' });
@@ -238,7 +238,7 @@ describe('QBO realm scoping', () => {
   });
 
   it('does not let a disconnected realm reach any page of the paged customer catalog', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     seedQboCredentials([CONNECTED_REALM]);
 
     const result = await getQboCustomers({ realmId: OTHER_REALM });
@@ -249,7 +249,7 @@ describe('QBO realm scoping', () => {
   });
 
   it('never falls back to another realm when the requested realm errors', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     seedQboCredentials([CONNECTED_REALM, OTHER_REALM]);
     qboQueryMock.mockRejectedValue(new Error('QBO_AUTH_ERROR'));
 
@@ -263,7 +263,7 @@ describe('QBO realm scoping', () => {
   });
 
   it('reports not-connected without provider contact when the tenant has no realms', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
 
     const result = await getQboItems({});
 
@@ -272,9 +272,9 @@ describe('QBO realm scoping', () => {
   });
 });
 
-describe('QBO connection diagnostics stay separately permissioned', () => {
-  it('answers a billing_settings:read holder without requiring catalog access', async () => {
-    grantOnly('billing_settings:read');
+describe('QBO connection diagnostics', () => {
+  it('answers a catalog-read holder', async () => {
+    grantOnly('accounting_integrations:catalog_read');
 
     const status = await getQboConnectionStatus();
 
@@ -284,8 +284,8 @@ describe('QBO connection diagnostics stay separately permissioned', () => {
     expect(status.connections).toEqual([]);
   });
 
-  it('refuses diagnostics to a user without billing_settings:read', async () => {
-    grantOnly('accounting_catalog:read');
+  it('refuses diagnostics to a billing-settings reader without catalog access', async () => {
+    grantOnly('billing_settings:read');
 
     const status = await getQboConnectionStatus();
 
@@ -306,7 +306,7 @@ describe('Xero catalog permission and tenant scoping', () => {
   });
 
   it('fails closed on a disconnected Xero connection id — no provider contact', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     xeroSummariesMock.mockResolvedValue([{ connectionId: 'conn-1', status: 'active' }]);
 
     const result = await getXeroAccounts('conn-unknown');
@@ -315,8 +315,8 @@ describe('Xero catalog permission and tenant scoping', () => {
     expect(xeroCreateMock).not.toHaveBeenCalled();
   });
 
-  it('serves an accounting_catalog:read holder from the requested connection', async () => {
-    grantOnly('accounting_catalog:read');
+  it('serves an accounting_integrations:catalog_read holder from the requested connection', async () => {
+    grantOnly('accounting_integrations:catalog_read');
     xeroSummariesMock.mockResolvedValue([{ connectionId: 'conn-1', status: 'active' }]);
     xeroCreateMock.mockResolvedValue({
       listAccounts: async () => [{ accountId: 'acc-1', name: 'Sales', code: '200', type: 'REVENUE' }],
@@ -349,7 +349,7 @@ describe('External mapping read scope', () => {
     [{ integrationType: 'quickbooks_online', algaEntityType: 'service' }],
     [{}],
   ])('rejects an under-scoped read before any database query: %j', async (params) => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
 
     const result = await getExternalEntityMappings(params as never);
 
@@ -358,7 +358,7 @@ describe('External mapping read scope', () => {
   });
 
   it('accepts a fully scoped read, including an explicit null realm', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     withTransactionMock.mockResolvedValue([]);
 
     const result = await getExternalEntityMappings({
@@ -380,7 +380,7 @@ describe('External mapping read scope', () => {
     algaEntityType,
     externalRealmId
   ) => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     getStoredQboCredentialsMapMock.mockResolvedValue({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } });
 
     const result = await getExternalEntityMappings({
@@ -396,7 +396,7 @@ describe('External mapping read scope', () => {
   });
 
   it('rejects a disconnected QBO realm before database or provider contact', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     getStoredQboCredentialsMapMock.mockResolvedValue({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } });
 
     const result = await getExternalEntityMappings({
@@ -411,7 +411,7 @@ describe('External mapping read scope', () => {
   });
 
   it('rejects a QBO realm presented as a Xero scope', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     getStoredQboCredentialsMapMock.mockResolvedValue({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } });
     getStoredXeroConnectionsMock.mockResolvedValue({
       'xero-connection': { xeroTenantId: OTHER_REALM },

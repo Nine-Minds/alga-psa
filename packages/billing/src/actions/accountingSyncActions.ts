@@ -3,8 +3,9 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- sync actions consult QBO connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, writeAccountingAudit } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
+import logger from '@alga-psa/core/logger';
 import { getStoredQboCredentialsMap, QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { isProviderDisconnectActive, PROVIDER_QBO } from '@alga-psa/integrations/lib/providerDisconnect';
 import {
@@ -37,15 +38,29 @@ function assertEnterpriseEdition(): void {
   }
 }
 
-async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+async function checkCatalogReadAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     throw new Error('Forbidden');
   }
 }
 
-async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+async function checkConnectionsManageAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'connections_manage');
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
+}
+
+async function checkExportsExecuteAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'exports_execute');
+  if (!allowed) {
+    throw new Error('Forbidden');
+  }
+}
+
+async function checkMappingsManageAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage');
   if (!allowed) {
     throw new Error('Forbidden');
   }
@@ -71,7 +86,7 @@ export const getAccountingSyncSettingsAction = withAuth(async (
   { tenant }
 ): Promise<AccountingSyncSettings> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
   const { knex } = await createTenantKnex();
   return getAccountingSyncSettings(knex, tenant);
 });
@@ -82,9 +97,12 @@ export const updateAccountingSyncSettingsAction = withAuth(async (
   patch: Partial<AccountingSyncSettings>
 ): Promise<AccountingSyncSettings> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  // The settings object includes the default-realm selection, which is
+  // connection administration, so the narrowest single gate is
+  // `connections_manage`.
+  await checkConnectionsManageAccess(user);
   const { knex } = await createTenantKnex();
-  return updateAccountingSyncSettings(knex, tenant, {
+  const updated = await updateAccountingSyncSettings(knex, tenant, {
     ...(patch.autoSyncEnabled !== undefined ? { autoSyncEnabled: Boolean(patch.autoSyncEnabled) } : {}),
     ...(patch.autoSyncStartDate !== undefined ? { autoSyncStartDate: patch.autoSyncStartDate } : {}),
     ...(patch.autoProvisionCustomers !== undefined ? { autoProvisionCustomers: Boolean(patch.autoProvisionCustomers) } : {}),
@@ -93,6 +111,22 @@ export const updateAccountingSyncSettingsAction = withAuth(async (
     ...(patch.defaultDepartmentRef !== undefined ? { defaultDepartmentRef: patch.defaultDepartmentRef } : {}),
     ...(patch.defaultRealm !== undefined ? { defaultRealm: patch.defaultRealm } : {})
   });
+
+  // This action can carry the default-realm selection, so a realm change
+  // through it is audited exactly like the dedicated `setDefaultQboRealm`
+  // action — identifiers only, never secret material.
+  if (patch.defaultRealm !== undefined) {
+    await writeAccountingAudit(knex, tenant, 'accounting_default_realm_changed', {
+      userId: user.user_id,
+      provider: 'quickbooks_online',
+      recordId: patch.defaultRealm ?? undefined,
+      details: { realmId: patch.defaultRealm },
+    }).catch((error) => {
+      logger.warn('Failed to write default-realm audit entry', { tenantId: tenant, error });
+    });
+  }
+
+  return updated;
 });
 
 /** Run an immediate sync cycle for the tenant's default realm (Sync Now). */
@@ -101,7 +135,7 @@ export const runAccountingSyncNow = withAuth(async (
   { tenant }
 ): Promise<RunCycleResult> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
   await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
@@ -118,7 +152,7 @@ export const runAccountingSyncNow = withAuth(async (
 
   const credentials = await getStoredQboCredentialsMap(tenant);
 
-  return runAccountingSyncCycle({
+  const result = await runAccountingSyncCycle({
     knex,
     tenantId: tenant,
     adapterType: SYNC_ADAPTER_TYPE,
@@ -127,6 +161,21 @@ export const runAccountingSyncNow = withAuth(async (
     refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null,
     force: true
   });
+
+  await writeAccountingAudit(knex, tenant, 'accounting_sync_cycle_run', {
+    userId: user.user_id,
+    provider: 'quickbooks_online',
+    recordId: realm,
+    details: {
+      ran: result.ran,
+      status: result.status,
+      source: 'sync_now',
+    },
+  }).catch((error) => {
+    logger.warn('Failed to write accounting sync-cycle audit entry', { tenantId: tenant, error });
+  });
+
+  return result;
 });
 
 /** Queue a single invoice for (re-)export on the next cycle. */
@@ -136,7 +185,7 @@ export const queueInvoiceSync = withAuth(async (
   invoiceId: string
 ): Promise<{ queued: boolean; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
   await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
@@ -164,7 +213,7 @@ export const resolveAccountingDriftReExport = withAuth(async (
   invoiceId: string
 ): Promise<{ queued: boolean; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
   await assertNoActiveProviderDisconnect(tenant);
   const { knex } = await createTenantKnex();
 
@@ -193,7 +242,9 @@ export const resolveAccountingDriftAccept = withAuth(async (
   invoiceId: string
 ): Promise<{ resolved: boolean; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  // Accepting the external snapshot rewrites the mapping's reconciliation
+  // state — a mapping/reconciliation operation.
+  await checkMappingsManageAccess(user);
   const { knex } = await createTenantKnex();
 
   const realm = await resolveDefaultRealm(knex, tenant);
@@ -204,7 +255,7 @@ export const resolveAccountingDriftAccept = withAuth(async (
   const ledger = new SyncMappingLedger(knex, tenant, SYNC_ADAPTER_TYPE);
   const mapping = await ledger.findByAlgaId('invoice', invoiceId, realm);
   if (!mapping) {
-    return { resolved: false, error: 'Invoice has no QuickBooks mapping.' };
+    return { resolved: false, error: 'Invoice has no QuickBooks mapping for the connected company.' };
   }
 
   const metadata = mapping.metadata ?? {};
@@ -255,7 +306,7 @@ export const getInvoiceSyncStatuses = withAuth(async (
   if (!isEnterpriseEdition()) {
     return {};
   }
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
   const { knex } = await createTenantKnex();
 
   const ids = Array.from(new Set(invoiceIds)).filter(Boolean);
@@ -362,7 +413,7 @@ export const getAccountingSyncHealth = withAuth(async (
   { tenant }
 ): Promise<AccountingSyncHealth> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
   const { knex } = await createTenantKnex();
 
   const settings = await getAccountingSyncSettings(knex, tenant);
@@ -444,7 +495,7 @@ export const setDefaultQboRealm = withAuth(async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     assertEnterpriseEdition();
-    await checkBillingUpdateAccess(user);
+    await checkConnectionsManageAccess(user);
 
     const credentials = await getStoredQboCredentialsMap(tenant).catch(() => ({} as Record<string, any>));
     if (!(realmId in credentials)) {
@@ -453,6 +504,16 @@ export const setDefaultQboRealm = withAuth(async (
 
     const { knex } = await createTenantKnex();
     await updateAccountingSyncSettings(knex, tenant, { defaultRealm: realmId });
+
+    await writeAccountingAudit(knex, tenant, 'accounting_default_realm_changed', {
+      userId: user.user_id,
+      provider: 'quickbooks_online',
+      recordId: realmId,
+      details: { realmId },
+    }).catch((error) => {
+      logger.warn('Failed to write default-realm audit entry', { tenantId: tenant, error });
+    });
+
     return { success: true };
   } catch (error) {
     if (error instanceof Error && error.message === 'Accounting sync is only available in Enterprise Edition.') {

@@ -6,7 +6,7 @@ import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { createTenantKnex } from '@alga-psa/db';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 
 import {
   getQboRedirectUri,
@@ -280,6 +280,23 @@ export async function GET(request: Request): Promise<NextResponse> {
       realmId,
       credentialSource: credentials.source
     });
+
+    // Audit the connection lifecycle event (no secrets recorded). The actor is
+    // the re-verified initiating user carried on the OAuth state. Auditing is
+    // strictly best-effort: a failure while recording the audit entry must
+    // never turn a completed connection into a failed one, so the whole block
+    // — including obtaining the knex handle — is guarded.
+    try {
+      const { knex: auditKnex } = await createTenantKnex();
+      await writeAccountingAudit(auditKnex, tenantId, 'accounting_connected', {
+        userId: statePayload.userId,
+        provider: 'qbo',
+        recordId: realmId,
+        details: { realmId },
+      });
+    } catch (error) {
+      logger.warn('[qboOAuth] Failed to write connect audit entry', { tenantId, error });
+    }
 
     return createRedirect(SUCCESS_PATH);
   } catch (error) {

@@ -3,7 +3,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- onboarding actions consult QBO customers and connection state */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { auditLog, createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { auditLog, createTenantKnex, lockInvoiceForExternalSync, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
@@ -52,23 +52,18 @@ function assertEnterpriseEdition(): void {
   }
 }
 
-async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+async function checkCatalogReadAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) throw new Error('Forbidden');
 }
 
-/**
- * Reads that enumerate remote accounting data (QBO customers, historical
- * invoices) require accounting_catalog:read — Admin and Finance by default.
- * Wizard state and other connection diagnostics stay on billing_settings:read.
- */
-async function checkAccountingCatalogReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'accounting_catalog', 'read');
+async function checkMappingsManageAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'mappings_manage');
   if (!allowed) throw new Error('Forbidden');
 }
 
-async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+async function checkExportsExecuteAccess(user: IUserWithRoles): Promise<void> {
+  const allowed = await hasPermission(user, 'accounting_integrations', 'exports_execute');
   if (!allowed) throw new Error('Forbidden');
 }
 
@@ -153,7 +148,7 @@ export const getCustomerMatchCandidates = withAuth(async (
   error?: string;
 }> => {
   assertEnterpriseEdition();
-  await checkAccountingCatalogReadAccess(user);
+  await checkCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -299,7 +294,7 @@ export const linkClientToQboCustomer = withAuth(async (
   input: { clientId: string; externalId: string; externalName: string; billingProfileId?: string }
 ): Promise<{ linked: boolean; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkMappingsManageAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -361,10 +356,11 @@ export const linkClientToQboCustomer = withAuth(async (
 // ─── 3. bulkLinkExactCustomerMatches ─────────────────────────────────────────
 
 export const bulkLinkExactCustomerMatches = withAuth(async (
-  _user,
+  user,
   _ctx
 ): Promise<{ linked: number }> => {
   assertEnterpriseEdition();
+  await checkMappingsManageAccess(user);
 
   const { rows } = await getCustomerMatchCandidates();
   const exactRows = rows.filter((r) => r.suggestion?.exact && !r.mappedExternalId);
@@ -391,7 +387,7 @@ export const createQboCustomerForClient = withAuth(async (
   clientId: string
 ): Promise<{ created: boolean; externalId?: string; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   try {
     const { knex } = await createTenantKnex();
@@ -445,7 +441,7 @@ export const createQboSubCustomerForProfile = withAuth(async (
   input: { clientId: string; billingProfileId: string }
 ): Promise<{ created: boolean; externalId?: string; error?: string }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   try {
     const { knex } = await createTenantKnex();
@@ -542,7 +538,7 @@ export const getHistoricalInvoiceMatches = withAuth(async (
   input?: { windowStart?: string }
 ): Promise<{ confident: HistMatch[]; review: Array<HistMatch & { reason: string }> }> => {
   assertEnterpriseEdition();
-  await checkAccountingCatalogReadAccess(user);
+  await checkCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -620,7 +616,7 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
   }>
 ): Promise<{ linked: number; skipped: number }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkMappingsManageAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -687,20 +683,30 @@ export const bulkLinkHistoricalInvoices = withAuth(async (
       continue;
     }
 
-    await ledger.insert({
-      algaEntityType: 'invoice',
-      algaEntityId: match.invoiceId,
-      externalEntityId: match.externalId,
-      targetRealm: realm,
-      syncStatus: 'synced',
-      metadata: {
-        sync_token: match.externalSyncToken ?? remoteInvoice.SyncToken ?? null,
-        // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
-        // the matcher carries cents internally.
-        exported_total: match.externalTotal / 100,
-        doc_number: match.externalDocNumber,
-        linked_via: 'onboarding'
-      }
+    // The mapping insert serializes against invoice void on the shared invoice
+    // row lock (invoiceExternalSyncLock.ts). A voided invoice must never gain
+    // a mapping after the void decided no remote void is needed — the remote
+    // copy would outlive the cancelled local document with nothing enqueued to
+    // void it. The remote SyncToken (proven to exist just above) is snapshotted
+    // as a fallback so a later remote void carries a usable token.
+    await withTransaction(knex, async (trx) => {
+      await lockInvoiceForExternalSync(trx, tenant, match.invoiceId);
+      const trxLedger = new SyncMappingLedger(trx, tenant, SYNC_ADAPTER_TYPE);
+      await trxLedger.insert({
+        algaEntityType: 'invoice',
+        algaEntityId: match.invoiceId,
+        externalEntityId: match.externalId,
+        targetRealm: realm,
+        syncStatus: 'synced',
+        metadata: {
+          sync_token: match.externalSyncToken ?? remoteInvoice.SyncToken ?? null,
+          // Snapshot convention is QBO dollars (adapter stores response.TotalAmt);
+          // the matcher carries cents internally.
+          exported_total: match.externalTotal / 100,
+          doc_number: match.externalDocNumber,
+          linked_via: 'onboarding'
+        }
+      });
     });
     linked++;
   }
@@ -723,7 +729,7 @@ export const backfillPaymentsForLinkedInvoices = withAuth(async (
   invoiceIds: string[]
 ): Promise<{ processed: number; paymentsApplied: number; skippedPaid: number; errors: number }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);
@@ -895,7 +901,7 @@ export const getOnboardingWizardState = withAuth(async (
   { tenant }
 ): Promise<{ completedAt: string | null; lastRunAt: string | null; connected: boolean }> => {
   assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  await checkCatalogReadAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await getDefaultQboRealmId(tenant);
@@ -921,7 +927,7 @@ export const completeOnboardingWizard = withAuth(async (
   input: { autoSyncStartDate: string; enableAutoSync: boolean }
 ): Promise<{ done: boolean }> => {
   assertEnterpriseEdition();
-  await checkBillingUpdateAccess(user);
+  await checkExportsExecuteAccess(user);
 
   const { knex } = await createTenantKnex();
   const realm = await requireDefaultRealm(tenant);

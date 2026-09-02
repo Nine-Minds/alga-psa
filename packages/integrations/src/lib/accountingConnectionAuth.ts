@@ -26,8 +26,8 @@ import {
 } from './accountingOAuthStateStore';
 
 export const ACCOUNTING_CONNECTION_ADMIN_PERMISSION = {
-  resource: 'billing_settings',
-  action: 'update'
+  resource: 'accounting_integrations',
+  action: 'connections_manage'
 } as const;
 
 export const ACCOUNTING_OAUTH_AUTHZ_ERRORS = {
@@ -71,9 +71,11 @@ function reject(
 }
 
 /**
- * The single place the accounting connection-admin policy is defined. Today it
- * resolves to `billing_settings:update`; swap the resource/action here when a
- * narrower permission lands.
+ * The single place the accounting connection-admin policy is defined. It
+ * resolves to the narrow `accounting_integrations:connections_manage`
+ * capability (default Admin-only), so connecting, disconnecting, and
+ * credential administration are gated independently of ordinary
+ * `billing_settings:update` daily work.
  */
 export async function canManageAccountingConnections(
   user: IUser

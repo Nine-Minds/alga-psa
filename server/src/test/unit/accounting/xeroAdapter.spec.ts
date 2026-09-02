@@ -12,6 +12,16 @@ vi.mock('@alga-psa/db', async (importOriginal) => ({
   createTenantKnex: createTenantKnexMock,
 }));
 
+// The adapter now serializes delivery on the shared invoice row lock
+// (invoiceExternalSyncLock.ts). This spec exercises the adapter's transform/
+// deliver payload logic, not the lock discipline — that is covered by the
+// real-concurrency suite — so the lock re-check resolves to a live invoice.
+vi.mock('../../../../../packages/billing/src/lib/invoiceExternalSyncLock', () => ({
+  lockInvoiceForExternalSync: vi.fn(async () => ({ status: 'sent' })),
+  ACCOUNTING_EXPORT_INVOICE_CANCELLED: 'ACCOUNTING_EXPORT_INVOICE_CANCELLED',
+  ACCOUNTING_EXPORT_INVOICE_NOT_FOUND: 'ACCOUNTING_EXPORT_INVOICE_NOT_FOUND',
+}));
+
 /**
  * Specs referenced from:
  * https://developer.xero.com/documentation/accounting/invoices
@@ -107,6 +117,8 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     };
     const knexMock: any = () => knexQb;
     knexMock.raw = (sql: string) => ({ __raw: sql });
+    // deliver() runs inside withTransaction; hand the same mock back as the trx.
+    knexMock.transaction = async (cb: any) => cb(knexMock);
     createTenantKnexMock.mockResolvedValue({ knex: knexMock, tenant: TENANT_ID });
     vi.spyOn(AccountingMappingResolver, 'create').mockResolvedValue(mockResolver as unknown as AccountingMappingResolver);
     mockResolver.resolveServiceMapping.mockResolvedValue({
@@ -791,5 +803,50 @@ describe('XeroAdapter – spec validation scaffolding', () => {
     await expect(adapter.transform(context)).rejects.toMatchObject({
       code: 'XERO_CHARGE_MISSING_NET_AMOUNT'
     });
+  });
+});
+
+describe('XeroAdapter realm requirements', () => {
+  beforeEach(() => {
+    createTenantKnexMock.mockResolvedValue({ knex: {} as any, tenant: TENANT_ID });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('fails transform before any mapping or provider work when the batch realm is missing', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([]);
+    (context.batch as any).target_realm = null;
+    const clientCreate = vi.spyOn(XeroClientService, 'create');
+
+    await expect(adapter.transform(context)).rejects.toThrow(/immutable batch target realm/);
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(clientCreate).not.toHaveBeenCalled();
+  });
+
+  it('fails delivery before any provider call when the batch realm is missing', async () => {
+    const adapter = new XeroAdapter();
+    const context = buildContext([]);
+    (context.batch as any).target_realm = null;
+    const clientCreate = vi.spyOn(XeroClientService, 'create');
+
+    await expect(adapter.deliver({ documents: [] } as any, context)).rejects.toThrow(
+      /immutable batch target realm/
+    );
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
+    expect(clientCreate).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unstamped invoice fetch without calling Xero', async () => {
+    const adapter = new XeroAdapter();
+    const clientCreate = vi.spyOn(XeroClientService, 'create');
+
+    await expect(adapter.fetchExternalInvoice('colliding-id')).resolves.toEqual({
+      success: false,
+      error: 'Xero adapter requires targetRealm to fetch invoices'
+    });
+    expect(clientCreate).not.toHaveBeenCalled();
   });
 });

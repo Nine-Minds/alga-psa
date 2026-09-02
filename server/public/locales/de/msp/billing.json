@@ -387,7 +387,10 @@
       "loadingBatches": "Stapel werden geladen...",
       "empty": "Noch keine Exportchargen.",
       "loadingDetails": "Chargendetails werden geladen...",
-      "batchNotFound": "Charge nicht gefunden."
+      "batchNotFound": "Charge nicht gefunden.",
+      "checkingAccess": "Zugriff wird geprüft...",
+      "accessDeniedTitle": "Zugriff verweigert",
+      "accessDeniedDescription": "Sie haben keine Berechtigung, auf Buchhaltungsexporte zuzugreifen."
     },
     "createDialog": {
       "title": "Neuer Buchhaltungsexport",

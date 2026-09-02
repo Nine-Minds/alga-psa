@@ -1,9 +1,9 @@
 /**
  * Behavioral coverage for the onboarding read boundary: the reads that sweep
  * remote accounting data (customer match candidates, historical invoice
- * matches) require accounting_catalog:read, while wizard state — a connection
- * diagnostic — stays on billing_settings:read. Assertions check behavior and
- * whether the provider was contacted, never source strings.
+ * matches and connection diagnostics require
+ * accounting_integrations:catalog_read. Assertions check behavior and whether
+ * the provider was contacted, never source strings.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -95,7 +95,7 @@ describe('onboarding catalog reads', () => {
   });
 
   it('matches historical invoices through the TxnDate-windowed simulator query for an authorized user', async () => {
-    grantOnly('accounting_catalog:read');
+    grantOnly('accounting_integrations:catalog_read');
     const sim = new QboSimulator({ realmId: 'realm-100' });
     const customer = sim.seedCustomer({ name: 'Historical Customer' });
     const remoteInvoice = sim.seedInvoice({
@@ -160,8 +160,8 @@ describe('onboarding catalog reads', () => {
 });
 
 describe('onboarding diagnostics', () => {
-  it('serves wizard state to a billing_settings:read holder without catalog access and without provider contact', async () => {
-    grantOnly('billing_settings:read');
+  it('serves wizard state to a catalog-read holder without provider contact', async () => {
+    grantOnly('accounting_integrations:catalog_read');
     tenantDbMock.mockReturnValue({
       table: () => ({
         select: () => ({ first: async () => ({ settings: {} }) }),

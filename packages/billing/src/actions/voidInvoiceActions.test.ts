@@ -30,9 +30,18 @@ vi.mock('../services/accountingSync/invoiceTerminalStatusHandlers', () => ({
   listPendingInvoicePaymentLinks: vi.fn(),
 }));
 
+// The void denial predicate consults the tenant's connection state (never the
+// per-invoice mapping); default to unconnected so the local-void behavior is
+// exercised, and flip to connected in the denial tests.
+vi.mock('../services/accountingSync/accountingSyncSettings', () => ({
+  hasConnectedQboRealm: vi.fn(async () => false),
+}));
+
 import { voidInvoice } from './voidInvoiceActions';
 import { createTenantKnex } from '@alga-psa/db';
 import { notifyInvoiceTerminalStatus } from '../services/accountingSync/invoiceTerminalStatusHandlers';
+import { hasPermission } from '@alga-psa/auth/rbac';
+import { hasConnectedQboRealm } from '../services/accountingSync/accountingSyncSettings';
 
 // ── voidInvoice harness ─────────────────────────────────────────────────────
 
@@ -176,6 +185,11 @@ function makeVoidHarness(options: VoidHarnessOptions = {}) {
 describe('voidInvoice (credit note)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Restore the module defaults explicitly: vi.clearAllMocks() keeps any
+    // implementation a previous test set, and the permission-predicate block
+    // below overrides both mocks.
+    vi.mocked(hasPermission).mockImplementation(async () => true);
+    vi.mocked(hasConnectedQboRealm).mockResolvedValue(false);
   });
 
   it('claws back unconsumed issued credit: tracking zeroed, adjustment written', async () => {
@@ -259,6 +273,8 @@ describe('voidInvoice (credit note)', () => {
 describe('voidInvoice (standard invoice)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(hasPermission).mockImplementation(async () => true);
+    vi.mocked(hasConnectedQboRealm).mockResolvedValue(false);
   });
 
   it('reverses every credit application through the shared primitive before cancelling', async () => {
@@ -315,5 +331,65 @@ describe('voidInvoice (standard invoice)', () => {
     // No restore, no new adjustment — only the cancel writes.
     expect(log.filter((e) => e.table === 'credit_tracking')).toHaveLength(0);
     expect(log.filter((e) => e.table === 'transactions' && e.op === 'insert' && e.args.type === 'credit_adjustment')).toHaveLength(0);
+  });
+});
+
+describe('voidInvoice (remote-affecting permission predicate)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Unconnected tenant by default; the denial test flips it to connected.
+    vi.mocked(hasConnectedQboRealm).mockResolvedValue(false);
+    // The fast-fail calls hasPermission(user, 'accounting_integrations',
+    // 'remote_mutate', knex); everything else stays granted.
+    vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) =>
+      resource === 'accounting_integrations' && action === 'remote_mutate' ? false : true
+    );
+  });
+
+  const remoteMutateDenial =
+    'Permission denied: voiding invoices while the accounting integration is connected requires the accounting remote-mutate permission.';
+
+  it('refuses an actor without remote_mutate on a connected tenant — identically whether or not the invoice is mapped', async () => {
+    // Connected tenant: the denial must fire for this unmapped invoice exactly
+    // as it would for a mapped one (the predicate reads connection state, never
+    // the per-invoice mapping row), so the denial event leaks nothing.
+    vi.mocked(hasConnectedQboRealm).mockResolvedValue(true);
+
+    const { knex, log } = makeVoidHarness();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'connected denial'
+    );
+    expect(result).toEqual({ success: false, error: remoteMutateDenial });
+
+    // Refused before any state change — the denial fires at the fast-fail, so
+    // no table write is ever recorded.
+    expect(log).toHaveLength(0);
+    expect(vi.mocked(hasPermission)).toHaveBeenCalledWith(
+      { user_id: 'user-1' },
+      'accounting_integrations',
+      'remote_mutate',
+      knex
+    );
+  });
+
+  it('lets an actor without remote_mutate void when the tenant is unconnected', async () => {
+    // Default mock state: unconnected tenant + no remote_mutate. invoice:update
+    // alone must suffice — this is the "most tenants" case that must not break.
+    const { knex, log } = makeVoidHarness();
+    vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
+
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'local void'
+    );
+    expect(result).toEqual({ success: true });
+    expect(log.some((e) => e.table === 'invoices' && e.op === 'update' && e.args.status === 'cancelled')).toBe(true);
   });
 });

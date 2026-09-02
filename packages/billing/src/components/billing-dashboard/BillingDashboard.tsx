@@ -26,11 +26,12 @@ import InvoicingHub from './InvoicingHub';
 import ServiceCatalogManager from '../settings/billing/ServiceCatalogManager';
 import ProductsManager from '../settings/billing/ProductsManager';
 import ServiceTypeSettings from '../settings/billing/ServiceTypeSettings';
-import AccountingExportsTab from './accounting/AccountingExportsTab';
+import AccountingExportsTab, { AccountingExportsAccessDenied } from './accounting/AccountingExportsTab';
 import QuotesTab from './quotes/QuotesTab';
 import QuoteDocumentTemplatesPage from './quotes/QuoteDocumentTemplatesPage';
 import QuoteTemplatesList from './quotes/QuoteTemplatesList';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 
 interface BillingDashboardProps {
   initialServices: IService[];
@@ -56,13 +57,16 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const liveSearchParams = useSearchParams();
   const [isHydrated, setIsHydrated] = useState(false);
   const [error] = useState<string | null>(null);
+  const accountingCapabilities = useAccountingCapabilities();
 
   const tabDefinitions = useMemo(() => {
-    return billingTabDefinitions.map((tab) => ({
-      ...tab,
-      label: t(tab.labelKey, { defaultValue: tab.label }),
-    }));
-  }, [t]);
+    return billingTabDefinitions
+      .filter((tab) => !tab.requiredPermission || accountingCapabilities.exportsExecute)
+      .map((tab) => ({
+        ...tab,
+        label: t(tab.labelKey, { defaultValue: tab.label }),
+      }));
+  }, [accountingCapabilities.exportsExecute, t]);
 
   const initialSearchParams = useMemo(() => {
     const params = new URLSearchParams();
@@ -112,6 +116,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
   const currentTab = availableValues.includes(requestedTab as BillingTabValue)
     ? (requestedTab as BillingTabValue)
     : tabDefinitions[0]?.value ?? 'client-contracts';
+  const accountingExportsBlocked = requestedTab === 'accounting-exports'
+    && accountingCapabilities.loaded
+    && !accountingCapabilities.exportsExecute;
+  const accountingExportsCapabilityLoading = requestedTab === 'accounting-exports'
+    && !accountingCapabilities.loaded;
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -129,11 +138,18 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           </AlertDescription>
         </Alert>
       )}
-      <Tabs.Root
-        value={currentTab}
-        onValueChange={handleTabChange}
-        className="w-full"
-      >
+      {accountingExportsCapabilityLoading ? (
+        <div className="text-sm text-muted-foreground" role="status">
+          {t('accountingExports.states.checkingAccess', { defaultValue: 'Checking access...' })}
+        </div>
+      ) : accountingExportsBlocked ? (
+        <AccountingExportsAccessDenied />
+      ) : (
+        <Tabs.Root
+          value={currentTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
         <Tabs.Content value="contract-templates">
           {searchParams?.has('contractId') ? (
             <ContractDetailSwitcher renderClientDetails={renderClientDetails} />
@@ -237,7 +253,8 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
           <ProductsManager />
         </Tabs.Content>
 
-      </Tabs.Root>
+        </Tabs.Root>
+      )}
     </div>
   );
 };

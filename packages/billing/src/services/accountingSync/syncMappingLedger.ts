@@ -123,6 +123,25 @@ export class SyncMappingLedger {
       .first();
   }
 
+  /**
+   * Diagnostic lookup across realms (including legacy null-realm rows). Never
+   * use the result to address an external write — it exists so callers can
+   * distinguish "never mapped" from "mapped to a different realm" and report
+   * the mismatch.
+   */
+  async findByAlgaIdAnyRealm(
+    algaEntityType: string,
+    algaEntityId: string
+  ): Promise<ExternalEntityMappingRow[]> {
+    return this.table<ExternalEntityMappingRow>()
+      .where({
+        integration_type: this.integrationType,
+        alga_entity_type: algaEntityType,
+        alga_entity_id: algaEntityId
+      })
+      .select('*');
+  }
+
   async insert(params: {
     algaEntityType: string;
     algaEntityId: string;

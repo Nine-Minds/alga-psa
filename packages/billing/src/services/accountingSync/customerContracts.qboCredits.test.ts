@@ -90,6 +90,7 @@ function makeFakeLedger() {
   const ledger: any = {
     findByExternalId: vi.fn(async () => null),
     findByAlgaId: vi.fn(async () => undefined),
+    findByAlgaIdAnyRealm: vi.fn(async () => []),
     insert: vi.fn(async () => ({})),
     update: vi.fn(async () => undefined),
     withKnex: vi.fn()

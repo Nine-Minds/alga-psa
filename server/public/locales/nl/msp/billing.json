@@ -387,7 +387,10 @@
       "loadingBatches": "Batch laden...",
       "empty": "Nog geen exportbatches.",
       "loadingDetails": "Batchgegevens laden...",
-      "batchNotFound": "Partij niet gevonden."
+      "batchNotFound": "Partij niet gevonden.",
+      "checkingAccess": "Toegang controleren...",
+      "accessDeniedTitle": "Toegang geweigerd",
+      "accessDeniedDescription": "U hebt geen toestemming om toegang te krijgen tot boekhoudexporten."
     },
     "createDialog": {
       "title": "Nieuwe boekhoudkundige export",
