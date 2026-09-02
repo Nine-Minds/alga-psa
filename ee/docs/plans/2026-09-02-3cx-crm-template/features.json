@@ -1,0 +1,789 @@
+[
+  {
+    "id": "F001",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "`RELEASE_V1_6_FEATURE_FLAG = 'release-v1-6-feature'` is exported from packages/core/src/lib/features.ts"
+  },
+  {
+    "id": "F002",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "`TIER_FEATURES.PBX_TELEPHONY` exists with FEATURE_MINIMUM_TIER 'pro'"
+  },
+  {
+    "id": "F003",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "AccountManagement.tsx label map carries PBX_TELEPHONY with an i18n key"
+  },
+  {
+    "id": "F004",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "TEAMS_INTEGRATION is removed from ADD_ON_ONLY_FEATURES so tierHasFeature answers by tier for it"
+  },
+  {
+    "id": "F005",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "getTelephonyProviderAvailability(provider, ctx) in telephonyAvailability.ts returns the base getTelephonyAvailability result unchanged when that is disabled"
+  },
+  {
+    "id": "F006",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "For '3cx' the helper resolves the tenant tier with resolveTenantTier and returns reason 'tier_required' when PBX_TELEPHONY is not in the tier"
+  },
+  {
+    "id": "F007",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "For 'teams-phone' the helper adds no checks beyond the base availability"
+  },
+  {
+    "id": "F008",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates",
+      "Security / Permissions"
+    ],
+    "description": "The helper never calls isFeatureFlagEnabled; the flag is read only by the settings card"
+  },
+  {
+    "id": "F009",
+    "commitGroup": "flag-and-tier",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "TELEPHONY_AVAILABILITY_MESSAGES and TelephonyAvailabilityDisabledReason gain 'tier_required'"
+  },
+  {
+    "id": "F010",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "TELEPHONY_PROVIDERS is ['teams-phone', '3cx'] and TelephonyProviderKind follows"
+  },
+  {
+    "id": "F011",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "packages/integrations/src/lib/telephony/providerRegistry.ts exports entries with id, labelKey, descriptionKey, requiresTierFeature, releaseFlag and loadEe"
+  },
+  {
+    "id": "F012",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "The registry lists teams-phone (no tier feature, no flag) and 3cx (PBX_TELEPHONY, RELEASE_V1_6_FEATURE_FLAG)"
+  },
+  {
+    "id": "F013",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "getTelephonyOverview returns one TelephonyProviderCard per registry entry with a providerAvailability field from the helper"
+  },
+  {
+    "id": "F014",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "setTelephonyProviderEnabled dispatches to the registry entry's EE module instead of calling the Teams module directly"
+  },
+  {
+    "id": "F015",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "setTelephonyAutoCreateTickets dispatches through the registry entry"
+  },
+  {
+    "id": "F016",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry",
+      "UX / UI Notes"
+    ],
+    "description": "TelephonyIntegrationSettings.tsx renders one card per overview entry using the registry's i18n keys; the hard-coded PROVIDER_LABELS map is gone"
+  },
+  {
+    "id": "F017",
+    "commitGroup": "provider-registry",
+    "implemented": false,
+    "prdRefs": [
+      "FR2 Provider registry"
+    ],
+    "description": "The Teams Phone card keeps its prerequisite notice, toggles and copy exactly as before the refactor"
+  },
+  {
+    "id": "F018",
+    "commitGroup": "ee-package-scaffold",
+    "implemented": false,
+    "prdRefs": [
+      "FR3 EE package"
+    ],
+    "description": "ee/packages/threecx exists as @alga-psa/ee-threecx with a lib entry exporting the provider-state functions, renderThreecxTemplate, the route handlers and the route constants"
+  },
+  {
+    "id": "F019",
+    "commitGroup": "ee-package-scaffold",
+    "implemented": false,
+    "prdRefs": [
+      "FR3 EE package"
+    ],
+    "description": "server/next.config.mjs aliases @alga-psa/ee-threecx and @alga-psa/ee-threecx/ to the package on EE and to packages/ee/src on CE"
+  },
+  {
+    "id": "F020",
+    "commitGroup": "ee-package-scaffold",
+    "implemented": false,
+    "prdRefs": [
+      "FR3 EE package"
+    ],
+    "description": "server/tsconfig.json paths carry the same alias pair for @alga-psa/ee-threecx and @alga-psa/ee-threecx/*"
+  },
+  {
+    "id": "F021",
+    "commitGroup": "ee-package-scaffold",
+    "implemented": false,
+    "prdRefs": [
+      "FR3 EE package"
+    ],
+    "description": "The registry's loadEe for 3cx is import('@alga-psa/ee-threecx/lib') and is typed against the package's lib module"
+  },
+  {
+    "id": "F022",
+    "commitGroup": "ee-package-scaffold",
+    "implemented": false,
+    "prdRefs": [
+      "FR3 EE package",
+      "Non-functional Requirements"
+    ],
+    "description": "A CE typecheck and build pass with @alga-psa/ee-threecx aliased to the stub package"
+  },
+  {
+    "id": "F023",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "getThreecxProviderState returns status, autoCreateTickets, keyLastFour, keyRotatedAt and templateVersion for the tenant's 3cx row, with status 'not_configured' when no row exists"
+  },
+  {
+    "id": "F024",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "activateThreecxProvider upserts the 3cx row with status 'active' and generates a 32-byte base64url key when webhook_secret is null"
+  },
+  {
+    "id": "F025",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "Activation returns the full key only on the call that generated it; later calls return null for the key"
+  },
+  {
+    "id": "F026",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "deactivateThreecxProvider sets status 'disabled' and leaves webhook_secret in place"
+  },
+  {
+    "id": "F027",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "rotateThreecxApiKey writes a new key and config.keyRotatedAt and returns the full new key"
+  },
+  {
+    "id": "F028",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "The 3cx row's config is validated as { templateVersion: number, keyRotatedAt: string | null } on read and write"
+  },
+  {
+    "id": "F029",
+    "commitGroup": "threecx-provider-state",
+    "implemented": false,
+    "prdRefs": [
+      "FR4 Provider state"
+    ],
+    "description": "setThreecxAutoCreateTickets updates auto_create_tickets on the 3cx row"
+  },
+  {
+    "id": "F030",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "One constants module defines the four route segments and the query parameter names, imported by the routes, the template renderer, the validator test and the emulator"
+  },
+  {
+    "id": "F031",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "Route files exist under server/src/app/api/telephony/3cx/[tenantSlug]/ for lookup, lookup-by-email, search and report-call, each guarded with isEnterpriseEdition from _ceStub.ts and delegating to the EE package"
+  },
+  {
+    "id": "F032",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "On CE every 3CX route answers 501 through eeUnavailable()"
+  },
+  {
+    "id": "F033",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "OPTIONS on every 3CX route answers 204 with an Allow header through telephonyOptionsResponse"
+  },
+  {
+    "id": "F034",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes",
+      "Security / Permissions"
+    ],
+    "description": "An unknown tenant slug answers 404 { error: 'unknown_tenant' } before any key comparison"
+  },
+  {
+    "id": "F035",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "The inbound-webhook rate limit from rateLimitConfig.ts applies to every 3CX route"
+  },
+  {
+    "id": "F036",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "The Authorization: Bearer header is verified with verifyBearer against the 3cx row's webhook_secret; a missing or wrong key answers 403 { error: 'forbidden' }"
+  },
+  {
+    "id": "F037",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "A disabled getTelephonyProviderAvailability result (edition or tier) answers 403"
+  },
+  {
+    "id": "F038",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "A 3cx row whose status is not 'active' answers 403"
+  },
+  {
+    "id": "F039",
+    "commitGroup": "threecx-routes-auth",
+    "implemented": false,
+    "prdRefs": [
+      "FR5 Routes"
+    ],
+    "description": "Missing or invalid parameters answer 400 { error: 'invalid_request' }"
+  },
+  {
+    "id": "F040",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "lookup normalizes the number query with normalizeToE164 using resolveTenantPhoneCountryCode before matching"
+  },
+  {
+    "id": "F041",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "A matched contact returns one Contact whose contactUrl is <baseUrl>/msp/contacts/<contact_id>"
+  },
+  {
+    "id": "F042",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "A client-only match returns one Contact with companyName set and contactUrl <baseUrl>/msp/clients/<client_id>"
+  },
+  {
+    "id": "F043",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "An ambiguous match returns every candidate as a Contact"
+  },
+  {
+    "id": "F044",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "An unmatched number returns { contacts: [] } with status 200"
+  },
+  {
+    "id": "F045",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "Every Contact returned by lookup carries the number query value verbatim in phone"
+  },
+  {
+    "id": "F046",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "lookup-by-email matches contacts.email case-insensitively within the tenant"
+  },
+  {
+    "id": "F047",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "search matches first name, last name, company name, email and normalized phone digits by case-insensitive substring, ordered by name, at most 20 results"
+  },
+  {
+    "id": "F048",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "lookup, lookup-by-email and search exclude inactive contacts"
+  },
+  {
+    "id": "F049",
+    "commitGroup": "threecx-lookup",
+    "implemented": false,
+    "prdRefs": [
+      "FR6 Lookup and search"
+    ],
+    "description": "For lookup-by-email and search, phone is the contact's primary number in E.164"
+  },
+  {
+    "id": "F050",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "report-call validates the body: callType in the four values, ISO 8601 UTC times, non-negative durationSeconds, optional establishedTimeUtc and queueExtension"
+  },
+  {
+    "id": "F051",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "callType maps Inbound to inbound, Outbound to outbound, Missed and Notanswered to missed"
+  },
+  {
+    "id": "F052",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "The number lands on callerNumber for inbound and missed and on calleeNumber for outbound, as { raw, e164 }"
+  },
+  {
+    "id": "F053",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "providerCallId is the SHA-256 hex of agentEmail lower-cased, the E.164 or raw number, callType and startTimeUtc joined with '|'"
+  },
+  {
+    "id": "F054",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "organizerUserId is the tenant user whose email equals agentEmail case-insensitively, or null when none matches"
+  },
+  {
+    "id": "F055",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "startedAt, endedAt and durationSeconds come from the body, durationSeconds is 0 for missed, modality is 'audio' and raw is the full body"
+  },
+  {
+    "id": "F056",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call",
+      "Non-functional Requirements"
+    ],
+    "description": "report-call enqueues process-telephony-canonical-call with { tenantId, record } and answers 202 { accepted: true, providerCallId } without other database writes"
+  },
+  {
+    "id": "F057",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "process-telephony-canonical-call is registered in registerAllHandlers.ts beside process-telephony-call-notification with maxAttempts 3 and the same edition gate"
+  },
+  {
+    "id": "F058",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "The handler runs ingestCanonicalCall for the record and then the shared post-ingest tail"
+  },
+  {
+    "id": "F059",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call"
+    ],
+    "description": "The auto-ticket and notification tail after ingestion is one function called by both the Teams handler and the canonical-call handler"
+  },
+  {
+    "id": "F060",
+    "commitGroup": "threecx-report-call",
+    "implemented": false,
+    "prdRefs": [
+      "FR7 Report-call",
+      "Acceptance Criteria (Definition of Done)"
+    ],
+    "description": "A second report-call with the same hash inputs creates no new ledger row or interaction"
+  },
+  {
+    "id": "F061",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template"
+    ],
+    "description": "renderThreecxTemplate({ baseUrl, tenantSlug, templateVersion, country }) returns XML with Name 'AlgaPSA', the Version, the Country, an ApiKey password parameter and Plus prefix handling"
+  },
+  {
+    "id": "F062",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template"
+    ],
+    "description": "The template carries four scenarios: lookup by number with an empty Id, LookupByEmail, SearchContacts and ReportCall"
+  },
+  {
+    "id": "F063",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template"
+    ],
+    "description": "Every scenario request sends Authorization: Bearer [ApiKey]"
+  },
+  {
+    "id": "F064",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template"
+    ],
+    "description": "Every scenario URL is built from baseUrl, the tenant slug and the route constants"
+  },
+  {
+    "id": "F065",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template"
+    ],
+    "description": "Lookup outputs map contactUrl to ContactUrl, firstName, lastName, companyName, email, and phone to PhoneBusiness"
+  },
+  {
+    "id": "F066",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template",
+      "Security / Permissions"
+    ],
+    "description": "A download action streams the rendered XML as algapsa-3cx-<tenantSlug>.xml and requires canManageTelephony"
+  },
+  {
+    "id": "F067",
+    "commitGroup": "threecx-template",
+    "implemented": false,
+    "prdRefs": [
+      "FR8 Template"
+    ],
+    "description": "Downloading stamps config.templateVersion with the renderer's current version"
+  },
+  {
+    "id": "F068",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "FR9 Settings card",
+      "UX / UI Notes"
+    ],
+    "description": "The 3CX card is hidden when useFeatureFlag(entry.releaseFlag) is false"
+  },
+  {
+    "id": "F069",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "FR9 Settings card",
+      "UX / UI Notes"
+    ],
+    "description": "The 3CX card is hidden when useTier().hasFeature(PBX_TELEPHONY) is false"
+  },
+  {
+    "id": "F070",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "FR9 Settings card"
+    ],
+    "description": "On CE the telephony section shows TelephonyUnavailableCard and no 3CX card"
+  },
+  {
+    "id": "F071",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "FR9 Settings card",
+      "UX / UI Notes"
+    ],
+    "description": "The card shows status, Enable toggle, Auto-create tickets toggle, endpoint base URL with copy, masked key (last four) with Rotate, and Download template"
+  },
+  {
+    "id": "F072",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "FR9 Settings card",
+      "UX / UI Notes"
+    ],
+    "description": "After Enable generates a key or Rotate replaces it, the full key is shown once with a copy button and a not-shown-again warning"
+  },
+  {
+    "id": "F073",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "description": "Every interactive element on the card carries a kebab-case id"
+  },
+  {
+    "id": "F074",
+    "commitGroup": "threecx-settings-card",
+    "implemented": false,
+    "prdRefs": [
+      "FR9 Settings card",
+      "Security / Permissions"
+    ],
+    "description": "Without canManageTelephony the toggles, Rotate and Download are disabled and the permission message shows"
+  },
+  {
+    "id": "F075",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "packages/emulators/threecx exists with id 'threecx' on port 4070, registered in suite/src/index.ts, the PACKAGES list in build-image.sh, compose.yml and the README"
+  },
+  {
+    "id": "F076",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "Action crm-configure { baseUrl, tenantSlug, apiKey } stores the target"
+  },
+  {
+    "id": "F077",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "Action crm-inbound-call { number, agentEmail, agentExtension, answered, durationSeconds } performs GET lookup then POST report-call with the bearer header and records both exchanges"
+  },
+  {
+    "id": "F078",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "Action crm-outbound-call performs the same pair with callType Outbound"
+  },
+  {
+    "id": "F079",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "Action crm-search { q } performs GET search and records the exchange"
+  },
+  {
+    "id": "F080",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "State view exchanges lists request and response pairs with status codes"
+  },
+  {
+    "id": "F081",
+    "commitGroup": "emulator-threecx",
+    "implemented": false,
+    "prdRefs": [
+      "FR10 Emulator"
+    ],
+    "description": "The emulator builds its URLs and query parameters from the shared route constants"
+  },
+  {
+    "id": "F082",
+    "commitGroup": "i18n",
+    "implemented": false,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Data / API / Integrations"
+    ],
+    "description": "All card, availability and download strings exist under integrations.telephony.providers.threecx.* in the en locale"
+  },
+  {
+    "id": "F083",
+    "commitGroup": "i18n",
+    "implemented": false,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ],
+    "description": "The same keys exist in all ten files under server/public/locales/*/msp/integrations.json"
+  },
+  {
+    "id": "F084",
+    "commitGroup": "i18n",
+    "implemented": false,
+    "prdRefs": [
+      "FR1 Gates"
+    ],
+    "description": "The tier_required availability message and the PBX_TELEPHONY tier label are translated in every locale"
+  },
+  {
+    "id": "F085",
+    "commitGroup": "regression",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "description": "Existing telephony, Teams Phone and integrations settings tests pass unchanged"
+  },
+  {
+    "id": "F086",
+    "commitGroup": "regression",
+    "implemented": false,
+    "prdRefs": [
+      "Non-functional Requirements"
+    ],
+    "description": "The unit suite and the telephony integration tests are green on EE and the CE typecheck is green"
+  }
+]
