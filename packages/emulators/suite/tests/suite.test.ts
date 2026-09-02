@@ -28,6 +28,7 @@ describe('emulator suite', () => {
       'qbo',
       'smtp-sink',
       'stripe',
+      'threecx',
       'webhook-sink',
       'xero',
     ]);
