@@ -11,6 +11,14 @@
  * Before creating the index, duplicate non-cancelled rows are collapsed: the
  * latest keeps flowing (matching the app, which surfaces the most recent
  * meeting), earlier ones are marked cancelled.
+ *
+ * That cancellation is local bookkeeping only — a migration cannot call
+ * Microsoft Graph, so the collapsed rows' external Teams meetings stay live
+ * for now. Retraction is owed by the schedule-entry deletion sweep in
+ * packages/scheduling/src/actions/scheduleActions.ts, which best-effort
+ * Graph-deletes ALL entry-linked meetings regardless of local status
+ * (already-deleted meetings answer 404, treated as success), so these
+ * orphans are retracted when their entry is deleted.
  */
 
 /**

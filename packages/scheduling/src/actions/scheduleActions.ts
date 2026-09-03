@@ -1009,26 +1009,35 @@ export const deleteScheduleEntry = withAuth(async (
 
     // Meetings attached directly to this entry (online_meetings.schedule_entry_id,
     // created from the calendar entry editor) die with the entry: cancel the
-    // rows, then best-effort delete the Graph meetings so invites are retracted.
+    // active rows, then best-effort delete the Graph meetings so invites are
+    // retracted. The Graph retraction deliberately includes rows already marked
+    // cancelled: a local cancellation does not prove the external meeting was
+    // retracted (migration 20260903160000 collapses duplicate rows locally
+    // without touching Graph, and an earlier best-effort delete may have
+    // failed). deleteTeamsMeeting treats an already-deleted meeting (Graph 404)
+    // as success, so retrying here is safe and idempotent.
     const entryLinkedMeetings: Array<{
       meeting_id: string;
       provider: string;
       provider_meeting_id: string | null;
       provider_event_id: string | null;
+      status: string;
     }> = await withTransaction(db, async (trx: Knex.Transaction) => {
       return await (tenantDb(trx, tenant) as any).table('online_meetings')
         .where({ schedule_entry_id: masterEntryId })
         .whereNull('appointment_request_id')
-        .whereNot('status', 'cancelled')
-        .select('meeting_id', 'provider', 'provider_meeting_id', 'provider_event_id');
+        .select('meeting_id', 'provider', 'provider_meeting_id', 'provider_event_id', 'status');
     });
 
     if (entryLinkedMeetings.length > 0) {
-      await withTransaction(db, async (trx: Knex.Transaction) => {
-        await (tenantDb(trx, tenant) as any).table('online_meetings')
-          .whereIn('meeting_id', entryLinkedMeetings.map((meeting) => meeting.meeting_id))
-          .update({ status: 'cancelled', updated_at: new Date() });
-      });
+      const activeMeetings = entryLinkedMeetings.filter((meeting) => meeting.status !== 'cancelled');
+      if (activeMeetings.length > 0) {
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+          await (tenantDb(trx, tenant) as any).table('online_meetings')
+            .whereIn('meeting_id', activeMeetings.map((meeting) => meeting.meeting_id))
+            .update({ status: 'cancelled', updated_at: new Date() });
+        });
+      }
 
       const teamsMeetingService = await resolveTeamsMeetingService();
       for (const meeting of entryLinkedMeetings) {
