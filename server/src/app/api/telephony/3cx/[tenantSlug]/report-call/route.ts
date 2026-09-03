@@ -13,7 +13,7 @@ export async function POST(
     return eeUnavailable();
   }
   const { tenantSlug } = await context.params;
-  const { handleThreecxReportCall } = await import('@alga-psa/ee-threecx/lib');
+  const { handleThreecxReportCall } = await import('@alga-psa/ee-threecx/lib/server');
   return handleThreecxReportCall(request, tenantSlug, buildThreecxRouteDeps());
 }
 

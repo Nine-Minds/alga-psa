@@ -4,29 +4,12 @@ import { TELEPHONY_PROVIDERS } from '@alga-psa/telephony/types';
 import type { TelephonyProviderKind } from '@alga-psa/telephony/types';
 
 /**
- * One provider adapter across the telephony class. Each EE module names its
- * lifecycle functions after its own vendor (activateTeamsPhoneProvider,
- * activateThreecxProvider); the registry normalizes them to this shape so the
- * server actions dispatch by provider without naming any one vendor.
+ * Client-safe provider metadata only. The settings cards render from this
+ * registry, so it must never reference an EE module — even a dynamic import
+ * here lands the EE graph (route handlers, ingest services, the db package)
+ * in the browser bundle. The per-provider EE loaders live in
+ * providerEeLoader.ts, imported from the server actions alone.
  */
-export interface TelephonyProviderStateSummary {
-  provider: string;
-  status: 'not_configured' | 'active' | 'disabled' | 'error';
-  autoCreateTickets: boolean;
-  subscriptionId: string | null;
-  subscriptionExpiresAt: string | null;
-  lastError: string | null;
-  lastNotificationAt: string | null;
-  prerequisiteMet: boolean;
-}
-
-export interface TelephonyProviderEeAdapter {
-  getProviderState(tenantId: string): Promise<TelephonyProviderStateSummary>;
-  activateProvider(tenantId: string): Promise<unknown>;
-  deactivateProvider(tenantId: string): Promise<unknown>;
-  setAutoCreateTickets(tenantId: string, autoCreateTickets: boolean): Promise<unknown>;
-}
-
 export interface TelephonyProviderRegistryEntry {
   id: TelephonyProviderKind;
   /** i18n key for the card title. */
@@ -37,8 +20,6 @@ export interface TelephonyProviderRegistryEntry {
   requiresTierFeature: TIER_FEATURES | null;
   /** Release flag that gates the settings card only, or null. */
   releaseFlag: string | null;
-  /** Loads the provider's EE module, normalized to the adapter interface. */
-  loadEe: () => Promise<TelephonyProviderEeAdapter>;
 }
 
 const TEAMS_PHONE_ENTRY: TelephonyProviderRegistryEntry = {
@@ -47,28 +28,6 @@ const TEAMS_PHONE_ENTRY: TelephonyProviderRegistryEntry = {
   descriptionKey: 'integrations.telephony.providers.teamsPhone.description',
   requiresTierFeature: null,
   releaseFlag: null,
-  loadEe: async () => {
-    const mod: any = await import('@alga-psa/ee-microsoft-teams/lib');
-    return {
-      getProviderState: async (tenantId: string) => {
-        const state = await mod.getTeamsPhoneProviderState(tenantId);
-        return {
-          provider: state.provider,
-          status: state.status,
-          autoCreateTickets: Boolean(state.autoCreateTickets),
-          subscriptionId: state.subscriptionId ?? null,
-          subscriptionExpiresAt: state.subscriptionExpiresAt ?? null,
-          lastError: state.lastError ?? null,
-          lastNotificationAt: state.lastNotificationAt ?? null,
-          prerequisiteMet: Boolean(state.teamsConfigured),
-        };
-      },
-      activateProvider: (tenantId: string) => mod.activateTeamsPhoneProvider(tenantId),
-      deactivateProvider: (tenantId: string) => mod.deactivateTeamsPhoneProvider(tenantId),
-      setAutoCreateTickets: (tenantId: string, autoCreateTickets: boolean) =>
-        mod.setTeamsPhoneAutoTicketPolicy(tenantId, autoCreateTickets),
-    };
-  },
 };
 
 const THREECX_ENTRY: TelephonyProviderRegistryEntry = {
@@ -77,28 +36,6 @@ const THREECX_ENTRY: TelephonyProviderRegistryEntry = {
   descriptionKey: 'integrations.telephony.providers.threecx.description',
   requiresTierFeature: TIER_FEATURES.PBX_TELEPHONY,
   releaseFlag: RELEASE_V1_6_FEATURE_FLAG,
-  loadEe: async () => {
-    const mod: any = await import('@alga-psa/ee-threecx/lib');
-    return {
-      getProviderState: async (tenantId: string) => {
-        const state = await mod.getThreecxProviderState(tenantId);
-        return {
-          provider: '3cx',
-          status: state.status,
-          autoCreateTickets: Boolean(state.autoCreateTickets),
-          subscriptionId: null,
-          subscriptionExpiresAt: null,
-          lastError: null,
-          lastNotificationAt: null,
-          prerequisiteMet: true,
-        };
-      },
-      activateProvider: (tenantId: string) => mod.activateThreecxProvider(tenantId),
-      deactivateProvider: (tenantId: string) => mod.deactivateThreecxProvider(tenantId),
-      setAutoCreateTickets: (tenantId: string, autoCreateTickets: boolean) =>
-        mod.setThreecxAutoCreateTickets(tenantId, autoCreateTickets),
-    };
-  },
 };
 
 const REGISTRY: Record<TelephonyProviderKind, TelephonyProviderRegistryEntry> = {

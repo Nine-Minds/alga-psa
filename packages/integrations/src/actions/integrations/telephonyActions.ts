@@ -11,6 +11,7 @@ import {
   getTelephonyProviderRegistryEntry,
   TELEPHONY_PROVIDER_REGISTRY,
 } from '../../lib/telephony/providerRegistry';
+import { loadTelephonyProviderEe } from '../../lib/telephony/providerEeLoader';
 
 export interface TelephonyProviderAvailabilitySummary {
   enabled: boolean;
@@ -405,7 +406,7 @@ export const getTelephonyOverview = withAuth(async (user, { tenant }): Promise<T
   const providers = await Promise.all(
     TELEPHONY_PROVIDER_REGISTRY.map(async (entry): Promise<TelephonyProviderCard> => {
       const providerAvailability = await getTelephonyProviderAvailability(entry.id, { tenantId: tenant });
-      const adapter = await entry.loadEe();
+      const adapter = await loadTelephonyProviderEe(entry.id);
       const state = await adapter.getProviderState(tenant);
       return {
         provider: entry.id,
@@ -473,7 +474,7 @@ export const setTelephonyProviderEnabled = withAuth(async (
     return { success: false, error: gate.error };
   }
 
-  const adapter = await gate.entry.loadEe();
+  const adapter = await loadTelephonyProviderEe(gate.entry.id);
   try {
     if (input.enabled) {
       const result = await adapter.activateProvider(tenant);
@@ -502,7 +503,7 @@ export const setTelephonyAutoCreateTickets = withAuth(async (
     return { success: false, error: gate.error };
   }
 
-  const adapter = await gate.entry.loadEe();
+  const adapter = await loadTelephonyProviderEe(gate.entry.id);
   await adapter.setAutoCreateTickets(tenant, input.autoCreateTickets);
   return { success: true };
 });

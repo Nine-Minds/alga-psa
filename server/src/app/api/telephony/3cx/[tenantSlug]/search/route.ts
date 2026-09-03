@@ -13,7 +13,7 @@ export async function GET(
     return eeUnavailable();
   }
   const { tenantSlug } = await context.params;
-  const { handleThreecxSearch } = await import('@alga-psa/ee-threecx/lib');
+  const { handleThreecxSearch } = await import('@alga-psa/ee-threecx/lib/server');
   return handleThreecxSearch(request, tenantSlug, buildThreecxRouteDeps());
 }
 

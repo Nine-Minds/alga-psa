@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { RELEASE_V1_6_FEATURE_FLAG } from '@alga-psa/core/features';
 import { TIER_FEATURES } from '@alga-psa/types';
@@ -6,6 +8,7 @@ import {
   TELEPHONY_PROVIDER_REGISTRY,
   getTelephonyProviderRegistryEntry,
 } from './providerRegistry';
+import { loadTelephonyProviderEe } from './providerEeLoader';
 
 describe('telephony provider registry', () => {
   it('T014: exports exactly one entry per TELEPHONY_PROVIDERS value', () => {
@@ -23,17 +26,24 @@ describe('telephony provider registry', () => {
     expect(teams?.releaseFlag).toBeNull();
   });
 
-  it('every entry exposes i18n keys and a loadEe function', () => {
+  it('every entry exposes i18n keys', () => {
     for (const entry of TELEPHONY_PROVIDER_REGISTRY) {
       expect(entry.labelKey).toMatch(/^integrations\.telephony\.providers\./);
       expect(entry.descriptionKey).toMatch(/^integrations\.telephony\.providers\./);
-      expect(typeof entry.loadEe).toBe('function');
     }
   });
 
-  it('T028: the 3cx loadEe resolves to an adapter over the EE module', async () => {
-    const threecx = getTelephonyProviderRegistryEntry('3cx');
-    const adapter = await threecx!.loadEe();
+  it('keeps the registry client-safe: no EE module references', () => {
+    // Client components render cards from this registry; an EE reference here
+    // (even inside a dynamic import) drags handlers/ingest/db into the browser
+    // bundle and 500s every page. EE dispatch lives in providerEeLoader.ts.
+    const source = fs.readFileSync(path.resolve(__dirname, 'providerRegistry.ts'), 'utf8');
+    expect(source).not.toContain('@alga-psa/ee-');
+    expect(source).not.toContain('loadEe');
+  });
+
+  it('T028: the 3cx EE loader resolves to an adapter over the EE module', async () => {
+    const adapter = await loadTelephonyProviderEe('3cx');
     expect(typeof adapter.activateProvider).toBe('function');
     expect(typeof adapter.deactivateProvider).toBe('function');
     expect(typeof adapter.getProviderState).toBe('function');
