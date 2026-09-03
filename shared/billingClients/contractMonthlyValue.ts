@@ -3,8 +3,17 @@ import { tenantDb } from '@alga-psa/db';
 
 export interface ContractMonthlyValue {
   clientContractId: string;
+  /**
+   * Fixed recurring value only, in minor currency units. Usage lines bill
+   * recorded usage and contribute variable revenue that cannot be stated as a
+   * fixed monthly amount, so they are excluded here and flagged via
+   * {@link ContractMonthlyValue.hasVariableUsage} instead of silently
+   * reporting zero.
+   */
   monthlyValueCents: number;
   currencyCode: string;
+  /** True when the contract has usage-billed lines with variable, record-driven revenue. */
+  hasVariableUsage: boolean;
 }
 
 /**
@@ -27,10 +36,14 @@ export async function getContractMonthlyValuesByAssignment(
   const rows = await query
     .groupBy('cc.client_contract_id', 'c.currency_code')
     .select('cc.client_contract_id', 'c.currency_code')
-    .sum({ monthly_value_cents: conn.raw('COALESCE(cln.custom_rate, 0)') }) as Array<{
+    // Usage lines are record-driven variable revenue: any custom_rate on them
+    // is not a recurring monthly amount, so it is excluded rather than summed.
+    .sum({ monthly_value_cents: conn.raw("CASE WHEN cln.contract_line_type = 'Usage' THEN 0 ELSE COALESCE(cln.custom_rate, 0) END") })
+    .max({ usage_line_flag: conn.raw("CASE WHEN cln.contract_line_type = 'Usage' THEN 1 ELSE 0 END") }) as Array<{
       client_contract_id: string;
       currency_code: string;
       monthly_value_cents: string | number | null;
+      usage_line_flag: string | number | null;
     }>;
 
   return new Map(rows.map((row) => [
@@ -39,6 +52,7 @@ export async function getContractMonthlyValuesByAssignment(
       clientContractId: row.client_contract_id,
       monthlyValueCents: Number(row.monthly_value_cents ?? 0) || 0,
       currencyCode: row.currency_code,
+      hasVariableUsage: Number(row.usage_line_flag ?? 0) === 1,
     },
   ]));
 }

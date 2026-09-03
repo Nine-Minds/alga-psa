@@ -980,6 +980,12 @@ export interface IContractLineOverview {
     service_name: string;
     billing_method: string;
     custom_rate: number | null;  // In cents
+    /**
+     * Fixed-allocation quantity. Always null for Usage lines: usage billing is
+     * record-driven (only usage_tracking records create charges), so any
+     * legacy configured quantity is inert audit metadata that must never be
+     * presented as billable.
+     */
     quantity: number | null;
     unit_of_measure: string | null;
   }[];
@@ -1081,7 +1087,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : (svc.custom_rate ? Number(svc.custom_rate) : null),
-              quantity: config?.quantity ?? svc.quantity ?? 1,
+              // Usage lines bill recorded usage only; legacy configured
+              // quantities are audit metadata and must not read as billable.
+              quantity: line.contract_line_type === 'Usage' ? null : (config?.quantity ?? svc.quantity ?? 1),
               unit_of_measure: null
             };
           })
@@ -1138,7 +1146,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               service_name: svc.service_name || 'Unknown Service',
               billing_method: svc.billing_method || 'fixed',
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
-              quantity: config?.quantity ?? 1,
+              // Usage lines bill recorded usage only; legacy configured
+              // quantities are audit metadata and must not read as billable.
+              quantity: line.contract_line_type === 'Usage' ? null : (config?.quantity ?? 1),
               unit_of_measure: svc.unit_of_measure || null
             };
           })

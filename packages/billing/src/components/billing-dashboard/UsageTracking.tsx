@@ -46,13 +46,20 @@ import {
 
 interface UsageTrackingProps {
   initialServices: IService[];
+  /**
+   * Optional deep-link prefills so contract and invoice-preview surfaces can
+   * route users straight to recording a period's usage for a specific
+   * client/service without hunting through filters.
+   */
+  initialClientId?: string | null;
+  initialServiceId?: string | null;
 }
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
-const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
+const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialClientId, initialServiceId }) => {
   const { t } = useTranslation('msp/billing');
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -61,8 +68,8 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [usageRecords, setUsageRecords] = useState<IUsageRecord[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
-  const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [selectedService, setSelectedService] = useState<string>('');
+  const [selectedClient, setSelectedClient] = useState<string | null>(initialClientId ?? null);
+  const [selectedService, setSelectedService] = useState<string>(initialServiceId ?? '');
   const [editingUsage, setEditingUsage] = useState<IUsageRecord | null>(null);
   const [usageToDelete, setUsageToDelete] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');

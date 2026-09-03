@@ -139,7 +139,18 @@ const ContractReports: React.FC = () => {
     {
       title: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }),
       dataIndex: 'monthly_recurring',
-      render: (value: number) => <span className="font-semibold text-green-600">{formatCents(value)}</span>
+      // Usage revenue is variable (billed from recorded usage), so it is
+      // labeled instead of misstated as part of a fixed recurring amount.
+      render: (value: number, record) => (
+        <span className="font-semibold text-green-600 dark:text-green-400">
+          {formatCents(value)}
+          {record.has_variable_usage && (
+            <span className="ml-1 font-normal text-muted-foreground">
+              {t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}
+            </span>
+          )}
+        </span>
+      )
     },
     {
       title: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }),
@@ -192,7 +203,16 @@ const ContractReports: React.FC = () => {
     {
       title: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }),
       dataIndex: 'monthly_value',
-      render: (value: number) => formatCents(value)
+      render: (value: number, record) => (
+        <span>
+          {formatCents(value)}
+          {record.has_variable_usage && (
+            <span className="ml-1 text-muted-foreground">
+              {t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}
+            </span>
+          )}
+        </span>
+      )
     },
     {
       title: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }),
@@ -271,7 +291,13 @@ const ContractReports: React.FC = () => {
   const revenuePrintColumns: PrintableTableColumn<ContractRevenue>[] = [
     { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name },
     { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
-    { key: 'mrr', header: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }), render: (row) => formatCents(row.monthly_recurring) },
+    {
+      key: 'mrr',
+      header: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }),
+      render: (row) => (row.has_variable_usage
+        ? `${formatCents(row.monthly_recurring)} ${t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}`
+        : formatCents(row.monthly_recurring)),
+    },
     { key: 'ytd', header: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }), render: (row) => formatCents(row.total_billed_ytd) },
     { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => statusLabel(row.status, t) },
   ];
@@ -285,7 +311,13 @@ const ContractReports: React.FC = () => {
       header: t('contractReports.table.daysUntilExpiration', { defaultValue: 'Days Until Expiration' }),
       render: (row) => `${row.days_until_expiration} ${t('units.days', { defaultValue: 'days' })}`,
     },
-    { key: 'monthlyValue', header: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }), render: (row) => formatCents(row.monthly_value) },
+    {
+      key: 'monthlyValue',
+      header: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }),
+      render: (row) => (row.has_variable_usage
+        ? `${formatCents(row.monthly_value)} ${t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}`
+        : formatCents(row.monthly_value)),
+    },
     { key: 'autoRenew', header: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }), render: (row) => yesNoLabel(row.auto_renew, t) },
   ];
 
@@ -425,8 +457,16 @@ const ContractReports: React.FC = () => {
           </div>
           <p className="text-2xl font-bold text-green-600">{formatCents(summary?.totalMRR ?? 0)}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {t('contractReports.summary.totalMRR.subtitle', { defaultValue: 'Monthly Recurring Revenue' })}
+            {t('contractReports.summary.totalMRR.subtitle', { defaultValue: 'Fixed Monthly Recurring Revenue' })}
           </p>
+          {(summary?.variableUsageContractCount ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground mt-1" data-testid="mrr-variable-usage-note">
+              {t('contractReports.summary.totalMRR.variableUsageNote', {
+                count: summary?.variableUsageContractCount ?? 0,
+                defaultValue: '{{count}} active contracts also bill variable usage (not included)',
+              })}
+            </p>
+          )}
         </Card>
 
         <Card className="p-4">

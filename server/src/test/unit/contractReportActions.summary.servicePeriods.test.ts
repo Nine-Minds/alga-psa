@@ -126,6 +126,7 @@ describe('contractReportActions summary service-period basis', () => {
       totalYTD: 17000,
       activeContractCount: 1,
       atRiskDecisionCount: 2,
+      variableUsageContractCount: 0,
     });
   });
 });

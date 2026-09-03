@@ -320,6 +320,7 @@
       "noContractLinesDescription": "Ajoutez des lignes de contrat pour définir ce qui est inclus dans ce contrat",
       "noContractLinesYet": "Aucune ligne de contrat pour le moment",
       "noServicesConfigured": "Aucun service configuré",
+      "billedOnRecordedUsage": "Facturé selon l'utilisation enregistrée",
       "serviceCountOne": "{{count}} service",
       "serviceCountOther": "{{count}} services"
     },

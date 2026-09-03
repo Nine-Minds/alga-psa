@@ -315,12 +315,13 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Minimalny próg wykorzystania",
-        "help": "Minimalne płatne użycie w okresie (0 oznacza brak minimum)",
+        "help": "Minimalny próg stosowany do zarejestrowanego użycia (0 = brak minimum). Obowiązuje tylko wtedy, gdy okres ma rekord użycia — nawet jawne zero — i nigdy samodzielnie nie tworzy opłaty.",
         "errorNegative": "Minimalne użycie nie może być ujemne"
       },
       "enableTieredPricing": "Włącz ceny warstwowe"
     },
     "title": "Konfiguracja oparta na użyciu",
+    "recordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć tę usługę.",
     "tiers": {
       "title": "Poziomy cenowe",
       "addTier": "Dodaj poziom",

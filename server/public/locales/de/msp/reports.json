@@ -241,7 +241,8 @@
     "summary": {
       "totalMRR": {
         "title": "Gesamter MRR",
-        "subtitle": "Monatlich wiederkehrender Umsatz"
+        "subtitle": "Feste monatlich wiederkehrende Umsätze",
+        "variableUsageNote": "{{count}} aktive Verträge rechnen zusätzlich variablen Verbrauch ab (nicht enthalten)"
       },
       "ytdRevenue": {
         "title": "Umsatz bis heute",
@@ -302,7 +303,8 @@
       "revenueYtd": "Umsatz (YTD)",
       "costYtd": "Kosten (YTD)",
       "profit": "Gewinn",
-      "margin": "Marge"
+      "margin": "Marge",
+      "plusVariableUsage": "+ variabler Verbrauch"
     },
     "statusValues": {
       "active": "Aktiv",

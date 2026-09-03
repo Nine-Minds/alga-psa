@@ -100,7 +100,8 @@
       "reverseInvoice": "Fatura reversa",
       "deleteInvoice": "Excluir fatura",
       "closePreview": "Fechar visualização",
-      "generateInvoice": "Gerar fatura"
+      "generateInvoice": "Gerar fatura",
+      "recordUsage": "Registar utilização"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +164,9 @@
           "total": "Total"
         },
         "generating": "Gerando...",
-        "generateError": "Falha ao gerar fatura da visualização"
+        "generateError": "Falha ao gerar fatura da visualização",
+        "missingUsageHeading": "Nenhuma utilização registada para este período",
+        "missingUsageService": "{{service}}: sem registos de utilização de {{periodStart}} a {{periodEnd}}"
       },
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
@@ -344,6 +347,7 @@
       "updateFailed": "Erro ao atualizar fatura",
       "generateFailed": "Erro ao gerar fatura",
       "NO_BILLING_EMAIL": "{{clientName}} não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida e tente novamente.",
+      "USAGE_RECORDS_MISSING": "Não há registos de utilização elegíveis para {{services}} no período de serviço de {{periodStart}} a {{periodEnd}}. Registe a utilização deste período (ou uma entrada de utilização zero) para faturar estes serviços.",
       "CLIENT_NOT_FOUND": "O cliente selecionado não foi encontrado. Atualize a página e tente novamente.",
       "SERVICE_NOT_FOUND": "O serviço {{serviceId}} não foi encontrado. Atualize a página e tente novamente.",
       "INVALID_QUANTITY": "A quantidade deve ser maior que zero.",

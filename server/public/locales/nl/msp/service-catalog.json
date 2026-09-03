@@ -315,12 +315,13 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Minimale gebruiksdrempel",
-        "help": "Minimaal factureerbaar gebruik per periode (0 voor geen minimum)",
+        "help": "Ondergrens toegepast op geregistreerd verbruik (0 voor geen minimum). Deze geldt alleen wanneer de periode een verbruiksrecord heeft — ook een expliciete nul — en creëert nooit zelfstandig kosten.",
         "errorNegative": "Minimumverbruik kan niet negatief zijn"
       },
       "enableTieredPricing": "Schakel gedifferentieerde prijzen in"
     },
     "title": "Op gebruik gebaseerde configuratie",
+    "recordDrivenNote": "Verbruiksdiensten worden gefactureerd op basis van het in Verbruiksregistratie geregistreerde verbruik per serviceperiode. Een periode zonder verbruiksrecord levert geen kosten op — registreer het verbruik (of een expliciete nul) per periode om deze service te factureren.",
     "tiers": {
       "title": "Prijsniveaus",
       "addTier": "Niveau toevoegen",

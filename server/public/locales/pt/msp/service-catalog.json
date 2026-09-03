@@ -319,6 +319,7 @@
   },
   "usageConfig": {
     "title": "Configuração baseada no uso",
+    "recordDrivenNote": "Os serviços por utilização são faturados com base na utilização registada no acompanhamento de utilização para cada período de serviço. Um período sem registo de utilização não gera cobrança — registe a utilização (ou um zero explícito) em cada período para faturar este serviço.",
     "defaults": {
       "unitOfMeasure": "Unidade"
     },
@@ -332,7 +333,7 @@
       "minimumUsage": {
         "label": "Limite mínimo de uso",
         "placeholder": "0",
-        "help": "Uso mínimo faturável por período (0 sem mínimo)",
+        "help": "Mínimo aplicado à utilização registada (0 para sem mínimo). Aplica-se apenas quando o período tem um registo de utilização — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
         "errorNegative": "O uso mínimo não pode ser negativo"
       },
       "enableTieredPricing": "Habilitar preços diferenciados"

@@ -320,6 +320,7 @@
       "noContractLinesDescription": "〖Ȧḓḓ ƈȯƞŧřȧƈŧ ŀīƞḗş ŧȯ ḓḗƒīƞḗ ẇħȧŧ'ş īƞƈŀŭḓḗḓ īƞ ŧħīş ƈȯƞŧřȧƈŧ ·························〗",
       "noContractLinesYet": "〖Ƞȯ ƈȯƞŧřȧƈŧ ŀīƞḗş ẏḗŧ ·········〗",
       "noServicesConfigured": "〖Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ ·········〗",
+      "billedOnRecordedUsage": "〖Ɓīŀŀḗḓ ȯƞ řḗƈȯřḓḗḓ ŭşȧɠḗ ··········〗",
       "serviceCountOne": "〖{{count}} şḗřṽīƈḗ ·······〗",
       "serviceCountOther": "〖{{count}} şḗřṽīƈḗş ········〗"
     },

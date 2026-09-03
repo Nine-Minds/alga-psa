@@ -315,12 +315,13 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Mindestnutzungsschwelle",
-        "help": "Mindestens abrechnungsfähige Nutzung pro Zeitraum (0 für kein Minimum)",
+        "help": "Untergrenze für den erfassten Verbrauch (0 für kein Minimum). Sie gilt nur, wenn für den Zeitraum ein Verbrauchsdatensatz existiert — auch eine explizite Null — und erzeugt niemals von sich aus eine Abrechnung.",
         "errorNegative": "Die Mindestnutzung darf nicht negativ sein"
       },
       "enableTieredPricing": "Aktivieren Sie gestaffelte Preise"
     },
     "title": "Nutzungsbasierte Konfiguration",
+    "recordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diesen Dienst abzurechnen.",
     "tiers": {
       "title": "Preisstufen",
       "addTier": "Stufe hinzufügen",

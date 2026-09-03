@@ -315,12 +315,13 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Umbral de uso mínimo",
-        "help": "Uso mínimo facturable por período (0 sin mínimo)",
+        "help": "Mínimo aplicado al uso registrado (0 para sin mínimo). Solo se aplica cuando el período tiene un registro de uso — incluso un cero explícito — y nunca genera un cargo por sí solo.",
         "errorNegative": "El uso mínimo no puede ser negativo"
       },
       "enableTieredPricing": "Habilitar precios escalonados"
     },
     "title": "Configuración basada en el uso",
+    "recordDrivenNote": "Los servicios por uso se facturan según el uso registrado en el seguimiento de uso para cada período de servicio. Un período sin registro de uso no genera cargo: registre el uso (o un cero explícito) en cada período para facturar este servicio.",
     "tiers": {
       "title": "Niveles de precios",
       "addTier": "Agregar nivel",

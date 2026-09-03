@@ -315,12 +315,13 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Seuil d'utilisation minimum",
-        "help": "Utilisation minimale facturable par période (0 pour aucun minimum)",
+        "help": "Plancher appliqué à l'utilisation enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement d'utilisation — même un zéro explicite — et ne crée jamais de frais à lui seul.",
         "errorNegative": "L'utilisation minimale ne peut pas être négative"
       },
       "enableTieredPricing": "Activer la tarification échelonnée"
     },
     "title": "Configuration basée sur l'utilisation",
+    "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ce service.",
     "tiers": {
       "title": "Niveaux de tarification",
       "addTier": "Ajouter un niveau",

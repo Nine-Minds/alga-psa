@@ -320,6 +320,7 @@
       "noContractLinesDescription": "Voeg contractregels toe om te definiëren wat in dit contract is inbegrepen",
       "noContractLinesYet": "Nog geen contractregels",
       "noServicesConfigured": "Geen services geconfigureerd",
+      "billedOnRecordedUsage": "Gefactureerd op basis van geregistreerd verbruik",
       "serviceCountOne": "{{count}} dienst",
       "serviceCountOther": "{{count}} diensten"
     },

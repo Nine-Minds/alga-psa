@@ -320,6 +320,7 @@
       "noContractLinesDescription": "Fügen Sie Vertragslinien hinzu, um festzulegen, was in diesem Vertrag enthalten ist",
       "noContractLinesYet": "Noch keine Vertragslinien",
       "noServicesConfigured": "Keine Services konfiguriert",
+      "billedOnRecordedUsage": "Abrechnung nach erfasstem Verbrauch",
       "serviceCountOne": "{{count}} Service",
       "serviceCountOther": "{{count}} Services"
     },

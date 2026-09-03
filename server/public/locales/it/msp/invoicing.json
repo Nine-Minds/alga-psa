@@ -100,7 +100,8 @@
       "reverseInvoice": "Fattura inversa",
       "deleteInvoice": "Elimina fattura",
       "closePreview": "Chiudi anteprima",
-      "generateInvoice": "Genera fattura"
+      "generateInvoice": "Genera fattura",
+      "recordUsage": "Registra utilizzo"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +164,9 @@
           "total": "Totale"
         },
         "generating": "Generazione...",
-        "generateError": "Impossibile generare la fattura dall'anteprima"
+        "generateError": "Impossibile generare la fattura dall'anteprima",
+        "missingUsageHeading": "Nessun utilizzo registrato per questo periodo",
+        "missingUsageService": "{{service}}: nessun record di utilizzo dal {{periodStart}} al {{periodEnd}}"
       },
       "poOverage": {
         "title": "Eccessioni del limite dell'ordine di acquisto",
@@ -344,6 +347,7 @@
       "updateFailed": "Errore durante l'aggiornamento della fattura",
       "generateFailed": "Errore nella generazione della fattura",
       "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita e riprova.",
+      "USAGE_RECORDS_MISSING": "Nessun record di utilizzo idoneo per {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra l'utilizzo per questo periodo (o una voce di utilizzo zero) per fatturare questi servizi.",
       "CLIENT_NOT_FOUND": "Il cliente selezionato non è stato trovato. Aggiorna la pagina e riprova.",
       "SERVICE_NOT_FOUND": "Il servizio {{serviceId}} non è stato trovato. Aggiorna la pagina e riprova.",
       "INVALID_QUANTITY": "La quantità deve essere maggiore di zero.",

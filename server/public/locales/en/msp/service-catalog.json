@@ -319,6 +319,7 @@
   },
   "usageConfig": {
     "title": "Usage-Based Configuration",
+    "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill this service.",
     "defaults": {
       "unitOfMeasure": "Unit"
     },
@@ -332,7 +333,7 @@
       "minimumUsage": {
         "label": "Minimum Usage Threshold",
         "placeholder": "0",
-        "help": "Minimum billable usage per period (0 for no minimum)",
+        "help": "Floor applied to recorded usage (0 for no minimum). It only applies when the period has a usage record — even an explicit zero — and never creates a charge on its own.",
         "errorNegative": "Minimum usage cannot be negative"
       },
       "enableTieredPricing": "Enable Tiered Pricing"

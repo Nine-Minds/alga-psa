@@ -34,6 +34,7 @@ function buildThenableQuery(result: any) {
   builder.groupBy = vi.fn(() => builder);
   builder.orderBy = vi.fn(() => builder);
   builder.sum = vi.fn(() => builder);
+  builder.max = vi.fn(() => builder);
   builder.andWhere = vi.fn((arg: any) => {
     if (typeof arg === 'function') {
       const callbackBuilder = {
@@ -147,6 +148,7 @@ describe('contractReportActions expiration report service-period basis', () => {
         queue_status: 'open',
         days_until_expiration: 30,
         monthly_value: 15000,
+        has_variable_usage: false,
         auto_renew: false,
       },
     ]);

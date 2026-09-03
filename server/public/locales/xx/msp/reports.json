@@ -241,7 +241,8 @@
     "summary": {
       "totalMRR": {
         "title": "⟦Ŧȯŧȧŀ ḾŘŘ⟧",
-        "subtitle": "⟦Ḿȯƞŧħŀẏ Řḗƈŭřřīƞɠ Řḗṽḗƞŭḗ⟧"
+        "subtitle": "⟦Ƒīẋḗḓ Ḿȯƞŧħŀẏ Řḗƈŭřřīƞɠ Řḗṽḗƞŭḗ⟧",
+        "variableUsageNote": "⟦{{count}} ȧƈŧīṽḗ ƈȯƞŧřȧƈŧş ȧŀşȯ ƀīŀŀ ṽȧřīȧƀŀḗ ŭşȧɠḗ (ƞȯŧ īƞƈŀŭḓḗḓ)⟧"
       },
       "ytdRevenue": {
         "title": "⟦ẎŦḒ Řḗṽḗƞŭḗ⟧",
@@ -302,7 +303,8 @@
       "revenueYtd": "⟦Řḗṽḗƞŭḗ (ẎŦḒ)⟧",
       "costYtd": "⟦Ƈȯşŧ (ẎŦḒ)⟧",
       "profit": "⟦Ƥřȯƒīŧ⟧",
-      "margin": "⟦Ḿȧřɠīƞ⟧"
+      "margin": "⟦Ḿȧřɠīƞ⟧",
+      "plusVariableUsage": "⟦+ ṽȧřīȧƀŀḗ ŭşȧɠḗ⟧"
     },
     "statusValues": {
       "active": "⟦Ȧƈŧīṽḗ⟧",

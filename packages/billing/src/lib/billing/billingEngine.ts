@@ -34,6 +34,7 @@ import {
   IClientContractLineCycle,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
+  IUsageServicePeriodStatus,
   BillingCycleType,
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
   RECURRING_RANGE_SEMANTICS,
@@ -111,6 +112,12 @@ import {
 interface ContractObligationSink {
   obligations: UnpricedContractBillingObligation[];
   taxContexts: Record<string, ChargeComputeTaxContext>;
+  /**
+   * Usage-billed services whose due service period has no eligible
+   * usage_tracking record. Usage billing is record-driven; these statuses let
+   * callers surface "missing usage" instead of a silent empty result.
+   */
+  usageStatuses?: IUsageServicePeriodStatus[];
 }
 import { getClientDefaultBillingProfileId } from "./billingProfileLookup";
 import { listSeparatelyBillingProfiles } from "@alga-psa/shared/billingClients/billingProfileSettings";
@@ -1753,6 +1760,7 @@ export class BillingEngine {
 
     const contractObligations: UnpricedContractBillingObligation[] = [];
     const contractTaxContexts: Record<string, ChargeComputeTaxContext> = {};
+    const usageServicePeriodStatuses: IUsageServicePeriodStatus[] = [];
     for (const clientContractLine of clientContractLines) {
       console.log(
         `Processing contract line: ${clientContractLine.contract_line_name}`,
@@ -1856,6 +1864,9 @@ export class BillingEngine {
       for (const sink of familyObligationSinks) {
         contractObligations.push(...sink.obligations);
         Object.assign(contractTaxContexts, sink.taxContexts);
+        if (sink.usageStatuses) {
+          usageServicePeriodStatuses.push(...sink.usageStatuses);
+        }
       }
     }
 
@@ -2015,13 +2026,19 @@ export class BillingEngine {
       canonical,
     );
 
+    const usageStatusField =
+      usageServicePeriodStatuses.length > 0
+        ? { usageServicePeriodStatuses }
+        : {};
+
     return projectBillingContext
       ? {
           ...canonicalFinalCharges,
+          ...usageStatusField,
           projectCapThresholdCrossings: capResult.thresholdCrossings,
           warnings: projectMaterialWarnings,
         }
-      : canonicalFinalCharges;
+      : { ...canonicalFinalCharges, ...usageStatusField };
   }
 
   /**
@@ -5319,6 +5336,63 @@ export class BillingEngine {
       ); // Fetch tax_rate_id
 
     const usageRecords = await usageRecordQuery;
+
+    // Usage billing is record-driven: a configured service with no eligible
+    // usage record in the due period produces no charge. Report those services
+    // explicitly so preview can distinguish "missing usage" from a valid zero
+    // record; a positive minimum_usage is a floor applied only when a record
+    // exists and never creates a charge on its own.
+    //
+    // This loader runs for every contract line, and the configuredServiceIds
+    // fallback lists all line services regardless of billing method. Only
+    // services that are genuinely usage-billed — explicit Usage configs, or
+    // any service on a Usage-type line — may be reported as missing usage.
+    // System-managed default lines are attribution-only catch-alls, not
+    // authored usage commitments; absence of records there is normal.
+    const usageBilledServiceIds =
+      clientContractLine.is_system_managed_default === true
+        ? []
+        : serviceConfigMap.size > 0
+          ? Array.from(serviceConfigMap.keys())
+          : clientContractLine.contract_line_type === "Usage"
+            ? configuredServiceIds
+            : [];
+    const serviceIdsWithRecords = new Set<string>(
+      usageRecords.map((record: { service_id: string }) => record.service_id),
+    );
+    const serviceIdsWithoutRecords = usageBilledServiceIds.filter(
+      (serviceId) => !serviceIdsWithRecords.has(serviceId),
+    );
+    if (serviceIdsWithoutRecords.length > 0) {
+      const missingServiceNames = (await db
+        .table<{ service_id: string; service_name: string | null }>(
+          "service_catalog",
+        )
+        .where({ tenant: this.tenant })
+        .whereIn("service_id", serviceIdsWithoutRecords)
+        .select("service_id", "service_name")) as Array<{
+        service_id: string;
+        service_name: string | null;
+      }>;
+      const nameByServiceId = new Map(
+        missingServiceNames.map((row) => [row.service_id, row.service_name]),
+      );
+      obligationSink.usageStatuses = obligationSink.usageStatuses ?? [];
+      for (const serviceId of serviceIdsWithoutRecords) {
+        obligationSink.usageStatuses.push({
+          client_contract_line_id: clientContractLine.client_contract_line_id,
+          contract_line_name: clientContractLine.contract_line_name,
+          service_id: serviceId,
+          service_name: nameByServiceId.get(serviceId) ?? null,
+          service_period_start: servicePeriodStart,
+          service_period_end: servicePeriodEnd,
+          status: "missing_usage",
+          minimum_usage: Number(
+            serviceConfigMap.get(serviceId)?.config.minimum_usage ?? 0,
+          ),
+        });
+      }
+    }
 
     const obligation = {
       kind: "usage",

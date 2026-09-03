@@ -2,7 +2,7 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
-import type { BillingProfileSource } from './billing.interfaces';
+import type { BillingProfileSource, IUsageServicePeriodStatus } from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -329,11 +329,17 @@ export interface IConditionalRule {
  * for localized, actionable UI remediation. Absent for unknown/internal failures,
  * which keep the generic error string. Only allowlisted codes belong here.
  */
-export type RecurringInvoiceFailureCode = 'NO_BILLING_EMAIL';
+export type RecurringInvoiceFailureCode = 'NO_BILLING_EMAIL' | 'USAGE_RECORDS_MISSING';
 
 export type PreviewInvoiceResponse = {
   success: true;
   data: WasmInvoiceViewModel; // Use the imported ViewModel alias
+  /**
+   * Usage-billed services in the previewed window whose due service period has
+   * no eligible usage record. Present when the preview still has other charges;
+   * a preview with no charges at all fails with USAGE_RECORDS_MISSING instead.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 } | {
   success: false;
   error: string;

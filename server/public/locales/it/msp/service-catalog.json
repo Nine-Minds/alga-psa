@@ -315,12 +315,13 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Soglia di utilizzo minimo",
-        "help": "Utilizzo minimo fatturabile per periodo (0 per nessun minimo)",
+        "help": "Soglia minima applicata all'utilizzo registrato (0 per nessun minimo). Si applica solo quando il periodo ha un record di utilizzo — anche uno zero esplicito — e non crea mai un addebito da sola.",
         "errorNegative": "L'utilizzo minimo non può essere negativo"
       },
       "enableTieredPricing": "Abilita prezzi differenziati"
     },
     "title": "Configurazione basata sull'utilizzo",
+    "recordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questo servizio.",
     "tiers": {
       "title": "Livelli di prezzo",
       "addTier": "Aggiungi livello",

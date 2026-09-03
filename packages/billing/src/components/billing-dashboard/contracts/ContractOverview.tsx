@@ -56,6 +56,7 @@ const ContractLineCard: React.FC<{
   formatContractLineType: (value: string) => string;
   includedServicesLabel: string;
   noServicesConfiguredLabel: string;
+  billedOnRecordedUsageLabel: string;
 }> = ({
   line,
   isExpanded,
@@ -67,6 +68,7 @@ const ContractLineCard: React.FC<{
   formatContractLineType,
   includedServicesLabel,
   noServicesConfiguredLabel,
+  billedOnRecordedUsageLabel,
 }) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
@@ -119,8 +121,21 @@ const ContractLineCard: React.FC<{
               >
                 <span className="text-sm text-[rgb(var(--color-text-700))]">{service.service_name}</span>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {service.quantity && service.quantity > 1 && (
+                  {/* Usage services bill from recorded usage only: never show a
+                      configured quantity that billing does not consume. */}
+                  {line.contract_line_type !== 'Usage' && service.quantity != null && service.quantity > 1 && (
                     <span>x{service.quantity}</span>
+                  )}
+                  {line.contract_line_type === 'Usage' && (
+                    <a
+                      href={`/msp/billing?tab=usage-tracking&serviceId=${service.service_id}`}
+                      className="italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                      data-testid={`usage-recorded-usage-hint-${service.service_id}`}
+                      onClick={(event) => event.stopPropagation()}
+                      title={billedOnRecordedUsageLabel}
+                    >
+                      {billedOnRecordedUsageLabel}
+                    </a>
                   )}
                   {service.custom_rate !== null && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
@@ -226,6 +241,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
   ), [t]);
   const includedServicesLabel = t('contractOverview.lines.includedServices', { defaultValue: 'Included Services' });
   const noServicesConfiguredLabel = t('contractOverview.lines.noServicesConfigured', { defaultValue: 'No services configured' });
+  const billedOnRecordedUsageLabel = t('contractOverview.lines.billedOnRecordedUsage', { defaultValue: 'Billed on recorded usage' });
 
   if (isLoading) {
     return (
@@ -375,6 +391,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   formatContractLineType={formatContractLineType}
                   includedServicesLabel={includedServicesLabel}
                   noServicesConfiguredLabel={noServicesConfiguredLabel}
+                  billedOnRecordedUsageLabel={billedOnRecordedUsageLabel}
                 />
               ))}
             </div>

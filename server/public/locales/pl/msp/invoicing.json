@@ -116,7 +116,8 @@
       "closePreview": "Zamknij podgląd",
       "generateInvoice": "Wygeneruj fakturę",
       "generateSelected_few": "Generuj faktury za wybrane okresy ({{count}})",
-      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})"
+      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})",
+      "recordUsage": "Zarejestruj użycie"
     },
     "dialogs": {
       "reverse": {
@@ -181,7 +182,9 @@
         "generating": "Generowanie...",
         "generateError": "Nie udało się wygenerować faktury z podglądu",
         "summary_few": "Wybrano {{count}} faktury",
-        "summary_many": "Wybrano {{count}} faktur"
+        "summary_many": "Wybrano {{count}} faktur",
+        "missingUsageHeading": "Nie zarejestrowano użycia dla tego okresu",
+        "missingUsageService": "{{service}}: brak rekordów użycia od {{periodStart}} do {{periodEnd}}"
       },
       "poOverage": {
         "title": "Przekroczenie limitu zamówienia zakupu",
@@ -362,6 +365,7 @@
       "updateFailed": "Błąd podczas aktualizowania faktury",
       "generateFailed": "Błąd podczas generowania faktury",
       "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej i spróbuj ponownie.",
+      "USAGE_RECORDS_MISSING": "Brak kwalifikujących się rekordów użycia dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}}. Zarejestruj użycie dla tego okresu (lub wpis zerowego użycia), aby rozliczyć te usługi.",
       "CLIENT_NOT_FOUND": "Nie znaleziono wybranego klienta. Odśwież stronę i spróbuj ponownie.",
       "SERVICE_NOT_FOUND": "Nie znaleziono usługi {{serviceId}}. Odśwież stronę i spróbuj ponownie.",
       "INVALID_QUANTITY": "Ilość musi być większa od zera.",

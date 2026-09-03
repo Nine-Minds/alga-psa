@@ -37,7 +37,7 @@ import {
   DEFAULT_RECURRING_SERVICE_PERIOD_DUE_SELECTION_STATES,
 } from '@alga-psa/types';
 import { WasmInvoiceViewModel } from '@alga-psa/types';
-import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from '@alga-psa/types';
+import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
 import { createTenantKnex } from '@alga-psa/db';
@@ -77,7 +77,7 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY, NO_BILLING_EMAIL_MESSAGE_KEY } from './invoiceGeneration.constants';
+import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY, NO_BILLING_EMAIL_MESSAGE_KEY, USAGE_RECORDS_MISSING_MESSAGE_KEY } from './invoiceGeneration.constants';
 import {
   ManualInvoiceError,
   type HandledManualInvoiceErrorCode,
@@ -604,6 +604,34 @@ function buildPreviewInvoiceFailure(
 }
 
 /**
+ * Builds the coded `USAGE_RECORDS_MISSING` failure for a preview window whose
+ * usage-billed services have no eligible usage records. Usage billing is
+ * record-driven: no record means missing usage — not zero and not an error —
+ * so the failure names the services and the applicable service period and the
+ * UI routes the user to record usage for that period.
+ */
+function buildMissingUsageRecordsError(
+  statuses: IUsageServicePeriodStatus[],
+): ManualInvoiceError {
+  const serviceNames = Array.from(
+    new Set(
+      statuses.map((status) => status.service_name ?? status.service_id),
+    ),
+  );
+  const periodStart = statuses[0].service_period_start;
+  const periodEnd = statuses[0].service_period_end;
+  return new ManualInvoiceError(
+    'USAGE_RECORDS_MISSING',
+    `No eligible usage records for ${serviceNames.join(', ')} in the service period ${periodStart} to ${periodEnd}. Record usage for this period (or a zero-usage entry) to bill these services.`,
+    {
+      services: serviceNames.join(', '),
+      periodStart,
+      periodEnd,
+    },
+  );
+}
+
+/**
  * Maps a preview failure to the user-safe message plus the structured, known
  * failure (code/params) the UI needs to render localized, actionable guidance.
  * Unknown/internal failures carry no code, so the UI keeps the generic string.
@@ -659,10 +687,13 @@ function previewInvoiceErrorInfo(error: unknown): {
   // so preview surfaces the same localized remediation as its sibling flows.
   // Only the allowlisted NO_BILLING_EMAIL code crosses; unsupported codes take
   // the generic fallback so raw validation detail never reaches the user.
-  if (error instanceof ManualInvoiceError && error.code === 'NO_BILLING_EMAIL') {
+  if (
+    error instanceof ManualInvoiceError &&
+    (error.code === 'NO_BILLING_EMAIL' || error.code === 'USAGE_RECORDS_MISSING')
+  ) {
     return {
       message: error.message,
-      code: 'NO_BILLING_EMAIL',
+      code: error.code,
       params: error.params,
     };
   }
@@ -699,6 +730,8 @@ function manualInvoiceErrorMessageKey(
   switch (code) {
     case 'NO_BILLING_EMAIL':
       return NO_BILLING_EMAIL_MESSAGE_KEY;
+    case 'USAGE_RECORDS_MISSING':
+      return USAGE_RECORDS_MISSING_MESSAGE_KEY;
     default:
       return undefined;
   }
@@ -1884,11 +1917,22 @@ async function adaptToWasmViewModel(
   };
 }
 
+interface BuiltPreviewInvoice {
+  viewModel: WasmInvoiceViewModel;
+  /**
+   * Usage-billed services in the previewed window whose due service period has
+   * no eligible usage record. Present alongside a successful preview when the
+   * window still has other charges (a window with no charges at all fails with
+   * the coded USAGE_RECORDS_MISSING error instead).
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+}
+
 async function buildPreviewInvoiceForSelectionInputs(params: {
   knex: Knex;
   tenant: string;
   selectorInputs: IRecurringDueSelectionInput[];
-}): Promise<WasmInvoiceViewModel> {
+}): Promise<BuiltPreviewInvoice> {
   const { knex, tenant, selectorInputs } = params;
   const canonicalSelection = assertSameRecurringSelectionWindow(selectorInputs);
   const client_id = canonicalSelection.clientId;
@@ -1934,6 +1978,15 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   }
 
   if (billingResult.charges.length === 0) {
+    const missingUsageStatuses = billingResult.usageServicePeriodStatuses ?? [];
+    if (missingUsageStatuses.length > 0) {
+      // Not a generic empty preview: usage-billed services are due but have no
+      // usage records for the period. Fail with the coded, actionable state.
+      throw withRecurringWindowErrorContext(
+        buildMissingUsageRecordsError(missingUsageStatuses),
+        canonicalSelection,
+      );
+    }
     throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
   }
 
@@ -2124,7 +2177,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     client?.tax_region || '',
   );
 
-  return adaptToWasmViewModel(
+  const viewModel = await adaptToWasmViewModel(
     billingResult,
     client,
     invoiceItems,
@@ -2132,13 +2185,21 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
     previewTax,
     tenant,
   );
+
+  const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
+  return {
+    viewModel,
+    ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
+      ? { usageServicePeriodStatuses }
+      : {}),
+  };
 }
 
 async function buildPreviewInvoiceForSelectionInput(params: {
   knex: Knex;
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
-}): Promise<WasmInvoiceViewModel> {
+}): Promise<BuiltPreviewInvoice> {
   return buildPreviewInvoiceForSelectionInputs({
     knex: params.knex,
     tenant: params.tenant,
@@ -2158,6 +2219,12 @@ export type RecurringGroupedPreviewResponse = {
     previewGroupKey: string;
     data: WasmInvoiceViewModel;
     selectorInputs: IRecurringDueSelectionInput[];
+    /**
+     * Usage-billed services in this preview's window whose due service period
+     * has no eligible usage record; the preview UI surfaces them so recorded
+     * charges are never mistaken for "all usage billed".
+     */
+    usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
   }>;
 } | {
   success: false;
@@ -2201,15 +2268,21 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
     );
 
     const previews = await Promise.all(
-      normalizedGroupedSelections.map(async (group) => ({
-        previewGroupKey: group.previewGroupKey,
-        selectorInputs: group.selectorInputs,
-        data: await buildPreviewInvoiceForSelectionInputs({
+      normalizedGroupedSelections.map(async (group) => {
+        const preview = await buildPreviewInvoiceForSelectionInputs({
           knex,
           tenant,
           selectorInputs: group.selectorInputs,
-        }),
-      })),
+        });
+        return {
+          previewGroupKey: group.previewGroupKey,
+          selectorInputs: group.selectorInputs,
+          data: preview.viewModel,
+          ...(preview.usageServicePeriodStatuses
+            ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
+            : {}),
+        };
+      }),
     );
 
     return {
@@ -2265,13 +2338,17 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       tenant,
       selectorInput,
     });
+    const preview = await buildPreviewInvoiceForSelectionInput({
+      knex,
+      tenant,
+      selectorInput: normalizedSelectorInput,
+    });
     return {
       success: true,
-      data: await buildPreviewInvoiceForSelectionInput({
-        knex,
-        tenant,
-        selectorInput: normalizedSelectorInput,
-      }),
+      data: preview.viewModel,
+      ...(preview.usageServicePeriodStatuses
+        ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
+        : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2345,13 +2422,17 @@ export const previewInvoice = withAuth(async (
       windowEnd: cycleEnd,
     });
 
+    const preview = await buildPreviewInvoiceForSelectionInput({
+      knex,
+      tenant,
+      selectorInput,
+    });
     return {
       success: true,
-      data: await buildPreviewInvoiceForSelectionInput({
-        knex,
-        tenant,
-        selectorInput,
-      })
+      data: preview.viewModel,
+      ...(preview.usageServicePeriodStatuses
+        ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
+        : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(

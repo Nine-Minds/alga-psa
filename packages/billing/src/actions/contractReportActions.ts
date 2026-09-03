@@ -17,8 +17,16 @@ export interface ContractRevenue {
   client_id: string;
   client_name: string;
   logoUrl?: string | null;
+  /**
+   * Fixed recurring value in minor units. Usage lines bill recorded usage —
+   * variable revenue that is excluded here and flagged via
+   * {@link ContractRevenue.has_variable_usage} so an active usage contract is
+   * never silently presented as zero recurring revenue.
+   */
   monthly_recurring: number;
   total_billed_ytd: number;
+  /** True when the contract has usage-billed lines with variable, record-driven revenue. */
+  has_variable_usage: boolean;
   status: 'active' | 'upcoming' | 'expired';
 }
 
@@ -33,7 +41,10 @@ export interface ContractExpiration {
   renewal_mode?: 'none' | 'manual' | 'auto' | null;
   queue_status?: RenewalWorkItemStatus | null;
   days_until_expiration: number;
+  /** Fixed recurring value in minor units; variable usage revenue is excluded. */
   monthly_value: number;
+  /** True when the contract has usage-billed lines with variable, record-driven revenue. */
+  has_variable_usage: boolean;
   auto_renew: boolean;
 }
 
@@ -50,10 +61,13 @@ export interface BucketUsage {
 }
 
 export interface ContractReportSummary {
+  /** Fixed monthly recurring revenue; variable usage revenue is excluded, never counted as zero. */
   totalMRR: number;
   totalYTD: number;
   activeContractCount: number;
   atRiskDecisionCount: number;
+  /** Active contracts whose revenue includes variable, record-driven usage billing. */
+  variableUsageContractCount: number;
 }
 
 type ContractRevenueFactRow = {
@@ -81,6 +95,7 @@ type ContractRevenueAssignmentRow = {
 type ContractLineRateRow = {
   contract_id: string;
   custom_rate: string | number | null;
+  contract_line_type: string | null;
 };
 
 type ContractExpirationRow = {
@@ -279,6 +294,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         client_name: row.client_name || 'Unknown Client',
         monthly_recurring: 0,
         total_billed_ytd: invoiceMap.get(row.client_contract_id) || 0,
+        has_variable_usage: false,
         status,
       });
     }
@@ -286,13 +302,21 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     const contractLines = (await db.table('contract_lines as cl')
       .select(
         'cl.contract_id',
-        'cl.custom_rate'
+        'cl.custom_rate',
+        'cl.contract_line_type'
       )) as unknown as ContractLineRateRow[];
 
     for (const contractLine of contractLines) {
-      const rateInCents = Math.round(Number(contractLine.custom_rate) || 0);
+      // Usage lines bill recorded usage: their revenue is variable and must be
+      // flagged, not summed into fixed MRR (nor silently treated as zero).
+      const isUsageLine = contractLine.contract_line_type === 'Usage';
+      const rateInCents = isUsageLine ? 0 : Math.round(Number(contractLine.custom_rate) || 0);
       for (const item of aggregatedMap.values()) {
         if (item.contract_id !== contractLine.contract_id) {
+          continue;
+        }
+        if (isUsageLine) {
+          item.has_variable_usage = true;
           continue;
         }
         item.monthly_recurring += rateInCents;
@@ -406,9 +430,11 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
 
       const key = row.client_contract_id;
       const monthlyValue = monthlyValues.get(key)?.monthlyValueCents ?? 0;
+      const hasVariableUsage = monthlyValues.get(key)?.hasVariableUsage ?? false;
       const existing = expirationMap.get(key);
       if (existing) {
         existing.monthly_value = monthlyValue;
+        existing.has_variable_usage = hasVariableUsage;
         continue;
       }
 
@@ -423,6 +449,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         queue_status: row.queue_status ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: monthlyValue,
+        has_variable_usage: hasVariableUsage,
         auto_renew: effectiveRenewalMode === 'auto'
       });
     }
@@ -574,6 +601,9 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     ).reduce((sum, amount) => sum + amount, 0);
 
     const activeContractCount = revenueData.filter((item) => item.status === 'active').length;
+    const variableUsageContractCount = revenueData.filter(
+      (item) => item.status === 'active' && item.has_variable_usage
+    ).length;
     const summaryTodayDateOnly = today.toISOString().slice(0, 10);
     const inNinetyDays = new Date(today);
     inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
@@ -603,7 +633,8 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
       totalMRR,
       totalYTD,
       activeContractCount,
-      atRiskDecisionCount
+      atRiskDecisionCount,
+      variableUsageContractCount
     };
   } catch (error) {
     console.error('Error fetching contract report summary:', error);

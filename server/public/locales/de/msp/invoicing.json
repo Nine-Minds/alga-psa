@@ -100,7 +100,8 @@
       "reverseInvoice": "Rechnung stornieren",
       "deleteInvoice": "Rechnung löschen",
       "closePreview": "Vorschau schließen",
-      "generateInvoice": "Rechnung erstellen"
+      "generateInvoice": "Rechnung erstellen",
+      "recordUsage": "Verbrauch erfassen"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +164,9 @@
           "total": "Gesamt"
         },
         "generating": "Generieren...",
-        "generateError": "Die Rechnung konnte aus der Vorschau nicht erstellt werden"
+        "generateError": "Die Rechnung konnte aus der Vorschau nicht erstellt werden",
+        "missingUsageHeading": "Für diesen Zeitraum wurde kein Verbrauch erfasst",
+        "missingUsageService": "{{service}}: keine Verbrauchsdatensätze für {{periodStart}} bis {{periodEnd}}"
       },
       "poOverage": {
         "title": "Überschreitungen des Bestelllimits",
@@ -344,6 +347,7 @@
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
       "generateFailed": "Fehler beim Generieren der Rechnung",
       "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest und versuche es erneut.",
+      "USAGE_RECORDS_MISSING": "Keine berücksichtigungsfähigen Verbrauchsdatensätze für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}}. Erfasse den Verbrauch für diesen Zeitraum (oder einen Null-Verbrauchseintrag), um diese Dienste abzurechnen.",
       "CLIENT_NOT_FOUND": "Der ausgewählte Kunde wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "SERVICE_NOT_FOUND": "Der Dienst {{serviceId}} wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "INVALID_QUANTITY": "Die Menge muss größer als null sein.",

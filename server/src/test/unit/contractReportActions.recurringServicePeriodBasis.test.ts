@@ -214,6 +214,7 @@ describe('contractReportActions recurring service-period basis', () => {
         logoUrl: null,
         monthly_recurring: 20000,
         total_billed_ytd: 12000,
+        has_variable_usage: false,
         status: 'active',
       },
     ]);

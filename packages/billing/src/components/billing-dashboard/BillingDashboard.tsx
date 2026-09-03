@@ -238,7 +238,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
         </Tabs.Content>
 
         <Tabs.Content value="usage-tracking">
-          <UsageTracking initialServices={initialServices} />
+          <UsageTracking
+            initialServices={initialServices}
+            initialClientId={searchParams?.get('clientId') ?? null}
+            initialServiceId={searchParams?.get('serviceId') ?? null}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="service-types">

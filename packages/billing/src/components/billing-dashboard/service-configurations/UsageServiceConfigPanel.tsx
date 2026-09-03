@@ -62,8 +62,12 @@ export function UsageServiceConfigPanel({
     setUnitOfMeasure(configuration.unit_of_measure || defaultUnitOfMeasure);
     setEnableTieredPricing(configuration.enable_tiered_pricing || false);
     setMinimumUsage(configuration.minimum_usage || 0);
-    
-    if (rateTiers) {
+
+    // The `rateTiers = []` default parameter is a fresh array identity every
+    // render; unconditionally mirroring it into state re-triggered this effect
+    // and looped the component whenever a parent passed non-memoized props.
+    // Only sync when there is actual tier data to mirror.
+    if (rateTiers.length > 0) {
       setTiers(
         rateTiers.map(tier => ({
           id: tier.tier_id || Date.now().toString(),
@@ -247,6 +251,15 @@ export function UsageServiceConfigPanel({
         <h3 className="text-md font-medium">
           {t('usageConfig.title', { defaultValue: 'Usage-Based Configuration' })}
         </h3>
+        <p
+          className="text-sm text-muted-foreground"
+          data-testid="usage-config-record-driven-note"
+        >
+          {t('usageConfig.recordDrivenNote', {
+            defaultValue:
+              'Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill this service.',
+          })}
+        </p>
         <div className="grid gap-4">
           <div>
             <Label htmlFor="usage-unit-of-measure">
@@ -298,7 +311,8 @@ export function UsageServiceConfigPanel({
               ) : (
                 <p className="text-sm text-muted-foreground mt-1">
                   {t('usageConfig.fields.minimumUsage.help', {
-                    defaultValue: 'Minimum billable usage per period (0 for no minimum)',
+                    defaultValue:
+                      'Floor applied to recorded usage (0 for no minimum). It only applies when the period has a usage record — even an explicit zero — and never creates a charge on its own.',
                   })}
                 </p>
               )}

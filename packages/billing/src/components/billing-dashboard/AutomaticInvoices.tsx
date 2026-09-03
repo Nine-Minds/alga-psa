@@ -28,7 +28,7 @@ import {
   type RecurringBillingRunInvoiceFailure,
 } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
-import { WasmInvoiceViewModel, type PreviewInvoiceResponse } from '@alga-psa/types';
+import { WasmInvoiceViewModel, type PreviewInvoiceResponse, type IUsageServicePeriodStatus, type RecurringInvoiceFailureCode } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
@@ -729,12 +729,20 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   } | null>(null);
   // State to hold preview data and the canonical selector metadata used to generate it.
   const [previewState, setPreviewState] = useState<{
-    previews: Array<{ previewGroupKey: string; data: WasmInvoiceViewModel; selectorInputs: IRecurringDueSelectionInput[] }>;
+    previews: Array<{
+      previewGroupKey: string;
+      data: WasmInvoiceViewModel;
+      selectorInputs: IRecurringDueSelectionInput[];
+      usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+    }>;
     invoiceCount: number;
     billingCycleId: string | null;
     executionIdentityKey: string | null;
     selectorInput: IRecurringDueSelectionInput | null;
   }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null });
+  // Structured code of the last preview failure; drives actionable remediation
+  // (e.g. USAGE_RECORDS_MISSING links to Usage Tracking for the period).
+  const [previewFailureCode, setPreviewFailureCode] = useState<RecurringInvoiceFailureCode | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
@@ -1506,6 +1514,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setIsPreviewLoading(true);
     setErrorOperation('finalize');
     setErrors({}); // Clear previous errors
+    setPreviewFailureCode(null);
     const response = await previewGroupedInvoicesForSelectionInputs(
       groups.map((group) => ({
         previewGroupKey: group.groupKey,
@@ -1531,6 +1540,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         executionIdentityKey: null,
         selectorInput: null,
       }); // Clear preview state on error
+      setPreviewFailureCode(response.code ?? null);
       setErrors({
         preview: localizePreviewFailure(t, response)
       });
@@ -3006,6 +3016,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             selectorInput: null,
           });
           setErrors({}); // Clear preview-specific errors on close
+          setPreviewFailureCode(null);
         }}
         title={t('automaticInvoices.dialogs.preview.title', {
           defaultValue: 'Invoice Preview',
@@ -3025,6 +3036,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   selectorInput: null,
                 }); // Reset state on close
                 setErrors({}); // Clear errors on close
+                setPreviewFailureCode(null);
               }}
               disabled={isGeneratingFromPreview} // Disable while generating
             >
@@ -3058,9 +3070,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             })}
           </DialogDescription>
           {errors.preview ? (
-            <div className="text-center py-8">
+            <div className="text-center py-8 space-y-4" data-testid="preview-failure-state">
               {/* Display error message if present */}
               <p className="text-destructive">{errors.preview}</p>
+              {previewFailureCode === 'USAGE_RECORDS_MISSING' && (
+                // Missing usage is an actionable state, not a dead end: usage
+                // billing only invoices recorded usage, so route the user to
+                // record the period's usage (or an explicit zero) directly.
+                <Button
+                  id="preview-record-usage-button"
+                  variant="outline"
+                  onClick={() => router.push('/msp/billing?tab=usage-tracking')}
+                >
+                  {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
+                </Button>
+              )}
             </div>
           ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
@@ -3082,6 +3106,41 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
+                  {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (
+                    // Usage billing invoices recorded usage only. These services
+                    // are due this period but have no usage records, so they are
+                    // absent from the preview rather than billed at zero.
+                    <div
+                      className="rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-sm text-[rgb(var(--badge-warning-text))]"
+                      data-testid={`preview-missing-usage-${previewEntry.previewGroupKey}`}
+                    >
+                      <p className="font-medium">
+                        {t('automaticInvoices.dialogs.preview.missingUsageHeading', {
+                          defaultValue: 'Usage not recorded for this period',
+                        })}
+                      </p>
+                      <ul className="mt-1 list-disc pl-5">
+                        {previewEntry.usageServicePeriodStatuses!.map((status) => (
+                          <li key={`${status.client_contract_line_id}:${status.service_id}`}>
+                            {t('automaticInvoices.dialogs.preview.missingUsageService', {
+                              service: status.service_name ?? status.service_id,
+                              periodStart: status.service_period_start,
+                              periodEnd: status.service_period_end,
+                              defaultValue: `${status.service_name ?? status.service_id}: no usage records for ${status.service_period_start} to ${status.service_period_end}`,
+                            })}
+                          </li>
+                        ))}
+                      </ul>
+                      <Button
+                        id={`preview-record-usage-${previewIndex}-button`}
+                        variant="outline"
+                        className="mt-2"
+                        onClick={() => router.push('/msp/billing?tab=usage-tracking')}
+                      >
+                        {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
+                      </Button>
+                    </div>
+                  )}
                   <div className="border-b pb-4">
                     <h4 className="font-semibold">
                       {t('automaticInvoices.dialogs.preview.sections.clientDetails', {

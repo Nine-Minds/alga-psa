@@ -1496,7 +1496,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                               })}
                                             </p>
                                           </div>
-                                          {serviceConfig.configuration.configuration_type !== 'Hourly' && (
+                                          {/* Usage configs bill recorded usage, not a configured
+                                              quantity — never badge a number billing ignores. */}
+                                          {serviceConfig.configuration.configuration_type !== 'Hourly'
+                                            && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                             <Badge className="chip-primary border-[rgb(var(--color-primary-200))]">
                                               {t('contractLines.services.quantityShort', {
                                                 defaultValue: 'Qty: {{quantity}}',
@@ -1528,8 +1531,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                       </div>
 
                                       <div className="grid gap-4 md:grid-cols-2">
-                                        {/* Quantity - Fixed and Usage only (not used for Hourly billing) */}
-                                        {serviceConfig.configuration.configuration_type !== 'Hourly' && (
+                                        {/* Quantity - Fixed-style allocations only. Hourly bills time
+                                            entries and Usage bills recorded usage_tracking records, so
+                                            neither consumes a configured quantity. */}
+                                        {serviceConfig.configuration.configuration_type !== 'Hourly'
+                                          && serviceConfig.configuration.configuration_type !== 'Usage' && (
                                           <div>
                                             <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                                               {line.contract_line_type === 'Fixed'

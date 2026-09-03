@@ -100,7 +100,8 @@
       "reverseInvoice": "Omgekeerde factuur",
       "deleteInvoice": "Factuur verwijderen",
       "closePreview": "Voorbeeld sluiten",
-      "generateInvoice": "Factuur genereren"
+      "generateInvoice": "Factuur genereren",
+      "recordUsage": "Verbruik registreren"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +164,9 @@
           "total": "Totaal"
         },
         "generating": "Genereren...",
-        "generateError": "Kan factuur niet genereren vanuit voorbeeld"
+        "generateError": "Kan factuur niet genereren vanuit voorbeeld",
+        "missingUsageHeading": "Geen verbruik geregistreerd voor deze periode",
+        "missingUsageService": "{{service}}: geen verbruiksrecords voor {{periodStart}} tot {{periodEnd}}"
       },
       "poOverage": {
         "title": "Overschrijdingen van inkooporderlimieten",
@@ -344,6 +347,7 @@
       "updateFailed": "Fout bij bijwerken factuur",
       "generateFailed": "Fout bij genereren factuur",
       "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in en probeer het opnieuw.",
+      "USAGE_RECORDS_MISSING": "Geen in aanmerking komende verbruiksrecords voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer het verbruik voor deze periode (of een invoer met nulverbruik) om deze services te factureren.",
       "CLIENT_NOT_FOUND": "De geselecteerde klant is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "SERVICE_NOT_FOUND": "Service {{serviceId}} is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "INVALID_QUANTITY": "De hoeveelheid moet groter zijn dan nul.",

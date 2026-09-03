@@ -100,7 +100,8 @@
       "reverseInvoice": "Annuler la facture",
       "deleteInvoice": "Supprimer la facture",
       "closePreview": "Fermer l'aperçu",
-      "generateInvoice": "Générer une facture"
+      "generateInvoice": "Générer une facture",
+      "recordUsage": "Enregistrer l'utilisation"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +164,9 @@
           "total": "Total"
         },
         "generating": "Générateur...",
-        "generateError": "Échec de la génération de la facture à partir de l'aperçu"
+        "generateError": "Échec de la génération de la facture à partir de l'aperçu",
+        "missingUsageHeading": "Aucune utilisation enregistrée pour cette période",
+        "missingUsageService": "{{service}} : aucun enregistrement d'utilisation du {{periodStart}} au {{periodEnd}}"
       },
       "poOverage": {
         "title": "Dépassements de la limite des bons de commande",
@@ -344,6 +347,7 @@
       "updateFailed": "Erreur lors de la mise à jour de la facture",
       "generateFailed": "Erreur lors de la génération de la facture",
       "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à l'emplacement de facturation ou par défaut, puis réessayez.",
+      "USAGE_RECORDS_MISSING": "Aucun enregistrement d'utilisation éligible pour {{services}} sur la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez l'utilisation pour cette période (ou une entrée d'utilisation nulle) afin de facturer ces services.",
       "CLIENT_NOT_FOUND": "Le client sélectionné est introuvable. Actualisez la page et réessayez.",
       "SERVICE_NOT_FOUND": "Le service {{serviceId}} est introuvable. Actualisez la page et réessayez.",
       "INVALID_QUANTITY": "La quantité doit être supérieure à zéro.",

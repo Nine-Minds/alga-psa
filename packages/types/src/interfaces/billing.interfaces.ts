@@ -185,6 +185,29 @@ export interface IAdjustment extends TenantEntity {
   amount: number;
 }
 
+/**
+ * Usage billing is record-driven: only explicit period-dated usage_tracking
+ * records create charges. When a usage-billed service has no eligible record
+ * in a due service period, the engine reports it here instead of silently
+ * producing nothing — absence of a record means "missing usage", never an
+ * implicit zero and never an automatic recurring baseline.
+ */
+export interface IUsageServicePeriodStatus {
+  client_contract_line_id: string;
+  contract_line_name?: string;
+  service_id: string;
+  service_name: string | null;
+  service_period_start: ISO8601String;
+  service_period_end: ISO8601String;
+  status: 'missing_usage';
+  /**
+   * Configured minimum for the service. A positive minimum is a floor applied
+   * only when an explicit usage record exists for the period; it never creates
+   * a charge on its own.
+   */
+  minimum_usage: number;
+}
+
 export interface IBillingResult extends TenantEntity {
   charges: IBillingCharge[];
   totalAmount: number;
@@ -192,6 +215,13 @@ export interface IBillingResult extends TenantEntity {
   adjustments: IAdjustment[];
   finalAmount: number;
   currency_code: string;
+  /**
+   * Usage-billed services in the calculated window whose due service period
+   * has no eligible usage record. Lets invoice preview distinguish
+   * "no eligible usage records for this period" from a valid zero-usage
+   * record and from calculation errors.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 }
 
 export interface IClientContractLine extends TenantEntity {
