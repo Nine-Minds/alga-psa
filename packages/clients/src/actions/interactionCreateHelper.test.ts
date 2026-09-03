@@ -265,6 +265,27 @@ describe('interactionCreateHelper', () => {
     );
   });
 
+  it('ignores a closed default status so new interactions do not start finished', async () => {
+    const trx = createLookupTrx({
+      statuses: [
+        { tenant: 'tenant-1', status_type: 'interaction', status_id: 'status-completed', is_default: true, is_closed: true, order_number: 3 },
+        { tenant: 'tenant-1', status_type: 'interaction', status_id: 'status-planned', is_default: false, is_closed: false, order_number: 1 },
+      ],
+    });
+
+    await createInteractionRecord({
+      tenant: 'tenant-1',
+      trx,
+      interactionData: interactionInput(),
+    });
+
+    expect(hoisted.addInteractionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status_id: 'status-planned' }),
+      'tenant-1',
+      trx,
+    );
+  });
+
   it('throws when the tenant has no open interaction status to fall back to', async () => {
     const trx = createLookupTrx({
       statuses: [

@@ -46,12 +46,13 @@ export async function getDefaultInteractionStatusId(trx: Knex.Transaction, tenan
     })
     .first();
 
-  if (defaultStatus) {
+  if (defaultStatus && !defaultStatus.is_closed) {
     return defaultStatus.status_id;
   }
 
-  // Tenants that cleared the (historically closed) default would otherwise be unable to
-  // log an interaction at all — fall back to the first open status instead.
+  // Tenants that cleared (or never repaired) the historically closed default would
+  // otherwise log every interaction as already finished — fall back to the first open
+  // status instead, exactly like the quick-add dialog does.
   const firstOpenStatus = await tenantDb(trx, tenant).table('statuses')
     .where({
       status_type: 'interaction',
