@@ -183,6 +183,10 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
   'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
   'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
+  // Ticket-time designer bindings suite (feature/invoice-layouts-ticket-level-
+  // billed-time-details) landed after the pass-0 snapshot; it asserts the
+  // non-time tables keep their recurring service-period binding suggestions.
+  'packages/billing/tests/invoiceDesignerTicketTimeBindings.test.ts',
   // The designer field picker now generates its per-document-kind options from
   // the binding catalogs, so the invoice line-item options — including the
   // persisted service-period boundaries — are declared here; it landed after

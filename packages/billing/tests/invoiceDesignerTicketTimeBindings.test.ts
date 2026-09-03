@@ -31,12 +31,14 @@ describe('invoice designer: billed-time collection discoverability', () => {
       'item.label',
       'item.description',
       'item.totalHours',
-      'item.rateLabel',
+      'item.rateDisplay',
       'item.totalAmount',
     ]);
-    // Rate presentation stays honest: rateLabel is text ("Mixed rates"
-    // when entries differ), never a blended currency value.
-    expect(presets.find((preset) => preset.key === 'item.rateLabel')?.type).toBe('text');
+    // Rate presentation stays honest: rateDisplay is the uniform minor-unit
+    // rate (currency column formats it with the render locale) or the
+    // "Mixed rates" text when entries differ — never a blended figure and
+    // never money pre-formatted with a hardcoded locale.
+    expect(presets.find((preset) => preset.key === 'item.rateDisplay')?.type).toBe('currency');
   });
 
   it('offers per-entry preset columns for timeEntries tables', () => {
@@ -88,7 +90,7 @@ describe('invoice designer: billed-time collection discoverability', () => {
       key: 'ticket:1', workItemType: 'ticket', workItemId: '1', ticketNumber: 'T-1',
       title: 't', description: 'd', label: 'l', dateStart: null, dateEnd: null,
       totalMinutes: 0, totalHours: 0, totalAmount: 0, hasMixedRates: false,
-      rate: null, rateLabel: '', entryCount: 0, entries: [],
+      rate: null, rateDisplay: 'Mixed rates', entryCount: 0, entries: [],
     };
     const entryShape: Record<string, unknown> = {
       id: 'e', itemId: null, workItemType: 'ticket', workItemId: '1', ticketNumber: 'T-1',

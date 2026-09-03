@@ -832,15 +832,22 @@ const buildStandardByLocationAst = (): TemplateAst => ({
 
 /**
  * Standard Invoice By Ticket — the classic line-items table followed by a
- * "Billed Time by Ticket" detail: one band per ticket (or project task /
- * ad-hoc fallback) sourced from the `ticketGroups` snapshot collection, with
- * the ticket's customer-visible description, per-entry date/hours/rate/amount
- * rows, and a ticket-level hours + amount subtotal. Rate is shown via
- * `rateLabel`, which reports "Mixed rates" instead of inventing one blended
- * figure when a ticket bills at more than one rate.
+ * "Billed Time by Ticket" summary sourced from the `ticketGroups` snapshot
+ * collection: one rolled-up row per ticket (or project task / ad-hoc
+ * fallback) with the ticket's customer-visible description, total billed
+ * hours, rate, and amount. Multiple time entries on a ticket aggregate into
+ * that single row; the Rate column renders `rateDisplay`, which is the
+ * uniform hourly rate (currency-formatted at render time) or "Mixed rates"
+ * when entries bill at more than one rate — never a blended figure.
+ *
+ * Individual time entries are deliberately not printed: a note under the
+ * summary directs the client to the portal for the per-entry breakdown.
+ * Custom layouts can still opt into per-entry detail via the `timeEntries`
+ * collection.
  *
  * Invoices without snapshot data (anything generated before the feature)
- * simply render zero bands — the layout stays valid and totals unchanged.
+ * render the summary's explicit empty state — totals stay driven by the line
+ * items and are unchanged.
  */
 const buildStandardByTicketAst = (): TemplateAst => ({
   kind: 'invoice-template-ast',
@@ -939,62 +946,43 @@ const buildStandardByTicketAst = (): TemplateAst => ({
           { id: 'line-total', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'total' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
         ],
       },
-      // ── Per-ticket billed-time bands ──────────────────────────────
-      // One band per ticketGroups row. Renders nothing at all on invoices
-      // without snapshot data, so legacy invoices are unaffected.
+      // ── Billed time by ticket (rolled-up summary) ─────────────────
+      // One row per ticketGroups entry: all of a ticket's time entries
+      // aggregate into a single Ticket | Description | Hours | Rate | Amount
+      // row. Legacy invoices (no snapshot data) render the explicit empty
+      // state instead of fabricated detail.
       {
-        id: 'ticket-bands',
-        type: 'stack',
-        direction: 'column',
-        style: { inline: { gap: '8px', margin: '0 0 16px 0' } },
-        repeat: { sourceBinding: { bindingId: 'ticketGroups' }, itemBinding: 'group' },
-        children: [
-          {
-            id: 'ticket-band-header',
-            type: 'stack',
-            direction: 'column',
-            style: { inline: { gap: '2px', backgroundColor: '#7c45d3', color: '#ffffff', padding: '6px 12px', borderRadius: '6px 6px 0 0' } },
-            children: [
-              { id: 'ticket-band-label', type: 'text', content: { type: 'path', path: 'label' }, style: { inline: { fontSize: '14px', fontWeight: 700, color: '#ffffff' } } },
-              { id: 'ticket-band-description', type: 'text', content: { type: 'path', path: 'description' }, style: { inline: { fontSize: '12px', color: '#ffffff', lineHeight: 1.4 } } },
-            ],
-          },
-          {
-            id: 'ticket-band-entries',
-            type: 'dynamic-table',
-            style: { inline: { margin: '0', border: '1px solid #e5e7eb', borderRadius: '0' } },
-            repeat: { sourceBinding: { bindingId: 'group.entries' }, itemBinding: 'entry' },
-            columns: [
-              { id: 'entry-date', header: { i18nKey: 'labels.date', defaultValue: 'Date' }, value: { type: 'path', path: 'date' }, format: 'date', style: { inline: { width: '22%' } } },
-              { id: 'entry-service', header: { i18nKey: 'labels.service', defaultValue: 'Service' }, value: { type: 'path', path: 'serviceName' }, style: { inline: { width: '32%' } } },
-              { id: 'entry-hours', header: { i18nKey: 'labels.hours', defaultValue: 'Hours' }, value: { type: 'path', path: 'hours' }, format: 'number', style: { inline: { textAlign: 'right', width: '12%' } } },
-              { id: 'entry-rate', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'rate' }, format: 'currency', style: { inline: { textAlign: 'right', width: '16%' } } },
-              { id: 'entry-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'amount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '18%' } } },
-            ],
-          },
-          {
-            id: 'ticket-band-subtotal',
-            type: 'stack',
-            direction: 'row',
-            style: { inline: { justifyContent: 'space-between', padding: '6px 12px', backgroundColor: '#f9fafb', borderRadius: '0 0 6px 6px' } },
-            children: [
-              {
-                id: 'ticket-band-subtotal-label',
-                type: 'text',
-                content: {
-                  type: 'template',
-                  template: 'Ticket total — {{hours}} hrs @ {{rate}}',
-                  args: {
-                    hours: { type: 'path', path: 'totalHours' },
-                    rate: { type: 'path', path: 'rateLabel' },
-                  },
-                },
-                style: { inline: { fontWeight: 700 } },
-              },
-              { id: 'ticket-band-subtotal-value', type: 'text', content: { type: 'path', path: 'totalAmount|currency' }, style: { inline: { fontWeight: 700, textAlign: 'right' } } },
-            ],
-          },
+        id: 'billed-time-heading',
+        type: 'text',
+        content: { type: 'i18n', i18nKey: 'labels.billedTimeByTicket', defaultValue: 'Billed Time by Ticket' },
+        style: { inline: { fontSize: '14px', fontWeight: 700, margin: '0 0 6px 0' } },
+      },
+      {
+        id: 'ticket-time-summary',
+        type: 'dynamic-table',
+        style: { inline: { margin: '0 0 6px 0', border: '1px solid #e5e7eb', borderRadius: '10px' } },
+        repeat: { sourceBinding: { bindingId: 'ticketGroups' }, itemBinding: 'item' },
+        emptyStateText: {
+          i18nKey: 'labels.emptyState.noBilledTimeDetail',
+          defaultValue: 'No billed-time detail is available for this invoice.',
+        },
+        columns: [
+          { id: 'ticket', header: { i18nKey: 'labels.ticket', defaultValue: 'Ticket' }, value: { type: 'path', path: 'label' }, style: { inline: { width: '26%' } } },
+          { id: 'ticket-description', header: { i18nKey: 'labels.description', defaultValue: 'Description' }, value: { type: 'path', path: 'description' }, style: { inline: { width: '34%' } } },
+          { id: 'ticket-hours', header: { i18nKey: 'labels.hours', defaultValue: 'Hours' }, value: { type: 'path', path: 'totalHours' }, format: 'number', style: { inline: { textAlign: 'right', width: '10%' } } },
+          { id: 'ticket-rate', header: { i18nKey: 'labels.rate', defaultValue: 'Rate' }, value: { type: 'path', path: 'rateDisplay' }, format: 'currency', style: { inline: { textAlign: 'right', width: '14%' } } },
+          { id: 'ticket-amount', header: { i18nKey: 'labels.amount', defaultValue: 'Amount' }, value: { type: 'path', path: 'totalAmount' }, format: 'currency', style: { inline: { textAlign: 'right', width: '16%' } } },
         ],
+      },
+      {
+        id: 'billed-time-portal-note',
+        type: 'text',
+        content: {
+          type: 'i18n',
+          i18nKey: 'labels.note.billedTimePortalDetail',
+          defaultValue: 'A detailed breakdown of the time entries behind each ticket is available in the client portal.',
+        },
+        style: { inline: { color: '#6b7280', fontSize: '11px', margin: '0 0 16px 0' } },
       },
       // ── Grand totals ──────────────────────────────────────────────
       {

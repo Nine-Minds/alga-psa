@@ -36,31 +36,42 @@ describe('invoice template bindings: billed-time collections', () => {
 });
 
 describe('standard-invoice-by-ticket rendering', () => {
-  it('renders one band per ticket with description, entries, and honest rate presentation', async () => {
+  it('rolls each ticket into one summary row with description, hours, honest rate, and amount', async () => {
     const scenario = getPreviewSampleScenarioById('sample-ticket-time-detail');
     expect(scenario).not.toBeNull();
 
     const { html } = await renderViewModel(scenario!.data);
 
-    // Uniform-rate ticket: label, customer-visible description, subtotal.
+    // Uniform-rate ticket: label, customer-visible description, aggregated
+    // hours (90 + 60 minutes = 2.5h), locale-formatted rate, summed amount.
     expect(html).toContain('T-20260118-004 — Email outage — Exchange connector down');
     expect(html).toContain('Investigated failed mail flow and restored the Exchange connector.');
-    expect(html).toContain('Ticket total — 2.5 hrs @ $150.00/hr');
-    expect(html).toContain('$375.00'); // 37,500 minor units
+    expect(html).toContain('2.5');
+    expect(html).toContain('$150.00');
+    expect(html).toContain('$375.00'); // 22,500 + 15,000 minor units
 
-    // Mixed-rate ticket must never show a blended rate.
+    // Mixed-rate ticket must say so — never a blended figure ($130.00 would
+    // be the fabricated blend of $125 and $150 across 2.5h).
     expect(html).toContain('T-20260122-011 — Onboard new staff workstation');
-    expect(html).toContain('Ticket total — 2.5 hrs @ Mixed rates');
+    expect(html).toContain('Mixed rates');
     expect(html).toContain('$325.00');
+    expect(html).not.toContain('$130.00');
 
-    // Project-task time gets its own band under the task name.
+    // Project-task time gets its own rolled-up row under the task name.
     expect(html).toContain('Server migration — data sync validation');
+
+    // Per-entry lines are NOT the default output: no per-entry dates render.
+    expect(html).not.toContain('1/19/2026');
+    expect(html).not.toContain('1/23/2026');
+
+    // The invoice directs the client to the portal for the breakdown.
+    expect(html).toContain('available in the client portal');
 
     // Overall invoice totals stay driven by the line items.
     expect(html).toContain('$1,666.70');
   });
 
-  it('renders safely for legacy invoices without snapshot collections', async () => {
+  it('renders the explicit empty state for legacy invoices without snapshot collections', async () => {
     const legacy: WasmInvoiceViewModel = {
       invoiceNumber: 'INV-LEGACY-1',
       issueDate: '2025-01-01',
@@ -87,11 +98,12 @@ describe('standard-invoice-by-ticket rendering', () => {
 
     expect(html).toContain('INV-LEGACY-1');
     expect(html).toContain('Remote Support');
-    // No ticket bands are fabricated.
-    expect(html).not.toContain('Ticket total —');
+    // Historical detail is unavailable by design — stated, not fabricated.
+    expect(html).toContain('No billed-time detail is available for this invoice.');
+    expect(html).not.toContain('Mixed rates');
   });
 
-  it('produces identical ticket bands for the designer sample and a DB-shaped invoice with the same snapshots', async () => {
+  it('produces an identical billed-time summary for the designer sample and a DB-shaped invoice with the same snapshots', async () => {
     const scenario = getPreviewSampleScenarioById('sample-ticket-time-detail');
     expect(scenario).not.toBeNull();
     const sampleRender = await renderViewModel(scenario!.data);
@@ -140,12 +152,12 @@ describe('standard-invoice-by-ticket rendering', () => {
     expect(dbShaped).not.toBeNull();
     const dbRender = await renderViewModel(dbShaped!);
 
-    const extractBands = (html: string) => {
-      const start = html.indexOf('id="ticket-bands"');
+    const extractSummary = (html: string) => {
+      const start = html.indexOf('id="billed-time-heading"');
       expect(start).toBeGreaterThan(-1);
       return html.slice(start, html.indexOf('id="totals-wrap"', start));
     };
 
-    expect(extractBands(dbRender.html)).toBe(extractBands(sampleRender.html));
+    expect(extractSummary(dbRender.html)).toBe(extractSummary(sampleRender.html));
   });
 });

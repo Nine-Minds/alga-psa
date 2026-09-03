@@ -130,7 +130,7 @@ const TICKET_TIME_SAMPLE_SOURCES: InvoiceTimeCollectionSource[] = [
   },
 ];
 
-const TICKET_TIME_SAMPLE_COLLECTIONS = buildInvoiceTimeCollections(TICKET_TIME_SAMPLE_SOURCES, 'USD');
+const TICKET_TIME_SAMPLE_COLLECTIONS = buildInvoiceTimeCollections(TICKET_TIME_SAMPLE_SOURCES);
 
 export const INVOICE_PREVIEW_SAMPLE_SCENARIOS: InvoicePreviewSampleScenario[] = [
   enrichScenario({

@@ -4,6 +4,7 @@
     "amount": "Betrag",
     "authorizedBy": "Genehmigt von",
     "billTo": "Rechnung an",
+    "billedTimeByTicket": "Abgerechnete Zeit nach Ticket",
     "date": "Datum",
     "description": "Beschreibung",
     "discounts": "Rabatte",
@@ -55,6 +56,7 @@
     "subtotal": "Zwischensumme",
     "tax": "Steuer",
     "termsAndConditions": "Allgemeine Geschäftsbedingungen",
+    "ticket": "Ticket",
     "total": "Gesamt",
     "unitPrice": "Einzelpreis",
     "validUntil": "Gültig bis",
@@ -62,6 +64,7 @@
     "yourPoNumber": "Ihre Bestell-Nr.",
     "emptyState": {
       "noBillableLineItems": "Keine abrechenbaren Positionen",
+      "noBilledTimeDetail": "Für diese Rechnung sind keine Details zur abgerechneten Zeit verfügbar.",
       "noItemsOnOrder": "Keine Positionen in diesem Auftrag",
       "noItemsToPick": "Keine Positionen zu kommissionieren",
       "noLineItems": "Keine Positionen",
@@ -70,6 +73,7 @@
       "noPhasesDefined": "Keine Phasen definiert"
     },
     "note": {
+      "billedTimePortalDetail": "Eine detaillierte Aufschlüsselung der Zeiteinträge zu jedem Ticket ist im Kundenportal verfügbar.",
       "pickedBy": "Kommissioniert von: ____________________     Datum: ____________",
       "preTaxTotals": "Die angegebenen Summen verstehen sich ohne Steuer. Die anfallende Steuer wird auf Ihrer Rechnung ausgewiesen.",
       "thankYouForOrder": "Vielen Dank für Ihren Auftrag."

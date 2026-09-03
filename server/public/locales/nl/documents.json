@@ -4,6 +4,7 @@
     "amount": "Bedrag",
     "authorizedBy": "Geautoriseerd door",
     "billTo": "Factuuradres",
+    "billedTimeByTicket": "Gefactureerde tijd per ticket",
     "date": "Datum",
     "description": "Omschrijving",
     "discounts": "Kortingen",
@@ -55,6 +56,7 @@
     "subtotal": "Subtotaal",
     "tax": "Belasting",
     "termsAndConditions": "Algemene voorwaarden",
+    "ticket": "Ticket",
     "total": "Totaal",
     "unitPrice": "Stukprijs",
     "validUntil": "Geldig tot",
@@ -62,6 +64,7 @@
     "yourPoNumber": "Uw inkoopordernr.",
     "emptyState": {
       "noBillableLineItems": "Geen factureerbare regels",
+      "noBilledTimeDetail": "Voor deze factuur zijn geen details van gefactureerde tijd beschikbaar.",
       "noItemsOnOrder": "Geen regels op deze order",
       "noItemsToPick": "Geen te picken regels",
       "noLineItems": "Geen regels",
@@ -70,6 +73,7 @@
       "noPhasesDefined": "Geen fasen gedefinieerd"
     },
     "note": {
+      "billedTimePortalDetail": "Een gedetailleerd overzicht van de tijdregistraties per ticket is beschikbaar in het klantenportaal.",
       "pickedBy": "Gepickt door: ____________________     Datum: ____________",
       "preTaxTotals": "De getoonde totalen zijn exclusief belasting. De verschuldigde belasting wordt op uw factuur berekend.",
       "thankYouForOrder": "Bedankt voor uw order."

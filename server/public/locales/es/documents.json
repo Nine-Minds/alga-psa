@@ -4,6 +4,7 @@
     "amount": "Importe",
     "authorizedBy": "Autorizado por",
     "billTo": "Facturar a",
+    "billedTimeByTicket": "Tiempo facturado por ticket",
     "date": "Fecha",
     "description": "Descripción",
     "discounts": "Descuentos",
@@ -55,6 +56,7 @@
     "subtotal": "Subtotal",
     "tax": "Impuesto",
     "termsAndConditions": "Términos y condiciones",
+    "ticket": "Ticket",
     "total": "Total",
     "unitPrice": "Precio unitario",
     "validUntil": "Válido hasta",
@@ -62,6 +64,7 @@
     "yourPoNumber": "Su orden de compra",
     "emptyState": {
       "noBillableLineItems": "No hay artículos facturables",
+      "noBilledTimeDetail": "No hay detalles de tiempo facturado disponibles para esta factura.",
       "noItemsOnOrder": "No hay artículos en este pedido",
       "noItemsToPick": "No hay artículos por surtir",
       "noLineItems": "No hay artículos",
@@ -70,6 +73,7 @@
       "noPhasesDefined": "No hay fases definidas"
     },
     "note": {
+      "billedTimePortalDetail": "En el portal de clientes hay disponible un desglose detallado de las entradas de tiempo de cada ticket.",
       "pickedBy": "Surtido por: ____________________     Fecha: ____________",
       "preTaxTotals": "Los totales mostrados no incluyen impuestos. El impuesto correspondiente se calcula en su factura.",
       "thankYouForOrder": "Gracias por su pedido."

@@ -55,6 +55,11 @@ const LABEL_KEYS = {
   Amount: 'labels.amount',
   Service: 'labels.service',
   Hours: 'labels.hours',
+  Ticket: 'labels.ticket',
+  'Billed Time by Ticket': 'labels.billedTimeByTicket',
+  'No billed-time detail is available for this invoice.': 'labels.emptyState.noBilledTimeDetail',
+  'A detailed breakdown of the time entries behind each ticket is available in the client portal.':
+    'labels.note.billedTimePortalDetail',
   Price: 'labels.price',
   'Project Phase': 'labels.projectPhase',
   Phase: 'labels.phase',

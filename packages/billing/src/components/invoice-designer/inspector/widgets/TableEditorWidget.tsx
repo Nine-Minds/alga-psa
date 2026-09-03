@@ -58,9 +58,10 @@ type ColumnPreset = {
 
 /**
  * Quick-add columns for tables bound to the `ticketGroups` collection —
- * the "Ticket | Description | Hours | Rate | Amount" presentation. Rate uses
- * `item.rateLabel`, which shows "Mixed rates" when a ticket bills at more
- * than one rate instead of inventing a blended figure.
+ * the rolled-up "Ticket | Description | Hours | Rate | Amount" presentation
+ * (one row per ticket). Rate uses `item.rateDisplay`: the uniform hourly rate
+ * (currency-formatted with the render locale) or "Mixed rates" when a ticket
+ * bills at more than one rate — never a blended figure.
  */
 export const buildTicketGroupColumnPresets = (t: TFunction): ColumnPreset[] => [
   {
@@ -94,8 +95,8 @@ export const buildTicketGroupColumnPresets = (t: TFunction): ColumnPreset[] => [
     id: 'ticket-rate',
     label: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
     header: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
-    key: 'item.rateLabel',
-    type: 'text',
+    key: 'item.rateDisplay',
+    type: 'currency',
     width: 110,
     description: t('invoiceDesigner.tableEditor.presets.ticketRate.hint', { defaultValue: 'Hourly rate ("Mixed rates" when entries differ)' }),
   },
@@ -191,6 +192,7 @@ export const resolveExtraBindingKeySuggestions = (sourceBindingId: string): stri
       'item.dateStart',
       'item.dateEnd',
       'item.entryCount',
+      'item.rate',
       'item.hasMixedRates',
     ];
   }

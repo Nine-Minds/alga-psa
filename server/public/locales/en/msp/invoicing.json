@@ -1838,7 +1838,9 @@
         "productItems": "Product Items",
         "items": "Items",
         "transformsSource": "{{binding}} (Transforms source)",
-        "transformsOutput": "{{binding}} (Transforms output)"
+        "transformsOutput": "{{binding}} (Transforms output)",
+        "ticketGroups": "Billed Time by Ticket",
+        "timeEntries": "Billed Time Entries"
       },
       "presets": {
         "description": {
@@ -1856,6 +1858,46 @@
         "amount": {
           "label": "Amount",
           "hint": "Line total"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Ticket number and title"
+        },
+        "ticketDescription": {
+          "hint": "Customer-visible ticket description"
+        },
+        "hours": {
+          "label": "Hours"
+        },
+        "ticketHours": {
+          "hint": "Total billed hours for the ticket"
+        },
+        "ticketRate": {
+          "hint": "Hourly rate (\"Mixed rates\" when entries differ)"
+        },
+        "ticketAmount": {
+          "hint": "Total billed amount for the ticket"
+        },
+        "date": {
+          "label": "Date"
+        },
+        "entryDate": {
+          "hint": "Date the work was performed"
+        },
+        "entryTicket": {
+          "hint": "Source ticket number"
+        },
+        "entryTitle": {
+          "hint": "Ticket title or task name"
+        },
+        "entryHours": {
+          "hint": "Billed hours for the entry"
+        },
+        "entryRate": {
+          "hint": "Hourly rate for the entry"
+        },
+        "entryAmount": {
+          "hint": "Billed amount for the entry"
         }
       },
       "sourceBinding": {

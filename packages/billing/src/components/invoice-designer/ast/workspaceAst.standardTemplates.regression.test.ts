@@ -61,7 +61,7 @@ describe('workspaceAst standard template regression coverage', () => {
     ['standard-detailed', ['issuer-logo', 'party-blocks', 'bill-to-card', 'totals-wrap']] as const,
     ['standard-grouped', ['issuer-logo', 'recurring-items', 'onetime-items', 'notes-totals-row']] as const,
     ['standard-invoice-by-location', ['location-bands', 'location-band-header', 'location-band-items', 'location-band-subtotal', 'totals-wrap']] as const,
-    ['standard-invoice-by-ticket', ['line-items', 'ticket-bands', 'ticket-band-header', 'ticket-band-entries', 'ticket-band-subtotal', 'totals-wrap']] as const,
+    ['standard-invoice-by-ticket', ['line-items', 'billed-time-heading', 'ticket-time-summary', 'billed-time-portal-note', 'totals-wrap']] as const,
   ])('keeps invoice template %s structurally stable across designer import/export', (templateCode, criticalNodeIds) => {
     const source = getStandardTemplateAstByCode(templateCode);
     expect(source).toBeTruthy();

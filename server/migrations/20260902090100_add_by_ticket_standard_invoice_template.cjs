@@ -6,10 +6,13 @@
  * The template already exists in code at
  * `packages/billing/src/lib/invoice-template-ast/standardTemplates.ts`
  * (buildStandardByTicketAst). It renders the classic line-items table plus a
- * "Billed Time by Ticket" band section driven by the `ticketGroups`
- * collection — the immutable per-entry work-item snapshot captured at invoice
- * generation (invoice_time_entries.work_item_snapshot). Invoices generated
- * before snapshot support render zero bands and are otherwise unchanged.
+ * "Billed Time by Ticket" summary driven by the `ticketGroups` collection —
+ * the immutable per-entry work-item snapshot captured at invoice generation
+ * (invoice_time_entries.work_item_snapshot) rolled up to one row per ticket
+ * (Ticket | Description | Hours | Rate | Amount), with a note directing the
+ * client to the portal for the per-entry breakdown. Invoices generated before
+ * snapshot support render the summary's explicit empty state and are
+ * otherwise unchanged.
  *
  * The AST below is a frozen copy of the code template at seeding time, the
  * same convention as 20260416120100_add_by_location_standard_invoice_template.
@@ -611,227 +614,145 @@ const INVOICE_BY_TICKET_AST = {
         ]
       },
       {
-        "id": "ticket-bands",
-        "type": "stack",
-        "direction": "column",
+        "id": "billed-time-heading",
+        "type": "text",
+        "content": {
+          "type": "i18n",
+          "i18nKey": "labels.billedTimeByTicket",
+          "defaultValue": "Billed Time by Ticket"
+        },
         "style": {
           "inline": {
-            "gap": "8px",
-            "margin": "0 0 16px 0"
+            "fontSize": "14px",
+            "fontWeight": 700,
+            "margin": "0 0 6px 0"
+          }
+        }
+      },
+      {
+        "id": "ticket-time-summary",
+        "type": "dynamic-table",
+        "style": {
+          "inline": {
+            "margin": "0 0 6px 0",
+            "border": "1px solid #e5e7eb",
+            "borderRadius": "10px"
           }
         },
         "repeat": {
           "sourceBinding": {
             "bindingId": "ticketGroups"
           },
-          "itemBinding": "group"
+          "itemBinding": "item"
         },
-        "children": [
+        "emptyStateText": {
+          "i18nKey": "labels.emptyState.noBilledTimeDetail",
+          "defaultValue": "No billed-time detail is available for this invoice."
+        },
+        "columns": [
           {
-            "id": "ticket-band-header",
-            "type": "stack",
-            "direction": "column",
+            "id": "ticket",
+            "header": {
+              "i18nKey": "labels.ticket",
+              "defaultValue": "Ticket"
+            },
+            "value": {
+              "type": "path",
+              "path": "label"
+            },
             "style": {
               "inline": {
-                "gap": "2px",
-                "backgroundColor": "#7c45d3",
-                "color": "#ffffff",
-                "padding": "6px 12px",
-                "borderRadius": "6px 6px 0 0"
+                "width": "26%"
               }
-            },
-            "children": [
-              {
-                "id": "ticket-band-label",
-                "type": "text",
-                "content": {
-                  "type": "path",
-                  "path": "label"
-                },
-                "style": {
-                  "inline": {
-                    "fontSize": "14px",
-                    "fontWeight": 700,
-                    "color": "#ffffff"
-                  }
-                }
-              },
-              {
-                "id": "ticket-band-description",
-                "type": "text",
-                "content": {
-                  "type": "path",
-                  "path": "description"
-                },
-                "style": {
-                  "inline": {
-                    "fontSize": "12px",
-                    "color": "#ffffff",
-                    "lineHeight": 1.4
-                  }
-                }
-              }
-            ]
+            }
           },
           {
-            "id": "ticket-band-entries",
-            "type": "dynamic-table",
+            "id": "ticket-description",
+            "header": {
+              "i18nKey": "labels.description",
+              "defaultValue": "Description"
+            },
+            "value": {
+              "type": "path",
+              "path": "description"
+            },
             "style": {
               "inline": {
-                "margin": "0",
-                "border": "1px solid #e5e7eb",
-                "borderRadius": "0"
+                "width": "34%"
               }
-            },
-            "repeat": {
-              "sourceBinding": {
-                "bindingId": "group.entries"
-              },
-              "itemBinding": "entry"
-            },
-            "columns": [
-              {
-                "id": "entry-date",
-                "header": {
-                  "i18nKey": "labels.date",
-                  "defaultValue": "Date"
-                },
-                "value": {
-                  "type": "path",
-                  "path": "date"
-                },
-                "format": "date",
-                "style": {
-                  "inline": {
-                    "width": "22%"
-                  }
-                }
-              },
-              {
-                "id": "entry-service",
-                "header": {
-                  "i18nKey": "labels.service",
-                  "defaultValue": "Service"
-                },
-                "value": {
-                  "type": "path",
-                  "path": "serviceName"
-                },
-                "style": {
-                  "inline": {
-                    "width": "32%"
-                  }
-                }
-              },
-              {
-                "id": "entry-hours",
-                "header": {
-                  "i18nKey": "labels.hours",
-                  "defaultValue": "Hours"
-                },
-                "value": {
-                  "type": "path",
-                  "path": "hours"
-                },
-                "format": "number",
-                "style": {
-                  "inline": {
-                    "textAlign": "right",
-                    "width": "12%"
-                  }
-                }
-              },
-              {
-                "id": "entry-rate",
-                "header": {
-                  "i18nKey": "labels.rate",
-                  "defaultValue": "Rate"
-                },
-                "value": {
-                  "type": "path",
-                  "path": "rate"
-                },
-                "format": "currency",
-                "style": {
-                  "inline": {
-                    "textAlign": "right",
-                    "width": "16%"
-                  }
-                }
-              },
-              {
-                "id": "entry-amount",
-                "header": {
-                  "i18nKey": "labels.amount",
-                  "defaultValue": "Amount"
-                },
-                "value": {
-                  "type": "path",
-                  "path": "amount"
-                },
-                "format": "currency",
-                "style": {
-                  "inline": {
-                    "textAlign": "right",
-                    "width": "18%"
-                  }
-                }
-              }
-            ]
+            }
           },
           {
-            "id": "ticket-band-subtotal",
-            "type": "stack",
-            "direction": "row",
+            "id": "ticket-hours",
+            "header": {
+              "i18nKey": "labels.hours",
+              "defaultValue": "Hours"
+            },
+            "value": {
+              "type": "path",
+              "path": "totalHours"
+            },
+            "format": "number",
             "style": {
               "inline": {
-                "justifyContent": "space-between",
-                "padding": "6px 12px",
-                "backgroundColor": "#f9fafb",
-                "borderRadius": "0 0 6px 6px"
+                "textAlign": "right",
+                "width": "10%"
               }
+            }
+          },
+          {
+            "id": "ticket-rate",
+            "header": {
+              "i18nKey": "labels.rate",
+              "defaultValue": "Rate"
             },
-            "children": [
-              {
-                "id": "ticket-band-subtotal-label",
-                "type": "text",
-                "content": {
-                  "type": "template",
-                  "template": "Ticket total — {{hours}} hrs @ {{rate}}",
-                  "args": {
-                    "hours": {
-                      "type": "path",
-                      "path": "totalHours"
-                    },
-                    "rate": {
-                      "type": "path",
-                      "path": "rateLabel"
-                    }
-                  }
-                },
-                "style": {
-                  "inline": {
-                    "fontWeight": 700
-                  }
-                }
-              },
-              {
-                "id": "ticket-band-subtotal-value",
-                "type": "text",
-                "content": {
-                  "type": "path",
-                  "path": "totalAmount|currency"
-                },
-                "style": {
-                  "inline": {
-                    "fontWeight": 700,
-                    "textAlign": "right"
-                  }
-                }
+            "value": {
+              "type": "path",
+              "path": "rateDisplay"
+            },
+            "format": "currency",
+            "style": {
+              "inline": {
+                "textAlign": "right",
+                "width": "14%"
               }
-            ]
+            }
+          },
+          {
+            "id": "ticket-amount",
+            "header": {
+              "i18nKey": "labels.amount",
+              "defaultValue": "Amount"
+            },
+            "value": {
+              "type": "path",
+              "path": "totalAmount"
+            },
+            "format": "currency",
+            "style": {
+              "inline": {
+                "textAlign": "right",
+                "width": "16%"
+              }
+            }
           }
         ]
+      },
+      {
+        "id": "billed-time-portal-note",
+        "type": "text",
+        "content": {
+          "type": "i18n",
+          "i18nKey": "labels.note.billedTimePortalDetail",
+          "defaultValue": "A detailed breakdown of the time entries behind each ticket is available in the client portal."
+        },
+        "style": {
+          "inline": {
+            "color": "#6b7280",
+            "fontSize": "11px",
+            "margin": "0 0 16px 0"
+          }
+        }
       },
       {
         "id": "totals-wrap",

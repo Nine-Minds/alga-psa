@@ -257,18 +257,21 @@ export function buildInvoiceLocationGroups(items: WasmInvoiceLineItem[]): WasmIn
 /** Round minor-unit minutes to display hours (2dp, minutes stay authoritative). */
 const minutesToHours = (minutes: number): number => Math.round((minutes / 60) * 100) / 100;
 
-const formatMinorUnits = (cents: number, currencyCode: string): string =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currencyCode || 'USD',
-  }).format(cents / 100);
-
 /** Snapshot input for the billed-time collections: entry + owning charge id. */
 export type InvoiceTimeCollectionSource = IInvoiceChargeTimeEntrySnapshot & {
   itemId?: string | null;
 };
 
 const AD_HOC_GROUP_LABEL = 'Other billed time';
+
+/**
+ * Rate-column text for a group billing at more than one hourly rate. A data
+ * value, deliberately not localized here: the view model carries no locale
+ * (one locale per render, applied by the renderer), so money and labels are
+ * formatted downstream. Renderers pass non-numeric strings through currency
+ * formatting untouched.
+ */
+const MIXED_RATE_DISPLAY = 'Mixed rates';
 
 /**
  * Build the renderer collections for ticket-level billed-time detail from
@@ -286,7 +289,6 @@ const AD_HOC_GROUP_LABEL = 'Other billed time';
  */
 export function buildInvoiceTimeCollections(
   sources: InvoiceTimeCollectionSource[],
-  currencyCode: string,
 ): { timeEntries: WasmInvoiceTimeEntry[]; ticketGroups: WasmInvoiceTicketGroup[] } {
   const timeEntries: WasmInvoiceTimeEntry[] = sources
     .map((source): WasmInvoiceTimeEntry => ({
@@ -366,11 +368,7 @@ export function buildInvoiceTimeCollections(
         totalAmount,
         hasMixedRates,
         rate,
-        rateLabel: hasMixedRates
-          ? 'Mixed rates'
-          : rate !== null
-            ? `${formatMinorUnits(rate, currencyCode)}/hr`
-            : '',
+        rateDisplay: rate !== null ? rate : MIXED_RATE_DISPLAY,
         entryCount: entries.length,
         entries,
       };
@@ -415,10 +413,7 @@ export function attachInvoiceTimeCollections(
     return viewModel;
   }
 
-  const { timeEntries, ticketGroups } = buildInvoiceTimeCollections(
-    sources,
-    viewModel.currencyCode || 'USD',
-  );
+  const { timeEntries, ticketGroups } = buildInvoiceTimeCollections(sources);
   viewModel.timeEntries = timeEntries;
   viewModel.ticketGroups = ticketGroups;
   return viewModel;

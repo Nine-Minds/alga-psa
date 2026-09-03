@@ -126,8 +126,14 @@ export interface WasmInvoiceTicketGroup {
   hasMixedRates: boolean;
   /** Uniform hourly rate in minor units, or null when hasMixedRates. */
   rate: number | null;
-  /** Preformatted rate text ("$150.00/hr", or "Mixed rates"). */
-  rateLabel: string;
+  /**
+   * Value for a Rate column: the uniform hourly rate in minor units (render
+   * with currency formatting — the renderer supplies locale and currency), or
+   * the "Mixed rates" text when entries bill at more than one rate. Never a
+   * blended figure, and never pre-formatted money (the view model carries no
+   * locale).
+   */
+  rateDisplay: number | string;
   entryCount: number;
   entries: WasmInvoiceTimeEntry[];
 }

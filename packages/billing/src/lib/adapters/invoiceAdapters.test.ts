@@ -452,7 +452,6 @@ describe('buildInvoiceTimeCollections', () => {
         snapshotSource({ entryId: 'e2', entryDate: '2026-08-07', billedMinutes: 45, netAmount: 11250 }),
         snapshotSource({ entryId: 'e1' }),
       ],
-      'USD',
     );
 
     expect(timeEntries.map((entry) => entry.id)).toEqual(['e1', 'e2']); // date-ordered
@@ -470,7 +469,7 @@ describe('buildInvoiceTimeCollections', () => {
       totalAmount: 33750,
       hasMixedRates: false,
       rate: 15000,
-      rateLabel: '$150.00/hr',
+      rateDisplay: 15000,
       entryCount: 2,
     });
   });
@@ -481,13 +480,12 @@ describe('buildInvoiceTimeCollections', () => {
         snapshotSource({ entryId: 'e1', rate: 12500, netAmount: 25000, billedMinutes: 120 }),
         snapshotSource({ entryId: 'e2', rate: 15000, netAmount: 7500, billedMinutes: 30 }),
       ],
-      'USD',
     );
 
     expect(ticketGroups[0]).toMatchObject({
       hasMixedRates: true,
       rate: null,
-      rateLabel: 'Mixed rates',
+      rateDisplay: 'Mixed rates',
       totalMinutes: 150,
       totalAmount: 32500,
     });
@@ -514,7 +512,6 @@ describe('buildInvoiceTimeCollections', () => {
         }),
         snapshotSource({ entryId: 'e-ticket' }),
       ],
-      'USD',
     );
 
     // Deterministic order: tickets, then tasks, then the ad-hoc group.
@@ -533,7 +530,6 @@ describe('buildInvoiceTimeCollections', () => {
         snapshotSource({ entryId: 'e2', workItemId: 'ticket-b', ticketNumber: 'T-900' }),
         snapshotSource({ entryId: 'e1', workItemId: 'ticket-a', ticketNumber: 'T-100' }),
       ],
-      'USD',
     );
 
     expect(ticketGroups.map((group) => group.ticketNumber)).toEqual(['T-100', 'T-900']);
