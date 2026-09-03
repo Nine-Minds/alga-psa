@@ -33,6 +33,10 @@ export default defineConfig({
       'src/lib/adapters/invoiceAdapters.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.test.ts',
       'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
+      // Timezone-safe date-only rendering: the renderer and field formatting
+      // share one UTC-pinned formatter — listed for the same reason as above.
+      'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.test.tsx',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
