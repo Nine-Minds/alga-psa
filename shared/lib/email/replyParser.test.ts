@@ -79,6 +79,71 @@ describe('replyParser', () => {
     expect(result.sanitizedText).toMatchInlineSnapshot('"Quick confirmation that everything works as expected."');
   });
 
+  it('keeps content after an inline Outlook elementToProof blockquote (alga0002339)', () => {
+    const text = readFixture('outlook-inline-blockquote.txt');
+    const html = readFixture('outlook-inline-blockquote.html');
+
+    const result = parseEmailReply({ text, html });
+
+    // The inline quote is the author's own content, not reply history.
+    expect(result.appliedHeuristics).not.toContain('html-blockquote-trim');
+    expect(result.strategy).toBe('signature-trim');
+    expect(result.confidence).not.toBe('high');
+
+    // Everything after the inline blockquote must survive in both renditions.
+    expect(result.sanitizedHtml).toContain('I will follow up with you on Friday morning');
+    expect(result.sanitizedHtml).toContain('Call the customer back');
+    expect(result.sanitizedHtml).toContain('Outlook calendar');
+    expect(result.sanitizedHtml).toContain('Teams notifications');
+    expect(result.sanitizedHtml).toContain('Mobile push');
+    expect(result.sanitizedHtml).toContain('Desktop notifications');
+    expect(result.sanitizedHtml).toContain('kept promises are the whole ballgame');
+    expect(result.sanitizedText).toContain('I will follow up with you on Friday morning');
+    expect(result.sanitizedText).toContain('Call the customer back');
+    expect(result.sanitizedText).toContain('kept promises are the whole ballgame');
+  });
+
+  it('cuts at the quoted-history blockquote, not an earlier inline one', () => {
+    const text = readFixture('inline-then-history.txt');
+    const html = readFixture('inline-then-history.html');
+
+    const result = parseEmailReply({ text, html });
+
+    expect(result.appliedHeuristics).toContain('html-blockquote-trim');
+    // The inline quote and the text after it are the author's message.
+    expect(result.sanitizedHtml).toContain('replacement part ships Monday');
+    expect(result.sanitizedHtml).toContain("plan the install for Wednesday");
+    // The gmail_quote history block is removed.
+    expect(result.sanitizedHtml).not.toContain('has not confirmed a ship date');
+    expect(result.sanitizedText).toContain("plan the install for Wednesday");
+    expect(result.sanitizedText).not.toContain('has not confirmed a ship date');
+  });
+
+  it('trims trailing Apple Mail type="cite" history', () => {
+    const text = readFixture('apple-mail-reply.txt');
+    const html = readFixture('apple-mail-reply.html');
+
+    const result = parseEmailReply({ text, html });
+
+    expect(result.appliedHeuristics).toContain('html-blockquote-trim');
+    expect(result.sanitizedHtml).toContain('The new build fixed the crash on startup');
+    expect(result.sanitizedHtml).not.toContain('Please try the new build');
+    expect(result.sanitizedText).toContain('The new build fixed the crash on startup');
+  });
+
+  it('retains the answer in a bottom-posted reply below a quoted block', () => {
+    const text = readFixture('bottom-post-reply.txt');
+    const html = readFixture('bottom-post-reply.html');
+
+    const result = parseEmailReply({ text, html });
+
+    // The quoted block is removed as a span; the authored answer below it survives.
+    expect(result.sanitizedHtml).toContain('10pm Eastern');
+    expect(result.sanitizedHtml).not.toContain('Could you confirm the maintenance window');
+    expect(result.sanitizedText).toContain('10pm Eastern');
+    expect(result.sanitizedText).not.toContain('Could you confirm the maintenance window');
+  });
+
   it('recovers tokens wrapped/quoted by Gmail', () => {
     const text = `let's see if replies work now
 *Robert Isaacs* | *CEO*
