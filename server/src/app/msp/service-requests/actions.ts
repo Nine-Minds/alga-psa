@@ -41,7 +41,12 @@ import {
   type ServiceRequestDefinitionEditorData,
   ServiceRequestDefinitionBusinessError,
   type ServiceRequestDefinitionErrorCode,
+  SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG,
+  applyStoreOnlyAuthoringGateToEditorData,
+  isBlockedStoreOnlyAdoption,
+  storeOnlyAuthoringDisabledMessage,
 } from '../../../lib/service-requests';
+import { featureFlags } from '../../../lib/feature-flags/featureFlags';
 import type { IBoard, IPriority, ITicketCategory, ITicketStatus, IUser } from '@alga-psa/types';
 
 type AuthUser = Parameters<Parameters<typeof withAuth>[0]>[0];
@@ -71,6 +76,13 @@ function throwHttpError(status: number, message: string): never {
   const error = new Error(message) as Error & { status?: number };
   error.status = status;
   throw error;
+}
+
+async function isStoreOnlyAuthoringEnabled(user: AuthUser, tenant: string): Promise<boolean> {
+  return featureFlags.isEnabled(SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG, {
+    userId: getActorId(user) ?? undefined,
+    tenantId: tenant,
+  });
 }
 
 async function requireServiceRequestPermission(
@@ -115,7 +127,13 @@ export const getServiceRequestDefinitionEditorDataAction = withAuth(async (
 ): Promise<ServiceRequestDefinitionEditorData | null> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'read', knex);
-  return getServiceRequestDefinitionEditorData(knex, tenant, definitionId);
+  const editorData = await getServiceRequestDefinitionEditorData(knex, tenant, definitionId);
+  if (!editorData) {
+    return null;
+  }
+
+  const storeOnlyEnabled = await isStoreOnlyAuthoringEnabled(user, tenant);
+  return applyStoreOnlyAuthoringGateToEditorData(editorData, storeOnlyEnabled);
 });
 
 export interface ServiceRequestTicketRoutingReferenceData {
@@ -242,6 +260,7 @@ export const duplicateServiceRequestDefinitionAction = withAuth(async (
       tenant,
       sourceDefinitionId: definitionId,
       createdBy: getActorId(user),
+      storeOnlyAuthoringEnabled: await isStoreOnlyAuthoringEnabled(user, tenant),
     });
     return serviceRequestSuccess(created);
   } catch (error) {
@@ -273,6 +292,12 @@ export const updateServiceRequestExecutionProviderAction = withAuth(async (
 ): Promise<ServiceRequestDefinitionManagementRow> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
+
+  const storeOnlyEnabled = await isStoreOnlyAuthoringEnabled(user, tenant);
+  if (isBlockedStoreOnlyAdoption(executionProvider, storeOnlyEnabled)) {
+    throwHttpError(403, storeOnlyAuthoringDisabledMessage('Selecting the store-only execution provider'));
+  }
+
   return saveServiceRequestDefinitionDraft({
     knex,
     tenant,
@@ -496,7 +521,9 @@ export const validateServiceRequestDefinitionForPublishAction = withAuth(async (
 ): Promise<ServiceRequestPublishValidationResult> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'update', knex);
-  return validateServiceRequestDefinitionForPublish(knex, tenant, definitionId);
+  return validateServiceRequestDefinitionForPublish(knex, tenant, definitionId, {
+    storeOnlyAuthoringEnabled: await isStoreOnlyAuthoringEnabled(user, tenant),
+  });
 });
 
 export const publishServiceRequestDefinitionAction = withAuth(async (
@@ -511,6 +538,7 @@ export const publishServiceRequestDefinitionAction = withAuth(async (
     tenant,
     definitionId,
     publishedBy: getActorId(user),
+    storeOnlyAuthoringEnabled: await isStoreOnlyAuthoringEnabled(user, tenant),
   });
 });
 

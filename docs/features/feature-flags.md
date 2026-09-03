@@ -206,6 +206,26 @@ Controls discovery of the Contract Simulator while it is being rolled out.
 - Simulator routes, APIs, server actions, and all other entry points remain unchanged. This
   flag controls only the Contract Details tab and is not an authorization boundary.
 
+### 14. `service-request-store-only`
+Gates newly authoring/selecting the store-only execution provider for service request definitions (server-side).
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Service Request definition editor at `/msp/service-requests/:definitionId` — the
+    execution provider dropdown
+- **Server actions:** `getServiceRequestDefinitionEditorDataAction` (filters the selectable
+  providers) / `updateServiceRequestExecutionProviderAction` (rejects the selection)
+
+**Behavior:**
+- When disabled (default): "Store Only" is filtered out of the editor's execution provider
+  options, and the server action rejects an attempt to select it with a 403 error.
+  Definitions that already use store-only keep the provider visible in their editor so the
+  current selection renders faithfully.
+- When enabled: Store-only is selectable exactly as before.
+- Existing published store-only definitions remain fully functional regardless of flag
+  state: portal catalog listing, submission execution, migrations, and historical
+  submission reads are not gated.
+
 ## Implementation Details
 
 ### User Identification
