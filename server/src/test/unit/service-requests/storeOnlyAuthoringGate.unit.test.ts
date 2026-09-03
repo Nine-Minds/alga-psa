@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG,
   applyStoreOnlyAuthoringGateToEditorData,
-  isBlockedStoreOnlySelection,
+  isBlockedStoreOnlyAdoption,
+  storeOnlyAuthoringDisabledMessage,
 } from '../../../lib/service-requests/storeOnlyAuthoringGate';
 import type { ServiceRequestDefinitionEditorData } from '../../../lib/service-requests/definitionEditor';
 
@@ -50,18 +52,28 @@ function buildEditorData(executionProvider: string): ServiceRequestDefinitionEdi
   };
 }
 
-describe('isBlockedStoreOnlySelection', () => {
-  it('blocks selecting store-only while the flag is disabled', () => {
-    expect(isBlockedStoreOnlySelection('store-only', false)).toBe(true);
+describe('isBlockedStoreOnlyAdoption', () => {
+  it('blocks adopting store-only (select, duplicate source, publish draft) while the flag is disabled', () => {
+    expect(isBlockedStoreOnlyAdoption('store-only', false)).toBe(true);
   });
 
-  it('allows selecting store-only while the flag is enabled', () => {
-    expect(isBlockedStoreOnlySelection('store-only', true)).toBe(false);
+  it('allows adopting store-only while the flag is enabled', () => {
+    expect(isBlockedStoreOnlyAdoption('store-only', true)).toBe(false);
   });
 
   it('never blocks other execution providers', () => {
-    expect(isBlockedStoreOnlySelection('ticket-only', false)).toBe(false);
-    expect(isBlockedStoreOnlySelection('ticket-only', true)).toBe(false);
+    expect(isBlockedStoreOnlyAdoption('ticket-only', false)).toBe(false);
+    expect(isBlockedStoreOnlyAdoption('ticket-only', true)).toBe(false);
+  });
+});
+
+describe('storeOnlyAuthoringDisabledMessage', () => {
+  it('names the authoring act and the unlocking feature flag', () => {
+    const message = storeOnlyAuthoringDisabledMessage('Publishing a store-only service request definition');
+
+    expect(message).toBe(
+      `Publishing a store-only service request definition requires the "${SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG}" feature flag`
+    );
   });
 });
 

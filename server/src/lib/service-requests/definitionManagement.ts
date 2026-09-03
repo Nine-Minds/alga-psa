@@ -9,6 +9,10 @@ import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
 import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
+import {
+  isBlockedStoreOnlyAdoption,
+  storeOnlyAuthoringDisabledMessage,
+} from './storeOnlyAuthoringGate';
 
 /**
  * Template provider whose templates author the in-app appliance-license purchase
@@ -93,6 +97,12 @@ interface DuplicateDefinitionInput {
   tenant: string;
   sourceDefinitionId: string;
   createdBy?: string | null;
+  /**
+   * Whether the `service-request-store-only` feature flag allows newly
+   * adopting the store-only execution provider. Callers evaluate the flag
+   * (this layer never does); omitting it leaves duplication ungated.
+   */
+  storeOnlyAuthoringEnabled?: boolean;
 }
 
 interface SaveDraftDefinitionInput {
@@ -326,6 +336,7 @@ export async function duplicateServiceRequestDefinition({
   tenant,
   sourceDefinitionId,
   createdBy = null,
+  storeOnlyAuthoringEnabled = true,
 }: DuplicateDefinitionInput): Promise<ServiceRequestDefinitionManagementRow> {
   const db = tenantDb(knex, tenant);
   const source = (await db.table('service_request_definitions')
@@ -336,6 +347,13 @@ export async function duplicateServiceRequestDefinition({
     throw new ServiceRequestDefinitionBusinessError(
       'SOURCE_DEFINITION_NOT_FOUND',
       'Source service request definition not found'
+    );
+  }
+
+  if (isBlockedStoreOnlyAdoption(source.execution_provider, storeOnlyAuthoringEnabled)) {
+    throw new ServiceRequestDefinitionBusinessError(
+      'STORE_ONLY_AUTHORING_DISABLED',
+      storeOnlyAuthoringDisabledMessage('Duplicating a store-only service request definition')
     );
   }
 

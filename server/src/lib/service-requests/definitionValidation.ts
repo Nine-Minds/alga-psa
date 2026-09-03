@@ -7,11 +7,24 @@ import {
   getServiceRequestFormBehaviorProvider,
   getServiceRequestVisibilityProvider,
 } from './providers/registry';
+import {
+  isBlockedStoreOnlyAdoption,
+  storeOnlyAuthoringDisabledMessage,
+} from './storeOnlyAuthoringGate';
 
 export interface ServiceRequestPublishValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+export interface ServiceRequestPublishValidationOptions {
+  /**
+   * Whether the `service-request-store-only` feature flag allows publishing a
+   * store-only definition. Callers evaluate the flag (this layer never does);
+   * omitting it leaves publishing ungated.
+   */
+  storeOnlyAuthoringEnabled?: boolean;
 }
 
 interface ServiceRequestDefinitionForValidation {
@@ -29,8 +42,10 @@ interface ServiceRequestDefinitionForValidation {
 export async function validateServiceRequestDefinitionForPublish(
   knex: Knex,
   tenant: string,
-  definitionId: string
+  definitionId: string,
+  options: ServiceRequestPublishValidationOptions = {}
 ): Promise<ServiceRequestPublishValidationResult> {
+  const { storeOnlyAuthoringEnabled = true } = options;
   const db = tenantDb(knex, tenant);
   const definition = (await db.table('service_request_definitions')
     .where({ definition_id: definitionId })
@@ -67,6 +82,12 @@ export async function validateServiceRequestDefinitionForPublish(
     } else if (linkedService.is_active === false) {
       warnings.push('Linked service is inactive');
     }
+  }
+
+  if (isBlockedStoreOnlyAdoption(definition.execution_provider, storeOnlyAuthoringEnabled)) {
+    errors.push(
+      `Execution: ${storeOnlyAuthoringDisabledMessage('Publishing a store-only service request definition')}`
+    );
   }
 
   const executionProvider = getServiceRequestExecutionProvider(definition.execution_provider);
@@ -114,11 +135,13 @@ export async function publishServiceRequestDefinitionWithValidation(input: {
   tenant: string;
   definitionId: string;
   publishedBy?: string | null;
+  storeOnlyAuthoringEnabled?: boolean;
 }): Promise<ServiceRequestDefinitionVersionRecord> {
   const validation = await validateServiceRequestDefinitionForPublish(
     input.knex,
     input.tenant,
-    input.definitionId
+    input.definitionId,
+    { storeOnlyAuthoringEnabled: input.storeOnlyAuthoringEnabled }
   );
 
   if (!validation.isValid) {

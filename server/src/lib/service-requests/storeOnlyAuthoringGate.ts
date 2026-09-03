@@ -15,14 +15,25 @@ import { storeOnlyExecutionProvider } from './providers/builtins/storeOnlyExecut
 export const SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG = 'service-request-store-only';
 
 /**
- * True when the requested execution provider selection must be rejected
- * because it would newly adopt store-only while the feature flag is disabled.
+ * True when an authoring act must be rejected because it would newly adopt
+ * store-only while the feature flag is disabled. This covers every server-side
+ * adoption path: selecting the provider on a draft, duplicating a definition
+ * whose source uses it (the copy would be a new store-only definition), and
+ * publishing a draft that uses it (a new store-only catalog surface).
  */
-export function isBlockedStoreOnlySelection(
+export function isBlockedStoreOnlyAdoption(
   executionProvider: string,
   storeOnlyAuthoringEnabled: boolean
 ): boolean {
   return !storeOnlyAuthoringEnabled && executionProvider === storeOnlyExecutionProvider.key;
+}
+
+/**
+ * Shared human-readable reason used by every gate rejection so the UI and
+ * error logs consistently name the flag that unlocks the path.
+ */
+export function storeOnlyAuthoringDisabledMessage(authoringAct: string): string {
+  return `${authoringAct} requires the "${SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG}" feature flag`;
 }
 
 /**
