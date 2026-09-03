@@ -173,6 +173,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   // Teams meeting attached directly to this schedule entry (not via an appointment request)
   const [entryTeamsMeeting, setEntryTeamsMeeting] = useState<{ meeting_id: string; join_url: string } | null>(null);
   const [isCreatingTeamsMeeting, setIsCreatingTeamsMeeting] = useState(false);
+  // Set when creating a Teams meeting for a recurring occurrence materialized
+  // it into a standalone entry: the popup then edits that concrete entry, not
+  // the stale virtual occurrence id it was opened with.
+  const [materializedEntryId, setMaterializedEntryId] = useState<string | null>(null);
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
 
@@ -569,7 +573,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     const runValidation = async () => {
       setIsDeleteValidating(true);
       try {
-        const result = await preCheckDeletion('schedule_entry', event.entry_id);
+        const result = await preCheckDeletion('schedule_entry', materializedEntryId ?? event.entry_id);
         setDeleteValidation(result);
       } catch (error) {
         console.error('Failed to validate schedule entry deletion:', error);
@@ -588,7 +592,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     };
 
     void runValidation();
-  }, [event, isDeleteDialogOpen]);
+  }, [event, isDeleteDialogOpen, materializedEntryId]);
 
   const resetDeleteState = () => {
     setShowDeleteDialog(false);
@@ -615,7 +619,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     }
     setIsDeleteProcessing(true);
     try {
-      const result = await onDelete(event.entry_id, pendingDeleteScope);
+      const result = await onDelete(materializedEntryId ?? event.entry_id, pendingDeleteScope);
       if (result.success) {
         resetDeleteState();
         onClose();
@@ -733,7 +737,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   // Attach a Teams meeting to this existing schedule entry. The server reads
   // subject/times/attendees from the saved entry and appends the join link to
   // its notes; the returned notes replace the local ones so a later Save
-  // doesn't clobber the link with a stale value.
+  // doesn't clobber the link with a stale value. For a recurring occurrence
+  // the server materializes it into a standalone entry and links the meeting
+  // there — the popup rebinds to that entry so a later Save or Delete targets
+  // it instead of re-extracting the occurrence.
   const handleCreateTeamsMeeting = async () => {
     if (!event?.entry_id) return;
 
@@ -742,6 +749,17 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       const result = await scheduleTeamsMeeting({ scheduleEntryId: event.entry_id });
       if (result.success) {
         setEntryTeamsMeeting({ meeting_id: result.data.meeting_id, join_url: result.data.join_url });
+        const linkedEntryId = result.data.schedule_entry_id;
+        if (linkedEntryId && linkedEntryId !== event.entry_id) {
+          setMaterializedEntryId(linkedEntryId);
+          setEntryData(prev => ({
+            ...prev,
+            entry_id: linkedEntryId,
+            is_recurring: false,
+            original_entry_id: undefined,
+          }));
+          setRecurrencePattern(null);
+        }
         if (typeof result.data.schedule_entry_notes === 'string') {
           const nextNotes = result.data.schedule_entry_notes;
           setEntryData(prev => ({ ...prev, notes: nextNotes }));
@@ -860,8 +878,9 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       assigned_user_ids: Array.isArray(entryData.assigned_user_ids) ? entryData.assigned_user_ids : [],
     };
 
-    // Show recurrence options only for existing recurring events
-    if (event?.is_recurring) {
+    // Show recurrence options only for existing recurring events. A
+    // materialized occurrence is a standalone entry now — no scope to pick.
+    if (event?.is_recurring && !materializedEntryId) {
       setPendingUpdateData(savedEntryData);
       setShowRecurrenceDialog(true);
     } else {
@@ -900,7 +919,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               onClick={() => {
                 setDeleteValidation(null);
                 setPendingDeleteScope(undefined);
-                if (event.is_recurring) {
+                if (event.is_recurring && !materializedEntryId) {
                   setShowDeleteDialog(true);
                   return;
                 }
@@ -1435,7 +1454,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   {t('entryPopup.teamsMeeting.join', { defaultValue: 'Join Teams Meeting' })}
                 </Button>
               </div>
-            ) : teamsMeetingCapability?.available && (event?.is_recurring || event?.entry_id.includes('_')) ? (
+            ) : teamsMeetingCapability?.available && event?.is_recurring && !event.entry_id.includes('_') ? (
               <div>
                 <Tooltip
                   content={t('entryPopup.teamsMeeting.recurringUnsupported', {
