@@ -28,6 +28,11 @@ import { createTestService } from '../../../../test-utils/billingTestHelpers';
 const helpers = TestContext.createHelpers();
 const HOOK_TIMEOUT = 240_000;
 
+// Xero batches carry an immutable target realm stamped at creation (production
+// derives it from the tenant's stored default connection); the adapter refuses
+// realm-less batches outright, so every delivery-path test seeds one.
+const DEFAULT_TARGET_REALM = 'xero-tenant-default';
+
 describe('Live Xero export integration', () => {
   let ctx: TestContext;
   let repository: AccountingExportRepository;
@@ -129,7 +134,7 @@ describe('Live Xero export integration', () => {
     targetRealm?: string | null;
     netAmount?: number | null;
   } = {}): Promise<{ batchId: string; lineId: string }> {
-    const targetRealm = options.targetRealm ?? null;
+    const targetRealm = options.targetRealm === undefined ? DEFAULT_TARGET_REALM : options.targetRealm;
     const netAmount = options.netAmount === undefined ? 5000 : options.netAmount;
     const serviceId = await createTestService(ctx, {
       service_name: 'Managed Endpoint',
@@ -329,5 +334,26 @@ describe('Live Xero export integration', () => {
       line_id: lineId,
       code: 'missing_net_amount'
     }));
+  }, HOOK_TIMEOUT);
+
+  it('T021: a realm-less Xero batch fails with XERO_REALM_REQUIRED and never reaches the Xero client', async () => {
+    // Realms are immutable batch state stamped at creation; a batch that was
+    // created without one must fail loudly instead of guessing a connection
+    // and potentially posting into the wrong Xero organisation.
+    const { batchId, lineId } = await seedLiveXeroBatch({ targetRealm: null });
+
+    await expect(service.executeBatch(batchId)).rejects.toMatchObject({
+      code: 'XERO_REALM_REQUIRED'
+    });
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+
+    const batch = await repository.getBatch(batchId);
+    const [line] = await repository.listLines(batchId);
+
+    expect(batch?.status).toBe('failed');
+    expect(batch?.notes).toContain('immutable batch target realm');
+    expect(line.line_id).toBe(lineId);
+    expect(line.status).not.toBe('delivered');
+    expect(line.external_document_ref).toBeNull();
   }, HOOK_TIMEOUT);
 });
