@@ -139,7 +139,8 @@ exports.seed = async function (knex) {
                     order_number: 1,
                     name: 'Crystal Ball Awaiting',
                     created_by: createdBy,
-                    status_type: 'interaction'
+                    status_type: 'interaction',
+                    is_default: true
                 },
                 {
                     tenant: tenantId,
@@ -154,8 +155,7 @@ exports.seed = async function (knex) {
                     name: 'Emerald Communication',
                     created_by: createdBy,
                     status_type: 'interaction',
-                    is_closed: true,
-                    is_default: true
+                    is_closed: true
                 },
                 {
                     tenant: tenantId,
