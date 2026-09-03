@@ -24,6 +24,26 @@ describe('EntryPopup entry-attached Teams meetings', () => {
     expect(source).toContain("(appointmentRequestData?.online_meeting_url || entryTeamsMeeting)");
   });
 
+  it('refreshes the parent calendar after attaching a meeting, outside the onSave path', () => {
+    const calendarSource = fs.readFileSync(
+      path.resolve(__dirname, './ScheduleCalendar.tsx'),
+      'utf-8',
+    );
+
+    // The editor reports the linked entry (and its rewritten notes) upward the
+    // moment the meeting exists — the calendar's fetched events are stale from
+    // that point on.
+    expect(source).toContain('onTeamsMeetingCreated?.({');
+    expect(source).toContain('entryId: linkedEntryId || event.entry_id');
+
+    // The calendar answers with a refetch, never by re-saving: onSave updates
+    // from the stale selected event, which is unsafe for virtual occurrences.
+    expect(calendarSource).toContain('onTeamsMeetingCreated={handleTeamsMeetingCreated}');
+    expect(calendarSource).toMatch(
+      /handleTeamsMeetingCreated = async \(\) => \{\s*await fetchEvents\(\);/,
+    );
+  });
+
   it('keeps entry-linked meetings following the entry lifecycle', () => {
     // Reschedule: entry-linked meetings are synced alongside appointment ones.
     expect(scheduleActionsSource).toContain('syncTeamsMeetingForRescheduledEntryLink');

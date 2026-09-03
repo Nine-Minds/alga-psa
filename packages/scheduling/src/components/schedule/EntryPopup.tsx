@@ -72,6 +72,17 @@ interface EntryPopupProps {
     updateType?: string;
   }) => void;
   onDelete?: (entryId: string, deleteType?: IEditScope) => Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string; isPrivateError?: boolean }>;
+  /**
+   * Fired after a Teams meeting is attached to this entry. The server rewrote
+   * the entry's notes (and, for a recurring occurrence, materialized it into a
+   * new concrete entry), so events the parent fetched before the call are
+   * stale — closing and reopening this popup would otherwise resurrect
+   * pre-link notes or a virtual occurrence that no longer exists. The parent
+   * should refetch its events. Deliberately not routed through onSave: that
+   * path performs another update from the parent's stale selected event,
+   * which is unsafe for virtual occurrences.
+   */
+  onTeamsMeetingCreated?: (meeting: { entryId: string; notes?: string }) => void;
   canAssignMultipleAgents: boolean;
   users: IUser[];
   currentUserId: string;
@@ -97,6 +108,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   onClose,
   onSave,
   onDelete,
+  onTeamsMeetingCreated,
   canAssignMultipleAgents,
   users,
   currentUserId,
@@ -764,6 +776,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           const nextNotes = result.data.schedule_entry_notes;
           setEntryData(prev => ({ ...prev, notes: nextNotes }));
         }
+        onTeamsMeetingCreated?.({
+          entryId: linkedEntryId || event.entry_id,
+          notes: typeof result.data.schedule_entry_notes === 'string'
+            ? result.data.schedule_entry_notes
+            : undefined,
+        });
         toast.success(t('entryPopup.teamsMeeting.created', {
           defaultValue: 'Microsoft Teams meeting created',
         }));
@@ -1655,6 +1673,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     onClose,
     onSave,
     onDelete,
+    onTeamsMeetingCreated,
     canAssignMultipleAgents,
     users,
     currentUserId,
