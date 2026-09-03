@@ -201,6 +201,52 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(missing.status).toBe(404);
   });
 
+  it('mirrors live Xero line catalog validation: bogus ItemCode rejected, account-code-only line accepted', async () => {
+    const contactId = ((await (
+      await fetch(api(`/Contacts?where=${encodeURIComponent('Name=="Acme Rockets"')}`), { headers: authed() })
+    ).json()) as any).Contacts[0].ContactID;
+
+    const invoiceFor = (line: Record<string, unknown>) => ({
+      Invoices: [
+        {
+          Type: 'ACCREC',
+          Contact: { ContactID: contactId },
+          LineAmountTypes: 'Exclusive',
+          LineItems: [{ Description: 'IT Professional Services', Quantity: 1, UnitAmount: 150, LineAmount: 150, ...line }],
+        },
+      ],
+    });
+
+    // The alga0002321 failure: an account code sent as ItemCode.
+    const badItem = await fetch(api('/Invoices'), {
+      method: 'POST',
+      headers: authed(),
+      body: JSON.stringify(invoiceFor({ ItemCode: '200', TaxType: 'OUTPUT' })),
+    });
+    expect(badItem.status).toBe(400);
+    const badBody = (await badItem.json()) as any;
+    expect(JSON.stringify(badBody)).toContain("Item code '200' is not valid");
+
+    // Archived account code is rejected too.
+    const archivedAccount = await fetch(api('/Invoices'), {
+      method: 'POST',
+      headers: authed(),
+      body: JSON.stringify(invoiceFor({ AccountCode: '299' })),
+    });
+    expect(archivedAccount.status).toBe(400);
+
+    // Account-code-only line (no ItemCode property) is valid.
+    const accountOnly = await fetch(api('/Invoices'), {
+      method: 'POST',
+      headers: authed(),
+      body: JSON.stringify(invoiceFor({ AccountCode: '200', TaxType: 'OUTPUT' })),
+    });
+    expect(accountOnly.status).toBe(200);
+    const accepted = ((await accountOnly.json()) as any).Invoices[0];
+    expect(accepted.LineItems[0].AccountCode).toBe('200');
+    expect(accepted.LineItems[0].ItemCode).toBeUndefined();
+  });
+
   it('401s expired access tokens until a refresh mints a new one', async () => {
     const expired = await controlPost('/control/xero/actions/expire-access-tokens');
     expect(expired.ok).toBe(true);

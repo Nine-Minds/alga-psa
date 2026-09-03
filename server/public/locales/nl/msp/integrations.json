@@ -14,6 +14,7 @@
         "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
         "metadataLabel": "Metagegevens (JSON)",
         "metadataPlaceholder": "Optionele metadata als JSON",
+        "noKindOptions": "Er zijn geen bruikbare records van dit type gevonden in de gekoppelde organisatie.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Toewijzing opslaan",
         "saving": "Opslaan…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "QuickBooks-installatiegids",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
-        "connectionsPermissionNotice": "U kunt de QuickBooks-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
-,
+        "connectionsPermissionNotice": "U kunt de QuickBooks-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen.",
         "disconnectPending": "QuickBooks wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
         "disconnectForceFinalized": "De QuickBooks-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
-        "connectionsPermissionNotice": "U kunt de Xero-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
-,
+        "connectionsPermissionNotice": "U kunt de Xero-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen.",
         "disconnectPending": "Xero wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
         "disconnectForceFinalized": "De Xero-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
       "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw.",
       "invoiceCancelled": "De factuur is geannuleerd en kan niet worden gekoppeld aan de boekhoudintegratie.",
-      "invoiceNotFound": "De factuur bestaat niet meer en kan niet worden gekoppeld aan de boekhoudintegratie."
-,
+      "invoiceNotFound": "De factuur bestaat niet meer en kan niet worden gekoppeld aan de boekhoudintegratie.",
       "scopeRequired": "Voor het opzoeken van koppelingen zijn een integratie, een entiteitstype en een realm-scope vereist."
     },
     "qbo": {

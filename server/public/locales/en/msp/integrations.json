@@ -14,6 +14,7 @@
         "manualEntryHelp": "Enter the identifier exactly as it appears in your accounting system.",
         "metadataLabel": "Metadata (JSON)",
         "metadataPlaceholder": "Optional metadata as JSON",
+        "noKindOptions": "No usable records of this type were found in the connected organisation.",
         "realmIdLabel": "Realm ID",
         "saveMapping": "Save Mapping",
         "saving": "Saving…",
@@ -1957,8 +1958,7 @@
         },
         "setupGuideLink": "QuickBooks setup guide",
         "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
-        "connectionsPermissionNotice": "You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it."
-,
+        "connectionsPermissionNotice": "You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
         "disconnectPending": "QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
         "disconnectForceFinalized": "The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
         "disconnect": {
@@ -3551,8 +3551,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
-        "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it."
-,
+        "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
         "disconnectPending": "Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
         "disconnectForceFinalized": "The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Mapping not found. Refresh mappings and try again.",
       "deleteFailed": "Unable to delete mapping. Please try again.",
       "invoiceCancelled": "The invoice has been voided and cannot be mapped to the accounting integration.",
-      "invoiceNotFound": "The invoice no longer exists and cannot be mapped to the accounting integration."
-,
+      "invoiceNotFound": "The invoice no longer exists and cannot be mapped to the accounting integration.",
       "scopeRequired": "Mapping lookups require an integration, an entity type, and a realm scope."
     },
     "qbo": {

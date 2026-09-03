@@ -14,6 +14,7 @@
         "manualEntryHelp": "Inserisci l'identificatore esattamente come appare nel tuo sistema contabile.",
         "metadataLabel": "Metadati (JSON)",
         "metadataPlaceholder": "Metadati opzionali in formato JSON",
+        "noKindOptions": "Nessun record utilizzabile di questo tipo è stato trovato nell’organizzazione collegata.",
         "realmIdLabel": "ID realm",
         "saveMapping": "Salva mappatura",
         "saving": "Salvataggio…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "Guida alla configurazione di QuickBooks",
         "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
-        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla."
-,
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di QuickBooks, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla.",
         "disconnectPending": "QuickBooks è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
         "disconnectForceFinalized": "La disconnessione di QuickBooks è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Non disponi dell'autorizzazione per visualizzare o configurare le integrazioni contabili.",
-        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla."
-,
+        "connectionsPermissionNotice": "Puoi visualizzare le impostazioni di Xero, ma il salvataggio delle credenziali, la connessione e la disconnessione richiedono la capacità manage-connections. Chiedi a un amministratore di concederla.",
         "disconnectPending": "Xero è in fase di disconnessione. La sincronizzazione e le esportazioni sono in pausa finché la pulizia lato provider non è completata; la disconnessione continua a riprovare automaticamente.",
         "disconnectForceFinalized": "La disconnessione di Xero è stata finalizzata forzatamente. Non è stato possibile confermare la pulizia lato provider, quindi le credenziali sono state rimosse localmente con un record di audit.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Mappatura non trovata. Aggiornare le mappature e riprovare.",
       "deleteFailed": "Impossibile eliminare la mappatura. Riprovare.",
       "invoiceCancelled": "La fattura è stata annullata e non può essere mappata all'integrazione contabile.",
-      "invoiceNotFound": "La fattura non esiste più e non può essere mappata all'integrazione contabile."
-,
+      "invoiceNotFound": "La fattura non esiste più e non può essere mappata all'integrazione contabile.",
       "scopeRequired": "Le ricerche di mappature richiedono un'integrazione, un tipo di entità e un ambito realm."
     },
     "qbo": {

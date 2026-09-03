@@ -14,6 +14,7 @@
         "manualEntryHelp": "Insira o identificador exatamente como aparece no seu sistema de contabilidade.",
         "metadataLabel": "Metadados (JSON)",
         "metadataPlaceholder": "Metadados opcionais como JSON",
+        "noKindOptions": "Nenhum registro utilizável desse tipo foi encontrado na organização conectada.",
         "realmIdLabel": "ID do reino",
         "saveMapping": "Salvar mapeamento",
         "saving": "Salvando…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "Guia de configuração do QuickBooks",
         "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
-        "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la."
-,
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do QuickBooks, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la.",
         "disconnectPending": "O QuickBooks está sendo desconectado. A sincronização e as exportações ficam pausadas até que a limpeza do provedor seja concluída; a desconexão continua tentando novamente automaticamente.",
         "disconnectForceFinalized": "A desconexão do QuickBooks foi finalizada à força. Não foi possível confirmar a limpeza do provedor, portanto as credenciais foram removidas localmente com um registro de auditoria.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Você não tem permissão para visualizar ou configurar integrações contábeis.",
-        "connectionsPermissionNotice": "Você pode visualizar as configurações do Xero, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la."
-,
+        "connectionsPermissionNotice": "Você pode visualizar as configurações do Xero, mas salvar credenciais, conectar e desconectar requerem a capacidade manage-connections. Peça a um administrador para concedê-la.",
         "disconnectPending": "O Xero está sendo desconectado. A sincronização e as exportações ficam pausadas até que a limpeza do provedor seja concluída; a desconexão continua tentando novamente automaticamente.",
         "disconnectForceFinalized": "A desconexão do Xero foi finalizada à força. Não foi possível confirmar a limpeza do provedor, portanto as credenciais foram removidas localmente com um registro de auditoria.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Mapeamento não encontrado. Atualize os mapeamentos e tente novamente.",
       "deleteFailed": "Não é possível excluir o mapeamento. Tente novamente.",
       "invoiceCancelled": "A fatura foi anulada e não pode ser mapeada para a integração contábil.",
-      "invoiceNotFound": "A fatura não existe mais e não pode ser mapeada para a integração contábil."
-,
+      "invoiceNotFound": "A fatura não existe mais e não pode ser mapeada para a integração contábil.",
       "scopeRequired": "As consultas de mapeamento exigem uma integração, um tipo de entidade e um escopo de realm."
     },
     "qbo": {
