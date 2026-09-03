@@ -661,6 +661,14 @@
     },
     "errors": {
       "loadWorkItem": "Échec du chargement de l'élément de travail."
+    },
+    "teamsMeeting": {
+      "create": "Créer une réunion Teams",
+      "creating": "Création de la réunion Teams…",
+      "join": "Rejoindre la réunion Teams",
+      "created": "Réunion Microsoft Teams créée",
+      "createFailed": "Échec de la création de la réunion Teams",
+      "recurringUnsupported": "Les réunions Teams ne peuvent être ajoutées qu'à des entrées autonomes, pas à des séries récurrentes."
     }
   },
   "actions": {
