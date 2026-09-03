@@ -112,6 +112,7 @@ const apiKeySkipPaths = [
   '/api/teams/message-extension/',
   '/api/teams/webhooks/',  // Microsoft Graph change notifications; authenticated via clientState secret in the route
   '/api/telephony/webhooks/',  // Microsoft Graph callRecords notifications; authenticated via clientState secret in the route
+  '/api/telephony/3cx/',  // 3CX CRM template calls; authenticated via per-tenant Bearer ApiKey verified in the route
   '/api/teams/package/download',
   '/api/online-meetings/recordings/',
   '/api/client-portal/domain-session',

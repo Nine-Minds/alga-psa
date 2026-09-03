@@ -30,6 +30,14 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/online-meetings/recordings/artifact-123')).toBe(true);
   });
 
+  it('allows 3CX CRM template routes (per-tenant Bearer ApiKey verified in the route)', () => {
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/lookup')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/lookup-by-email')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/search')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx/abc123def456/report-call')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/telephony/3cx-malicious/x/lookup')).toBe(false);
+  });
+
   it('allows public appointment calendar downloads from email links', () => {
     expect(shouldSkipApiKeyAuth('/api/calendar/appointment/2187d639-b796-4b0e-b760-8a2576bb435f.ics')).toBe(true);
   });
