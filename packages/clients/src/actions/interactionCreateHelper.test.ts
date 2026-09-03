@@ -392,7 +392,7 @@ describe('interactionCreateHelper', () => {
       expect(deleted).toEqual(['schedule-entry-1', 'schedule-entry-2']);
     });
 
-    it('moves the linked schedule entry when the interaction is rescheduled', async () => {
+    it('moves and renames the linked schedule entry when the interaction changes', async () => {
       hoisted.scheduleEntryGetByWorkItemMock.mockResolvedValue([{ entry_id: 'schedule-entry-1' }]);
 
       await syncInteractionScheduleEntries({} as any, 'tenant-1', interaction);
@@ -402,9 +402,23 @@ describe('interactionCreateHelper', () => {
         'tenant-1',
         'schedule-entry-1',
         {
+          title: 'Follow-up call',
           scheduled_start: interaction.start_time,
           scheduled_end: interaction.end_time,
         },
+      );
+    });
+
+    it('removes the linked schedule entry when the interaction loses its start time', async () => {
+      hoisted.scheduleEntryGetByWorkItemMock.mockResolvedValue([{ entry_id: 'schedule-entry-1' }]);
+
+      await syncInteractionScheduleEntries({} as any, 'tenant-1', { ...interaction, start_time: null });
+
+      expect(hoisted.scheduleEntryUpdateMock).not.toHaveBeenCalled();
+      expect(hoisted.scheduleEntryDeleteMock).toHaveBeenCalledWith(
+        expect.anything(),
+        'tenant-1',
+        'schedule-entry-1',
       );
     });
   });

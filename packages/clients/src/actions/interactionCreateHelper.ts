@@ -337,20 +337,26 @@ export async function deleteInteractionScheduleEntries(
 }
 
 /**
- * Keeps a linked schedule entry in step with the interaction's rescheduled window.
+ * Keeps a linked schedule entry in step with the interaction it represents: renamed,
+ * rescheduled, or — once the interaction has no start time left — removed.
  */
 export async function syncInteractionScheduleEntries(
   trx: Knex.Transaction,
   tenant: string,
   interaction: IInteraction,
 ): Promise<void> {
-  const window = resolveInteractionWindow(interaction);
-  if (!window) return;
-
   const entries = await ScheduleEntry.getByWorkItem(trx, tenant, interaction.interaction_id, 'interaction');
+  if (entries.length === 0) return;
+
+  const window = resolveInteractionWindow(interaction);
+  if (!window) {
+    await deleteInteractionScheduleEntries(trx, tenant, interaction.interaction_id);
+    return;
+  }
 
   for (const entry of entries) {
     await ScheduleEntry.update(trx, tenant, entry.entry_id, {
+      ...(interaction.title ? { title: interaction.title } : {}),
       scheduled_start: window.start,
       scheduled_end: window.end,
     });
