@@ -7,7 +7,8 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { ExternalLink, Check, X, Download, FileText } from 'lucide-react';
+import { ExternalLink, Check, X, Download, FileText, Video } from 'lucide-react';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { WorkItemDrawer } from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/WorkItemDrawer';
@@ -29,6 +30,8 @@ import {
   declineAppointmentRequest as declineRequest,
   getTeamsMeetingCapability,
   getAppointmentRequestById,
+  getScheduleEntryTeamsMeeting,
+  scheduleTeamsMeeting,
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
@@ -166,6 +169,10 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [generateTeamsMeeting, setGenerateTeamsMeeting] = useState(true);
   const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Teams meeting attached directly to this schedule entry (not via an appointment request)
+  const [entryTeamsMeeting, setEntryTeamsMeeting] = useState<{ meeting_id: string; join_url: string } | null>(null);
+  const [isCreatingTeamsMeeting, setIsCreatingTeamsMeeting] = useState(false);
   const { t } = useTranslation('msp/schedule');
   const { formatDate } = useFormatters();
 
@@ -252,12 +259,40 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           setAppointmentRequestData(null);
         }
     } else {
-        // Non-appointment entries no longer offer ad-hoc Teams meeting creation
-        // (meetings are created as interactions, not schedule entries).
         setIsAppointmentRequest(false);
         setAppointmentRequestData(null);
-        setTeamsMeetingCapability(null);
         setGenerateTeamsMeeting(false);
+
+        // Existing non-appointment entries can attach a Teams meeting directly
+        // (online_meetings.schedule_entry_id). Recurring entries can't — a
+        // meeting belongs to one concrete occurrence — but the capability is
+        // still loaded so the disabled button can explain itself.
+        if (event?.entry_id) {
+          try {
+            const capability = await getTeamsMeetingCapability();
+            setTeamsMeetingCapability(capability);
+          } catch (error) {
+            console.error('Failed to load Teams meeting capability:', error);
+            setTeamsMeetingCapability({ available: false, reason: 'not_configured' });
+          }
+
+          if (!event.is_recurring && !event.entry_id.includes('_')) {
+            const meetingResult = await getScheduleEntryTeamsMeeting(event.entry_id);
+            if (meetingResult.success) {
+              setEntryTeamsMeeting(meetingResult.data
+                ? { meeting_id: meetingResult.data.meeting_id, join_url: meetingResult.data.join_url }
+                : null);
+            } else {
+              console.error('Failed to load Teams meeting for schedule entry:', meetingResult.error);
+              setEntryTeamsMeeting(null);
+            }
+          } else {
+            setEntryTeamsMeeting(null);
+          }
+        } else {
+          setTeamsMeetingCapability(null);
+          setEntryTeamsMeeting(null);
+        }
       }
     };
 
@@ -471,7 +506,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
   const [isDeleteProcessing, setIsDeleteProcessing] = useState(false);
   const [pendingDeleteScope, setPendingDeleteScope] = useState<IEditScope | undefined>(undefined);
   const [pendingUpdateData, setPendingUpdateData] = useState<Omit<IScheduleEntry, 'tenant'>>();
-  const deleteConfirmationMessage = appointmentRequestData?.online_meeting_url
+  const deleteConfirmationMessage = (appointmentRequestData?.online_meeting_url || entryTeamsMeeting)
     ? t('entryPopup.delete.confirmWithTeamsWarning', {
         defaultValue: 'Are you sure you want to delete this schedule entry? This action cannot be undone. This will also delete the Microsoft Teams meeting.',
       })
@@ -692,6 +727,39 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       }));
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  // Attach a Teams meeting to this existing schedule entry. The server reads
+  // subject/times/attendees from the saved entry and appends the join link to
+  // its notes; the returned notes replace the local ones so a later Save
+  // doesn't clobber the link with a stale value.
+  const handleCreateTeamsMeeting = async () => {
+    if (!event?.entry_id) return;
+
+    setIsCreatingTeamsMeeting(true);
+    try {
+      const result = await scheduleTeamsMeeting({ scheduleEntryId: event.entry_id });
+      if (result.success) {
+        setEntryTeamsMeeting({ meeting_id: result.data.meeting_id, join_url: result.data.join_url });
+        if (typeof result.data.schedule_entry_notes === 'string') {
+          const nextNotes = result.data.schedule_entry_notes;
+          setEntryData(prev => ({ ...prev, notes: nextNotes }));
+        }
+        toast.success(t('entryPopup.teamsMeeting.created', {
+          defaultValue: 'Microsoft Teams meeting created',
+        }));
+      } else {
+        toast.error(result.error || t('entryPopup.teamsMeeting.createFailed', {
+          defaultValue: 'Failed to create Teams meeting',
+        }));
+      }
+    } catch (error) {
+      handleError(error, t('entryPopup.teamsMeeting.createFailed', {
+        defaultValue: 'Failed to create Teams meeting',
+      }));
+    } finally {
+      setIsCreatingTeamsMeeting(false);
     }
   };
 
@@ -1353,6 +1421,57 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
               disabled={!canEditFields} // Disable based on permissions
             />
           </div>
+          {/* Teams meeting attached directly to this entry */}
+          {isEditing && !isAppointmentRequest && (
+            entryTeamsMeeting ? (
+              <div>
+                <Button
+                  id="join-entry-teams-meeting-button"
+                  type="button"
+                  variant="outline"
+                  onClick={() => window.open(entryTeamsMeeting.join_url, '_blank', 'noopener,noreferrer')}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  {t('entryPopup.teamsMeeting.join', { defaultValue: 'Join Teams Meeting' })}
+                </Button>
+              </div>
+            ) : teamsMeetingCapability?.available && (event?.is_recurring || event?.entry_id.includes('_')) ? (
+              <div>
+                <Tooltip
+                  content={t('entryPopup.teamsMeeting.recurringUnsupported', {
+                    defaultValue: 'Teams meetings can only be added to standalone entries, not recurring series.',
+                  })}
+                >
+                  <span className="inline-block">
+                    <Button
+                      id="create-teams-meeting-button"
+                      type="button"
+                      variant="outline"
+                      disabled
+                    >
+                      <Video className="h-4 w-4 mr-2" />
+                      {t('entryPopup.teamsMeeting.create', { defaultValue: 'Create Teams meeting' })}
+                    </Button>
+                  </span>
+                </Tooltip>
+              </div>
+            ) : teamsMeetingCapability?.available && canEditFields ? (
+              <div>
+                <Button
+                  id="create-teams-meeting-button"
+                  type="button"
+                  variant="outline"
+                  onClick={handleCreateTeamsMeeting}
+                  disabled={isCreatingTeamsMeeting}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  {isCreatingTeamsMeeting
+                    ? t('entryPopup.teamsMeeting.creating', { defaultValue: 'Creating Teams meeting…' })
+                    : t('entryPopup.teamsMeeting.create', { defaultValue: 'Create Teams meeting' })}
+                </Button>
+              </div>
+            ) : null
+          )}
         </div>
         <div className="space-y-4">
           <div className="relative z-10">

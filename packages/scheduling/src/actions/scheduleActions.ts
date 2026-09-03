@@ -386,7 +386,7 @@ async function syncTeamsMeetingForRescheduledEntry(
   updatedEntry: IScheduleEntry,
 ): Promise<string | undefined> {
   if (updatedEntry.work_item_type !== 'appointment_request' || !updatedEntry.work_item_id) {
-    return undefined;
+    return syncTeamsMeetingForRescheduledEntryLink(db, tenant, updatedEntry);
   }
 
   const scopedDb = tenantDb(db, tenant) as any;
@@ -457,6 +457,67 @@ async function syncTeamsMeetingForRescheduledEntry(
       .where({ meeting_id: onlineMeeting.meeting_id })
       .update({ start_time: startDate, end_time: endDate, updated_at: new Date() });
   }
+
+  return undefined;
+}
+
+/**
+ * Same contract as syncTeamsMeetingForRescheduledEntry, for meetings attached
+ * directly to a schedule entry (online_meetings.schedule_entry_id, created
+ * from the calendar entry editor) rather than through an appointment request.
+ * Subject follows the entry title; attendees are left untouched.
+ */
+async function syncTeamsMeetingForRescheduledEntryLink(
+  db: Knex,
+  tenant: string,
+  updatedEntry: IScheduleEntry,
+): Promise<string | undefined> {
+  const scopedDb = tenantDb(db, tenant) as any;
+  const onlineMeeting = await scopedDb.table('online_meetings')
+    .where({ schedule_entry_id: updatedEntry.entry_id })
+    .whereNull('appointment_request_id')
+    .whereNot('status', 'cancelled')
+    .first();
+
+  if (!onlineMeeting || onlineMeeting.provider !== 'teams' || !onlineMeeting.provider_meeting_id) {
+    return undefined;
+  }
+
+  const startDate = new Date(updatedEntry.scheduled_start as unknown as string);
+  const endDate = new Date(updatedEntry.scheduled_end as unknown as string);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
+    return undefined;
+  }
+
+  const teamsMeetingService = await resolveTeamsMeetingService();
+  const outcome = await teamsMeetingService.updateTeamsMeetingWithResult({
+    tenantId: tenant,
+    meetingId: onlineMeeting.provider_meeting_id,
+    eventId: onlineMeeting.provider_event_id ?? null,
+    startDateTime: startDate.toISOString(),
+    endDateTime: endDate.toISOString(),
+    subject: updatedEntry.title ?? null,
+    attendees: null,
+    bodyHtml: null,
+    appointmentRequestId: null,
+  });
+
+  if (outcome.status === 'skipped') {
+    return undefined;
+  }
+
+  if (outcome.status === 'failed') {
+    return 'Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
+  }
+
+  await scopedDb.table('online_meetings')
+    .where({ meeting_id: onlineMeeting.meeting_id })
+    .update({
+      start_time: startDate,
+      end_time: endDate,
+      subject: updatedEntry.title ?? onlineMeeting.subject,
+      updated_at: new Date(),
+    });
 
   return undefined;
 }
@@ -591,6 +652,23 @@ export const updateScheduleEntry = withAuth(async (
           });
         } catch (eventError) {
           console.error('[ScheduleActions] Failed to publish SCHEDULE_BLOCK_DELETED workflow event', eventError);
+        }
+      }
+
+      // Meetings attached directly to this entry (online_meetings.schedule_entry_id,
+      // created from the calendar entry editor) must follow a reschedule too.
+      // Appointment/ticket entries reach the same sync helper through the
+      // appointment-events block below.
+      if (
+        !shouldEmitAppointmentEvents(existingEntry) &&
+        !shouldEmitAppointmentEvents(updatedEntry) &&
+        isAppointmentRescheduled(existingEntry, updatedEntry)
+      ) {
+        try {
+          teamsMeetingWarning = await syncTeamsMeetingForRescheduledEntry(db, tenant, updatedEntry);
+        } catch (teamsError) {
+          console.error('[ScheduleActions] Failed to sync Teams meeting on reschedule', teamsError);
+          teamsMeetingWarning = 'Entry moved, but the Microsoft Teams meeting could not be rescheduled. Please update it manually in Teams.';
         }
       }
 
@@ -925,6 +1003,43 @@ export const deleteScheduleEntry = withAuth(async (
           meetingId: teamsMeetingId,
           eventId: onlineMeetingRow?.provider_event_id ?? null,
           appointmentRequestId: appointmentRequestRow.appointment_request_id,
+        });
+      }
+    }
+
+    // Meetings attached directly to this entry (online_meetings.schedule_entry_id,
+    // created from the calendar entry editor) die with the entry: cancel the
+    // rows, then best-effort delete the Graph meetings so invites are retracted.
+    const entryLinkedMeetings: Array<{
+      meeting_id: string;
+      provider: string;
+      provider_meeting_id: string | null;
+      provider_event_id: string | null;
+    }> = await withTransaction(db, async (trx: Knex.Transaction) => {
+      return await (tenantDb(trx, tenant) as any).table('online_meetings')
+        .where({ schedule_entry_id: masterEntryId })
+        .whereNull('appointment_request_id')
+        .whereNot('status', 'cancelled')
+        .select('meeting_id', 'provider', 'provider_meeting_id', 'provider_event_id');
+    });
+
+    if (entryLinkedMeetings.length > 0) {
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        await (tenantDb(trx, tenant) as any).table('online_meetings')
+          .whereIn('meeting_id', entryLinkedMeetings.map((meeting) => meeting.meeting_id))
+          .update({ status: 'cancelled', updated_at: new Date() });
+      });
+
+      const teamsMeetingService = await resolveTeamsMeetingService();
+      for (const meeting of entryLinkedMeetings) {
+        if (meeting.provider !== 'teams' || !meeting.provider_meeting_id) {
+          continue;
+        }
+        await teamsMeetingService.deleteTeamsMeeting({
+          tenantId: tenant,
+          meetingId: meeting.provider_meeting_id,
+          eventId: meeting.provider_event_id ?? null,
+          appointmentRequestId: null,
         });
       }
     }
