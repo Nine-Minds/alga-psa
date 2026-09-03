@@ -59,6 +59,7 @@ async function handleHourBlockExpiringEvent(event: unknown): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
+      const emailLocale = await getTenantDefaultLocale(tenantId, 'client');
       await withTransaction(knex, async (trx: Knex.Transaction) => {
         const scopedDb = tenantDb(trx, tenantId);
 
@@ -111,7 +112,6 @@ async function handleHourBlockExpiringEvent(event: unknown): Promise<void> {
               .first()
           )?.default_currency_code ||
           'USD';
-        const emailLocale = await getTenantDefaultLocale(tenantId, 'client');
 
         const totalMinutesRemaining = blockRows.reduce(
           (sum, row) => sum + Number(row.remaining_minutes || 0),

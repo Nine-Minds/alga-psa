@@ -14,6 +14,7 @@
         "manualEntryHelp": "Geben Sie die Kennung genau so ein, wie sie in Ihrem Buchhaltungssystem erscheint.",
         "metadataLabel": "Metadaten (JSON)",
         "metadataPlaceholder": "Optionale Metadaten als JSON",
+        "noKindOptions": "In der verbundenen Organisation wurden keine verwendbaren Datensätze dieses Typs gefunden.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Zuordnung speichern",
         "saving": "Speichern…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "QuickBooks-Einrichtungsanleitung",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
-        "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
-,
+        "connectionsPermissionNotice": "Sie können die QuickBooks-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
         "disconnectPending": "QuickBooks wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
         "disconnectForceFinalized": "Die Trennung von QuickBooks wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Sie haben keine Berechtigung, Buchhaltungsintegrationen anzuzeigen oder zu konfigurieren.",
-        "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen."
-,
+        "connectionsPermissionNotice": "Sie können die Xero-Einstellungen anzeigen, zum Speichern von Anmeldedaten, Verbinden und Trennen ist jedoch die Berechtigung manage-connections erforderlich. Bitten Sie einen Administrator, sie zu erteilen.",
         "disconnectPending": "Xero wird getrennt. Synchronisierung und Exporte sind pausiert, bis die Anbieterbereinigung abgeschlossen ist; die Trennung wird automatisch wiederholt.",
         "disconnectForceFinalized": "Die Trennung von Xero wurde zwangsweise abgeschlossen. Die Anbieterbereinigung konnte nicht bestätigt werden, daher wurden die Anmeldedaten lokal mit einem Audit-Eintrag entfernt.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Zuordnung nicht gefunden. Aktualisieren Sie die Zuordnungen und versuchen Sie es erneut.",
       "deleteFailed": "Die Zuordnung kann nicht gelöscht werden. Bitte versuchen Sie es erneut.",
       "invoiceCancelled": "Die Rechnung wurde storniert und kann nicht der Buchhaltungsintegration zugeordnet werden.",
-      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden."
-,
+      "invoiceNotFound": "Die Rechnung existiert nicht mehr und kann nicht der Buchhaltungsintegration zugeordnet werden.",
       "scopeRequired": "Zuordnungsabfragen erfordern eine Integration, einen Entitätstyp und einen Bereichs-Scope."
     },
     "qbo": {

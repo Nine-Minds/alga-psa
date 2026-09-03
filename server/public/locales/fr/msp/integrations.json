@@ -14,6 +14,7 @@
         "manualEntryHelp": "Saisissez l'identifiant exactement tel qu'il apparaît dans votre système comptable.",
         "metadataLabel": "Métadonnées (JSON)",
         "metadataPlaceholder": "Métadonnées optionnelles au format JSON",
+        "noKindOptions": "Aucun enregistrement utilisable de ce type n'a été trouvé dans l'organisation connectée.",
         "realmIdLabel": "ID du Realm",
         "saveMapping": "Enregistrer le mappage",
         "saving": "Enregistrement…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "Guide de configuration QuickBooks",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
-        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
-,
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres QuickBooks, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder.",
         "disconnectPending": "QuickBooks est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
         "disconnectForceFinalized": "La déconnexion de QuickBooks a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Xero CSV",
         "noPermissionDescription": "Vous n'avez pas l'autorisation d'afficher ou de configurer les intégrations comptables.",
-        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder."
-,
+        "connectionsPermissionNotice": "Vous pouvez consulter les paramètres Xero, mais l'enregistrement des identifiants, la connexion et la déconnexion nécessitent la capacité manage-connections. Demandez à un administrateur de l'accorder.",
         "disconnectPending": "Xero est en cours de déconnexion. La synchronisation et les exports sont en pause jusqu'à la fin du nettoyage côté fournisseur ; la déconnexion réessaie automatiquement.",
         "disconnectForceFinalized": "La déconnexion de Xero a été finalisée de force. Le nettoyage côté fournisseur n'a pas pu être confirmé ; les identifiants ont donc été supprimés localement avec un enregistrement d'audit.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Correspondance introuvable. Actualisez les correspondances et réessayez.",
       "deleteFailed": "Impossible de supprimer la correspondance. Veuillez réessayer.",
       "invoiceCancelled": "La facture a été annulée et ne peut pas être mappée à l'intégration comptable.",
-      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable."
-,
+      "invoiceNotFound": "La facture n'existe plus et ne peut pas être mappée à l'intégration comptable.",
       "scopeRequired": "Les recherches de correspondances nécessitent une intégration, un type d'entité et une portée de realm."
     },
     "qbo": {

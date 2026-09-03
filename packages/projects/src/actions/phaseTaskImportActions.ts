@@ -854,7 +854,7 @@ export const importPhasesAndTasks = withAuth(async (
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
-      if (!await hasPermission(user, 'project', 'update')) {
+      if (!await hasPermission(user, 'project', 'update', trx)) {
         throw new Error('Permission denied: Cannot update projects');
       }
 

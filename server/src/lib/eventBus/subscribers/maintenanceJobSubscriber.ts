@@ -18,6 +18,7 @@ import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout'
 // @alga-psa/jobs one), so rmm/huntress are only registered there.
 import { executeJobHandler } from '../../jobs/jobHandlerRegistry';
 import { runWithTenant } from '@alga-psa/db';
+import { acquireMaintenanceJobLock } from './maintenanceJobLock';
 
 let isRegistered = false;
 
@@ -49,10 +50,20 @@ async function handleMaintenanceJobRequested(event: unknown): Promise<void> {
 
   try {
     if (isKnownMaintenanceJob(jobName)) {
-      // Global maintenance fan-out: run once / across all tenants.
-      logger.info(`[MaintenanceJobSubscriber] Running maintenance job '${jobName}'`);
-      const result = await runMaintenanceJob(jobName);
-      logger.info(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' complete`, result);
+      // Global maintenance fan-out: run once / across all tenants, and never
+      // concurrently with another run of the same job anywhere in the cluster.
+      const lock = await acquireMaintenanceJobLock(jobName);
+      if (!lock) {
+        logger.info(`[MaintenanceJobSubscriber] Skipping maintenance job '${jobName}': a run is already in progress`);
+        return;
+      }
+      try {
+        logger.info(`[MaintenanceJobSubscriber] Running maintenance job '${jobName}'`);
+        const result = await runMaintenanceJob(jobName);
+        logger.info(`[MaintenanceJobSubscriber] Maintenance job '${jobName}' complete`, result);
+      } finally {
+        await lock.release();
+      }
     } else {
       // Worker-scheduled job (e.g. rmm/huntress) forwarded for server-side
       // execution because its handler imports src-consumed packages the worker

@@ -1707,7 +1707,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -2593,7 +2593,7 @@ export const generateInvoice = withAuth(async (
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check permissions within transaction
-    if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
       throw new Error('Permission denied: Cannot generate invoices');
     }
 
@@ -3158,7 +3158,7 @@ export async function createInvoiceFromBillingResultImpl(
       invoiceData.invoice_number = invoiceNumber;
       const [insertedInvoice] = await withTransaction(knex, async (trx: Knex.Transaction) => {
         // Check permissions within transaction
-        if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+        if (!await hasPermission(user, 'invoice', 'create', trx) && !await hasPermission(user, 'invoice', 'generate', trx)) {
           throw new Error('Permission denied: Cannot create invoices');
         }
 

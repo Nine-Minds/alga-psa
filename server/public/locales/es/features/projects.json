@@ -1320,6 +1320,12 @@
       },
       "skip": "Omitir",
       "creating": "Creando..."
+    },
+    "discardConfirmation": {
+      "title": "¿Descartar la plantilla sin guardar?",
+      "message": "Su plantilla tiene cambios sin guardar. Si sale ahora, esos cambios se perderán.",
+      "keepEditing": "Seguir editando",
+      "discard": "Descartar plantilla"
     }
   },
   "documents": {

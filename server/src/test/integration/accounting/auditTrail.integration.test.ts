@@ -182,8 +182,6 @@ describe('Accounting export audit trail integration', () => {
       transactionsByInvoice[invoiceId] = transactionId;
     }
 
-    // Mappings are realm-scoped: customer validation is realm-exact, so the
-    // seeded rows must carry the batch's target realm to clear validation.
     await ctx.db('tenant_external_entity_mappings').insert({
       id: uuidv4(),
       tenant: ctx.tenantId,
@@ -191,6 +189,8 @@ describe('Accounting export audit trail integration', () => {
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: 'QB-ITEM-DEFAULT',
+      // Mapping resolution is realm-exact: rows must carry the batch's
+      // target realm ('realm-500' below) or validation flags them missing.
       external_realm_id: 'realm-500',
       sync_status: 'synced',
       created_at: new Date().toISOString(),

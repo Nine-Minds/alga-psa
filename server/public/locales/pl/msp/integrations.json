@@ -14,6 +14,7 @@
         "manualEntryHelp": "Wprowadź identyfikator dokładnie tak, jak pojawia się w systemie księgowym.",
         "metadataLabel": "Metadane (JSON)",
         "metadataPlaceholder": "Opcjonalne metadane w formacie JSON",
+        "noKindOptions": "Nie znaleziono użytecznych rekordów tego typu w połączonej organizacji.",
         "realmIdLabel": "Identyfikator Realm",
         "saveMapping": "Zapisz mapowanie",
         "saving": "Zapisywanie…",
@@ -1934,8 +1935,7 @@
         },
         "setupGuideLink": "Przewodnik konfiguracji QuickBooks",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
-        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia QuickBooks, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie."
-,
+        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia QuickBooks, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie.",
         "disconnectPending": "Trwa rozłączanie QuickBooks. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
         "disconnectForceFinalized": "Rozłączanie QuickBooks zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
         "disconnect": {
@@ -3528,8 +3528,7 @@
         "title": "Xero",
         "xeroCsv": "Plik CSV Xero",
         "noPermissionDescription": "Nie masz uprawnień do wyświetlania ani konfigurowania integracji księgowych.",
-        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia Xero, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie."
-,
+        "connectionsPermissionNotice": "Możesz wyświetlić ustawienia Xero, ale zapisywanie poświadczeń, łączenie i rozłączanie wymagają uprawnienia manage-connections. Poproś administratora o jego przyznanie.",
         "disconnectPending": "Trwa rozłączanie Xero. Synchronizacja i eksporty są wstrzymane do czasu zakończenia czyszczenia po stronie dostawcy; rozłączanie jest automatycznie ponawiane.",
         "disconnectForceFinalized": "Rozłączanie Xero zostało przymusowo sfinalizowane. Nie udało się potwierdzić czyszczenia po stronie dostawcy, dlatego poświadczenia zostały usunięte lokalnie wraz z wpisem audytowym.",
         "disconnect": {
@@ -3725,8 +3724,7 @@
       "notFound": "Nie znaleziono powiązania. Odśwież powiązania i spróbuj ponownie.",
       "deleteFailed": "Nie można usunąć powiązania. Spróbuj ponownie.",
       "invoiceCancelled": "Faktura została anulowana i nie można jej zmapować do integracji księgowej.",
-      "invoiceNotFound": "Faktura już nie istnieje i nie można jej zmapować do integracji księgowej."
-,
+      "invoiceNotFound": "Faktura już nie istnieje i nie można jej zmapować do integracji księgowej.",
       "scopeRequired": "Wyszukiwanie mapowań wymaga integracji, typu encji i zakresu realm."
     },
     "qbo": {

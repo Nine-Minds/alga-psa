@@ -84,7 +84,7 @@ export const getContractLinePresets = withAuth(async (user, { tenant }): Promise
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'read')) {
+            if (!await hasPermission(user, 'billing', 'read', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line presets');
             }
 
@@ -106,7 +106,7 @@ export const getContractLinePresetById = withAuth(async (user, { tenant }, prese
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'read')) {
+            if (!await hasPermission(user, 'billing', 'read', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line presets');
             }
 
@@ -138,7 +138,7 @@ export const createContractLinePreset = withAuth(async (
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'create')) {
+            if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract line presets');
             }
 
@@ -177,7 +177,7 @@ export const updateContractLinePreset = withAuth(async (
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line presets');
             }
 
@@ -226,7 +226,7 @@ export const deleteContractLinePreset = withAuth(async (user, { tenant }, preset
         const { knex } = await createTenantKnex();
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'delete')) {
+            if (!await hasPermission(user, 'billing', 'delete', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot delete contract line presets');
             }
 
@@ -250,7 +250,7 @@ export const getContractLinePresetServices = withAuth(async (user, { tenant }, p
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'read')) {
+            if (!await hasPermission(user, 'billing', 'read', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset services');
             }
 
@@ -275,7 +275,7 @@ export const getContractLinePresetServiceCounts = withAuth(async (user, { tenant
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'read')) {
+            if (!await hasPermission(user, 'billing', 'read', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset services');
             }
 
@@ -304,7 +304,7 @@ export const updateContractLinePresetServices = withAuth(async (
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line preset services');
             }
 
@@ -329,7 +329,7 @@ export const getContractLinePresetFixedConfig = withAuth(async (user, { tenant }
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'read')) {
+            if (!await hasPermission(user, 'billing', 'read', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset fixed config');
             }
 
@@ -359,7 +359,7 @@ export const updateContractLinePresetFixedConfig = withAuth(async (
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'update')) {
+            if (!await hasPermission(user, 'billing', 'update', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line preset fixed config');
             }
 
@@ -400,7 +400,7 @@ export const copyPresetToContractLine = withAuth(async (
         const tenantId: string = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'create')) {
+            if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines from presets');
             }
 
@@ -679,7 +679,7 @@ export const createCustomContractLine = withAuth(async (
         const tenantId: string = tenant;
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
-            if (!await hasPermission(user, 'billing', 'create')) {
+            if (!await hasPermission(user, 'billing', 'create', trx)) {
                 throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines');
             }
 

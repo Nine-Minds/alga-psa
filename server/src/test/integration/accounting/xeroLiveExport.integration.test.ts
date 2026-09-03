@@ -238,8 +238,10 @@ describe('Live Xero export integration', () => {
     return { batchId: batch.batch_id, lineId: line.line_id };
   }
 
-  it('T017: DB-backed export succeeds through the live Xero adapter using the stored connection for the batch realm', async () => {
-    const { batchId, lineId } = await seedLiveXeroBatch();
+  it('T017: DB-backed export succeeds through the live Xero adapter using the stored default connection context', async () => {
+    // The adapter requires an immutable batch target realm, so even the
+    // default-connection flow exports against a realm-stamped batch.
+    const { batchId, lineId } = await seedLiveXeroBatch({ targetRealm: 'xero-default-realm' });
 
     xeroCreateMock.mockResolvedValue({
       createInvoices: vi.fn(async (payloads: Array<Record<string, any>>) => {
@@ -266,7 +268,7 @@ describe('Live Xero export integration', () => {
       }
     });
 
-    expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, DEFAULT_TARGET_REALM);
+    expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, 'xero-default-realm');
 
     const batch = await repository.getBatch(batchId);
     const [line] = await repository.listLines(batchId);
@@ -277,7 +279,7 @@ describe('Live Xero export integration', () => {
   }, HOOK_TIMEOUT);
 
   it('T018: DB-backed export fails with a clear guard error when no stored default Xero connection exists', async () => {
-    const { batchId, lineId } = await seedLiveXeroBatch();
+    const { batchId, lineId } = await seedLiveXeroBatch({ targetRealm: 'xero-default-realm' });
     const guardError = new AppError(
       'XERO_NOT_CONFIGURED',
       `No Xero connections configured for tenant ${ctx.tenantId}`
@@ -289,7 +291,7 @@ describe('Live Xero export integration', () => {
       `No Xero connections configured for tenant ${ctx.tenantId}`
     );
 
-    expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, DEFAULT_TARGET_REALM);
+    expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, 'xero-default-realm');
 
     const batch = await repository.getBatch(batchId);
     const [line] = await repository.listLines(batchId);

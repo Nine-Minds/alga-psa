@@ -317,7 +317,7 @@ export async function linkExistingDocumentAsEntityImage(
       return { success: false, message: 'Document must be an image' };
     }
 
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
       const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
       // Step 1: Unmark any existing logo/avatar for this entity
@@ -354,15 +354,13 @@ export async function linkExistingDocumentAsEntityImage(
         });
       }
 
-      // Get the image URL for the response
-      const imageUrl = await getEntityImageUrl(entityType, entityId, tenant);
-
-      return {
-        success: true,
-        message: `Document linked as ${entityType} image successfully`,
-        imageUrl,
-      };
     });
+    const imageUrl = await getEntityImageUrl(entityType, entityId, tenant);
+    return {
+      success: true,
+      message: `Document linked as ${entityType} image successfully`,
+      imageUrl,
+    };
   } catch (error) {
     console.error(`[EntityImageService] Failed to link document as ${entityType} image:`, {
       operation: 'linkExistingDocumentAsEntityImage',
