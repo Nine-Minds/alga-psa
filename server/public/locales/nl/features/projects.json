@@ -1320,6 +1320,12 @@
       },
       "skip": "Overslaan",
       "creating": "Aanmaken..."
+    },
+    "discardConfirmation": {
+      "title": "Niet-opgeslagen sjabloon verwerpen?",
+      "message": "Uw sjabloon bevat niet-opgeslagen wijzigingen. Als u nu weggaat, gaan deze wijzigingen verloren.",
+      "keepEditing": "Doorgaan met bewerken",
+      "discard": "Sjabloon verwerpen"
     }
   },
   "documents": {
