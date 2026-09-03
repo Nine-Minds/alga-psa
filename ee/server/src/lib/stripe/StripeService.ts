@@ -1917,12 +1917,18 @@ export class StripeService {
     product: 'ALGADESK' | 'ALGAPSA',
     interval: 'month' | 'year',
   ): string {
-    const envName = `STRIPE_${product}_USER_${interval === 'year' ? 'ANNUAL_' : ''}PRICE_ID`;
+    const annual = interval === 'year';
+    // The AlgaPSA per-seat price is the Pro price; STRIPE_ALGAPSA_USER_* only overrides it.
     const priceId = product === 'ALGADESK'
-      ? (interval === 'year' ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
-      : (interval === 'year' ? this.config.algapsaUserAnnualPriceId : this.config.algapsaUserPriceId);
+      ? (annual ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
+      : (annual
+        ? (this.config.algapsaUserAnnualPriceId || this.config.proAnnualPriceId)
+        : (this.config.algapsaUserPriceId || this.config.proPriceId));
 
     if (!priceId) {
+      const envName = product === 'ALGADESK'
+        ? `STRIPE_ALGADESK_USER_${annual ? 'ANNUAL_' : ''}PRICE_ID`
+        : `STRIPE_PRO_${annual ? 'ANNUAL_' : ''}PRICE_ID`;
       throw new Error(`${envName} environment variable is not configured`);
     }
 
