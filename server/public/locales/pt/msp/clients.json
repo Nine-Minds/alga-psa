@@ -1477,7 +1477,11 @@
         "unavailable": "A criação de reuniões do Teams não está disponível para este locatário."
       },
       "loadFailed": "Não foi possível carregar as opções de interação. Tente novamente.",
-      "saveFailed": "Não foi possível salvar a interação. Tente novamente."
+      "saveFailed": "Não foi possível salvar a interação. Tente novamente.",
+      "schedule": {
+        "addToggle": "Adicionar à minha agenda",
+        "addHelp": "Uma entrada de agendamento será adicionada ao seu calendário do AlgaPSA."
+      }
     },
     "feed": {
       "addInteraction": "Adicionar interação",

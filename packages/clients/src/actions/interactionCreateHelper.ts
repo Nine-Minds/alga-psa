@@ -2,9 +2,10 @@
 import { revalidatePath } from 'next/cache';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { IInteraction } from '@alga-psa/types';
+import type { IInteraction, IScheduleEntry } from '@alga-psa/types';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildInteractionLoggedPayload } from '@alga-psa/workflow-streams';
+import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import InteractionModel from '../models/interactions';
 
 type InteractionInput = Partial<IInteraction> & {
@@ -45,11 +46,25 @@ export async function getDefaultInteractionStatusId(trx: Knex.Transaction, tenan
     })
     .first();
 
-  if (!defaultStatus) {
+  if (defaultStatus) {
+    return defaultStatus.status_id;
+  }
+
+  // Tenants that cleared the (historically closed) default would otherwise be unable to
+  // log an interaction at all — fall back to the first open status instead.
+  const firstOpenStatus = await tenantDb(trx, tenant).table('statuses')
+    .where({
+      status_type: 'interaction',
+      is_closed: false
+    })
+    .orderBy('order_number')
+    .first();
+
+  if (!firstOpenStatus) {
     throw new Error('No default status found for interactions');
   }
 
-  return defaultStatus.status_id;
+  return firstOpenStatus.status_id;
 }
 
 export async function publishInteractionSearchEvent(
@@ -200,4 +215,143 @@ export async function createInteractionWithSideEffects(
       changedFields: params.changedFields,
     }),
   };
+}
+
+function toDate(value: unknown): Date | null {
+  if (!value) return null;
+  const date = value instanceof Date ? value : new Date(value as string);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function resolveInteractionWindow(
+  interaction: Pick<IInteraction, 'start_time' | 'end_time' | 'duration'>,
+): { start: Date; end: Date } | null {
+  const start = toDate(interaction.start_time);
+  if (!start) return null;
+
+  const explicitEnd = toDate(interaction.end_time);
+  if (explicitEnd && explicitEnd.getTime() > start.getTime()) {
+    return { start, end: explicitEnd };
+  }
+
+  // Calendars need a non-empty window; fall back to the logged duration, then to 30 minutes.
+  const minutes = typeof interaction.duration === 'number' && interaction.duration > 0
+    ? interaction.duration
+    : 30;
+  return { start, end: new Date(start.getTime() + minutes * 60000) };
+}
+
+export interface CreateInteractionScheduleEntryParams {
+  tenant: string;
+  trx: Knex.Transaction;
+  interaction: IInteraction;
+  assignedUserIds: string[];
+  assignedByUserId: string;
+}
+
+/**
+ * Puts an interaction on the assignees' AlgaPSA calendar. Mirrors the schedule entry the
+ * Teams flow already creates, so every interaction type — call, email, in-person — can
+ * show up on a schedule instead of only online meetings.
+ *
+ * Returns the after-commit publisher, or null when the interaction has no start time.
+ */
+export async function createInteractionScheduleEntry({
+  tenant,
+  trx,
+  interaction,
+  assignedUserIds,
+  assignedByUserId,
+}: CreateInteractionScheduleEntryParams): Promise<{
+  entry: IScheduleEntry;
+  publishScheduleEntryCreated: () => Promise<void>;
+} | null> {
+  const window = resolveInteractionWindow(interaction);
+  if (!window || assignedUserIds.length === 0) {
+    return null;
+  }
+
+  const entry = await ScheduleEntry.create(
+    trx,
+    tenant,
+    {
+      title: interaction.title,
+      scheduled_start: window.start,
+      scheduled_end: window.end,
+      work_item_type: 'interaction',
+      work_item_id: interaction.interaction_id,
+      status: 'scheduled',
+      assigned_user_ids: assignedUserIds,
+      is_recurring: false,
+      is_private: false,
+    },
+    {
+      assignedUserIds,
+      assignedByUserId,
+    },
+  );
+
+  return {
+    entry,
+    publishScheduleEntryCreated: async () => {
+      try {
+        await publishEvent({
+          eventType: 'SCHEDULE_ENTRY_CREATED',
+          payload: {
+            tenantId: tenant,
+            userId: assignedByUserId,
+            entryId: entry.entry_id,
+            changes: {
+              after: entry,
+              assignedUserIds,
+            },
+          },
+        });
+      } catch (eventError) {
+        console.error('[interactionCreateHelper] Failed to publish SCHEDULE_ENTRY_CREATED event:', eventError);
+      }
+    },
+  };
+}
+
+/**
+ * Schedule entries hang off an interaction by (work_item_type, work_item_id) with no FK
+ * cascade (Citus), so they must be removed explicitly — otherwise a deleted interaction
+ * leaves a ghost block on the calendar.
+ */
+export async function deleteInteractionScheduleEntries(
+  trx: Knex.Transaction,
+  tenant: string,
+  interactionId: string,
+): Promise<string[]> {
+  const entries = await ScheduleEntry.getByWorkItem(trx, tenant, interactionId, 'interaction');
+  const deletedEntryIds: string[] = [];
+
+  for (const entry of entries) {
+    await ScheduleEntry.delete(trx, tenant, entry.entry_id);
+    deletedEntryIds.push(entry.entry_id);
+  }
+
+  return deletedEntryIds;
+}
+
+/**
+ * Keeps a linked schedule entry in step with the interaction's rescheduled window.
+ */
+export async function syncInteractionScheduleEntries(
+  trx: Knex.Transaction,
+  tenant: string,
+  interaction: IInteraction,
+): Promise<void> {
+  const window = resolveInteractionWindow(interaction);
+  if (!window) return;
+
+  const entries = await ScheduleEntry.getByWorkItem(trx, tenant, interaction.interaction_id, 'interaction');
+
+  for (const entry of entries) {
+    await ScheduleEntry.update(trx, tenant, entry.entry_id, {
+      scheduled_start: window.start,
+      scheduled_end: window.end,
+    });
+  }
 }

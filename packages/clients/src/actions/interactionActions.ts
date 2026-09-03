@@ -11,8 +11,11 @@ import type { InteractionPageFilters, InteractionPageResult } from '../models/in
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
 import {
+  createInteractionScheduleEntry,
   createInteractionWithSideEffects,
+  deleteInteractionScheduleEntries,
   publishInteractionSearchEvent,
+  syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
@@ -70,10 +73,16 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
   return null;
 }
 
+export interface AddInteractionOptions {
+  /** Also place the interaction on the creating user's AlgaPSA calendar. */
+  createScheduleEntry?: boolean;
+}
+
 export const addInteraction = withAuth(async (
   user,
   { tenant },
-  interactionData: Omit<IInteraction, 'interaction_date'>
+  interactionData: Omit<IInteraction, 'interaction_date'>,
+  options: AddInteractionOptions = {}
 ): Promise<IInteraction | InteractionActionError> => {
   try {
     await assertMspPermission(user, 'interaction', 'create', 'Permission denied: Cannot create interactions');
@@ -97,6 +106,7 @@ export const addInteraction = withAuth(async (
     }
 
     let publishSideEffects: (() => Promise<void>) | undefined;
+    let publishScheduleEntryCreated: (() => Promise<void>) | undefined;
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
       const result = await createInteractionWithSideEffects({
         tenant,
@@ -105,11 +115,25 @@ export const addInteraction = withAuth(async (
         interactionData,
       });
       publishSideEffects = result.publishSideEffects;
+
+      if (options.createScheduleEntry) {
+        const scheduled = await createInteractionScheduleEntry({
+          tenant,
+          trx,
+          interaction: result.interaction,
+          // "Add to my schedule" — the calendar block belongs to whoever logged it.
+          assignedUserIds: [user.user_id],
+          assignedByUserId: user.user_id,
+        });
+        publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;
+      }
+
       return result.interaction;
     });
 
     console.log('New interaction created:', newInteraction);
     await publishSideEffects?.();
+    await publishScheduleEntryCreated?.();
     return newInteraction;
   } catch (error) {
     console.error('Error adding interaction:', error)
@@ -218,8 +242,14 @@ export const updateInteraction = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const reschedules = updateData.start_time !== undefined || updateData.end_time !== undefined;
     const updatedInteraction = await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await InteractionModel.updateInteraction(interactionId, updateData, tenant);
+      const interaction = await InteractionModel.updateInteraction(interactionId, updateData, tenant);
+      // Keep the calendar block in step with the interaction it represents.
+      if (reschedules) {
+        await syncInteractionScheduleEntries(trx, tenant, interaction);
+      }
+      return interaction;
     });
     await publishInteractionSearchEvent('INTERACTION_UPDATED', tenant, interactionId, {
       clientId: updatedInteraction.client_id,
@@ -322,6 +352,9 @@ export const deleteInteraction = withAuth(async (user, { tenant }, interactionId
 
       // Cascade-delete the linked online meeting, its artifacts, and transcript documents.
       const fileIds = await cleanupInteractionOnlineMeetings(trx, tenant, interactionId);
+
+      // ...and the calendar block the interaction put on the assignees' schedule.
+      await deleteInteractionScheduleEntries(trx, tenant, interactionId);
 
       // Delete the interaction
       const deletedCount = await db.table('interactions')

@@ -1477,7 +1477,11 @@
         "unavailable": "La creación de reuniones de Teams no está disponible para este inquilino."
       },
       "loadFailed": "No se pudieron cargar las opciones de interacción. Inténtelo de nuevo.",
-      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo."
+      "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo.",
+      "schedule": {
+        "addToggle": "Agregar a mi calendario",
+        "addHelp": "Se añadirá una entrada de programación a su calendario de AlgaPSA."
+      }
     },
     "feed": {
       "addInteraction": "Agregar interacción",

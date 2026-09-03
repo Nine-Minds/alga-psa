@@ -1477,7 +1477,11 @@
         "unavailable": "La création de réunions Teams n'est pas disponible pour ce locataire."
       },
       "loadFailed": "Impossible de charger les options d'interaction. Réessayez.",
-      "saveFailed": "Impossible d'enregistrer l'interaction. Réessayez."
+      "saveFailed": "Impossible d'enregistrer l'interaction. Réessayez.",
+      "schedule": {
+        "addToggle": "Ajouter à mon planning",
+        "addHelp": "Une entrée de planification sera ajoutée à votre calendrier AlgaPSA."
+      }
     },
     "feed": {
       "addInteraction": "Ajouter une interaction",

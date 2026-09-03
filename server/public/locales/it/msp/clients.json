@@ -1477,7 +1477,11 @@
         "unavailable": "La creazione di riunioni Teams non è disponibile per questo tenant."
       },
       "loadFailed": "Impossibile caricare le opzioni di interazione. Riprova.",
-      "saveFailed": "Impossibile salvare l'interazione. Riprova."
+      "saveFailed": "Impossibile salvare l'interazione. Riprova.",
+      "schedule": {
+        "addToggle": "Aggiungi alla mia pianificazione",
+        "addHelp": "Una voce di pianificazione verrà aggiunta al tuo calendario AlgaPSA."
+      }
     },
     "feed": {
       "addInteraction": "Aggiungi interazione",

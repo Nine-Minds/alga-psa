@@ -1529,7 +1529,11 @@
         "unavailable": "Tworzenie spotkań Teams nie jest dostępne dla tego tenanta."
       },
       "loadFailed": "Nie udało się wczytać opcji interakcji. Spróbuj ponownie.",
-      "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie."
+      "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie.",
+      "schedule": {
+        "addToggle": "Dodaj do mojego harmonogramu",
+        "addHelp": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA."
+      }
     },
     "feed": {
       "addInteraction": "Dodaj interakcję",

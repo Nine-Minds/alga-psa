@@ -1477,7 +1477,11 @@
         "unavailable": "Het aanmaken van Teams-vergaderingen is niet beschikbaar voor deze tenant."
       },
       "loadFailed": "Interactieopties konden niet worden geladen. Probeer het opnieuw.",
-      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw."
+      "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw.",
+      "schedule": {
+        "addToggle": "Toevoegen aan mijn planning",
+        "addHelp": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda."
+      }
     },
     "feed": {
       "addInteraction": "Interactie toevoegen",

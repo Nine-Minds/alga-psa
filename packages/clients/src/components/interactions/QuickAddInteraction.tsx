@@ -122,6 +122,8 @@ export function QuickAddInteraction({
   const [clientDefaultEmail, setClientDefaultEmail] = useState<string | null>(null);
   const [clientDefaultName, setClientDefaultName] = useState<string | null>(null);
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
+  const [addToSchedule, setAddToSchedule] = useState(false);
+  const [hasTouchedScheduleToggle, setHasTouchedScheduleToggle] = useState(false);
 
   const isEditMode = !!editingInteraction;
   const isStandaloneCreate = !isEditMode && !entityId;
@@ -154,6 +156,10 @@ export function QuickAddInteraction({
     && isOnlineMeetingType
     && !!clientCrossFeature?.scheduleTeamsMeeting
     && teamsMeetingCapability?.available === true;
+  // The Teams path always books the calendar itself, so the generic toggle would be a
+  // duplicate control there. Every other interaction type gets it as soon as it has a start.
+  const teamsMeetingWillSchedule = createTeamsMeeting && canCreateTeamsMeeting;
+  const canAddToSchedule = !isEditMode && !!startTime && !teamsMeetingWillSchedule;
 
   // UI Reflection System Integration
   const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -306,9 +312,14 @@ export function QuickAddInteraction({
           setContacts(allContacts);
         }
         
-        // Set default status if available (only for new interactions)
+        // Set default status if available (only for new interactions). A new interaction
+        // must not open in a closed status, so fall back to the first open one when the
+        // tenant has no default configured.
         if (!isEditMode) {
-          const defaultStatus = statusList.find(s => s.is_default);
+          const defaultStatus = statusList.find(s => s.is_default && !s.is_closed)
+            ?? statusList.filter(s => !s.is_closed)
+              .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))[0]
+            ?? statusList.find(s => s.is_default);
           if (defaultStatus) {
             setStatusId(defaultStatus.status_id);
           }
@@ -389,7 +400,14 @@ export function QuickAddInteraction({
     }
   }, [isOpen, isEditMode, isStandaloneCreate, editingInteraction, session?.user?.id, t]);
 
-  // Note: ContactPicker handles client filtering internally, 
+  // Scheduling something ahead should land on the calendar; logging what already happened
+  // should not. Stops steering once the user has flipped the switch themselves.
+  useEffect(() => {
+    if (isEditMode || hasTouchedScheduleToggle) return;
+    setAddToSchedule(!!startTime && startTime.getTime() > Date.now() + 60000);
+  }, [startTime, isEditMode, hasTouchedScheduleToggle]);
+
+  // Note: ContactPicker handles client filtering internally,
   // so we don't need to refetch contacts when client changes
 
   useEffect(() => {
@@ -713,7 +731,10 @@ export function QuickAddInteraction({
         // Create new interaction
         console.log('Creating new interaction');
         console.log('Create data:', interactionData);
-        const newInteraction = await addInteraction(interactionData as Omit<IInteraction, 'interaction_date'>);
+        const newInteraction = await addInteraction(
+          interactionData as Omit<IInteraction, 'interaction_date'>,
+          { createScheduleEntry: canAddToSchedule && addToSchedule },
+        );
         if (isReturnedActionError(newInteraction)) {
           throw new Error(getErrorMessage(newInteraction));
         }
@@ -755,6 +776,8 @@ export function QuickAddInteraction({
         setClientDefaultEmail(null);
         setClientDefaultName(null);
         setHasLoadedAttendeeOptions(false);
+        setAddToSchedule(false);
+        setHasTouchedScheduleToggle(false);
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -1195,6 +1218,26 @@ export function QuickAddInteraction({
                   </div>
                 </div>
               </div>
+              {canAddToSchedule && (
+                <div className="space-y-1">
+                  <Switch
+                    id={`${id}-add-to-schedule-toggle`}
+                    checked={addToSchedule}
+                    onCheckedChange={(checked) => {
+                      setHasTouchedScheduleToggle(true);
+                      setAddToSchedule(checked);
+                    }}
+                    label={t('interactions.quickAdd.schedule.addToggle', {
+                      defaultValue: 'Add to my schedule',
+                    })}
+                  />
+                  <p className="text-xs text-gray-600">
+                    {t('interactions.quickAdd.schedule.addHelp', {
+                      defaultValue: 'Creates a matching entry on your AlgaPSA calendar.',
+                    })}
+                  </p>
+                </div>
+              )}
             </form>
         </DialogContent>
       </Dialog>
