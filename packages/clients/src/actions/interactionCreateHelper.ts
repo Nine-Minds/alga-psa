@@ -61,11 +61,18 @@ export async function getDefaultInteractionStatusId(trx: Knex.Transaction, tenan
     .orderBy('order_number')
     .first();
 
-  if (!firstOpenStatus) {
-    throw new Error('No default status found for interactions');
+  if (firstOpenStatus) {
+    return firstOpenStatus.status_id;
   }
 
-  return firstOpenStatus.status_id;
+  // Preferring an open status must never become a hard stop: a tenant whose interaction
+  // statuses are all closed still has to be able to log interactions, so honour the
+  // configured default as a last resort — same order the quick-add dialog resolves in.
+  if (defaultStatus) {
+    return defaultStatus.status_id;
+  }
+
+  throw new Error('No default status found for interactions');
 }
 
 export async function publishInteractionSearchEvent(

@@ -28,6 +28,7 @@ type Fixture = {
   opportunityId: string;
   otherTenantInteractionId: string;
   callTypeId: string;
+  openStatusId: string;
   initialOpportunityActivity: string;
 };
 
@@ -99,15 +100,20 @@ function clientInsert(tenantId: string, clientId: string, label: string) {
   };
 }
 
-function statusInsert(tenantId: string, statusId: string, userId: string) {
+function statusInsert(
+  tenantId: string,
+  statusId: string,
+  userId: string,
+  overrides: { name?: string; orderNumber?: number; isClosed?: boolean; isDefault?: boolean } = {},
+) {
   return {
     tenant: tenantId,
     status_id: statusId,
-    name: 'Completed',
+    name: overrides.name ?? 'Completed',
     status_type: 'interaction',
-    order_number: 10,
-    is_closed: true,
-    is_default: true,
+    order_number: overrides.orderNumber ?? 10,
+    is_closed: overrides.isClosed ?? true,
+    is_default: overrides.isDefault ?? true,
     created_by: userId,
     ...(hasColumn('statuses', 'item_type') ? { item_type: 'interaction' } : {}),
     ...(hasColumn('statuses', 'is_custom') ? { is_custom: true } : {}),
@@ -145,6 +151,7 @@ async function seedFixture(): Promise<Fixture> {
   const otherClientId = randomUUID();
   const opportunityId = randomUUID();
   const statusId = randomUUID();
+  const openStatusId = randomUUID();
   const otherStatusId = randomUUID();
   const roleId = randomUUID();
   const otherTenantInteractionId = randomUUID();
@@ -185,7 +192,17 @@ async function seedFixture(): Promise<Fixture> {
     ...(hasColumn('contacts', 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
-  await tenantTable(tenantId, 'statuses').insert(statusInsert(tenantId, statusId, allowedUserId));
+  // Legacy shape kept on purpose: "Completed" is still flagged as the tenant default, so the
+  // POST below proves the API opens interactions in the open status instead of finishing them.
+  await tenantTable(tenantId, 'statuses').insert([
+    statusInsert(tenantId, statusId, allowedUserId),
+    statusInsert(tenantId, openStatusId, allowedUserId, {
+      name: 'Planned',
+      orderNumber: 1,
+      isClosed: false,
+      isDefault: false,
+    }),
+  ]);
   await tenantTable(otherTenantId, 'statuses').insert(statusInsert(otherTenantId, otherStatusId, otherUserId));
 
   await tenantTable(tenantId, 'opportunities').insert({
@@ -285,6 +302,7 @@ async function seedFixture(): Promise<Fixture> {
     opportunityId,
     otherTenantInteractionId,
     callTypeId: callType.type_id,
+    openStatusId,
     initialOpportunityActivity,
   };
 }
@@ -399,6 +417,7 @@ describe('interactions REST API (integration)', () => {
       user_id: expect.any(String),
       title: 'Mobile discovery call',
       visibility: 'internal',
+      status_id: fixture.openStatusId,
     });
 
     const listResponse = await controller.list()(request(

@@ -286,7 +286,27 @@ describe('interactionCreateHelper', () => {
     );
   });
 
-  it('throws when the tenant has no open interaction status to fall back to', async () => {
+  it('still logs the interaction when every interaction status is closed', async () => {
+    const trx = createLookupTrx({
+      statuses: [
+        { tenant: 'tenant-1', status_type: 'interaction', status_id: 'status-completed', is_default: true, is_closed: true, order_number: 3 },
+      ],
+    });
+
+    await createInteractionRecord({
+      tenant: 'tenant-1',
+      trx,
+      interactionData: interactionInput(),
+    });
+
+    expect(hoisted.addInteractionMock).toHaveBeenCalledWith(
+      expect.objectContaining({ status_id: 'status-completed' }),
+      'tenant-1',
+      trx,
+    );
+  });
+
+  it('throws when no interaction status is open or marked as the default', async () => {
     const trx = createLookupTrx({
       statuses: [
         { tenant: 'tenant-1', status_type: 'interaction', status_id: 'status-completed', is_closed: true, order_number: 3 },
