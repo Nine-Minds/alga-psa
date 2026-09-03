@@ -312,10 +312,16 @@ export function QuickAddInteraction({
           setContacts(allContacts);
         }
         
-        // Set default status if available (only for new interactions). A new interaction
-        // must not open in a closed status, so fall back to the first open one when the
-        // tenant has no default configured.
-        if (!isEditMode) {
+        if (isEditMode && editingInteraction) {
+          // A Radix select silently drops a controlled value whose option has not rendered
+          // yet, so the edited interaction's type/status are applied only once both lists
+          // are loaded — otherwise the dialog opens with empty selects.
+          setTypeId(editingInteraction.type_id || '');
+          setStatusId(editingInteraction.status_id || '');
+        } else {
+          // Set default status if available (only for new interactions). A new interaction
+          // must not open in a closed status, so fall back to the first open one when the
+          // tenant has no default configured.
           const defaultStatus = statusList.find(s => s.is_default && !s.is_closed)
             ?? statusList.filter(s => !s.is_closed)
               .sort((a, b) => (a.order_number || 0) - (b.order_number || 0))[0]
@@ -338,8 +344,7 @@ export function QuickAddInteraction({
     // Populate fields if editing
     if (isEditMode && editingInteraction) {
       setTitle(editingInteraction.title || '');
-      setTypeId(editingInteraction.type_id || '');
-      setStatusId(editingInteraction.status_id || '');
+      // type_id / status_id are set from fetchData, once their options exist.
       // Convert duration from total minutes to hours and minutes
       if (editingInteraction.duration) {
         const totalMinutes = editingInteraction.duration;
@@ -799,12 +804,34 @@ export function QuickAddInteraction({
   };
 
   const typeOptions = useMemo(
-    () => interactionTypes.map((type) => ({
-      value: type.type_id,
-      label: getTypeLabel(type),
-      textValue: type.type_name
-    })),
-    [interactionTypes]
+    () => {
+      const options = interactionTypes.map((type) => ({
+        value: type.type_id,
+        label: getTypeLabel(type),
+        textValue: type.type_name
+      }));
+
+      // Interactions can also reference a *system* interaction type, which this
+      // tenant-only list omits. Keep the edited interaction's own type selectable so the
+      // dialog does not open on a blank (and unsavable) type.
+      const currentTypeId = editingInteraction?.type_id;
+      if (currentTypeId && !options.some((option) => option.value === currentTypeId)) {
+        const typeName = editingInteraction?.type_name ?? '';
+        options.unshift({
+          value: currentTypeId,
+          label: (
+            <div className="flex items-center gap-2">
+              <InteractionIcon icon={editingInteraction?.icon} typeName={typeName} />
+              <span className="capitalize">{typeName}</span>
+            </div>
+          ),
+          textValue: typeName
+        });
+      }
+
+      return options;
+    },
+    [interactionTypes, editingInteraction]
   );
 
   const footer = (
