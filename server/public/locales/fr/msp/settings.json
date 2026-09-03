@@ -1051,7 +1051,8 @@
         "name": "Nom",
         "status": "Statut",
         "order": "Ordre",
-        "actions": "Actions"
+        "actions": "Actions",
+        "default": "Par défaut"
       },
       "statusLabels": {
         "closedHelp": "Les interactions avec ce statut seront marquées comme fermées",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Statut mis à jour avec succès",
           "deleted": "Statut supprimé avec succès",
-          "imported": "{{count}} statuts importés avec succès"
+          "imported": "{{count}} statuts importés avec succès",
+          "defaultUpdated": "Statut d’interaction par défaut mis à jour"
         },
         "error": {
           "lastClosed": "Au moins un statut doit rester marqué comme fermé",
           "deleteLastClosed": "Impossible de supprimer le dernier statut fermé pour ce type.",
           "skipped": "{{count}} statuts ignorés ({{reason}})",
-          "importFailed": "Échec de l'importation des statuts"
+          "importFailed": "Échec de l'importation des statuts",
+          "defaultRequired": "Un statut doit rester le statut par défaut — définissez plutôt un autre statut par défaut.",
+          "closedCannotBeDefault": "Un statut fermé ne peut pas être le statut par défaut des nouvelles interactions."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Par défaut pour les nouvelles interactions",
+        "setDefault": "Utiliser par défaut"
       }
     },
     "quickAdd": {
@@ -3141,7 +3149,9 @@
       "nameRequired": "Le nom du statut est obligatoire",
       "nameEmpty": "Le nom du statut ne peut pas être vide",
       "idRequired": "L’identifiant du statut est obligatoire",
-      "manageFromBoard": "Les statuts de ticket doivent être gérés depuis les paramètres du tableau"
+      "manageFromBoard": "Les statuts de ticket doivent être gérés depuis les paramètres du tableau",
+      "closedCannotBeDefault": "Un statut fermé ne peut pas être le statut par défaut",
+      "defaultMustStayOpen": "Définissez un autre statut par défaut avant de fermer celui-ci"
     },
     "priority": {
       "notFound": "Priorité introuvable.",

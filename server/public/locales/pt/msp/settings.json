@@ -1051,7 +1051,8 @@
         "name": "Nome",
         "status": "Status",
         "order": "Ordem",
-        "actions": "Ações"
+        "actions": "Ações",
+        "default": "Padrão"
       },
       "statusLabels": {
         "closedHelp": "As interações com este status serão marcadas como fechadas",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Status atualizado com sucesso",
           "deleted": "Status excluído com sucesso",
-          "imported": "Status {{count}} importados com sucesso"
+          "imported": "Status {{count}} importados com sucesso",
+          "defaultUpdated": "Status padrão de interação atualizado"
         },
         "error": {
           "lastClosed": "Pelo menos um status deve permanecer marcado como fechado",
           "deleteLastClosed": "Não é possível excluir o último status fechado deste tipo.",
           "skipped": "Status {{count}} ignorados ({{reason}})",
-          "importFailed": "Falha ao importar status"
+          "importFailed": "Falha ao importar status",
+          "defaultRequired": "Um status precisa continuar sendo o padrão — defina outro status como padrão.",
+          "closedCannotBeDefault": "Um status fechado não pode ser o padrão para novas interações."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Padrão para novas interações",
+        "setDefault": "Usar como padrão"
       }
     },
     "quickAdd": {
@@ -3141,7 +3149,9 @@
       "nameRequired": "O nome do status é obrigatório",
       "nameEmpty": "O nome do status não pode ficar vazio",
       "idRequired": "O ID do status é obrigatório",
-      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro"
+      "manageFromBoard": "Os status de ticket devem ser gerenciados nas configurações do quadro",
+      "closedCannotBeDefault": "Um status fechado não pode ser o status padrão",
+      "defaultMustStayOpen": "Defina outro status como padrão antes de fechar este"
     },
     "priority": {
       "notFound": "Prioridade não encontrada.",

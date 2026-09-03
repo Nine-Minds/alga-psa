@@ -1051,7 +1051,8 @@
         "name": "Name",
         "status": "Status",
         "order": "Reihenfolge",
-        "actions": "Aktionen"
+        "actions": "Aktionen",
+        "default": "Standard"
       },
       "statusLabels": {
         "closedHelp": "Interaktionen mit diesem Status werden als geschlossen markiert",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Status erfolgreich aktualisiert",
           "deleted": "Status erfolgreich gelöscht",
-          "imported": "{{count}} Status erfolgreich importiert"
+          "imported": "{{count}} Status erfolgreich importiert",
+          "defaultUpdated": "Standardstatus für Interaktionen aktualisiert"
         },
         "error": {
           "lastClosed": "Mindestens ein Status muss als geschlossen markiert bleiben",
           "deleteLastClosed": "Der letzte geschlossene Status für diesen Typ kann nicht gelöscht werden.",
           "skipped": "{{count}} Status übersprungen ({{reason}})",
-          "importFailed": "Status konnten nicht importiert werden"
+          "importFailed": "Status konnten nicht importiert werden",
+          "defaultRequired": "Ein Status muss der Standard bleiben – legen Sie stattdessen einen anderen Status als Standard fest.",
+          "closedCannotBeDefault": "Ein abgeschlossener Status kann nicht der Standard für neue Interaktionen sein."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Standard für neue Interaktionen",
+        "setDefault": "Als Standard verwenden"
       }
     },
     "quickAdd": {
@@ -3141,7 +3149,9 @@
       "nameRequired": "Der Statusname ist erforderlich",
       "nameEmpty": "Der Statusname darf nicht leer sein",
       "idRequired": "Die Status-ID ist erforderlich",
-      "manageFromBoard": "Ticketstatus müssen in den Board-Einstellungen verwaltet werden"
+      "manageFromBoard": "Ticketstatus müssen in den Board-Einstellungen verwaltet werden",
+      "closedCannotBeDefault": "Ein abgeschlossener Status kann nicht der Standardstatus sein",
+      "defaultMustStayOpen": "Legen Sie einen anderen Status als Standard fest, bevor Sie diesen schließen"
     },
     "priority": {
       "notFound": "Priorität nicht gefunden.",

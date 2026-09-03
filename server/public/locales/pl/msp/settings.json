@@ -1057,7 +1057,8 @@
         "name": "Nazwa",
         "status": "Status",
         "order": "Kolejność",
-        "actions": "Akcje"
+        "actions": "Akcje",
+        "default": "Domyślny"
       },
       "statusLabels": {
         "closedHelp": "Interakcje z tym statusem zostaną oznaczone jako zamknięte",
@@ -1073,14 +1074,21 @@
         "success": {
           "updated": "Status został zaktualizowany pomyślnie",
           "deleted": "Status został usunięty pomyślnie",
-          "imported": "Pomyślnie zaimportowano {{count}} statusów"
+          "imported": "Pomyślnie zaimportowano {{count}} statusów",
+          "defaultUpdated": "Zaktualizowano domyślny status interakcji"
         },
         "error": {
           "lastClosed": "Co najmniej jeden status musi pozostać oznaczony jako zamknięty",
           "deleteLastClosed": "Nie można usunąć ostatniego zamkniętego statusu dla tego typu.",
           "skipped": "Pominięto {{count}} statusów ({{reason}})",
-          "importFailed": "Nie udało się zaimportować statusów"
+          "importFailed": "Nie udało się zaimportować statusów",
+          "defaultRequired": "Jeden status musi pozostać domyślny — ustaw jako domyślny inny status.",
+          "closedCannotBeDefault": "Status zamknięty nie może być domyślny dla nowych interakcji."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Domyślny dla nowych interakcji",
+        "setDefault": "Ustaw jako domyślny"
       }
     },
     "quickAdd": {
@@ -3169,7 +3177,9 @@
       "nameRequired": "Nazwa statusu jest wymagana",
       "nameEmpty": "Nazwa statusu nie może być pusta",
       "idRequired": "Identyfikator statusu jest wymagany",
-      "manageFromBoard": "Statusami zgłoszeń zarządza się w ustawieniach tablicy"
+      "manageFromBoard": "Statusami zgłoszeń zarządza się w ustawieniach tablicy",
+      "closedCannotBeDefault": "Status zamknięty nie może być statusem domyślnym",
+      "defaultMustStayOpen": "Ustaw inny status jako domyślny przed zamknięciem tego"
     },
     "priority": {
       "notFound": "Nie znaleziono priorytetu.",

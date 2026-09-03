@@ -1628,7 +1628,8 @@
     "usedOrders": "Zajęte numery kolejności: {{orders}}",
     "noUsedOrders": "Żaden numer kolejności nie jest jeszcze zajęty",
     "markClosed": "Oznacz jako status zamknięty",
-    "setDefault": "Ustaw jako domyślny status nowych zgłoszeń"
+    "setDefault": "Ustaw jako domyślny status nowych elementów",
+    "defaultClosedHelp": "Status zamknięty nie może być domyślny dla nowych elementów."
   },
   "callLink": {
     "teamsCall": "Zadzwoń w Microsoft Teams"

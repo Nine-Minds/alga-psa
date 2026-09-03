@@ -45,6 +45,12 @@ export function statusActionErrorFrom(error: unknown): StatusActionError | null 
     ) {
       return actionError(message);
     }
+    if (message === 'A closed status cannot be the default status') {
+      return actionError(message, 'msp/settings:errors.status.closedCannotBeDefault');
+    }
+    if (message === 'Set another status as the default before closing this one') {
+      return actionError(message, 'msp/settings:errors.status.defaultMustStayOpen');
+    }
   }
 
   const dbError = error as { code?: string; constraint?: string; column?: string };

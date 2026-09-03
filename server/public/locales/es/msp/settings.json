@@ -1051,7 +1051,8 @@
         "name": "Nombre",
         "status": "Estado",
         "order": "Orden",
-        "actions": "Acciones"
+        "actions": "Acciones",
+        "default": "Predeterminado"
       },
       "statusLabels": {
         "closedHelp": "Las interacciones con este estado se marcarán como cerradas",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Estado actualizado correctamente",
           "deleted": "Estado eliminado correctamente",
-          "imported": "Se importaron {{count}} estados correctamente"
+          "imported": "Se importaron {{count}} estados correctamente",
+          "defaultUpdated": "Estado de interacción predeterminado actualizado"
         },
         "error": {
           "lastClosed": "Al menos un estado debe permanecer marcado como cerrado",
           "deleteLastClosed": "No se puede eliminar el último estado cerrado para este tipo.",
           "skipped": "Se omitieron {{count}} estados ({{reason}})",
-          "importFailed": "No se pudieron importar los estados"
+          "importFailed": "No se pudieron importar los estados",
+          "defaultRequired": "Un estado debe seguir siendo el predeterminado: establezca otro estado como predeterminado.",
+          "closedCannotBeDefault": "Un estado cerrado no puede ser el predeterminado para las interacciones nuevas."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Predeterminado para las interacciones nuevas",
+        "setDefault": "Usar como predeterminado"
       }
     },
     "quickAdd": {
@@ -3141,7 +3149,9 @@
       "nameRequired": "El nombre del estado es obligatorio",
       "nameEmpty": "El nombre del estado no puede estar vacío",
       "idRequired": "El ID del estado es obligatorio",
-      "manageFromBoard": "Los estados de ticket deben gestionarse desde la configuración del tablero"
+      "manageFromBoard": "Los estados de ticket deben gestionarse desde la configuración del tablero",
+      "closedCannotBeDefault": "Un estado cerrado no puede ser el estado predeterminado",
+      "defaultMustStayOpen": "Establezca otro estado como predeterminado antes de cerrar este"
     },
     "priority": {
       "notFound": "No se encontró la prioridad.",

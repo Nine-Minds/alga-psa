@@ -1051,7 +1051,8 @@
         "name": "Nome",
         "status": "Stato",
         "order": "Ordine",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "default": "Predefinito"
       },
       "statusLabels": {
         "closedHelp": "Le interazioni con questo stato saranno contrassegnate come chiuse",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Stato aggiornato con successo",
           "deleted": "Stato eliminato con successo",
-          "imported": "{{count}} stati importati con successo"
+          "imported": "{{count}} stati importati con successo",
+          "defaultUpdated": "Stato di interazione predefinito aggiornato"
         },
         "error": {
           "lastClosed": "Almeno uno stato deve rimanere contrassegnato come chiuso",
           "deleteLastClosed": "Impossibile eliminare l'ultimo stato chiuso per questo tipo.",
           "skipped": "{{count}} stati saltati ({{reason}})",
-          "importFailed": "Impossibile importare gli stati"
+          "importFailed": "Impossibile importare gli stati",
+          "defaultRequired": "Uno stato deve restare quello predefinito: imposta un altro stato come predefinito.",
+          "closedCannotBeDefault": "Uno stato chiuso non può essere quello predefinito per le nuove interazioni."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Predefinito per le nuove interazioni",
+        "setDefault": "Usa come predefinito"
       }
     },
     "quickAdd": {
@@ -3141,7 +3149,9 @@
       "nameRequired": "Il nome dello stato è obbligatorio",
       "nameEmpty": "Il nome dello stato non può essere vuoto",
       "idRequired": "L’ID dello stato è obbligatorio",
-      "manageFromBoard": "Gli stati dei ticket devono essere gestiti dalle impostazioni della bacheca"
+      "manageFromBoard": "Gli stati dei ticket devono essere gestiti dalle impostazioni della bacheca",
+      "closedCannotBeDefault": "Uno stato chiuso non può essere lo stato predefinito",
+      "defaultMustStayOpen": "Imposta un altro stato come predefinito prima di chiudere questo"
     },
     "priority": {
       "notFound": "Priorità non trovata.",

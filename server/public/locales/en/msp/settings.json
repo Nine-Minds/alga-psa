@@ -1051,7 +1051,8 @@
         "name": "Name",
         "status": "Status",
         "order": "Order",
-        "actions": "Actions"
+        "actions": "Actions",
+        "default": "Default"
       },
       "statusLabels": {
         "closedHelp": "Interactions with this status will be marked as closed",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Status updated successfully",
           "deleted": "Status deleted successfully",
-          "imported": "Successfully imported {{count}} statuses"
+          "imported": "Successfully imported {{count}} statuses",
+          "defaultUpdated": "Default interaction status updated"
         },
         "error": {
           "lastClosed": "At least one status must remain marked as closed",
           "deleteLastClosed": "Cannot delete the last closed status for this type.",
           "skipped": "Skipped {{count}} statuses ({{reason}})",
-          "importFailed": "Failed to import statuses"
+          "importFailed": "Failed to import statuses",
+          "defaultRequired": "One status must stay the default — set another status as default instead.",
+          "closedCannotBeDefault": "A closed status cannot be the default for new interactions."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Default for new interactions",
+        "setDefault": "Use as default"
       }
     },
     "quickAdd": {
@@ -3131,7 +3139,9 @@
       "nameRequired": "Status name is required",
       "nameEmpty": "Status name cannot be empty",
       "idRequired": "Status ID is required",
-      "manageFromBoard": "Ticket statuses must be managed from board settings"
+      "manageFromBoard": "Ticket statuses must be managed from board settings",
+      "closedCannotBeDefault": "A closed status cannot be the default status",
+      "defaultMustStayOpen": "Set another status as the default before closing this one"
     },
     "priority": {
       "notFound": "Priority not found.",

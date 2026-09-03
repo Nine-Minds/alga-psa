@@ -227,6 +227,20 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
         throw new Error('Ticket statuses must be managed from board settings');
       }
 
+      // New records are created with the default status, so it must stay open — otherwise
+      // every logged interaction/ticket is born closed. Existing closed defaults (the old
+      // interaction seed) stay editable so they can be repaired.
+      const nextIsClosed = statusData.is_closed !== undefined ? statusData.is_closed : currentStatus.is_closed;
+      const nextIsDefault = statusData.is_default !== undefined ? statusData.is_default : currentStatus.is_default;
+      const wasClosedDefault = !!currentStatus.is_closed && !!currentStatus.is_default;
+
+      if (currentStatus.is_default && nextIsClosed && !currentStatus.is_closed) {
+        throw new Error('Set another status as the default before closing this one');
+      }
+      if (nextIsDefault && nextIsClosed && !wasClosedDefault) {
+        throw new Error('A closed status cannot be the default status');
+      }
+
       // Check if new name conflicts with existing status
       if (statusData.name) {
         const existingStatus = await statusesQuery(trx, tenant)

@@ -1594,7 +1594,8 @@
     "usedOrders": "Números de orden usados: {{orders}}",
     "noUsedOrders": "Aún no se ha usado ningún número de orden",
     "markClosed": "Marcar como estado cerrado",
-    "setDefault": "Establecer como estado predeterminado para los tickets nuevos"
+    "setDefault": "Establecer como estado predeterminado para los elementos nuevos",
+    "defaultClosedHelp": "Un estado cerrado no puede ser el predeterminado para los elementos nuevos."
   },
   "callLink": {
     "teamsCall": "Llamar en Microsoft Teams"

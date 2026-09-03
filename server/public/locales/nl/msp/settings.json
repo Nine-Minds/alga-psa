@@ -1051,7 +1051,8 @@
         "name": "Naam",
         "status": "Status",
         "order": "Volgorde",
-        "actions": "Acties"
+        "actions": "Acties",
+        "default": "Standaard"
       },
       "statusLabels": {
         "closedHelp": "Interacties met deze status worden als gesloten gemarkeerd",
@@ -1067,14 +1068,21 @@
         "success": {
           "updated": "Status succesvol bijgewerkt",
           "deleted": "Status succesvol verwijderd",
-          "imported": "{{count}} statussen succesvol geïmporteerd"
+          "imported": "{{count}} statussen succesvol geïmporteerd",
+          "defaultUpdated": "Standaardstatus voor interacties bijgewerkt"
         },
         "error": {
           "lastClosed": "Ten minste één status moet als gesloten gemarkeerd blijven",
           "deleteLastClosed": "Kan de laatste gesloten status voor dit type niet verwijderen.",
           "skipped": "{{count}} statussen overgeslagen ({{reason}})",
-          "importFailed": "Kan statussen niet importeren"
+          "importFailed": "Kan statussen niet importeren",
+          "defaultRequired": "Eén status moet de standaard blijven — stel in plaats daarvan een andere status als standaard in.",
+          "closedCannotBeDefault": "Een afgesloten status kan niet de standaard voor nieuwe interacties zijn."
         }
+      },
+      "defaultLabels": {
+        "isDefault": "Standaard voor nieuwe interacties",
+        "setDefault": "Als standaard gebruiken"
       }
     },
     "quickAdd": {
@@ -3141,7 +3149,9 @@
       "nameRequired": "Statusnaam is verplicht",
       "nameEmpty": "De statusnaam mag niet leeg zijn",
       "idRequired": "Status-ID is verplicht",
-      "manageFromBoard": "Ticketstatussen moeten worden beheerd via de bordinstellingen"
+      "manageFromBoard": "Ticketstatussen moeten worden beheerd via de bordinstellingen",
+      "closedCannotBeDefault": "Een afgesloten status kan niet de standaardstatus zijn",
+      "defaultMustStayOpen": "Stel een andere status als standaard in voordat u deze afsluit"
     },
     "priority": {
       "notFound": "Prioriteit niet gevonden.",
