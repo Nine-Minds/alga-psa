@@ -194,7 +194,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     }
 
     // For other files, trigger download using the existing utility
-    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.document_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -208,7 +208,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     e.stopPropagation();
     if (!doc.file_id) return;
 
-    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.document_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -234,7 +234,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           {isImage && doc.file_id ? (
             <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden">
               <img
-                src={`/api/documents/view/${doc.file_id}`}
+                src={`/api/documents/view/${doc.document_id}`}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -304,7 +304,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
   const PreviewModal = () => {
     if (!showPreviewModal || !previewDocument || !previewDocument.file_id) return null;
 
-    const viewUrl = `/api/documents/view/${previewDocument.file_id}`;
+    const viewUrl = `/api/documents/view/${previewDocument.document_id}`;
 
     return (
       <div
@@ -435,7 +435,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                       {isImage && doc.file_id ? (
                         <div className="w-8 h-8 bg-gray-100 rounded overflow-hidden">
                           <img
-                            src={`/api/documents/view/${doc.file_id}`}
+                            src={`/api/documents/view/${doc.document_id}`}
                             alt=""
                             className="w-full h-full object-cover"
                             onError={(e) => {

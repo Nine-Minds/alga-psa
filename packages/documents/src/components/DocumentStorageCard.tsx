@@ -552,7 +552,7 @@ function DocumentStorageCardComponent({
             setShowFullSizeModal(true);
         } else {
             // For other files, download
-            const downloadUrl = getDocumentDownloadUrl(document.file_id);
+            const downloadUrl = getDocumentDownloadUrl(document.document_id);
             const filename = document.document_name || 'download';
             try {
                 await downloadDocument(downloadUrl, filename, true);
@@ -941,7 +941,7 @@ function DocumentStorageCardComponent({
                         <div className="flex justify-center items-center" onClick={(e) => e.stopPropagation()}>
                             {document.mime_type?.startsWith('image/') ? (
                                 <img
-                                    src={`/api/documents/view/${document.file_id}`}
+                                    src={`/api/documents/view/${document.document_id}`}
                                     alt={document.document_name}
                                     className="max-w-full max-h-[70vh] object-contain"
                                 />
@@ -954,7 +954,7 @@ function DocumentStorageCardComponent({
                                 />
                             ) : document.mime_type === 'application/pdf' ? (
                                 <iframe
-                                    src={`/api/documents/view/${document.file_id}`}
+                                    src={`/api/documents/view/${document.document_id}`}
                                     className="w-full border-0"
                                     style={{ height: 'calc(90vh - 120px)', width: '100%' }}
                                     title={document.document_name}
@@ -965,7 +965,7 @@ function DocumentStorageCardComponent({
                                     <Button
                                         id={`${id}-download-modal-button`}
                                         onClick={async () => {
-                                            const downloadUrl = getDocumentDownloadUrl(document.file_id!);
+                                            const downloadUrl = getDocumentDownloadUrl(document.document_id);
                                             const filename = document.document_name || 'download';
                                             try {
                                                 await downloadDocument(downloadUrl, filename, true);
