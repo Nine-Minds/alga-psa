@@ -1484,6 +1484,10 @@
         "addHelpOthers": "Uma entrada de agendamento será adicionada aos calendários do AlgaPSA dos usuários selecionados.",
         "assigneesLabel": "Agendar para",
         "assigneesPlaceholder": "Selecionar usuários"
+      },
+      "assignedTo": {
+        "label": "Atribuído a",
+        "placeholder": "Selecionar usuário"
       }
     },
     "feed": {

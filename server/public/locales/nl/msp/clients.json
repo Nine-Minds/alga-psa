@@ -1484,6 +1484,10 @@
         "addHelpOthers": "Er wordt een planningsinvoer toegevoegd aan de AlgaPSA-agenda's van de geselecteerde gebruikers.",
         "assigneesLabel": "Plannen voor",
         "assigneesPlaceholder": "Gebruikers selecteren"
+      },
+      "assignedTo": {
+        "label": "Toegewezen aan",
+        "placeholder": "Gebruiker selecteren"
       }
     },
     "feed": {

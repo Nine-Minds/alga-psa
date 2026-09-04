@@ -1536,6 +1536,10 @@
         "addHelpOthers": "Wpis harmonogramu zostanie dodany do kalendarzy AlgaPSA wybranych użytkowników.",
         "assigneesLabel": "Zaplanuj dla",
         "assigneesPlaceholder": "Wybierz użytkowników"
+      },
+      "assignedTo": {
+        "label": "Przypisane do",
+        "placeholder": "Wybierz użytkownika"
       }
     },
     "feed": {

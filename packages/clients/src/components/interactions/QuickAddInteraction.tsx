@@ -127,7 +127,8 @@ export function QuickAddInteraction({
   const [hasTouchedScheduleToggle, setHasTouchedScheduleToggle] = useState(false);
   const [canAssignScheduleToOthers, setCanAssignScheduleToOthers] = useState(false);
   const [scheduleAssignedUserIds, setScheduleAssignedUserIds] = useState<string[]>([]);
-  const [hasLoadedScheduleUserOptions, setHasLoadedScheduleUserOptions] = useState(false);
+  const [hasTouchedAssignedUser, setHasTouchedAssignedUser] = useState(false);
+  const [hasTouchedScheduleAssignees, setHasTouchedScheduleAssignees] = useState(false);
 
   const isEditMode = !!editingInteraction;
   const isStandaloneCreate = !isEditMode && !entityId;
@@ -308,11 +309,16 @@ export function QuickAddInteraction({
         }
         setStatuses(statusList);
         
+        // Every create path shows the assignee picker, so the user list is always needed.
+        // Edit mode keeps the unfiltered list so an interaction owned by an inactive or
+        // non-internal user still resolves to a name.
+        const usersList = isEditMode
+          ? await getAllUsersBasicAsync()
+          : await getAllUsersBasicAsync(false, 'internal');
+        setUsers(usersList);
+
         // Edit mode and standalone creation both need entity pickers.
         if (isEditMode || isStandaloneCreate) {
-          const usersList = await getAllUsersBasicAsync();
-          setUsers(usersList);
-          
           const clientsList = await getAllClients();
           setClients(clientsList);
           
@@ -421,6 +427,8 @@ export function QuickAddInteraction({
 
     setScheduleAssignedUserIds(session?.user?.id ? [session.user.id] : []);
     setSelectedUserId(session?.user?.id || '');
+    setHasTouchedAssignedUser(false);
+    setHasTouchedScheduleAssignees(false);
 
     let cancelled = false;
     getCurrentUserPermissions()
@@ -436,30 +444,6 @@ export function QuickAddInteraction({
       cancelled = true;
     };
   }, [isOpen, isEditMode, session?.user?.id]);
-
-  // Same deal as the attendee options: fetch the internal users only once the assignee
-  // picker is actually on screen, and only once per dialog session.
-  useEffect(() => {
-    if (!canPickScheduleAssignees || hasLoadedScheduleUserOptions || hasLoadedAttendeeOptions) {
-      return;
-    }
-
-    let cancelled = false;
-    (async () => {
-      try {
-        const usersList = await getAllUsersBasicAsync(false, 'internal');
-        if (cancelled) return;
-        setUsers(usersList);
-        setHasLoadedScheduleUserOptions(true);
-      } catch (error) {
-        console.error('Failed to load schedule assignee options:', error);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canPickScheduleAssignees, hasLoadedScheduleUserOptions, hasLoadedAttendeeOptions]);
 
   // Scheduling something ahead should land on the calendar; logging what already happened
   // should not. Stops steering once the user has flipped the switch themselves.
@@ -680,11 +664,23 @@ export function QuickAddInteraction({
     }
   };
 
-  // Booking a single colleague's calendar logs the interaction for them too, so the record
-  // and its calendar block never disagree about whose work it is.
+  // The record and its calendar block should never disagree about whose work this is, so
+  // each picker seeds the other until the user overrides it by hand. Mirroring an owner
+  // into the schedule only happens when this user may book other people's calendars.
+  const handleAssignedUserChange = (userId: string) => {
+    setSelectedUserId(userId);
+    setHasTouchedAssignedUser(true);
+    if (canAssignScheduleToOthers && !hasTouchedScheduleAssignees) {
+      setScheduleAssignedUserIds(userId ? [userId] : []);
+    }
+  };
+
   const handleScheduleAssigneesChange = (values: string[]) => {
     setScheduleAssignedUserIds(values);
-    setSelectedUserId(values.length === 1 ? values[0] : (session?.user?.id || ''));
+    setHasTouchedScheduleAssignees(true);
+    if (!hasTouchedAssignedUser) {
+      setSelectedUserId(values.length === 1 ? values[0] : (session?.user?.id || ''));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -786,6 +782,7 @@ export function QuickAddInteraction({
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
           attendees: meetingAttendees,
+          interactionUserId: interactionData.user_id,
           // The scheduled meeting must exist on the AlgaPSA calendar too;
           // the creator is the default assignee server-side.
           createScheduleEntry: true,
@@ -849,7 +846,8 @@ export function QuickAddInteraction({
         setAddToSchedule(false);
         setHasTouchedScheduleToggle(false);
         setScheduleAssignedUserIds([]);
-        setHasLoadedScheduleUserOptions(false);
+        setHasTouchedAssignedUser(false);
+        setHasTouchedScheduleAssignees(false);
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -1223,18 +1221,43 @@ export function QuickAddInteraction({
                 skipSuccessDialog
               />
               
-              {/* Status for non-edit mode - shown for create mode */}
+              {/* Status and owner for non-edit mode - shown for create mode */}
               {!isEditMode && (
-                <CustomSelect
-                  options={statuses.map((status) => ({ 
-                    value: status.status_id, 
-                    label: status.name 
-                  }))}
-                  value={statusId}
-                  onValueChange={setStatusId}
-                  placeholder="Select Status"
-                  className="w-fit"
-                />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('interactions.overall.columns.status', { defaultValue: 'Status' })}
+                    </label>
+                    <CustomSelect
+                      options={statuses.map((status) => ({
+                        value: status.status_id,
+                        label: status.name
+                      }))}
+                      value={statusId}
+                      onValueChange={setStatusId}
+                      placeholder="Select Status"
+                      className="w-fit"
+                    />
+                  </div>
+                  {/* Whose interaction this is, on every create path — a plain field on the
+                      record, so logging a call for a colleague needs no schedule permission. */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">
+                      {t('interactions.quickAdd.assignedTo.label', { defaultValue: 'Assigned To' })}
+                    </label>
+                    <UserPicker
+                      {...userPickerProps}
+                      users={users}
+                      value={selectedUserId}
+                      onValueChange={handleAssignedUserChange}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      placeholder={t('interactions.quickAdd.assignedTo.placeholder', {
+                        defaultValue: 'Select user',
+                      })}
+                      buttonWidth="full"
+                    />
+                  </div>
+                </div>
               )}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">

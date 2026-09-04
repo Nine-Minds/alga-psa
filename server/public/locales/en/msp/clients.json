@@ -1484,6 +1484,10 @@
         "addHelpOthers": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
         "assigneesLabel": "Schedule for",
         "assigneesPlaceholder": "Select users"
+      },
+      "assignedTo": {
+        "label": "Assigned To",
+        "placeholder": "Select user"
       }
     },
     "feed": {

@@ -1484,6 +1484,10 @@
         "addHelpOthers": "Une entrée de planification sera ajoutée aux calendriers AlgaPSA des utilisateurs sélectionnés.",
         "assigneesLabel": "Planifier pour",
         "assigneesPlaceholder": "Sélectionner des utilisateurs"
+      },
+      "assignedTo": {
+        "label": "Attribué à",
+        "placeholder": "Sélectionner un utilisateur"
       }
     },
     "feed": {

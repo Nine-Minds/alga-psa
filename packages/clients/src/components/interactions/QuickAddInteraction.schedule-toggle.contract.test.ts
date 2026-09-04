@@ -67,25 +67,42 @@ describe('quick add interaction schedule toggle wiring contract', () => {
     expect(source).toContain("t('interactions.quickAdd.schedule.addHelpOthers'");
   });
 
-  it('loads the internal users only once the assignee picker is on screen', () => {
+  it('offers an owner picker on every create path, not just standalone', () => {
     const source = readSource();
 
-    expect(source).toContain(
-      'if (!canPickScheduleAssignees || hasLoadedScheduleUserOptions || hasLoadedAttendeeOptions) {',
-    );
-    expect(source).toContain("await getAllUsersBasicAsync(false, 'internal')");
+    expect(source).toContain("t('interactions.quickAdd.assignedTo.label'");
+    expect(source).toContain('onValueChange={handleAssignedUserChange}');
+    // The owner picker sits in the create-mode block, outside the isStandaloneCreate gate.
+    const createBlock = source.slice(source.indexOf('{/* Status and owner for non-edit mode'));
+    const ownerPickerIndex = createBlock.indexOf('<UserPicker');
+    expect(ownerPickerIndex).toBeGreaterThan(-1);
+    expect(createBlock.slice(0, ownerPickerIndex)).not.toContain('isStandaloneCreate');
   });
 
-  it('keeps the interaction owner in step with a single chosen assignee', () => {
+  it('loads the internal users for every create path', () => {
     const source = readSource();
 
+    expect(source).toContain('const usersList = isEditMode');
+    expect(source).toContain("await getAllUsersBasicAsync(false, 'internal');");
+  });
+
+  it('keeps the interaction owner and the schedule assignees in step until overridden', () => {
+    const source = readSource();
+
+    expect(source).toContain('const handleAssignedUserChange = (userId: string) => {');
+    expect(source).toContain('if (canAssignScheduleToOthers && !hasTouchedScheduleAssignees) {');
+    expect(source).toContain('setScheduleAssignedUserIds(userId ? [userId] : []);');
     expect(source).toContain('const handleScheduleAssigneesChange = (values: string[]) => {');
+    expect(source).toContain('if (!hasTouchedAssignedUser) {');
     expect(source).toContain("setSelectedUserId(values.length === 1 ? values[0] : (session?.user?.id || ''));");
     expect(source).toContain('user_id: selectedUserId || session.user.id,');
   });
 
-  it('carries the assignees across the Teams cross-feature seam', () => {
+  it('carries the owner and the assignees across the Teams cross-feature seam', () => {
+    expect(readSource()).toContain('interactionUserId: interactionData.user_id,');
+    expect(readCrossFeatureContract()).toContain('interactionUserId?: string;');
     expect(readCrossFeatureContract()).toContain('scheduleAssignedUserIds?: string[];');
+    expect(readMspProvider()).toContain('interactionUserId: input.interactionUserId,');
     expect(readMspProvider()).toContain('scheduleEntry: input.scheduleAssignedUserIds?.length');
     expect(readMspProvider()).toContain('{ assignedUserIds: input.scheduleAssignedUserIds }');
   });

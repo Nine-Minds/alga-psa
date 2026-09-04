@@ -1484,6 +1484,10 @@
         "addHelpOthers": "Una voce di pianificazione verrà aggiunta ai calendari AlgaPSA degli utenti selezionati.",
         "assigneesLabel": "Pianifica per",
         "assigneesPlaceholder": "Seleziona utenti"
+      },
+      "assignedTo": {
+        "label": "Assegnato a",
+        "placeholder": "Seleziona utente"
       }
     },
     "feed": {

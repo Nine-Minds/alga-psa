@@ -1484,6 +1484,10 @@
         "addHelpOthers": "Ein Zeitplaneintrag wird zu den AlgaPSA-Kalendern der ausgewählten Benutzer hinzugefügt.",
         "assigneesLabel": "Planen für",
         "assigneesPlaceholder": "Benutzer auswählen"
+      },
+      "assignedTo": {
+        "label": "Zugewiesen an",
+        "placeholder": "Benutzer auswählen"
       }
     },
     "feed": {

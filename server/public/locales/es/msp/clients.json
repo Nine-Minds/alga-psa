@@ -1484,6 +1484,10 @@
         "addHelpOthers": "Se añadirá una entrada de programación a los calendarios de AlgaPSA de los usuarios seleccionados.",
         "assigneesLabel": "Programar para",
         "assigneesPlaceholder": "Seleccionar usuarios"
+      },
+      "assignedTo": {
+        "label": "Asignado a",
+        "placeholder": "Seleccionar usuario"
       }
     },
     "feed": {
