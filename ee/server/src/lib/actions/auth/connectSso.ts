@@ -12,6 +12,10 @@ import {
   hasTenantProviderCredentials,
   parseResolverProvider,
 } from "@alga-psa/auth/lib/sso/mspSsoResolution";
+import {
+  CLIENT_PORTAL_SSO_DISCOVERY_COOKIE,
+  CLIENT_PORTAL_SSO_RESOLUTION_COOKIE,
+} from "@alga-psa/auth/lib/sso/clientPortalSsoResolution";
 import { TIER_FEATURES } from "@alga-psa/types";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/core/logger";
@@ -150,6 +154,19 @@ export async function prepareSsoLinkResolutionAction(
   });
 
   const store = await cookies();
+  // A client-portal resolution outranks the MSP one in getOAuthSecrets, so drop any stale
+  // portal handshake first, exactly as /api/auth/msp/sso/resolve does.
+  for (const name of [CLIENT_PORTAL_SSO_DISCOVERY_COOKIE, CLIENT_PORTAL_SSO_RESOLUTION_COOKIE]) {
+    store.set({
+      name,
+      value: "",
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 0,
+    });
+  }
   store.set({
     name: MSP_SSO_RESOLUTION_COOKIE,
     value: cookie.value,

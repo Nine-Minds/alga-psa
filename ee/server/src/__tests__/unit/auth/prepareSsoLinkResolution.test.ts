@@ -40,6 +40,10 @@ vi.mock('@alga-psa/auth/lib/sso/mspSsoResolution', () => ({
   parseResolverProvider: (value: unknown) =>
     value === 'google' || value === 'azure-ad' ? value : null,
 }));
+vi.mock('@alga-psa/auth/lib/sso/clientPortalSsoResolution', () => ({
+  CLIENT_PORTAL_SSO_DISCOVERY_COOKIE: 'client_portal_sso_discovery',
+  CLIENT_PORTAL_SSO_RESOLUTION_COOKIE: 'client_portal_sso_resolution',
+}));
 
 import { prepareSsoLinkResolutionAction } from '@ee/lib/actions/auth/connectSso';
 
@@ -71,6 +75,19 @@ describe('prepareSsoLinkResolutionAction', () => {
     expect(cookieStore.set).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'msp_sso_resolution', value: 'cookie-value' })
     );
+  });
+
+  it('clears a stale client-portal handshake that would outrank the MSP cookie', async () => {
+    hasTenantProviderCredentialsMock.mockResolvedValue(true);
+    hasAppFallbackProviderCredentialsMock.mockResolvedValue(false);
+
+    await prepareSsoLinkResolutionAction('azure-ad');
+
+    for (const name of ['client_portal_sso_discovery', 'client_portal_sso_resolution']) {
+      expect(cookieStore.set).toHaveBeenCalledWith(
+        expect.objectContaining({ name, value: '', maxAge: 0 })
+      );
+    }
   });
 
   it('falls back to the app credential source when the tenant has no profile', async () => {
