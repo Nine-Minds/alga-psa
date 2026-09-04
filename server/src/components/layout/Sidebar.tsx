@@ -51,9 +51,9 @@ interface SidebarProps {
 const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
 /**
- * Reads the colour the rail actually painted — theme pair, light/dark mode and a
- * hand-edited `sidebarBg` all land here — so logo variants and muted text can
- * follow the surface instead of a hardcoded "always dark" assumption.
+ * Reads the rail's own background — theme pair, light/dark mode and a hand-edited
+ * `sidebarBg` all land in that one colour — so the logo variant follows the
+ * surface instead of a hardcoded "always dark" assumption.
  */
 function useRailIsLight(railRef: React.RefObject<HTMLElement | null>): boolean {
   const [isLight, setIsLight] = useState(false);
@@ -64,10 +64,12 @@ function useRailIsLight(railRef: React.RefObject<HTMLElement | null>): boolean {
 
     const read = () => {
       const styles = window.getComputedStyle(rail);
-      // A transparent or unreadable background leaves the raw token as fallback,
-      // and an unreadable token leaves the dark-rail default in place.
-      const painted = styles.backgroundColor;
-      const surface = surfaceLuminance(painted) !== null ? painted : styles.getPropertyValue('--color-sidebar-bg');
+      // The token first: the rail transitions `background-color`, so the painted
+      // value still reads the previous theme while a switch animates. Custom
+      // properties do not transition, so the token is already correct — and an
+      // unreadable pair leaves the dark-rail default in place.
+      const token = styles.getPropertyValue('--color-sidebar-bg');
+      const surface = surfaceLuminance(token) !== null ? token : styles.backgroundColor;
       setIsLight(isLightSurface(surface));
     };
 

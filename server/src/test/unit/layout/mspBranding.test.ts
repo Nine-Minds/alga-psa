@@ -166,7 +166,10 @@ describe('MSP sidebar branding', () => {
   it('measures the rail instead of assuming it is dark', () => {
     expect(sidebar).toContain('const railIsLight = useRailIsLight(railRef)');
     expect(sidebar).toContain('window.getComputedStyle(rail)');
-    expect(sidebar).toContain("styles.getPropertyValue('--color-sidebar-bg')");
+    // The token, not the painted colour: `background-color` transitions, so it
+    // still reports the previous theme while a switch animates.
+    expect(sidebar).toContain("const token = styles.getPropertyValue('--color-sidebar-bg')");
+    expect(sidebar).toContain('surfaceLuminance(token) !== null ? token : styles.backgroundColor');
     // A theme switch repaints the rail, so the reading has to be redone.
     expect(sidebar).toContain('new MutationObserver(read)');
     // Muted footer text and the mark's frame follow the same surface.
