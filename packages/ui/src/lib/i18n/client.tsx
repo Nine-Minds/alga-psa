@@ -17,6 +17,7 @@ import {
   filterPseudoLocales,
   getTranslationLanguageCode,
 } from './config';
+import { formatDateValue } from './formatDateValue';
 
 /**
  * Initialize i18next on the client side.
@@ -405,8 +406,9 @@ export function useFormatters() {
       date: Date | string,
       options?: Intl.DateTimeFormatOptions
     ) => {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      return new Intl.DateTimeFormat(locale, options).format(dateObj);
+      // Date-only strings are calendar dates and must not shift through the
+      // browser timezone; see formatDateValue.
+      return formatDateValue(date, locale, options);
     },
 
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => {

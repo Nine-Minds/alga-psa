@@ -3,7 +3,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
-import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
+import { createTenantKnex, resolveEffectiveTimeZone } from '@alga-psa/db';
 import {
   actionError,
   isActionMessageError,
@@ -40,9 +40,10 @@ import {
   evaluateCalendarMonthEndEarlyCloseEligibility,
   type CalendarMonthEndCloseEligibilityReason,
 } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
-import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import type { IRecurringDueSelectionInput } from '@alga-psa/types';
-import type { Knex } from 'knex';
+import {
+  listCanonicalClientCadenceWindowPeriods,
+  listUnmaterializedClientCadenceWindowLineIds,
+} from '../lib/billing/clientCadenceWindowMaterialization';
 
 export type {
   HandledRecurringFailureCode,
@@ -388,21 +389,28 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 const MONTH_END_CLOSE_NOT_ELIGIBLE_KEY = 'msp/billing:errors.recurringRun.monthEndCloseNotEligible';
 const MONTH_END_CLOSE_NOT_MATERIALIZED_KEY =
   'msp/billing:errors.recurringRun.monthEndCloseNotMaterialized';
-const MONTH_END_CLOSE_REASON_LABELS: Record<CalendarMonthEndCloseEligibilityReason, string> = {
+
+/**
+ * The policy's own reasons plus the action-level rejection for a selection
+ * that names only part of the canonical window (closing part of a window
+ * would strand the unselected periods behind the window's duplicate guard).
+ */
+type MonthEndCloseRejectionReason = CalendarMonthEndCloseEligibilityReason | 'selection_incomplete';
+
+const MONTH_END_CLOSE_REASON_LABELS: Record<MonthEndCloseRejectionReason, string> = {
   eligible: 'eligible',
   not_arrears: 'the period is not billed in arrears',
   not_client_cadence: 'the period is not a client schedule period',
   not_calendar_month_period: 'the service period is not a full calendar month',
   window_does_not_open_next_day: 'the invoice window does not open the day after the period',
   not_final_calendar_day: 'today is not the final calendar day of the service period',
+  selection_incomplete: 'the selection does not include every service period due in this billing window',
 };
 
 /**
- * Truncates a date-ish value to its date-only (YYYY-MM-DD) form. The recurring
- * service-period `date` columns come back from the pg driver hydrated as
- * JavaScript `Date` objects, so `String(value).slice(0, 10)` would render the
- * English `Date#toString()` prefix ("Thu Oct 01") instead of the ISO day —
- * which the month-end policy then rejects as an invalid ISO 8601 string.
+ * Truncates a date-ish value to its date-only (YYYY-MM-DD) form. Selector
+ * inputs may carry full ISO timestamps, and pg-hydrated values arrive as
+ * JavaScript `Date` objects whose `String()` form would not be an ISO day.
  * Normalize `Date` values through the same UTC-day slice the rest of the
  * billing package uses for these columns; plain strings fall through untouched.
  */
@@ -414,46 +422,8 @@ function monthEndClosePeriodLabel(servicePeriodStart: string, servicePeriodEnd: 
   return `${servicePeriodStart} to ${servicePeriodEnd}`;
 }
 
-async function fetchClientCadenceServicePeriodForMonthEndClose(params: {
-  knex: Knex;
-  tenant: string;
-  selectorInput: IRecurringDueSelectionInput;
-}): Promise<{
-  // The pg driver hydrates the `date` columns it selects below as JavaScript
-  // `Date` objects (never strings); the union is honest about that hydration.
-  service_period_start: string | Date;
-  service_period_end: string | Date;
-  invoice_window_start: string | Date;
-  due_position: 'arrears' | 'advance';
-} | null> {
-  const executionWindow = params.selectorInput.executionWindow;
-  if (executionWindow.kind !== 'client_cadence_window') {
-    return null;
-  }
-
-  const db = tenantDb(params.knex, params.tenant);
-  return db.table('recurring_service_periods as rsp')
-    .where({
-      'rsp.cadence_owner': 'client',
-      'rsp.schedule_key': executionWindow.scheduleKey ?? null,
-      'rsp.period_key': executionWindow.periodKey ?? null,
-      'rsp.invoice_window_start': normalizeWindowDate(params.selectorInput.windowStart),
-      'rsp.invoice_window_end': normalizeWindowDate(params.selectorInput.windowEnd),
-    })
-    .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-    .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
-    .orderBy('rsp.service_period_start', 'asc')
-    .orderBy('rsp.revision', 'asc')
-    .first(
-      'rsp.service_period_start',
-      'rsp.service_period_end',
-      'rsp.invoice_window_start',
-      'rsp.due_position',
-    );
-}
-
 function monthEndCloseEligibilityErrorMessage(params: {
-  reason: CalendarMonthEndCloseEligibilityReason;
+  reason: MonthEndCloseRejectionReason;
   servicePeriodLabel: string;
   finalCalendarDay: string;
 }): string {
@@ -519,42 +489,123 @@ export async function generateCalendarMonthEndCloseInvoices(params: {
     .toPlainDate()
     .toString();
 
-  // Server-side revalidation: the UI convenience flag is not the policy.
+  // Server-side revalidation: the UI convenience flag is not the policy. The
+  // CANONICAL WINDOW is validated as a whole — every persisted client-cadence
+  // service period the client's invoice window serves, resolved from the
+  // database rather than from the caller's selection — using the same
+  // materialization helpers the generation path enforces. A window with
+  // unrebuilt schedule changes is refused as not materialized (generation
+  // would refuse it too), and a selection naming only part of the window is
+  // refused outright: closing part of a window would strand the unselected
+  // periods behind the window's duplicate guard.
+  const monthEndCloseNotMaterializedError = () => localizeActionError(actionError(
+    'Recurring service periods were not materialized for this recurring execution window.',
+    MONTH_END_CLOSE_NOT_MATERIALIZED_KEY,
+  ));
+  const monthEndCloseNotEligibleError = (params: {
+    reason: MonthEndCloseRejectionReason;
+    servicePeriodLabel: string;
+    finalCalendarDay: string;
+  }) => localizeActionError(actionError(
+    monthEndCloseEligibilityErrorMessage({
+      reason: params.reason,
+      servicePeriodLabel: params.servicePeriodLabel,
+      finalCalendarDay: params.finalCalendarDay,
+    }),
+    MONTH_END_CLOSE_NOT_ELIGIBLE_KEY,
+    { reason: params.reason, servicePeriod: params.servicePeriodLabel, finalCalendarDay: params.finalCalendarDay },
+  ));
+
   for (const group of groupedTargets) {
+    const firstSelector = group.selectorInputs[0]!;
+    const clientId = firstSelector.clientId;
+    const windowStart = normalizeWindowDate(firstSelector.windowStart);
+    const windowEnd = normalizeWindowDate(firstSelector.windowEnd);
+    const windowLabel = monthEndClosePeriodLabel(windowStart, windowEnd);
+
+    // Only complete client-schedule selections sharing one window can be a
+    // month-end close; anything else (contract cadence, mixed windows) stays
+    // on the normal path.
+    const selectorIdentityKeys = new Set<string>();
     for (const selectorInput of group.selectorInputs) {
-      const row = await fetchClientCadenceServicePeriodForMonthEndClose({
-        knex,
-        tenant: tenantId,
-        selectorInput,
-      });
-      if (!row) {
-        return localizeActionError(actionError(
-          'Recurring service periods were not materialized for this recurring execution window.',
-          MONTH_END_CLOSE_NOT_MATERIALIZED_KEY,
-        ));
+      const executionWindow = selectorInput.executionWindow;
+      if (
+        executionWindow.kind !== 'client_cadence_window'
+        || !executionWindow.scheduleKey
+        || !executionWindow.periodKey
+        || selectorInput.clientId !== clientId
+        || normalizeWindowDate(selectorInput.windowStart) !== windowStart
+        || normalizeWindowDate(selectorInput.windowEnd) !== windowEnd
+      ) {
+        return monthEndCloseNotEligibleError({
+          reason: 'not_client_cadence',
+          servicePeriodLabel: windowLabel,
+          finalCalendarDay: windowStart,
+        });
       }
-      const servicePeriodStart = normalizeWindowDate(row.service_period_start);
-      const servicePeriodEnd = normalizeWindowDate(row.service_period_end);
+      selectorIdentityKeys.add(`${executionWindow.scheduleKey}::${executionWindow.periodKey}`);
+    }
+
+    const missingLineIds = await listUnmaterializedClientCadenceWindowLineIds({
+      knex,
+      tenant: tenantId,
+      clientId,
+      windowStart,
+      windowEnd,
+    });
+    if (missingLineIds.length > 0) {
+      return monthEndCloseNotMaterializedError();
+    }
+
+    const canonicalPeriods = await listCanonicalClientCadenceWindowPeriods({
+      knex,
+      tenant: tenantId,
+      clientId,
+      windowStart,
+      windowEnd,
+    });
+    if (canonicalPeriods.length === 0) {
+      return monthEndCloseNotMaterializedError();
+    }
+
+    let finalCalendarDay = windowStart;
+    for (const period of canonicalPeriods) {
       const evaluation = evaluateCalendarMonthEndEarlyCloseEligibility({
-        duePosition: row.due_position,
+        duePosition: period.duePosition,
         cadenceSource: 'client_schedule',
-        servicePeriodStart,
-        servicePeriodEnd,
-        invoiceWindowStart: normalizeWindowDate(row.invoice_window_start),
+        servicePeriodStart: period.servicePeriodStart,
+        servicePeriodEnd: period.servicePeriodEnd,
+        invoiceWindowStart: period.invoiceWindowStart,
         asOf: now,
         timeZone: effectiveTimeZone,
       });
       if (!evaluation.eligible) {
-        const servicePeriodLabel = monthEndClosePeriodLabel(servicePeriodStart, servicePeriodEnd);
-        return localizeActionError(actionError(
-          monthEndCloseEligibilityErrorMessage({
-            reason: evaluation.reason,
-            servicePeriodLabel,
-            finalCalendarDay: evaluation.finalCalendarDay,
-          }),
-          MONTH_END_CLOSE_NOT_ELIGIBLE_KEY,
-          { reason: evaluation.reason, servicePeriod: servicePeriodLabel, finalCalendarDay: evaluation.finalCalendarDay },
-        ));
+        return monthEndCloseNotEligibleError({
+          reason: evaluation.reason,
+          servicePeriodLabel: monthEndClosePeriodLabel(period.servicePeriodStart, period.servicePeriodEnd),
+          finalCalendarDay: evaluation.finalCalendarDay,
+        });
+      }
+      finalCalendarDay = evaluation.finalCalendarDay;
+    }
+
+    const canonicalIdentityKeys = new Set(
+      canonicalPeriods.map((period) => `${period.scheduleKey}::${period.periodKey}`),
+    );
+    // A selector whose period row no longer exists is stale, not closable.
+    for (const identityKey of selectorIdentityKeys) {
+      if (!canonicalIdentityKeys.has(identityKey)) {
+        return monthEndCloseNotMaterializedError();
+      }
+    }
+    // Every canonical period must be part of the selection.
+    for (const identityKey of canonicalIdentityKeys) {
+      if (!selectorIdentityKeys.has(identityKey)) {
+        return monthEndCloseNotEligibleError({
+          reason: 'selection_incomplete',
+          servicePeriodLabel: windowLabel,
+          finalCalendarDay,
+        });
       }
     }
   }

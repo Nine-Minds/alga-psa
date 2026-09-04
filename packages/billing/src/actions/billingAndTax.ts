@@ -33,6 +33,10 @@ import {
 import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
 import { evaluateCalendarMonthEndEarlyCloseEligibility } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
 import {
+    listCanonicalClientCadenceWindowPeriods,
+    listUnmaterializedClientCadenceWindowLineIds,
+} from '../lib/billing/clientCadenceWindowMaterialization';
+import {
     buildClientCadenceDueSelectionInput,
     buildContractCadenceDueSelectionInput,
 } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
@@ -1425,6 +1429,69 @@ function buildRecurringDueWorkInvoiceCandidates(
         });
 }
 
+/**
+ * Confirms provisionally month-end-eligible candidates against the CANONICAL
+ * window — the same materialization helpers the generation action enforces.
+ *
+ * The member-level policy check in buildRecurringDueWorkInvoiceCandidates sees
+ * only the dateRange-filtered rows, so it can flag a window whose remaining
+ * periods (an advance period due next month, an active line whose schedule
+ * change was never rebuilt) would make generation refuse the close. Any such
+ * candidate must not present an actionable close button: eligibility requires
+ * that every ACTIVE line is materialized for the window, every canonical
+ * period passes the month-end policy, and the candidate's members cover the
+ * complete canonical window (a partial member list would send generation a
+ * partial selection, which it rejects).
+ */
+async function revalidateMonthEndCloseEligibilityAgainstCanonicalWindow(
+    knex: Knex,
+    tenant: string,
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
+    monthEndCloseEligibilityDate: string,
+): Promise<IRecurringDueWorkInvoiceCandidate[]> {
+    const revalidated: IRecurringDueWorkInvoiceCandidate[] = [];
+    for (const candidate of invoiceCandidates) {
+        if (!candidate.monthEndCloseEligible) {
+            revalidated.push(candidate);
+            continue;
+        }
+
+        const windowParams = {
+            knex,
+            tenant,
+            clientId: candidate.clientId,
+            windowStart: candidate.windowStart,
+            windowEnd: candidate.windowEnd,
+        };
+        const missingLineIds = await listUnmaterializedClientCadenceWindowLineIds(windowParams);
+        let eligible = missingLineIds.length === 0;
+
+        if (eligible) {
+            const canonicalPeriods = await listCanonicalClientCadenceWindowPeriods(windowParams);
+            const memberIdentityKeys = new Set(
+                candidate.members
+                    .filter((member) => member.scheduleKey && member.periodKey)
+                    .map((member) => `${member.scheduleKey}::${member.periodKey}`),
+            );
+            eligible = canonicalPeriods.length > 0
+                && canonicalPeriods.every((period) =>
+                    memberIdentityKeys.has(`${period.scheduleKey}::${period.periodKey}`)
+                    && evaluateCalendarMonthEndEarlyCloseEligibility({
+                        duePosition: period.duePosition,
+                        cadenceSource: 'client_schedule',
+                        servicePeriodStart: period.servicePeriodStart,
+                        servicePeriodEnd: period.servicePeriodEnd,
+                        invoiceWindowStart: period.invoiceWindowStart,
+                        asOfDate: monthEndCloseEligibilityDate,
+                    }).eligible);
+        }
+
+        revalidated.push(eligible ? candidate : { ...candidate, monthEndCloseEligible: false });
+    }
+
+    return revalidated;
+}
+
 function applyClientCadenceMaterializationGapBlocks(
     invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
     materializationGaps: RecurringDueWorkMaterializationGap[],
@@ -1952,9 +2019,20 @@ export const getAvailableRecurringDueWork = withAuth(async (
             visibleInvoiceCandidates.flatMap((candidate) => candidate.members),
             persistedDbRows,
         );
+        // Month-end close is only offered when generation would accept it; a
+        // partially-listed or partially-materialized window must not present
+        // an actionable close button. Runs on the visible page only — the flag
+        // is a UI affordance and the action re-validates server-side anyway.
+        const canonicalizedInvoiceCandidates =
+            await revalidateMonthEndCloseEligibilityAgainstCanonicalWindow(
+                knex,
+                tenant,
+                visibleInvoiceCandidates,
+                monthEndCloseEligibilityDate,
+            );
 
         return {
-            invoiceCandidates: visibleInvoiceCandidates,
+            invoiceCandidates: canonicalizedInvoiceCandidates,
             materializationGaps,
             total,
             page,

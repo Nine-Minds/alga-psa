@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { buildClientCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
@@ -51,6 +51,7 @@ const { generateCalendarMonthEndCloseInvoices } = await import(
 
 const TENANT = uuidv4();
 const CLIENT_ID = uuidv4();
+const CONTRACT_ID = uuidv4();
 const CONTRACT_LINE_ID = uuidv4();
 const SCHEDULE_KEY = `schedule:${TENANT}:client_contract_line:${CONTRACT_LINE_ID}:client:arrears`;
 const PERIOD_KEY = 'period:2026-09-01:2026-10-01';
@@ -63,20 +64,45 @@ const WINDOW_END = '2026-11-01';
 
 let db: Knex;
 
-async function insertServicePeriodFixture(): Promise<void> {
+async function insertContractLineFixture(params: {
+  contractLineId: string;
+  billingTiming: 'arrears' | 'advance';
+  name: string;
+}): Promise<void> {
+  await db('contract_lines').insert({
+    tenant: TENANT,
+    contract_line_id: params.contractLineId,
+    contract_id: CONTRACT_ID,
+    contract_line_name: params.name,
+    billing_frequency: 'monthly',
+    billing_timing: params.billingTiming,
+    cadence_owner: 'client',
+    is_template: false,
+    is_active: true,
+  });
+}
+
+async function insertServicePeriodFixture(overrides: {
+  scheduleKey?: string;
+  periodKey?: string;
+  obligationId?: string;
+  duePosition?: 'arrears' | 'advance';
+  servicePeriodStart?: string;
+  servicePeriodEnd?: string;
+} = {}): Promise<void> {
   await db('recurring_service_periods').insert({
     tenant: TENANT,
-    schedule_key: SCHEDULE_KEY,
-    period_key: PERIOD_KEY,
+    schedule_key: overrides.scheduleKey ?? SCHEDULE_KEY,
+    period_key: overrides.periodKey ?? PERIOD_KEY,
     revision: 1,
-    obligation_id: CONTRACT_LINE_ID,
+    obligation_id: overrides.obligationId ?? CONTRACT_LINE_ID,
     obligation_type: 'client_contract_line',
     charge_family: 'fixed',
     cadence_owner: 'client',
-    due_position: 'arrears',
+    due_position: overrides.duePosition ?? 'arrears',
     lifecycle_state: 'generated',
-    service_period_start: SERVICE_PERIOD_START,
-    service_period_end: SERVICE_PERIOD_END,
+    service_period_start: overrides.servicePeriodStart ?? SERVICE_PERIOD_START,
+    service_period_end: overrides.servicePeriodEnd ?? SERVICE_PERIOD_END,
     invoice_window_start: WINDOW_START,
     invoice_window_end: WINDOW_END,
     provenance_kind: 'generated',
@@ -84,15 +110,26 @@ async function insertServicePeriodFixture(): Promise<void> {
   });
 }
 
-function buildGroupedTarget() {
-  const selectorInput = buildClientCadenceDueSelectionInput({
-    clientId: CLIENT_ID,
-    scheduleKey: SCHEDULE_KEY,
-    periodKey: PERIOD_KEY,
-    windowStart: WINDOW_START,
-    windowEnd: WINDOW_END,
-  });
-  return { groupKey: `g1:${WINDOW_START}`, selectorInputs: [selectorInput] };
+function buildGroupedTarget(selectorOverrides: Array<{ scheduleKey: string; periodKey: string }> = []) {
+  const selectorInputs = [
+    buildClientCadenceDueSelectionInput({
+      clientId: CLIENT_ID,
+      scheduleKey: SCHEDULE_KEY,
+      periodKey: PERIOD_KEY,
+      windowStart: WINDOW_START,
+      windowEnd: WINDOW_END,
+    }),
+    ...selectorOverrides.map((override) =>
+      buildClientCadenceDueSelectionInput({
+        clientId: CLIENT_ID,
+        scheduleKey: override.scheduleKey,
+        periodKey: override.periodKey,
+        windowStart: WINDOW_START,
+        windowEnd: WINDOW_END,
+      }),
+    ),
+  ];
+  return { groupKey: `g1:${WINDOW_START}`, selectorInputs };
 }
 
 beforeAll(async () => {
@@ -106,6 +143,32 @@ beforeAll(async () => {
     created_at: db.fn.now(),
     updated_at: db.fn.now(),
   });
+  // The month-end close validates the CANONICAL window: rows resolve to the
+  // client through contract_lines -> contracts -> clients, and active-line
+  // materialization is read from client_contracts. Seed the full chain.
+  await db('clients').insert({
+    tenant: TENANT,
+    client_id: CLIENT_ID,
+    client_name: 'Month End Close Client',
+  });
+  await db('contracts').insert({
+    tenant: TENANT,
+    contract_id: CONTRACT_ID,
+    contract_name: 'Month End Close Contract',
+    owner_client_id: CLIENT_ID,
+  });
+  await insertContractLineFixture({
+    contractLineId: CONTRACT_LINE_ID,
+    billingTiming: 'arrears',
+    name: 'Month End Close Arrears Line',
+  });
+  await db('client_contracts').insert({
+    tenant: TENANT,
+    client_id: CLIENT_ID,
+    contract_id: CONTRACT_ID,
+    start_date: '2026-01-01',
+    is_active: true,
+  });
 });
 
 beforeEach(() => {
@@ -117,13 +180,20 @@ beforeEach(() => {
 
 afterEach(async () => {
   vi.useRealTimers();
-  await db('recurring_service_periods')
-    .where({ tenant: TENANT, schedule_key: SCHEDULE_KEY })
+  await db('recurring_service_periods').where({ tenant: TENANT }).del();
+  // Per-test extra lines; the shared arrears line from beforeAll stays.
+  await db('contract_lines')
+    .where({ tenant: TENANT })
+    .whereNot({ contract_line_id: CONTRACT_LINE_ID })
     .del();
 });
 
 afterAll(async () => {
   await db('recurring_service_periods').where({ tenant: TENANT }).del();
+  await db('client_contracts').where({ tenant: TENANT }).del();
+  await db('contract_lines').where({ tenant: TENANT }).del();
+  await db('contracts').where({ tenant: TENANT }).del();
+  await db('clients').where({ tenant: TENANT }).del();
   await db('tenants').where({ tenant: TENANT }).del();
   await db.destroy().catch(() => undefined);
   vi.useRealTimers();
@@ -181,5 +251,128 @@ describe('generateCalendarMonthEndCloseInvoices (DB-backed hydration)', () => {
       messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotEligible',
     });
     expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
+  });
+
+  it('refuses the close when an active line has no materialized period for the window', async () => {
+    await insertServicePeriodFixture();
+    // A second ACTIVE client-cadence line whose schedule change was never
+    // rebuilt: no recurring_service_periods row for the window. Generation's
+    // normalization refuses such windows, so the close must refuse too — the
+    // listing-side flag reuses the exact same helper.
+    await insertContractLineFixture({
+      contractLineId: uuidv4(),
+      billingTiming: 'arrears',
+      name: 'Month End Close Unrebuilt Line',
+    });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+
+    const result = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [buildGroupedTarget()],
+    });
+
+    expect(result).toMatchObject({
+      messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotMaterialized',
+    });
+    expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
+  });
+
+  it('refuses the close when the canonical window also serves an advance period', async () => {
+    await insertServicePeriodFixture();
+    // An ADVANCE line due in the same invoice window (October billed at period
+    // start). Closing the window with only the arrears selection would strand
+    // the advance period behind the window's duplicate guard, so the whole
+    // window is ineligible — regardless of what the caller selected.
+    const advanceLineId = uuidv4();
+    await insertContractLineFixture({
+      contractLineId: advanceLineId,
+      billingTiming: 'advance',
+      name: 'Month End Close Advance Line',
+    });
+    await insertServicePeriodFixture({
+      scheduleKey: `schedule:${TENANT}:client_contract_line:${advanceLineId}:client:advance`,
+      periodKey: 'period:2026-10-01:2026-11-01',
+      obligationId: advanceLineId,
+      duePosition: 'advance',
+      servicePeriodStart: '2026-10-01',
+      servicePeriodEnd: '2026-11-01',
+    });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+
+    const result = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [buildGroupedTarget()],
+    });
+
+    expect(result).toMatchObject({
+      messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotEligible',
+    });
+    expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
+  });
+
+  it('refuses a partial selection of an otherwise eligible window', async () => {
+    await insertServicePeriodFixture();
+    // A second eligible arrears line in the same window that the caller did
+    // NOT select. Generating only part of the canonical window would claim
+    // the window's invoice identity and strand the unselected period.
+    const secondArrearsLineId = uuidv4();
+    const secondScheduleKey = `schedule:${TENANT}:client_contract_line:${secondArrearsLineId}:client:arrears`;
+    await insertContractLineFixture({
+      contractLineId: secondArrearsLineId,
+      billingTiming: 'arrears',
+      name: 'Month End Close Second Arrears Line',
+    });
+    await insertServicePeriodFixture({
+      scheduleKey: secondScheduleKey,
+      obligationId: secondArrearsLineId,
+    });
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+
+    const partialSelection = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [buildGroupedTarget()],
+    });
+
+    expect(partialSelection).toMatchObject({
+      messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotEligible',
+    });
+    expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
+
+    // The complete selection of the same window generates normally.
+    const completeSelection = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [
+        buildGroupedTarget([{ scheduleKey: secondScheduleKey, periodKey: PERIOD_KEY }]),
+      ],
+    });
+
+    expect(completeSelection).toMatchObject({ invoicesCreated: 1, failedCount: 0 });
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(1);
+  });
+
+  it('surfaces a repeated close as duplicateRecurringInvoice', async () => {
+    await insertServicePeriodFixture();
+
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-09-30T12:00:00.000Z'));
+
+    // Production generation refuses an already-claimed window with the coded
+    // duplicate error before creating anything; the manual close must surface
+    // it (the scheduled run treats it as a benign skip instead).
+    const duplicateError = Object.assign(
+      new Error('Invoice already exists for this recurring execution window'),
+      { code: 'DUPLICATE_RECURRING_INVOICE' },
+    );
+    mocks.generateInvoiceForSelectionInputs.mockRejectedValueOnce(duplicateError);
+
+    const result = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [buildGroupedTarget()],
+    });
+
+    expect(result).toMatchObject({
+      messageKey: 'msp/billing:errors.duplicateRecurringInvoice',
+    });
   });
 });
