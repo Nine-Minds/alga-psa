@@ -5365,9 +5365,7 @@ export class BillingEngine {
     );
     if (serviceIdsWithoutRecords.length > 0) {
       const missingServiceNames = (await db
-        .table<{ service_id: string; service_name: string | null }>(
-          "service_catalog",
-        )
+        .table("service_catalog")
         .where({ tenant: this.tenant })
         .whereIn("service_id", serviceIdsWithoutRecords)
         .select("service_id", "service_name")) as Array<{
