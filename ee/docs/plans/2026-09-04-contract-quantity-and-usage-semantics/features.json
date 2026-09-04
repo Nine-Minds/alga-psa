@@ -2,7 +2,7 @@
   {
     "id": "F001",
     "description": "Authoring explains recurring seats, period counts, and additive consumption, including carry-forward, replacement, and addition behavior.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R1 — Explicit agreement semantics"
     ]
@@ -66,7 +66,7 @@
   {
     "id": "F009",
     "description": "Finalization consumes the previewed total revision once, rejects stale previews, and prevents edits, deletion, or recreation of invoiced totals.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R3 — Period-total replacement and concurrency"
     ]
@@ -74,7 +74,7 @@
   {
     "id": "F010",
     "description": "Existing additive entries retain amounts and per-entry minimum/tier behavior with explicit additive labels and request-id retry protection.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4 — Additive compatibility and pricing"
     ]
@@ -82,7 +82,7 @@
   {
     "id": "F011",
     "description": "Reject additive writes into period-total configurations and mixed measurement modes in one period; schedule mode changes only at eligible boundaries.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R4 — Additive compatibility and pricing"
     ]
@@ -114,7 +114,7 @@
   {
     "id": "F015",
     "description": "Billing diagnostics distinguish unreported, explicit zero, billable, already-invoiced, attribution-excluded, and calculation-error states with appropriate actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6 — Accurate billing diagnostics"
     ]
@@ -122,7 +122,7 @@
   {
     "id": "F016",
     "description": "Mixed invoices require acknowledgement of omitted usage; automated generation reports incomplete usage and keeps omitted obligations available.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R6 — Accurate billing diagnostics"
     ]
@@ -130,7 +130,7 @@
   {
     "id": "F017",
     "description": "Preserve invoice retry idempotency, tenant isolation, minor-unit arithmetic, and tax/profile/contract attribution for both usage modes and recurring units.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "Data, API, and permissions"
     ]
@@ -138,7 +138,7 @@
   {
     "id": "F018",
     "description": "Overview, reports, and summaries share recurring unit/bundle valuation with cadence normalization and effective active commitment filtering.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7 — Honest recurring-revenue reporting"
     ]
@@ -146,7 +146,7 @@
   {
     "id": "F019",
     "description": "Reports label pure usage as Variable usage, mixed agreements as fixed plus variable, and totals as Fixed MRR with actuals separate.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7 — Honest recurring-revenue reporting"
     ]
@@ -154,7 +154,7 @@
   {
     "id": "F020",
     "description": "Report rows retain contract currency and summaries aggregate separately by currency without tenant-currency relabeling or implicit FX.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R7 — Honest recurring-revenue reporting"
     ]
@@ -162,7 +162,7 @@
   {
     "id": "F021",
     "description": "Display legacy ignored quantities and saved rates as non-billing reference data with explicit recurring-seat and period-count transition actions.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8 — Deliberate transition and history preservation"
     ]
@@ -178,7 +178,7 @@
   {
     "id": "F023",
     "description": "Schedule explicit period-total transitions without reinterpreting historical entries or creating a report until separately confirmed.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R8 — Deliberate transition and history preservation"
     ]

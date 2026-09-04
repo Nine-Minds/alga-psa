@@ -21,6 +21,8 @@ import {
   getConfigurationForService,
   getConfigurationWithDetails
 } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
+import { setUsageMeasurementMode } from '@alga-psa/billing/actions/contractLineSemanticsActions';
+import type { UsageMeasurementMode } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { ServiceConfigurationPanel } from '../service-configurations/ServiceConfigurationPanel';
 import {
@@ -86,6 +88,10 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
   });
   const [rateTiers, setRateTiers] = useState<IContractLineServiceRateTier[]>([]);
   const [userTypeRates, setUserTypeRates] = useState<IUserTypeRate[]>([]);
+  // Measurement mode is a semantic transition, not a plain column edit: the
+  // saved value is compared against what was loaded so an unchanged mode never
+  // runs the conversion guard, and a changed one always does.
+  const [initialMeasurementMode, setInitialMeasurementMode] = useState<UsageMeasurementMode>('additive');
 
   // Bucket overlay state
   const [bucketOverlay, setBucketOverlay] = useState<BucketOverlayInput | null>(null);
@@ -132,6 +138,11 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
           });
 
           setTypeConfig(configDetails.typeConfig);
+          setInitialMeasurementMode(
+            (configDetails.typeConfig as Partial<IContractLineServiceUsageConfig> | null)?.measurement_mode === 'period_total'
+              ? 'period_total'
+              : 'additive'
+          );
 
           // Set plan fixed config if available
           if (details.planFixedConfig) {
@@ -236,6 +247,32 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
     setError(null);
 
     try {
+      // A usage measurement-mode change must go through the semantics action:
+      // it refuses conversions that would orphan unbilled entries or an
+      // unbilled period count. Persist it first so a refused transition never
+      // half-saves the surrounding configuration, and keep the mode out of the
+      // generic type-config update so it cannot bypass that guard.
+      let typeConfigToPersist = typeConfig || undefined;
+      if (baseConfig.configuration_type === 'Usage' && typeConfig) {
+        const { measurement_mode, ...usageRest } = typeConfig as Partial<IContractLineServiceUsageConfig>;
+        typeConfigToPersist = usageRest;
+        const selectedMode: UsageMeasurementMode = measurement_mode === 'period_total' ? 'period_total' : 'additive';
+        if (measurement_mode && selectedMode !== initialMeasurementMode && baseConfig.config_id) {
+          const modeResult = await setUsageMeasurementMode({
+            config_id: baseConfig.config_id,
+            contract_line_id: planService.contract_line_id,
+            service_id: planService.service_id,
+            measurement_mode: selectedMode,
+          });
+          if (isReturnedActionError(modeResult)) {
+            setError(getErrorMessage(modeResult));
+            setIsSubmitting(false);
+            return;
+          }
+          setInitialMeasurementMode(selectedMode);
+        }
+      }
+
       // Update the plan service with the new configuration
       const updateResult = await updateContractLineService(
         planService.contract_line_id,
@@ -243,7 +280,7 @@ const ContractLineServiceForm: React.FC<ContractLineServiceFormProps> = ({
         {
           quantity: baseConfig.quantity,
           customRate: baseConfig.custom_rate,
-          typeConfig: typeConfig || undefined
+          typeConfig: typeConfigToPersist
         },
         rateTiers // Pass the rateTiers state here
       );

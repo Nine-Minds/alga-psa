@@ -323,7 +323,12 @@
       "billedOnRecordedUsage": "Fatturato in base all'utilizzo registrato",
       "serviceCountOne": "{{count}} servizio",
       "serviceCountOther": "{{count}} servizi",
-      "previouslyConfiguredQuantity": "Quantità configurata in precedenza: {{count}} — non utilizzata per la fatturazione"
+      "previouslyConfiguredQuantity": "Quantità configurata in precedenza: {{count}} — non utilizzata per la fatturazione",
+      "billedOnPeriodCount": "Fatturato in base al conteggio comunicato per ogni periodo",
+      "recurringSeats": "{{count}} × {{rate}} (postazioni ricorrenti)",
+      "bundleAllocation": "Ripartizione del prezzo del pacchetto — non sono postazioni fatturabili",
+      "setUpRecurringSeats": "Configura postazioni ricorrenti",
+      "reportPeriodCount": "Comunica un conteggio di periodo"
     },
     "stats": {
       "contractLines": "Linee contrattuali",
@@ -333,7 +338,33 @@
       "variableSuffix": "+ variabile (oraria/utilizzo)",
       "viewDetails": "Visualizza dettagli"
     },
-    "title": "Cosa è incluso"
+    "title": "Cosa è incluso",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configura postazioni ricorrenti",
+        "explanation": "Le postazioni ricorrenti fatturano quantità × tariffa unitaria in ogni periodo senza record di consumo, quindi vivono su una riga di contratto fissa prezzata a postazioni/unità ricorrenti — non su questa riga a consumo.",
+        "nextStep": "Vai alle righe di contratto, aggiungi (o apri) una riga fissa, aggiungi questo servizio e scegli «Postazioni/unità ricorrenti», quindi conferma quantità e tariffa unitaria. La modifica ha effetto dal successivo periodo di servizio non fatturato; questa riga a consumo e la sua cronologia restano invariate finché non la rimuovi."
+      },
+      "periodCount": {
+        "title": "Comunica un conteggio di periodo",
+        "explanation": "Comunicare un conteggio di periodo porta questo servizio a un conteggio sostituibile per periodo di servizio: correggere 10 in 12 fattura 12, mai 22, e il minimo si applica una sola volta. Il periodo successivo inizia non comunicato — nessun conteggio viene riportato.",
+        "nextStep": "La conferma cambia solo il modo in cui questo servizio viene misurato dal successivo periodo di servizio non fatturato. Le voci esistenti restano additive e non viene creato alcun conteggio — comunica poi il conteggio del periodo in Monitoraggio consumi."
+      },
+      "referenceHeading": "Riferimento non confermato dalla configurazione precedente",
+      "referenceQuantity": "Quantità configurata in precedenza: {{count}}",
+      "referenceRate": "Tariffa salvata: {{rate}}",
+      "referenceCaveat": "Questi valori non sono mai stati fatturati. Qui non viene salvato né addebitato nulla finché non confermi tu stesso i valori nel flusso qui sotto.",
+      "actions": {
+        "close": "Chiudi",
+        "cancel": "Annulla",
+        "switching": "Modifica in corso…",
+        "confirmPeriodCount": "Passa ai conteggi di periodo"
+      },
+      "errors": {
+        "missingConfiguration": "Questo servizio non ha una configurazione salvata da convertire. Aggiorna e riprova.",
+        "failed": "Non è stato possibile modificare il modo in cui questo servizio viene misurato."
+      }
+    }
   },
   "contractDialog": {
     "actions": {

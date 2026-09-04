@@ -323,7 +323,12 @@
       "billedOnRecordedUsage": "Billed on recorded usage",
       "serviceCountOne": "{{count}} service",
       "serviceCountOther": "{{count}} services",
-      "previouslyConfiguredQuantity": "Previously configured quantity: {{count}} — not used for billing"
+      "previouslyConfiguredQuantity": "Previously configured quantity: {{count}} — not used for billing",
+      "billedOnPeriodCount": "Billed on the count reported for each period",
+      "recurringSeats": "{{count}} × {{rate}} (recurring seats)",
+      "bundleAllocation": "Allocation of the bundle price — not billable seats",
+      "setUpRecurringSeats": "Set up recurring seats",
+      "reportPeriodCount": "Report a period count"
     },
     "stats": {
       "contractLines": "Contract Lines",
@@ -333,7 +338,33 @@
       "variableSuffix": "+ variable (hourly/usage)",
       "viewDetails": "View details"
     },
-    "title": "What's Included"
+    "title": "What's Included",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Set up recurring seats",
+        "explanation": "Recurring seats bill quantity × unit rate every period without usage records, so they live on a Fixed contract line priced by recurring seats/units — not on this Usage line.",
+        "nextStep": "Go to Contract Lines, add (or open) a Fixed line, add this service, and choose “Recurring seats/units”, then confirm the quantity and unit rate. The change takes effect at the next unbilled service period; this Usage line and its history stay as they are until you remove it."
+      },
+      "periodCount": {
+        "title": "Report a period count",
+        "explanation": "Reporting a period count switches this service to one replaceable count per service period: correcting 10 to 12 bills 12, never 22, and the minimum applies once. The next period starts unreported — no count carries forward.",
+        "nextStep": "Confirming changes only how this service is measured from the next unbilled service period. Existing entries stay additive, and no count is created — report the count for the period in Usage Tracking afterwards."
+      },
+      "referenceHeading": "Unconfirmed reference from the previous configuration",
+      "referenceQuantity": "Previously configured quantity: {{count}}",
+      "referenceRate": "Saved rate: {{rate}}",
+      "referenceCaveat": "These values have never billed. Nothing here is saved or charged until you confirm the values yourself in the flow below.",
+      "actions": {
+        "close": "Close",
+        "cancel": "Cancel",
+        "switching": "Switching…",
+        "confirmPeriodCount": "Switch to period counts"
+      },
+      "errors": {
+        "missingConfiguration": "This service has no saved configuration to convert. Refresh and try again.",
+        "failed": "Could not change how this service is measured."
+      }
+    }
   },
   "contractDialog": {
     "actions": {

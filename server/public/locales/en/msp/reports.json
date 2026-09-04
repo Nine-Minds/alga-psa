@@ -240,8 +240,8 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "Total MRR",
-        "subtitle": "Fixed Monthly Recurring Revenue",
+        "title": "Fixed MRR",
+        "subtitle": "Fixed Monthly Recurring Revenue of active contracts",
         "variableUsageNote": "{{count}} active contracts also bill variable usage (not included)"
       },
       "ytdRevenue": {
@@ -304,7 +304,8 @@
       "costYtd": "Cost (YTD)",
       "profit": "Profit",
       "margin": "Margin",
-      "plusVariableUsage": "+ variable usage"
+      "plusVariableUsage": "+ variable usage",
+      "variableUsage": "Variable usage"
     },
     "statusValues": {
       "active": "Active",

@@ -323,7 +323,12 @@
       "billedOnRecordedUsage": "Gefactureerd op basis van geregistreerd verbruik",
       "serviceCountOne": "{{count}} dienst",
       "serviceCountOther": "{{count}} diensten",
-      "previouslyConfiguredQuantity": "Eerder geconfigureerde hoeveelheid: {{count}} — niet gebruikt voor facturatie"
+      "previouslyConfiguredQuantity": "Eerder geconfigureerde hoeveelheid: {{count}} — niet gebruikt voor facturatie",
+      "billedOnPeriodCount": "Gefactureerd op het per periode opgegeven aantal",
+      "recurringSeats": "{{count}} × {{rate}} (terugkerende plaatsen)",
+      "bundleAllocation": "Verdeling van de bundelprijs — geen factureerbare plaatsen",
+      "setUpRecurringSeats": "Terugkerende plaatsen instellen",
+      "reportPeriodCount": "Periodeaantal doorgeven"
     },
     "stats": {
       "contractLines": "Contractregels",
@@ -333,7 +338,33 @@
       "variableSuffix": "+ variabel (per uur/verbruik)",
       "viewDetails": "Details bekijken"
     },
-    "title": "Wat is inbegrepen"
+    "title": "Wat is inbegrepen",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Terugkerende plaatsen instellen",
+        "explanation": "Terugkerende plaatsen factureren aantal × eenheidstarief in elke periode zonder verbruiksregistraties; ze horen daarom op een vaste contractregel met prijsbasis terugkerende plaatsen/eenheden — niet op deze verbruiksregel.",
+        "nextStep": "Ga naar Contractregels, voeg een vaste regel toe (of open er een), voeg deze dienst toe en kies “Terugkerende plaatsen/eenheden”; bevestig daarna het aantal en het eenheidstarief. De wijziging geldt vanaf de volgende niet-gefactureerde serviceperiode; deze verbruiksregel en de historie blijven ongewijzigd tot je ze verwijdert."
+      },
+      "periodCount": {
+        "title": "Periodeaantal doorgeven",
+        "explanation": "Een periodeaantal doorgeven zet deze dienst om naar één vervangbaar aantal per serviceperiode: 10 corrigeren naar 12 factureert 12, nooit 22, en het minimum geldt eenmalig. De volgende periode begint zonder opgave — er wordt niets overgenomen.",
+        "nextStep": "Bevestigen wijzigt alleen hoe deze dienst wordt gemeten vanaf de volgende niet-gefactureerde serviceperiode. Bestaande registraties blijven optellen en er wordt geen aantal aangemaakt — geef het aantal voor de periode daarna op in Verbruiksregistratie."
+      },
+      "referenceHeading": "Onbevestigde referentie uit de vorige configuratie",
+      "referenceQuantity": "Eerder geconfigureerd aantal: {{count}}",
+      "referenceRate": "Opgeslagen tarief: {{rate}}",
+      "referenceCaveat": "Deze waarden zijn nooit gefactureerd. Hier wordt niets opgeslagen of in rekening gebracht totdat je de waarden zelf bevestigt in de stroom hieronder.",
+      "actions": {
+        "close": "Sluiten",
+        "cancel": "Annuleren",
+        "switching": "Bezig met omzetten…",
+        "confirmPeriodCount": "Overschakelen naar periodeaantallen"
+      },
+      "errors": {
+        "missingConfiguration": "Deze dienst heeft geen opgeslagen configuratie om om te zetten. Vernieuw en probeer het opnieuw.",
+        "failed": "Kon niet wijzigen hoe deze dienst wordt gemeten."
+      }
+    }
   },
   "contractDialog": {
     "actions": {

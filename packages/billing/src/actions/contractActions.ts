@@ -15,6 +15,7 @@ import {
 } from '@alga-psa/types';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { getContractMonthlyFixedValuesByContract } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 
@@ -995,6 +996,18 @@ export interface IContractLineOverview {
      */
     previouslyConfiguredQuantity: number | null;
     unit_of_measure: string | null;
+    /** Service configuration identity, needed to act on this row (null for template rows). */
+    config_id: string | null;
+    /**
+     * Explicit fixed pricing basis: 'unit' bills quantity × unit rate as
+     * recurring seats, 'bundle'/null keeps the legacy line-total semantics
+     * where the quantity is only an allocation.
+     */
+    pricing_basis: 'unit' | 'bundle' | null;
+    /** Explicit usage measurement mode; null (legacy) reads as additive entries. */
+    measurement_mode: 'additive' | 'period_total' | null;
+    /** Unit rate in cents for unit-priced fixed services, else null. */
+    unit_rate: number | null;
   }[];
 }
 
@@ -1080,7 +1093,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         // Get service configurations for rates
         const configs = await tenantScopedTable(knex, tenant, 'contract_template_line_service_configuration as config')
           .where({ 'config.template_line_id': line.contract_line_id })
-          .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
+          .select(['config.config_id', 'config.service_id', 'config.custom_rate', 'config.quantity']);
 
         const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
 
@@ -1105,7 +1118,14 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 line.contract_line_type === 'Usage'
                   ? (config?.quantity ?? svc.quantity ?? null)
                   : null,
-              unit_of_measure: null
+              unit_of_measure: null,
+              // Template lines do not carry the explicit basis/mode columns;
+              // they resolve to legacy semantics until a contract line is
+              // authored from them.
+              config_id: config?.config_id ?? null,
+              pricing_basis: null,
+              measurement_mode: null,
+              unit_rate: null
             };
           })
         });
@@ -1143,9 +1163,38 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
         // Get service configurations for rates
         const configs = await tenantScopedTable(knex, tenant, 'contract_line_service_configuration as config')
           .where({ 'config.contract_line_id': line.contract_line_id })
-          .select(['config.service_id', 'config.custom_rate', 'config.quantity']);
+          .select([
+            'config.config_id',
+            'config.service_id',
+            'config.custom_rate',
+            'config.quantity',
+            'config.configuration_type',
+          ]);
 
         const configMap = new Map<string, any>((configs as any[]).map((c: any) => [c.service_id, c]));
+
+        // Explicit billing semantics per configuration. They decide how this
+        // row must read: a unit-priced fixed member is a recurring seat count
+        // billed at a unit rate, a bundle member's quantity is only an
+        // allocation, and a usage member states its measurement mode. Legacy
+        // rows have no value and keep their legacy meaning.
+        const configIds = (configs as any[]).map((c: any) => c.config_id).filter(Boolean);
+        const fixedSemantics = configIds.length > 0
+          ? await tenantScopedTable(knex, tenant, 'contract_line_service_fixed_config')
+              .whereIn('config_id', configIds)
+              .select(['config_id', 'pricing_basis', 'base_rate'])
+          : [];
+        const usageSemantics = configIds.length > 0
+          ? await tenantScopedTable(knex, tenant, 'contract_line_service_usage_config')
+              .whereIn('config_id', configIds)
+              .select(['config_id', 'measurement_mode'])
+          : [];
+        const fixedSemanticsMap = new Map<string, any>(
+          (fixedSemantics as any[]).map((row: any) => [row.config_id, row]),
+        );
+        const usageSemanticsMap = new Map<string, any>(
+          (usageSemantics as any[]).map((row: any) => [row.config_id, row]),
+        );
 
         contractLines.push({
           contract_line_id: line.contract_line_id,
@@ -1168,7 +1217,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
                 line.contract_line_type === 'Usage'
                   ? (config?.quantity ?? null)
                   : null,
-              unit_of_measure: svc.unit_of_measure || null
+              unit_of_measure: svc.unit_of_measure || null,
+              config_id: config?.config_id ?? null,
+              pricing_basis: fixedSemanticsMap.get(config?.config_id)?.pricing_basis ?? null,
+              measurement_mode: usageSemanticsMap.get(config?.config_id)?.measurement_mode ?? null,
+              unit_rate:
+                fixedSemanticsMap.get(config?.config_id)?.pricing_basis === 'unit'
+                  ? (fixedSemanticsMap.get(config?.config_id)?.base_rate != null
+                      ? Number(fixedSemanticsMap.get(config?.config_id)?.base_rate)
+                      : (config?.custom_rate != null ? Number(config.custom_rate) : null))
+                  : null
             };
           })
         });
@@ -1181,29 +1239,20 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     const hasHourlyServices = contractLines.some(line => line.contract_line_type === 'Hourly');
     const hasUsageServices = contractLines.some(line => line.contract_line_type === 'Usage');
 
-    // Calculate estimated monthly value (only for fixed lines)
+    // Calculate estimated monthly value: fixed lines only (mixed contracts
+    // show the fixed portion; hourly/usage revenue is variable).
     let totalEstimatedMonthlyValue: number | null = null;
 
-    if (hasFixedServices && !hasHourlyServices && !hasUsageServices) {
-      // All fixed - we can calculate
-      totalEstimatedMonthlyValue = contractLines
-        .filter(line => line.contract_line_type === 'Fixed' && line.base_rate !== null)
-        .reduce((acc, line) => {
-          let monthlyRate = line.base_rate!;
-          // Normalize to monthly
-          if (line.billing_frequency === 'weekly') {
-            monthlyRate = monthlyRate * 4.33;
-          } else if (line.billing_frequency === 'quarterly') {
-            monthlyRate = monthlyRate / 3;
-          } else if (line.billing_frequency === 'semi-annually' || line.billing_frequency === 'semi_annually') {
-            monthlyRate = monthlyRate / 6;
-          } else if (line.billing_frequency === 'annually') {
-            monthlyRate = monthlyRate / 12;
-          }
-          return acc + monthlyRate;
-        }, 0);
+    if (hasFixedServices && !isTemplate) {
+      // Real contracts use the canonical shared valuation so the overview,
+      // contract reports, and the summary MRR cannot disagree: unit-priced
+      // lines are quantity × unit rate (revision-aware), bundles keep their
+      // line rate, and every line is cadence-normalized.
+      const contractValues = await getContractMonthlyFixedValuesByContract(knex, tenant, [contractId]);
+      totalEstimatedMonthlyValue = contractValues.get(contractId)?.monthlyValueCents ?? 0;
     } else if (hasFixedServices) {
-      // Mixed - calculate fixed portion only
+      // Templates have no contract rows for the shared valuation; keep the
+      // template-line normalization.
       totalEstimatedMonthlyValue = contractLines
         .filter(line => line.contract_line_type === 'Fixed' && line.base_rate !== null)
         .reduce((acc, line) => {

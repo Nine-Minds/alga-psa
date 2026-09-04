@@ -91,6 +91,17 @@ vi.mock('@alga-psa/billing/actions/contractReportActions', () => ({
       monthly_recurring: 0,
       total_billed_ytd: 0,
       has_variable_usage: true,
+      currency_code: 'CAD',
+      status: 'active',
+    },
+    {
+      contract_name: 'Mixed Retainer',
+      client_id: 'client-1',
+      client_name: 'Solutions by Swift',
+      monthly_recurring: 50000,
+      total_billed_ytd: 100000,
+      has_variable_usage: true,
+      currency_code: 'CAD',
       status: 'active',
     },
   ]),
@@ -103,13 +114,14 @@ vi.mock('@alga-psa/billing/actions/contractReportActions', () => ({
       days_until_expiration: 120,
       monthly_value: 0,
       has_variable_usage: true,
+      currency_code: 'CAD',
       auto_renew: false,
     },
   ]),
   getBucketUsageReport: vi.fn(async () => []),
   getContractReportSummary: vi.fn(async () => ({
-    totalMRR: 50000,
-    totalYTD: 100000,
+    fixedMrrByCurrency: [{ currencyCode: 'CAD', totalCents: 50000 }],
+    ytdRevenueByCurrency: [{ currencyCode: 'CAD', totalCents: 100000 }],
     activeContractCount: 3,
     atRiskDecisionCount: 0,
     variableUsageContractCount: 2,
@@ -282,14 +294,27 @@ describe('contract reports variable usage labeling', () => {
   it('marks usage contracts as variable revenue instead of bare zero MRR', async () => {
     render(<ContractReports />);
 
-    // Revenue row for the usage contract carries the variable-usage label.
-    const labels = await screen.findAllByText(/\+ variable usage/);
-    expect(labels.length).toBeGreaterThan(0);
+    // A pure-usage contract row shows "Variable usage" instead of a fixed
+    // zero; a mixed contract shows its fixed amount plus the variable label.
+    const pureUsageLabels = await screen.findAllByText(/^Variable usage$/);
+    expect(pureUsageLabels.length).toBeGreaterThan(0);
+    const mixedLabels = screen.getAllByText(/\+ variable usage/);
+    expect(mixedLabels.length).toBeGreaterThan(0);
 
     // The MRR tile is explicitly fixed recurring revenue and notes the
     // contracts that also bill variable usage.
     expect(screen.getByText(/Fixed Monthly Recurring Revenue/)).toBeInTheDocument();
     expect(screen.getByTestId('mrr-variable-usage-note').textContent)
       .toMatch(/2 active contracts also bill variable usage/);
+  });
+
+  it('aggregates summary MRR and YTD separately per contract currency', async () => {
+    render(<ContractReports />);
+
+    const mrrTile = await screen.findByTestId('fixed-mrr-by-currency');
+    // CAD minor units formatted in CAD — never re-labeled in tenant currency.
+    expect(mrrTile.textContent).toMatch(/CA\$500(\.00)?|500(\.|,)00\s*\$?\s*CA/);
+    const ytdTile = screen.getByTestId('ytd-revenue-by-currency');
+    expect(ytdTile.textContent).toMatch(/CA\$1,?000(\.00)?|1[.,\s]?000(\.|,)00/);
   });
 });

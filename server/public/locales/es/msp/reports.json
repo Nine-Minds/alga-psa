@@ -240,8 +240,8 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "MRR total",
-        "subtitle": "Ingresos recurrentes mensuales fijos",
+        "title": "MRR fijo",
+        "subtitle": "Ingresos recurrentes mensuales fijos de contratos activos",
         "variableUsageNote": "{{count}} contratos activos también facturan uso variable (no incluido)"
       },
       "ytdRevenue": {
@@ -304,7 +304,8 @@
       "costYtd": "Coste (YTD)",
       "profit": "Beneficio",
       "margin": "Margen",
-      "plusVariableUsage": "+ uso variable"
+      "plusVariableUsage": "+ uso variable",
+      "variableUsage": "Uso variable"
     },
     "statusValues": {
       "active": "Activo",

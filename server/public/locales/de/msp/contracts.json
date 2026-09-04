@@ -323,7 +323,12 @@
       "billedOnRecordedUsage": "Abrechnung nach erfasstem Verbrauch",
       "serviceCountOne": "{{count}} Service",
       "serviceCountOther": "{{count}} Services",
-      "previouslyConfiguredQuantity": "Zuvor konfigurierte Menge: {{count}} — wird nicht für die Abrechnung verwendet"
+      "previouslyConfiguredQuantity": "Zuvor konfigurierte Menge: {{count}} — wird nicht für die Abrechnung verwendet",
+      "billedOnPeriodCount": "Abrechnung nach der je Zeitraum gemeldeten Menge",
+      "recurringSeats": "{{count}} × {{rate}} (wiederkehrende Plätze)",
+      "bundleAllocation": "Verteilung des Paketpreises — keine abrechenbaren Plätze",
+      "setUpRecurringSeats": "Wiederkehrende Plätze einrichten",
+      "reportPeriodCount": "Menge für den Zeitraum melden"
     },
     "stats": {
       "contractLines": "Vertragslinien",
@@ -333,7 +338,33 @@
       "variableSuffix": "+ variabel (stundenbasiert/nutzungsbasiert)",
       "viewDetails": "Details anzeigen"
     },
-    "title": "Was enthalten ist"
+    "title": "Was enthalten ist",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Wiederkehrende Plätze einrichten",
+        "explanation": "Wiederkehrende Plätze rechnen in jedem Zeitraum Menge × Einzelpreis ohne Verbrauchsdatensätze ab. Sie gehören daher auf eine feste Vertragsposition mit Preisbasis „Wiederkehrende Plätze/Einheiten“ — nicht auf diese nutzungsbasierte Position.",
+        "nextStep": "Öffne die Vertragspositionen, füge eine feste Position hinzu (oder öffne eine), nimm diesen Dienst auf, wähle „Wiederkehrende Plätze/Einheiten“ und bestätige Menge und Einzelpreis. Die Änderung gilt ab dem nächsten nicht abgerechneten Leistungszeitraum; diese nutzungsbasierte Position und ihre Historie bleiben unverändert, bis du sie entfernst."
+      },
+      "periodCount": {
+        "title": "Menge für den Zeitraum melden",
+        "explanation": "Mit der Zeitraummeldung wechselt dieser Dienst zu einer ersetzbaren Menge je Leistungszeitraum: Eine Korrektur von 10 auf 12 wird mit 12 abgerechnet, nie mit 22, und die Mindestmenge gilt einmal. Der nächste Zeitraum beginnt ungemeldet — es wird nichts übernommen.",
+        "nextStep": "Die Bestätigung ändert nur, wie dieser Dienst ab dem nächsten nicht abgerechneten Leistungszeitraum gemessen wird. Bestehende Einträge bleiben additiv, und es wird keine Menge angelegt — melde die Menge für den Zeitraum anschließend in der Verbrauchserfassung."
+      },
+      "referenceHeading": "Unbestätigte Referenz aus der bisherigen Konfiguration",
+      "referenceQuantity": "Zuvor konfigurierte Menge: {{count}}",
+      "referenceRate": "Gespeicherter Preis: {{rate}}",
+      "referenceCaveat": "Diese Werte wurden nie abgerechnet. Hier wird nichts gespeichert oder berechnet, bis du die Werte im folgenden Ablauf selbst bestätigst.",
+      "actions": {
+        "close": "Schließen",
+        "cancel": "Abbrechen",
+        "switching": "Wird umgestellt …",
+        "confirmPeriodCount": "Auf Zeitraummengen umstellen"
+      },
+      "errors": {
+        "missingConfiguration": "Für diesen Dienst gibt es keine gespeicherte Konfiguration zum Umstellen. Aktualisiere die Seite und versuche es erneut.",
+        "failed": "Die Messweise dieses Dienstes konnte nicht geändert werden."
+      }
+    }
   },
   "contractDialog": {
     "actions": {

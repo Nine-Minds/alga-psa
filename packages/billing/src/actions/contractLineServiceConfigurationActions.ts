@@ -10,12 +10,19 @@ import {
   IContractLineServiceUsageConfig,
   IContractLineServiceBucketConfig,
   IContractLineServiceRateTierInput,
-  IUserTypeRate
+  IUserTypeRate,
+  UsageMeasurementMode
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  actionError,
+  permissionError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { setUsageMeasurementMode } from './contractLineSemanticsActions';
 
 export type ContractLineServiceConfigActionError = ActionMessageError | ActionPermissionError;
 
@@ -348,6 +355,13 @@ type UsageConfigPayload = {
   unit_of_measure?: string;
   minimum_usage?: number;
   enable_tiered_pricing?: boolean;
+  /**
+   * Explicit measurement intent for this usage configuration. Omitted leaves
+   * the stored mode untouched (legacy configurations stay additive). A change
+   * is applied through {@link setUsageMeasurementMode} so the conversion guard
+   * — not this generic upsert — decides whether the transition is safe.
+   */
+  measurement_mode?: UsageMeasurementMode;
   tiers?: Array<{ min_quantity: number; max_quantity?: number; rate: number }>;
 };
 
@@ -385,6 +399,17 @@ export const upsertPlanServiceConfiguration = withAuth(async (
 
     if (existing) {
       await service.updateConfiguration(existing.config_id, undefined, usageConfig, rateTiers as any);
+      if (payload.measurement_mode) {
+        const modeResult = await setUsageMeasurementMode({
+          config_id: existing.config_id,
+          contract_line_id: payload.contractLineId,
+          service_id: payload.serviceId,
+          measurement_mode: payload.measurement_mode,
+        });
+        if (isActionMessageError(modeResult) || isActionPermissionError(modeResult)) {
+          return modeResult;
+        }
+      }
       return existing.config_id;
     }
 
@@ -398,7 +423,19 @@ export const upsertPlanServiceConfiguration = withAuth(async (
       tenant
     };
 
-    return service.createConfiguration(baseConfig, usageConfig, rateTiers as any);
+    const createdConfigId = await service.createConfiguration(baseConfig, usageConfig, rateTiers as any);
+    if (payload.measurement_mode) {
+      const modeResult = await setUsageMeasurementMode({
+        config_id: createdConfigId,
+        contract_line_id: payload.contractLineId,
+        service_id: payload.serviceId,
+        measurement_mode: payload.measurement_mode,
+      });
+      if (isActionMessageError(modeResult) || isActionPermissionError(modeResult)) {
+        return modeResult;
+      }
+    }
+    return createdConfigId;
   } catch (error) {
     console.error(`Error upserting usage configuration for contract line ${payload.contractLineId} and service ${payload.serviceId}:`, error);
     const expected = contractLineServiceConfigActionErrorFrom(error);

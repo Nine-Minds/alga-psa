@@ -166,7 +166,9 @@
         "generating": "Generating...",
         "generateError": "Failed to generate invoice from preview",
         "missingUsageHeading": "Usage not recorded for this period",
-        "missingUsageService": "{{service}}: no usage records for {{periodStart}} to {{periodEnd}}"
+        "missingUsageService": "{{service}}: no usage records for {{periodStart}} to {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: usage recorded for {{periodStart}} to {{periodEnd}} is excluded until its contract-line attribution is resolved — resolve the attribution instead of recording more usage",
+        "usageCalculationError": "{{service}}: recorded usage for {{periodStart}} to {{periodEnd}} could not be priced — fix the service pricing instead of recording more usage"
       },
       "poOverage": {
         "title": "Purchase Order Limit Overages",
@@ -181,6 +183,13 @@
         "proceedAnyway": "Proceed anyway?",
         "proceedConfirm": "Proceed Anyway",
         "skippedError": "Skipped due to PO overage ({{poLabel}}): over by {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Usage not reported for this period",
+        "description": "These usage services have no report for the invoice window. Generating now leaves them off the invoice; they stay billable once their usage is reported.",
+        "omittedItem": "{{services}}: no usage reported for {{periodStart}} to {{periodEnd}}",
+        "question": "Generate without these services?",
+        "confirm": "Generate without unreported usage"
       }
     },
     "history": {
@@ -358,7 +367,10 @@
       "UNEXPECTED": "Something went wrong generating the invoice. Quote reference {{ref}} when contacting support.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
-      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "This invoice window has billable charges, but {{services}} have no usage reported for the service period {{periodStart}} to {{periodEnd}}. Record the usage first, or explicitly acknowledge generating without it — the unreported services stay billable later.",
+      "USAGE_PERIOD_TOTAL_STALE": "The preview is out of date: {{details}}. Re-run the preview to see the current numbers, then generate again.",
+      "USAGE_CALCULATION_ERROR": "Usage for {{services}} in the service period {{periodStart}} to {{periodEnd}} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage."
     },
     "warnings": {
       "noBillingEmail": "This client has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location before generating the invoice."

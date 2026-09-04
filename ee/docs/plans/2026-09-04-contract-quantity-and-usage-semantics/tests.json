@@ -2,7 +2,7 @@
   {
     "id": "T001",
     "description": "DB-backed recurring-seat journey: 10 units at CAD100, 9 at CAD85, and 1 at CAD125 preview/finalize at CAD1890 before tax in two monthly periods with no usage rows; overview and fixed MRR agree. Existing bundle-total pricing remains unchanged.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F004",
@@ -13,7 +13,7 @@
   {
     "id": "T002",
     "description": "DB-backed effective-change matrix: change 10 to 12 at the next unbilled boundary, obtain CAD2090 there while earlier periods remain CAD1890; zero units do not become one; already-billed/finalizing target periods reject edits; explicitly configured partial-period coverage remains consistent.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F004",
       "F005",
@@ -23,7 +23,7 @@
   {
     "id": "T003",
     "description": "DB-backed period-total replacement: save 10 then replace with 12; preview is 12 units and does not consume it; minimum and tier pricing run once on the effective total; absent next-period report stays unreported without carry-forward.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F007",
@@ -43,7 +43,7 @@
   {
     "id": "T005",
     "description": "DB-backed invoice consistency: modifying/deleting a total or applicable pricing after preview invalidates generation; concurrent generation/retries consume one revision once; finalized totals cannot be edited, deleted, or recreated to bill again. Repeat under period regeneration.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F006",
       "F009",
@@ -53,7 +53,7 @@
   {
     "id": "T006",
     "description": "DB-backed additive compatibility: separate 10 and 12 entries bill 22; per-entry minimums/tiers preserve legacy amounts; editing is replacement of that entry; an identical request retry is one event but distinct request IDs may represent legitimate identical events. Wrong-mode writes and occupied-period conversions fail.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F002",
       "F010",
@@ -64,7 +64,7 @@
   {
     "id": "T007",
     "description": "DB-backed diagnostic matrix across absent record, explicit zero with/without minimum, billable positive, all-already-invoiced, partly invoiced, unresolved attribution, and pricing error: correct state, quantity, and action are returned; already-invoiced never prompts duplicate recording.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F008",
       "F015",
@@ -74,7 +74,7 @@
   {
     "id": "T008",
     "description": "DB-backed mixed invoice: fixed charges with unreported usage require explicit omission acknowledgement; unacknowledged automated generation creates no partial invoice; acknowledged omission leaves the missing obligation available and later recording bills only the remainder once.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F009",
       "F015",
@@ -107,7 +107,7 @@
   {
     "id": "T011",
     "description": "DB-backed reports: recurring unit and fixed bundle amounts match canonical valuation, monthly/non-monthly cadence normalizes correctly, inactive/future/superseded commitments are excluded, pure/mixed Usage labels are correct, and CAD/USD rows aggregate separately despite a different tenant currency.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F018",
       "F019",

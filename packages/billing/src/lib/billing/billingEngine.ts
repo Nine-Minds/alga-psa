@@ -5508,10 +5508,44 @@ export class BillingEngine {
         "sp.rate as currency_rate",
       ); // Fetch tax_rate_id
 
-    const usageRecords: any[] = [
+    const fetchedUsageRecords: any[] = [
       ...((await usageRecordQuery) as Array<Record<string, unknown>>),
       ...periodTotalChargeRows,
     ];
+
+    // Per-service pricing pre-validation, mirroring the shared usage charge
+    // math exactly (contract-line custom rate, else the contract-currency
+    // catalog price, else enabled rate tiers). A recorded report that cannot
+    // be priced is a calculation error — a typed diagnostic, never
+    // "unreported": the loader withholds the unpriceable rows so the rest of
+    // the document still computes and preview can name the broken service,
+    // while invoice generation refuses the window rather than silently
+    // omitting a recorded charge.
+    const calculationErrorServiceIds = new Set<string>();
+    if (clientContractLine.is_system_managed_default !== true) {
+      for (const record of fetchedUsageRecords) {
+        const recordServiceId = record.service_id as string;
+        if (!modeForService.has(recordServiceId)) {
+          continue;
+        }
+        const entry = serviceConfigMap.get(recordServiceId);
+        const hasCustomRate = Boolean(entry?.config.custom_rate);
+        const hasCurrencyRate = record.currency_rate != null;
+        const tiered = Boolean(
+          entry?.config.enable_tiered_pricing &&
+            (entry?.rateTiers.length ?? 0) > 0,
+        );
+        if (!hasCustomRate && !hasCurrencyRate && !tiered) {
+          calculationErrorServiceIds.add(recordServiceId);
+        }
+      }
+    }
+    const usageRecords: any[] =
+      calculationErrorServiceIds.size > 0
+        ? fetchedUsageRecords.filter(
+            (record) => !calculationErrorServiceIds.has(record.service_id),
+          )
+        : fetchedUsageRecords;
 
     // Usage billing is record-driven: a configured service with no eligible
     // report in the due period produces no charge. Report those services
@@ -5532,10 +5566,54 @@ export class BillingEngine {
       ),
     );
     const servicesWithoutReports = usageBilledServiceIds.filter(
-      (serviceId) => !serviceIdsWithChargeableReports.has(serviceId),
+      (serviceId) =>
+        !serviceIdsWithChargeableReports.has(serviceId) &&
+        !calculationErrorServiceIds.has(serviceId),
     );
 
+    // LEVERAGE: pattern usage-status-row — six near-identical status literals
+    // (line/service/period identity + typed state) are assembled by hand in
+    // this loader; a small builder seeded with the line/period identity would
+    // leave only the per-state fields at each site.
     const statusRows: IUsageServicePeriodStatus[] = [];
+
+    // Calculation-error services carry reports the engine withheld from
+    // pricing; report the typed state (with the recorded quantity) so the
+    // failure never masquerades as "unreported" and never advises recording
+    // more usage.
+    for (const serviceId of calculationErrorServiceIds) {
+      const configForService = serviceConfigMap.get(serviceId);
+      const withheldRows = fetchedUsageRecords.filter(
+        (record) => record.service_id === serviceId,
+      );
+      const reportedQuantity = withheldRows.reduce(
+        (sum, record) => sum + Number(record.quantity ?? 0),
+        0,
+      );
+      const periodTotalRow = withheldRows.find(
+        (record) => record.period_total_id,
+      );
+      statusRows.push({
+        client_contract_line_id: clientContractLine.client_contract_line_id,
+        contract_line_name: clientContractLine.contract_line_name,
+        service_id: serviceId,
+        service_name:
+          (withheldRows[0]?.service_name as string | null) ?? null,
+        config_id: configForService?.config.config_id ?? null,
+        service_period_start: servicePeriodStart,
+        service_period_end: servicePeriodEnd,
+        status: "calculation_error",
+        minimum_usage: Number(configForService?.config.minimum_usage ?? 0),
+        measurement_mode:
+          modeForService.get(serviceId) === "period_total"
+            ? "period_total"
+            : "additive",
+        quantity: reportedQuantity,
+        ...(periodTotalRow
+          ? { revision: Number(periodTotalRow.period_total_revision ?? 1) }
+          : {}),
+      });
+    }
     if (servicesWithoutReports.length > 0) {
       const reportedNames = (await db
         .table("service_catalog")
@@ -5592,6 +5670,34 @@ export class BillingEngine {
         );
         for (const row of invoicedRows) {
           additiveInvoicedServiceIds.add(row.service_id);
+        }
+      }
+
+      // Usage that exists in-period but is excluded from this line's charges
+      // by unresolved attribution: entries with no contract line whose service
+      // more than one line covers cannot be deterministically assigned, so the
+      // engine defers them to the unresolved-charge review instead of charging
+      // them here. Report that state distinctly — the fix is to resolve
+      // attribution, never to record more usage.
+      const attributionExcludedServiceIds = new Set<string>();
+      const ambiguousCandidateIds = additiveNoReportIds.filter(
+        (serviceId) => !uniquelyAssignableServiceIds.includes(serviceId),
+      );
+      if (ambiguousCandidateIds.length > 0) {
+        const excludedRows = await db
+          .table("usage_tracking")
+          .where({
+            client_id: clientId,
+            tenant: this.tenant,
+            invoiced: false,
+          })
+          .whereNull("contract_line_id")
+          .whereIn("service_id", ambiguousCandidateIds)
+          .where("usage_date", ">=", servicePeriodStartExclusive)
+          .where("usage_date", "<", servicePeriodEndExclusive)
+          .select("service_id");
+        for (const row of excludedRows) {
+          attributionExcludedServiceIds.add(row.service_id);
         }
       }
 
@@ -5654,6 +5760,23 @@ export class BillingEngine {
           });
         } else if (
           mode === "additive" &&
+          attributionExcludedServiceIds.has(serviceId)
+        ) {
+          statusRows.push({
+            client_contract_line_id:
+              clientContractLine.client_contract_line_id,
+            contract_line_name: clientContractLine.contract_line_name,
+            service_id: serviceId,
+            service_name: nameByServiceId.get(serviceId) ?? null,
+            config_id: configForService?.config.config_id ?? null,
+            service_period_start: servicePeriodStart,
+            service_period_end: servicePeriodEnd,
+            status: "attribution_excluded",
+            minimum_usage: minimumUsage,
+            measurement_mode: mode,
+          });
+        } else if (
+          mode === "additive" &&
           additiveInvoicedServiceIds.has(serviceId)
         ) {
           statusRows.push({
@@ -5688,16 +5811,38 @@ export class BillingEngine {
       }
     }
 
-    // Explicit diagnostics for recorded period totals that produce no charge:
-    // an explicit zero (no minimum) is a deliberate report; an explicit zero
-    // under a positive minimum is a report the floor raises to billable.
+    // Explicit diagnostics for every recorded period total. A zero report is
+    // an explicit zero (or a report a positive minimum raises to billable); a
+    // positive report is billable. Every status carries the total's stored
+    // revision so preview exposes exactly which report revision it priced —
+    // finalization consumes that same revision or refuses (stale preview).
     for (const total of periodTotalRows) {
+      if (calculationErrorServiceIds.has(total.service_id as string)) {
+        continue;
+      }
       const serviceConfig = serviceConfigMap.get(total.service_id);
       const minimumUsage = Number(
         serviceConfig?.config.minimum_usage ?? 0,
       );
       const reportedQuantity = Number(total.quantity ?? 0);
-      if (reportedQuantity === 0) {
+      if (reportedQuantity > 0) {
+        statusRows.push({
+          client_contract_line_id: clientContractLine.client_contract_line_id,
+          contract_line_name: clientContractLine.contract_line_name,
+          service_id: total.service_id,
+          service_name: (total.service_name as string | null) ?? null,
+          config_id: serviceConfig?.config.config_id ?? null,
+          service_period_start: servicePeriodStart,
+          service_period_end: servicePeriodEnd,
+          status: "billable",
+          minimum_usage: minimumUsage,
+          measurement_mode: "period_total",
+          quantity: reportedQuantity,
+          billable_quantity: Math.max(reportedQuantity, minimumUsage),
+          revision: Number(total.revision ?? 1),
+          minimum_applied: minimumUsage > reportedQuantity,
+        });
+      } else {
         statusRows.push({
           client_contract_line_id: clientContractLine.client_contract_line_id,
           contract_line_name: clientContractLine.contract_line_name,

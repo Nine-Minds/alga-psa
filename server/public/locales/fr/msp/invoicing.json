@@ -166,7 +166,9 @@
         "generating": "Générateur...",
         "generateError": "Échec de la génération de la facture à partir de l'aperçu",
         "missingUsageHeading": "Aucune utilisation enregistrée pour cette période",
-        "missingUsageService": "{{service}} : aucun enregistrement d'utilisation du {{periodStart}} au {{periodEnd}}"
+        "missingUsageService": "{{service}} : aucun enregistrement d'utilisation du {{periodStart}} au {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} est exclue tant que son rattachement à une ligne de contrat n'est pas résolu — résolvez le rattachement au lieu d'enregistrer davantage d'utilisation",
+        "usageCalculationError": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} n'a pas pu être tarifée — corrigez la tarification du service au lieu d'enregistrer davantage d'utilisation"
       },
       "poOverage": {
         "title": "Dépassements de la limite des bons de commande",
@@ -181,6 +183,13 @@
         "proceedAnyway": "Continuer quand même ?",
         "proceedConfirm": "Continuer quand même",
         "skippedError": "Ignoré en raison d'un dépassement du bon de commande ({{poLabel}}) : terminé par {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Utilisation non déclarée pour cette période",
+        "description": "Ces services à l'utilisation n'ont aucune déclaration pour la fenêtre de facturation. Générer maintenant les laisse hors de la facture ; ils resteront facturables une fois leur utilisation déclarée.",
+        "omittedItem": "{{services}} : aucune utilisation déclarée du {{periodStart}} au {{periodEnd}}",
+        "question": "Générer sans ces services ?",
+        "confirm": "Générer sans l'utilisation non déclarée"
       }
     },
     "history": {
@@ -358,7 +367,10 @@
       "UNEXPECTED": "Une erreur s'est produite lors de la génération de la facture. Indiquez la référence {{ref}} lorsque vous contactez le support.",
       "salesOrderGenerateFailed": "Impossible de générer la facture de la commande client.",
       "salesOrderNothingToInvoice": "Il ne reste plus rien à facturer pour cette commande client.",
-      "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée."
+      "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Cette fenêtre de facturation comporte des éléments facturables, mais {{services}} n'a aucune utilisation déclarée pour la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez d'abord l'utilisation, ou confirmez explicitement la génération sans elle — les services non déclarés resteront facturables plus tard.",
+      "USAGE_PERIOD_TOTAL_STALE": "L'aperçu est obsolète : {{details}}. Relancez l'aperçu pour voir les chiffres actuels, puis générez à nouveau.",
+      "USAGE_CALCULATION_ERROR": "L'utilisation de {{services}} sur la période de service du {{periodStart}} au {{periodEnd}} est enregistrée mais n'a pas pu être tarifée. Corrigez la tarification du service (prix catalogue dans la devise du contrat, tarif personnalisé ou paliers de tarifs), puis réessayez. N'enregistrez pas d'utilisation de remplacement."
     },
     "warnings": {
       "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."

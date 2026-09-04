@@ -240,8 +240,8 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "Gesamter MRR",
-        "subtitle": "Feste monatlich wiederkehrende Umsätze",
+        "title": "Fester MRR",
+        "subtitle": "Feste monatlich wiederkehrende Umsätze aktiver Verträge",
         "variableUsageNote": "{{count}} aktive Verträge rechnen zusätzlich variablen Verbrauch ab (nicht enthalten)"
       },
       "ytdRevenue": {
@@ -304,7 +304,8 @@
       "costYtd": "Kosten (YTD)",
       "profit": "Gewinn",
       "margin": "Marge",
-      "plusVariableUsage": "+ variabler Verbrauch"
+      "plusVariableUsage": "+ variabler Verbrauch",
+      "variableUsage": "Variabler Verbrauch"
     },
     "statusValues": {
       "active": "Aktiv",

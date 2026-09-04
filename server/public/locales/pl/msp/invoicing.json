@@ -184,7 +184,9 @@
         "summary_few": "Wybrano {{count}} faktury",
         "summary_many": "Wybrano {{count}} faktur",
         "missingUsageHeading": "Nie zarejestrowano użycia dla tego okresu",
-        "missingUsageService": "{{service}}: brak rekordów użycia od {{periodStart}} do {{periodEnd}}"
+        "missingUsageService": "{{service}}: brak rekordów użycia od {{periodStart}} do {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: zarejestrowane użycie od {{periodStart}} do {{periodEnd}} jest wykluczone, dopóki nie zostanie rozstrzygnięte przypisanie do pozycji umowy — rozstrzygnij przypisanie zamiast rejestrować kolejne użycie",
+        "usageCalculationError": "{{service}}: zarejestrowanego użycia od {{periodStart}} do {{periodEnd}} nie udało się wycenić — popraw ceny usługi zamiast rejestrować kolejne użycie"
       },
       "poOverage": {
         "title": "Przekroczenie limitu zamówienia zakupu",
@@ -199,6 +201,13 @@
         "proceedAnyway": "Kontynuować mimo to?",
         "proceedConfirm": "Kontynuuj mimo to",
         "skippedError": "Pominięte ze względu na nadmiar zamówienia ({{poLabel}}): przekroczone przez {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Brak zgłoszonego użycia za ten okres",
+        "description": "Te usługi rozliczane według użycia nie mają zgłoszenia w oknie fakturowania. Wygenerowanie teraz pominie je na fakturze; pozostaną rozliczalne po zgłoszeniu użycia.",
+        "omittedItem": "{{services}}: brak zgłoszonego użycia od {{periodStart}} do {{periodEnd}}",
+        "question": "Wygenerować bez tych usług?",
+        "confirm": "Generuj bez niezgłoszonego użycia"
       }
     },
     "history": {
@@ -376,7 +385,10 @@
       "UNEXPECTED": "Wystąpił błąd podczas generowania faktury. Kontaktując się z pomocą techniczną, podaj numer referencyjny {{ref}}.",
       "salesOrderGenerateFailed": "Nie udało się utworzyć faktury z zamówienia sprzedaży.",
       "salesOrderNothingToInvoice": "To zamówienie sprzedaży nie zawiera już niczego do zafakturowania.",
-      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży."
+      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "To okno fakturowania zawiera pozycje do rozliczenia, ale dla {{services}} nie zgłoszono użycia za okres rozliczeniowy od {{periodStart}} do {{periodEnd}}. Najpierw zarejestruj użycie albo wyraźnie potwierdź wygenerowanie bez niego — niezgłoszone usługi pozostaną rozliczalne później.",
+      "USAGE_PERIOD_TOTAL_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć aktualne wartości, a następnie wygeneruj fakturę jeszcze raz.",
+      "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."

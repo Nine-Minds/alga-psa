@@ -323,7 +323,12 @@
       "billedOnRecordedUsage": "Faturado com base na utilização registada",
       "serviceCountOne": "Serviço {{count}}",
       "serviceCountOther": "Serviços {{count}}",
-      "previouslyConfiguredQuantity": "Quantidade configurada anteriormente: {{count}} — não usada para faturamento"
+      "previouslyConfiguredQuantity": "Quantidade configurada anteriormente: {{count}} — não usada para faturamento",
+      "billedOnPeriodCount": "Faturado pela contagem informada em cada período",
+      "recurringSeats": "{{count}} × {{rate}} (postos recorrentes)",
+      "bundleAllocation": "Distribuição do preço do pacote — não são postos faturáveis",
+      "setUpRecurringSeats": "Configurar postos recorrentes",
+      "reportPeriodCount": "Informar uma contagem do período"
     },
     "stats": {
       "contractLines": "Linhas de Contrato",
@@ -333,7 +338,33 @@
       "variableSuffix": "+ variável (por hora/uso)",
       "viewDetails": "Ver detalhes"
     },
-    "title": "O que está incluído"
+    "title": "O que está incluído",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configurar postos recorrentes",
+        "explanation": "Os postos recorrentes faturam quantidade × tarifa unitária em cada período sem registos de consumo, pelo que pertencem a uma linha de contrato fixa precificada por postos/unidades recorrentes — não a esta linha de consumo.",
+        "nextStep": "Vai a Linhas de contrato, adiciona (ou abre) uma linha fixa, adiciona este serviço e escolhe «Postos/unidades recorrentes»; depois confirma a quantidade e a tarifa unitária. A alteração passa a valer no próximo período de serviço não faturado; esta linha de consumo e o seu histórico mantêm-se até a removeres."
+      },
+      "periodCount": {
+        "title": "Informar uma contagem do período",
+        "explanation": "Informar uma contagem do período muda este serviço para uma contagem substituível por período de serviço: corrigir 10 para 12 fatura 12, nunca 22, e o mínimo aplica-se uma vez. O período seguinte começa sem informação — nenhuma contagem é transportada.",
+        "nextStep": "Confirmar altera apenas a forma como este serviço é medido a partir do próximo período de serviço não faturado. Os lançamentos existentes continuam a somar e nenhuma contagem é criada — informa depois a contagem do período no Registo de consumo."
+      },
+      "referenceHeading": "Referência não confirmada da configuração anterior",
+      "referenceQuantity": "Quantidade configurada anteriormente: {{count}}",
+      "referenceRate": "Tarifa guardada: {{rate}}",
+      "referenceCaveat": "Estes valores nunca foram faturados. Nada aqui é guardado ou cobrado até confirmares tu próprio os valores no fluxo abaixo.",
+      "actions": {
+        "close": "Fechar",
+        "cancel": "Cancelar",
+        "switching": "A alterar…",
+        "confirmPeriodCount": "Mudar para contagens por período"
+      },
+      "errors": {
+        "missingConfiguration": "Este serviço não tem configuração guardada para converter. Atualiza e tenta novamente.",
+        "failed": "Não foi possível alterar a forma como este serviço é medido."
+      }
+    }
   },
   "contractDialog": {
     "actions": {

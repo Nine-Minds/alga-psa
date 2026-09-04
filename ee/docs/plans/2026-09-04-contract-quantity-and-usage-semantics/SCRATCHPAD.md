@@ -67,3 +67,38 @@ Durable record of what the Draft Implementation round changed and verified. Feat
 ### Reviewer first-stop
 
 `billingEngine.ts` usage/fixed loaders and the domain facts threading in `calculateContractCharge.ts`; the period-total consumption lock in `invoiceService.ts::linkAndMarkSourceBillingRecord` and its draft-void release in `invoiceModification.ts`; `usagePeriodTotalActions.ts` replay/revision semantics.
+
+## Round-3 status (2026-09-04, Draft Implementation takeover)
+
+Three parallel workstreams landed together; the integrated tree is fully verified (billing vitest 1180 passed/38 skipped, billing+shared+server tsc clean with the server memory flag, DB suites 41/41: contractQuantityUsageSemantics 28, usageRecordDrivenBilling 7, usageAddFlowOverlappingBucket 1, contractRecurringValueReporting 5, server unit report/UI/run suites 32/32).
+
+### Reporting (F018–F020, T011)
+
+- `shared/billingClients/contractMonthlyValue.ts` is now the canonical recurring valuation: `getContractMonthlyFixedValuesByContract` (unit lines Σ qty × rate with the latest `contract_line_unit_pricing_revisions` row effective at/before the as-of date; future revisions excluded; bundles keep the line rate; every line cadence-normalized via `normalizeToMonthlyCents`) plus the assignment rollup and `aggregateCentsByCurrency`.
+- Consumers: `getContractOverview` (non-template `totalEstimatedMonthlyValue`), `contractReportActions` revenue/expiration rows (now carry `currency_code`), and the summary — `ContractReportSummary.totalMRR/totalYTD` were REPLACED by `fixedMrrByCurrency`/`ytdRevenueByCurrency` (active-assignments-only MRR, per-currency, no cross-currency sums). `ContractReports.tsx` renders per-currency tiles ("Fixed MRR"), row-currency amounts, and pure-usage rows as "Variable usage" instead of a fixed zero. New msp/reports.json keys in all 10 locales.
+- DB proof: `server/src/test/infrastructure/billing/invoices/contractRecurringValueReporting.test.ts` (5 tests, incl. the 10/9/1 → 189000 example and CAD/USD separation).
+
+### Engine safety (F009, F015, F016; T005, T007, T008)
+
+- Stale-preview lock: preview statuses carry the period-total `revision`; `generateInvoice*` accept `IInvoiceGenerationRequestOptions.expectedUsagePeriodTotals` and refuse coded `USAGE_PERIOD_TOTAL_STALE` when the stored revision changed/was deleted/billed; no expectation → legacy recompute. Consumption stays the conditional recorded+revision UPDATE in `invoiceService.ts`.
+- Diagnostics: `attribution_excluded` and `calculation_error` are now distinct typed statuses (never conflated with unreported); missing-usage advice is built only from genuinely unreported services.
+- Mixed-invoice ack: charges + unreported usage fail coded `USAGE_RECORDS_MISSING_ACK_REQUIRED` unless `acknowledgeUnreportedUsage`; acknowledged generation omits the usage and leaves the obligation billable later exactly once; automated recurring runs report an actionable incomplete-usage failure instead of silently finalizing. `AutomaticInvoices.tsx` renders the ack dialog; 13 new msp/invoicing.json keys × 10 locales. 9 new DB tests in contractQuantityUsageSemantics (28 total).
+- Deliberate behavior changes: zero-charge unreported windows fail coded at generation (no $0 invoice), and whole-document "missing pricing" throws became per-service `calculation_error` statuses (generation still refuses).
+
+### Authoring UI (F001, F003 partial, F010, F021, F023; T014 partial)
+
+- `UsageServiceConfigPanel` has the additive vs period-total measurement-mode choice with add/replace/carry-forward explanations and mode-scoped minimum labels; `FixedServiceConfigPanel` has bundle vs recurring-seats pricing basis with a live N × rate summary; `ContractLineServiceForm` routes mode changes through `setUsageMeasurementMode` (guard reused, generic update cannot bypass it); `upsertPlanServiceConfiguration` accepts `measurement_mode` through the same guard.
+- `ContractOverview` names the quantity source per intent (unit "N × rate (recurring seats)", bundle "allocation — not billable seats", usage per mode) and the legacy-quantity reference offers "Set up recurring seats" / "Report a period count" via the new `UsageLegacyTransitionDialog` (open/cancel writes nothing; period-count confirm goes through the conversion guard; recurring seats is a reviewed handoff, not an atomic transition). New keys in msp/service-catalog.json + msp/contracts.json × 10 locales; 10 new jsdom tests in packages/billing/tests.
+
+### Still open (flags false)
+
+- F003 remainder: wizard/preset/template intent selection and the contract-lines editors translating from msp/contract-lines.json / msp/billing.json (deliberately reverted to respect locale-file boundaries; `upsertPlanServiceConfiguration.measurement_mode` has no UI caller yet).
+- F005: revision scheduling has no UI displaying the next unbilled boundary (server path proven).
+- F012–F014: preview shortcut create-vs-edit, multi-service chooser, additive period carry, return-to-preview.
+- F022: atomic recurring-seat transition (close source + activate destination).
+- F025 / T009 / T015: no live browser smoke this round — the dev-stack `server` DB has not run migration 20260904100000 (see card facts); run it before smoking period totals/unit pricing on 3748.
+- T010, T012–T014: not fully proven.
+
+### Reviewer first-stop (this round)
+
+`assertExpectedUsagePeriodTotalsCurrent` + the generation guard ordering in `invoiceGeneration.ts`; the `calculation_error` pre-validation in `billingEngine.ts` (it withholds unpriceable rows instead of throwing); the summary-shape change in `contractReportActions.ts` (totalMRR/totalYTD removed — check downstream consumers outside this repo, if any).

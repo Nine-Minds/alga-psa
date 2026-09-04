@@ -109,6 +109,19 @@ function localizePreviewFailure(
   });
 }
 
+/**
+ * A recurring-run failure that requires an explicit omission acknowledgement:
+ * the window has billable charges, but one or more usage services are
+ * unreported and would be left off the invoice. The confirm control re-runs
+ * the same generation with `acknowledgeUnreportedUsage`; the omitted services
+ * stay billable once their usage is reported.
+ */
+function isUnreportedUsageAckRequiredFailure(
+  failure: RecurringBillingRunInvoiceFailure,
+): boolean {
+  return failure.code === 'USAGE_RECORDS_MISSING' && failure.params?.acknowledgeRequired === 'true';
+}
+
 // Placeholder for a DataTable while its (independent) section data loads, so the
 // rest of the screen can render immediately instead of waiting behind one spinner.
 function BillingTableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
@@ -886,6 +899,28 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     overageCents: 0,
     poNumber: null,
   });
+  // Pending "generate without the unreported usage services?" confirmation.
+  // Captures the exact generation request that failed with the
+  // acknowledgement-required code so confirming retries it unchanged, plus the
+  // explicit acknowledgement; windows generated in the meantime are skipped by
+  // the run's duplicate guard.
+  const [unreportedUsageAckState, setUnreportedUsageAckState] = useState<{
+    isOpen: boolean;
+    retry:
+      | { kind: 'grouped'; groupedTargets: RecurringSelectionGroup[]; allowPoOverage?: boolean }
+      | {
+          kind: 'targets';
+          targets: Array<{
+            selectorInput: IRecurringDueSelectionInput;
+            executionWindow: IRecurringDueSelectionInput['executionWindow'];
+            billingCycleId: string | null;
+          }>;
+          allowPoOverage?: boolean;
+        }
+      | null;
+    failures: RecurringBillingRunInvoiceFailure[];
+    fromPreview: boolean;
+  }>({ isOpen: false, retry: null, failures: [], fromPreview: false });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -1747,25 +1782,41 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
+      const groupedTargets = selectedSelectionGroups.map((group) => ({
+        groupKey: group.groupKey,
+        selectorInputs: group.selectorInputs,
+        billingCycleId: group.billingCycleId,
+      }));
       const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
-        groupedTargets: selectedSelectionGroups.map((group) => ({
-          groupKey: group.groupKey,
-          selectorInputs: group.selectorInputs,
-          billingCycleId: group.billingCycleId,
-        })),
+        groupedTargets,
       });
       if (isReturnedActionError(runResult)) {
         setErrors({ generation: getErrorMessage(runResult) });
         return;
       }
+      const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
+        if (isUnreportedUsageAckRequiredFailure(failure)) {
+          continue;
+        }
         const label = resolveRecurringFailureLabel(failure);
         newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
+      }
+      if (ackFailures.length > 0) {
+        setUnreportedUsageAckState({
+          isOpen: true,
+          retry: { kind: 'grouped', groupedTargets },
+          failures: ackFailures,
+          fromPreview: false,
+        });
+        return;
+      }
+      if (Object.keys(newErrors).length > 0) {
         return;
       }
 
@@ -1809,25 +1860,41 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }
       }
 
+      const groupedTargets = toGenerate.map((period) => ({
+        groupKey: `child-selection:${period.executionIdentityKey}`,
+        selectorInputs: [period.selectorInput],
+        billingCycleId: period.billingCycleId ?? null,
+      }));
       const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
-        groupedTargets: toGenerate.map((period) => ({
-          groupKey: `child-selection:${period.executionIdentityKey}`,
-          selectorInputs: [period.selectorInput],
-          billingCycleId: period.billingCycleId ?? null,
-        })),
+        groupedTargets,
         allowPoOverage: decision === 'allow',
       });
       if (isReturnedActionError(runResult)) {
         setErrors({ generation: getErrorMessage(runResult) });
         return;
       }
+      const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
       for (const failure of runResult.failures) {
+        if (isUnreportedUsageAckRequiredFailure(failure)) {
+          continue;
+        }
         const label = resolveRecurringFailureLabel(failure);
         newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
+      }
+      if (ackFailures.length > 0) {
+        setUnreportedUsageAckState({
+          isOpen: true,
+          retry: { kind: 'grouped', groupedTargets, allowPoOverage: decision === 'allow' },
+          failures: ackFailures,
+          fromPreview: false,
+        });
+        return;
+      }
+      if (Object.keys(newErrors).length > 0) {
         return;
       }
 
@@ -1927,19 +1994,28 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({
-        targets: [
-          buildRecurringRunTargetFromSelection({
-            selectorInput: previewState.selectorInput,
-            billingCycleId: previewState.billingCycleId,
-          }),
-        ],
-      });
+      const targets = [
+        buildRecurringRunTargetFromSelection({
+          selectorInput: previewState.selectorInput,
+          billingCycleId: previewState.billingCycleId,
+        }),
+      ];
+      const runResult = await generateInvoicesAsRecurringBillingRun({ targets });
       if (isReturnedActionError(runResult)) {
         setErrors({ preview: getErrorMessage(runResult) });
         return;
       }
       if (runResult.failures.length > 0) {
+        const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
+        if (ackFailures.length === runResult.failures.length) {
+          setUnreportedUsageAckState({
+            isOpen: true,
+            retry: { kind: 'targets', targets },
+            failures: ackFailures,
+            fromPreview: true,
+          });
+          return;
+        }
         setErrors({
           preview: localizeRecurringFailure(t, runResult.failures[0])
             || t('automaticInvoices.dialogs.preview.generateError', {
@@ -1989,13 +2065,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setErrors({});
 
     try {
+      const targets = [
+        buildRecurringRunTargetFromSelection({
+          selectorInput,
+          billingCycleId: poOverageSingleConfirm.billingCycleId,
+        }),
+      ];
       const runResult = await generateInvoicesAsRecurringBillingRun({
-        targets: [
-          buildRecurringRunTargetFromSelection({
-            selectorInput,
-            billingCycleId: poOverageSingleConfirm.billingCycleId,
-          }),
-        ],
+        targets,
         allowPoOverage: true,
       });
       if (isReturnedActionError(runResult)) {
@@ -2003,6 +2080,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
       if (runResult.failures.length > 0) {
+        const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
+        if (ackFailures.length === runResult.failures.length) {
+          setUnreportedUsageAckState({
+            isOpen: true,
+            retry: { kind: 'targets', targets, allowPoOverage: true },
+            failures: ackFailures,
+            fromPreview: true,
+          });
+          return;
+        }
         setErrors({
           preview: localizeRecurringFailure(t, runResult.failures[0]) || 'Failed to generate invoice from preview',
         });
@@ -2023,6 +2110,74 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       });
     } finally {
       setIsGeneratingFromPreview(false);
+    }
+  };
+
+  /**
+   * Retries the captured generation request with the explicit
+   * acknowledgement that unreported usage services are omitted from the
+   * invoice. The omitted obligations are not consumed server-side and stay
+   * billable once their usage is reported.
+   */
+  const handleAcknowledgeUnreportedUsage = async () => {
+    const { retry, fromPreview } = unreportedUsageAckState;
+    setUnreportedUsageAckState({ isOpen: false, retry: null, failures: [], fromPreview: false });
+    if (!retry) {
+      return;
+    }
+
+    if (fromPreview) {
+      setIsGeneratingFromPreview(true);
+    } else {
+      setIsGenerating(true);
+      setErrorOperation('finalize');
+    }
+    setErrors({});
+    try {
+      const runResult = retry.kind === 'grouped'
+        ? await generateGroupedInvoicesAsRecurringBillingRun({
+            groupedTargets: retry.groupedTargets,
+            allowPoOverage: retry.allowPoOverage,
+            acknowledgeUnreportedUsage: true,
+          })
+        : await generateInvoicesAsRecurringBillingRun({
+            targets: retry.targets,
+            allowPoOverage: retry.allowPoOverage,
+            acknowledgeUnreportedUsage: true,
+          });
+      if (isReturnedActionError(runResult)) {
+        setErrors(fromPreview
+          ? { preview: getErrorMessage(runResult) }
+          : { generation: getErrorMessage(runResult) });
+        return;
+      }
+      if (runResult.failures.length > 0) {
+        const newErrors: { [key: string]: string } = {};
+        for (const failure of runResult.failures) {
+          const label = fromPreview ? 'preview' : resolveRecurringFailureLabel(failure);
+          newErrors[label] = localizeRecurringFailure(t, failure);
+        }
+        setErrors(newErrors);
+        return;
+      }
+      if (fromPreview) {
+        setShowPreviewDialog(false);
+        setPreviewState({
+          previews: [],
+          invoiceCount: 0,
+          billingCycleId: null,
+          executionIdentityKey: null,
+          selectorInput: null,
+        });
+      }
+      setSelectedTargets(new Set());
+      onGenerateSuccess();
+    } finally {
+      if (fromPreview) {
+        setIsGeneratingFromPreview(false);
+      } else {
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -3254,8 +3409,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     const additiveStatuses = actionableStatuses.filter(
                       (status) => status.measurement_mode !== 'period_total',
                     );
+                    // Billable statuses are represented by the priced line
+                    // items themselves (they exist so generation can consume
+                    // the exact previewed period-total revision); the evidence
+                    // panel shows only the states that produce no charge.
                     const evidenceStatuses = usageStatuses.filter(
-                      (status) => !actionableStatuses.includes(status),
+                      (status) => !actionableStatuses.includes(status) && status.status !== 'billable',
                     );
                     const previewClientId = previewEntry.selectorInputs[0]?.clientId ?? null;
                     return (
@@ -3333,7 +3492,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                     ? `${status.service_name ?? status.service_id}: reported zero for ${status.service_period_start} to ${status.service_period_end}`
                                     : status.status === 'minimum_raised_zero'
                                       ? `${status.service_name ?? status.service_id}: reported zero for ${status.service_period_start} to ${status.service_period_end} — the ${status.minimum_usage} minimum applies`
-                                      : `${status.service_name ?? status.service_id}: ${status.status} for ${status.service_period_start} to ${status.service_period_end}`;
+                                      : status.status === 'attribution_excluded'
+                                        ? t('automaticInvoices.dialogs.preview.usageAttributionExcluded', {
+                                          service: status.service_name ?? status.service_id,
+                                          periodStart: status.service_period_start,
+                                          periodEnd: status.service_period_end,
+                                          defaultValue: `${status.service_name ?? status.service_id}: usage recorded for ${status.service_period_start} to ${status.service_period_end} is excluded until its contract-line attribution is resolved — resolve the attribution instead of recording more usage`,
+                                        })
+                                        : status.status === 'calculation_error'
+                                          ? t('automaticInvoices.dialogs.preview.usageCalculationError', {
+                                            service: status.service_name ?? status.service_id,
+                                            periodStart: status.service_period_start,
+                                            periodEnd: status.service_period_end,
+                                            defaultValue: `${status.service_name ?? status.service_id}: recorded usage for ${status.service_period_start} to ${status.service_period_end} could not be priced — fix the service pricing instead of recording more usage`,
+                                          })
+                                          : `${status.service_name ?? status.service_id}: ${status.status} for ${status.service_period_start} to ${status.service_period_end}`;
                                 return <li key={`${status.client_contract_line_id}:${status.service_id}`}>{label}</li>;
                               })}
                             </ul>
@@ -3485,6 +3658,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           })}
         isConfirming={isDeleting}
         id="delete-recurring-invoice-confirmation"
+      />
+
+      <ConfirmationDialog
+        id="unreported-usage-omission-confirm"
+        isOpen={unreportedUsageAckState.isOpen}
+        onClose={() =>
+          setUnreportedUsageAckState({ isOpen: false, retry: null, failures: [], fromPreview: false })
+        }
+        title={t('automaticInvoices.dialogs.unreportedUsage.title', {
+          defaultValue: 'Usage not reported for this period',
+        })}
+        message={
+          <div className="space-y-2">
+            <p>
+              {t('automaticInvoices.dialogs.unreportedUsage.description', {
+                defaultValue:
+                  'These usage services have no report for the invoice window. Generating now leaves them off the invoice; they stay billable once their usage is reported.',
+              })}
+            </p>
+            <ul className="list-disc pl-5" data-testid="unreported-usage-omission-list">
+              {unreportedUsageAckState.failures.map((failure, index) => (
+                <li key={failure.executionIdentityKey ?? `ack-${index}`}>
+                  {t('automaticInvoices.dialogs.unreportedUsage.omittedItem', {
+                    services: failure.params?.services ?? '',
+                    periodStart: failure.params?.periodStart ?? '',
+                    periodEnd: failure.params?.periodEnd ?? '',
+                    defaultValue: `${failure.params?.services ?? ''}: no usage reported for ${failure.params?.periodStart ?? ''} to ${failure.params?.periodEnd ?? ''}`,
+                  })}
+                </li>
+              ))}
+            </ul>
+            <p>
+              {t('automaticInvoices.dialogs.unreportedUsage.question', {
+                defaultValue: 'Generate without these services?',
+              })}
+            </p>
+          </div>
+        }
+        confirmLabel={t('automaticInvoices.dialogs.unreportedUsage.confirm', {
+          defaultValue: 'Generate without unreported usage',
+        })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        onConfirm={handleAcknowledgeUnreportedUsage}
       />
 
       <ConfirmationDialog

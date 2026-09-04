@@ -323,7 +323,12 @@
       "billedOnRecordedUsage": "Rozliczane według zarejestrowanego użycia",
       "serviceCountOne": "Liczba usług: {{count}}",
       "serviceCountOther": "Liczba usług: {{count}}",
-      "previouslyConfiguredQuantity": "Wcześniej skonfigurowana ilość: {{count}} — nieużywana do rozliczeń"
+      "previouslyConfiguredQuantity": "Wcześniej skonfigurowana ilość: {{count}} — nieużywana do rozliczeń",
+      "billedOnPeriodCount": "Fakturowane według liczby zgłoszonej dla każdego okresu",
+      "recurringSeats": "{{count}} × {{rate}} (cykliczne stanowiska)",
+      "bundleAllocation": "Podział ceny pakietu — to nie są fakturowane stanowiska",
+      "setUpRecurringSeats": "Skonfiguruj cykliczne stanowiska",
+      "reportPeriodCount": "Zgłoś liczbę dla okresu"
     },
     "stats": {
       "contractLines": "Linie kontraktowe",
@@ -333,7 +338,33 @@
       "variableSuffix": "+ zmienna (godzinowa/zużycie)",
       "viewDetails": "Zobacz szczegóły"
     },
-    "title": "Co jest wliczone"
+    "title": "Co jest wliczone",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Skonfiguruj cykliczne stanowiska",
+        "explanation": "Cykliczne stanowiska fakturują ilość × stawkę jednostkową w każdym okresie bez wpisów zużycia, więc należą do stałej pozycji umowy wycenianej jako cykliczne stanowiska/jednostki — a nie do tej pozycji zużyciowej.",
+        "nextStep": "Przejdź do pozycji umowy, dodaj (lub otwórz) pozycję stałą, dodaj tę usługę i wybierz „Cykliczne stanowiska/jednostki”, a następnie potwierdź ilość i stawkę jednostkową. Zmiana obowiązuje od następnego niezafakturowanego okresu usługi; ta pozycja zużyciowa i jej historia pozostają bez zmian, dopóki jej nie usuniesz."
+      },
+      "periodCount": {
+        "title": "Zgłoś liczbę dla okresu",
+        "explanation": "Zgłaszanie liczby dla okresu przełącza tę usługę na jedną zastępowalną liczbę na okres usługi: korekta z 10 na 12 daje 12 na fakturze, nigdy 22, a minimum obowiązuje raz. Kolejny okres zaczyna się bez zgłoszenia — nic nie jest przenoszone.",
+        "nextStep": "Potwierdzenie zmienia tylko sposób pomiaru tej usługi od następnego niezafakturowanego okresu usługi. Istniejące wpisy pozostają sumowane i nie jest tworzona żadna liczba — zgłoś liczbę dla okresu później w module śledzenia zużycia."
+      },
+      "referenceHeading": "Niepotwierdzone dane referencyjne z poprzedniej konfiguracji",
+      "referenceQuantity": "Wcześniej skonfigurowana ilość: {{count}}",
+      "referenceRate": "Zapisana stawka: {{rate}}",
+      "referenceCaveat": "Te wartości nigdy nie były fakturowane. Nic tu nie jest zapisywane ani naliczane, dopóki samodzielnie nie potwierdzisz wartości w poniższym procesie.",
+      "actions": {
+        "close": "Zamknij",
+        "cancel": "Anuluj",
+        "switching": "Przełączanie…",
+        "confirmPeriodCount": "Przełącz na liczby okresowe"
+      },
+      "errors": {
+        "missingConfiguration": "Ta usługa nie ma zapisanej konfiguracji do przekształcenia. Odśwież i spróbuj ponownie.",
+        "failed": "Nie udało się zmienić sposobu pomiaru tej usługi."
+      }
+    }
   },
   "contractDialog": {
     "actions": {

@@ -1,7 +1,17 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
 import { setupCommonMocks } from '../../../../../test-utils/testMocks';
-import { generateInvoice, previewInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  generateInvoice,
+  generateInvoiceForSelectionInput,
+  previewInvoice,
+} from '@alga-psa/billing/actions/invoiceGeneration';
+import {
+  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+} from '@alga-psa/billing/actions/invoiceGeneration.constants';
+import { buildContractCadenceDueSelectionInput } from '@alga-psa/shared/billingClients/recurringRunExecutionIdentity';
 import {
   upsertUsagePeriodTotal,
   deleteUsagePeriodTotal,
@@ -871,6 +881,533 @@ describe('Contract quantity & usage semantics — period totals and recurring se
         // Refusing to bill an all-zero line is also correct (no phantom seat).
         expect(true).toBe(true);
       }
+    });
+  });
+
+  describe('stale-preview consistency lock (R3 / F009)', () => {
+    async function reportJanuaryTotal(
+      setup: { serviceId: string; contractLineId: string; configId: string },
+      quantity: number,
+      expectedRevision?: number,
+    ) {
+      const result = await upsertUsagePeriodTotal({
+        client_id: context.clientId,
+        client_contract_line_id: setup.contractLineId,
+        service_id: setup.serviceId,
+        config_id: setup.configId,
+        period_start: JAN_PERIOD.period_start,
+        period_end: JAN_PERIOD.period_end,
+        quantity,
+        ...(expectedRevision != null ? { expected_revision: expectedRevision } : {}),
+      });
+      if ('actionError' in ((result ?? {}) as object)) throw new Error(JSON.stringify(result));
+      return result as { total: { period_total_id: string; revision: number } };
+    }
+
+    /** The previewed period-total identity (line/service/period/revision). */
+    async function previewBillableTotal(billingCycleId: string, serviceId: string) {
+      const preview = await previewInvoice(billingCycleId);
+      expect(preview.success).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      const status = (preview.usageServicePeriodStatuses ?? []).find(
+        (candidate) => candidate.service_id === serviceId && candidate.status === 'billable',
+      );
+      if (!status) {
+        throw new Error(
+          `preview did not surface a billable period-total status: ${JSON.stringify(preview.usageServicePeriodStatuses)}`,
+        );
+      }
+      return {
+        clientContractLineId: status.client_contract_line_id,
+        serviceId: status.service_id,
+        periodStart: status.service_period_start,
+        periodEnd: status.service_period_end,
+        revision: Number(status.revision),
+      };
+    }
+
+    it('preview surfaces the priced revision; editing the total after preview invalidates it until re-preview', async () => {
+      const setup = await setupUsageLine({ measurementMode: 'period_total' });
+      await reportJanuaryTotal(setup, 10);
+
+      const previewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
+      expect(previewed.revision).toBe(1);
+
+      // The operator's colleague replaces 10 with 12 after the preview.
+      await reportJanuaryTotal(setup, 12, 1);
+
+      // Generating against the stale previewed revision is refused, and no
+      // invoice exists afterwards. Preview itself marked nothing invoiced.
+      const stale = await generateInvoice(setup.billingCycleId, {
+        expectedUsagePeriodTotals: [previewed],
+      });
+      expect('actionError' in ((stale ?? {}) as object)).toBe(true);
+      expect((stale as { messageKey?: string }).messageKey).toBe(USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY);
+      expect(await context.db('invoices').where({ tenant: context.tenantId })).toHaveLength(0);
+      const rows = await totalsTable().where({ tenant: context.tenantId });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ quantity: 12, revision: 2, lifecycle_state: 'recorded' });
+
+      // Re-preview shows the current revision; generating with it succeeds and
+      // consumes exactly that revision.
+      const repreviewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
+      expect(repreviewed.revision).toBe(2);
+      const invoice = unwrapInvoiceResult(
+        await generateInvoice(setup.billingCycleId, {
+          expectedUsagePeriodTotals: [repreviewed],
+        }),
+      );
+      expect(invoice).toMatchObject({ subtotal: 12000 });
+      const consumed = await totalsTable().where({ tenant: context.tenantId });
+      expect(consumed).toHaveLength(1);
+      expect(consumed[0]).toMatchObject({ quantity: 12, revision: 2, lifecycle_state: 'billed' });
+    });
+
+    it('deleting the total after preview invalidates the previewed revision and creates no invoice', async () => {
+      const setup = await setupUsageLine({ measurementMode: 'period_total' });
+      const created = await reportJanuaryTotal(setup, 10);
+
+      const previewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
+
+      const deletion = await deleteUsagePeriodTotal({
+        period_total_id: created.total.period_total_id,
+      });
+      expect(deletion === undefined || !('actionError' in ((deletion ?? {}) as object))).toBe(true);
+
+      const stale = await generateInvoice(setup.billingCycleId, {
+        expectedUsagePeriodTotals: [previewed],
+      });
+      expect('actionError' in ((stale ?? {}) as object)).toBe(true);
+      expect((stale as { messageKey?: string }).messageKey).toBe(USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY);
+      expect(await context.db('invoices').where({ tenant: context.tenantId })).toHaveLength(0);
+
+      // Re-reporting and generating with the fresh previewed revision succeeds.
+      await reportJanuaryTotal(setup, 7);
+      const repreviewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
+      const invoice = unwrapInvoiceResult(
+        await generateInvoice(setup.billingCycleId, {
+          expectedUsagePeriodTotals: [repreviewed],
+        }),
+      );
+      expect(invoice).toMatchObject({ subtotal: 7000 });
+    });
+
+    it('generation retries cannot consume the previewed revision twice', async () => {
+      // True cross-connection races are settled by the conditional
+      // recorded+revision UPDATE in the consumption lock (invoiceService);
+      // this harness shares one test transaction, so the observable exactly-
+      // once contract is proven through the retry path: the first generation
+      // consumes revision 1, and every subsequent attempt with the same
+      // previewed revision refuses without another charge.
+      const setup = await setupUsageLine({ measurementMode: 'period_total' });
+      await reportJanuaryTotal(setup, 10);
+      const previewed = await previewBillableTotal(setup.billingCycleId, setup.serviceId);
+
+      const invoice = unwrapInvoiceResult(
+        await generateInvoice(setup.billingCycleId, { expectedUsagePeriodTotals: [previewed] }),
+      );
+      expect(invoice).toMatchObject({ subtotal: 10000 });
+
+      // The single logical total was consumed exactly once, at revision 1.
+      const rows = await totalsTable().where({ tenant: context.tenantId });
+      expect(rows).toHaveLength(1);
+      expect(rows[0]).toMatchObject({ quantity: 10, revision: 1, lifecycle_state: 'billed' });
+
+      // A retry with the same previewed revision refuses and adds no charge.
+      const retry = await generateInvoice(setup.billingCycleId, {
+        expectedUsagePeriodTotals: [previewed],
+      }).catch((error: unknown) => error);
+      const retryIsRefusal =
+        retry instanceof Error || 'actionError' in ((retry ?? {}) as object);
+      expect(retryIsRefusal).toBe(true);
+      const after = await totalsTable().where({ tenant: context.tenantId });
+      expect(after).toHaveLength(1);
+      expect(after[0]).toMatchObject({ revision: 1, lifecycle_state: 'billed' });
+      expect(after[0].invoice_id).toBe(invoice.invoice_id);
+      const invoices = await context.db('invoices').where({ tenant: context.tenantId });
+      expect(invoices).toHaveLength(1);
+    });
+
+    it('legacy callers that pass no expected revision keep the recompute-from-database behavior', async () => {
+      const setup = await setupUsageLine({ measurementMode: 'period_total' });
+      await reportJanuaryTotal(setup, 10);
+      // Edit after an (unpassed) preview: generation without an expectation
+      // simply bills the current stored report.
+      await reportJanuaryTotal(setup, 12, 1);
+      const invoice = unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+      expect(invoice).toMatchObject({ subtotal: 12000 });
+    });
+  });
+
+  describe('diagnostic matrix completeness (R6 / F015)', () => {
+    it('usage excluded by unresolved attribution is reported distinctly, never as missing usage', async () => {
+      // Line 1: a period-total service with a recorded report (keeps the
+      // window billable) plus an additive service S.
+      const line1 = await setupUsageLine({
+        measurementMode: 'period_total',
+        serviceName: 'Reported PT Service',
+      });
+      const sharedServiceId = await createTestService(context, {
+        service_name: 'Ambiguous Shared Service',
+        billing_method: 'usage',
+        default_rate: 1000,
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+      });
+      const addSharedServiceToLine = async (lineId: string) => {
+        const configId = uuidv4();
+        await context.db('contract_line_service_configuration').insert({
+          config_id: configId,
+          contract_line_id: lineId,
+          service_id: sharedServiceId,
+          configuration_type: 'Usage',
+          quantity: null,
+          tenant: context.tenantId,
+        });
+        await context.db('contract_line_service_usage_config').insert({
+          config_id: configId,
+          tenant: context.tenantId,
+          unit_of_measure: 'unit',
+          enable_tiered_pricing: false,
+          minimum_usage: 0,
+          measurement_mode: 'additive',
+          base_rate: 1000,
+        });
+        await context.db('contract_line_services').insert({
+          contract_line_id: lineId,
+          service_id: sharedServiceId,
+          tenant: context.tenantId,
+        });
+      };
+      await addSharedServiceToLine(line1.contractLineId);
+
+      // Line 2 also covers S for the same client: S is no longer uniquely
+      // assignable, so an unassigned entry cannot be attributed.
+      const line2Id = await context.createEntity('contract_lines', {
+        contract_line_name: 'Second Usage Line',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Usage',
+      }, 'contract_line_id');
+      await addSharedServiceToLine(line2Id);
+      await assignContractLineToClient(context, line2Id, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      });
+
+      // An in-period entry with no contract line: excluded by attribution.
+      await context.db('usage_tracking').insert({
+        tenant: context.tenantId,
+        usage_id: uuidv4(),
+        service_id: sharedServiceId,
+        client_id: context.clientId,
+        usage_date: '2023-01-10',
+        quantity: 3,
+        invoiced: false,
+        contract_line_id: null,
+      });
+
+      await upsertUsagePeriodTotal({
+        client_id: context.clientId,
+        client_contract_line_id: line1.contractLineId,
+        service_id: line1.serviceId,
+        config_id: line1.configId,
+        period_start: JAN_PERIOD.period_start,
+        period_end: JAN_PERIOD.period_end,
+        quantity: 5,
+      });
+
+      const preview = await previewInvoice(line1.billingCycleId);
+      expect(preview.success).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      const statuses = preview.usageServicePeriodStatuses ?? [];
+      const sharedStatuses = statuses.filter((status) => status.service_id === sharedServiceId);
+      expect(sharedStatuses.length).toBeGreaterThan(0);
+      expect(sharedStatuses.every((status) => status.status === 'attribution_excluded')).toBe(true);
+      // The excluded record never charges on either line, and the report is
+      // never conflated with "record usage".
+      expect(statuses.some(
+        (status) => status.service_id === sharedServiceId && status.status === 'missing_usage',
+      )).toBe(false);
+    });
+
+    it('a per-service pricing failure is a calculation error, not unreported, and generation refuses', async () => {
+      const setup = await setupUsageLine({
+        measurementMode: 'additive',
+        serviceName: 'Priced Additive Service',
+      });
+      // A second additive service on the same line with no resolvable pricing
+      // (no contract-currency catalog price, no custom rate, no tiers).
+      const unpricedServiceId = await createTestService(context, {
+        service_name: 'Unpriced Additive Service',
+        billing_method: 'usage',
+        default_rate: 1000,
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+        seedServicePrice: false,
+      });
+      const unpricedConfigId = uuidv4();
+      await context.db('contract_line_service_configuration').insert({
+        config_id: unpricedConfigId,
+        contract_line_id: setup.contractLineId,
+        service_id: unpricedServiceId,
+        configuration_type: 'Usage',
+        quantity: null,
+        tenant: context.tenantId,
+      });
+      await context.db('contract_line_service_usage_config').insert({
+        config_id: unpricedConfigId,
+        tenant: context.tenantId,
+        unit_of_measure: 'unit',
+        enable_tiered_pricing: false,
+        minimum_usage: 0,
+        measurement_mode: 'additive',
+        base_rate: null,
+      });
+      await context.db('contract_line_services').insert({
+        contract_line_id: setup.contractLineId,
+        service_id: unpricedServiceId,
+        tenant: context.tenantId,
+      });
+
+      await createUsageRecord({
+        client_id: context.clientId,
+        service_id: setup.serviceId,
+        quantity: 2,
+        usage_date: '2023-01-10',
+        contract_line_id: setup.contractLineId,
+      });
+      await createUsageRecord({
+        client_id: context.clientId,
+        service_id: unpricedServiceId,
+        quantity: 4,
+        usage_date: '2023-01-12',
+        contract_line_id: setup.contractLineId,
+      });
+
+      // Preview succeeds for the priced service and reports the broken one as
+      // a typed calculation error carrying the recorded quantity.
+      const preview = await previewInvoice(setup.billingCycleId);
+      expect(preview.success).toBe(true);
+      if (!preview.success) throw new Error('unreachable');
+      const statuses = preview.usageServicePeriodStatuses ?? [];
+      const errored = statuses.find((status) => status.service_id === unpricedServiceId);
+      expect(errored?.status).toBe('calculation_error');
+      expect(Number(errored?.quantity)).toBe(4);
+      expect(statuses.some(
+        (status) => status.service_id === unpricedServiceId
+          && (status.status === 'missing_usage' || status.status === 'unreported'),
+      )).toBe(false);
+
+      // Generation refuses rather than silently omitting the recorded charge.
+      const refused = await generateInvoice(setup.billingCycleId);
+      expect('actionError' in ((refused ?? {}) as object)).toBe(true);
+      expect((refused as { messageKey?: string }).messageKey).toBe(USAGE_CALCULATION_ERROR_MESSAGE_KEY);
+      expect(await context.db('invoices').where({ tenant: context.tenantId })).toHaveLength(0);
+      const records = await context.db('usage_tracking').where({ tenant: context.tenantId });
+      expect(records.every((row: { invoiced: boolean }) => row.invoiced === false)).toBe(true);
+    });
+
+    it('an already-invoiced period never re-prompts recording as missing usage', async () => {
+      const setup = await setupUsageLine({ measurementMode: 'period_total' });
+      await upsertUsagePeriodTotal({
+        client_id: context.clientId,
+        client_contract_line_id: setup.contractLineId,
+        service_id: setup.serviceId,
+        config_id: setup.configId,
+        period_start: JAN_PERIOD.period_start,
+        period_end: JAN_PERIOD.period_end,
+        quantity: 10,
+      });
+      unwrapInvoiceResult(await generateInvoice(setup.billingCycleId));
+
+      // Re-previewing the same window: the consumed total is evidence of
+      // reporting, so the failure must not be the coded "record usage" state.
+      const preview = await previewInvoice(setup.billingCycleId);
+      expect(preview.success).toBe(false);
+      if (preview.success) throw new Error('unreachable');
+      expect(preview.code).toBeUndefined();
+    });
+  });
+
+  describe('mixed-invoice omission acknowledgement (R6 / F016)', () => {
+    /**
+     * One client window (February invoices January) with:
+     *  - a Fixed seat line on the client cadence (10 × $100 = $1,000), and
+     *  - a period-total Usage line on the contract cadence, unreported.
+     */
+    async function setupMixedWindow() {
+      const seatLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Mixed Seat Line',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed',
+        custom_rate: null,
+        billing_timing: 'arrears',
+      }, 'contract_line_id');
+      const seatServiceId = await createTestService(context, {
+        service_name: 'Mixed Seat Service',
+        billing_method: 'fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+      });
+      const seatConfigId = uuidv4();
+      await context.db('contract_line_services').insert({
+        contract_line_id: seatLineId,
+        service_id: seatServiceId,
+        tenant: context.tenantId,
+      });
+      await context.db('contract_line_service_configuration').insert({
+        config_id: seatConfigId,
+        contract_line_id: seatLineId,
+        service_id: seatServiceId,
+        configuration_type: 'Fixed',
+        quantity: 10,
+        tenant: context.tenantId,
+      });
+      await context.db('contract_line_service_fixed_config').insert({
+        config_id: seatConfigId,
+        tenant: context.tenantId,
+        base_rate: 10000,
+        pricing_basis: 'unit',
+      });
+      await assignContractLineToClient(context, seatLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      });
+
+      const usageLineId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Mixed Usage Line',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Usage',
+        billing_timing: 'arrears',
+        cadence_owner: 'contract',
+      }, 'contract_line_id');
+      const usageServiceId = await createTestService(context, {
+        service_name: 'Mixed Usage Service',
+        billing_method: 'usage',
+        default_rate: 1000,
+        unit_of_measure: 'unit',
+        tax_region: 'US-NY',
+      });
+      const usageConfigId = uuidv4();
+      await context.db('contract_line_service_configuration').insert({
+        config_id: usageConfigId,
+        contract_line_id: usageLineId,
+        service_id: usageServiceId,
+        configuration_type: 'Usage',
+        quantity: null,
+        tenant: context.tenantId,
+      });
+      await context.db('contract_line_service_usage_config').insert({
+        config_id: usageConfigId,
+        tenant: context.tenantId,
+        unit_of_measure: 'unit',
+        enable_tiered_pricing: false,
+        minimum_usage: 0,
+        measurement_mode: 'period_total',
+        base_rate: 1000,
+      });
+      await context.db('contract_line_services').insert({
+        contract_line_id: usageLineId,
+        service_id: usageServiceId,
+        tenant: context.tenantId,
+      });
+      const usageAssignment = await assignContractLineToClient(context, usageLineId, {
+        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+      });
+
+      const billingCycleId = await setupInvoiceCycle(2023, 2, 1);
+      return {
+        seatLineId,
+        seatServiceId,
+        usageLineId,
+        usageServiceId,
+        usageConfigId,
+        usageContractId: usageAssignment.contractId,
+        billingCycleId,
+      };
+    }
+
+    function usageRecurringPeriods(usageLineId: string) {
+      return context.db('recurring_service_periods').where({
+        tenant: context.tenantId,
+        obligation_id: usageLineId,
+      });
+    }
+
+    it('without acknowledgement, a mixed window fails coded, lists the omitted services, and creates nothing', async () => {
+      const setup = await setupMixedWindow();
+
+      const refused = await generateInvoice(setup.billingCycleId);
+      expect('actionError' in ((refused ?? {}) as object)).toBe(true);
+      const failure = refused as { messageKey?: string; messageParams?: Record<string, string> };
+      expect(failure.messageKey).toBe(USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY);
+      expect(failure.messageParams?.services).toContain('Mixed Usage Service');
+      // The marker the recurring run and the UI use to offer an explicit
+      // generate-anyway acknowledgement (automated runs never pass it).
+      expect(failure.messageParams?.acknowledgeRequired).toBe('true');
+
+      expect(await context.db('invoices').where({ tenant: context.tenantId })).toHaveLength(0);
+      expect(await context.db('invoice_charges').where({ tenant: context.tenantId })).toHaveLength(0);
+    });
+
+    it('with acknowledgement, generates the fixed charges only and the omitted usage obligation stays billable exactly once', async () => {
+      const setup = await setupMixedWindow();
+
+      const invoice = unwrapInvoiceResult(
+        await generateInvoice(setup.billingCycleId, { acknowledgeUnreportedUsage: true }),
+      );
+      // 10 seats × $100 and nothing else.
+      expect(invoice).toMatchObject({ subtotal: 100000 });
+
+      // The omitted usage obligation is not marked fulfilled: no period total
+      // exists or was consumed, and the usage line's recurring period is not
+      // billed/linked to the invoice.
+      expect(await totalsTable().where({ tenant: context.tenantId })).toHaveLength(0);
+      const usagePeriods = await usageRecurringPeriods(setup.usageLineId);
+      expect(usagePeriods.length).toBeGreaterThan(0);
+      expect(usagePeriods.every(
+        (row: { lifecycle_state: string; invoice_id: string | null }) =>
+          row.lifecycle_state !== 'billed' && row.invoice_id == null,
+      )).toBe(true);
+
+      // Later, the operator reports January and bills just the usage line's
+      // contract-cadence window: the omitted obligation is billed exactly once.
+      await upsertUsagePeriodTotal({
+        client_id: context.clientId,
+        client_contract_line_id: setup.usageLineId,
+        service_id: setup.usageServiceId,
+        config_id: setup.usageConfigId,
+        period_start: JAN_PERIOD.period_start,
+        period_end: JAN_PERIOD.period_end,
+        quantity: 4,
+      });
+      const usageSelectorInput = buildContractCadenceDueSelectionInput({
+        clientId: context.clientId,
+        contractId: setup.usageContractId,
+        contractLineId: setup.usageLineId,
+        windowStart: '2023-02-01',
+        windowEnd: '2023-03-01',
+      });
+      const usageInvoice = unwrapInvoiceResult(
+        await generateInvoiceForSelectionInput(usageSelectorInput),
+      );
+      expect(usageInvoice).toMatchObject({ subtotal: 4000 });
+      const totals = await totalsTable().where({ tenant: context.tenantId });
+      expect(totals).toHaveLength(1);
+      expect(totals[0]).toMatchObject({ quantity: 4, lifecycle_state: 'billed' });
+
+      // Exactly once: a retry refuses and consumes nothing further.
+      const retry = await generateInvoiceForSelectionInput(usageSelectorInput)
+        .catch((error: unknown) => error);
+      const retryIsRefusal =
+        retry === null || retry instanceof Error || 'actionError' in ((retry ?? {}) as object);
+      expect(retryIsRefusal).toBe(true);
+      const totalsAfterRetry = await totalsTable().where({ tenant: context.tenantId });
+      expect(totalsAfterRetry).toHaveLength(1);
+      expect(totalsAfterRetry[0]).toMatchObject({ quantity: 4, lifecycle_state: 'billed' });
+      expect(totalsAfterRetry[0].invoice_id).toBe(usageInvoice.invoice_id);
     });
   });
 });
