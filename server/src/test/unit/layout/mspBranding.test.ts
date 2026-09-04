@@ -24,6 +24,13 @@ const defaultLayout = fs.readFileSync(DEFAULT_LAYOUT, 'utf8');
 const ALGADESK_SHELL = path.resolve(__dirname, '../../../components/layout/AlgaDeskMspShell.tsx');
 const algaDeskShell = fs.readFileSync(ALGADESK_SHELL, 'utf8');
 
+// Both shells read their side panel's colour through the same shared hook.
+const SURFACE_HOOK = path.resolve(
+  __dirname,
+  '../../../../../packages/ui/src/hooks/useSurfaceIsLight.ts',
+);
+const surfaceHook = fs.readFileSync(SURFACE_HOOK, 'utf8');
+
 describe('MSP sidebar branding', () => {
   it('uses a shared uploaded logo after MSP white-labeling is enabled', () => {
     expect(
@@ -164,14 +171,14 @@ describe('MSP sidebar branding', () => {
   });
 
   it('measures the rail instead of assuming it is dark', () => {
-    expect(sidebar).toContain('const railIsLight = useRailIsLight(railRef)');
-    expect(sidebar).toContain('window.getComputedStyle(rail)');
-    // The token, not the painted colour: `background-color` transitions, so it
-    // still reports the previous theme while a switch animates.
-    expect(sidebar).toContain("const token = styles.getPropertyValue('--color-sidebar-bg')");
-    expect(sidebar).toContain('surfaceLuminance(token) !== null ? token : styles.backgroundColor');
+    expect(sidebar).toContain("const railIsLight = useSurfaceIsLight(railRef, '--color-sidebar-bg')");
+    expect(surfaceHook).toContain('window.getComputedStyle(surface)');
+    // The token, not the painted colour: backgrounds transition, so the painted
+    // value still reports the previous theme while a switch animates.
+    expect(surfaceHook).toContain('const token = variable ? styles.getPropertyValue(variable)');
+    expect(surfaceHook).toContain('surfaceLuminance(token) !== null ? token : styles.backgroundColor');
     // A theme switch repaints the rail, so the reading has to be redone.
-    expect(sidebar).toContain('new MutationObserver(read)');
+    expect(surfaceHook).toContain('new MutationObserver(read)');
     // Muted footer text and the mark's frame follow the same surface.
     expect(sidebar).not.toContain('text-gray-400');
     expect(sidebar).not.toContain('bg-white/5');

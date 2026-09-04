@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
@@ -7,6 +7,7 @@ import { getAppVersion } from '@alga-psa/core';
 import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
 import { DynamicNavigationSlot } from '@alga-psa/ui/components/extensions/DynamicNavigationSlot';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useSurfaceIsLight } from '@alga-psa/ui/hooks/useSurfaceIsLight';
 import {
   menuItems as defaultMenuItems,
   bottomMenuItems as defaultBottomMenuItems,
@@ -19,7 +20,7 @@ import {
   type NavMode,
 } from '@/config/menuConfig';
 import { useMspBranding } from './MspBrandingContext';
-import { isLightSurface, pickLogoForSurface, surfaceLuminance } from './mspBranding';
+import { pickLogoForSurface } from './mspBranding';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
@@ -46,46 +47,6 @@ interface SidebarProps {
   inventorySectionsOverride?: NavigationSection[];
 }
 
-// The server cannot measure a colour, so it renders the dark-rail assumption and
-// the client corrects it before paint.
-const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
-
-/**
- * Reads the rail's own background — theme pair, light/dark mode and a hand-edited
- * `sidebarBg` all land in that one colour — so the logo variant follows the
- * surface instead of a hardcoded "always dark" assumption.
- */
-function useRailIsLight(railRef: React.RefObject<HTMLElement | null>): boolean {
-  const [isLight, setIsLight] = useState(false);
-
-  useBrowserLayoutEffect(() => {
-    const rail = railRef.current;
-    if (!rail) return;
-
-    const read = () => {
-      const styles = window.getComputedStyle(rail);
-      // The token first: the rail transitions `background-color`, so the painted
-      // value still reads the previous theme while a switch animates. Custom
-      // properties do not transition, so the token is already correct — and an
-      // unreadable pair leaves the dark-rail default in place.
-      const token = styles.getPropertyValue('--color-sidebar-bg');
-      const surface = surfaceLuminance(token) !== null ? token : styles.backgroundColor;
-      setIsLight(isLightSurface(surface));
-    };
-
-    read();
-    // Mode lands as `html.light`/`html.dark`, the pair as `html[data-theme-pair]`.
-    const observer = new MutationObserver(read);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class', 'style', 'data-theme-pair'],
-    });
-    return () => observer.disconnect();
-  }, [railRef]);
-
-  return isLight;
-}
-
 const Sidebar: React.FC<SidebarProps> = ({
   sidebarOpen,
   setSidebarOpen,
@@ -109,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const railRef = useRef<HTMLElement | null>(null);
   // Every shipped theme paints a dark rail, but a custom theme can set a light
   // `sidebarBg` — so ask the rail what colour it actually is.
-  const railIsLight = useRailIsLight(railRef);
+  const railIsLight = useSurfaceIsLight(railRef, '--color-sidebar-bg');
   const tenantLogoUrl = pickLogoForSurface(mspBranding.logoUrl, mspBranding.logoDarkUrl, railIsLight);
   // The wide wordmark already contains the tenant name, so it replaces both the
   // circular mark and the name span — but only where there is room for it.
