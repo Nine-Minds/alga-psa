@@ -28,6 +28,7 @@ import {
   type RecurringBillingRunInvoiceFailure,
 } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
+import { upsertUsagePeriodTotal } from '@alga-psa/billing/actions/usagePeriodTotalActions';
 import { WasmInvoiceViewModel, type PreviewInvoiceResponse, type IUsageServicePeriodStatus, type RecurringInvoiceFailureCode } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
@@ -323,8 +324,7 @@ const buildServicePeriodRepairHref = (scheduleKey: string) =>
 
 // Usage Tracking deep link with optional filter prefills so "Record Usage"
 // lands on the affected client/service instead of All Clients / All Services.
-const buildUsageTrackingHref = (input: { clientId?: string | null; serviceId?: string | null } = {}) => {
-  const params = new URLSearchParams({ tab: 'usage-tracking' });
+const buildUsageTrackingHref = (input: { clientId?: string | null; serviceId?: string | null } = {}) => {  const params = new URLSearchParams({ tab: 'usage-tracking' });
   if (input.clientId) {
     params.set('clientId', input.clientId);
   }
@@ -333,6 +333,94 @@ const buildUsageTrackingHref = (input: { clientId?: string | null; serviceId?: s
   }
   return `/msp/billing?${params.toString()}`;
 };
+
+/**
+ * Inline "report a period count" field for a due usage service that uses
+ * period-total measurement. Lives in the invoice preview so the operator can
+ * report (or correct) the whole-period count for the affected client, service,
+ * contract line, and service period without leaving the preview selection.
+ *
+ * Server-side scope/eligibility validation is owned by
+ * upsertUsagePeriodTotal (measurement mode, membership, assignment, quantity,
+ * period, revision). After a successful save the preview is recomputed for the
+ * same selection, so the operator verifies the intended amount in place.
+ */
+const UsagePeriodTotalQuickEntry: React.FC<{
+  status: IUsageServicePeriodStatus;
+  clientId: string | null;
+  entryId: string;
+  onSaved: () => void;
+}> = ({ status, clientId, entryId, onSaved }) => {
+  const [draft, setDraft] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const save = async () => {
+    if (!clientId || !status.config_id) {
+      setSaveError('Missing client or service configuration for this report.');
+      return;
+    }
+    const quantity = Number(draft);
+    if (draft === '' || !Number.isInteger(quantity) || quantity < 0) {
+      setSaveError('Enter a whole number of 0 or more for the period count.');
+      return;
+    }
+    setIsSaving(true);
+    setSaveError(null);
+    const result = await upsertUsagePeriodTotal({
+      client_id: clientId,
+      client_contract_line_id: status.client_contract_line_id,
+      service_id: status.service_id,
+      config_id: status.config_id,
+      period_start: status.service_period_start,
+      period_end: status.service_period_end,
+      quantity,
+    });
+    const failure = (result as unknown) as { actionError?: string; permissionError?: string };
+    if (failure && (failure.actionError || failure.permissionError)) {
+      setSaveError(failure.actionError ?? failure.permissionError ?? 'Unable to save the period count.');
+      setIsSaving(false);
+      return;
+    }
+    setDraft('');
+    setIsSaving(false);
+    onSaved();
+  };
+
+  return (
+    <li key={entryId} className="flex flex-wrap items-center gap-2" data-testid={`period-total-entry-${entryId}`}>
+      <span>
+        {tMissingPeriodTotalCopy(status)}
+      </span>
+      <Input
+        id={`period-total-quantity-${entryId}`}
+        type="number"
+        min={0}
+        step={1}
+        value={draft}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
+        placeholder="0"
+        className="w-24"
+        aria-label={`Period count for ${status.service_name ?? status.service_id}`}
+      />
+      <Button
+        id={`period-total-save-${entryId}`}
+        size="sm"
+        variant="outline"
+        disabled={isSaving}
+        onClick={() => void save()}
+      >
+        {isSaving ? 'Saving…' : 'Save'}
+      </Button>
+      {saveError && <span className="text-xs text-[rgb(var(--badge-danger-text))]">{saveError}</span>}
+    </li>
+  );
+};
+
+function tMissingPeriodTotalCopy(status: IUsageServicePeriodStatus): string {
+  const period = `${status.service_period_start} to ${status.service_period_end}`;
+  return `Report a period count for ${status.service_name ?? status.service_id} (${period})`;
+}
 
 const AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM = 'automaticClientFilter';
 
@@ -750,8 +838,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     cadenceSource: string | null | undefined;
   } | null>(null);
   // State to hold preview data and the canonical selector metadata used to generate it.
-  const [previewState, setPreviewState] = useState<{
-    previews: Array<{
+  const [previewState, setPreviewState] = useState<{    previews: Array<{
       previewGroupKey: string;
       data: WasmInvoiceViewModel;
       selectorInputs: IRecurringDueSelectionInput[];
@@ -773,6 +860,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     serviceId: string | null;
   }>({ clientId: null, serviceId: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const lastPreviewGroupsRef = useRef<RecurringSelectionGroup[]>([]);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
     isOpen: boolean;
@@ -1538,6 +1626,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     if (groups.length === 0) {
       return;
     }
+    lastPreviewGroupsRef.current = groups;
 
     const primarySelection = groups[0]?.selectorInputs[0] ?? null;
     setIsPreviewLoading(true);
@@ -3159,16 +3248,24 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     const actionableStatuses = usageStatuses.filter(
                       (status) => status.status === 'missing_usage' || status.status === 'unreported',
                     );
+                    const periodTotalStatuses = actionableStatuses.filter(
+                      (status) => status.measurement_mode === 'period_total',
+                    );
+                    const additiveStatuses = actionableStatuses.filter(
+                      (status) => status.measurement_mode !== 'period_total',
+                    );
                     const evidenceStatuses = usageStatuses.filter(
                       (status) => !actionableStatuses.includes(status),
                     );
+                    const previewClientId = previewEntry.selectorInputs[0]?.clientId ?? null;
                     return (
                       <>
                         {actionableStatuses.length > 0 && (
                           // Usage billing invoices recorded usage only. These
                           // services are due this period but have no report, so
                           // they are absent from the preview rather than billed at
-                          // zero.
+                          // zero. Period-total services report a whole-period
+                          // count inline; additive services route to Usage Tracking.
                           <div
                             className="rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-sm text-[rgb(var(--badge-warning-text))]"
                             data-testid={`preview-missing-usage-${previewEntry.previewGroupKey}`}
@@ -3178,8 +3275,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                 defaultValue: 'Usage not recorded for this period',
                               })}
                             </p>
-                            <ul className="mt-1 list-disc pl-5">
-                              {actionableStatuses.map((status) => (
+                            <ul className="mt-1 list-disc pl-5 space-y-1">
+                              {additiveStatuses.map((status) => (
                                 <li key={`${status.client_contract_line_id}:${status.service_id}`}>
                                   {t('automaticInvoices.dialogs.preview.missingUsageService', {
                                     service: status.service_name ?? status.service_id,
@@ -3189,23 +3286,38 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                                   })}
                                 </li>
                               ))}
+                              {periodTotalStatuses.map((status) => (
+                                <UsagePeriodTotalQuickEntry
+                                  key={`${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                                  status={status}
+                                  clientId={previewClientId}
+                                  entryId={`${previewEntry.previewGroupKey}:${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                                  onSaved={() => {
+                                    if (lastPreviewGroupsRef.current.length > 0) {
+                                      void handlePreviewSelection(lastPreviewGroupsRef.current);
+                                    }
+                                  }}
+                                />
+                              ))}
                             </ul>
-                            <Button
-                              id={`preview-record-usage-${previewIndex}-button`}
-                              variant="outline"
-                              className="mt-2"
-                              onClick={() => {
-                                const missingServiceIds = Array.from(
-                                  new Set(actionableStatuses.map((status) => status.service_id)),
-                                );
-                                router.push(buildUsageTrackingHref({
-                                  clientId: previewEntry.selectorInputs[0]?.clientId ?? null,
-                                  serviceId: missingServiceIds.length === 1 ? missingServiceIds[0] : null,
-                                }));
-                              }}
-                            >
-                              {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
-                            </Button>
+                            {additiveStatuses.length > 0 && (
+                              <Button
+                                id={`preview-record-usage-${previewIndex}-button`}
+                                variant="outline"
+                                className="mt-2"
+                                onClick={() => {
+                                  const missingServiceIds = Array.from(
+                                    new Set(additiveStatuses.map((status) => status.service_id)),
+                                  );
+                                  router.push(buildUsageTrackingHref({
+                                    clientId: previewClientId,
+                                    serviceId: missingServiceIds.length === 1 ? missingServiceIds[0] : null,
+                                  }));
+                                }}
+                              >
+                                {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
+                              </Button>
+                            )}
                           </div>
                         )}
                         {evidenceStatuses.length > 0 && (
