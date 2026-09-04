@@ -1,8 +1,9 @@
 # White-label round 2 — rectangular logo, collapsed rail, attribution, favicon
 
 Enterprise-only follow-up to the MSP white-label work. Open `mockups.html` in a browser
-(no build step, no server) to review the design; `mockups.png` is a rendered copy of the
-same file for anyone reading this in a diff.
+(no build step, no server) to review the design. `mockups.png` is a local full-page render of
+the same file — the repo ignores `*.png`, so re-render it when the HTML changes rather than
+expecting it in a diff.
 
 ## What the feedback asked for
 
@@ -28,8 +29,14 @@ same file for anyone reading this in a diff.
   `object-contain`, no circular frame **and no duplicate name span** (the name is inside the image).
   Without a wide logo the rail keeps today's square mark + name text.
 * **Collapsed (4rem)** — always the square mark in its circle. The wide logo is never rendered here.
-* **Dark-first per slot** — the rail is dark in both themes, so it prefers `wide-dark` → `wide`, and
-  `dark` → `default` for the square mark, exactly like the existing logic.
+* **Variant follows the rail's own background** — every shipped theme paints a dark rail, so the
+  usual order is `wide-dark` → `wide` and `dark` → `default`. But a custom theme can set a light
+  `sidebarBg` (the editor exposes “Side panel background” per mode), and on a light rail that order
+  is exactly backwards. The rail therefore measures the colour it actually painted
+  (`getComputedStyle` → WCAG relative luminance) and flips to `wide` → `wide-dark` /
+  `default` → `dark` when it comes out light. An unreadable colour keeps the dark-first order.
+  Muted rail chrome — the mark's frame, section headings, the version and attribution rows — uses
+  the `sidebar-text` token for the same reason.
 * **Fallback chain** — a broken wide-logo URL falls back to the square mark, which falls back to the
   stock Alga avatar. Each `<img>` keeps its own `onError` latch.
 

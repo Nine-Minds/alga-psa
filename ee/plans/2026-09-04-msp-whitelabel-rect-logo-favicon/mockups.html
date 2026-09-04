@@ -58,6 +58,11 @@
   }
   /* ---------- sidebar rail ---------- */
   .rail {
+    /* Rail chrome is drawn from the sidebar tokens, never from a fixed dark
+       palette — that is exactly the bug the light-rail figures below cover. */
+    --rail-tint: rgba(255,255,255,.06);
+    --rail-hair: #2b2545;
+    --rail-muted: #9a92b8;
     background: var(--sidebar-bg);
     color: var(--sidebar-text);
     height: 520px;
@@ -79,7 +84,7 @@
   .mark {
     width: 32px; height: 32px;
     border-radius: 9999px;
-    background: rgba(255,255,255,.05);
+    background: var(--rail-tint);
     display: flex; align-items: center; justify-content: center;
     overflow: hidden; flex-shrink: 0;
   }
@@ -89,7 +94,7 @@
   .wide-logo { height: 32px; width: auto; max-width: 100%; object-fit: contain; display: block; }
   .search {
     margin: 4px 8px 8px;
-    background: rgba(255,255,255,.06);
+    background: var(--rail-tint);
     border-radius: 6px;
     padding: 7px 10px;
     color: var(--sidebar-icon);
@@ -98,7 +103,7 @@
   }
   .rail.collapsed .search { justify-content: center; padding: 7px 0; margin: 4px 8px 8px; }
   nav.items { flex: 1 1 auto; padding: 0 8px; overflow: hidden; }
-  .sec-title { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #7f7a99; padding: 0 8px; margin: 12px 0 6px; }
+  .sec-title { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--rail-muted); padding: 0 8px; margin: 12px 0 6px; }
   .item {
     display: flex; align-items: center; gap: 10px;
     padding: 7px 8px; border-radius: 6px; color: var(--sidebar-text);
@@ -107,10 +112,10 @@
   .rail.collapsed .item { justify-content: center; padding: 7px 0; }
   .item.active { background: var(--sidebar-hover); }
   .glyph { width: 16px; height: 16px; border-radius: 4px; background: var(--sidebar-icon); opacity: .75; flex-shrink: 0; }
-  .divider { height: 1px; background: #2b2545; margin: 10px 6px; }
+  .divider { height: 1px; background: var(--rail-hair); margin: 10px 6px; }
   /* ---------- footer / attribution ---------- */
   .footer {
-    border-top: 1px solid #2b2545;
+    border-top: 1px solid var(--rail-hair);
     padding: 10px 16px 12px;
   }
   .rail.collapsed .footer { padding: 10px 6px 12px; }
@@ -118,17 +123,27 @@
     display: flex; align-items: center; justify-content: space-between; gap: 8px;
   }
   .footer a.version {
-    font-size: 12px; color: #9a92b8; text-decoration: none;
+    font-size: 12px; color: var(--rail-muted); text-decoration: none;
     display: inline-flex; align-items: center; gap: 4px;
   }
   .star {
-    font-size: 11px; color: #9a92b8; border: 1px solid #332c53;
+    font-size: 11px; color: var(--rail-muted); border: 1px solid var(--rail-hair);
     border-radius: 6px; padding: 2px 6px; display: inline-flex; gap: 4px; align-items: center;
   }
   .powered {
     margin-top: 6px;
     display: flex; align-items: center; gap: 6px;
-    font-size: 11px; color: #8b84a8; text-decoration: none;
+    font-size: 11px; color: var(--rail-muted); text-decoration: none;
+  }
+  /* A custom theme can hand the rail a pale "Side panel background". */
+  .rail.light {
+    --sidebar-bg: #f3f4f8;
+    --sidebar-text: #1f2333;
+    --sidebar-icon: #6b7280;
+    --sidebar-hover: #e3e6ef;
+    --rail-tint: rgba(20,16,36,.05);
+    --rail-hair: rgba(20,16,36,.16);
+    --rail-muted: rgba(20,16,36,.55);
   }
   .rail.collapsed .powered { justify-content: center; margin-top: 8px; }
   .powered .alga-mark { width: 14px; height: 14px; border-radius: 9999px; flex-shrink: 0; }
@@ -372,6 +387,119 @@
   </div>
 </section>
 
+<!-- ===================== 2b. Light rail ===================== -->
+<section>
+  <h2>2b · Light rail (custom theme) — the variant follows the background</h2>
+  <p class="note">
+    Every shipped theme paints a dark rail, but the custom theme editor exposes “Side panel
+    background” per mode, so a tenant can make it pale. The rail therefore measures the colour it
+    actually painted instead of assuming: light rail → <code>wide</code> / <code>default</code>
+    first, dark rail → <code>wide-dark</code> / <code>dark</code> first, and the dark-first order
+    stays whenever the colour cannot be read. Muted chrome (mark frame, section headings, version
+    and attribution rows) comes from the <code>sidebar-text</code> token for the same reason.
+  </p>
+  <div class="row">
+
+    <figure class="frame">
+      <figcaption>A · light rail, expanded — light-background wordmark wins</figcaption>
+      <div class="rail expanded light">
+        <div class="brand">
+          <svg class="wide-logo" viewBox="0 0 200 32" role="img" aria-label="Emerald City IT">
+            <circle cx="16" cy="16" r="13" fill="#31c48d"/>
+            <path d="M10 17.5l4 4 8-9" stroke="#0b2018" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="38" y="15" fill="#1f1b2e" font-family="Helvetica, Arial" font-size="13" font-weight="700">EMERALD CITY</text>
+            <text x="38" y="27" fill="#5d7f6f" font-family="Helvetica, Arial" font-size="9" letter-spacing="2.6">IT SERVICES</text>
+          </svg>
+        </div>
+        <div class="search">&#128269; Search</div>
+        <nav class="items">
+          <div class="sec-title">Work</div>
+          <div class="item active"><span class="glyph"></span>Dashboard</div>
+          <div class="item"><span class="glyph"></span>Tickets</div>
+          <div class="item"><span class="glyph"></span>Projects</div>
+          <div class="sec-title">Money</div>
+          <div class="item"><span class="glyph"></span>Billing</div>
+        </nav>
+        <div class="footer">
+          <div class="version-row">
+            <a class="version" href="#">v1.5.0 &#8599;</a>
+          </div>
+          <a class="powered" href="#">
+            <img class="alga-mark" src="../../../server/public/images/avatar-purple-background.png" alt="" />
+            Powered by AlgaPSA
+          </a>
+        </div>
+      </div>
+    </figure>
+
+    <figure class="frame">
+      <figcaption>B · light rail, collapsed — light-background square mark</figcaption>
+      <div class="rail collapsed light">
+        <div class="brand">
+          <div class="mark">
+            <svg viewBox="0 0 32 32" role="img" aria-label="Emerald City IT">
+              <circle cx="16" cy="16" r="14" fill="#31c48d"/>
+              <path d="M10 17.5l4 4 8-9" stroke="#0b2018" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        <div class="search">&#128269;</div>
+        <nav class="items">
+          <div class="item active"><span class="glyph"></span></div>
+          <div class="item"><span class="glyph"></span></div>
+          <div class="item"><span class="glyph"></span></div>
+          <div class="divider"></div>
+          <div class="item"><span class="glyph"></span></div>
+        </nav>
+        <div class="footer">
+          <div class="version-row" style="justify-content:center">
+            <a class="version" href="#" title="Version 1.5.0">v1.5</a>
+          </div>
+          <a class="powered" href="#" title="Powered by AlgaPSA v1.5.0">
+            <img class="alga-mark big" src="../../../server/public/images/avatar-purple-background.png" alt="Powered by AlgaPSA" />
+          </a>
+        </div>
+      </div>
+    </figure>
+
+    <figure class="frame">
+      <figcaption>C &#183; what the old “always dark” assumption did &#8212; the bug</figcaption>
+      <div class="rail expanded light">
+        <div class="brand">
+          <svg class="wide-logo" viewBox="0 0 200 32" role="img" aria-label="Emerald City IT">
+            <circle cx="16" cy="16" r="13" fill="#31c48d"/>
+            <path d="M10 17.5l4 4 8-9" stroke="#0b2018" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="38" y="15" fill="#ffffff" font-family="Helvetica, Arial" font-size="13" font-weight="700">EMERALD CITY</text>
+            <text x="38" y="27" fill="#9fe8c8" font-family="Helvetica, Arial" font-size="9" letter-spacing="2.6">IT SERVICES</text>
+          </svg>
+        </div>
+        <div class="search">&#128269; Search</div>
+        <nav class="items">
+          <div class="sec-title" style="color:#7f7a99">Work</div>
+          <div class="item active"><span class="glyph"></span>Dashboard</div>
+          <div class="item"><span class="glyph"></span>Tickets</div>
+          <div class="item"><span class="glyph"></span>Projects</div>
+        </nav>
+        <div class="footer">
+          <div class="version-row">
+            <a class="version" href="#" style="color:#9ca3af">v1.5.0 &#8599;</a>
+          </div>
+          <a class="powered" href="#" style="color:#9ca3af">
+            <img class="alga-mark" src="../../../server/public/images/avatar-purple-background.png" alt="" />
+            Powered by AlgaPSA
+          </a>
+        </div>
+      </div>
+    </figure>
+
+  </div>
+  <div class="legend">
+    <span>Rail background read at runtime, not assumed</span>
+    <span>Relative luminance decides, so mid-greys land somewhere sensible</span>
+    <span>Unreadable colour &#8594; dark-first, i.e. today's behaviour</span>
+  </div>
+</section>
+
 <!-- ===================== 3. Attribution footer ===================== -->
 <section>
   <h2>3 · “Powered by AlgaPSA” footer row</h2>
@@ -447,8 +575,9 @@
         <p style="margin:0 0 16px; color:var(--muted); font-size:13px">
           The square mark is used wherever the space is square — the collapsed side menu and circular
           frames. The optional wide logo replaces the mark and the name in the expanded side menu, so
-          upload one that already contains your company name. The always-dark side menu prefers the
-          dark-background variants and falls back to the light ones.
+          upload one that already contains your company name. The side menu follows its own background:
+          dark-background variants on a dark menu, light ones on a light menu, falling back to
+          whichever variant you uploaded.
         </p>
 
         <div class="slot-grid">
@@ -497,7 +626,7 @@
                 <text x="38" y="27" fill="#9fe8c8" font-family="Helvetica, Arial" font-size="9" letter-spacing="2.6">IT SERVICES</text>
               </svg>
             </div>
-            <p class="hint">Optional. The side menu is dark in both themes, so this is the one it reaches for first.</p>
+            <p class="hint">Optional. Used while the side menu background is dark, which is the case in every built-in theme.</p>
             <div class="warn">
               That image is nearly square. The wide slot expects a landscape logo — the square mark
               slot is probably the one you want.
