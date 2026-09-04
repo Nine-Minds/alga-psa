@@ -7,6 +7,8 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
+import { todayUsageDate, usageDateFromStored, usageDateToStored } from '@alga-psa/billing/lib/usageDate';
+import { buildEligibleContractLineOptions } from '@alga-psa/billing/lib/contractLineOptionLabels';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, AlertTriangle, Info, MoreVertical, Package } from 'lucide-react';
@@ -77,12 +79,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
     client_id: '',
     service_id: '',
     quantity: 0,
-    usage_date: new Date().toISOString(),
+    usage_date: usageDateToStored(todayUsageDate()),
   });
   const [eligibleContractLines, setEligibleContractLines] = useState<Array<{
     client_contract_line_id: string;
     contract_line_name: string;
     contract_line_type: string;
+    contract_name?: string | null;
     start_date: string;
     end_date: string | null;
     has_bucket_overlay: boolean;
@@ -398,7 +401,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
       client_id: '',
       service_id: '',
       quantity: 0,
-      usage_date: new Date().toISOString(),
+      usage_date: usageDateToStored(todayUsageDate()),
       contract_line_id: undefined,
     });
     setEditingUsage(null);
@@ -423,7 +426,13 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
     {
       title: t('usage.table.usageDate', { defaultValue: 'Usage Date' }),
       dataIndex: 'usage_date',
-      render: (value) => new Date(value).toLocaleDateString(),
+      // Render the plain calendar day from a local-midnight Date so the shown
+      // date is the day the operator picked, never a UTC-boundary shift.
+      render: (value) => {
+        const plain = usageDateFromStored(value as string | Date | null | undefined);
+        const localMidnight = dateFromString(plain);
+        return localMidnight ? localMidnight.toLocaleDateString() : '';
+      },
     },
     {
       title: t('usage.table.contractLine', { defaultValue: 'Contract Line' }),
@@ -462,7 +471,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
                   client_id: record.client_id,
                   service_id: record.service_id,
                   quantity: record.quantity,
-                  usage_date: record.usage_date,
+                  usage_date: usageDateToStored(usageDateFromStored(record.usage_date)),
                   contract_line_id: record.contract_line_id,
                 });
                 setIsAddModalOpen(true);
@@ -606,7 +615,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
                     client_id: record.client_id,
                     service_id: record.service_id,
                     quantity: record.quantity,
-                    usage_date: record.usage_date,
+                    usage_date: usageDateToStored(usageDateFromStored(record.usage_date)),
                     contract_line_id: record.contract_line_id,
                   });
                   setIsAddModalOpen(true);
@@ -692,12 +701,10 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
                 placeholder={t('usage.dialog.fields.usageDate', { defaultValue: 'Usage Date' })}
                 clearable
                 className="w-full"
-                value={dateFromString(newUsage.usage_date
-                  ? new Date(newUsage.usage_date).toISOString().split('T')[0]
-                  : '')}
+                value={dateFromString(usageDateFromStored(newUsage.usage_date))}
                 onChange={(date) => setNewUsage({
                   ...newUsage,
-                  usage_date: date ? new Date(dateToString(date)).toISOString() : '',
+                  usage_date: date ? usageDateToStored(dateToString(date)) : '',
                 })}
               />
             </div>
@@ -758,10 +765,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
                       : eligibleContractLines.length === 1
                         ? t('usage.contractLineGuidance.placeholderSingle', { defaultValue: 'Using {{name}}', name: eligibleContractLines[0].contract_line_name })
                         : t('usage.contractLineGuidance.placeholderSelect', { defaultValue: 'Select a contract line' })}
-                  options={eligibleContractLines.map(plan => ({
-                    value: plan.client_contract_line_id,
-                    label: `${plan.contract_line_name} (${plan.contract_line_type})`
-                  }))}
+                  options={buildEligibleContractLineOptions(eligibleContractLines)}
                 />
 
                 {eligibleContractLines.length > 1 && (
