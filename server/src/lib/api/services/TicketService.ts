@@ -2213,8 +2213,9 @@ export class TicketService extends BaseService<ITicket> {
    * Update an existing comment. Only the comment author may edit their own
    * comment. Comments with no authoring user (user_id null — e.g. inbound
    * email comments attributed to a contact) have no owner who could ever
-   * edit them, so an operator holding the `comment:update` RBAC permission
-   * may repair them; the repair is recorded in the comment metadata.
+   * edit them, so an operator holding the `ticket:update` RBAC permission
+   * (which covers updating tickets and their comments) may repair them; the
+   * repair is recorded in the comment metadata.
    */
   async updateComment(
     ticketId: string,
@@ -2244,7 +2245,7 @@ export class TicketService extends BaseService<ITicket> {
         const canOperatorRepair =
           comment.user_id == null &&
           context.user != null &&
-          (await hasPermission(context.user, 'comment', 'update', trx));
+          (await hasPermission(context.user, 'ticket', 'update', trx));
         if (!canOperatorRepair) {
           throw new ValidationError('You can only edit your own comments');
         }

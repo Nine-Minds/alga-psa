@@ -23,7 +23,7 @@ describe('TicketService.updateComment operator repair contract', () => {
     expect(body).toContain('You can only edit your own comments');
   });
 
-  it('allows an operator with comment:update RBAC to repair ownerless comments, failing closed without a loaded user', () => {
+  it('allows an operator with ticket:update RBAC to repair ownerless comments, failing closed without a loaded user', () => {
     const body = updateCommentBody(readTicketServiceSource());
 
     // The operator path applies only to comments with no authoring user
@@ -31,8 +31,9 @@ describe('TicketService.updateComment operator repair contract', () => {
     expect(body).toContain('comment.user_id == null');
     // Fail closed: a missing caller user record denies the repair.
     expect(body).toContain('context.user != null');
-    // The RBAC gate is the comment update permission, checked in-transaction.
-    expect(body).toContain("hasPermission(context.user, 'comment', 'update', trx)");
+    // The RBAC gate is the established ticket update permission (the
+    // `comment` RBAC resource is deprecated), checked in-transaction.
+    expect(body).toContain("hasPermission(context.user, 'ticket', 'update', trx)");
   });
 
   it('preserves existing metadata and appends an attributable operatorEdits audit record', () => {
