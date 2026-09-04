@@ -429,6 +429,9 @@ export function QuickAddInteraction({
     setSelectedUserId(session?.user?.id || '');
     setHasTouchedAssignedUser(false);
     setHasTouchedScheduleAssignees(false);
+    // A toggle flipped in an abandoned draft must not survive into the next one; clearing the
+    // "touched" flag hands the switch back to the start-time rule below.
+    setHasTouchedScheduleToggle(false);
 
     let cancelled = false;
     getCurrentUserPermissions()
@@ -487,10 +490,11 @@ export function QuickAddInteraction({
     };
   }, [isOpen, isOnlineMeetingType, isEditMode, clientCrossFeature]);
 
-  // Load attendee options (internal users + contacts) only once the Teams meeting toggle is
-  // on (i.e. the attendee picker is actually shown) — avoids running the heavy getAllContacts()
-  // query every time the "Online Meeting" type is merely selected. The `hasLoadedAttendeeOptions`
-  // guard keeps it to a single fetch per dialog session.
+  // Load the attendee contacts only once the Teams meeting toggle is on (i.e. the attendee
+  // picker is actually shown) — avoids running the heavy getAllContacts() query every time the
+  // "Online Meeting" type is merely selected. Internal users already arrive with the dialog's
+  // own fetch, so they are not requested again here. The `hasLoadedAttendeeOptions` guard keeps
+  // this to a single fetch per dialog session.
   useEffect(() => {
     if (!isOpen || isEditMode || !isOnlineMeetingType || !createTeamsMeeting || hasLoadedAttendeeOptions) {
       return;
@@ -499,12 +503,8 @@ export function QuickAddInteraction({
     let cancelled = false;
     (async () => {
       try {
-        const [usersList, contactsList] = await Promise.all([
-          getAllUsersBasicAsync(false, 'internal'),
-          getAllContacts(),
-        ]);
+        const contactsList = await getAllContacts();
         if (cancelled) return;
-        setUsers(usersList);
         setContacts(contactsList);
         setHasLoadedAttendeeOptions(true);
       } catch (error) {
@@ -1366,15 +1366,18 @@ export function QuickAddInteraction({
                       showSearch
                     />
                   )}
-                  <p className="text-xs text-gray-600">
-                    {isSchedulingForOthers
-                      ? t('interactions.quickAdd.schedule.addHelpOthers', {
-                          defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
-                        })
-                      : t('interactions.quickAdd.schedule.addHelp', {
-                          defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
-                        })}
-                  </p>
+                  {/* Only promise a calendar entry when one is actually going to be created. */}
+                  {willCreateScheduleEntry && (
+                    <p className="text-xs text-gray-600">
+                      {isSchedulingForOthers
+                        ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                            defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                          })
+                        : t('interactions.quickAdd.schedule.addHelp', {
+                            defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                          })}
+                    </p>
+                  )}
                 </div>
               )}
             </form>

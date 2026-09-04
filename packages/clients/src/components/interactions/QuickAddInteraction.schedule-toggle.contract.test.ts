@@ -38,6 +38,21 @@ describe('quick add interaction schedule toggle wiring contract', () => {
     expect(source).toContain('if (isEditMode || hasTouchedScheduleToggle) return;');
     expect(source).toContain('setAddToSchedule(!!startTime && startTime.getTime() > Date.now() + 60000);');
     expect(source).toContain('setHasTouchedScheduleToggle(true);');
+    // Reopening the dialog hands the switch back to the start-time rule.
+    const resetBlock = source.slice(
+      source.indexOf('setHasTouchedScheduleAssignees(false);'),
+      source.indexOf('getCurrentUserPermissions()'),
+    );
+    expect(resetBlock).toContain('setHasTouchedScheduleToggle(false);');
+  });
+
+  it('only promises a calendar entry when one will actually be created', () => {
+    const source = readSource();
+
+    expect(source).toContain('{willCreateScheduleEntry && (');
+    const helpIndex = source.indexOf("t('interactions.quickAdd.schedule.addHelp'");
+    const gateIndex = source.indexOf('{willCreateScheduleEntry && (');
+    expect(helpIndex).toBeGreaterThan(gateIndex);
   });
 
   it('passes the flag and the assignees to addInteraction and to the Teams path', () => {
@@ -79,11 +94,14 @@ describe('quick add interaction schedule toggle wiring contract', () => {
     expect(createBlock.slice(0, ownerPickerIndex)).not.toContain('isStandaloneCreate');
   });
 
-  it('loads the internal users for every create path', () => {
+  it('loads the internal users once per dialog, for every create path', () => {
     const source = readSource();
 
     expect(source).toContain('const usersList = isEditMode');
     expect(source).toContain("await getAllUsersBasicAsync(false, 'internal');");
+    // The Teams attendee load must not repeat the user query the dialog already ran.
+    expect(source.match(/getAllUsersBasicAsync\(false, 'internal'\)/g)).toHaveLength(1);
+    expect(source).toContain('const contactsList = await getAllContacts();');
   });
 
   it('keeps the interaction owner and the schedule assignees in step until overridden', () => {
