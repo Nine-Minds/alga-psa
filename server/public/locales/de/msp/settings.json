@@ -1423,10 +1423,24 @@
     "whiteLabel": {
       "title": "MSP-App mit eigener Marke",
       "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
-      "logoHelp": "Das MSP-Seitenmenü ist in beiden Designs dunkel. Es verwendet daher das Logo für dunkle Hintergründe, sofern vorhanden, und sonst das Hauptlogo.",
+      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das stets dunkle Seitenmenü bevorzugt die Varianten für dunkle Hintergründe und greift sonst auf die hellen zurück.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo für dunkle Hintergründe"
+        "mark": "Quadratisches Zeichen",
+        "markDark": "Quadratisches Zeichen für dunkle Hintergründe",
+        "wide": "Breites Logo (optional)",
+        "wideDark": "Breites Logo für dunkle Hintergründe (optional)",
+        "favicon": "Browsersymbol (Favicon)"
+      },
+      "hints": {
+        "mark": "Wird im eingeklappten Seitenmenü und in jedem runden Rahmen verwendet. Quadratisch funktioniert am besten.",
+        "markDark": "Optional. Fällt auf das quadratische Zeichen zurück.",
+        "wide": "Wird nur im ausgeklappten Seitenmenü angezeigt, 32 px hoch. Nehmen Sie Ihren Firmennamen mit ins Bild auf.",
+        "wideDark": "Optional. Das Seitenmenü ist in beiden Designs dunkel, daher wird zuerst diese Variante verwendet.",
+        "favicon": "PNG, SVG oder ICO. Rasterbilder werden auf 32x32 verkleinert. Gilt für die MSP-App und das Kundenportal Ihrer Organisation."
+      },
+      "warnings": {
+        "expectSquare": "Dieses Bild ist deutlich breiter als hoch. Der Platz für das quadratische Zeichen ist quadratisch — gemeint ist vermutlich der Platz für das breite Logo.",
+        "expectWide": "Dieses Bild ist nahezu quadratisch. Der breite Platz erwartet ein Querformat-Logo — gemeint ist vermutlich der Platz für das quadratische Zeichen."
       },
       "colors": {
         "label": "Markenfarben in der MSP-App verwenden",

@@ -592,7 +592,7 @@ const AppearanceSettings = () => {
                   <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
                     {t('appearance.whiteLabel.hints.favicon', {
                       defaultValue:
-                        'PNG, SVG or ICO. Raster uploads are resized to 32x32. Applies to the MSP app and the client portal for this tenant.',
+                        'PNG, SVG or ICO. Raster uploads are resized to 32x32. Applies to the MSP app and the client portal for your organization.',
                     })}
                   </p>
                 </div>

@@ -1423,10 +1423,24 @@
     "whiteLabel": {
       "title": "Eigen merk voor de MSP-app",
       "description": "Upload uw logo één keer. Het vervangt het Alga-merk in het MSP-zijmenu en het klantenportaal gebruikt dezelfde afbeeldingen.",
-      "logoHelp": "Het MSP-zijmenu is in beide thema’s donker en gebruikt daarom het logo voor donkere achtergronden als u dat toevoegt, en anders het hoofdlogo.",
+      "logoHelp": "Het vierkante merkteken wordt gebruikt overal waar de ruimte vierkant is: in het ingeklapte zijmenu en in ronde kaders. Het optionele brede logo vervangt het merkteken en de naam in het uitgeklapte zijmenu, dus upload er een waarin uw bedrijfsnaam al staat. Het altijd donkere zijmenu gebruikt bij voorkeur de varianten voor donkere achtergronden en valt anders terug op de lichte.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo voor donkere achtergronden"
+        "mark": "Vierkant merkteken",
+        "markDark": "Vierkant merkteken voor donkere achtergronden",
+        "wide": "Breed logo (optioneel)",
+        "wideDark": "Breed logo voor donkere achtergronden (optioneel)",
+        "favicon": "Browserpictogram (favicon)"
+      },
+      "hints": {
+        "mark": "Wordt gebruikt in het ingeklapte zijmenu en in elk rond kader. Vierkant werkt het best.",
+        "markDark": "Optioneel. Valt terug op het vierkante merkteken.",
+        "wide": "Wordt alleen in het uitgeklapte zijmenu getoond, 32 px hoog. Zet uw bedrijfsnaam in de afbeelding.",
+        "wideDark": "Optioneel. Het zijmenu is in beide thema’s donker, dus deze variant wordt als eerste gebruikt.",
+        "favicon": "PNG, SVG of ICO. Rasterafbeeldingen worden verkleind naar 32x32. Geldt voor de MSP-app en het klantenportaal van uw organisatie."
+      },
+      "warnings": {
+        "expectSquare": "Die afbeelding is veel breder dan hoog. De plek voor het vierkante merkteken wordt in vierkante ruimtes gebruikt — u bedoelt waarschijnlijk de plek voor het brede logo.",
+        "expectWide": "Die afbeelding is bijna vierkant. De brede plek verwacht een liggend logo — u bedoelt waarschijnlijk de plek voor het vierkante merkteken."
       },
       "colors": {
         "label": "Uw merkkleuren in de MSP-app gebruiken",

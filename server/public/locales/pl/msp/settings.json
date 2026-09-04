@@ -1429,10 +1429,24 @@
     "whiteLabel": {
       "title": "Własna marka w aplikacji MSP",
       "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
-      "logoHelp": "Menu boczne MSP jest ciemne w obu motywach, dlatego używa logo na ciemne tła, jeśli je prześlesz, a w przeciwnym razie logo głównego.",
+      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Zawsze ciemne menu boczne najpierw sięga po warianty na ciemne tła, a w razie ich braku po jasne.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo na ciemne tła"
+        "mark": "Znak kwadratowy",
+        "markDark": "Znak kwadratowy na ciemne tła",
+        "wide": "Szerokie logo (opcjonalnie)",
+        "wideDark": "Szerokie logo na ciemne tła (opcjonalnie)",
+        "favicon": "Ikona przeglądarki (favicon)"
+      },
+      "hints": {
+        "mark": "Używany w zwiniętym menu bocznym i w każdej okrągłej ramce. Najlepiej sprawdza się format kwadratowy.",
+        "markDark": "Opcjonalne. W razie braku używany jest znak kwadratowy.",
+        "wide": "Wyświetlane tylko w rozwiniętym menu bocznym, o wysokości 32 px. Umieść nazwę firmy na obrazie.",
+        "wideDark": "Opcjonalne. Menu boczne jest ciemne w obu motywach, więc ten wariant jest używany w pierwszej kolejności.",
+        "favicon": "PNG, SVG lub ICO. Obrazy rastrowe są zmniejszane do 32x32. Dotyczy aplikacji MSP i portalu klienta Twojej organizacji."
+      },
+      "warnings": {
+        "expectSquare": "Ten obraz jest znacznie szerszy niż wyższy. Miejsce na znak kwadratowy służy do przestrzeni kwadratowych — prawdopodobnie chodzi o miejsce na szerokie logo.",
+        "expectWide": "Ten obraz jest niemal kwadratowy. Miejsce na szerokie logo oczekuje logo poziomego — prawdopodobnie chodzi o miejsce na znak kwadratowy."
       },
       "colors": {
         "label": "Używaj kolorów swojej marki w aplikacji MSP",

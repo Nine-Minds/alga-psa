@@ -1436,7 +1436,7 @@
         "markDark": "Optional. Falls back to the square mark.",
         "wide": "Shown only in the expanded side menu, at 32px tall. Include your company name in the image.",
         "wideDark": "Optional. The side menu is dark in both themes, so this is the one it reaches for first.",
-        "favicon": "PNG, SVG or ICO. Raster uploads are resized to 32x32. Applies to the MSP app and the client portal for this tenant."
+        "favicon": "PNG, SVG or ICO. Raster uploads are resized to 32x32. Applies to the MSP app and the client portal for your organization."
       },
       "warnings": {
         "expectSquare": "That image is much wider than it is tall. The square mark slot is used in square spaces — the wide logo slot is probably the one you want.",

@@ -1423,10 +1423,24 @@
     "whiteLabel": {
       "title": "Personalizza il marchio dell’app MSP",
       "description": "Carica il tuo logo una volta sola. Sostituisce il marchio Alga nel menu laterale MSP e il portale clienti usa le stesse immagini.",
-      "logoHelp": "Il menu laterale MSP è scuro in entrambi i temi, quindi usa il logo per sfondi scuri quando lo fornisci e altrimenti ricorre al logo principale.",
+      "logoHelp": "Il marchio quadrato viene usato ovunque lo spazio sia quadrato: nel menu laterale compresso e nelle cornici circolari. Il logo largo facoltativo sostituisce il marchio e il nome nel menu laterale espanso, quindi caricane uno che contenga già il nome della tua azienda. Il menu laterale, sempre scuro, preferisce le varianti per sfondi scuri e ricorre a quelle chiare.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo per sfondi scuri"
+        "mark": "Marchio quadrato",
+        "markDark": "Marchio quadrato per sfondi scuri",
+        "wide": "Logo largo (facoltativo)",
+        "wideDark": "Logo largo per sfondi scuri (facoltativo)",
+        "favicon": "Icona del browser (favicon)"
+      },
+      "hints": {
+        "mark": "Usato nel menu laterale compresso e in ogni cornice circolare. Il formato quadrato è il migliore.",
+        "markDark": "Facoltativo. Ricorre al marchio quadrato.",
+        "wide": "Mostrato solo nel menu laterale espanso, alto 32 px. Includi il nome della tua azienda nell’immagine.",
+        "wideDark": "Facoltativo. Il menu laterale è scuro in entrambi i temi, quindi è questa la variante usata per prima.",
+        "favicon": "PNG, SVG o ICO. Le immagini raster vengono ridimensionate a 32x32. Vale per l’app MSP e per il portale clienti della tua organizzazione."
+      },
+      "warnings": {
+        "expectSquare": "Questa immagine è molto più larga che alta. Lo spazio del marchio quadrato serve per le aree quadrate: probabilmente cerchi lo spazio del logo largo.",
+        "expectWide": "Questa immagine è quasi quadrata. Lo spazio largo si aspetta un logo orizzontale: probabilmente cerchi lo spazio del marchio quadrato."
       },
       "colors": {
         "label": "Usa i colori del tuo marchio nell’app MSP",

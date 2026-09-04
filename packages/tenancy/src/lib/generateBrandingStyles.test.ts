@@ -131,4 +131,23 @@ describe('scopeBrandingToEdition', () => {
     expect(scoped?.computedStyles).toContain('--color-sidebar-bg');
     expect(scoped?.computedStyles).toContain('--color-primary-500');
   });
+
+  it('drops the Enterprise-only wordmark and favicon on Community', () => {
+    const branding: TenantBranding = {
+      ...baseBranding,
+      logoUrl: '/mark.png',
+      logoWideUrl: '/wide.png',
+      logoWideDarkUrl: '/wide-dark.png',
+      faviconUrl: '/favicon.png',
+    };
+
+    const scoped = scopeBrandingToEdition(branding, false);
+
+    expect(scoped?.logoUrl).toBe('/mark.png');
+    expect(scoped?.logoWideUrl).toBeUndefined();
+    expect(scoped?.logoWideDarkUrl).toBeUndefined();
+    expect(scoped?.faviconUrl).toBeUndefined();
+    // Enterprise keeps everything it uploaded.
+    expect(scopeBrandingToEdition(branding, true)).toBe(branding);
+  });
 });

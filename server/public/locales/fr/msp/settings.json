@@ -1423,10 +1423,24 @@
     "whiteLabel": {
       "title": "Personnaliser la marque de l’application MSP",
       "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
-      "logoHelp": "Le menu latéral MSP est sombre dans les deux thèmes : il utilise le logo pour arrière-plans sombres lorsque vous en fournissez un, sinon le logo principal.",
+      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral, toujours sombre, privilégie les variantes pour arrière-plans sombres et se rabat sur les claires.",
       "fields": {
-        "logo": "Logo",
-        "logoDark": "Logo pour arrière-plans sombres"
+        "mark": "Marque carrée",
+        "markDark": "Marque carrée pour arrière-plans sombres",
+        "wide": "Logo large (facultatif)",
+        "wideDark": "Logo large pour arrière-plans sombres (facultatif)",
+        "favicon": "Icône du navigateur (favicon)"
+      },
+      "hints": {
+        "mark": "Utilisée dans le menu latéral réduit et dans tous les cadres circulaires. Le format carré fonctionne le mieux.",
+        "markDark": "Facultatif. Se rabat sur la marque carrée.",
+        "wide": "Affiché uniquement dans le menu latéral déployé, sur 32 px de haut. Intégrez le nom de votre entreprise à l’image.",
+        "wideDark": "Facultatif. Le menu latéral est sombre dans les deux thèmes : c’est donc cette variante qui est utilisée en premier.",
+        "favicon": "PNG, SVG ou ICO. Les images matricielles sont redimensionnées en 32x32. S’applique à l’application MSP et au portail client de votre organisation."
+      },
+      "warnings": {
+        "expectSquare": "Cette image est bien plus large que haute. L’emplacement de la marque carrée sert aux espaces carrés — vous cherchez probablement celui du logo large.",
+        "expectWide": "Cette image est presque carrée. L’emplacement large attend un logo au format paysage — vous cherchez probablement celui de la marque carrée."
       },
       "colors": {
         "label": "Utiliser vos couleurs de marque dans l’application MSP",

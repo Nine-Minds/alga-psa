@@ -1423,10 +1423,24 @@
     "whiteLabel": {
       "title": "Marca própria no aplicativo MSP",
       "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
-      "logoHelp": "O menu lateral MSP é escuro nos dois temas, por isso usa o logotipo para fundos escuros quando você fornece um e, caso contrário, o logotipo principal.",
+      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral, sempre escuro, prefere as variantes para fundos escuros e recorre às claras.",
       "fields": {
-        "logo": "Logotipo",
-        "logoDark": "Logotipo para fundos escuros"
+        "mark": "Marca quadrada",
+        "markDark": "Marca quadrada para fundos escuros",
+        "wide": "Logotipo largo (opcional)",
+        "wideDark": "Logotipo largo para fundos escuros (opcional)",
+        "favicon": "Ícone do navegador (favicon)"
+      },
+      "hints": {
+        "mark": "Usada no menu lateral recolhido e em todas as molduras circulares. O formato quadrado funciona melhor.",
+        "markDark": "Opcional. Recorre à marca quadrada.",
+        "wide": "Exibido apenas no menu lateral expandido, com 32 px de altura. Inclua o nome da sua empresa na imagem.",
+        "wideDark": "Opcional. O menu lateral é escuro nos dois temas, por isso esta é a variante usada primeiro.",
+        "favicon": "PNG, SVG ou ICO. Imagens raster são redimensionadas para 32x32. Vale para o aplicativo MSP e para o portal do cliente da sua organização."
+      },
+      "warnings": {
+        "expectSquare": "Essa imagem é bem mais larga do que alta. O espaço da marca quadrada é usado em áreas quadradas — você provavelmente quer o espaço do logotipo largo.",
+        "expectWide": "Essa imagem é quase quadrada. O espaço largo espera um logotipo em paisagem — você provavelmente quer o espaço da marca quadrada."
       },
       "colors": {
         "label": "Usar as cores da sua marca no aplicativo MSP",
