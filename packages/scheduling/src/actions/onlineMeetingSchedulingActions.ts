@@ -25,6 +25,8 @@ export interface ScheduleTeamsMeetingInput {
   ticketId?: string | null;
   notes?: string | null;
   attendees?: TeamsMeetingAttendee[];
+  /** Who owns the logged interaction. Defaults to the creator. */
+  interactionUserId?: string | null;
   createScheduleEntry?: boolean;
   assignedUserIds?: string[];
   scheduleEntry?: {
@@ -180,7 +182,9 @@ export const scheduleTeamsMeeting = withAuth(async (
             type_id: onlineMeetingType.type_id,
             client_id: clientId,
             contact_name_id: contactNameId,
-            user_id: user.user_id,
+            // The Teams organizer is a tenant setting; who the interaction belongs to is
+            // the dialog's choice, and falls back to whoever booked the meeting.
+            user_id: input.interactionUserId?.trim() || user.user_id,
             ticket_id: input.ticket_id ?? input.ticketId ?? null,
             title: `Online Meeting: ${subject}`,
             notes: appendJoinUrlToNotes(input.notes, createdMeeting.joinWebUrl),

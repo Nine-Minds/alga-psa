@@ -161,6 +161,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
         },
         type: 'required' as const,
       })),
+      interactionUserId: input.interactionUserId,
       // The AlgaPSA-calendar assignees ride on the schedule entry, not on the Teams invite.
       scheduleEntry: input.scheduleAssignedUserIds?.length
         ? { assignedUserIds: input.scheduleAssignedUserIds }
