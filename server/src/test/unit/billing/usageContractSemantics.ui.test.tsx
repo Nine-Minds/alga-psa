@@ -121,16 +121,13 @@ vi.mock('@alga-psa/billing/actions/usageActions', () => ({
   createUsageRecord: vi.fn(),
   updateUsageRecord: vi.fn(),
   deleteUsageRecord: vi.fn(),
+  getEligibleContractLinesForUI: vi.fn(async () => []),
 }));
 
 vi.mock('@alga-psa/billing/actions/billingClientsActions', () => ({
   getAllClientsForBilling: vi.fn(async () => [
     { client_id: 'client-1', client_name: 'Solutions by Swift', is_inactive: false, client_type: 'company' },
   ]),
-}));
-
-vi.mock('@alga-psa/billing/lib/contractLineDisambiguation', () => ({
-  getEligibleContractLinesForUI: vi.fn(async () => []),
 }));
 
 vi.mock('@alga-psa/reporting/actions/report-actions/getRemainingBucketUnits', () => ({

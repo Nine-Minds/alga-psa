@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getEligibleContractLinesForUI } from '@alga-psa/billing/lib/contractLineDisambiguation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -15,7 +14,7 @@ import { useToast } from '@alga-psa/ui/hooks/use-toast';
 import { IUsageRecord, ICreateUsageRecord, IUsageFilter } from '@alga-psa/types';
 import { IService } from '@alga-psa/types';
 import { IClient } from '@alga-psa/types';
-import { createUsageRecord, deleteUsageRecord, getUsageRecords, updateUsageRecord } from '../../actions/usageActions';
+import { createUsageRecord, deleteUsageRecord, getEligibleContractLinesForUI, getUsageRecords, updateUsageRecord } from '../../actions/usageActions';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
@@ -176,6 +175,16 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
           newUsage.service_id,
           newUsage.usage_date
         );
+        if (isReturnedActionError(plans)) {
+          setEligibleContractLines([]);
+          setShowContractLineSelector(false);
+          toast({
+            title: t('common.error', { defaultValue: 'Error' }),
+            description: getErrorMessage(plans),
+            variant: "destructive",
+          });
+          return;
+        }
         setEligibleContractLines(plans);
 
         // Always show the contract line selector, but set a default when appropriate
