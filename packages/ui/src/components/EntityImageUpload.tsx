@@ -43,6 +43,19 @@ interface EntityImageUploadProps {
   canModify?: boolean;
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  /**
+   * 'rect' previews the image in a landscape frame instead of the circular
+   * avatar, for slots (wide wordmarks, favicons) that are never cropped round.
+   */
+  previewShape?: 'circle' | 'rect';
+  /** File input `accept` filter; defaults to any image. */
+  accept?: string;
+  /**
+   * Warns — never blocks — when the picked image's aspect ratio does not match
+   * what this slot is for. The caller owns the copy so it stays in its own i18n
+   * namespace.
+   */
+  aspectHint?: { expects: 'square' | 'wide'; warning: string };
   linkDocumentAsAvatar?: (args: {
     entityType: EntityType;
     entityId: string;
@@ -70,6 +83,9 @@ const EntityImageUpload = ({
   canModify = true,
   className,
   size = 'lg',
+  previewShape = 'circle',
+  accept = 'image/*',
+  aspectHint,
   linkDocumentAsAvatar,
   renderDocumentSelector,
 }: EntityImageUploadProps) => {
@@ -113,6 +129,23 @@ const EntityImageUpload = ({
     return true;
   }, [canModify, entityType, userType, userEntityId, entityId]);
 
+  // A wordmark dropped into the square slot (or a square mark into the wide one)
+  // still uploads — the tenant just gets told which slot it belongs in.
+  const warnOnAspectMismatch = async (file: File) => {
+    if (!aspectHint || typeof createImageBitmap !== 'function') return;
+    try {
+      const bitmap = await createImageBitmap(file);
+      const ratio = bitmap.width / bitmap.height;
+      bitmap.close?.();
+      const mismatched = aspectHint.expects === 'wide' ? ratio < 1.5 : ratio > 1.5;
+      if (mismatched) {
+        toast(aspectHint.warning, { icon: '⚠️' });
+      }
+    } catch {
+      // SVGs (and anything the browser refuses to decode) simply skip the hint.
+    }
+  };
+
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -123,6 +156,8 @@ const EntityImageUpload = ({
       e.target.value = '';
       return;
     }
+
+    void warnOnAspectMismatch(file);
 
     // Check file size (2MB limit)
     const maxSize = 2 * 1024 * 1024; // 2MB in bytes
@@ -265,7 +300,22 @@ const EntityImageUpload = ({
   const renderAvatar = () => {
     // Use the preview URL if available, otherwise use the current image URL
     const displayUrl = previewUrl || currentImageUrl;
-    
+
+    if (previewShape === 'rect') {
+      return (
+        <div
+          className="flex h-20 w-56 items-center justify-center overflow-hidden rounded-md border border-dashed border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-2"
+          data-automation-id={`${entityType}-image-rect-preview`}
+        >
+          {displayUrl ? (
+            <img src={displayUrl} alt={entityName} className="max-h-full max-w-full object-contain" />
+          ) : (
+            <span className="text-xs text-[rgb(var(--color-text-400))]">{entityName}</span>
+          )}
+        </div>
+      );
+    }
+
     if (entityType === 'client') {
       return (
         <ClientAvatar
@@ -371,7 +421,7 @@ const EntityImageUpload = ({
 
               <input
                 type="file"
-                accept="image/*"
+                accept={accept}
                 onChange={handleImageUpload}
                 disabled={isPendingUpload || isPendingDelete || isPendingLink}
                 className="hidden"
