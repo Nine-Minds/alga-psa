@@ -1829,7 +1829,9 @@
       "missingField": "Brakuje wymaganego pola interakcji.",
       "missingFieldNamed": "Brakuje wymaganego pola interakcji: {{field}}.",
       "referenceMissing": "Wybrana interakcja, klient, kontakt, użytkownik, status lub typ już nie istnieje. Odśwież stronę i spróbuj ponownie.",
-      "duplicate": "Interakcja o takich danych już istnieje."
+      "duplicate": "Interakcja o takich danych już istnieje.",
+      "scheduleAssignDenied": "Odmowa uprawnień: nie można przypisywać wpisów harmonogramu innym użytkownikom.",
+      "scheduleUsersMissing": "Nie można odnaleźć co najmniej jednego przypisanego użytkownika."
     },
     "interactionType": {
       "notFound": "Nie znaleziono typu interakcji lub nie masz do niego dostępu.",

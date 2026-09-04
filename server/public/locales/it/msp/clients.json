@@ -1777,7 +1777,9 @@
       "missingField": "Manca un campo obbligatorio dell’interazione.",
       "missingFieldNamed": "Manca un campo obbligatorio dell’interazione: {{field}}.",
       "referenceMissing": "L’interazione, il cliente, il contatto, l’utente, lo stato o il tipo selezionati non esistono più. Aggiornare la pagina e riprovare.",
-      "duplicate": "Esiste già un’interazione con questi dati."
+      "duplicate": "Esiste già un’interazione con questi dati.",
+      "scheduleAssignDenied": "Autorizzazione negata: non è possibile assegnare voci di pianificazione ad altri utenti.",
+      "scheduleUsersMissing": "Non è stato possibile trovare uno o più utenti assegnati."
     },
     "interactionType": {
       "notFound": "Tipo di interazione non trovato o non si dispone dell’accesso.",

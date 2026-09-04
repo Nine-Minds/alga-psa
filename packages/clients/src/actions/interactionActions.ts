@@ -15,11 +15,12 @@ import {
   createInteractionWithSideEffects,
   deleteInteractionScheduleEntries,
   publishInteractionSearchEvent,
+  resolveScheduleAssignees,
   syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
 
 import { createTenantKnex } from '@alga-psa/db';
-import { assertMspPermission } from '../lib/authHelpers';
+import { assertMspPermission, hasPermissionAsync } from '../lib/authHelpers';
 import {
   actionError,
   permissionError,
@@ -49,6 +50,13 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
     ) {
       return actionError(error.message);
     }
+    // Raised by ScheduleEntry.create when a requested assignee is not in this tenant.
+    if (/^Users .+ not found/.test(error.message)) {
+      return actionError(
+        'One or more assigned users could not be found.',
+        'msp/clients:errors.interaction.scheduleUsersMissing',
+      );
+    }
   }
 
   const dbError = error as { code?: string; column?: string };
@@ -74,8 +82,10 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
 }
 
 export interface AddInteractionOptions {
-  /** Also place the interaction on the creating user's AlgaPSA calendar. */
+  /** Also place the interaction on an AlgaPSA calendar. */
   createScheduleEntry?: boolean;
+  /** Whose calendar to book. Defaults to the creator; anyone else needs `user_schedule:update`. */
+  scheduleAssignedUserIds?: string[];
 }
 
 export const addInteraction = withAuth(async (
@@ -105,6 +115,19 @@ export const addInteraction = withAuth(async (
       throw new Error('Either client_id or contact_name_id must be provided');
     }
 
+    const scheduleAssignedUserIds = resolveScheduleAssignees(user.user_id, options.scheduleAssignedUserIds);
+    if (options.createScheduleEntry && scheduleAssignedUserIds.some((id) => id !== user.user_id)) {
+      // Same gate addScheduleEntry applies: booking someone else's calendar is an update
+      // of their schedule, not of your own.
+      const canAssignOthers = await hasPermissionAsync(user, 'user_schedule', 'update', db);
+      if (!canAssignOthers) {
+        return permissionError(
+          'Permission denied to assign schedule entries to other users.',
+          'msp/clients:errors.interaction.scheduleAssignDenied',
+        );
+      }
+    }
+
     let publishSideEffects: (() => Promise<void>) | undefined;
     let publishScheduleEntryCreated: (() => Promise<void>) | undefined;
     const newInteraction = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -121,8 +144,7 @@ export const addInteraction = withAuth(async (
           tenant,
           trx,
           interaction: result.interaction,
-          // "Add to my schedule" — the calendar block belongs to whoever logged it.
-          assignedUserIds: [user.user_id],
+          assignedUserIds: scheduleAssignedUserIds,
           assignedByUserId: user.user_id,
         });
         publishScheduleEntryCreated = scheduled?.publishScheduleEntryCreated;

@@ -1777,7 +1777,9 @@
       "missingField": "Missing required interaction field.",
       "missingFieldNamed": "Missing required interaction field: {{field}}.",
       "referenceMissing": "The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.",
-      "duplicate": "An interaction with these details already exists."
+      "duplicate": "An interaction with these details already exists.",
+      "scheduleAssignDenied": "Permission denied to assign schedule entries to other users.",
+      "scheduleUsersMissing": "One or more assigned users could not be found."
     },
     "interactionType": {
       "notFound": "Interaction type not found or you do not have access to it.",

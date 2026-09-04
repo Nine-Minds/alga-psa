@@ -249,6 +249,18 @@ export function resolveInteractionWindow(
   return { start, end: new Date(start.getTime() + minutes * 60000) };
 }
 
+/**
+ * Whose calendar an interaction lands on: the requested users once de-duplicated, or the
+ * creator when nothing was requested. Callers must gate `user_schedule:update` before
+ * booking anyone other than the creator.
+ */
+export function resolveScheduleAssignees(currentUserId: string, requested?: string[] | null): string[] {
+  const unique = Array.from(new Set(
+    (requested ?? []).filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+  ));
+  return unique.length > 0 ? unique : [currentUserId];
+}
+
 export interface CreateInteractionScheduleEntryParams {
   tenant: string;
   trx: Knex.Transaction;

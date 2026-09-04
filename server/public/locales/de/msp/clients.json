@@ -1777,7 +1777,9 @@
       "missingField": "Erforderliches Interaktionsfeld fehlt.",
       "missingFieldNamed": "Erforderliches Interaktionsfeld fehlt: {{field}}.",
       "referenceMissing": "Die ausgewählte Interaktion, der Kunde, Kontakt, Benutzer, Status oder Typ existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
-      "duplicate": "Eine Interaktion mit diesen Angaben existiert bereits."
+      "duplicate": "Eine Interaktion mit diesen Angaben existiert bereits.",
+      "scheduleAssignDenied": "Berechtigung verweigert: Zeitplaneinträge können anderen Benutzern nicht zugewiesen werden.",
+      "scheduleUsersMissing": "Ein oder mehrere zugewiesene Benutzer konnten nicht gefunden werden."
     },
     "interactionType": {
       "notFound": "Interaktionstyp nicht gefunden oder Sie haben keinen Zugriff darauf.",

@@ -1777,7 +1777,9 @@
       "missingField": "Un champ obligatoire de l’interaction est manquant.",
       "missingFieldNamed": "Un champ obligatoire de l’interaction est manquant : {{field}}.",
       "referenceMissing": "L’interaction, le client, le contact, l’utilisateur, le statut ou le type sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
-      "duplicate": "Une interaction avec ces informations existe déjà."
+      "duplicate": "Une interaction avec ces informations existe déjà.",
+      "scheduleAssignDenied": "Autorisation refusée : impossible d’attribuer des entrées de planification à d’autres utilisateurs.",
+      "scheduleUsersMissing": "Un ou plusieurs utilisateurs affectés sont introuvables."
     },
     "interactionType": {
       "notFound": "Type d’interaction introuvable ou vous n’y avez pas accès.",

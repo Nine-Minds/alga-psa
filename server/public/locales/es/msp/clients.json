@@ -1777,7 +1777,9 @@
       "missingField": "Falta un campo obligatorio de la interacción.",
       "missingFieldNamed": "Falta un campo obligatorio de la interacción: {{field}}.",
       "referenceMissing": "La interacción, el cliente, el contacto, el usuario, el estado o el tipo seleccionados ya no existen. Actualice la página e inténtelo de nuevo.",
-      "duplicate": "Ya existe una interacción con estos datos."
+      "duplicate": "Ya existe una interacción con estos datos.",
+      "scheduleAssignDenied": "Permiso denegado: no se pueden asignar entradas de programación a otros usuarios.",
+      "scheduleUsersMissing": "No se pudieron encontrar uno o más usuarios asignados."
     },
     "interactionType": {
       "notFound": "Tipo de interacción no encontrado o no tiene acceso a él.",

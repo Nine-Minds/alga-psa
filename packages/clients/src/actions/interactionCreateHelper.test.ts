@@ -45,6 +45,7 @@ import {
   createInteractionScheduleEntry,
   createInteractionWithSideEffects,
   deleteInteractionScheduleEntries,
+  resolveScheduleAssignees,
   syncInteractionScheduleEntries,
 } from './interactionCreateHelper';
 
@@ -320,6 +321,22 @@ describe('interactionCreateHelper', () => {
     })).rejects.toThrow('No default status found for interactions');
   });
 
+  describe('resolveScheduleAssignees', () => {
+    it('defaults to the creator when nobody was requested', () => {
+      expect(resolveScheduleAssignees('user-1')).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', [])).toEqual(['user-1']);
+      expect(resolveScheduleAssignees('user-1', ['', '  '])).toEqual(['user-1']);
+    });
+
+    it('keeps the requested users, de-duplicated and in order', () => {
+      expect(resolveScheduleAssignees('user-1', ['user-2', 'user-3', 'user-2'])).toEqual(['user-2', 'user-3']);
+    });
+
+    it('does not add the creator to an explicit list', () => {
+      expect(resolveScheduleAssignees('user-1', ['user-2'])).toEqual(['user-2']);
+    });
+  });
+
   describe('schedule entries', () => {
     const interaction = {
       interaction_id: 'interaction-1',
@@ -362,6 +379,23 @@ describe('interactionCreateHelper', () => {
           entryId: 'schedule-entry-1',
         }),
       }));
+    });
+
+    it('books every requested assignee, not just the creator', async () => {
+      await createInteractionScheduleEntry({
+        tenant: 'tenant-1',
+        trx: {} as any,
+        interaction,
+        assignedUserIds: ['user-2', 'user-3'],
+        assignedByUserId: 'user-1',
+      });
+
+      expect(hoisted.scheduleEntryCreateMock).toHaveBeenCalledWith(
+        expect.anything(),
+        'tenant-1',
+        expect.objectContaining({ assigned_user_ids: ['user-2', 'user-3'] }),
+        { assignedUserIds: ['user-2', 'user-3'], assignedByUserId: 'user-1' },
+      );
     });
 
     it('derives an end time from the duration when the interaction has none', async () => {

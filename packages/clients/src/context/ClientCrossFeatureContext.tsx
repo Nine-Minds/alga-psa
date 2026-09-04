@@ -110,8 +110,10 @@ export interface ScheduleTeamsMeetingFromClientInput {
   client_id?: string | null;
   contact_name_id?: string | null;
   attendees?: Array<{ emailAddress: string; name?: string }>;
-  /** Also place the meeting on the creator's AlgaPSA calendar. */
+  /** Also place the meeting on an AlgaPSA calendar. */
   createScheduleEntry?: boolean;
+  /** Whose AlgaPSA calendar to book — distinct from the Teams invitees. Defaults to the creator. */
+  scheduleAssignedUserIds?: string[];
 }
 
 export interface ScheduleTeamsMeetingFromClientResult {
