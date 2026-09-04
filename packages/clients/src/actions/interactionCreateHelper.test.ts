@@ -335,6 +335,10 @@ describe('interactionCreateHelper', () => {
     it('does not add the creator to an explicit list', () => {
       expect(resolveScheduleAssignees('user-1', ['user-2'])).toEqual(['user-2']);
     });
+
+    it('trims the ids it hands to the schedule', () => {
+      expect(resolveScheduleAssignees('user-1', [' user-2 ', 'user-2'])).toEqual(['user-2']);
+    });
   });
 
   describe('schedule entries', () => {

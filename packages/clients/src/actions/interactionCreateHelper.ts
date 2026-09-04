@@ -256,7 +256,9 @@ export function resolveInteractionWindow(
  */
 export function resolveScheduleAssignees(currentUserId: string, requested?: string[] | null): string[] {
   const unique = Array.from(new Set(
-    (requested ?? []).filter((id): id is string => typeof id === 'string' && id.trim().length > 0),
+    (requested ?? [])
+      .map((id) => (typeof id === 'string' ? id.trim() : ''))
+      .filter((id) => id.length > 0),
   ));
   return unique.length > 0 ? unique : [currentUserId];
 }
