@@ -2,6 +2,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import {
   actionError,
   isActionMessageError,
@@ -34,6 +35,13 @@ import {
   type RecurringBillingRunResult,
   type RecurringBillingRunTarget,
 } from './recurringBillingRunActions.shared';
+import {
+  evaluateCalendarMonthEndEarlyCloseEligibility,
+  type CalendarMonthEndCloseEligibilityReason,
+} from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
+import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import type { IRecurringDueSelectionInput } from '@alga-psa/types';
+import type { Knex } from 'knex';
 
 export type {
   HandledRecurringFailureCode,
@@ -370,6 +378,219 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
 
     throw fatalError;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Calendar month-end arrears manual close
+// ---------------------------------------------------------------------------
+
+const MONTH_END_CLOSE_NOT_ELIGIBLE_KEY = 'msp/billing:errors.recurringRun.monthEndCloseNotEligible';
+const MONTH_END_CLOSE_NOT_MATERIALIZED_KEY =
+  'msp/billing:errors.recurringRun.monthEndCloseNotMaterialized';
+const MONTH_END_CLOSE_REASON_LABELS: Record<CalendarMonthEndCloseEligibilityReason, string> = {
+  eligible: 'eligible',
+  not_arrears: 'the period is not billed in arrears',
+  not_client_cadence: 'the period is not a client schedule period',
+  not_calendar_month_period: 'the service period is not a full calendar month',
+  window_does_not_open_next_day: 'the invoice window does not open the day after the period',
+  not_final_calendar_day: 'today is not the final calendar day of the service period',
+};
+
+function normalizeWindowDate(value: unknown): string {
+  return String(value).slice(0, 10);
+}
+
+function monthEndClosePeriodLabel(servicePeriodStart: string, servicePeriodEnd: string): string {
+  return `${servicePeriodStart} to ${servicePeriodEnd}`;
+}
+
+async function fetchClientCadenceServicePeriodForMonthEndClose(params: {
+  knex: Knex;
+  tenant: string;
+  selectorInput: IRecurringDueSelectionInput;
+}): Promise<{
+  service_period_start: string;
+  service_period_end: string;
+  invoice_window_start: string;
+  due_position: 'arrears' | 'advance';
+} | null> {
+  const executionWindow = params.selectorInput.executionWindow;
+  if (executionWindow.kind !== 'client_cadence_window') {
+    return null;
+  }
+
+  const db = tenantDb(params.knex, params.tenant);
+  return db.table('recurring_service_periods as rsp')
+    .where({
+      'rsp.cadence_owner': 'client',
+      'rsp.schedule_key': executionWindow.scheduleKey ?? null,
+      'rsp.period_key': executionWindow.periodKey ?? null,
+      'rsp.invoice_window_start': normalizeWindowDate(params.selectorInput.windowStart),
+      'rsp.invoice_window_end': normalizeWindowDate(params.selectorInput.windowEnd),
+    })
+    .whereIn('rsp.obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
+    .whereNotIn('rsp.lifecycle_state', ['archived', 'superseded'])
+    .orderBy('rsp.service_period_start', 'asc')
+    .orderBy('rsp.revision', 'asc')
+    .first(
+      'rsp.service_period_start',
+      'rsp.service_period_end',
+      'rsp.invoice_window_start',
+      'rsp.due_position',
+    );
+}
+
+function monthEndCloseEligibilityErrorMessage(params: {
+  reason: CalendarMonthEndCloseEligibilityReason;
+  servicePeriodLabel: string;
+  finalCalendarDay: string;
+}): string {
+  const { reason, servicePeriodLabel, finalCalendarDay } = params;
+  if (reason === 'not_final_calendar_day') {
+    return (
+      `The ${servicePeriodLabel} period can only be closed at month end on ${finalCalendarDay}. ` +
+      'It is not the final calendar day yet, so the invoice window must open normally.'
+    );
+  }
+  return (
+    `The ${servicePeriodLabel} period cannot be closed at month end ` +
+    `(${MONTH_END_CLOSE_REASON_LABELS[reason]}). Only calendar-month arrears service ` +
+    'periods can be closed early on their final calendar day.'
+  );
+}
+
+/**
+ * Manual month-end arrears close.
+ *
+ * Lets a billing administrator generate a true calendar-month arrears invoice
+ * on the FINAL calendar day of the service period instead of waiting for the
+ * 1st of the next month. This is an explicit manual exception: every target is
+ * re-validated server-side against the same shared month-end policy used to
+ * surface candidates, in the account's effective billing timezone, so a direct
+ * server-action invocation on any other day (or for any non-eligible period) is
+ * rejected before generation is attempted. Generation itself keeps the normal
+ * guards: approvals must be satisfied and an already-invoiced period is refused
+ * as a duplicate.
+ *
+ * Automatic/scheduled generation is unaffected — it never calls this action and
+ * its own window-open eligibility rules are untouched.
+ */
+export async function generateCalendarMonthEndCloseInvoices(params: {
+  groupedTargets?: RecurringBillingRunGroupedTarget[];
+  allowPoOverage?: boolean;
+}): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
+  const currentUser = await getCurrentUserAsync();
+  if (!currentUser) {
+    return localizeActionError(permissionError('Unauthorized: No authenticated user found', 'msp/billing:errors.context.notAuthenticated'));
+  }
+
+  if (!await hasPermissionAsync(currentUser, 'invoice', 'create') && !await hasPermissionAsync(currentUser, 'invoice', 'generate')) {
+    return localizeActionError(permissionError('Permission denied: invoice create or generate required', 'msp/billing:errors.recurringRun.invoicePermission'));
+  }
+
+  const groupedTargets = normalizeRecurringBillingRunGroupedTargets(params);
+  if (groupedTargets.length === 0) {
+    return localizeActionError(actionError('Select at least one recurring billing period to generate.', 'msp/billing:errors.recurringRun.selectPeriods'));
+  }
+
+  const tenantId = currentUser.tenant;
+  const { knex } = await createTenantKnex();
+  const effectiveTimeZone = await resolveEffectiveTimeZone(knex, tenantId);
+  const now = new Date();
+
+  // Server-side revalidation: the UI convenience flag is not the policy.
+  for (const group of groupedTargets) {
+    for (const selectorInput of group.selectorInputs) {
+      const row = await fetchClientCadenceServicePeriodForMonthEndClose({
+        knex,
+        tenant: tenantId,
+        selectorInput,
+      });
+      if (!row) {
+        return localizeActionError(actionError(
+          'Recurring service periods were not materialized for this recurring execution window.',
+          MONTH_END_CLOSE_NOT_MATERIALIZED_KEY,
+        ));
+      }
+      const servicePeriodStart = normalizeWindowDate(row.service_period_start);
+      const servicePeriodEnd = normalizeWindowDate(row.service_period_end);
+      const evaluation = evaluateCalendarMonthEndEarlyCloseEligibility({
+        duePosition: row.due_position,
+        cadenceSource: 'client_schedule',
+        servicePeriodStart,
+        servicePeriodEnd,
+        invoiceWindowStart: normalizeWindowDate(row.invoice_window_start),
+        asOf: now,
+        timeZone: effectiveTimeZone,
+      });
+      if (!evaluation.eligible) {
+        const servicePeriodLabel = monthEndClosePeriodLabel(servicePeriodStart, servicePeriodEnd);
+        return localizeActionError(actionError(
+          monthEndCloseEligibilityErrorMessage({
+            reason: evaluation.reason,
+            servicePeriodLabel,
+            finalCalendarDay: evaluation.finalCalendarDay,
+          }),
+          MONTH_END_CLOSE_NOT_ELIGIBLE_KEY,
+          { reason: evaluation.reason, servicePeriod: servicePeriodLabel, finalCalendarDay: evaluation.finalCalendarDay },
+        ));
+      }
+    }
+  }
+
+  const flattenedExecutionWindows = groupedTargets.flatMap((group) =>
+    group.selectorInputs.map((selectorInput) => selectorInput.executionWindow),
+  );
+  const selectionIdentity = buildRecurringRunSelectionIdentity(flattenedExecutionWindows);
+  const runId = uuidv4();
+  let invoicesCreated = 0;
+
+  for (const group of groupedTargets) {
+    try {
+      const invoice = group.billingCycleId
+        ? await generateInvoiceForSelectionInputs(
+            group.selectorInputs,
+            { allowPoOverage: params.allowPoOverage },
+            { billingCycleId: group.billingCycleId },
+          )
+        : await generateInvoiceForSelectionInputs(group.selectorInputs, {
+            allowPoOverage: params.allowPoOverage,
+          });
+
+      // The duplicate guard refuses an already-invoiced period; unlike the
+      // scheduled run (which treats "already done" as a benign no-op) the
+      // manual close surfaces it so the operator knows nothing was generated.
+      if (isRecurringBillingRunActionError(invoice)) {
+        return localizeActionError(invoice);
+      }
+      if (invoice) {
+        invoicesCreated += 1;
+      }
+    } catch (err) {
+      if (isDuplicateRecurringInvoiceError(err)) {
+        return localizeActionError(actionError(
+          'Invoice already exists for this recurring execution window.',
+          DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
+        ));
+      }
+      console.error('[billing.calendarMonthEndClose.invoiceFailure]', {
+        event: 'billing.calendarMonthEndClose.invoiceFailure',
+        runId,
+        tenantId,
+        error: err instanceof Error ? { name: err.name, message: err.message } : { name: 'Unknown', message: String(err) },
+      });
+      throw err;
+    }
+  }
+
+  return {
+    runId,
+    selectionKey: selectionIdentity.selectionKey,
+    retryKey: selectionIdentity.retryKey,
+    invoicesCreated,
+    failedCount: 0,
+    failures: [],
+  };
 }
 
 export async function generateGroupedInvoicesAsRecurringBillingRun(params: {

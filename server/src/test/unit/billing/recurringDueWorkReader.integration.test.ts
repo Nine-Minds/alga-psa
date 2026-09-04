@@ -588,6 +588,83 @@ describe('recurring due-work reader', () => {
     });
   });
 
+  it('T-EC1: client-arrears calendar-month candidates surface month-end-close eligibility only on the final calendar day', async () => {
+    mocks.rowsByTable.recurring_service_periods = [
+      {
+        tenant: 'tenant-1',
+        record_id: 'rsp-client-arrears-1',
+        schedule_key: 'schedule:tenant-1:client_contract_line:assignment-3:client:arrears',
+        period_key: 'period:2025-03-01:2025-04-01',
+        lifecycle_state: 'generated',
+        cadence_owner: 'client',
+        obligation_type: 'client_contract_line',
+        due_position: 'arrears',
+        service_period_start: '2025-03-01',
+        service_period_end: '2025-04-01',
+        invoice_window_start: '2025-04-01',
+        invoice_window_end: '2025-05-01',
+        invoice_charge_detail_id: null,
+        client_id: 'client-3',
+        client_name: 'Wonder Co',
+        billing_cycle_id: null,
+        contract_id: 'contract-3',
+        contract_name: 'Wonder Retainer',
+        contract_line_id: 'assignment-3',
+        contract_line_name: 'Wonder Fixed Fee',
+      },
+    ];
+
+    const finalDay = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-03-31' },
+    });
+    const monthEndCandidate = finalDay.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    // 2025-03-31 is the last calendar day of the March service period
+    // ([2025-03-01, 2025-04-01)) whose invoice window opens 2025-04-01.
+    expect(monthEndCandidate).toMatchObject({
+      servicePeriodStart: '2025-03-01',
+      servicePeriodEnd: '2025-04-01',
+      windowStart: '2025-04-01',
+      canGenerate: false,
+      notYetDue: true,
+      availableOnDate: '2025-04-01',
+      monthEndCloseEligible: true,
+    });
+
+    const dayBefore = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-03-30' },
+    });
+    const beforeCandidate = dayBefore.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    expect(beforeCandidate).toMatchObject({
+      notYetDue: true,
+      canGenerate: false,
+      monthEndCloseEligible: false,
+    });
+
+    const windowOpened = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-04-01' },
+    });
+    const openCandidate = windowOpened.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    // Once the window opens, the ordinary generation path applies — the
+    // manual month-end exception is no longer offered.
+    expect(openCandidate).toMatchObject({
+      notYetDue: false,
+      canGenerate: true,
+      monthEndCloseEligible: false,
+    });
+  });
+
   it('T118: client-arrears materialization gaps align to the following invoice window instead of inventing a same-period repair gap', async () => {
     mocks.rowsByTable.client_billing_cycles = [
       {

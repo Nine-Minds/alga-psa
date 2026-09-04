@@ -666,7 +666,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Wählen Sie mindestens einen wiederkehrenden Abrechnungszeitraum zum Generieren aus.",
-      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich"
+      "invoicePermission": "Berechtigung verweigert: Berechtigung zum Erstellen oder Generieren von Rechnungen erforderlich",
+      "monthEndCloseNotMaterialized": "Recurring service periods were not materialized for this recurring execution window.",
+      "monthEndCloseNotEligible": "The {{servicePeriod}} period can only be closed at month end on {{finalCalendarDay}}. Only calendar-month arrears service periods can be closed early on their final calendar day."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Zum Prüfen wiederkehrender Serviceperioden ist ein Zeitplanschlüssel erforderlich.",

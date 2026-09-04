@@ -470,6 +470,10 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     recurringBillingRunActions,
     'generateInvoicesAsRecurringBillingRun',
   );
+  const generateCalendarMonthEndCloseInvoicesMock = vi.spyOn(
+    recurringBillingRunActions,
+    'generateCalendarMonthEndCloseInvoices',
+  );
   const reverseRecurringInvoiceMock = vi.spyOn(
     billingCycleActions,
     'reverseRecurringInvoice',
@@ -638,6 +642,14 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       failedCount: 0,
       failures: [],
     });
+    generateCalendarMonthEndCloseInvoicesMock.mockResolvedValue({
+      runId: 'month-end-run-1',
+      selectionKey: 'month-end-selection-1',
+      retryKey: 'month-end-retry-1',
+      invoicesCreated: 1,
+      failedCount: 0,
+      failures: [],
+    });
     repairAllRecurringServicePeriodsForTenantMock.mockResolvedValue({
       clientsScanned: 0,
       clientsRepaired: 0,
@@ -664,6 +676,61 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     expect(await screen.findByText('Zenith Health')).toBeInTheDocument();
     expect(getAvailableBillingPeriodsMock).not.toHaveBeenCalled();
+  });
+
+  it('T-EC1: a month-end-eligible not-yet-due group offers the early-close action with an omission warning and confirms through the dedicated action', async () => {
+    const clientRow = {
+      ...createClientRow(),
+      duePosition: 'arrears' as const,
+      servicePeriodStart: '2025-03-01',
+      servicePeriodEnd: '2025-04-01',
+      invoiceWindowStart: '2025-04-01',
+      invoiceWindowEnd: '2025-05-01',
+      canGenerate: false,
+      isEarly: true,
+    };
+    const candidate = {
+      ...buildInvoiceCandidate([clientRow], { candidateKey: 'candidate-month-end' }),
+      canGenerate: false,
+      notYetDue: true,
+      availableOnDate: '2025-04-01',
+      monthEndCloseEligible: true,
+    };
+    getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
+      invoiceCandidates: [candidate],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    const onGenerateSuccess = vi.fn();
+    render(<AutomaticInvoices onGenerateSuccess={onGenerateSuccess} />);
+
+    const action = await screen.findByRole('button', { name: 'Generate month-end invoice' });
+    expect(action).toBeInTheDocument();
+
+    fireEvent.click(action);
+
+    // The omission warning must be explicit before anything generates.
+    expect(await screen.findByTestId('calendar-month-end-close-warning')).toBeInTheDocument();
+    expect(screen.getByText(/will NOT be included on the invoice/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate at month end' }));
+
+    await waitFor(() => {
+      expect(generateCalendarMonthEndCloseInvoicesMock).toHaveBeenCalledWith({
+        groupedTargets: [
+          {
+            groupKey: 'candidate-month-end',
+            selectorInputs: [clientRow.selectorInput],
+            billingCycleId: 'cycle-2025-03',
+          },
+        ],
+      });
+    });
+    expect(onGenerateSuccess).toHaveBeenCalled();
   });
 
   it('handles an empty recurring due-work and history page', async () => {

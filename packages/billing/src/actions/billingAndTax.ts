@@ -31,6 +31,7 @@ import {
     buildRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
 import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
+import { evaluateCalendarMonthEndEarlyCloseEligibility } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
 import {
     buildClientCadenceDueSelectionInput,
     buildContractCadenceDueSelectionInput,
@@ -1226,6 +1227,7 @@ async function attachFixedContractLineAmountsToRows(
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
+    asOf?: ISO8601String,
 ): IRecurringDueWorkInvoiceCandidate[] {
     if (rows.length === 0) {
         return [];
@@ -1328,6 +1330,21 @@ function buildRecurringDueWorkInvoiceCandidates(
             const availableOnDate = notYetDue
                 ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
                 : null;
+            // Month-end early close: every member is a calendar-month arrears
+            // period whose final calendar day is the listing's as-of date. This
+            // mirrors (and must stay in lock-step with) the server-side policy
+            // re-validation the generation action runs.
+            const asOfDate = asOf ? String(asOf).slice(0, 10) : undefined;
+            const monthEndCloseEligible = members.length > 0 && members.every((member) =>
+                evaluateCalendarMonthEndEarlyCloseEligibility({
+                    duePosition: member.duePosition,
+                    cadenceSource: member.cadenceSource,
+                    servicePeriodStart: member.servicePeriodStart,
+                    servicePeriodEnd: member.servicePeriodEnd,
+                    invoiceWindowStart: member.invoiceWindowStart,
+                    asOfDate,
+                }).eligible,
+            );
             const explicitContractCount = members.filter(
                 (member) => member.attribution?.source === 'explicit_contract',
             ).length;
@@ -1371,6 +1388,7 @@ function buildRecurringDueWorkInvoiceCandidates(
                 canGenerate,
                 notYetDue,
                 availableOnDate,
+                monthEndCloseEligible,
                 blockedReason: canGenerate || notYetDue
                     ? null
                     : 'One or more included obligations are not eligible for generation.',
@@ -1461,6 +1479,7 @@ function applyClientCadenceMaterializationGapBlocks(
             canGenerate: false,
             notYetDue: false,
             availableOnDate: null,
+            monthEndCloseEligible: false,
             blockedReason:
                 'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
         };
@@ -1522,6 +1541,7 @@ function applyRecurringApprovalBlocksToInvoiceCandidates(
             canGenerate: false,
             notYetDue: false,
             availableOnDate: null,
+            monthEndCloseEligible: false,
             blockedReason: formatApprovalBlockedReason(approvalBlockedEntryCount),
             approvalBlockedEntryCount,
             hasApprovalBlockers: true,
@@ -1864,6 +1884,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
             [...readyPersistedRows, ...unresolvedNonContractRows],
             groupingMetadataByRecordId,
+            asOf,
         );
         const blockedInvoiceCandidates = applyClientCadenceMaterializationGapBlocks(
             invoiceCandidates,

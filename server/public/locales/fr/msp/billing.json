@@ -666,7 +666,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Sélectionnez au moins une période de facturation récurrente à générer.",
-      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise"
+      "invoicePermission": "Autorisation refusée : autorisation de création ou de génération de factures requise",
+      "monthEndCloseNotMaterialized": "Recurring service periods were not materialized for this recurring execution window.",
+      "monthEndCloseNotEligible": "The {{servicePeriod}} period can only be closed at month end on {{finalCalendarDay}}. Only calendar-month arrears service periods can be closed early on their final calendar day."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Une clé de planning est requise pour inspecter les périodes de service récurrentes.",

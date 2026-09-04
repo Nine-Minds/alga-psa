@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Generate month-end invoice",
+      "title": "Close {{servicePeriod}} at month end?",
+      "warning": "This invoices {{servicePeriod}} on its final calendar day. Time or usage entries recorded after this close will not be included, so only close the period once its work is fully recorded.",
+      "confirm": "Generate at month end",
+      "omissionWarning": "Time or usage entries recorded after this close will NOT be included on the invoice.",
+      "generationFailed": "Could not generate the month-end invoice. Please try again."
+    },
     "ready": {
       "title": "Gotowy do wystawienia faktury",
       "description": "Przeglądaj powtarzające się terminy prac i generuj wersje robocze faktur za wybrane okresy.",
