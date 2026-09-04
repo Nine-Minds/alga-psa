@@ -3,6 +3,15 @@
 import { randomBytes, createHmac } from "node:crypto";
 import { auth } from "server/src/app/api/auth/[...nextauth]/auth";
 import { authenticateUser } from "@alga-psa/auth/actions/auth";
+import {
+  MSP_SSO_RESOLUTION_COOKIE,
+  MSP_SSO_RESOLUTION_TTL_SECONDS,
+  createSignedMspSsoResolutionCookie,
+  getMspSsoSigningSecret,
+  hasAppFallbackProviderCredentials,
+  hasTenantProviderCredentials,
+  parseResolverProvider,
+} from "@alga-psa/auth/lib/sso/mspSsoResolution";
 import { TIER_FEATURES } from "@alga-psa/types";
 import { verifyAuthenticator } from "server/src/utils/authenticator/authenticator";
 import logger from "@alga-psa/core/logger";
@@ -28,6 +37,11 @@ interface AuthorizeSsoLinkingResult {
 interface LinkNoncePayload {
   nonce: string;
   userId: string;
+}
+
+interface PrepareSsoLinkResolutionResult {
+  success: boolean;
+  error?: string;
 }
 
 const LINK_TTL_SECONDS = 5 * 60; // 5 minutes
@@ -71,6 +85,82 @@ async function persistLinkStateCookie(payload: { userId: string; nonce: string; 
   } catch (error) {
     logger.warn("[connect-sso] failed to persist link state cookie", { error });
   }
+}
+
+// Self-service linking already knows the tenant from the session, so it selects the
+// credential source directly instead of replaying the sign-in page's anonymous domain
+// discovery (which needs a claimed login domain). Appliances configure Microsoft through
+// the tenant provider profile only; without this cookie `getOAuthSecrets` never registers
+// azure-ad and the redirect has no provider to start.
+export async function prepareSsoLinkResolutionAction(
+  providerId: string
+): Promise<PrepareSsoLinkResolutionResult> {
+  await assertTierAccess(TIER_FEATURES.SSO);
+
+  const provider = parseResolverProvider(providerId);
+  if (!provider) {
+    return { success: false };
+  }
+
+  const session = await auth();
+  if (!session?.user?.id) {
+    return {
+      success: false,
+      error: "You must be signed in to link single sign-on providers.",
+    };
+  }
+
+  const { user: currentUser, tenant } = await ensureSsoSettingsPermission();
+  if (currentUser.user_id !== session.user.id) {
+    logger.warn("[connect-sso] Session user mismatch while preparing SSO link", {
+      sessionUserId: session.user.id,
+      currentUserId: currentUser.user_id,
+    });
+    return {
+      success: false,
+      error: "Your session is out of date. Please sign in again.",
+    };
+  }
+
+  const signingSecret = await getMspSsoSigningSecret();
+  if (!signingSecret) {
+    logger.warn("[connect-sso] NEXTAUTH_SECRET is not configured; cannot issue resolution cookie");
+    return { success: false };
+  }
+
+  const tenantReady = Boolean(tenant) && (await hasTenantProviderCredentials(tenant, provider));
+  const source = tenantReady
+    ? "tenant"
+    : (await hasAppFallbackProviderCredentials(provider))
+      ? "app"
+      : null;
+
+  if (!source) {
+    logger.info("[connect-sso] no available credential source for SSO linking", { provider });
+    return { success: false };
+  }
+
+  const cookie = createSignedMspSsoResolutionCookie({
+    provider,
+    source,
+    tenantId: source === "tenant" ? tenant : undefined,
+    userId: currentUser.user_id.toString(),
+    secret: signingSecret,
+    ttlSeconds: MSP_SSO_RESOLUTION_TTL_SECONDS,
+  });
+
+  const store = await cookies();
+  store.set({
+    name: MSP_SSO_RESOLUTION_COOKIE,
+    value: cookie.value,
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: MSP_SSO_RESOLUTION_TTL_SECONDS,
+  });
+
+  return { success: true };
 }
 
 export async function authorizeSsoLinkingAction(
