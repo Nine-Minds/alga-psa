@@ -1290,11 +1290,11 @@
         "canonicalHostFallback": "kanonischer Host"
       },
       "appliance": {
-        "helpText": "Richten Sie diesen Hostnamen auf Ihre Appliance aus und lassen Sie Ihren Reverse-Proxy den ursprünglichen Host-Header weiterleiten, bevor Sie speichern.",
+        "helpText": "Richten Sie diesen Hostnamen auf Ihren Server aus und lassen Sie Ihren Reverse-Proxy den ursprünglichen Host-Header weiterleiten, bevor Sie speichern.",
         "checklistTitle": "Reverse-Proxy-Einrichtung",
         "step1Prefix": "Richten Sie ",
-        "step1Suffix": " auf diese Appliance aus (ein A-Record auf ihre Adresse oder ein CNAME auf Ihren Appliance-Host).",
-        "step2": "Terminieren Sie auf Ihrem Reverse-Proxy TLS für die Domain und leiten Sie an diese Appliance auf Port 3000 weiter, wobei der ursprüngliche Host-Header erhalten bleibt (z. B. proxy_set_header Host $host) und X-Forwarded-Proto: https gesendet wird.",
+        "step1Suffix": " auf diesen Server aus (ein A-Record auf seine Adresse oder ein CNAME auf den Hostnamen Ihres Servers).",
+        "step2": "Terminieren Sie auf Ihrem Reverse-Proxy TLS für die Domain und leiten Sie an diesen Server auf Port 3000 weiter, wobei der ursprüngliche Host-Header erhalten bleibt (z. B. proxy_set_header Host $host) und X-Forwarded-Proto: https gesendet wird.",
         "step3": "Beschaffen und pflegen Sie das TLS-Zertifikat für die Domain auf Ihrem Proxy.",
         "step4": "Speichern Sie die Domain hier — sie wird sofort aktiviert. Richten Sie zuerst DNS und Ihren Proxy ein, da Portal-Links sofort auf diese Domain umgestellt werden.",
         "docLinkText": "Anleitung zur Reverse-Proxy-Einrichtung und Fehlerbehebung",
@@ -3258,7 +3258,7 @@
       "needsDot": "Die Domain muss mindestens einen Punkt enthalten.",
       "notCanonicalHost": "Bitte wählen Sie eine andere Domain als den kanonischen Host.",
       "noLeadingTrailingDot": "Die Domain darf nicht mit einem Punkt beginnen oder enden.",
-      "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieser Appliance. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
+      "notApplianceHost": "Wählen Sie eine andere Domain als den primären Host dieses Servers. Die eigene Portal-Domain muss ein anderer Hostname sein, den Ihr Reverse-Proxy hierher weiterleitet.",
       "nothingToRetry": "Es gibt keine fehlgeschlagene Registrierung einer eigenen Domain, die wiederholt werden könnte.",
       "retryOnlyAfterFailure": "Ein erneuter Versuch ist nur nach einer fehlgeschlagenen Registrierung möglich."
     }

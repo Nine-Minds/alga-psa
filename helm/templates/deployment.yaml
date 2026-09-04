@@ -194,6 +194,10 @@ spec:
           # trusted X-Forwarded-Host). Defaults to "hosted"; the appliance sets "appliance".
           - name: DEPLOYMENT_PROFILE
             value: "{{ .Values.deploymentProfile | default "hosted" }}"
+          # Trust X-Forwarded-Host from the reverse proxy without adopting the
+          # appliance profile (self-hosted behind a Host-rewriting proxy).
+          - name: TRUST_FORWARDED_HOST
+            value: "{{ .Values.trustForwardedHost | default false }}"
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"

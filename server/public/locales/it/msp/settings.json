@@ -1290,11 +1290,11 @@
         "canonicalHostFallback": "host canonico"
       },
       "appliance": {
-        "helpText": "Punta questo nome host alla tua appliance e fai in modo che il tuo reverse proxy inoltri l'header Host originale prima di salvare.",
+        "helpText": "Punta questo nome host al tuo server e fai in modo che il tuo reverse proxy inoltri l'header Host originale prima di salvare.",
         "checklistTitle": "Configurazione del reverse proxy",
         "step1Prefix": "Punta ",
-        "step1Suffix": " a questa appliance (un record A al suo indirizzo o un CNAME al tuo host appliance).",
-        "step2": "Sul tuo reverse proxy, termina TLS per il dominio e inoltra a questa appliance sulla porta 3000, preservando l'header Host originale (es. proxy_set_header Host $host) e inviando X-Forwarded-Proto: https.",
+        "step1Suffix": " a questo server (un record A al suo indirizzo o un CNAME al nome host del tuo server).",
+        "step2": "Sul tuo reverse proxy, termina TLS per il dominio e inoltra a questo server sulla porta 3000, preservando l'header Host originale (es. proxy_set_header Host $host) e inviando X-Forwarded-Proto: https.",
         "step3": "Ottieni e mantieni il certificato TLS per il dominio sul tuo proxy.",
         "step4": "Salva il dominio qui — si attiva immediatamente. Configura prima il DNS e il tuo proxy, poiché i link del portale passano subito a questo dominio.",
         "docLinkText": "Guida alla configurazione e risoluzione dei problemi del reverse proxy",
@@ -3258,7 +3258,7 @@
       "needsDot": "Il dominio deve contenere almeno un punto.",
       "notCanonicalHost": "Scegli un dominio diverso dall'host canonico.",
       "noLeadingTrailingDot": "Il dominio non può iniziare o terminare con un punto.",
-      "notApplianceHost": "Scegli un dominio diverso dall'host principale di questa appliance. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
+      "notApplianceHost": "Scegli un dominio diverso dall'host principale di questo server. Il dominio personalizzato del portale deve essere un altro nome host che il tuo reverse proxy inoltra qui.",
       "nothingToRetry": "Non c'è alcuna registrazione di dominio personalizzato non riuscita da ritentare.",
       "retryOnlyAfterFailure": "Il nuovo tentativo è disponibile solo dopo una registrazione non riuscita."
     }

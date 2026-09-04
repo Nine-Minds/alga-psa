@@ -1290,11 +1290,11 @@
         "canonicalHostFallback": "host canónico"
       },
       "appliance": {
-        "helpText": "Apunte este nombre de host a su appliance y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
+        "helpText": "Apunte este nombre de host a su servidor y haga que su proxy inverso reenvíe el encabezado Host original antes de guardar.",
         "checklistTitle": "Configuración del proxy inverso",
         "step1Prefix": "Apunte ",
-        "step1Suffix": " a este appliance (un registro A a su dirección o un CNAME a su host de appliance).",
-        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este appliance en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
+        "step1Suffix": " a este servidor (un registro A a su dirección o un CNAME al nombre de host de su servidor).",
+        "step2": "En su proxy inverso, termine TLS para el dominio y reenvíe a este servidor en el puerto 3000, preservando el encabezado Host original (p. ej. proxy_set_header Host $host) y enviando X-Forwarded-Proto: https.",
         "step3": "Obtenga y mantenga el certificado TLS para el dominio en su proxy.",
         "step4": "Guarde el dominio aquí — se activa de inmediato. Configure primero el DNS y su proxy, ya que los enlaces del portal cambian a este dominio de inmediato.",
         "docLinkText": "Guía de configuración y resolución de problemas del proxy inverso",
@@ -3258,7 +3258,7 @@
       "needsDot": "El dominio debe incluir al menos un punto.",
       "notCanonicalHost": "Elija un dominio distinto del host canónico.",
       "noLeadingTrailingDot": "El dominio no puede empezar ni terminar con un punto.",
-      "notApplianceHost": "Elija un dominio distinto del host principal de este dispositivo. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
+      "notApplianceHost": "Elija un dominio distinto del host principal de este servidor. El dominio personalizado del portal debe ser otro nombre de host que su proxy inverso reenvíe aquí.",
       "nothingToRetry": "No hay ningún registro de dominio personalizado fallido que reintentar.",
       "retryOnlyAfterFailure": "El reintento solo está disponible después de un registro fallido."
     }
