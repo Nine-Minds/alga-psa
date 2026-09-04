@@ -260,7 +260,7 @@ describe('tenantCreationWorkflow trial reminder scheduling', () => {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue,
-      workflowsPath: path.resolve(__dirname, './fixtures/tenant-creation-with-reminder.workflows.ts'),
+      workflowsPath: path.resolve(__dirname, '../../test-utils/tenant-creation-with-reminder.workflows.ts'),
       activities,
     });
 
@@ -320,7 +320,7 @@ describe('tenantCreationWorkflow trial reminder scheduling', () => {
     const worker = await Worker.create({
       connection: env.nativeConnection,
       taskQueue,
-      workflowsPath: path.resolve(__dirname, './fixtures/tenant-creation-with-reminder.workflows.ts'),
+      workflowsPath: path.resolve(__dirname, '../../test-utils/tenant-creation-with-reminder.workflows.ts'),
       activities,
     });
 
