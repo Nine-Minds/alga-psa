@@ -36,6 +36,31 @@ export interface FixedPlanServiceRow {
   service_base_rate: number | string | null;
   enable_proration?: boolean | null;
   quantity?: number | string | null;
+  /**
+   * Explicit pricing basis of the member's fixed configuration:
+   * 'unit' (recurring seat: quantity × base_rate) or 'bundle'/NULL (existing
+   * fixed-bundle semantics where the line total is authoritative).
+   */
+  pricing_basis?: 'unit' | 'bundle' | string | null;
+}
+
+/**
+ * A Fixed line is unit-priced when every fixed-config member is either
+ * explicitly 'unit' or unset, and at least one member is explicitly 'unit'.
+ * Pure legacy lines (all unset) stay bundle; the predicate only fires when an
+ * author explicitly opted a member into seat pricing.
+ */
+export function isUnitPricedFixedLine(planServices: FixedPlanServiceRow[]): boolean {
+  return (
+    planServices.length > 0 &&
+    planServices.every(
+      (service) =>
+        service.pricing_basis === undefined ||
+        service.pricing_basis === null ||
+        service.pricing_basis === "unit",
+    ) &&
+    planServices.some((service) => service.pricing_basis === "unit")
+  );
 }
 
 export interface FixedFallbackServiceRow {
@@ -385,6 +410,129 @@ export function computeFixedCharges(
     effectiveCustomRate !== undefined &&
     (planLevelBaseRateCents === null ||
       Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
+
+  // --- Explicit unit-priced Fixed line ("recurring seats/units") ---
+  // A Fixed line whose members all carry pricing_basis = 'unit' bills each
+  // member as quantity × unit rate. The bundle plan-level base rate (line
+  // custom_rate / service_base_rate FMV derivation) has NO precedence here,
+  // and quantity zero is an explicit zero — never a fallback to 1. Members are
+  // independent seats, not FMV allocations of one pool.
+  const unitPricedLine = isUnitPricedFixedLine(planServices);
+
+  if (isFixedFeePlan && unitPricedLine) {
+    const unitCharges: IFixedPriceCharge[] = [];
+    const unitExplanations: ChargeExplanation[] = [];
+
+    for (const service of planServices) {
+      const rawQuantity =
+        service.configuration_quantity ??
+        service.service_quantity ??
+        service.quantity;
+      const quantity = rawQuantity == null ? 0 : Number(rawQuantity);
+      if (!Number.isFinite(quantity) || quantity < 0) {
+        console.error(
+          `[BillingEngine] Unit-priced service ${service.service_id} on contract line ${clientContractLine.contract_line_id} has an invalid quantity; skipping seat charge.`,
+        );
+        continue;
+      }
+      if (quantity === 0) {
+        // Explicit zero: no seats to bill. Never 1.
+        continue;
+      }
+
+      const rawUnitRate =
+        service.service_base_rate ??
+        (service.configuration_custom_rate != null
+          ? Number(service.configuration_custom_rate)
+          : undefined) ??
+        service.default_rate;
+      const unitRate = rawUnitRate == null ? null : Number(rawUnitRate);
+      if (
+        unitRate === null ||
+        !Number.isFinite(unitRate) ||
+        unitRate < 0
+      ) {
+        console.error(
+          `[BillingEngine] Unit-priced service ${service.service_id} on contract line ${clientContractLine.contract_line_id} has no valid unit rate; skipping seat charge.`,
+        );
+        continue;
+      }
+      const rate = Math.ceil(unitRate);
+      const total = Math.ceil(quantity * rate);
+
+      const { taxRegion: serviceTaxRegion, isTaxable } =
+        taxPorts.getTaxInfoFromService(service);
+      const effectiveTaxRegion =
+        serviceTaxRegion ??
+        taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+        taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+        undefined;
+
+      let taxAmount = 0;
+      let taxRate = 0;
+      if (
+        !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+        isTaxable &&
+        effectiveTaxRegion
+      ) {
+        const taxResult = taxPorts.calculateTax(
+          client.client_id,
+          total,
+          servicePeriodEnd,
+          effectiveTaxRegion,
+          true,
+          currencyCode,
+          resolvedProfile?.billingProfileId ?? null,
+        );
+        taxRate = taxResult.taxRate;
+        taxAmount = taxResult.taxAmount;
+      }
+
+      const unitCharge: IFixedPriceCharge = {
+        serviceId: service.service_id,
+        serviceName: service.service_name,
+        quantity,
+        rate,
+        total,
+        type: "fixed",
+        client_contract_line_id: clientContractLine.client_contract_line_id,
+        client_contract_id: clientContractLine.client_contract_id || undefined,
+        contract_name: clientContractLine.contract_name || undefined,
+        location_id: clientContractLine.location_id ?? null,
+        billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+        billing_profile_source: resolvedProfile?.source ?? null,
+        tax_amount: taxAmount,
+        tax_rate: taxRate,
+        tax_region: effectiveTaxRegion,
+        is_taxable: isTaxable,
+        config_id: service.config_id,
+        base_rate: rate,
+      };
+      unitCharges.push(unitCharge);
+
+      unitExplanations.push({
+        chargeKey: fixedChargeKey(unitCharge),
+        serviceName: service.service_name,
+        chargeType: "fixed",
+        inputs: [
+          {
+            label: "Unit rate",
+            value: formatCents(rate, currencyCode),
+          },
+          { label: "Quantity", value: String(quantity) },
+        ],
+        steps: [
+          `${String(quantity)} × ${formatCents(rate, currencyCode)} = ${formatCents(total, currencyCode)}`,
+        ],
+        note:
+          "Recurring seats/units: quantity × unit rate. The fixed bundle total does not apply to this line.",
+        markers: [],
+      });
+    }
+
+    generatedCharges = unitCharges;
+    explanations.push(...unitExplanations);
+  }
 
   if (planServices.length === 0) {
     if (!isFixedFeePlan || planLevelBaseRateCents === null) {

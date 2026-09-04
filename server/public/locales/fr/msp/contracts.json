@@ -322,7 +322,8 @@
       "noServicesConfigured": "Aucun service configuré",
       "billedOnRecordedUsage": "Facturé selon l'utilisation enregistrée",
       "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "serviceCountOther": "{{count}} services",
+      "previouslyConfiguredQuantity": "Quantité configurée précédemment : {{count}} — non utilisée pour la facturation"
     },
     "stats": {
       "contractLines": "Lignes de contrat",

@@ -149,6 +149,39 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 
   if (charge.type === 'usage') {
+    const periodTotalId = (charge as { usagePeriodTotalId?: string | null })
+      .usagePeriodTotalId;
+    if (periodTotalId) {
+      // Period-total report: consume exactly the recorded total revision the
+      // charge carried. The conditional UPDATE (recorded + matching revision)
+      // is the single-consumption lock: concurrent generation or a retry
+      // cannot bill the total twice, and an invoiced total cannot be consumed
+      // again. The total row itself records invoice linkage.
+      const expectedRevision = (charge as {
+        usagePeriodTotalRevision?: number | null;
+      }).usagePeriodTotalRevision;
+      const totalUpdate = tenantScopedTable(tx, tenant, 'usage_period_totals')
+        .where({ period_total_id: periodTotalId, tenant })
+        .where('lifecycle_state', 'recorded');
+      if (expectedRevision != null) {
+        totalUpdate.where('revision', expectedRevision);
+      }
+      const updatedCount = await totalUpdate.update({
+        lifecycle_state: 'billed',
+        invoice_id: invoiceId,
+        invoice_charge_id: invoiceItemId,
+        consumed_at: linkedAt,
+        updated_at: linkedAt,
+      });
+
+      if (updatedCount !== 1) {
+        throw new Error(
+          `Internal error: Usage period total ${periodTotalId} (revision ${expectedRevision ?? 'any'}) could not be marked invoiced for invoice ${invoiceId}. It may have been edited, already invoiced, or deleted.`,
+        );
+      }
+      return;
+    }
+
     const usageId = (charge as { usageId?: string | null }).usageId;
     if (!usageId) {
       return;

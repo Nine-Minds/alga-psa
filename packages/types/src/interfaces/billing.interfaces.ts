@@ -125,6 +125,14 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'usage';
   usageId: string; // Added field for source usage record ID
+  /**
+   * Set when the charge was produced from a period-total report rather than a
+   * dated additive usage entry. The value is the usage_period_totals row id
+   * and its revision at compute time; invoice persistence consumes exactly
+   * that revision and never the usage_tracking table.
+   */
+  usagePeriodTotalId?: string;
+  usagePeriodTotalRevision?: number;
 }
 
 type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block';
@@ -187,25 +195,59 @@ export interface IAdjustment extends TenantEntity {
 
 /**
  * Usage billing is record-driven: only explicit period-dated usage_tracking
- * records create charges. When a usage-billed service has no eligible record
- * in a due service period, the engine reports it here instead of silently
- * producing nothing — absence of a record means "missing usage", never an
- * implicit zero and never an automatic recurring baseline.
+ * records (additive mode) or an explicit usage_period_totals report
+ * (period-total mode) create charges. When a usage-billed service has no
+ * eligible report in a due service period, the engine reports it here instead
+ * of silently producing nothing — absence of a report means "unreported",
+ * never an implicit zero and never an automatic recurring baseline.
  */
+export type UsageServicePeriodDiagnosis =
+  | 'missing_usage'
+  | 'unreported'
+  | 'explicit_zero'
+  | 'billable'
+  | 'already_invoiced'
+  | 'minimum_raised_zero'
+  | 'attribution_excluded'
+  | 'calculation_error';
+
 export interface IUsageServicePeriodStatus {
   client_contract_line_id: string;
   contract_line_name?: string;
   service_id: string;
   service_name: string | null;
+  config_id?: string | null;
   service_period_start: ISO8601String;
   service_period_end: ISO8601String;
-  status: 'missing_usage';
+  status: UsageServicePeriodDiagnosis;
   /**
-   * Configured minimum for the service. A positive minimum is a floor applied
-   * only when an explicit usage record exists for the period; it never creates
-   * a charge on its own.
+   * Configured minimum for the service. In additive mode a positive minimum is
+   * a floor applied only when an explicit usage record exists for the period;
+   * it never creates a charge on its own. In period-total mode the same floor
+   * is applied once to the reported total.
    */
   minimum_usage: number;
+  /**
+   * Measurement mode of the service configuration for the reported period.
+   * Lets callers phrase the next action correctly ("Report a period total"
+   * versus "Add consumption").
+   */
+  measurement_mode?: 'additive' | 'period_total' | null;
+  /**
+   * Reported quantity when the period carries an explicit report (including an
+   * explicit zero). Absent when the period is simply unreported.
+   */
+  quantity?: number | null;
+  /**
+   * Billable quantity after pricing rules (per-entry/per-total minimum) when a
+   * report exists. Differs from quantity when a minimum raised an explicit
+   * zero; a minimum alone never turns an absent report into a charge.
+   */
+  billable_quantity?: number | null;
+  /** Period-total row revision, when the report is a period total. */
+  revision?: number | null;
+  /** The reported amount would raise a minimum: billable exceeds reported. */
+  minimum_applied?: boolean;
 }
 
 export interface IBillingResult extends TenantEntity {

@@ -322,7 +322,8 @@
       "noServicesConfigured": "Geen services geconfigureerd",
       "billedOnRecordedUsage": "Gefactureerd op basis van geregistreerd verbruik",
       "serviceCountOne": "{{count}} dienst",
-      "serviceCountOther": "{{count}} diensten"
+      "serviceCountOther": "{{count}} diensten",
+      "previouslyConfiguredQuantity": "Eerder geconfigureerde hoeveelheid: {{count}} — niet gebruikt voor facturatie"
     },
     "stats": {
       "contractLines": "Contractregels",

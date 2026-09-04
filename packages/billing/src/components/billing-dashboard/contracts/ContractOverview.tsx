@@ -58,6 +58,7 @@ const ContractLineCard: React.FC<{
   includedServicesLabel: string;
   noServicesConfiguredLabel: string;
   billedOnRecordedUsageLabel: string;
+  previouslyConfiguredQuantityLabel: (quantity: number) => string;
 }> = ({
   line,
   isExpanded,
@@ -71,6 +72,7 @@ const ContractLineCard: React.FC<{
   includedServicesLabel,
   noServicesConfiguredLabel,
   billedOnRecordedUsageLabel,
+  previouslyConfiguredQuantityLabel,
 }) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
@@ -131,15 +133,27 @@ const ContractLineCard: React.FC<{
                   {line.contract_line_type === 'Usage' && (
                     // Deep link carries the owning client and the service so
                     // Usage Tracking opens filtered to this exact obligation.
-                    <a
-                      href={`/msp/billing?tab=usage-tracking${clientId ? `&clientId=${clientId}` : ''}&serviceId=${service.service_id}`}
-                      className="italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
-                      data-testid={`usage-recorded-usage-hint-${service.service_id}`}
-                      onClick={(event) => event.stopPropagation()}
-                      title={billedOnRecordedUsageLabel}
-                    >
-                      {billedOnRecordedUsageLabel}
-                    </a>
+                    <>
+                      <a
+                        href={`/msp/billing?tab=usage-tracking${clientId ? `&clientId=${clientId}` : ''}&serviceId=${service.service_id}`}
+                        className="italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                        data-testid={`usage-recorded-usage-hint-${service.service_id}`}
+                        onClick={(event) => event.stopPropagation()}
+                        title={billedOnRecordedUsageLabel}
+                      >
+                        {billedOnRecordedUsageLabel}
+                      </a>
+                      {service.previouslyConfiguredQuantity != null &&
+                        service.previouslyConfiguredQuantity > 0 && (
+                          <span
+                            className="italic text-muted-foreground"
+                            data-testid={`usage-previously-configured-${service.service_id}`}
+                            title={previouslyConfiguredQuantityLabel(service.previouslyConfiguredQuantity)}
+                          >
+                            {previouslyConfiguredQuantityLabel(service.previouslyConfiguredQuantity)}
+                          </span>
+                        )}
+                    </>
                   )}
                   {service.custom_rate !== null && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
@@ -246,6 +260,12 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
   const includedServicesLabel = t('contractOverview.lines.includedServices', { defaultValue: 'Included Services' });
   const noServicesConfiguredLabel = t('contractOverview.lines.noServicesConfigured', { defaultValue: 'No services configured' });
   const billedOnRecordedUsageLabel = t('contractOverview.lines.billedOnRecordedUsage', { defaultValue: 'Billed on recorded usage' });
+  const previouslyConfiguredQuantityLabel = useCallback((quantity: number): string => (
+    t('contractOverview.lines.previouslyConfiguredQuantity', {
+      count: quantity,
+      defaultValue: 'Previously configured quantity: {{count}} — not used for billing',
+    })
+  ), [t]);
 
   if (isLoading) {
     return (
@@ -397,6 +417,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   includedServicesLabel={includedServicesLabel}
                   noServicesConfiguredLabel={noServicesConfiguredLabel}
                   billedOnRecordedUsageLabel={billedOnRecordedUsageLabel}
+                  previouslyConfiguredQuantityLabel={previouslyConfiguredQuantityLabel}
                 />
               ))}
             </div>

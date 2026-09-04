@@ -322,7 +322,8 @@
       "noServicesConfigured": "⟦Ƞȯ şḗřṽīƈḗş ƈȯƞƒīɠŭřḗḓ⟧",
       "billedOnRecordedUsage": "⟦Ɓīŀŀḗḓ ȯƞ řḗƈȯřḓḗḓ ŭşȧɠḗ⟧",
       "serviceCountOne": "⟦{{count}} şḗřṽīƈḗ⟧",
-      "serviceCountOther": "⟦{{count}} şḗřṽīƈḗş⟧"
+      "serviceCountOther": "⟦{{count}} şḗřṽīƈḗş⟧",
+      "previouslyConfiguredQuantity": "⟦Previously configured quantity: {{count}} — not used for billing⟧"
     },
     "stats": {
       "contractLines": "⟦Ƈȯƞŧřȧƈŧ Ŀīƞḗş⟧",

@@ -94,8 +94,52 @@ async function resolveUsageAttribution(params: {
   };
 }
 
-function usageActionErrorFrom(error: unknown): UsageActionError | null {
-  // Typed bucket failures name their cause; prefer them over the string match.
+async function rejectAdditiveWriteToPeriodTotalConfig(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  contractLineId: string | null | undefined;
+}): Promise<string | null> {
+  const { trx, tenant, serviceId, contractLineId } = params;
+  if (!contractLineId) {
+    return null;
+  }
+  // A usage record whose (line, service) resolves to a Usage configuration in
+  // period-total measurement mode is an additive write into a period-total
+  // configuration. Such writes are rejected: mixing dated entries and one
+  // replaceable period count in the same period would double-charge the
+  // service. (clientId is part of the signature so the caller states the full
+  // scope; the mode lives on the config, not the client.)
+  const config = await tenantScopedTable(
+    trx,
+    tenant,
+    'contract_line_service_configuration',
+  )
+    .where({
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Usage',
+    })
+    .first<{ config_id: string }>('config_id');
+  if (!config) {
+    return null;
+  }
+  const usageConfig = await tenantScopedTable(
+    trx,
+    tenant,
+    'contract_line_service_usage_config',
+  )
+    .where({ tenant, config_id: config.config_id })
+    .first<{ measurement_mode: string | null }>('measurement_mode');
+  if ((usageConfig?.measurement_mode ?? 'additive') === 'period_total') {
+    return 'This service uses period-total reporting for this contract line: report one count for the whole service period instead of adding dated consumption entries.';
+  }
+  return null;
+}
+
+function usageActionErrorFrom(error: unknown): UsageActionError | null {  // Typed bucket failures name their cause; prefer them over the string match.
   const bucketError = findBucketUsageError(error);
   if (bucketError) {
     return actionError(bucketUsageErrorMessage(bucketError));
@@ -173,6 +217,18 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
         contractLineSource = 'unresolved';
         contractLineUnresolvedReason = 'error';
       }
+    }
+
+    // Additive entries may not be written into a period-total configuration.
+    const modeGuard = await rejectAdditiveWriteToPeriodTotalConfig({
+      trx,
+      tenant,
+      clientId: data.client_id,
+      serviceId: data.service_id,
+      contractLineId,
+    });
+    if (modeGuard) {
+      return actionError(modeGuard);
     }
 
     // Insert the usage record
@@ -294,6 +350,22 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         }
       } else {
         finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
+      }
+    }
+
+    // Additive entries may not be written into a period-total configuration.
+    const targetServiceForGuard = data.service_id || originalRecord.service_id;
+    const targetClientForGuard = data.client_id || originalRecord.client_id;
+    if (targetServiceForGuard && targetClientForGuard) {
+      const modeGuard = await rejectAdditiveWriteToPeriodTotalConfig({
+        trx,
+        tenant,
+        clientId: targetClientForGuard,
+        serviceId: targetServiceForGuard,
+        contractLineId: finalContractLineId,
+      });
+      if (modeGuard) {
+        return actionError(modeGuard);
       }
     }
 

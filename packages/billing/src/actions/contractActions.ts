@@ -982,11 +982,18 @@ export interface IContractLineOverview {
     custom_rate: number | null;  // In cents
     /**
      * Fixed-allocation quantity. Always null for Usage lines: usage billing is
-     * record-driven (only usage_tracking records create charges), so any
-     * legacy configured quantity is inert audit metadata that must never be
-     * presented as billable.
+     * record-driven (only usage_tracking records/period totals create charges),
+     * so any legacy configured quantity is inert audit metadata that must never
+     * be presented as billable.
      */
     quantity: number | null;
+    /**
+     * Legacy stored quantity for Usage services, kept visible as non-billing
+     * reference data ("Previously configured quantity — not used for billing").
+     * Null when the Usage service has no stored legacy quantity. For Fixed
+     * lines this mirrors `quantity`; the UI only renders it for Usage lines.
+     */
+    previouslyConfiguredQuantity: number | null;
     unit_of_measure: string | null;
   }[];
 }
@@ -1094,6 +1101,10 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
               quantity: line.contract_line_type === 'Usage' ? null : (config?.quantity ?? svc.quantity ?? 1),
+              previouslyConfiguredQuantity:
+                line.contract_line_type === 'Usage'
+                  ? (config?.quantity ?? svc.quantity ?? null)
+                  : null,
               unit_of_measure: null
             };
           })
@@ -1153,6 +1164,10 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
               quantity: line.contract_line_type === 'Usage' ? null : (config?.quantity ?? 1),
+              previouslyConfiguredQuantity:
+                line.contract_line_type === 'Usage'
+                  ? (config?.quantity ?? null)
+                  : null,
               unit_of_measure: svc.unit_of_measure || null
             };
           })

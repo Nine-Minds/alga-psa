@@ -535,6 +535,8 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   user_invitations: { scope: 'tenant' },
   user_type_rates: { scope: 'tenant' },
   usage_tracking: { scope: 'tenant' },
+  usage_period_totals: { scope: 'tenant' },
+  contract_line_unit_pricing_revisions: { scope: 'tenant' },
   user_cost_rates: { scope: 'tenant' },
   user_preferences: { scope: 'tenant' },
   user_internal_notification_preferences: { scope: 'tenant' },

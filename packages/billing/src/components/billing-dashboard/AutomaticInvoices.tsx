@@ -3154,53 +3154,82 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
-                  {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (
-                    // Usage billing invoices recorded usage only. These services
-                    // are due this period but have no usage records, so they are
-                    // absent from the preview rather than billed at zero.
-                    <div
-                      className="rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-sm text-[rgb(var(--badge-warning-text))]"
-                      data-testid={`preview-missing-usage-${previewEntry.previewGroupKey}`}
-                    >
-                      <p className="font-medium">
-                        {t('automaticInvoices.dialogs.preview.missingUsageHeading', {
-                          defaultValue: 'Usage not recorded for this period',
-                        })}
-                      </p>
-                      <ul className="mt-1 list-disc pl-5">
-                        {previewEntry.usageServicePeriodStatuses!.map((status) => (
-                          <li key={`${status.client_contract_line_id}:${status.service_id}`}>
-                            {t('automaticInvoices.dialogs.preview.missingUsageService', {
-                              service: status.service_name ?? status.service_id,
-                              periodStart: status.service_period_start,
-                              periodEnd: status.service_period_end,
-                              defaultValue: `${status.service_name ?? status.service_id}: no usage records for ${status.service_period_start} to ${status.service_period_end}`,
-                            })}
-                          </li>
-                        ))}
-                      </ul>
-                      <Button
-                        id={`preview-record-usage-${previewIndex}-button`}
-                        variant="outline"
-                        className="mt-2"
-                        onClick={() => {
-                          const missingServiceIds = Array.from(
-                            new Set(
-                              (previewEntry.usageServicePeriodStatuses ?? []).map(
-                                (status) => status.service_id,
-                              ),
-                            ),
-                          );
-                          router.push(buildUsageTrackingHref({
-                            clientId: previewEntry.selectorInputs[0]?.clientId ?? null,
-                            serviceId: missingServiceIds.length === 1 ? missingServiceIds[0] : null,
-                          }));
-                        }}
-                      >
-                        {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
-                      </Button>
-                    </div>
-                  )}
+                  {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (() => {
+                    const usageStatuses = previewEntry.usageServicePeriodStatuses ?? [];
+                    const actionableStatuses = usageStatuses.filter(
+                      (status) => status.status === 'missing_usage' || status.status === 'unreported',
+                    );
+                    const evidenceStatuses = usageStatuses.filter(
+                      (status) => !actionableStatuses.includes(status),
+                    );
+                    return (
+                      <>
+                        {actionableStatuses.length > 0 && (
+                          // Usage billing invoices recorded usage only. These
+                          // services are due this period but have no report, so
+                          // they are absent from the preview rather than billed at
+                          // zero.
+                          <div
+                            className="rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-sm text-[rgb(var(--badge-warning-text))]"
+                            data-testid={`preview-missing-usage-${previewEntry.previewGroupKey}`}
+                          >
+                            <p className="font-medium">
+                              {t('automaticInvoices.dialogs.preview.missingUsageHeading', {
+                                defaultValue: 'Usage not recorded for this period',
+                              })}
+                            </p>
+                            <ul className="mt-1 list-disc pl-5">
+                              {actionableStatuses.map((status) => (
+                                <li key={`${status.client_contract_line_id}:${status.service_id}`}>
+                                  {t('automaticInvoices.dialogs.preview.missingUsageService', {
+                                    service: status.service_name ?? status.service_id,
+                                    periodStart: status.service_period_start,
+                                    periodEnd: status.service_period_end,
+                                    defaultValue: `${status.service_name ?? status.service_id}: no usage records for ${status.service_period_start} to ${status.service_period_end}`,
+                                  })}
+                                </li>
+                              ))}
+                            </ul>
+                            <Button
+                              id={`preview-record-usage-${previewIndex}-button`}
+                              variant="outline"
+                              className="mt-2"
+                              onClick={() => {
+                                const missingServiceIds = Array.from(
+                                  new Set(actionableStatuses.map((status) => status.service_id)),
+                                );
+                                router.push(buildUsageTrackingHref({
+                                  clientId: previewEntry.selectorInputs[0]?.clientId ?? null,
+                                  serviceId: missingServiceIds.length === 1 ? missingServiceIds[0] : null,
+                                }));
+                              }}
+                            >
+                              {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
+                            </Button>
+                          </div>
+                        )}
+                        {evidenceStatuses.length > 0 && (
+                          <div
+                            className="rounded-md border border-border/70 bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-muted-foreground"
+                            data-testid={`preview-usage-evidence-${previewEntry.previewGroupKey}`}
+                          >
+                            <ul className="list-disc pl-5">
+                              {evidenceStatuses.map((status) => {
+                                const label = status.status === 'already_invoiced'
+                                  ? `${status.service_name ?? status.service_id}: already recorded and invoiced for ${status.service_period_start} to ${status.service_period_end} — no further usage to report`
+                                  : status.status === 'explicit_zero'
+                                    ? `${status.service_name ?? status.service_id}: reported zero for ${status.service_period_start} to ${status.service_period_end}`
+                                    : status.status === 'minimum_raised_zero'
+                                      ? `${status.service_name ?? status.service_id}: reported zero for ${status.service_period_start} to ${status.service_period_end} — the ${status.minimum_usage} minimum applies`
+                                      : `${status.service_name ?? status.service_id}: ${status.status} for ${status.service_period_start} to ${status.service_period_end}`;
+                                return <li key={`${status.client_contract_line_id}:${status.service_id}`}>{label}</li>;
+                              })}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   <div className="border-b pb-4">
                     <h4 className="font-semibold">
                       {t('automaticInvoices.dialogs.preview.sections.clientDetails', {
