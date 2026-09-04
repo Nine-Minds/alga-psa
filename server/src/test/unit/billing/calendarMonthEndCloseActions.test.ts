@@ -11,6 +11,9 @@ const mocks = vi.hoisted(() => ({
   generateInvoiceForSelectionInputs: vi.fn(),
   createTenantKnex: vi.fn(),
   tenantDb: vi.fn(),
+  withTransaction: vi.fn(
+    async (_knex: unknown, cb: (trx: unknown) => Promise<unknown>) => cb({}),
+  ),
   resolveEffectiveTimeZone: vi.fn(async () => 'UTC'),
   localizeActionError: vi.fn(async (result: unknown) => result),
 }));
@@ -28,6 +31,7 @@ vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => (
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: mocks.createTenantKnex,
   tenantDb: mocks.tenantDb,
+  withTransaction: mocks.withTransaction,
   resolveEffectiveTimeZone: mocks.resolveEffectiveTimeZone,
 }));
 
@@ -49,6 +53,8 @@ const { generateCalendarMonthEndCloseInvoices } = await import(
 
 const TENANT = 'tenant-1';
 const USER = { user_id: 'user-1', tenant: TENANT };
+const SCHEDULE_KEY = 'schedule:tenant-1:client_contract_line:line-1:client:arrears';
+const PERIOD_KEY = 'period:2026-06-01:2026-07-01';
 
 interface ServicePeriodRowFixture {
   service_period_start: string;
@@ -57,52 +63,84 @@ interface ServicePeriodRowFixture {
   due_position: 'arrears' | 'advance';
 }
 
-function installDbRow(row: ServicePeriodRowFixture | null) {
-  const builder: any = {
-    where: vi.fn(() => builder),
-    whereIn: vi.fn(() => builder),
-    whereNotIn: vi.fn(() => builder),
-    orderBy: vi.fn(() => builder),
-    first: vi.fn(async () => (row ? { ...row } : undefined)),
+/**
+ * The canonical recurring_service_periods row the materialization helper
+ * selects, carrying the same (schedule, period) identity as the selector
+ * inputs built by buildClientCadenceTarget so the action's selection
+ * completeness checks see a fully-selected window.
+ */
+function toCanonicalRow(row: ServicePeriodRowFixture) {
+  return {
+    schedule_key: SCHEDULE_KEY,
+    period_key: PERIOD_KEY,
+    due_position: row.due_position,
+    service_period_start: row.service_period_start,
+    service_period_end: row.service_period_end,
+    invoice_window_start: row.invoice_window_start,
   };
-  mocks.createTenantKnex.mockResolvedValue({ knex: {} });
-  mocks.tenantDb.mockReturnValue({ table: vi.fn(() => builder) });
 }
 
 /**
- * Serve a different recurring_service_period row per selector window so a run
- * can carry both an eligible and an ineligible group (the fetch keys on
- * invoice_window_start). Unknown windows materialize as nothing.
+ * Query-builder mock for the canonical window materialization helpers
+ * (listCanonicalClientCadenceWindowPeriods /
+ * listUnmaterializedClientCadenceWindowLineIds), which run inside
+ * withTransaction and terminate their chains with `.select()`:
+ * - `client_contracts as cc` (active recurring lines) resolves to no rows,
+ *   so no line is ever reported unmaterialized by that path;
+ * - `recurring_service_periods` resolves the fixture row keyed by the
+ *   `invoice_window_start` where-clause, so a run can carry both an eligible
+ *   and an ineligible group. Unknown windows materialize as nothing.
  */
-function installDbRowsByInvoiceWindow(
+function makeCanonicalWindowQueryBuilder(
+  tableName: string,
   rowsByWindow: Record<string, ServicePeriodRowFixture | null>,
 ) {
-  let whereClause: Record<string, unknown> | null = null;
+  const whereClause: Record<string, unknown> = {};
   const builder: any = {
     where: vi.fn((arg: unknown) => {
       if (arg && typeof arg === 'object') {
-        whereClause = arg as Record<string, unknown>;
+        Object.assign(whereClause, arg as Record<string, unknown>);
       }
       return builder;
     }),
     whereIn: vi.fn(() => builder),
     whereNotIn: vi.fn(() => builder),
+    whereNotNull: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
-    first: vi.fn(async () => {
-      const windowStart = whereClause?.invoice_window_start ?? whereClause?.['rsp.invoice_window_start'];
+    select: vi.fn(async () => {
+      if (tableName.startsWith('client_contracts')) {
+        return [];
+      }
+      const windowStart =
+        whereClause['rsp.invoice_window_start'] ?? whereClause['invoice_window_start'];
       const row = typeof windowStart === 'string' ? rowsByWindow[windowStart] : undefined;
-      return row ? { ...row } : undefined;
+      return row ? [toCanonicalRow(row)] : [];
     }),
   };
+  return builder;
+}
+
+function installDbRowsByInvoiceWindow(
+  rowsByWindow: Record<string, ServicePeriodRowFixture | null>,
+) {
   mocks.createTenantKnex.mockResolvedValue({ knex: {} });
-  mocks.tenantDb.mockReturnValue({ table: vi.fn(() => builder) });
+  mocks.tenantDb.mockImplementation(() => ({
+    table: vi.fn((tableName: string) =>
+      makeCanonicalWindowQueryBuilder(tableName, rowsByWindow),
+    ),
+    tenantJoin: vi.fn(),
+  }));
+}
+
+function installDbRow(row: ServicePeriodRowFixture | null) {
+  installDbRowsByInvoiceWindow(row ? { [row.invoice_window_start]: row } : {});
 }
 
 function buildClientCadenceTarget(windowStart: string, windowEnd: string) {
   const selectorInput = buildClientCadenceDueSelectionInput({
     clientId: 'client-1',
-    scheduleKey: 'schedule:tenant-1:client_contract_line:line-1:client:arrears',
-    periodKey: 'period:2026-06-01:2026-07-01',
+    scheduleKey: SCHEDULE_KEY,
+    periodKey: PERIOD_KEY,
     windowStart,
     windowEnd,
   });
