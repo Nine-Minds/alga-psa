@@ -16,6 +16,8 @@
     "documentsAll": "Tous les documents",
     "knowledgeBase": "Base de connaissances",
     "assets": "Actifs",
+    "assetsAll": "Tous les actifs",
+    "assetsMaintenance": "Entretien",
     "inventory": {
       "label": "Inventaire",
       "sections": {
@@ -197,6 +199,12 @@
           "description": "Ajouter un nouveau produit à votre catalogue"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Ressources et aide",
+      "title": "Ressources",
+      "documentation": "Documentation",
+      "support": "Contacter l'assistance"
     },
     "jobs": {
       "ariaLabel": "Voir l'activité des tâches d'arrière-plan",

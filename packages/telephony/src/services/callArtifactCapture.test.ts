@@ -113,10 +113,6 @@ function table(name: string): any[] {
   return hoisted.rowsFor(name);
 }
 
-function grantAddOn(): void {
-  table('tenant_addons').push({ tenant: TENANT, addon_key: 'teams', expires_at: null });
-}
-
 function seedCall(overrides: Record<string, unknown> = {}): string {
   const row = {
     tenant: TENANT,
@@ -179,20 +175,7 @@ describe('captureCallArtifacts', () => {
     seedUser();
   });
 
-  it('T075: refuses a tenant without the Teams add-on', async () => {
-    seedCall();
-
-    const outcome = await captureCallArtifacts(
-      { tenantId: TENANT, callRecordId: 'call-record-1' },
-      { fetchArtifacts: async () => [transcript], now: () => NOW },
-    );
-
-    expect(outcome).toEqual({ status: 'skipped', reason: 'addon_inactive' });
-    expect(table('telephony_call_artifacts')).toHaveLength(0);
-  });
-
   it('T075: files a transcript as a document and summarizes it onto the call ticket', async () => {
-    grantAddOn();
     seedCall();
     const annotate = vi.fn(async () => undefined);
 
@@ -232,7 +215,6 @@ describe('captureCallArtifacts', () => {
   });
 
   it('T075: a replayed poll re-links the stored artifact instead of duplicating it', async () => {
-    grantAddOn();
     seedCall();
     table('telephony_call_artifacts').push({
       tenant: TENANT,
@@ -259,7 +241,6 @@ describe('captureCallArtifacts', () => {
   });
 
   it('T075: stores the recording blob only when the tenant opted into downloads', async () => {
-    grantAddOn();
     seedCall();
     const download = vi.fn(async () => 'file-1');
 
@@ -290,7 +271,6 @@ describe('captureCallArtifacts', () => {
   });
 
   it('T075: an empty poll stays pending inside the window and settles to none after it', async () => {
-    grantAddOn();
     seedCall();
 
     const pending = await captureCallArtifacts(
@@ -308,7 +288,6 @@ describe('captureCallArtifacts', () => {
   });
 
   it('T075: a call with no Entra organizer can never yield artifacts and stops being polled', async () => {
-    grantAddOn();
     seedCall({ organizer_user_id: null });
     const fetchArtifacts = vi.fn(async () => [transcript]);
 
@@ -323,7 +302,6 @@ describe('captureCallArtifacts', () => {
   });
 
   it('T075: settled and not-yet-due calls are left alone', async () => {
-    grantAddOn();
     seedCall({ artifact_status: 'ready' });
     const fetchArtifacts = vi.fn(async () => [transcript]);
 
@@ -344,7 +322,6 @@ describe('captureCallArtifacts', () => {
   });
 
   it('T075: a Graph failure records the attempt before propagating, so retries back off', async () => {
-    grantAddOn();
     seedCall();
 
     await expect(captureCallArtifacts(

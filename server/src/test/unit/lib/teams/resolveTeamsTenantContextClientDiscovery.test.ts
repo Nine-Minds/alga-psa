@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ADD_ONS } from '@alga-psa/types';
 
 const getAdminConnectionMock = vi.fn();
 const getTenantIdBySlugMock = vi.fn();
@@ -86,7 +85,6 @@ function integrationRow(overrides: Record<string, unknown> = {}) {
     app_id: 'app-1',
     bot_id: 'bot-1',
     microsoft_tenant_id: 'msp-tid',
-    active_teams_addon: ADD_ONS.TEAMS,
     ...overrides,
   };
 }

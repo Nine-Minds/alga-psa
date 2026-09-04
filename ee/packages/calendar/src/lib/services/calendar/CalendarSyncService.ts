@@ -70,6 +70,11 @@ export class CalendarSyncService {
         };
       }
 
+      const authError = this.providerAuthorizationError(provider);
+      if (authError) {
+        return { success: false, error: authError };
+      }
+
       // Get or create adapter
       const adapter = await this.createAdapter(provider);
       await adapter.connect();
@@ -207,6 +212,11 @@ export class CalendarSyncService {
           success: false,
           error: 'Provider is configured for one-way sync to external calendar only'
         };
+      }
+
+      const authError = this.providerAuthorizationError(provider);
+      if (authError) {
+        return { success: false, error: authError };
       }
 
       // Get or create adapter
@@ -696,9 +706,26 @@ export class CalendarSyncService {
   }
 
   /**
+   * Friendly pre-check used before any adapter work: a provider whose OAuth
+   * flow was never completed has no tokens and every sync attempt would fail
+   * with a raw adapter error that then gets stamped onto the provider row.
+   */
+  private providerAuthorizationError(provider: CalendarProviderConfig): string | null {
+    const cfg = provider.provider_config;
+    if (!cfg?.accessToken || !cfg?.refreshToken) {
+      return 'Calendar provider is not authorized yet. Complete OAuth authorization before syncing.';
+    }
+    return null;
+  }
+
+  /**
    * Create adapter instance for provider
    */
   private async createAdapter(provider: CalendarProviderConfig): Promise<BaseCalendarAdapter> {
+    const authError = this.providerAuthorizationError(provider);
+    if (authError) {
+      throw new Error(authError);
+    }
     switch (provider.provider_type) {
       case 'google':
         return new GoogleCalendarAdapter(provider);

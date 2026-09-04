@@ -159,10 +159,10 @@ async function handleTicketCreatedEvent(event: unknown): Promise<void> {
           const { knex } = await createTenantKnex();
           const db = tenantDb(knex, tenantId);
 
-          // The main creation paths publish TICKET_CREATED after their
-          // transaction commits, so the row is normally visible immediately.
-          // Some paths still publish in-transaction; retry the read briefly
-          // (outside any transaction, so no locks are held while waiting).
+          // Supported creation paths publish TICKET_CREATED after commit (or
+          // through a transactional outbox), so the row should be visible.
+          // Keep a short defensive retry for rolling deployments and transient
+          // database visibility delays; no locks are held while waiting.
           let ticket: { client_id: string; board_id: string; priority_id: string; entered_at: string | Date | null } | undefined;
           for (let attempt = 0; attempt < 5; attempt++) {
             if (attempt > 0) {

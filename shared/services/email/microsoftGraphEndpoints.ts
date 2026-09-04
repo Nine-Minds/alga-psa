@@ -16,6 +16,7 @@ export const MICROSOFT_EMAIL_OAUTH_SCOPES = [
   'https://graph.microsoft.com/Mail.Read',
   'https://graph.microsoft.com/Mail.Read.Shared',
   'https://graph.microsoft.com/Mail.Send',
+  'https://graph.microsoft.com/Mail.Send.Shared',
   // Mailbox path auto-detection reads /me; without this the call is denied
   // and connect() cannot tell a personal mailbox from a shared one.
   'https://graph.microsoft.com/User.Read',

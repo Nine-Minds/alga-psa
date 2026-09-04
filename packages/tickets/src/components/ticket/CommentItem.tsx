@@ -11,6 +11,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Label } from '@alga-psa/ui/components/Label';
+import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
@@ -223,6 +224,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
     }
     return resolvedAuthor.displayName;
   };
+
+  // An unmatched inbound email still names its sender, so the avatar shows those
+  // initials; the Unknown User placeholder is kept only when nothing identifies
+  // the author.
+  const inboundSenderLabel = inboundSenderIdentity.fromName || inboundSenderIdentity.fromAddress;
+  const unknownAuthorAvatarName =
+    !conversation.is_system_generated && inboundSenderLabel
+      ? inboundSenderLabel
+      : t('conversation.unknownUser');
 
   const getAuthorEmail = () => {
     if (conversation.is_system_generated) return null;
@@ -457,7 +467,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             <UserAvatar
               {...withDataAutomationId({ id: `${commentId}-avatar` })}
               userId=""
-              userName={t('conversation.unknownUser')}
+              userName={unknownAuthorAvatarName}
               avatarUrl={null}
               size={isCompact ? 'sm' : 'md'}
             />
@@ -689,11 +699,18 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   }`}
                   style={{ overflowWrap: 'anywhere' }}
                 >
-                  <RichTextViewer
-                    key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
-                    content={displayContent as any}
-                    className="w-full min-w-0 max-w-full"
-                  />
+                  <ClampedContent
+                    id={`${commentId}-clamp`}
+                    maxHeight={240}
+                    showMoreLabel={t('conversation.showMore', 'Show more')}
+                    showLessLabel={t('conversation.showLess', 'Show less')}
+                  >
+                    <RichTextViewer
+                      key={`${conversation.comment_id}-${conversation.updated_at || conversation.created_at}`}
+                      content={displayContent as any}
+                      className="w-full min-w-0 max-w-full"
+                    />
+                  </ClampedContent>
               </div>
           )}
           {reactions && onToggleReaction && (

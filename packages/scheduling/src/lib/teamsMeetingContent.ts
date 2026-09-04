@@ -103,8 +103,8 @@ export function teamsMeetingSkipWarning(reason: TeamsMeetingSkipReason): string 
       return 'Microsoft Teams meeting was not created because no default organizer is configured.';
     case 'ee_disabled':
       return 'Microsoft Teams meetings are only available in Enterprise Edition.';
-    case 'addon_inactive':
-      return 'Microsoft Teams meeting was not created because the Teams add-on is not active for this tenant.';
+    case 'feature_disabled':
+      return 'Microsoft Teams meeting was not created because the release feature is not enabled for this tenant.';
     case 'not_configured':
     default:
       return 'Microsoft Teams meeting was not created because Teams is not configured for this tenant.';

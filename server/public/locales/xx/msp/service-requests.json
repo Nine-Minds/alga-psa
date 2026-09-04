@@ -124,6 +124,10 @@
         "descriptionPrefix": "⟦Ḓḗşƈřīƥŧīȯƞ Ƥřḗƒīẋ⟧",
         "save": "⟦Şȧṽḗ Ŧīƈķḗŧ Řȯŭŧīƞɠ⟧"
       },
+      "storeOnly": {
+        "title": "⟦Şŧȯřḗ Ȯƞŀẏ⟧",
+        "description": "⟦Ƈȯḿƥŀḗŧḗḓ şŭƀḿīşşīȯƞş ȧřḗ řḗŧȧīƞḗḓ ẇīŧħ ŧħḗīř ȧƞşẇḗřş ȧƞḓ ȧŧŧȧƈħḿḗƞŧş īƞ řḗʠŭḗşŧ ħīşŧȯřẏ. Ƞȯ şŭƥƥȯřŧ ŧīƈķḗŧ īş ƈřḗȧŧḗḓ.⟧"
+      },
       "workflow": {
         "title": "⟦Ẇȯřķƒŀȯẇ Ƈȯƞƒīɠŭřȧŧīȯƞ⟧",
         "workflowId": "⟦Ẇȯřķƒŀȯẇ ĪḒ⟧",
@@ -199,7 +203,17 @@
       "executionError": "⟦Ḗẋḗƈŭŧīȯƞ Ḗřřȯř⟧",
       "submittedAtStatus": "⟦{{date}} · {{status}}⟧",
       "loadingTicket": "⟦Ŀȯȧḓīƞɠ…⟧",
-      "ticketLoadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ḓḗŧȧīŀş.⟧"
+      "ticketLoadError": "⟦Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ḓḗŧȧīŀş.⟧",
+      "formVersion": "⟦Ƒȯřḿ Ṽḗřşīȯƞ⟧",
+      "formVersionValue": "⟦Ṽḗřşīȯƞ {{version}}⟧",
+      "historyTitle": "⟦Ħīşŧȯřẏ⟧",
+      "historyEmpty": "⟦Ƞȯ ħīşŧȯřẏ řḗƈȯřḓḗḓ ƒȯř ŧħīş şŭƀḿīşşīȯƞ.⟧",
+      "historyActor": "⟦ƀẏ {{actor}}⟧",
+      "historyOperations": {
+        "service_request_submission_created": "⟦Şŭƀḿīşşīȯƞ ƈřḗȧŧḗḓ⟧",
+        "service_request_submission_execution_succeeded": "⟦Ḗẋḗƈŭŧīȯƞ şŭƈƈḗḗḓḗḓ⟧",
+        "service_request_submission_execution_failed": "⟦Ḗẋḗƈŭŧīȯƞ ƒȧīŀḗḓ⟧"
+      }
     }
   },
   "icons": {

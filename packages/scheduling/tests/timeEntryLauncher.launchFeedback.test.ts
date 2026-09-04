@@ -1,11 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { launchTimeEntryForWorkItem } from '../src/lib/timeEntryLauncher';
 
-// Behavioral coverage for the release-v1-5-feature gate on time-entry launch
-// feedback. Flag OFF (no enhancedLaunchFeedback) must reproduce the exact
-// legacy toast surface: plain single-argument toast.error calls with the
-// legacy no-time-period copy. Flag ON switches to the deduplicated
-// long-lived blocked toast with the refreshed copy.
+// Behavioral coverage for time-entry launch feedback: blocked launches use the
+// deduplicated long-lived toast with the refreshed copy.
 
 const { getCurrentUser, getCurrentTimePeriod, fetchOrCreateTimeSheet, getTimeEntryById, toastError } =
   vi.hoisted(() => ({
@@ -61,8 +58,8 @@ beforeEach(() => {
   getTimeEntryById.mockResolvedValue(null);
 });
 
-describe('launchTimeEntryForWorkItem launch feedback (release-v1-5-feature)', () => {
-  it('flag off: uses the exact legacy plain toast and copy when no time period covers today', async () => {
+describe('launchTimeEntryForWorkItem launch feedback', () => {
+  it('no time period uses the refreshed copy on the deduplicated long-lived toast', async () => {
     getCurrentTimePeriod.mockResolvedValueOnce(null);
 
     await launchTimeEntryForWorkItem({
@@ -73,23 +70,32 @@ describe('launchTimeEntryForWorkItem launch feedback (release-v1-5-feature)', ()
 
     expect(toastError).toHaveBeenCalledTimes(1);
     expect(toastError).toHaveBeenCalledWith(
-      'No active time period found. Please configure time periods before entering time.',
+      'No time period covers today, so time can’t be entered yet. Ask an administrator to create time periods under Settings → Time Entry.',
+      { id: 'time-entry-launch-blocked', duration: 10000 },
     );
   });
 
-  it('flag off: precondition failure toasts carry no toast options', async () => {
-    getCurrentTimePeriod.mockResolvedValueOnce(null);
+  it('repeated blocked launches reuse one toast id', async () => {
+    getCurrentTimePeriod.mockResolvedValue(null);
 
     await launchTimeEntryForWorkItem({
       openDrawer: vi.fn(),
       closeDrawer: vi.fn(),
       context: baseContext,
     });
+    await launchTimeEntryForWorkItem({
+      openDrawer: vi.fn(),
+      closeDrawer: vi.fn(),
+      context: baseContext,
+    });
 
-    expect(toastError.mock.calls[0].length).toBe(1);
+    expect(toastError).toHaveBeenCalledTimes(2);
+    for (const call of toastError.mock.calls) {
+      expect(call[1]).toEqual({ id: 'time-entry-launch-blocked', duration: 10000 });
+    }
   });
 
-  it('flag off: other blocked launches also use the plain single-argument toast', async () => {
+  it('a missing existing entry uses the deduplicated blocked toast', async () => {
     getTimeEntryById.mockResolvedValueOnce(null);
 
     await launchTimeEntryForWorkItem({
@@ -100,46 +106,6 @@ describe('launchTimeEntryForWorkItem launch feedback (release-v1-5-feature)', ()
     });
 
     expect(toastError).toHaveBeenCalledTimes(1);
-    expect(toastError).toHaveBeenCalledWith('Time entry not found.');
-    expect(toastError.mock.calls[0].length).toBe(1);
-  });
-
-  it('flag on: no time period uses the refreshed copy on the deduplicated long-lived toast', async () => {
-    getCurrentTimePeriod.mockResolvedValueOnce(null);
-
-    await launchTimeEntryForWorkItem({
-      openDrawer: vi.fn(),
-      closeDrawer: vi.fn(),
-      context: baseContext,
-      enhancedLaunchFeedback: true,
-    });
-
-    expect(toastError).toHaveBeenCalledTimes(1);
-    expect(toastError).toHaveBeenCalledWith(
-      'No time period covers today, so time can’t be entered yet. Ask an administrator to create time periods under Settings → Time Entry.',
-      { id: 'time-entry-launch-blocked', duration: 10000 },
-    );
-  });
-
-  it('flag on: repeated blocked launches reuse one toast id', async () => {
-    getCurrentTimePeriod.mockResolvedValue(null);
-
-    await launchTimeEntryForWorkItem({
-      openDrawer: vi.fn(),
-      closeDrawer: vi.fn(),
-      context: baseContext,
-      enhancedLaunchFeedback: true,
-    });
-    await launchTimeEntryForWorkItem({
-      openDrawer: vi.fn(),
-      closeDrawer: vi.fn(),
-      context: baseContext,
-      enhancedLaunchFeedback: true,
-    });
-
-    expect(toastError).toHaveBeenCalledTimes(2);
-    for (const call of toastError.mock.calls) {
-      expect(call[1]).toEqual({ id: 'time-entry-launch-blocked', duration: 10000 });
-    }
+    expect(toastError).toHaveBeenCalledWith('Time entry not found.', { id: 'time-entry-launch-blocked', duration: 10000 });
   });
 });

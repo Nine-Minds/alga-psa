@@ -21,6 +21,7 @@ This starts every emulator on its default port and the console at
 | `webhook-sink` | `@alga-psa/emulator-webhook-sink` | 4030 | Any webhook receiver; records requests, echoes Graph validation tokens |
 | `smtp-sink` | `@alga-psa/emulator-smtp-sink` | 4040 | SMTP capture (MailHog stand-in) |
 | `stripe` | `@alga-psa/emulator-stripe` | 4050 | Stripe /v1 API (customers, Checkout sessions) + simulated hosted Checkout with signed webhooks |
+| `xero` | `@alga-psa/emulator-xero` | 4060 | Xero identity OAuth + connections list + api.xro/2.0 accounting API (invoices, contacts, settings) |
 
 The control API and console share port 9500. Override ports with
 `ALGASIM_CONTROL_PORT` and `ALGASIM_PORT_<ID>` (e.g. `ALGASIM_PORT_SMTP_SINK`).
@@ -54,6 +55,7 @@ overrides:
 | Teams / Bot Framework | `TEAMS_EMULATOR_MODE=true`, the two Microsoft vars above, plus `TEAMS_BOT_OPENID_CONFIG_URL=http://localhost:4010/v1/.well-known/openidconfiguration` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST=http://localhost:4010` |
 | QBO | `QBO_OAUTH_AUTHORIZE_URL=http://localhost:4020/connect/oauth2`, `QBO_OAUTH_TOKEN_URL=http://localhost:4020/oauth2/v1/tokens/bearer`, `QBO_API_BASE_URL=http://localhost:4020/v3/company` |
 | Stripe | `STRIPE_API_BASE_URL=http://localhost:4050`, `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim` |
+| Xero | `XERO_OAUTH_AUTHORIZE_URL=http://localhost:4060/identity/connect/authorize`, `XERO_OAUTH_TOKEN_URL=http://localhost:4060/connect/token`, `XERO_CONNECTIONS_URL=http://localhost:4060/connections`, `XERO_API_BASE_URL=http://localhost:4060/api.xro/2.0` |
 | Webhooks | Point the integration's webhook/notification URL at `http://localhost:4030/<any path>` |
 | SMTP | Configure the SMTP provider with host `localhost`, port `4040`, no TLS |
 
@@ -64,7 +66,7 @@ behaves exactly as it does in production. Any other value — unset, empty,
 `NODE_ENV` cannot redirect anything by accident, and `NODE_ENV=production` is a
 second lock the flag cannot unlock. The vars it gates are
 `TEAMS_BOT_OPENID_CONFIG_URL` and `TEAMS_BOT_SERVICE_URL_ALLOWLIST`, plus — for
-the Teams add-on specifically — `MICROSOFT_LOGIN_BASE_URL` and
+the Teams integration specifically — `MICROSOFT_LOGIN_BASE_URL` and
 `MICROSOFT_GRAPH_BASE_URL`, which is where the bot secret, the setup-probe
 credentials, the Graph client secret, and activity-notification tokens are
 sent. (The email module honors those two Microsoft vars unconditionally; that
@@ -146,10 +148,7 @@ algasim seed msgraph client -p '{
 algasim seed msgraph client -p '{"clientId":"11111111-2222-4333-8444-999999999999","clientSecret":"algasim-bot-secret"}'
 ```
 
-**3. Set the tenant up through the product.** The Teams add-on has to be
-granted (`POST /api/v1/tenant-management/tenants/<tenant>/addons` with
-`{"action":"grant","addonKey":"teams"}`, from the master billing tenant), then
-in **Settings → Integrations**:
+**3. Set the tenant up through the product.** Open **Settings → Integrations**:
 
 - *Providers → Microsoft → Add profile*: client id, tenant id
   (`11111111-2222-4333-8444-555555555555`) and secret from step 2.
@@ -206,7 +205,7 @@ teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
 
 ### Teams meetings and recordings
 
-The msgraph emulator also serves the meetings surface the Teams add-on uses:
+The msgraph emulator also serves the meetings surface the Teams integration uses:
 calendar events (`POST/PATCH/DELETE /users/{upn}/events`, an `isOnlineMeeting`
 event auto-creates an online meeting with a join URL), `onlineMeetings`
 (creation probe, join-URL `$filter` resolution), recordings/transcripts lists
@@ -271,8 +270,7 @@ The whole loop, end to end:
 # Locally on pg-boss, enqueue it:
 #   INSERT INTO pgboss.job (name, data) VALUES
 #     ('renew-telephony-call-subscriptions', '{"tenantId":"<tenant>"}');
-# (`telephony_providers` must have an active teams-phone row, and the tenant
-#  needs the Microsoft Teams add-on — the ingest path is deny-by-default.)
+# (`telephony_providers` must have an active teams-phone row.)
 
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15551234567","durationSeconds":180}'
 algasim seed msgraph call-record -p '{"direction":"inbound","callerNumber":"+15557654321","answered":false}'

@@ -4,7 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
+import { getTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import type { TeamsAppPackageStatusResponse } from './teamsContracts';
 import type { TeamsInstallStatus } from './teamsShared';
@@ -442,7 +442,7 @@ export const getTeamsAppPackageStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }

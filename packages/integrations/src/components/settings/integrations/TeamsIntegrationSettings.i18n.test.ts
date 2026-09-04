@@ -24,7 +24,6 @@ const REQUIRED_DIAGNOSTICS_KEYS = [
   'status.skip',
   'errors.run',
   'errors.testMessage',
-  'steps.addonEntitlement',
   'steps.integrationStatus',
   'steps.capabilities',
   'steps.microsoftProfile',
@@ -34,7 +33,6 @@ const REQUIRED_DIAGNOSTICS_KEYS = [
   'steps.userLinkage',
   'steps.conversationReference',
   'steps.recentDeliveryHealth',
-  'recommendation.addon',
   'recommendation.activate',
   'recommendation.capabilities',
   'recommendation.profile',
@@ -53,7 +51,6 @@ const REQUIRED_DIAGNOSTICS_KEYS = [
 const TEST_RESULT_REASON_KEYS = [
   'sent',
   'failed',
-  'addonInactive',
   'integrationInactive',
   'capabilityDisabled',
   'botNotConfigured',

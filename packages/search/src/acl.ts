@@ -6,17 +6,6 @@ import type { Knex } from 'knex';
 
 import type { AclMetadata, SearchObjectType } from '@alga-psa/types';
 
-const RESOURCE_CANONICAL_MAP: Record<string, string> = {
-  timeentry: 'time_entry',
-  time_entry: 'time_entry',
-  timesheet: 'time_sheet',
-  time_sheet: 'time_sheet',
-};
-
-function canonicalizeResource(resource: string): string {
-  return RESOURCE_CANONICAL_MAP[resource] ?? resource;
-}
-
 export interface ComposedAclHints {
   visibleToUserIds: string[];
   visibleToRoles: string[];
@@ -154,7 +143,7 @@ export async function resolveSearchAclPrincipal(
     for (const permission of role.permissions) {
       if (isClientPortal && !permission.client) continue;
       if (!isClientPortal && !permission.msp) continue;
-      permissions.add(`${canonicalizeResource(permission.resource)}:${permission.action}`);
+      permissions.add(`${permission.resource}:${permission.action}`);
     }
   }
 

@@ -683,6 +683,14 @@
     },
     "errors": {
       "loadWorkItem": "Falha ao carregar o item de trabalho."
+    },
+    "teamsMeeting": {
+      "create": "Criar reunião do Teams",
+      "creating": "Criando reunião do Teams…",
+      "join": "Entrar na reunião do Teams",
+      "created": "Reunião do Microsoft Teams criada",
+      "createFailed": "Falha ao criar a reunião do Teams",
+      "recurringUnsupported": "Reuniões do Teams só podem ser adicionadas a entradas avulsas, não a séries recorrentes."
     }
   },
   "actions": {

@@ -4,8 +4,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { ADD_ONS } from '@alga-psa/types';
-import { getTeamsAvailability, resolveTeamsAvailability } from '../../lib/teamsAvailability';
+import { getTeamsAvailability } from '../../lib/teamsAvailability';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -18,7 +17,6 @@ import {
   type TeamsNotificationCategory,
 } from './teamsShared';
 import type {
-  TeamsAddOnState,
   TeamsIntegrationExecutionState,
   TeamsIntegrationSettingsInput,
   TeamsIntegrationStatusResponse,
@@ -28,7 +26,14 @@ import type {
 
 type EeTeamsDiagnosticsActions = typeof import('@alga-psa/ee-microsoft-teams/actions');
 export type TeamsDiagnosticsReport = Awaited<ReturnType<EeTeamsDiagnosticsActions['runTeamsDiagnosticsImpl']>>;
-export type TeamsTestMessageResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>;
+export type TeamsTestMessageResult =
+  | Awaited<ReturnType<EeTeamsDiagnosticsActions['sendTeamsTestMessageImpl']>>
+  | {
+      status: 'skipped';
+      reason: 'ee_unavailable';
+      detail: string;
+      deliveryId: null;
+    };
 
 // F054-F056 live-validation results (typed via the EE impls through the /actions facade).
 export type TeamsGraphCredentialValidationResult = Awaited<ReturnType<EeTeamsDiagnosticsActions['validateTeamsGraphCredentialsImpl']>>;
@@ -236,33 +241,7 @@ function defaultTeamsIntegrationState() {
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
     botConnectorConfigured: isBotConnectorConfiguredFromEnv(),
-    // Overridden with the live add-on state in the status path; a configured row
-    // implies the add-on was active at save time.
-    addOnState: 'active' as TeamsAddOnState,
   };
-}
-
-// CE-safe mirror of the EE teamsAddOnGate.getTeamsAddOnState helper; kept local so
-// the shared status action never statically imports the EE microsoft-teams package.
-async function resolveTeamsAddOnState(knex: any, tenant: string): Promise<TeamsAddOnState> {
-  const row = await tenantDb(knex, tenant).table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .first('addon_key', 'expires_at');
-
-  if (!row) {
-    return 'absent';
-  }
-
-  if (row.expires_at === null || row.expires_at === undefined) {
-    return 'active';
-  }
-
-  const expiresAt = row.expires_at instanceof Date ? row.expires_at : new Date(row.expires_at);
-  if (Number.isNaN(expiresAt.getTime())) {
-    return 'active';
-  }
-
-  return expiresAt.getTime() > Date.now() ? 'active' : 'expired';
 }
 
 function mapTeamsIntegrationRow(
@@ -295,7 +274,6 @@ function mapTeamsIntegrationRow(
     downloadRecordings: Boolean(row.download_recordings),
     exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
     botConnectorConfigured: isBotConnectorConfiguredFromEnv(),
-    addOnState: 'active',
   };
 }
 
@@ -403,20 +381,15 @@ async function getTeamsIntegrationStatusImpl(
       userId: (user as any)?.user_id,
     });
 
-    const { knex } = await createTenantKnex();
-    const addOnState = await resolveTeamsAddOnState(knex, tenant);
-
-    // Soft-disable: an expired add-on keeps its preserved configuration visible so
-    // the admin banner can explain the lapse. A truly absent add-on stays gated, but
-    // still reports addOnState so the settings UI can render the paywall.
-    if (availability.enabled === false && addOnState !== 'expired') {
-      return { success: false, error: availability.message, addOnState };
+    if (availability.enabled === false) {
+      return { success: false, error: availability.message };
     }
 
+    const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
       success: true,
-      integration: { ...mapTeamsIntegrationRow(row), addOnState },
+      integration: mapTeamsIntegrationRow(row),
     };
   } catch (err: any) {
     return { success: false, error: teamsActionErrorMessage(err, 'Failed to load Teams integration settings') };
@@ -604,7 +577,7 @@ export const getTeamsIntegrationStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsIntegrationStatusResponse> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
@@ -623,7 +596,7 @@ export const saveTeamsIntegrationSettings = withAuth(async (
   { tenant },
   input: TeamsIntegrationSettingsInput
 ): Promise<TeamsIntegrationStatusResponse> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };
   }
@@ -640,15 +613,15 @@ export const runTeamsDiagnostics = withAuth(async (
   { tenant },
   input: Record<string, never> = {}
 ): Promise<TeamsDiagnosticsReport> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return {
       createdAt: new Date().toISOString(),
       overallStatus: 'fail',
       steps: [
         {
-          id: 'addon_entitlement',
-          title: 'Teams add-on entitlement',
+          id: 'availability',
+          title: 'Teams availability',
           status: 'fail',
           detail: availability.message,
           durationMs: 0,
@@ -668,30 +641,30 @@ export const sendTeamsTestMessage = withAuth(async (
   { tenant },
   input: Record<string, never> = {}
 ): Promise<TeamsTestMessageResult> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return {
       status: 'skipped',
-      reason: 'addon_inactive',
+      reason: 'ee_unavailable',
       detail: availability.message,
       deliveryId: null,
-    } as TeamsTestMessageResult;
+    };
   }
 
   const actions = await loadEeTeamsActions();
   return actions.sendTeamsTestMessageImpl(user, { tenant }, input);
 });
 
-// F054-F056: thin CE-safe delegators to the EE live-validation actions. In CE the
-// edition guard returns a typed addon_inactive failure rather than importing EE.
+// Thin CE-safe delegators to the EE live-validation actions. The availability
+// guard prevents loading the EE implementation when the release feature is off.
 export const validateTeamsGraphCredentials = withAuth(async (
   user,
   { tenant },
   input: Record<string, never> = {}
 ): Promise<TeamsGraphCredentialValidationResult> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
-    return { status: 'failed', reason: 'addon_inactive', message: availability.message };
+    return { status: 'failed', reason: 'feature_disabled', message: availability.message };
   }
 
   const actions = await loadEeTeamsActions();
@@ -703,9 +676,9 @@ export const probeTeamsGraphPermissions = withAuth(async (
   { tenant },
   input: Record<string, never> = {}
 ): Promise<TeamsGraphPermissionsProbeResult> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
-    return { status: 'failed', reason: 'addon_inactive', message: availability.message };
+    return { status: 'failed', reason: 'feature_disabled', message: availability.message };
   }
 
   const actions = await loadEeTeamsActions();
@@ -717,9 +690,9 @@ export const validateTeamsBotConnector = withAuth(async (
   { tenant },
   input: Record<string, never> = {}
 ): Promise<TeamsBotConnectorValidationResult> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
-    return { status: 'failed', reason: 'addon_inactive', message: availability.message };
+    return { status: 'failed', reason: 'feature_disabled', message: availability.message };
   }
 
   const actions = await loadEeTeamsActions();
@@ -733,7 +706,7 @@ export const listTeamsDeliveries = withAuth(async (
   { tenant },
   params: ListTeamsDeliveriesParams = {}
 ): Promise<TeamsDeliveriesPage> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return { rows: [], nextCursor: null };
   }
@@ -747,20 +720,11 @@ export const listTeamsAuditEvents = withAuth(async (
   { tenant },
   params: ListTeamsAuditEventsParams = {}
 ): Promise<TeamsAuditEventsPage> => {
-  const availability = resolveTeamsAvailability({ tenantId: tenant });
+  const availability = await getTeamsAvailability({ tenantId: tenant, userId: (user as any)?.user_id });
   if (availability.enabled === false) {
     return { rows: [], nextCursor: null };
   }
 
   const actions = await loadEeTeamsActions();
   return actions.listTeamsAuditEventsImpl(user, { tenant }, params);
-});
-
-// F064: paywall CTA gating. Only billing admins can purchase the add-on.
-export const getTeamsAddonPurchaseAccess = withAuth(async (
-  user,
-  _ctx
-): Promise<{ canPurchase: boolean }> => {
-  const canPurchase = await hasPermission(user as any, 'billing', 'update');
-  return { canPurchase };
 });

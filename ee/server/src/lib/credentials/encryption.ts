@@ -164,6 +164,22 @@ export function resetCredentialAesKeyCache(): void {
   aesKeyPromise = null;
 }
 
+/**
+ * Startup guard for the credentials vault (EE-only). Throws an actionable
+ * operator error when neither Vault Transit is configured nor the AES key
+ * (`credential_encryption_key` / `CREDENTIAL_ENCRYPTION_KEY`) is provisioned.
+ * Called at server boot so a misconfigured vault fails loudly up front instead
+ * of on the user's first save — empty-password rows never needed the key, but
+ * a non-empty password does (and the current environments that broke did not
+ * have it provisioned).
+ */
+export async function assertCredentialEncryptionConfigured(): Promise<void> {
+  if (isVaultTransitConfigured()) {
+    return;
+  }
+  await getAesKey();
+}
+
 /** Pure AES-256-GCM encrypt; payload layout `enc:{b64(iv(12)+tag(16)+ct)}`. */
 export function encryptAesGcm(plaintext: string, key: Buffer): string {
   const iv = crypto.randomBytes(12);

@@ -559,7 +559,9 @@
     "replies_other": "{{count}} respuestas",
     "collapse": "Contraer",
     "expand": "Expandir",
-    "showInDrawer": "Mostrar en el panel"
+    "showInDrawer": "Mostrar en el panel",
+    "showEarlierReplies_one": "Mostrar {{count}} respuesta anterior",
+    "showEarlierReplies_other": "Mostrar {{count}} respuestas anteriores"
   },
   "pagination": {
     "previous": "Anterior",

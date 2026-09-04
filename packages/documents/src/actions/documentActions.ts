@@ -1782,7 +1782,7 @@ export const getDocumentPreview = withAuth(async (
 });
 
 // Get document download URL
-export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, file_id: string): Promise<string | ActionPermissionError> => {
+export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, documentIdOrFileId: string): Promise<string | ActionPermissionError> => {
     // Check permission for document reading/download
     if (!await hasPermission(user, 'document', 'read')) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
@@ -1790,13 +1790,15 @@ export const getDocumentDownloadUrl = withAuth(async (user, { tenant }, file_id:
 
     const { knex } = await createTenantKnex();
     const authorizedDocument = await withTransaction(knex, async (trx: Knex.Transaction) =>
-      getAuthorizedDocumentByFileId(trx, tenant, user, file_id)
+      (await getAuthorizedDocumentById(trx, tenant, user, documentIdOrFileId))
+        ?? getAuthorizedDocumentByFileId(trx, tenant, user, documentIdOrFileId)
     );
     if (!authorizedDocument?.file_id) {
       return permissionError('Permission denied: Cannot read documents', 'documents:errors.permissions.read');
     }
 
-    return `/api/documents/download/${file_id}`;
+    // Link by document id so the URL survives a re-render that retires the file.
+    return `/api/documents/download/${authorizedDocument.document_id}`;
 });
 
 /**

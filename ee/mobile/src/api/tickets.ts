@@ -46,7 +46,7 @@ export type TicketListItem = {
 };
 
 export type TicketRichAttributes = {
-  description?: string | null;
+  description?: string | object | null;
   due_date?: string | null;
   watcher_user_ids?: string[] | null;
   [key: string]: unknown;

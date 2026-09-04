@@ -30,7 +30,6 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
-import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ProjectHoursView from './ProjectHoursReport';
@@ -1116,16 +1115,9 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
   const { t } = useTranslation('msp/reports');
   const [selectedReportId, setSelectedReportId] = useState<EmbeddedReportId>('ticket-workload');
   const [rangeDays, setRangeDays] = useState<ReportRangeDays>(30);
-  const { enabled: deferredRevenueEnabled } = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-
   const visibleReports = useMemo(
-    () =>
-      REPORTS.filter(
-        (report) =>
-          report.products.includes(productCode) &&
-          (report.id !== 'deferred-revenue' || deferredRevenueEnabled),
-      ),
-    [productCode, deferredRevenueEnabled],
+    () => REPORTS.filter((report) => report.products.includes(productCode)),
+    [productCode],
   );
 
   const selectedReport = visibleReports.find((report) => report.id === selectedReportId);

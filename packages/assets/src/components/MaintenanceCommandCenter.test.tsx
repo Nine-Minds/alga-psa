@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { SWRConfig } from 'swr';
 
 const listMaintenanceOccurrences = vi.fn();
+const listAssets = vi.fn();
 
 vi.mock('next/link', () => ({
   __esModule: true,
@@ -20,6 +21,7 @@ vi.mock('../actions/assetActions', () => ({
   createOccurrenceTicket: vi.fn(),
   setSchedulePaused: vi.fn(),
   skipOccurrence: vi.fn(),
+  listAssets: (...args: unknown[]) => listAssets(...args),
 }));
 
 vi.mock('../context/AssetCrossFeatureContext', () => ({
@@ -30,6 +32,7 @@ vi.mock('./MaintenanceCompletionDialog', () => ({
   MaintenanceCompletionDialog: () => null,
   checklistItems: () => [],
 }));
+vi.mock('./tabs/CreateMaintenanceScheduleDialog', () => ({ CreateMaintenanceScheduleDialog: () => null }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
   Button: ({ children, ...props }: any) => <button {...props}>{children}</button>,
@@ -41,7 +44,7 @@ vi.mock('@alga-psa/ui/components/Card', () => ({
   CardTitle: ({ children }: any) => <h2>{children}</h2>,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children }: any) => <div>{children}</div>,
+  Dialog: ({ children, footer }: any) => <div>{children}{footer}</div>,
   DialogContent: ({ children }: any) => <div>{children}</div>,
 }));
 vi.mock('@alga-psa/ui/components/Input', () => ({
@@ -119,5 +122,20 @@ describe('MaintenanceCommandCenter', () => {
     await waitFor(() => expect(screen.getByText('No maintenance occurrences match these filters. Clear a filter or widen the due-date range.')).toBeTruthy());
     expect(screen.queryByText('0 due')).toBeNull();
     expect(screen.queryByText('Sunday')).toBeNull();
+  });
+
+  it('resets the asset picker search after Cancel', async () => {
+    listMaintenanceOccurrences.mockResolvedValue({ occurrences: [], total: 0 });
+    listAssets.mockResolvedValue({ assets: [], total: 0 });
+    const user = userEvent.setup();
+    render(<SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}><MaintenanceCommandCenter /></SWRConfig>);
+
+    await user.click(await screen.findByRole('button', { name: 'New maintenance plan' }));
+    const pickerSearch = await screen.findByPlaceholderText('Search by name, tag, or serial number');
+    await user.type(pickerSearch, 'Ruby');
+    await user.click(document.getElementById('maintenance-plan-asset-select-cancel')!);
+    await user.click(screen.getByRole('button', { name: 'New maintenance plan' }));
+
+    expect((await screen.findByPlaceholderText('Search by name, tag, or serial number') as HTMLInputElement).value).toBe('');
   });
 });

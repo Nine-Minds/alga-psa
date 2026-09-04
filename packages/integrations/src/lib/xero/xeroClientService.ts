@@ -1,7 +1,14 @@
 import axios, { AxiosError, AxiosRequestConfig } from 'axios';
 import logger from '@alga-psa/core/logger';
 import { getSecretProviderInstance, type ISecretProvider } from '@alga-psa/core/secrets';
-import { AppError } from '@alga-psa/core';
+import { createTenantKnex } from '@alga-psa/db';
+import { retireTerminalDisconnectRecord } from '../providerDisconnect/retire';
+import {
+  getProviderCredentialWriteDisposition,
+  withProviderCredentialLock,
+} from '../providerDisconnect/lock';
+import { PROVIDER_XERO } from '../providerDisconnect/types';
+import { AppError, sanitizeProviderMessage, toSafeProviderError } from '@alga-psa/core';
 import type {
   ExternalCompanyRecord,
   NormalizedCompanyPayload
@@ -10,22 +17,61 @@ import type {
 // Re-export types for dependent modules
 export type { ExternalCompanyRecord, NormalizedCompanyPayload } from '@alga-psa/types';
 
-const XERO_TOKEN_ENDPOINT = 'https://identity.xero.com/connect/token';
-const XERO_API_BASE_URL = 'https://api.xero.com/api.xro/2.0';
+// Env overrides exist so test environments can point at a local Xero
+// provider simulator (tools/smoke-sim/accounting-provider-simulator.cjs or
+// packages/emulators/xero), mirroring QBO_OAUTH_TOKEN_URL/QBO_API_BASE_URL
+// for QBO and MICROSOFT_GRAPH_BASE_URL for Graph. They resolve lazily so a
+// test can set them after module load; when unset every call targets the real
+// Xero hosts.
+const XERO_TOKEN_ENDPOINT_DEFAULT = 'https://identity.xero.com/connect/token';
+const XERO_API_BASE_URL_DEFAULT = 'https://api.xero.com/api.xro/2.0';
+const XERO_CONNECTIONS_URL_DEFAULT = 'https://api.xero.com/connections';
+const XERO_REVOCATION_URL_DEFAULT = 'https://identity.xero.com/connect/revocation';
 const XERO_CREDENTIALS_SECRET = 'xero_credentials';
 const XERO_CLIENT_ID_SECRET = 'xero_client_id';
 const XERO_CLIENT_SECRET_SECRET = 'xero_client_secret';
 const ACCESS_TOKEN_BUFFER_SECONDS = 300;
+// Minimum scope set covering shipped functionality: invoice export (POST/GET
+// /Invoices), contact export (GET/POST /Contacts), and read-only settings
+// lookups (GET /Accounts, /Items, /TaxRates, /TrackingCategories — all covered
+// by accounting.settings.read). No shipped flow calls the Payments or
+// BankTransactions APIs, so those scopes are not requested by default.
 const DEFAULT_XERO_SCOPES = [
   'offline_access',
-  'accounting.settings',
+  'accounting.settings.read',
   'accounting.invoices',
-  'accounting.banktransactions',
-  'accounting.payments',
   'accounting.contacts'
 ];
 
-export const XERO_TOKEN_URL = XERO_TOKEN_ENDPOINT;
+// Provider endpoint overrides so test environments can point at the local
+// provider simulator (tools/smoke-sim/accounting-provider-simulator.cjs)
+// without touching production hosts. They resolve lazily so a test can set
+// them after module load; when unset every call targets the real Xero hosts.
+function readEndpointOverride(key: string, fallback: string): string {
+  return process.env[key]?.trim() || fallback;
+}
+
+export function getXeroTokenUrl(): string {
+  return readEndpointOverride('XERO_OAUTH_TOKEN_URL', XERO_TOKEN_ENDPOINT_DEFAULT);
+}
+
+export function getXeroApiBaseUrl(): string {
+  return readEndpointOverride('XERO_API_BASE_URL', XERO_API_BASE_URL_DEFAULT);
+}
+
+export function getXeroConnectionsUrl(): string {
+  return readEndpointOverride('XERO_CONNECTIONS_URL', XERO_CONNECTIONS_URL_DEFAULT);
+}
+
+export function getXeroRevocationUrl(): string {
+  return readEndpointOverride('XERO_REVOCATION_URL', XERO_REVOCATION_URL_DEFAULT);
+}
+
+// OAuth scope tokens are dot-separated lowercase identifiers such as
+// offline_access or accounting.settings.read.
+const XERO_SCOPE_TOKEN_PATTERN = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)*$/;
+
+export const XERO_TOKEN_URL = getXeroTokenUrl();
 export const XERO_CREDENTIALS_SECRET_NAME = XERO_CREDENTIALS_SECRET;
 export const XERO_CLIENT_ID_SECRET_NAME = XERO_CLIENT_ID_SECRET;
 export const XERO_CLIENT_SECRET_SECRET_NAME = XERO_CLIENT_SECRET_SECRET;
@@ -130,16 +176,56 @@ export async function getXeroDeploymentBaseUrl(secretProvider?: ISecretProvider)
   return computeBaseUrl(base);
 }
 
-export function getXeroOAuthScopes(): string[] {
+export type XeroOAuthScopeSource = 'default' | 'override';
+
+export interface XeroOAuthScopeConfig {
+  scopes: string[];
+  source: XeroOAuthScopeSource;
+  /** Override tokens rejected by validation; only present when an override was ignored. */
+  invalidOverrideScopes?: string[];
+}
+
+/**
+ * Resolve the OAuth scopes for new Xero authorizations.
+ *
+ * The XERO_OAUTH_SCOPES environment variable is an explicit deployment
+ * override (space-separated scope tokens). It is honoured only when every
+ * token is a well-formed scope; a malformed override is ignored in favour of
+ * the defaults, with the rejected tokens surfaced in the returned config so
+ * diagnostics can show them without inspecting the environment.
+ */
+export function getXeroOAuthScopeConfig(): XeroOAuthScopeConfig {
   const configured = readTrimmedSecret(process.env.XERO_OAUTH_SCOPES);
   if (!configured) {
-    return DEFAULT_XERO_SCOPES;
+    return { scopes: [...DEFAULT_XERO_SCOPES], source: 'default' };
   }
 
-  return configured
-    .split(/\s+/)
-    .map((scope) => scope.trim())
-    .filter(Boolean);
+  const requested = Array.from(
+    new Set(
+      configured
+        .split(/\s+/)
+        .map((scope) => scope.trim())
+        .filter(Boolean)
+    )
+  );
+  const invalidScopes = requested.filter((scope) => !XERO_SCOPE_TOKEN_PATTERN.test(scope));
+
+  if (requested.length === 0 || invalidScopes.length > 0) {
+    logger.warn('[XeroClientService] ignoring malformed XERO_OAUTH_SCOPES override; using default scopes', {
+      invalidScopes
+    });
+    return {
+      scopes: [...DEFAULT_XERO_SCOPES],
+      source: 'default',
+      invalidOverrideScopes: invalidScopes
+    };
+  }
+
+  return { scopes: requested, source: 'override' };
+}
+
+export function getXeroOAuthScopes(): string[] {
+  return getXeroOAuthScopeConfig().scopes;
 }
 
 export function getXeroOAuthScopesString(): string {
@@ -663,7 +749,7 @@ export class XeroClientService {
       logger.warn('[XeroClientService] failed to lookup contact after create', {
         tenantId: this.tenantId,
         connectionId: this.connection.connectionId,
-        error
+        error: toSafeProviderError('xero', error, { operation: 'findContactByName' })
       });
       return null;
     }
@@ -680,7 +766,7 @@ export class XeroClientService {
 
     try {
       const response = await axios.request<T>({
-        baseURL: XERO_API_BASE_URL,
+        baseURL: getXeroApiBaseUrl(),
         ...config,
         headers
       });
@@ -740,7 +826,7 @@ export class XeroClientService {
         client_secret: this.appSecrets.clientSecret
       });
 
-      const response = await axios.post(XERO_TOKEN_ENDPOINT, params.toString(), {
+      const response = await axios.post(getXeroTokenUrl(), params.toString(), {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
         }
@@ -761,7 +847,15 @@ export class XeroClientService {
       };
 
       this.connections[this.connection.connectionId] = this.connection;
-      await storeTenantConnections(this.tenantId, this.connections);
+      // Persist through the gated upsert (not a raw store): a refresh from a
+      // client instantiated before a disconnect started must not write the
+      // live credential secret back while the disconnect is in flight. Only
+      // the refreshed connection is passed so a concurrently updated sibling
+      // connection is not clobbered with this client's stale copy. QBO's
+      // refresh path does the same via upsertStoredQboCredentials.
+      await upsertStoredXeroConnections(this.tenantId, {
+        [this.connection.connectionId]: this.connection
+      });
     } catch (error) {
       const normalized = this.normalizeError(error);
       if (normalized.code === 'XERO_API_ERROR') {
@@ -791,21 +885,23 @@ export class XeroClientService {
             null;
           const validationErrors = Array.isArray(element?.ValidationErrors)
             ? element.ValidationErrors.map((validation: Record<string, any>) => ({
-                message: validation.Message ?? 'Validation error',
+                message: sanitizeProviderMessage(validation.Message ?? 'Validation error'),
                 field: validation.Message?.includes(':')
                   ? validation.Message.split(':')[0]?.trim()
                   : undefined
               }))
             : [];
 
+          // Allowlisted fields only — never attach the raw provider element:
+          // it carries the full invoice (customer, line items, amounts).
           return {
             documentId: invoiceNumber ?? undefined,
             validationErrors,
-            message:
+            message: sanitizeProviderMessage(
               validationErrors.length > 0
                 ? validationErrors.map((item) => item.message).join('; ')
-                : 'Validation error',
-            raw: element
+                : 'Validation error'
+            )
           };
         });
 
@@ -823,15 +919,19 @@ export class XeroClientService {
         });
       }
 
+      // Reduce the provider response to allowlisted fields; the body itself
+      // can contain tokens, contact data, and invoice contents.
+      const safe = toSafeProviderError('xero', error, { correlationId });
       return new AppError('XERO_API_ERROR', 'Unexpected Xero API error', {
         status,
-        correlationId,
-        raw: data
+        correlationId: safe.correlationId,
+        providerErrorCode: safe.providerErrorCode,
+        providerMessage: safe.message
       });
     }
 
     return new AppError('XERO_UNKNOWN_ERROR', 'Unknown Xero client error', {
-      originalError: error
+      originalError: toSafeProviderError('xero', error)
     });
   }
 }
@@ -872,7 +972,11 @@ async function getTenantConnections(tenantId: string): Promise<XeroConnectionsSt
       return parsed as XeroConnectionsStore;
     }
   } catch (error) {
-    logger.error('[XeroClientService] failed to parse stored credentials', { tenantId, error });
+    // Parse errors can quote the stored secret payload; log only the error type.
+    logger.error('[XeroClientService] failed to parse stored credentials', {
+      tenantId,
+      errorName: error instanceof Error ? error.name : 'unknown'
+    });
   }
   return {};
 }
@@ -889,29 +993,68 @@ export async function getStoredXeroConnections(tenantId: string): Promise<XeroCo
 export async function upsertStoredXeroConnections(
   tenantId: string,
   updates: XeroConnectionsStore,
-  options: { prioritize?: string[] } = {}
+  options: { prioritize?: string[]; authorizationFlowStartedAt?: string } = {}
 ): Promise<XeroConnectionsStore> {
-  const existing = await getTenantConnections(tenantId);
-  const merged: XeroConnectionsStore = { ...existing, ...updates };
+  const { knex } = await createTenantKnex(tenantId);
 
-  if (options.prioritize?.length) {
-    const prioritizedEntries: XeroConnectionsStore = {};
-    for (const id of options.prioritize) {
-      if (merged[id]) {
-        prioritizedEntries[id] = merged[id];
-      }
+  // The gate check and secret write hold the shared credential-write lock (see
+  // providerDisconnect/lock.ts), which disconnect initiation also holds while
+  // persisting its record and invalidating outstanding flows. Active records
+  // block every write; a finalized record is retired only for an OAuth flow
+  // provably started after finalization. Record-read failures fail closed.
+  return withProviderCredentialLock(knex, tenantId, PROVIDER_XERO, async (trx) => {
+    const disposition = await getProviderCredentialWriteDisposition(
+      trx,
+      tenantId,
+      PROVIDER_XERO,
+      options.authorizationFlowStartedAt,
+    ).catch(() => 'disconnect_in_progress' as const);
+    if (disposition === 'disconnect_in_progress') {
+      throw new AppError(
+        'XERO_DISCONNECT_IN_PROGRESS',
+        'Xero is being disconnected. Finish or finalize the disconnect before connecting again.'
+      );
     }
-    for (const [id, connection] of Object.entries(merged)) {
-      if (!(id in prioritizedEntries)) {
-        prioritizedEntries[id] = connection;
-      }
+    if (disposition === 'stale_authorization') {
+      throw new AppError(
+        'XERO_STALE_AUTHORIZATION',
+        'This Xero authorization started before the last disconnect completed. Start the connection again.'
+      );
     }
-    await storeTenantConnections(tenantId, prioritizedEntries);
-    return prioritizedEntries;
-  }
 
-  await storeTenantConnections(tenantId, merged);
-  return merged;
+    // Reconnect after a completed (or force-finalized) disconnect: retire the
+    // stale terminal disconnect record BEFORE the new connection becomes visible
+    // to the rest of the system, so the next disconnect starts a fresh cycle
+    // instead of short-circuiting on the old finalized row. A pending disconnect
+    // record is deliberately left alone — reconnect during an in-flight cycle is
+    // blocked upstream. The disconnect service independently treats a terminal
+    // record with live credentials as stale (defense in depth).
+    await retireTerminalDisconnectRecord(tenantId, PROVIDER_XERO, trx);
+
+    // Read-merge-write inside the lock so concurrent upserts serialize instead
+    // of losing entries to a stale read.
+    const existing = await getTenantConnections(tenantId);
+    const merged: XeroConnectionsStore = { ...existing, ...updates };
+
+    if (options.prioritize?.length) {
+      const prioritizedEntries: XeroConnectionsStore = {};
+      for (const id of options.prioritize) {
+        if (merged[id]) {
+          prioritizedEntries[id] = merged[id];
+        }
+      }
+      for (const [id, connection] of Object.entries(merged)) {
+        if (!(id in prioritizedEntries)) {
+          prioritizedEntries[id] = connection;
+        }
+      }
+      await storeTenantConnections(tenantId, prioritizedEntries);
+      return prioritizedEntries;
+    }
+
+    await storeTenantConnections(tenantId, merged);
+    return merged;
+  });
 }
 
 export async function resolveXeroOAuthCredentials(

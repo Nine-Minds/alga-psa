@@ -312,6 +312,7 @@ export async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob
       token_expires_at: googleConfig.token_expires_at,
       history_id: googleConfig.history_id,
       watch_expiration: googleConfig.watch_expiration,
+      label_filters: googleConfig.label_filters,
     },
   } as any;
 

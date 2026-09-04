@@ -82,8 +82,8 @@
       "linkQuote": "Bestaande offerte koppelen",
       "loadFailed": "Kan kans niet laden",
       "loading": "Kans laden...",
-      "markLost": "Mark heeft verloren",
-      "markWon": "Mark heeft gewonnen",
+      "markLost": "Markeren als verloren",
+      "markWon": "Markeren als gewonnen",
       "metadataTitle": "Gelegenheid",
       "nextAction": "Volgende actie",
       "nextActionOverdue": "Volgende actie · te laat",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "Wat moet het team weten als dit terugkomt?",
       "reason": "Reden",
       "reasonPlaceholder": "Waarom ging het niet door?",
-      "submit": "Mark heeft verloren",
-      "title": "Mark heeft verloren"
+      "submit": "Markeren als verloren",
+      "title": "Markeren als verloren"
     },
     "lossReason": {
       "chose_competitor": "Kies een concurrent",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Controleer de salesfunnel",
         "viewAssessmentDeals": "Bekijk assessmentdeals"
       },
-      "markLost": "Mark heeft verloren",
+      "markLost": "Markeren als verloren",
       "moneyFound": "Geld gevonden",
       "moneyFoundSource": "van facturering, contracten en assets",
       "needsYou_one": "{{count}} ding heeft u vandaag nodig.",
@@ -352,7 +352,7 @@
       "lost": "Verloren",
       "proposed": "Voorgesteld",
       "qualified": "Gekwalificeerd",
-      "verbal": "Verbaal",
+      "verbal": "Mondeling akkoord",
       "won": "Gewonnen"
     },
     "status": {
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "De deal wordt als gewonnen afgesloten.",
       "bodyProspect": "{{client}} wordt een actieve klant.",
-      "confirm": "Mark heeft gewonnen",
+      "confirm": "Markeren als gewonnen",
       "convertQuote": "Een geaccepteerde offerte omzetten naar een conceptovereenkomst (optioneel)",
       "nextConvert": "Zet de geaccepteerde offerte hieronder om in een overeenkomst, of later vanaf het offertescherm.",
       "nextSendQuote": "Er is nog geen geaccepteerde offerte gekoppeld. Stuur de offerte, laat deze goedkeuren en zet die daarna om naar een overeenkomst. U kunt de deal nu al als gewonnen markeren.",
@@ -558,7 +558,7 @@
       "projectStart": "Startdatum",
       "projectStatus": "Initiële status",
       "projectTemplate": "Maak een onboardingproject aan (optioneel)",
-      "title": "Mark heeft gewonnen"
+      "title": "Markeren als gewonnen"
     }
   }
 }

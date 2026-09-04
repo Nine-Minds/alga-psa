@@ -1320,6 +1320,12 @@
       },
       "skip": "Salta",
       "creating": "Creazione..."
+    },
+    "discardConfirmation": {
+      "title": "Scartare il modello non salvato?",
+      "message": "Il tuo modello contiene modifiche non salvate. Se esci ora, queste modifiche andranno perse.",
+      "keepEditing": "Continua a modificare",
+      "discard": "Scarta modello"
     }
   },
   "documents": {

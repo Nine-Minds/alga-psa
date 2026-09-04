@@ -56,7 +56,7 @@ describe('validate-direct route', () => {
       clientId: 'client-id-38',
       clientSecret: 'client-secret-38',
       tenantId: null,
-      source: 'tenant-secret',
+      source: 'profile', profileId: 'profile-38', profileDisplayName: 'MSP app',
     });
 
     const getTenantSecretMock = vi
@@ -108,7 +108,7 @@ describe('validate-direct route', () => {
       clientId: 'client-id-39',
       clientSecret: 'client-secret-39',
       tenantId: null,
-      source: 'tenant-secret',
+      source: 'profile', profileId: 'profile-39', profileDisplayName: 'MSP app',
     });
 
     const getTenantSecretMock = vi

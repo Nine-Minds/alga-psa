@@ -182,6 +182,7 @@ secrets/
 !packages/core/src/lib/secrets/
 !shared/workflow/secrets/
 !server/src/components/settings/secrets/
+!server/src/app/msp/settings/secrets/
 .secrets
 .clinerules
 data/

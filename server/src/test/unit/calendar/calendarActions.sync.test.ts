@@ -146,8 +146,10 @@ describe('syncCalendarProvider manual flows', () => {
       id: 'provider-1',
       tenant: 'tenant-1',
       user_id: 'user-1',
+      provider_type: 'google',
       sync_direction: 'bidirectional',
       last_sync_at: null,
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
     });
 
     mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true, externalEventId: 'ext-1' });
@@ -173,8 +175,10 @@ describe('syncCalendarProvider manual flows', () => {
       id: 'provider-2',
       tenant: 'tenant-1',
       user_id: 'user-1',
+      provider_type: 'microsoft',
       sync_direction: 'from_external',
       last_sync_at: null,
+      provider_config: { accessToken: 'access-token', refreshToken: 'refresh-token' },
     });
 
     mockSyncScheduleEntryToExternal.mockResolvedValue({ success: true });
@@ -187,5 +191,28 @@ describe('syncCalendarProvider manual flows', () => {
       expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
       expect(mockSyncExternalEventToSchedule).toHaveBeenCalledWith('ext-2', 'provider-2', true);
     });
+  });
+
+  it('refuses to sync a provider that never completed OAuth authorization', async () => {
+    setupKnex([{ schedule_entry_id: 'entry-3', external_event_id: 'ext-3' }]);
+
+    mockGetProvider.mockResolvedValue({
+      id: 'provider-3',
+      tenant: 'tenant-1',
+      user_id: 'user-1',
+      provider_type: 'microsoft',
+      sync_direction: 'bidirectional',
+      last_sync_at: null,
+      provider_config: {},
+    });
+
+    const result = await syncCalendarProviderImpl(authUser, { tenant: 'tenant-1' }, 'provider-3');
+
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/OAuth authorization/i);
+    expect(mockSyncScheduleEntryToExternal).not.toHaveBeenCalled();
+    // The guard must not stamp an error status either — the provider simply
+    // isn't ready yet, and onboarding renders status messages verbatim.
+    expect(mockUpdateProviderStatus).not.toHaveBeenCalled();
   });
 });

@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "Você não tem permissão para visualizar segredos.",
       "success": {
         "tenantNameUpdated": "Nome do locatário atualizado com sucesso",
         "timezoneUpdated": "Fuso horário padrão atualizado com sucesso",
@@ -1281,11 +1282,11 @@
         "canonicalHostFallback": "hospedeiro canônico"
       },
       "appliance": {
-        "helpText": "Aponte este nome de host para o seu appliance e faça com que o seu proxy reverso encaminhe o cabeçalho Host original antes de salvar.",
+        "helpText": "Aponte este nome de host para o seu servidor e faça com que o seu proxy reverso encaminhe o cabeçalho Host original antes de salvar.",
         "checklistTitle": "Configuração do proxy reverso",
         "step1Prefix": "Aponte ",
-        "step1Suffix": " para este appliance (um registro A para o seu endereço ou um CNAME para o seu host de appliance).",
-        "step2": "No seu proxy reverso, termine o TLS para o domínio e encaminhe para este appliance na porta 3000, preservando o cabeçalho Host original (ex. proxy_set_header Host $host) e enviando X-Forwarded-Proto: https.",
+        "step1Suffix": " para este servidor (um registro A para o seu endereço ou um CNAME para o nome de host do seu servidor).",
+        "step2": "No seu proxy reverso, termine o TLS para o domínio e encaminhe para este servidor na porta 3000, preservando o cabeçalho Host original (ex. proxy_set_header Host $host) e enviando X-Forwarded-Proto: https.",
         "step3": "Obtenha e mantenha o certificado TLS para o domínio no seu proxy.",
         "step4": "Salve o domínio aqui — ele é ativado imediatamente. Configure primeiro o DNS e o seu proxy, pois os links do portal mudam para este domínio imediatamente.",
         "docLinkText": "Guia de configuração e solução de problemas do proxy reverso",
@@ -1902,7 +1903,8 @@
         "valueRequired": "O valor secreto é obrigatório",
         "noChanges": "Nenhuma alteração para salvar",
         "fixValidation": "Corrija os erros de validação"
-      }
+      },
+      "permissionDenied": "Você não tem permissão para visualizar segredos."
     }
   },
   "importExport": {
@@ -3172,6 +3174,7 @@
       "notFound": "Segredo não encontrado. Ele pode já ter sido excluído. Atualize a página e tente novamente.",
       "invalidName": "Nome de tenant ou de segredo inválido.",
       "readOnly": "O armazenamento de segredos é somente leitura neste ambiente.",
+      "noDurablePath": "O armazenamento de segredos não está configurado para gravações duráveis neste ambiente.",
       "recordInvalid": "Um dos registros de segredo selecionados é inválido. Atualize a página e tente novamente.",
       "referenceMissing": "Um dos registros de segredo selecionados não existe mais. Atualize a página e tente novamente.",
       "duplicate": "Já existe um segredo com este nome.",
@@ -3233,7 +3236,7 @@
       "needsDot": "O domínio deve incluir pelo menos um ponto.",
       "notCanonicalHost": "Escolha um domínio diferente do host canônico.",
       "noLeadingTrailingDot": "O domínio não pode começar nem terminar com um ponto.",
-      "notApplianceHost": "Escolha um domínio diferente do host principal deste appliance. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
+      "notApplianceHost": "Escolha um domínio diferente do host principal deste servidor. O domínio personalizado do portal deve ser outro nome de host que seu proxy reverso encaminhe para cá.",
       "nothingToRetry": "Não há registro de domínio personalizado com falha para repetir.",
       "retryOnlyAfterFailure": "A repetição só está disponível após um registro com falha."
     }

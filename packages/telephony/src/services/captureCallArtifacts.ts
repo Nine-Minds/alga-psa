@@ -9,7 +9,6 @@ import type {
 import { buildCallInteractionTitle } from '../lib/callInteractions';
 import { hasCallArtifactWindowElapsed, isCallArtifactFetchDue } from '../lib/callArtifactBackoff';
 import { createCallTranscriptDocument } from '../lib/callArtifactDocuments';
-import { tenantHasTelephonyEntitlement } from '../lib/telephonyAddOnGate';
 
 export interface CallArtifactCaptureSettings {
   /** Store the recording blob, not just the pointer (recordings are large). */
@@ -59,7 +58,7 @@ export interface CaptureCallArtifactsDependencies {
 export type CaptureCallArtifactsOutcome =
   | {
       status: 'skipped';
-      reason: 'addon_inactive' | 'not_found' | 'not_due' | 'no_organizer' | 'settled';
+      reason: 'not_found' | 'not_due' | 'no_organizer' | 'settled';
     }
   | { status: 'captured'; artifactStatus: CallArtifactStatus; captured: number };
 
@@ -92,10 +91,6 @@ export async function captureCallArtifacts(
 
   const knex = input.knex ?? (await createTenantKnex(input.tenantId)).knex;
   const db = tenantDb(knex, input.tenantId);
-
-  if (!(await tenantHasTelephonyEntitlement(knex, input.tenantId))) {
-    return { status: 'skipped', reason: 'addon_inactive' };
-  }
 
   const call: TelephonyCallRecordRow | undefined = await db.table('telephony_call_records')
     .where({ call_record_id: input.callRecordId })

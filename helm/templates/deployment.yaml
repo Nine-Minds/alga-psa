@@ -194,6 +194,10 @@ spec:
           # trusted X-Forwarded-Host). Defaults to "hosted"; the appliance sets "appliance".
           - name: DEPLOYMENT_PROFILE
             value: "{{ .Values.deploymentProfile | default "hosted" }}"
+          # Trust X-Forwarded-Host from the reverse proxy without adopting the
+          # appliance profile (self-hosted behind a Host-rewriting proxy).
+          - name: TRUST_FORWARDED_HOST
+            value: "{{ .Values.trustForwardedHost | default false }}"
           # ----------- APP ----------------
           - name: VERSION
             value: "{{ .Values.version }}"
@@ -601,6 +605,14 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          # Credential vault encryption key (EE, Pro tier). Auto-generated in
+          # the secrets template; the startup guard fails the pod when it is
+          # missing, so a broken vault is caught at boot, not on first save.
+          - name: CREDENTIAL_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: CREDENTIAL_ENCRYPTION_KEY
           {{- if .Values.setup.applianceBootstrap.enabled }}
           # Lowercase alias (appliance bootstrap): getSecret()/EnvSecretProvider
           # resolves secrets by lowercase name ahead of the uppercase fallback,
@@ -899,6 +911,14 @@ spec:
           {{- if .Values.stripe.pro_annual_price_id }}
           - name: STRIPE_PRO_ANNUAL_PRICE_ID
             value: "{{ .Values.stripe.pro_annual_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.algadesk_user_price_id }}
+          - name: STRIPE_ALGADESK_USER_PRICE_ID
+            value: "{{ .Values.stripe.algadesk_user_price_id }}"
+          {{- end }}
+          {{- if .Values.stripe.algadesk_user_annual_price_id }}
+          - name: STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID
+            value: "{{ .Values.stripe.algadesk_user_annual_price_id }}"
           {{- end }}
           {{- if .Values.stripe.early_adopters_base_price_id }}
           - name: STRIPE_EARLY_ADOPTERS_BASE_PRICE_ID

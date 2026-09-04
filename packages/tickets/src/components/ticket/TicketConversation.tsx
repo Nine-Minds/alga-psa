@@ -548,6 +548,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             getCommentId={(comment) => comment.comment_id}
             renderComment={(comment) => renderCommentItem(comment)}
             onOpenPanel={openCommentThreadPanel}
+            autoCollapseAfter={3}
           />
         )}
       />

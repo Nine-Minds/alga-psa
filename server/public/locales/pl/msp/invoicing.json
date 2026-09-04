@@ -1032,38 +1032,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Wygeneruj fakturę zaliczkową",
-      "creditMemo": "Wygeneruj notę ​​kredytową"
+      "prepayment": "Wygeneruj fakturę zaliczkową"
     },
     "descriptions": {
-      "prepayment": "Faktury z przedpłatą tworzą kredyt klienta na przyszłą wartość. Nie tworzą powtarzających się okresów świadczenia usług; późniejsze faktury cykliczne zachowują własny zakres okresu świadczenia usługi.",
-      "creditMemo": "Noty kredytowe korygują salda finansowe bez ponownego definiowania powtarzającego się okresu świadczenia usługi na fakturze źródłowej."
+      "prepayment": "Faktury z przedpłatą tworzą kredyt klienta na przyszłą wartość. Nie tworzą powtarzających się okresów świadczenia usług; późniejsze faktury cykliczne zachowują własny zakres okresu świadczenia usługi."
     },
     "fields": {
-      "type": "Typ",
       "client": "Klient",
       "amount": "Kwota",
-      "description": "Opis"
-    },
-    "types": {
-      "prepaymentInvoice": "Faktura zaliczkowa",
-      "creditMemo": "Notatka kredytowa"
+      "descriptionOptional": "Opis (optional)"
     },
     "placeholders": {
       "amount": "Wpisz kwotę",
-      "prepaymentDescription": "Przedpłata na przyszłe usługi",
-      "creditMemoDescription": "Powód noty kredytowej"
+      "prepaymentDescription": "Przedpłata na przyszłe usługi"
     },
     "errors": {
       "allFieldsRequired": "Proszę wypełnić wszystkie pola",
       "validAmount": "Proszę wprowadzić prawidłową kwotę",
-      "creditMemosUnsupported": "Noty kredytowe nie są jeszcze obsługiwane",
       "generateFailed": "Błąd podczas generowania faktury"
     },
     "actions": {
       "generating": "Generowanie...",
-      "generatePrepayment": "Wygeneruj fakturę zaliczkową",
-      "generateCreditMemo": "Wygeneruj notę ​​kredytową"
+      "generatePrepayment": "Wygeneruj fakturę zaliczkową"
     }
   },
   "contractItems": {
@@ -1898,7 +1888,9 @@
         "productItems": "Pozycje produktów",
         "items": "Elementy",
         "transformsSource": "{{binding}} (źródło transformacji)",
-        "transformsOutput": "{{binding}} (wynik transformacji)"
+        "transformsOutput": "{{binding}} (wynik transformacji)",
+        "ticketGroups": "Rozliczony czas według zgłoszeń",
+        "timeEntries": "Rozliczone wpisy czasu"
       },
       "presets": {
         "description": {
@@ -1916,6 +1908,46 @@
         "amount": {
           "label": "Kwota",
           "hint": "Suma wiersza"
+        },
+        "ticket": {
+          "label": "Zgłoszenie",
+          "hint": "Numer i tytuł zgłoszenia"
+        },
+        "ticketDescription": {
+          "hint": "Widoczny dla klienta opis zgłoszenia"
+        },
+        "hours": {
+          "label": "Godziny"
+        },
+        "ticketHours": {
+          "hint": "Łączna liczba rozliczonych godzin dla zgłoszenia"
+        },
+        "ticketRate": {
+          "hint": "Stawka godzinowa („Stawki mieszane”, gdy wpisy się różnią)"
+        },
+        "ticketAmount": {
+          "hint": "Łączna rozliczona kwota dla zgłoszenia"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data wykonania pracy"
+        },
+        "entryTicket": {
+          "hint": "Numer zgłoszenia źródłowego"
+        },
+        "entryTitle": {
+          "hint": "Tytuł zgłoszenia lub nazwa zadania"
+        },
+        "entryHours": {
+          "hint": "Rozliczone godziny dla wpisu"
+        },
+        "entryRate": {
+          "hint": "Stawka godzinowa dla wpisu"
+        },
+        "entryAmount": {
+          "hint": "Rozliczona kwota dla wpisu"
         }
       },
       "sourceBinding": {

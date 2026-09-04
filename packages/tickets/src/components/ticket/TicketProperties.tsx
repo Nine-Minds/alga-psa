@@ -1080,7 +1080,13 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                   || client?.phone_no
                   || null;
                 return ticketPhone
-                  ? <CallLink id="ticket-contact-phone-call" phoneNumber={ticketPhone} />
+                  ? (
+                      <CallLink
+                        id="ticket-contact-phone-call"
+                        phoneNumber={ticketPhone}
+                        callIntent={ticket.ticket_id ? { ticketId: ticket.ticket_id } : undefined}
+                      />
+                    )
                   : t('properties.notAvailable', 'N/A');
               })()}
             </p>

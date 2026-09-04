@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import {
   actionError,
   permissionError,
@@ -544,8 +545,7 @@ export const createSalesOrder = withAuth(
 
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-        const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
-        const soNumber: string = r.rows[0].number;
+        const soNumber = await SharedNumberingService.getNextNumber('SALES_ORDER', { knex: trx, tenant });
 
         const [so] = await trx('sales_orders')
           .insert({
@@ -1095,8 +1095,7 @@ export const suggestPoFromBackorder = withAuth(
 
         const purchaseOrders: SuggestedPurchaseOrders['purchaseOrders'] = [];
         for (const [vendorId, items] of byVendor) {
-          const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-          const poNumber: string = r.rows[0].number;
+          const poNumber = await SharedNumberingService.getNextNumber('PURCHASE_ORDER', { knex: trx, tenant });
           const [po] = await trx('purchase_orders')
             .insert({
               tenant,

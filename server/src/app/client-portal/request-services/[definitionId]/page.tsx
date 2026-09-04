@@ -49,6 +49,10 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const submitError =
     typeof resolvedSearchParams?.error === 'string' ? resolvedSearchParams.error : null;
   const submitAction = submitRequestServiceDefinitionAction.bind(null, definitionId);
+  // One opaque key per rendered form attempt: retries of this rendered form
+  // resubmit the same key, letting the server deduplicate them into a single
+  // submission. Reloading the page starts a fresh attempt with a fresh key.
+  const clientSubmissionKey = crypto.randomUUID();
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
@@ -128,6 +132,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
                 : undefined,
             }))}
             initialValues={detail.initialValues}
+            clientSubmissionKey={clientSubmissionKey}
             labels={{
               selectPlaceholder: t('detail.selectOption'),
               datePlaceholder: t('detail.datePlaceholder'),

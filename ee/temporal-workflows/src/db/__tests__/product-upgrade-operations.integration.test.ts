@@ -112,12 +112,16 @@ const engineCleanupTables = [
   "statuses",
 ] as const;
 
-function permissionKey(row: {
-  resource: string;
-  action: string;
-  msp: boolean;
-}): string {
-  return `${row.resource}:${row.action}:${row.msp ? "msp" : "client"}`;
+// A permission may carry both scope flags; a grant on one is addressable from
+// the role's own scope, so callers comparing role grants must pass it.
+function permissionKey(
+  row: { resource: string; action: string; msp: boolean; client?: boolean },
+  scope?: "msp" | "client",
+): string {
+  const resolved = scope && (scope === "msp" ? row.msp : row.client)
+    ? scope
+    : row.msp ? "msp" : "client";
+  return `${row.resource}:${row.action}:${resolved}`;
 }
 
 async function createFixture(): Promise<TenantFixture> {
@@ -206,16 +210,18 @@ async function rolePermissionKeys(
   roleId: string,
 ): Promise<Set<string>> {
   const db = tenantDb(fixture.db, fixture.tenantId);
-  const [permissions, assignments] = await Promise.all([
+  const [role, permissions, assignments] = await Promise.all([
+    db.table("roles").where({ tenant: fixture.tenantId, role_id: roleId }).first(),
     db.table("permissions").where({ tenant: fixture.tenantId }),
     db
       .table("role_permissions")
       .where({ tenant: fixture.tenantId, role_id: roleId }),
   ]);
+  const scope: "msp" | "client" = role?.msp ? "msp" : "client";
   const permissionById = new Map(
     permissions.map((permission) => [
       permission.permission_id,
-      permissionKey(permission),
+      permissionKey(permission, scope),
     ]),
   );
   return new Set(
@@ -228,16 +234,23 @@ async function rolePermissionKeys(
 async function expectedGrantKeys(
   fixture: TenantFixture,
   grant: readonly string[] | string,
+  scope: "msp" | "client",
 ): Promise<Set<string>> {
   const permissions = await tenantDb(fixture.db, fixture.tenantId)
     .table("permissions")
     .where({ tenant: fixture.tenantId });
-  const available = new Set(permissions.map(permissionKey));
   if (grant === roleGrants.ALL_MSP) {
     return new Set(
-      permissions.filter((permission) => permission.msp).map(permissionKey),
+      permissions
+        .filter((permission) => permission.msp)
+        .map((permission) => permissionKey(permission, "msp")),
     );
   }
+  const available = new Set(
+    permissions
+      .filter((permission) => (scope === "msp" ? permission.msp : permission.client))
+      .map((permission) => permissionKey(permission, scope)),
+  );
   return new Set(grant.filter((key) => available.has(key)));
 }
 
@@ -326,17 +339,15 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         db.table("role_permissions").where({ tenant: fixture.tenantId }),
       ]);
       const permissionById = new Map(
-        permissions.map((permission) => [
-          permission.permission_id,
-          permissionKey(permission),
-        ]),
+        permissions.map((permission) => [permission.permission_id, permission]),
       );
       const roleById = new Map(roles.map((role) => [role.role_id, role]));
       const actual = new Set(
         assignments.map((assignment) => {
           const role = roleById.get(assignment.role_id)!;
           const scope = role.msp ? "msp" : "client";
-          return `${scope}/${role.role_name}/${permissionById.get(assignment.permission_id)}`;
+          const permission = permissionById.get(assignment.permission_id)!;
+          return `${scope}/${role.role_name}/${permissionKey(permission, scope)}`;
         }),
       );
       const expected = new Set<string>();
@@ -346,7 +357,7 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         if (!scope) continue;
         const grant = roleGrants.psa[scope][role.role_name];
         if (!grant) continue;
-        const keys = await expectedGrantKeys(fixture, grant);
+        const keys = await expectedGrantKeys(fixture, grant, scope);
         for (const key of keys)
           expected.add(`${scope}/${role.role_name}/${key}`);
       }
@@ -359,11 +370,14 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
     await withFixture(async (fixture) => {
       await seedAlgadesk(fixture);
       const db = tenantDb(fixture.db, fixture.tenantId);
-      const rolePermissionsBefore = await db
-        .table("role_permissions")
-        .where({ tenant: fixture.tenantId })
-        .count<{ count: string }[]>({ count: "*" })
-        .first();
+      const grantTuplesBefore = new Set(
+        (
+          await db
+            .table("role_permissions")
+            .where({ tenant: fixture.tenantId })
+            .select("role_id", "permission_id")
+        ).map((row) => `${row.role_id}/${row.permission_id}`),
+      );
 
       const firstSeeds = await backfillPsaSeeds(fixture.tenantId, log);
       const firstCounts = await countTenantRows(fixture, seededTables);
@@ -466,14 +480,21 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
       );
       expect(firstCounts.tenant_workflow_schedule).toBe(1);
 
-      const rolePermissionsAfter = await db
-        .table("role_permissions")
-        .where({ tenant: fixture.tenantId })
-        .count<{ count: string }[]>({ count: "*" })
-        .first();
-      expect(Number(rolePermissionsAfter?.count)).toBe(
-        Number(rolePermissionsBefore?.count),
+      // The permission seed now synchronizes the unified catalog, so the
+      // backfill additively grants the PSA defaults. Every pre-backfill grant
+      // tuple must survive it — that is the preservation invariant.
+      const grantTuplesAfter = new Set(
+        (
+          await db
+            .table("role_permissions")
+            .where({ tenant: fixture.tenantId })
+            .select("role_id", "permission_id")
+        ).map((row) => `${row.role_id}/${row.permission_id}`),
       );
+      for (const tuple of grantTuplesBefore) {
+        expect(grantTuplesAfter.has(tuple), `lost grant ${tuple}`).toBe(true);
+      }
+      expect(grantTuplesAfter.size).toBeGreaterThanOrEqual(grantTuplesBefore.size);
 
       await backfillPsaSeeds(fixture.tenantId, log);
       expect(await countTenantRows(fixture, seededTables)).toEqual(firstCounts);
@@ -544,11 +565,11 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
         const role = await getRole(fixture, roleName, scope);
         expect(role).toBeTruthy();
         expect(await rolePermissionKeys(fixture, role.role_id)).toEqual(
-          await expectedGrantKeys(fixture, roleGrants.psa[scope][roleName]),
+          await expectedGrantKeys(fixture, roleGrants.psa[scope][roleName], scope),
         );
       }
       expect(await rolePermissionKeys(fixture, adminRole.role_id)).toEqual(
-        await expectedGrantKeys(fixture, roleGrants.ALL_MSP),
+        await expectedGrantKeys(fixture, roleGrants.ALL_MSP, "msp"),
       );
       expect(await rolePermissionKeys(fixture, agentRole.role_id)).toEqual(
         agentBefore,
@@ -568,20 +589,20 @@ describe.sequential("AlgaDesk to PSA product upgrade engine (real DB)", () => {
       expect(portalAdminAfter).toEqual(
         new Set([
           ...portalAdminBefore,
-          ...(await expectedGrantKeys(fixture, roleGrants.psa.client.Admin)),
+          ...(await expectedGrantKeys(fixture, roleGrants.psa.client.Admin, "client")),
         ]),
       );
       expect(portalUserAfter).toEqual(
         new Set([
           ...portalUserBefore,
-          ...(await expectedGrantKeys(fixture, roleGrants.psa.client.User)),
+          ...(await expectedGrantKeys(fixture, roleGrants.psa.client.User, "client")),
         ]),
       );
       expect(portalAdminAfter.has("ticket:delete:client")).toBe(true);
       expect(portalAdminAfter.has("contact:read:client")).toBe(true);
       expect(portalAdminAfter.has("billing:read:client")).toBe(true);
       expect(portalAdminAfter.has("project:read:client")).toBe(true);
-      expect(portalAdminAfter.has("time_management:read:client")).toBe(true);
+      expect(portalAdminAfter.has("document:read:client")).toBe(true);
 
       const agentAssignments = await db
         .table("user_roles")

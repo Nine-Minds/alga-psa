@@ -96,15 +96,15 @@ async function grantWorkflowTimeTestPermissions(db: Knex, tenantId: string, user
   });
 
   const permissions = [
-    ['timeentry', 'create'],
-    ['timeentry', 'read'],
-    ['timeentry', 'update'],
-    ['timeentry', 'delete'],
-    ['timesheet', 'read'],
-    ['timesheet', 'read_all'],
-    ['timesheet', 'submit'],
-    ['timesheet', 'approve'],
-    ['timesheet', 'reverse'],
+    ['time_entry', 'create'],
+    ['time_entry', 'read'],
+    ['time_entry', 'update'],
+    ['time_entry', 'delete'],
+    ['time_sheet', 'read'],
+    ['time_sheet', 'read_all'],
+    ['time_sheet', 'submit'],
+    ['time_sheet', 'approve'],
+    ['time_sheet', 'reverse'],
   ] as const;
 
   for (const [resource, action] of permissions) {

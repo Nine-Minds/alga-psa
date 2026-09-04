@@ -2,9 +2,15 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
-import { CallLink, CallLinkProvider, buildTeamsCallDeepLink, buildTelHref } from './CallLink';
+import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import {
+  CallLink,
+  CallLinkProvider,
+  TeamsCallLink,
+  buildTeamsCallDeepLink,
+  buildTelHref,
+} from './CallLink';
 
 describe('T045/T046 click-to-call', () => {
   it('builds tel: hrefs from formatted numbers and refuses empty input', () => {
@@ -27,7 +33,7 @@ describe('T045/T046 click-to-call', () => {
     cleanup();
   });
 
-  it('adds the Teams call link only when Teams is active for the tenant', () => {
+  it('adds the Teams call link with the custom tooltip only when Teams is active for the tenant', async () => {
     render(
       <CallLinkProvider teamsCallEnabled>
         <CallLink id="contact-phone-2" phoneNumber="+15551234567" />
@@ -36,10 +42,54 @@ describe('T045/T046 click-to-call', () => {
     expect(document.getElementById('contact-phone-2-teams')?.getAttribute('href')).toContain(
       'teams.microsoft.com/l/call',
     );
-    // Translated with a defaultValue, so it still reads in English with no bundle loaded.
-    expect(document.getElementById('contact-phone-2-teams')?.getAttribute('title')).toBe(
+    // The custom tooltip replaces the browser-native title while the accessible
+    // name remains available to assistive technology.
+    expect(document.getElementById('contact-phone-2-teams')?.getAttribute('title')).toBeNull();
+    expect(document.getElementById('contact-phone-2-teams')?.getAttribute('aria-label')).toBe(
       'Call in Microsoft Teams',
     );
+    fireEvent.focus(document.getElementById('contact-phone-2-teams')!);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Call in Microsoft Teams');
+    cleanup();
+  });
+
+  it('shows the labelled Call action only when Teams Phone is connected', () => {
+    const { rerender } = render(
+      <CallLinkProvider teamsCallEnabled teamsPhoneConnected={false}>
+        <TeamsCallLink id="ticket-call" phoneNumber="+15551234567">Call</TeamsCallLink>
+      </CallLinkProvider>,
+    );
+    expect(document.getElementById('ticket-call')).toBeNull();
+
+    rerender(
+      <CallLinkProvider teamsCallEnabled teamsPhoneConnected>
+        <TeamsCallLink id="ticket-call" phoneNumber="+15551234567">Call</TeamsCallLink>
+      </CallLinkProvider>,
+    );
+    expect(screen.getByText('Call').getAttribute('href')).toContain('teams.microsoft.com/l/call');
+    cleanup();
+  });
+
+  it('records the ticket call intent while allowing the Teams link to open', () => {
+    const recordCallIntent = vi.fn();
+    render(
+      <CallLinkProvider teamsCallEnabled teamsPhoneConnected recordCallIntent={recordCallIntent}>
+        <TeamsCallLink
+          id="ticket-call-intent"
+          phoneNumber="+15551234567"
+          callIntent={{ ticketId: 'ticket-1' }}
+        >
+          Call
+        </TeamsCallLink>
+      </CallLinkProvider>,
+    );
+
+    fireEvent.click(screen.getByText('Call'));
+
+    expect(recordCallIntent).toHaveBeenCalledWith({
+      ticketId: 'ticket-1',
+      phoneNumber: '+15551234567',
+    });
     cleanup();
   });
 });

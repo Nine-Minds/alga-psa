@@ -683,6 +683,14 @@
     },
     "errors": {
       "loadWorkItem": "Werkitem laden mislukt."
+    },
+    "teamsMeeting": {
+      "create": "Teams-vergadering maken",
+      "creating": "Teams-vergadering wordt gemaakt…",
+      "join": "Deelnemen aan Teams-vergadering",
+      "created": "Microsoft Teams-vergadering gemaakt",
+      "createFailed": "Teams-vergadering kon niet worden gemaakt",
+      "recurringUnsupported": "Teams-vergaderingen kunnen alleen aan losse items worden toegevoegd, niet aan terugkerende reeksen."
     }
   },
   "actions": {

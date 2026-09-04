@@ -129,10 +129,10 @@ export function registerTimeActions(): void {
       description: 'Create a workflow-safe time entry using canonical time module behavior'
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'create' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'create' });
 
       if (input.user_id !== tx.actorUserId) {
-        await requirePermission(ctx, tx, { resource: 'timeentry', action: 'update' });
+        await requirePermission(ctx, tx, { resource: 'time_entry', action: 'update' });
       }
 
       try {
@@ -257,7 +257,7 @@ export function registerTimeActions(): void {
       description: 'Summarize filtered time entries with optional grouping dimensions',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'read' });
       try {
         return await summarizeWorkflowTimeEntries({
           trx: tx.trx,
@@ -319,7 +319,7 @@ export function registerTimeActions(): void {
       description: 'Find billing-readiness blockers across a bounded time-entry scope',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'read' });
       try {
         return await findWorkflowTimeBillingBlockers({
           trx: tx.trx,
@@ -383,7 +383,7 @@ export function registerTimeActions(): void {
       description: 'Validate entry readiness and return pass/fail with blocker details',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'read' });
       try {
         return await validateWorkflowTimeEntries({
           trx: tx.trx,
@@ -436,7 +436,7 @@ export function registerTimeActions(): void {
       description: 'Submit a draft or changes-requested timesheet and submit associated entries',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'submit' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'submit' });
       try {
         const result = await submitWorkflowTimeSheet({
           trx: tx.trx,
@@ -504,7 +504,7 @@ export function registerTimeActions(): void {
       description: 'Approve a submitted timesheet and approve associated entries',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'approve' });
       try {
         const result = await approveWorkflowTimeSheet({
           trx: tx.trx,
@@ -573,7 +573,7 @@ export function registerTimeActions(): void {
       description: 'Mark a timesheet as CHANGES_REQUESTED with an approver comment',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'approve' });
       try {
         const result = await requestWorkflowTimeSheetChanges({
           trx: tx.trx,
@@ -641,7 +641,7 @@ export function registerTimeActions(): void {
       description: 'Reopen an approved timesheet unless invoiced entries are present',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'reverse' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'reverse' });
       try {
         const result = await reverseWorkflowTimeSheetApproval({
           trx: tx.trx,
@@ -717,9 +717,9 @@ export function registerTimeActions(): void {
       description: 'Add an owner or approver comment to a timesheet',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'read' });
       if (input.is_approver) {
-        await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+        await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'approve' });
       }
       try {
         const result = await addWorkflowTimeSheetComment({
@@ -800,7 +800,7 @@ export function registerTimeActions(): void {
       description: 'Find or create a timesheet by user and period/date',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'read' });
 
       try {
         const result = await findOrCreateWorkflowTimeSheet({
@@ -878,7 +878,7 @@ export function registerTimeActions(): void {
       description: 'Load a timesheet with period, comments, and summary fields',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'read' });
 
       try {
         return await getWorkflowTimeSheet({
@@ -941,7 +941,7 @@ export function registerTimeActions(): void {
       description: 'Find timesheets by user/date/status with bounded results',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'read' });
 
       try {
         return await findWorkflowTimeSheets({
@@ -997,7 +997,7 @@ export function registerTimeActions(): void {
       description: 'Set a time entry approval status with optional change-request comment',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'approve' });
 
       try {
         const result = await setWorkflowTimeEntryApprovalStatus({
@@ -1057,7 +1057,7 @@ export function registerTimeActions(): void {
       description: 'Request changes for one or more time entries with a comment',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timesheet', action: 'approve' });
+      await requirePermission(ctx, tx, { resource: 'time_sheet', action: 'approve' });
 
       try {
         const result = await requestWorkflowTimeEntryChanges({
@@ -1129,7 +1129,7 @@ export function registerTimeActions(): void {
       description: 'Load a single tenant-scoped time entry',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'read' });
 
       try {
         const entry = await getWorkflowTimeEntry({
@@ -1210,7 +1210,7 @@ export function registerTimeActions(): void {
       description: 'Find tenant-scoped time entries with bounded filters and aggregate summary',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'read' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'read' });
 
       try {
         const result = await findWorkflowTimeEntries({
@@ -1280,7 +1280,7 @@ export function registerTimeActions(): void {
       description: 'Update a workflow-safe time entry using canonical time module behavior',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'update' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'update' });
 
       try {
         const updateInput: WorkflowTimeUpdateEntryInput = {
@@ -1370,7 +1370,7 @@ export function registerTimeActions(): void {
       description: 'Delete a workflow-safe time entry with canonical safeguards and side effects',
     },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
-      await requirePermission(ctx, tx, { resource: 'timeentry', action: 'delete' });
+      await requirePermission(ctx, tx, { resource: 'time_entry', action: 'delete' });
 
       try {
         const deleted = await deleteWorkflowTimeEntry({

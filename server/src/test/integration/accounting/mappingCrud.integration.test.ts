@@ -2,6 +2,22 @@ import { beforeAll, afterAll, beforeEach, afterEach, describe, it, expect, vi } 
 
 import { TestContext } from '../../../../test-utils/testContext';
 import { setupCommonMocks, createMockUser, mockGetCurrentUser } from '../../../../test-utils/testMocks';
+import { createTestService } from '../../../../test-utils/billingTestHelpers';
+
+// A QuickBooks catalog mapping is a link to a live remote Item, so the server
+// derives the connected realm and proves the Item exists before persisting.
+// Pin a connected realm and make the remote read resolve so the CRUD lifecycle
+// exercises the real create/update/delete path rather than the realm/remote
+// rejection paths (those are covered exhaustively in the action's db test).
+const qboReadMock = vi.hoisted(() => vi.fn(async () => ({ Id: 'qbo-item' })));
+const CONNECTED_REALM = 'realm-crud-1';
+
+vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
+  getStoredQboCredentialsMap: vi.fn(async () => ({ [CONNECTED_REALM]: { realmId: CONNECTED_REALM } })),
+  QboClientService: {
+    create: vi.fn(async () => ({ read: qboReadMock })),
+  },
+}));
 
 import {
   getExternalEntityMappings,
@@ -94,7 +110,8 @@ describe('Accounting Mapping CRUD integration', () => {
   }, HOOK_TIMEOUT);
 
   it('performs create, list, update, and delete for a service mapping', async () => {
-    const serviceId = 'svc-001';
+    // The local entity must exist and belong to the tenant, so map a real service.
+    const serviceId = await createTestService(ctx, { service_name: 'CRUD Mapping Service' });
     const initialExternalId = 'QBO-ITEM-ABC';
 
     const created = await createExternalEntityMapping({
@@ -102,6 +119,7 @@ describe('Accounting Mapping CRUD integration', () => {
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: initialExternalId,
+      external_realm_id: CONNECTED_REALM,
       metadata: { source: 'test' }
     });
 
@@ -112,7 +130,8 @@ describe('Accounting Mapping CRUD integration', () => {
     const listed = await getExternalEntityMappings({
       integrationType,
       algaEntityType: 'service',
-      algaEntityId: serviceId
+      algaEntityId: serviceId,
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(listed).toHaveLength(1);
@@ -131,9 +150,68 @@ describe('Accounting Mapping CRUD integration', () => {
     const finalList = await getExternalEntityMappings({
       integrationType,
       algaEntityType: 'service',
-      algaEntityId: serviceId
+      algaEntityId: serviceId,
+      externalRealmId: CONNECTED_REALM
     });
 
     expect(finalList).toHaveLength(0);
+  });
+
+  it('drops forbidden fields from an update payload — a service row cannot be converted into an invoice mapping', async () => {
+    // The TypeScript signature of updateExternalEntityMapping only admits the
+    // editable fields, but a direct server-action call can carry extra JSON
+    // keys. The action must pick the editable fields instead of spreading the
+    // caller's object, so alga_entity_type/tenant/integration_type/id in a
+    // payload are dropped — a non-invoice row can never be rewritten into an
+    // invoice-typed mapping (which would need the shared invoice lock and a
+    // cancelled check).
+    const serviceId = await createTestService(ctx, { service_name: 'Immutable Mapping Service' });
+    const created = await createExternalEntityMapping({
+      integration_type: integrationType,
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: 'QBO-ITEM-FIXED',
+      external_realm_id: CONNECTED_REALM,
+    });
+
+    const updated = await updateExternalEntityMapping(created.id, {
+      external_entity_id: 'QBO-ITEM-MOVED',
+      ...({ alga_entity_type: 'invoice', tenant: 'tenant-999', integration_type: 'xero', id: 'forged-id' } as Record<string, unknown>),
+    });
+
+    // Editable field applied; every forbidden column unchanged.
+    expect(updated.external_entity_id).toBe('QBO-ITEM-MOVED');
+    expect(updated.alga_entity_type).toBe('service');
+    expect(updated.tenant).toBe(ctx.tenantId);
+    expect(updated.integration_type).toBe(integrationType);
+    expect(updated.id).toBe(created.id);
+
+    // The persisted row agrees — the invoice-lock invariant was not bypassed.
+    const row = await ctx.db('tenant_external_entity_mappings').where({ id: created.id }).first();
+    expect(row.alga_entity_type).toBe('service');
+    expect(row.tenant).toBe(ctx.tenantId);
+    expect(row.integration_type).toBe(integrationType);
+    expect(row.external_entity_id).toBe('QBO-ITEM-MOVED');
+  });
+
+  it('refuses an update payload that only carried forbidden fields', async () => {
+    const serviceId = await createTestService(ctx, { service_name: 'Forbidden Fields Mapping Service' });
+    const created = await createExternalEntityMapping({
+      integration_type: integrationType,
+      alga_entity_type: 'service',
+      alga_entity_id: serviceId,
+      external_entity_id: 'QBO-ITEM-UNTOUCHED',
+      external_realm_id: CONNECTED_REALM,
+    });
+
+    const result = await updateExternalEntityMapping(created.id, {
+      ...({ alga_entity_type: 'invoice', tenant: 'tenant-999' } as Record<string, unknown>),
+    });
+
+    expect(result).toMatchObject({ actionError: 'No update data provided.', messageKey: 'msp/integrations:errors.mappings.noUpdateData' });
+
+    const row = await ctx.db('tenant_external_entity_mappings').where({ id: created.id }).first();
+    expect(row.alga_entity_type).toBe('service');
+    expect(row.tenant).toBe(ctx.tenantId);
   });
 });

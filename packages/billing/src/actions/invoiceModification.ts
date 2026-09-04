@@ -1203,7 +1203,7 @@ export async function finalizeInvoiceWithKnex(
         amount: creditAmount,
         type: 'credit_issuance',
         status: 'completed',
-        description: 'Credit issued from prepayment',
+        description: invoice.prepayment_description || 'Credit issued from prepayment',
         created_at: now,
         balance_after: (lastTransaction?.balance_after || 0) + creditAmount,
         tenant,

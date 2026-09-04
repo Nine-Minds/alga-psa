@@ -14,6 +14,7 @@
         "manualEntryHelp": "Voer de identifier exact in zoals deze verschijnt in uw boekhoudsysteem.",
         "metadataLabel": "Metagegevens (JSON)",
         "metadataPlaceholder": "Optionele metadata als JSON",
+        "noKindOptions": "Er zijn geen bruikbare records van dit type gevonden in de gekoppelde organisatie.",
         "realmIdLabel": "Realm-ID",
         "saveMapping": "Toewijzing opslaan",
         "saving": "Opslaan…",
@@ -73,6 +74,10 @@
         "unavailable": {
           "description": "Deze integratie is nog niet beschikbaar. Selecteer QuickBooks CSV of Xero CSV om handmatige exports te configureren.",
           "title": "Configuratie niet beschikbaar"
+        },
+        "noPermission": {
+          "title": "Geen toegang tot boekhoudintegraties",
+          "description": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren. Vraag een beheerder om toegang."
         }
       },
       "modules": {
@@ -215,11 +220,13 @@
           "intro": "Deze integratie biedt een alternatief voor op OAuth gebaseerde QuickBooks-connectiviteit:",
           "mappings": {
             "description": "Wijs Alga-klanten, services, belastingcodes en betalingsvoorwaarden toe aan de identifiers die in uw QuickBooks-bedrijf worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
-            "title": "QuickBooks CSV-toewijzingen"
+            "title": "QuickBooks CSV-toewijzingen",
+            "permissionNotice": "Het bewerken van CSV-toewijzingen vereist de mogelijkheid manage-mappings. Vraag een beheerder om deze te verlenen."
           },
           "note": "Let op: configureer de toewijzingen hieronder voor het exporteren. CSV-exports en belastingimports worden beheerd vanuit Facturatie → Boekhoudexports.",
           "title": "QuickBooks CSV-integratie"
-        }
+        },
+        "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren."
       },
       "taxImport": {
         "actions": {
@@ -863,7 +870,8 @@
         "overview": {
           "connectionTypeLabel": "Verbindingstype:",
           "label": "Overzicht",
-          "mappedTenantsLabel": "Toegewezen tenants:"
+          "mappedTenantsLabel": "Toegewezen tenants:",
+          "microsoftAppLabel": "Microsoft-app:"
         },
         "skipped": {
           "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
@@ -920,6 +928,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "App-registratie toevoegen",
+          "bindFailed": "De gekozen Microsoft-app voor Entra kon niet worden opgeslagen.",
+          "emptyBody": "De directe verbinding draait op de Microsoft-app-registratie van uw eigen organisatie. Registreer een multitenant-app in uw partnertenant, voeg de Entra-redirect URI toe en verleen beheerderstoestemming voor ManagedTenants.Read.All en Directory.Read.All.",
+          "label": "Microsoft-app-registratie",
+          "placeholder": "Selecteer een app-registratie",
+          "reconnectRequired": "Selecteer een Microsoft-app-registratie en maak opnieuw verbinding.",
+          "redirectUriLabel": "Redirect URI om in Entra toe te voegen",
+          "scopesLabel": "Gedelegeerde scopes (beheerderstoestemming vereist)"
+        },
         "backToCurrentStep": "Terug naar {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +958,7 @@
             "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
             "label": "Directe Microsoft-partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
+              "appRegistration": "Een hieronder gekozen Microsoft-app-registratie — de directe verbinding gebruikt altijd de app van uw eigen organisatie.",
               "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
               "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert.",
               "lighthouse": "Microsoft 365 Lighthouse ingericht in uw partnertenant."
@@ -956,6 +974,7 @@
         "description": "Breng de mensen uit de Microsoft-tenants die u beheert als klantcontacten naar Alga. Er wordt niets naar uw contacten geschreven totdat u een voorbeeld hebt gezien en goedgekeurd.",
         "directConsent": {
           "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
+          "appRegistration": "App-registratie: {{name}}.",
           "cancel": "Annuleren",
           "continue": "Doorgaan naar Microsoft",
           "intro": "U verlaat Alga en meldt zich aan bij Microsoft. Dit zijn de machtigingen die worden gevraagd.",
@@ -1665,6 +1684,11 @@
             "reconnect": "Bestaande Outlook-e-mailverbindingen moeten opnieuw worden geautoriseerd om Mail.Send toe te kennen voordat ze uitgaande e-mail kunnen verzenden.",
             "perProviderIssuerNote": "Bestaande postvakverbindingen behouden hun huidige Microsoft-app totdat ze opnieuw worden verbonden. Deze keuze geldt voor nieuwe postvakverbindingen."
           },
+          "entra": {
+            "description": "Kies de Microsoft-app voor Entra-synchronisatie via GDAP en Lighthouse.",
+            "label": "Entra direct",
+            "reconnect": "Het wijzigen van deze app verbreekt de huidige Entra-verbinding en vereist opnieuw toestemming."
+          },
           "mspSso": {
             "description": "Kies welk Microsoft-profiel MSP SSO-aanmeldingsdomeinen, Microsoft-aanmelding en tenant-detectie ondersteunt.",
             "label": "MSP SSO"
@@ -1721,6 +1745,9 @@
           "currentProfileTitle": "Huidige profielwaarden",
           "emailRedirect": "Redirect-URI inkomende e-mail",
           "emailTitle": "E-mailhandleiding",
+          "entraConsent": "Vereiste",
+          "entraConsentValue": "Registreer deze app als multitenant en verleen beheerderstoestemming in de partnertenant.",
+          "entraTitle": "Entra direct",
           "mspSsoTitle": "MSP SSO-handleiding",
           "notConfigured": "Niet geconfigureerd",
           "redirectUri": "Redirect URI",
@@ -1820,7 +1847,9 @@
           "reconnect": "QuickBooks opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "QuickBooks-inloggegevens opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "retryDisconnect": "Ontkoppeling opnieuw proberen",
+          "forceFinalizeDisconnect": "Geforceerd afronden"
         },
         "badges": {
           "connectionExpired": "Verbinding vereist aandacht",
@@ -1832,11 +1861,17 @@
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "QuickBooks OAuth kon niet worden gestart omdat het client ID en client secret niet volledig waren geconfigureerd.",
+          "disconnectInProgress": "QuickBooks wordt losgekoppeld. Rond de ontkoppeling af voordat u opnieuw verbinding maakt.",
+          "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "QuickBooks heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De QuickBooks OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de QuickBooks-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "oauthFailed": "De QuickBooks OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
-          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken."
+          "sessionExpired": "Uw sessie is niet meer geldig. Meld u aan en start de QuickBooks-verbinding opnieuw.",
+          "stateReplayed": "Deze QuickBooks-verbindingsaanvraag is al gebruikt. Start de verbindingsflow opnieuw.",
+          "tenantMismatch": "Deze QuickBooks-verbindingsaanvraag hoort bij een andere werkruimte. Meld u aan bij de juiste werkruimte en start opnieuw.",
+          "tokenExchangeFailed": "Intuit heeft de verwachte tokens niet geretourneerd. Probeer opnieuw verbinding te maken.",
+          "userMismatch": "Deze QuickBooks-verbindingsaanvraag hoort bij een andere gebruiker. Meld u aan als de gebruiker die deze is gestart en probeer het opnieuw."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Plak uw Intuit app-client ID",
@@ -1874,7 +1909,8 @@
           "descriptionPrefix": "Configureer live QuickBooks-toewijzingen voor het verbonden bedrijf. Deze toewijzingen zijn beperkt tot",
           "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat het eerste QuickBooks-bedrijf is verbonden en ingesteld als standaard live QuickBooks-context.",
           "placeholderDescription": "Verbind een QuickBooks-bedrijf voordat u live QuickBooks-artikel- en belastingtoewijzingen configureert.",
-          "title": "Live QuickBooks-toewijzing en -configuratie"
+          "title": "Live QuickBooks-toewijzing en -configuratie",
+          "permissionNotice": "U kunt het gekoppelde bedrijf bekijken, maar het bewerken van toewijzingen vereist de mogelijkheid manage-mappings. Vraag een beheerder om deze te verlenen."
         },
         "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
         "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
@@ -1897,7 +1933,20 @@
           "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
           "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
         },
-        "setupGuideLink": "QuickBooks-installatiegids"
+        "setupGuideLink": "QuickBooks-installatiegids",
+        "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
+        "connectionsPermissionNotice": "U kunt de QuickBooks-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen.",
+        "disconnectPending": "QuickBooks wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
+        "disconnectForceFinalized": "De QuickBooks-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reden voor het geforceerd afronden van de QuickBooks-ontkoppeling (vastgelegd in de auditlog):",
+          "inProgressTitle": "QuickBooks-ontkoppeling bezig",
+          "inProgressDescription": "De machtigingen bij de aanbieder worden ingetrokken. Synchronisatie en exports blijven gepauzeerd tot van elk verbonden bedrijf is bevestigd dat deze zijn ingetrokken.",
+          "targetRevoked": "ingetrokken",
+          "targetFailed": "vereist aandacht",
+          "targetPending": "in behandeling",
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        }
       },
       "sync": {
         "healthCardTitle": "Synchronisatiestatus",
@@ -2998,7 +3047,6 @@
           "test": {
             "sent": "Teams-testbericht verzonden.",
             "failed": "Teams-testbericht mislukt.",
-            "addonInactive": "De Teams-add-on is niet actief voor deze tenant.",
             "integrationInactive": "Activeer de Teams-integratie voordat u een testbericht verzendt.",
             "capabilityDisabled": "Schakel de persoonlijke bot-functie in voordat u een testbericht verzendt.",
             "botNotConfigured": "Configureer de Teams-botreferenties voordat u een testbericht verzendt.",
@@ -3007,7 +3055,6 @@
             "skipped": "Het Teams-testbericht is overgeslagen."
           },
           "steps": {
-            "addonEntitlement": "Teams-add-on-recht",
             "integrationStatus": "Status van Teams-integratie",
             "capabilities": "Teams-mogelijkheden",
             "microsoftProfile": "Gereedheid van Microsoft-profiel",
@@ -3019,7 +3066,6 @@
             "recentDeliveryHealth": "Recente Teams-leveringsstatus"
           },
           "recommendation": {
-            "addon": "Schakel de Microsoft Teams-add-on in voor deze tenant.",
             "activate": "Activeer de Teams-integratie in de instellingen.",
             "capabilities": "Schakel de persoonlijke bot en activiteitsmeldingen voor Teams in.",
             "profile": "Selecteer een gereed Microsoft-profiel voor Teams.",
@@ -3209,9 +3255,9 @@
               "cause": "De ontvanger heeft zich niet met Microsoft aangemeld bij AlgaPSA, dus er bestaat geen accountkoppeling.",
               "remedy": "Laat de gebruiker zich aanmelden met Microsoft (MSP-portal-SSO of het Teams-tabblad) zodat hun account wordt gekoppeld."
             },
-            "addon_inactive": {
-              "cause": "De Teams-invoegtoepassing is verlopen of afwezig, dus verzendingen worden overgeslagen terwijl de configuratie behouden blijft.",
-              "remedy": "Vernieuw de Teams-invoegtoepassing voor deze tenant."
+            "feature_disabled": {
+              "cause": "De Teams-functie was uitgeschakeld voor deze tenant toen de bezorging werd geprobeerd (vóór 1.5).",
+              "remedy": "Teams is nu algemeen beschikbaar; probeer het verzenden opnieuw."
             },
             "integration_inactive": {
               "cause": "De Teams-integratie is niet actief voor deze tenant.",
@@ -3242,26 +3288,6 @@
               "remedy": "Controleer de serverlogboeken voor de details van de bezorgfout en voer de diagnostiek opnieuw uit."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams-invoegtoepassing",
-          "description": "Voor de Microsoft Teams-integratie is de Teams-invoegtoepassing voor deze tenant vereist.",
-          "includedTitle": "Wat is inbegrepen",
-          "feature": {
-            "tab": "Persoonlijk tabblad: open AlgaPSA binnen Microsoft Teams.",
-            "bot": "Persoonlijke en groepschat-bot voor tickets, goedkeuringen, tijd en notities.",
-            "messageExtension": "Berichtextensie en snelle acties om vanuit elk bericht op PSA-records te reageren.",
-            "meetings": "Teams-vergaderingen bij goedkeuringen van afspraken met echte Outlook/Teams-agenda-uitnodigingen.",
-            "recordings": "Automatische vastlegging van vergaderopnamen en transcripties in interacties.",
-            "notifications": "Meldingen via activiteitenfeed en bot-DM voor toewijzingen, reacties, goedkeuringen en SLA-risico."
-          },
-          "cta": "Teams-invoegtoepassing kopen",
-          "nonBilling": "Neem contact op met een factureringsbeheerder om de Teams-invoegtoepassing voor deze tenant te kopen."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams-invoegtoepassing verlopen",
-          "message": "De Microsoft Teams-invoegtoepassing is verlopen. Uw configuratie en bezorggeschiedenis blijven behouden, maar Teams-meldingen worden overgeslagen totdat de invoegtoepassing wordt vernieuwd.",
-          "cta": "Teams-invoegtoepassing vernieuwen"
         },
         "staleManifest": {
           "title": "Teams-app-pakket is verouderd",
@@ -3332,7 +3358,8 @@
             "s3": "Na wijzigingen in Xero, contacten exporteren uit Xero",
             "s4": "De Xero-contacten-CSV terugimporteren in Alga om updates te synchroniseren"
           },
-          "workflowTitle": "Klantsynchronisatie-workflow"
+          "workflowTitle": "Klantsynchronisatie-workflow",
+          "permissionNotice": "Het exporteren en importeren van klanten vereist de mogelijkheid execute-exports. Vraag een beheerder om deze te verlenen."
         },
         "settings": {
           "dateFormat": "Datumnotatie",
@@ -3356,7 +3383,8 @@
           "managedSuffix": "om facturen te selecteren, Xero CSV-exports te genereren, belastingrapporten te importeren en batches te beheren.",
           "mappings": {
             "description": "Wijs Alga-klanten, services en belastingcodes toe aan de identifiers die in uw Xero-organisatie worden gebruikt. Deze waarden worden gebruikt bij het genereren van de CSV-export.",
-            "title": "Xero CSV-toewijzingen"
+            "title": "Xero CSV-toewijzingen",
+            "permissionNotice": "Het bewerken van CSV-toewijzingen vereist de mogelijkheid manage-mappings. Vraag een beheerder om deze te verlenen."
           },
           "overview": {
             "description": "Exporteer facturen naar CSV voor handmatige import in Xero en importeer belastinggegevens uit Xero-rapporten.",
@@ -3408,7 +3436,9 @@
             "title": "CSV-workflow",
             "trackingDescription": "De CSV-export bevat tracking-categoriekolommen die elke Xero-factuur koppelen aan zijn Alga-bron. Wanneer u belasting importeert uit Xero, worden deze tracking-categorieën gebruikt om facturen automatisch te koppelen - geen handmatige afstemming nodig.",
             "trackingTitle": "Tracking-categorieën voor afstemming"
-          }
+          },
+          "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
+          "connectionsPermissionNotice": "U kunt de Xero CSV-instellingen bekijken, maar het wijzigen ervan vereist de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen."
         }
       },
       "live": {
@@ -3422,7 +3452,9 @@
           "reconnect": "Xero opnieuw verbinden",
           "refresh": "Vernieuwen",
           "saveCredentials": "Xero-inloggegevens opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "retryDisconnect": "Ontkoppeling opnieuw proberen",
+          "forceFinalizeDisconnect": "Geforceerd afronden"
         },
         "badges": {
           "connectionExpired": "Verbinding verlopen",
@@ -3435,11 +3467,17 @@
           "accessDenied": "Xero-toegang werd geweigerd voordat de verbinding was voltooid.",
           "configMissing": "Xero OAuth kon niet worden gestart omdat het client ID en client secret van de tenant niet volledig waren geconfigureerd.",
           "connectionsUnmapped": "Xero heeft organisaties geretourneerd, maar geen enkele bevatte de identifiers die nodig zijn om een verbinding op te slaan.",
+          "disconnectInProgress": "Xero wordt losgekoppeld. Rond de ontkoppeling af voordat u opnieuw verbinding maakt.",
+          "forbidden": "U hebt geen toestemming meer om boekhoudkoppelingen te beheren. Vraag een beheerder om toegang.",
           "generic": "Xero heeft een OAuth-fout geretourneerd: {{code}}",
           "invalidState": "De Xero OAuth-status was ongeldig of verlopen. Start de verbindingsflow opnieuw.",
           "missingParams": "In de Xero-callback ontbraken vereiste parameters. Start de verbindingsflow opnieuw.",
           "noConnections": "Xero heeft geen organisaties geretourneerd voor deze aanmelding. Controleer uw Xero-app en organisatietoegang en probeer het opnieuw.",
-          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes."
+          "oauthFailed": "De Xero OAuth-callback is mislukt. Probeer opnieuw verbinding te maken. Als het probleem aanhoudt, controleer uw redirect-URI en scopes.",
+          "sessionExpired": "Uw sessie is niet meer geldig. Meld u aan en start de Xero-verbinding opnieuw.",
+          "stateReplayed": "Deze Xero-verbindingsaanvraag is al gebruikt. Start de verbindingsflow opnieuw.",
+          "tenantMismatch": "Deze Xero-verbindingsaanvraag hoort bij een andere werkruimte. Meld u aan bij de juiste werkruimte en start opnieuw.",
+          "userMismatch": "Deze Xero-verbindingsaanvraag hoort bij een andere gebruiker. Meld u aan als de gebruiker die deze is gestart en probeer het opnieuw."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Plak uw tenant-eigen Xero Client ID",
@@ -3473,18 +3511,36 @@
           "descriptionPrefix": "Configureer live Xero-toewijzingen voor de standaard verbonden organisatie. Deze toewijzingen zijn beperkt tot",
           "placeholderAlert": "De toewijzingsbeheerder wordt beschikbaar nadat de eerste Xero-organisatie is verbonden en ingesteld als standaard live Xero-context.",
           "placeholderDescription": "Verbind een live Xero-organisatie voordat u live Xero-item- en belastingtoewijzingen configureert.",
-          "title": "Live Xero-toewijzing en -configuratie"
+          "title": "Live Xero-toewijzing en -configuratie",
+          "permissionNotice": "U kunt de standaard gekoppelde organisatie bekijken, maar het bewerken van toewijzingen vereist de mogelijkheid manage-mappings. Vraag een beheerder om deze te verlenen."
         },
         "noClientId": "Er is nog geen client ID opgeslagen voor deze tenant.",
         "noClientSecret": "Er is nog geen client secret opgeslagen voor deze tenant.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Vereiste scopes",
+        "scopeOverride": "Implementatie-override (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "De XERO_OAUTH_SCOPES-override is genegeerd omdat deze ongeldige waarden bevat ({{scopes}}). In plaats daarvan worden de standaardscopes gebruikt.",
+        "scopeReconnectNote": "Deze scopes gelden voor nieuwe autorisaties. Een bestaande verbinding behoudt de scopes die oorspronkelijk zijn verleend. Verbreek de verbinding met Xero en maak opnieuw verbinding om de huidige set toe te passen. U kunt deze app ook verwijderen uit Connected apps in Xero om eerdere machtigingen in te trekken.",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
         "tenantOauthDescription": "Plak de Xero-app-inloggegevens die voor deze tenant zijn geregistreerd. Secret-waarden worden na opslaan nooit meer aan de browser geretourneerd.",
         "tenantOauthTitle": "Tenant-eigen OAuth-app",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
+        "connectionsPermissionNotice": "U kunt de Xero-instellingen bekijken, maar het opslaan van inloggegevens, verbinden en verbreken vereisen de mogelijkheid manage-connections. Vraag een beheerder om deze te verlenen.",
+        "disconnectPending": "Xero wordt losgekoppeld. Synchronisatie en exports zijn gepauzeerd tot de opschoning bij de aanbieder is voltooid; de ontkoppeling wordt automatisch opnieuw geprobeerd.",
+        "disconnectForceFinalized": "De Xero-ontkoppeling is geforceerd afgerond. De opschoning bij de aanbieder kon niet worden bevestigd, dus de inloggegevens zijn lokaal verwijderd met een auditregistratie.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reden voor het geforceerd afronden van de Xero-ontkoppeling (vastgelegd in de auditlog):",
+          "inProgressTitle": "Xero-ontkoppeling bezig",
+          "inProgressDescription": "De verbindingen bij de aanbieder worden ingetrokken. Synchronisatie en exports blijven gepauzeerd tot van elke verbinding is bevestigd dat deze is verwijderd.",
+          "grantTarget": "Intrekking van OAuth-machtiging",
+          "targetRevoked": "ingetrokken",
+          "targetFailed": "vereist aandacht",
+          "targetPending": "in behandeling",
+          "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        }
       }
     },
     "stripe": {
@@ -3615,15 +3671,16 @@
         "assignTo": "Toewijzen aan",
         "searchPlaceholder": "Zoek contacten en klanten…",
         "noTargets": "Geen overeenkomende contacten of klanten.",
-        "chooseTarget": "Toewijzen aan een contact of klant…"
+        "chooseTarget": "Toewijzen aan een klant…"
       },
       "forbidden": "U hebt geen toestemming om de telefonie-instellingen van deze tenant te bekijken.",
       "paywall": {
-        "title": "Microsoft Teams-add-on",
-        "description": "Telefonie-integraties vereisen de Microsoft Teams-add-on voor deze tenant.",
+        "title": "Telefonie",
+        "description": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
+        "unavailable": "Telefonie-integraties zijn niet beschikbaar voor deze tenant.",
         "ceOnly": "Telefonie-integraties zijn alleen beschikbaar in Enterprise Edition.",
         "includedTitle": "Wat is inbegrepen",
-        "cta": "Add-ons beheren",
+        "cta": "Integraties beheren",
         "feature": {
           "recognition": "Bellerherkenning tegen contacten en klanten bij elk vastgelegd gesprek.",
           "history": "Gespreksgeschiedenis op de tijdlijn van contact en klant als volwaardige interacties.",
@@ -3665,7 +3722,10 @@
       "updateFailed": "Kan de koppeling niet bijwerken. Probeer het opnieuw.",
       "idRequiredForDelete": "Voor het verwijderen is de koppelings-ID verplicht.",
       "notFound": "Koppeling niet gevonden. Vernieuw de koppelingen en probeer het opnieuw.",
-      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw."
+      "deleteFailed": "Kan de koppeling niet verwijderen. Probeer het opnieuw.",
+      "invoiceCancelled": "De factuur is geannuleerd en kan niet worden gekoppeld aan de boekhoudintegratie.",
+      "invoiceNotFound": "De factuur bestaat niet meer en kan niet worden gekoppeld aan de boekhoudintegratie.",
+      "scopeRequired": "Voor het opzoeken van koppelingen zijn een integratie, een entiteitstype en een realm-scope vereist."
     },
     "qbo": {
       "enterpriseOnly": "De QuickBooks Online-integratie is alleen beschikbaar in de Enterprise Edition.",

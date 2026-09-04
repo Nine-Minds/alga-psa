@@ -36,7 +36,6 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
 import { BucketPoolEditor } from './BucketPoolEditor';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { listBucketBusinessHoursSchedules } from '@alga-psa/billing/actions/bucketPoolActions';
 import {
   ServiceSelectionDialog,
@@ -161,11 +160,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const { formatCurrency } = useFormatters();
   const formatBillingFrequency = useFormatBillingFrequency();
   const formatContractLineType = useFormatContractLineType();
-  // Flag-on line-level bucket pools (weighted-burn model). Flag off keeps the
-  // existing per-service overlay UI served by the compat layer.
-  const { enabled: bucketPoolEditorEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [bucketSchedules, setBucketSchedules] = useState<Array<{
     schedule_id: string;
     schedule_name: string;
@@ -225,7 +219,6 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   }, [contract.contract_id]);
 
   useEffect(() => {
-    if (!bucketPoolEditorEnabled) return;
     let isActive = true;
     void (async () => {
       try {
@@ -246,7 +239,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       isActive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bucketPoolEditorEnabled]);
+  }, []);
 
   useEffect(() => {
     let isActive = true;
@@ -1763,27 +1756,25 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                           </div>
                         </div>
                       )}
-                      {/* Flag-on line-level bucket pools (weighted-burn model). */}
-                      {bucketPoolEditorEnabled && (
-                        <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
-                          <BucketPoolEditor
-                            contractLineId={line.contract_line_id}
-                            lineServices={services
-                              .map((serviceConfig) => ({
-                                service_id: serviceConfig.service.service_id,
-                                service_name: serviceConfig.service.service_name,
-                              }))}
-                            allServices={services.map((serviceConfig) => ({
+                      {/* Line-level bucket pools (weighted-burn model). */}
+                      <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-muted p-4">
+                        <BucketPoolEditor
+                          contractLineId={line.contract_line_id}
+                          lineServices={services
+                            .map((serviceConfig) => ({
                               service_id: serviceConfig.service.service_id,
                               service_name: serviceConfig.service.service_name,
                             }))}
-                            schedules={bucketSchedules}
-                            onChanged={() => {
-                              void loadServicesForLine(line.contract_line_id, true);
-                            }}
-                          />
-                        </div>
-                      )}
+                          allServices={services.map((serviceConfig) => ({
+                            service_id: serviceConfig.service.service_id,
+                            service_name: serviceConfig.service.service_name,
+                          }))}
+                          schedules={bucketSchedules}
+                          onChanged={() => {
+                            void loadServicesForLine(line.contract_line_id, true);
+                          }}
+                        />
+                      </div>
                     </div>
                   )}
                 </div>

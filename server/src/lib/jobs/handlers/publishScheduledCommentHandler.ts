@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getConnection } from 'server/src/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -69,8 +70,10 @@ export async function publishScheduledCommentHandler(data: PublishScheduledComme
       .where('scheduled_publish_at', '<=', trx.fn.now())
       .update({
         publish_state: 'published', published_at: trx.fn.now(), schedule_job_id: null,
-        scheduled_publish_event_id: trx.raw('COALESCE(scheduled_publish_event_id, gen_random_uuid())'),
-        scheduled_response_event_id: responseChanges ? trx.raw('COALESCE(scheduled_response_event_id, gen_random_uuid())') : null,
+        // Citus rejects VOLATILE functions (gen_random_uuid) in UPDATEs on
+        // distributed tables; generate the ids here and pass them as params.
+        scheduled_publish_event_id: trx.raw('COALESCE(scheduled_publish_event_id, ?)', [randomUUID()]),
+        scheduled_response_event_id: responseChanges ? trx.raw('COALESCE(scheduled_response_event_id, ?)', [randomUUID()]) : null,
         scheduled_previous_response_state: responseChanges ? ticket?.response_state ?? null : null,
         updated_at: trx.fn.now(),
       })

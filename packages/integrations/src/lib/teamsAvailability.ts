@@ -1,8 +1,4 @@
-import { ADD_ONS } from '@alga-psa/types';
-import {
-  disabledTeamsAvailability,
-  resolveTeamsAvailability,
-} from './teamsAvailabilityCore';
+import { resolveTeamsAvailability } from './teamsAvailabilityCore';
 import type {
   GetTeamsAvailabilityInput,
   TeamsAvailability,
@@ -20,29 +16,6 @@ export type {
   TeamsAvailabilityDisabledReason,
 } from './teamsAvailabilityCore';
 
-async function tenantHasTeamsAddOn(tenantId: string): Promise<boolean> {
-  const { createTenantKnex, tenantDb } = await import('@alga-psa/db');
-  const { knex } = await createTenantKnex(tenantId);
-  const row = await tenantDb(knex, tenantId).table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', knex.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
-}
-
 export async function getTeamsAvailability(input: GetTeamsAvailabilityInput = {}): Promise<TeamsAvailability> {
-  const baseAvailability = resolveTeamsAvailability(input);
-  if (baseAvailability.enabled === false) {
-    return baseAvailability;
-  }
-
-  const tenantId = (input.tenantId || '').trim();
-  if (tenantId && !(await tenantHasTeamsAddOn(tenantId))) {
-    return disabledTeamsAvailability('addon_required');
-  }
-
-  return baseAvailability;
+  return resolveTeamsAvailability(input);
 }

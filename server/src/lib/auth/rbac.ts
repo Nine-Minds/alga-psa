@@ -61,25 +61,12 @@ export class Permission implements IPermission {
   }
 }
 
-const RESOURCE_CANONICAL_MAP: Record<string, string> = {
-  client: 'client',
-  timeentry: 'time_entry',
-  time_entry: 'time_entry',
-  timesheet: 'time_sheet',
-  time_sheet: 'time_sheet',
-};
-
-function canonicalizeResource(resource: string): string {
-  return RESOURCE_CANONICAL_MAP[resource] ?? resource;
-}
-
 export async function hasPermission(
   user: Pick<IUser, 'user_id' | 'user_type'>,
   resource: string,
   action: string,
   knexConnection?: Knex | Knex.Transaction
 ): Promise<boolean> {
-  const normalizedResource = canonicalizeResource(resource);
   const userTenant = (user as IUser & { tenant?: string }).tenant;
   let rolesWithPermissions: IRoleWithPermissions[];
 
@@ -105,7 +92,7 @@ export async function hasPermission(
       if (isClientPortal && !permission.client) continue;
       if (!isClientPortal && !permission.msp) continue;
 
-      if (canonicalizeResource(permission.resource) === normalizedResource && permission.action === action) {
+      if (permission.resource === resource && permission.action === action) {
         return true;
       }
     }
@@ -156,13 +143,13 @@ export async function checkMultiplePermissions(
       if (isClientPortal && !permission.client) continue;
       if (!isClientPortal && !permission.msp) continue;
 
-      userPermissions.add(`${canonicalizeResource(permission.resource)}:${permission.action}`);
+      userPermissions.add(`${permission.resource}:${permission.action}`);
     }
   }
 
   return permissionChecks.map(check => ({
     resource: check.resource,
     action: check.action,
-    granted: userPermissions.has(`${canonicalizeResource(check.resource)}:${check.action}`)
+    granted: userPermissions.has(`${check.resource}:${check.action}`)
   }));
 }

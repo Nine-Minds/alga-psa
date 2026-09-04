@@ -3,9 +3,8 @@
 /**
  * Credentials vault list screen (EE-only, Pro tier).
  *
- * Gating: `release-v1-5-feature` flag, EE edition (implicit — this module is
- * only reachable from EE via the `@enterprise` alias), and `getCredentialsContext`
- * (tier). Off ⇒ renders nothing, so the nav-less flag-off state is preserved.
+ * Gating: EE edition (implicit — this module is only reachable from EE via
+ * the `@enterprise` alias) and `getCredentialsContext` (tier).
  *
  * SECURITY (NFR1): list payloads are metadata-only. Revealed values live ONLY in
  * transient component state keyed by row id — cleared on Hide, on Refresh, and
@@ -17,17 +16,20 @@
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import {
   ArrowLeft,
   Copy,
   Eye,
   EyeOff,
   ExternalLink,
+  History,
   KeyRound,
   Link2,
   Lock,
@@ -41,7 +43,6 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { FeatureUpgradeNotice } from '@alga-psa/ui/components/tier-gating/FeatureUpgradeNotice';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
@@ -61,6 +62,7 @@ import type {
 import { CredentialFormDialog, type CredentialFormValue } from './CredentialFormDialog';
 import { CredentialLinkDialog } from './CredentialLinkDialog';
 import { CredentialRestrictDialog } from './CredentialRestrictDialog';
+import { CredentialAuditPanel } from './CredentialAuditPanel';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { TotpCountdown } from './TotpCountdown';
 import { useCredentialsList, type RevealErrorKey } from './useCredentialsList';
@@ -126,8 +128,6 @@ function ListChrome({
 
 export function CredentialsScreen({ clientId, entityType, entityId, defaultClientId }: CredentialsScreenProps) {
   const { t } = useTranslation('msp/credentials');
-  const releaseFlag = useFeatureFlag('release-v1-5-feature', { defaultValue: false });
-  const flagEnabled = typeof releaseFlag === 'boolean' ? releaseFlag : releaseFlag?.enabled ?? false;
 
   const entityScoped = Boolean(entityType && entityId);
 
@@ -150,7 +150,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     hide: handleHide,
     copyPassword: handleCopy,
     copyOtp: handleCopyOtp,
-  } = useCredentialsList({ enabled: flagEnabled, clientId, entityType, entityId });
+  } = useCredentialsList({ enabled: true, clientId, entityType, entityId });
 
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -159,6 +159,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<CredentialSummary | null>(null);
   const [restrictTarget, setRestrictTarget] = useState<CredentialSummary | null>(null);
+  const [historyTarget, setHistoryTarget] = useState<CredentialSummary | null>(null);
   // Entity embeds swap the body between views instead of stacking overlay
   // dialogs (the embed often already lives inside the tile's manager dialog,
   // and a dialog on a dialog reads as broken chrome).
@@ -193,7 +194,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   // client), so skip the fetch there; the form dialog self-fetches when it
   // needs a picker.
   useEffect(() => {
-    if (!flagEnabled || entityScoped) return;
+    if (entityScoped) return;
     let cancelled = false;
     getAllClients(false)
       .then((list) => {
@@ -203,7 +204,7 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
     return () => {
       cancelled = true;
     };
-  }, [flagEnabled, entityScoped]);
+  }, [entityScoped]);
 
   const handleFormSubmit = async (value: CredentialFormValue) => {
     let result: CredentialSaveResult;
@@ -294,10 +295,6 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
   const clientName = (id: string) =>
     clients.find((client) => client.client_id === id)?.client_name ?? null;
 
-  if (!flagEnabled) {
-    return null;
-  }
-
   if (isLoading && !credentials) {
     return (
       <p id="credentials-screen-loading" className="text-sm text-[rgb(var(--color-text-500))]">
@@ -386,6 +383,16 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
             >
               <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             </Button>
+          )}
+          {!entityScoped && context?.canAudit === true && (
+            <Link
+              id="credentials-screen-audit-log"
+              href="/msp/credentials/audit"
+              className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[rgb(var(--color-border-200))] px-3 text-sm font-medium text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]"
+            >
+              <History className="h-4 w-4" />
+              {t('credentials.audit.pageTitle')}
+            </Link>
           )}
         </div>
       </div>
@@ -585,6 +592,18 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
                       )}
+                      {!entityScoped && context?.canAudit === true && (
+                        <Button
+                          id={`credentials-screen-history-${id}`}
+                          variant="ghost"
+                          size="sm"
+                          aria-label={t('credentials.audit.rowAction')}
+                          title={t('credentials.audit.rowAction')}
+                          onClick={() => setHistoryTarget(item)}
+                        >
+                          <History className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
                       {!entityScoped && item.source === 'alga' && (
                         <Button
                           id={`credentials-row-restrict-${id}`}
@@ -694,6 +713,26 @@ export function CredentialsScreen({ clientId, entityType, entityId, defaultClien
         onClose={() => setRestrictTarget(null)}
         onSaved={handleRestrictSaved}
       />
+
+      <Dialog
+        id="credentials-history-dialog"
+        isOpen={historyTarget !== null}
+        onClose={() => setHistoryTarget(null)}
+        title={t('credentials.audit.historyTitle')}
+        className="max-w-lg"
+      >
+        <DialogContent>
+          <div className="space-y-2">
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {historyTarget?.name}
+            </p>
+            <p className="text-sm text-[rgb(var(--color-text-500))]">
+              {t('credentials.audit.historySubtitle')}
+            </p>
+            {historyTarget && <CredentialAuditPanel credentialId={historyTarget.id} />}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmationDialog
         id="credentials-confirm-dialog"

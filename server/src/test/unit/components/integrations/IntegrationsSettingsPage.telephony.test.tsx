@@ -233,20 +233,6 @@ describe('IntegrationsSettingsPage communication sub-navigation', () => {
     expect(screen.getByTestId('telephony-integration-settings-shell')).toBeInTheDocument();
   });
 
-  it('T008: without the Teams add-on the sub-section offers the add-on, not the settings', async () => {
-    process.env.NEXT_PUBLIC_EDITION = 'enterprise';
-
-    await renderPage({ canUseTelephony: false });
-
-    fireEvent.click(screen.getByText('Telephony', { selector: 'button *, button' }));
-
-    expect(screen.queryByTestId('telephony-integration-settings-shell')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Manage add-ons' })).toHaveAttribute(
-      'href',
-      '/msp/add-ons?addon=teams',
-    );
-  });
-
   it('T005: CE lands on Inbound Email and never mounts the telephony settings', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
 
@@ -255,10 +241,8 @@ describe('IntegrationsSettingsPage communication sub-navigation', () => {
     expect(screen.getByText('Inbound Email')).toBeInTheDocument();
     expect(container.querySelector('#integration-subsection-communication-email')).not.toHaveAttribute('hidden');
 
-    fireEvent.click(screen.getByText('Telephony', { selector: 'button *, button' }));
-
     expect(screen.queryByTestId('telephony-integration-settings-shell')).not.toBeInTheDocument();
-    expect(screen.getByTestId('telephony-edition-notice')).toBeInTheDocument();
+    expect(screen.queryByText('Telephony', { selector: 'button *, button' })).not.toBeInTheDocument();
   });
 
   it('T011: the sub-navigation exposes kebab-case reflection ids', async () => {

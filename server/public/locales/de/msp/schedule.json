@@ -683,6 +683,14 @@
     },
     "errors": {
       "loadWorkItem": "Das Arbeitselement konnte nicht geladen werden."
+    },
+    "teamsMeeting": {
+      "create": "Teams-Besprechung erstellen",
+      "creating": "Teams-Besprechung wird erstellt…",
+      "join": "Teams-Besprechung beitreten",
+      "created": "Microsoft Teams-Besprechung erstellt",
+      "createFailed": "Teams-Besprechung konnte nicht erstellt werden",
+      "recurringUnsupported": "Teams-Besprechungen können nur zu eigenständigen Einträgen hinzugefügt werden, nicht zu wiederkehrenden Serien."
     }
   },
   "actions": {

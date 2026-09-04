@@ -327,8 +327,6 @@ function createService(planByTenant: Record<string, string>) {
     proAnnualPriceId: 'price_pro_seat_year',
     aiAddOnPriceId: 'price_ai_addon',
     aiAddOnAnnualPriceId: 'price_ai_addon_year',
-    teamsAddOnPriceId: 'price_teams_addon',
-    teamsAddOnAnnualPriceId: 'price_teams_addon_year',
     enterpriseAddOnPriceId: 'price_enterprise_addon',
     enterpriseAddOnAnnualPriceId: 'price_enterprise_addon_year',
     earlyAdoptersBasePriceId: null,
@@ -1011,24 +1009,15 @@ describe('StripeService tier pricing', () => {
     );
   });
 
-  it('creates embedded checkout sessions for Teams and Enterprise add-ons', async () => {
+  it('creates embedded checkout sessions for the Enterprise add-on', async () => {
     const service = createService({});
     service.initPromise = Promise.resolve();
 
-    const teamsResult = await service.purchaseAddOn('tenant-teams', 'teams', 'month');
     const enterpriseResult = await service.purchaseAddOn('tenant-enterprise', 'enterprise', 'year');
 
-    expect(teamsResult.success).toBe(true);
     expect(enterpriseResult.success).toBe(true);
     expect(service.stripe.checkout.sessions.create).toHaveBeenNthCalledWith(
       1,
-      expect.objectContaining({
-        line_items: [{ price: service.config.teamsAddOnPriceId, quantity: 1 }],
-        metadata: expect.objectContaining({ addon_key: 'teams' }),
-      }),
-    );
-    expect(service.stripe.checkout.sessions.create).toHaveBeenNthCalledWith(
-      2,
       expect.objectContaining({
         line_items: [{ price: service.config.enterpriseAddOnAnnualPriceId, quantity: 1 }],
         metadata: expect.objectContaining({ addon_key: 'enterprise' }),

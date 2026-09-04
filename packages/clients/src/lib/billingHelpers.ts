@@ -3,10 +3,8 @@
 import type { Knex } from 'knex';
 import { createTenantKnex, withTransaction, tenantDb } from '@alga-psa/db';
 import { resolveProductCode } from '@alga-psa/types';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { withAuth, withAuthCheck } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';import {
-  PREPAID_BALANCE_ALERT_FLAG,
   getPrepaidBalanceAlertSettingsDb,
   updatePrepaidBalanceAlertSettingsDb,
   getPrepaidReplenishmentContractOverridesDb,
@@ -520,21 +518,10 @@ export const getEffectiveTaxSourceForClientAsync = withAuth(async (
 });
 
 // ---------------------------------------------------------------------------
-// Prepaid balance alert policy (task 29.8.20). Clients UI path: independently
-// gated on release-v1-5-feature with a false default and billing_settings
-// read/update permissions, delegating persistence to the shared module.
+// Prepaid balance alert policy (task 29.8.20). Clients UI path: gated on
+// billing_settings read/update permissions, delegating persistence to the
+// shared module.
 // ---------------------------------------------------------------------------
-
-const PREPAID_ALERT_FLAG_DISABLED_MESSAGE = 'Prepaid balance alerts are not enabled for this workspace';
-
-async function prepaidAlertFeatureEnabled(tenantId: string): Promise<boolean> {
-  try {
-    return await isFeatureFlagEnabled(PREPAID_BALANCE_ALERT_FLAG, { tenantId });
-  } catch {
-    // Missing, unavailable, or throwing flag infrastructure fails closed.
-    return false;
-  }
-}
 
 export type PrepaidBalanceAlertSettingsReadResult =
   | PrepaidBalanceAlertSettingsWithDefault
@@ -553,9 +540,6 @@ export const getPrepaidBalanceAlertSettingsAsync = withAuth(async (
 ): Promise<PrepaidBalanceAlertSettingsReadResult> => {
   if (!tenant) {
     return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
-  }
-  if (!(await prepaidAlertFeatureEnabled(tenant))) {
-    return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
   }
   if (!(await hasPermission(_user, 'billing_settings', 'read'))) {
     return permissionError('Permission denied: billing_settings read required', 'msp/clients:errors.billingSettings.readRequired');
@@ -576,9 +560,6 @@ export const updatePrepaidBalanceAlertSettingsAsync = withAuth(async (
 ): Promise<PrepaidBalanceAlertSettingsUpdateResult> => {
   if (!tenant) {
     return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
-  }
-  if (!(await prepaidAlertFeatureEnabled(tenant))) {
-    return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
   }
   if (!(await hasPermission(_user, 'billing_settings', 'update'))) {
     return permissionError('Permission denied: billing_settings update required', 'msp/clients:errors.billingSettings.updateRequired');
@@ -606,7 +587,7 @@ export const getPrepaidReplenishmentContractOverridesAsync = withAuth(async (
   { tenant },
   clientId: string,
 ): Promise<PrepaidReplenishmentContractOverride[] | ActionMessageError | ActionPermissionError> => {
-  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
+  if (!tenant) return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
   if (!(await hasPermission(_user, 'billing_settings', 'read'))) return permissionError('Permission denied: billing_settings read required', 'msp/clients:errors.billingSettings.readRequired');
   const { knex } = await createTenantKnex();
   return getPrepaidReplenishmentContractOverridesDb(knex, tenant, clientId);
@@ -624,7 +605,7 @@ export const updatePrepaidReplenishmentContractOverrideAsync = withAuth(async (
     prepaidReplenishmentHorizonDays: number | null;
   },
 ): Promise<{ success: true } | ActionMessageError | ActionPermissionError> => {
-  if (!tenant || !(await prepaidAlertFeatureEnabled(tenant))) return actionError(PREPAID_ALERT_FLAG_DISABLED_MESSAGE, 'msp/clients:errors.billingSettings.prepaidAlertsDisabled');
+  if (!tenant) return actionError('Tenant context not found', 'msp/clients:errors.billingSettings.tenantContextMissing');
   if (!(await hasPermission(_user, 'billing_settings', 'update'))) return permissionError('Permission denied: billing_settings update required', 'msp/clients:errors.billingSettings.updateRequired');
   try {
     const { knex } = await createTenantKnex();

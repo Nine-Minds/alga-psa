@@ -119,17 +119,29 @@ RUN npm run build
 
 # Copy onboarding seeds after build
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+# The permission seeds require the catalog at runtime through
+# seeds/onboarding/lib/permissionCatalog.cjs, which resolves this packaged path
+# when the source checkout is absent. tenantDb.cjs travels with it: the catalog
+# modules require it as ../tenantDb.cjs.
+COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 # Verify seeds were copied (debug step)
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Prebuilt dist stage for parity/runtime validation builds.
 FROM base AS prebuilt
 
 COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Production image from prebuilt artifacts (skips in-container TypeScript compilation).
 FROM base AS production-prebuilt
@@ -148,6 +160,8 @@ RUN mkdir -p /app/node_modules/@alga-psa \
     && ln -sfn /app/ee/temporal-workflows/node_modules /app/packages/node_modules
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Same runtime-resolution guard as the production stage: the prebuilt path
 # relies on packages/*/dist arriving via the build context (.dockerignore
@@ -222,6 +236,8 @@ RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Fail the build if the runtime-resolved db package can't load the way the
 # onboarding seeds load it (dynamic import from node_modules). Missing

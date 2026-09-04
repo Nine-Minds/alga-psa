@@ -470,7 +470,9 @@
     "replies_other": "{{count}} Antworten",
     "collapse": "Einklappen",
     "expand": "Ausklappen",
-    "showInDrawer": "In Seitenleiste anzeigen"
+    "showInDrawer": "In Seitenleiste anzeigen",
+    "showEarlierReplies_one": "{{count}} frühere Antwort anzeigen",
+    "showEarlierReplies_other": "{{count}} frühere Antworten anzeigen"
   },
   "pagination": {
     "previous": "Zurück",

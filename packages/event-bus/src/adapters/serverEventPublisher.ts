@@ -4,9 +4,12 @@
  */
 
 import type { IEventPublisher } from '@alga-psa/types';
+import { registerAfterCommit } from '@alga-psa/db';
 import { publishWorkflowEvent } from '../publishers';
 
 export class ServerEventPublisher implements IEventPublisher {
+  constructor(private readonly trx?: Parameters<typeof registerAfterCommit>[0]) {}
+
   async publishTicketCreated(data: {
     tenantId: string;
     ticketId: string;
@@ -95,18 +98,31 @@ export class ServerEventPublisher implements IEventPublisher {
     actorUserId: string | undefined,
     payload: Record<string, unknown>
   ): Promise<void> {
-    try {
-      await publishWorkflowEvent({
-        eventType: eventType as any,
-        payload,
-        ctx: {
-          tenantId,
-          actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
-        }
-      });
-    } catch (error) {
-      console.error(`Failed to publish ${eventType} event:`, error);
-      // Don't throw - event publishing failure shouldn't break ticket operations
+    const publish = async () => {
+      try {
+        await publishWorkflowEvent({
+          eventType: eventType as any,
+          payload,
+          ctx: {
+            tenantId,
+            actor: actorUserId ? { actorType: 'USER', actorUserId } : { actorType: 'SYSTEM' }
+          }
+        });
+      } catch (error) {
+        console.error(`Failed to publish ${eventType} event:`, error);
+        // Don't throw - event publishing failure shouldn't break ticket operations
+      }
+    };
+
+    if (this.trx) {
+      registerAfterCommit(
+        this.trx,
+        publish,
+        `${eventType} ticket=${String(payload.ticketId ?? 'unknown')}`
+      );
+      return;
     }
+
+    await publish();
   }
 }

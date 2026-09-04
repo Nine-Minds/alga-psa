@@ -4,6 +4,7 @@
     "amount": "Importo",
     "authorizedBy": "Autorizzato da",
     "billTo": "Fatturare a",
+    "billedTimeByTicket": "Tempo fatturato per ticket",
     "date": "Data",
     "description": "Descrizione",
     "discounts": "Sconti",
@@ -12,6 +13,7 @@
     "from": "Da",
     "fulfilled": "Evaso",
     "fulfillment": "Evasione",
+    "hours": "Ore",
     "invoice": "Fattura",
     "invoiceNumber": "Fattura n.",
     "invoiceTitle": "FATTURA",
@@ -44,6 +46,7 @@
     "quoteTitle": "PREVENTIVO",
     "rate": "Tariffa",
     "recurring": "Ricorrente",
+    "service": "Servizio",
     "shipDate": "Data di spedizione",
     "shipTo": "Spedire a",
     "shipped": "Spedito",
@@ -53,6 +56,7 @@
     "subtotal": "Subtotale",
     "tax": "Imposta",
     "termsAndConditions": "Termini e condizioni",
+    "ticket": "Ticket",
     "total": "Totale",
     "unitPrice": "Prezzo unitario",
     "validUntil": "Valido fino al",
@@ -60,6 +64,7 @@
     "yourPoNumber": "Vostro ordine d'acquisto",
     "emptyState": {
       "noBillableLineItems": "Nessuna voce fatturabile",
+      "noBilledTimeDetail": "Nessun dettaglio del tempo fatturato è disponibile per questa fattura.",
       "noItemsOnOrder": "Nessuna voce in questo ordine",
       "noItemsToPick": "Nessuna voce da prelevare",
       "noLineItems": "Nessuna voce",
@@ -68,6 +73,7 @@
       "noPhasesDefined": "Nessuna fase definita"
     },
     "note": {
+      "billedTimePortalDetail": "Il dettaglio degli inserimenti ore di ogni ticket è disponibile nel portale clienti.",
       "pickedBy": "Prelevato da: ____________________     Data: ____________",
       "preTaxTotals": "I totali indicati sono al netto delle imposte. L'imposta applicabile viene calcolata sulla fattura.",
       "thankYouForOrder": "Grazie per il vostro ordine."

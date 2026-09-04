@@ -30,6 +30,8 @@ vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration', () => (
 
 vi.mock('../../../../../packages/billing/src/actions/invoiceGeneration.constants', () => ({
   DUPLICATE_RECURRING_INVOICE_CODE: 'DUPLICATE_RECURRING_INVOICE',
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY: 'msp/billing:errors.duplicateRecurringInvoice',
+  NO_BILLING_EMAIL_MESSAGE_KEY: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -93,6 +95,21 @@ function buildContractCadenceTarget(input: {
   return {
     selectorInput,
     executionWindow: selectorInput.executionWindow,
+  };
+}
+
+/**
+ * The returned (not thrown) action-error shape the invoice-generation boundary
+ * produces for a missing billing recipient after the localization seam has
+ * rewritten the sentence. The recurring run recognizes it by messageKey.
+ */
+function noBillingEmailActionError(clientName: string) {
+  return {
+    actionError:
+      `Cannot generate invoice: No billing email address for "${clientName}". ` +
+      'Please set a billing contact, billing email, or a billing/default location email before generating invoices.',
+    messageKey: 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL',
+    messageParams: { clientName },
   };
 }
 
@@ -423,6 +440,151 @@ describe('recurring billing run actions', () => {
         }),
       ],
     });
+    // Approval blockers are not a structured, known failure: they stay generic
+    // (no code), so the UI cannot translate them as client remediation.
+    expect((result.failures[0] as { code?: string })?.code).toBeUndefined();
+  });
+
+  it('carries NO_BILLING_EMAIL code and client/window attribution through a grouped recurring run', async () => {
+    const target = buildContractCadenceTarget({ contractLineId: 'line-no-email' });
+
+    mocks.generateInvoiceForSelectionInputs.mockResolvedValueOnce(
+      noBillingEmailActionError('Acme Co'),
+    );
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'child-selection:no-email',
+          selectorInputs: [target.selectorInput],
+          billingCycleId: 'cycle-no-email',
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        {
+          // The grouped-run normalization already drops billingCycleId; client/window
+          // attribution stays exact through executionIdentityKey + executionWindowKind.
+          billingCycleId: null,
+          executionIdentityKey: target.executionWindow.identityKey,
+          executionWindowKind: 'contract_cadence_window',
+          code: 'NO_BILLING_EMAIL',
+          params: { clientName: 'Acme Co' },
+          errorMessage: noBillingEmailActionError('Acme Co').actionError,
+        },
+      ],
+    });
+  });
+
+  it('carries NO_BILLING_EMAIL code through a single-target recurring run', async () => {
+    const target = buildContractCadenceTarget({ contractLineId: 'line-no-email-single' });
+
+    mocks.generateInvoiceForSelectionInput.mockResolvedValueOnce(
+      noBillingEmailActionError('Acme Co'),
+    );
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      targets: [target],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        {
+          billingCycleId: null,
+          executionIdentityKey: target.executionWindow.identityKey,
+          executionWindowKind: 'contract_cadence_window',
+          code: 'NO_BILLING_EMAIL',
+          params: { clientName: 'Acme Co' },
+        },
+      ],
+    });
+  });
+
+  it('keeps mixed-batch failures attributed to the right client/window and only codes known causes', async () => {
+    const noEmailTarget = buildContractCadenceTarget({
+      clientId: 'client-1',
+      contractLineId: 'line-no-email-mixed',
+    });
+    const unknownTarget = buildContractCadenceTarget({
+      clientId: 'client-2',
+      contractLineId: 'line-unknown-mixed',
+    });
+
+    mocks.generateInvoiceForSelectionInputs
+      .mockResolvedValueOnce(noBillingEmailActionError('Client One'))
+      .mockRejectedValueOnce(new Error('Unhandled linkage failure'));
+
+    const result = await generateGroupedInvoicesAsRecurringBillingRun({
+      groupedTargets: [
+        {
+          groupKey: 'child-selection:no-email-mixed',
+          selectorInputs: [noEmailTarget.selectorInput],
+          billingCycleId: 'cycle-no-email-mixed',
+        },
+        {
+          groupKey: 'child-selection:unknown-mixed',
+          selectorInputs: [unknownTarget.selectorInput],
+          billingCycleId: 'cycle-unknown-mixed',
+        },
+      ],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 2,
+    });
+    const [known, unknown] = (result as { failures: Array<Record<string, unknown>> }).failures;
+    expect(known).toMatchObject({
+      billingCycleId: null,
+      executionIdentityKey: noEmailTarget.executionWindow.identityKey,
+      executionWindowKind: 'contract_cadence_window',
+      code: 'NO_BILLING_EMAIL',
+      params: { clientName: 'Client One' },
+    });
+    expect(unknown).toMatchObject({
+      billingCycleId: null,
+      executionIdentityKey: unknownTarget.executionWindow.identityKey,
+      executionWindowKind: 'contract_cadence_window',
+      errorMessage: 'Failed to generate invoice for this billing cycle.',
+    });
+    expect(unknown.code).toBeUndefined();
+  });
+
+  it('keeps unsupported coded errors off the recurring-run UI as raw text', async () => {
+    const target = buildContractCadenceTarget({ contractLineId: 'line-unsupported' });
+
+    // The boundary re-throws coded-but-unallowlisted errors (e.g. SERVICE_NOT_FOUND
+    // from a ManualInvoiceError) so the run's generic catch owns them.
+    mocks.generateInvoiceForSelectionInput.mockRejectedValueOnce(
+      Object.assign(
+        new Error('Cannot generate invoice: Service "service-9" could not be found.'),
+        { code: 'SERVICE_NOT_FOUND' },
+      ),
+    );
+
+    const result = await generateInvoicesAsRecurringBillingRun({
+      targets: [target],
+    });
+
+    expect(result).toMatchObject({
+      invoicesCreated: 0,
+      failedCount: 1,
+      failures: [
+        expect.objectContaining({
+          executionIdentityKey: target.executionWindow.identityKey,
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
+        }),
+      ],
+    });
+    const failure = (result as { failures: Array<{ code?: string }> }).failures[0];
+    expect(failure?.code).toBeUndefined();
+    expect(JSON.stringify(result)).not.toContain('service-9');
   });
 
   it('skips duplicate recurring invoices without marking the canonical recurring run failed', async () => {
@@ -483,6 +645,8 @@ describe('recurring billing run actions', () => {
         }),
       ],
     });
+
+    expect((result as { failures: Array<{ code?: string }> }).failures[0]?.code).toBeUndefined();
 
     expect(consoleErrorSpy).toHaveBeenCalledTimes(1);
     const [, loggedContext] = consoleErrorSpy.mock.calls[0] as [string, Record<string, unknown>];

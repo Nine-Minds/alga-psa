@@ -209,6 +209,19 @@ export interface ActivityNotificationRecord {
   receivedAt: string;
 }
 
+/**
+ * An outbound mail request captured by the Graph simulator. This records the
+ * wire route as received, rather than claiming that an email was delivered.
+ */
+export interface CapturedSendMail {
+  route: string;
+  mailbox: string | null;
+  encodedMailbox: string | null;
+  payload: unknown;
+  contentType: string | null;
+  receivedAt: string;
+}
+
 /** Defaults for inbound activity injection; tune with the `configure` action. */
 export interface BotConfig {
   /** Where injected activities are POSTed (the app's bot endpoint). */
@@ -388,6 +401,7 @@ export class MsGraphCore implements EmulatorCore {
   readonly botConversations = new Map<string, BotConversation>();
   readonly capturedBotActivities: CapturedBotActivity[] = [];
   readonly activityNotifications: ActivityNotificationRecord[] = [];
+  readonly capturedSendMail: CapturedSendMail[] = [];
   readonly faults = new Map<string, OperationFault>();
   accessTokenTtlSeconds = 3600;
   rotateRefreshTokens = true;
@@ -421,6 +435,7 @@ export class MsGraphCore implements EmulatorCore {
     this.botConversations.clear();
     this.capturedBotActivities.length = 0;
     this.activityNotifications.length = 0;
+    this.capturedSendMail.length = 0;
     this.faults.clear();
     this.accessTokenTtlSeconds = 3600;
     this.rotateRefreshTokens = true;
@@ -1189,6 +1204,12 @@ export class MsGraphCore implements EmulatorCore {
       receivedAt: this.env.clock.now().toISOString(),
     };
     this.activityNotifications.push(record);
+    return record;
+  }
+
+  recordSendMail(input: Omit<CapturedSendMail, 'receivedAt'>): CapturedSendMail {
+    const record: CapturedSendMail = { ...input, receivedAt: this.env.clock.now().toISOString() };
+    this.capturedSendMail.push(record);
     return record;
   }
 

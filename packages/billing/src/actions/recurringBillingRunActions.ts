@@ -16,7 +16,7 @@ import {
   generateInvoiceForSelectionInput,
   generateInvoiceForSelectionInputs,
 } from './invoiceGeneration';
-import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY } from './invoiceGeneration.constants';
+import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY, NO_BILLING_EMAIL_MESSAGE_KEY } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
   listRecurringRunExecutionWindowKinds,
@@ -28,10 +28,16 @@ import {
 import {
   mapClientCadenceInvoiceCandidatesToRecurringRunTargets,
   type ClientCadenceRecurringRunTarget,
+  type HandledRecurringFailureCode,
   type RecurringBillingRunGroupedTarget,
   type RecurringBillingRunInvoiceFailure,
   type RecurringBillingRunResult,
   type RecurringBillingRunTarget,
+} from './recurringBillingRunActions.shared';
+
+export type {
+  HandledRecurringFailureCode,
+  RecurringBillingRunInvoiceFailure,
 } from './recurringBillingRunActions.shared';
 import {
   buildRecurringBillingRunCompletedPayload,
@@ -53,6 +59,25 @@ function isRecurringBillingRunActionError(value: unknown): value is RecurringBil
 
 function getRecurringBillingRunActionErrorMessage(error: RecurringBillingRunActionError): string {
   return 'permissionError' in error ? error.permissionError : error.actionError;
+}
+
+/**
+ * Recovers the structured, known failure (code/params) from a keyed action error
+ * returned by the invoice-generation boundary. Recognized by message key, never by
+ * the English sentence, which the localization boundary rewrites. Unknown/internal
+ * errors carry nothing, so the failure keeps the generic message for the UI.
+ */
+function handledRecurringFailureFromActionError(error: RecurringBillingRunActionError): {
+  code?: HandledRecurringFailureCode;
+  params?: Record<string, string>;
+} {
+  if (error.messageKey === NO_BILLING_EMAIL_MESSAGE_KEY) {
+    return {
+      code: 'NO_BILLING_EMAIL',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
+  return {};
 }
 
 function normalizeRecurringBillingRunTargets(params: {
@@ -255,6 +280,7 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
             executionIdentityKey: executionWindow.identityKey,
             executionWindowKind: executionWindow.kind,
             errorMessage: getRecurringBillingRunActionErrorMessage(invoice),
+            ...handledRecurringFailureFromActionError(invoice),
           });
           continue;
         }
@@ -425,6 +451,7 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
             executionIdentityKey: executionWindow.identityKey,
             executionWindowKind: executionWindow.kind,
             errorMessage: getRecurringBillingRunActionErrorMessage(invoice),
+            ...handledRecurringFailureFromActionError(invoice),
           });
           continue;
         }

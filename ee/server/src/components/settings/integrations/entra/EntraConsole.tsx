@@ -25,6 +25,7 @@ import { CustomTabs, type TabContent } from '@alga-psa/ui/components/CustomTabs'
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   disconnectEntraIntegration,
+  discoverEntraManagedTenants,
   getEntraConfirmedMappings,
   initiateEntraDirectOAuth,
   unmapEntraTenant,
@@ -52,6 +53,7 @@ import {
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
+import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker';
 import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
 import { EntraScheduleTab } from './EntraScheduleTab';
@@ -224,6 +226,7 @@ export function EntraConsole({
   const [loaded, setLoaded] = React.useState(false);
   const [loadError, setLoadError] = React.useState<string | null>(null);
   const [syncAllBusy, setSyncAllBusy] = React.useState(false);
+  const [discoveryBusy, setDiscoveryBusy] = React.useState(false);
   const [pauseBusy, setPauseBusy] = React.useState(false);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
@@ -237,12 +240,18 @@ export function EntraConsole({
   // mappings, so it has to keep a way back in as well.
   const [reconnectMethod, setReconnectMethod] = React.useState<EntraConnectionMethod | null>(null);
   const [reconnectBusy, setReconnectBusy] = React.useState(false);
+  const [reconnectDirectProfile, setReconnectDirectProfile] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [mappingSummary, setMappingSummary] = React.useState<EntraMappingSummary>({
     mapped: 0,
     skipped: 0,
     needsReview: 0,
   });
   const [skippedTenants, setSkippedTenants] = React.useState<EntraSkippedTenant[]>([]);
+  // Bumped after a discovery so the mapping preview re-fetches the tenants it just found.
+  const [mappingRefreshKey, setMappingRefreshKey] = React.useState(0);
   const [remapTarget, setRemapTarget] = React.useState<EntraSkippedTenant | null>(null);
   const [remapBusy, setRemapBusy] = React.useState(false);
 
@@ -403,6 +412,35 @@ export function EntraConsole({
   }, [loadConsole, t]);
 
   /**
+   * Discovery is not a setup-only step: an MSP that onboards a client after the
+   * wizard is finished had no way to find the new tenant, because the button
+   * only ever existed on the wizard the console replaces once setup completes.
+   */
+  const handleRunDiscovery = React.useCallback(async () => {
+    setDiscoveryBusy(true);
+    setActionError(null);
+    setActionMessage(null);
+    try {
+      const result = await discoverEntraManagedTenants();
+      if ('error' in result) {
+        setActionError(result.error || t('integrations.entra.settings.discovery.failed'));
+        return;
+      }
+
+      const discoveredCount = Number(result.data?.discoveredTenantCount || 0);
+      setActionMessage(
+        discoveredCount === 1
+          ? t('integrations.entra.settings.discovery.completedOne', { count: discoveredCount })
+          : t('integrations.entra.settings.discovery.completed', { count: discoveredCount })
+      );
+      setMappingRefreshKey((current) => current + 1);
+      await loadConsole();
+    } finally {
+      setDiscoveryBusy(false);
+    }
+  }, [loadConsole, t]);
+
+  /**
    * Pause is the button an operator reaches for when a sync is doing something
    * they did not expect, so it is on the header rather than two tabs away.
    */
@@ -530,6 +568,7 @@ export function EntraConsole({
       cippBaseUrl: status?.connectionDetails?.cippBaseUrl || null,
       directTenantId: status?.connectionDetails?.directTenantId || null,
       directCredentialSource: status?.connectionDetails?.directCredentialSource || null,
+      directProfileName: status?.connectionDetails?.directProfileName || null,
       mappedClients: mappings.map((mapping) => ({
         clientName: mapping.clientName,
         entraTenantId: mapping.entraTenantId,
@@ -1116,6 +1155,8 @@ export function EntraConsole({
                 onChange={setReconnectMethod}
                 onContinue={handleReconnect}
                 busy={reconnectBusy || rotateBusy}
+                directProfileBound={Boolean(reconnectDirectProfile)}
+                directProfilePicker={<MicrosoftAppRegistrationPicker onBound={setReconnectDirectProfile} />}
               />
             </div>
           ) : null}
@@ -1179,6 +1220,20 @@ export function EntraConsole({
         icon={Building2}
         title={t('integrations.entra.console.connection.mappingTitle')}
         description={t('integrations.entra.console.connection.mappingDescription')}
+        action={
+          <Button
+            id="entra-console-run-discovery"
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void handleRunDiscovery()}
+            disabled={discoveryBusy}
+          >
+            {discoveryBusy
+              ? t('integrations.entra.settings.actions.runDiscoveryRunning')
+              : t('integrations.entra.settings.actions.runDiscovery')}
+          </Button>
+        }
       >
         <div className="mb-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
           <p>
@@ -1207,6 +1262,7 @@ export function EntraConsole({
           </p>
         </div>
         <EntraTenantMappingTable
+          refreshKey={mappingRefreshKey}
           onSummaryChange={setMappingSummary}
           onSkippedTenantsChange={setSkippedTenants}
           onPersistedMappingChange={() => void loadConsole()}

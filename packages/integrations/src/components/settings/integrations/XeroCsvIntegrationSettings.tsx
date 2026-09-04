@@ -22,6 +22,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 /**
  * Xero CSV Integration Settings Component
@@ -34,6 +35,7 @@ import {
  */
 const XeroCsvIntegrationSettings: React.FC = () => {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const CURRENCY_SELECT_OPTIONS = React.useMemo(() => [
     { value: '', label: t('integrations.xero.csv.settings.useInvoiceCurrency', { defaultValue: 'Use invoice currency' }) },
     ...CURRENCY_OPTIONS
@@ -102,6 +104,26 @@ const XeroCsvIntegrationSettings: React.FC = () => {
     );
   }
 
+  const canManageConnections = caps.connectionsManage;
+  const canManageMappings = caps.mappingsManage;
+
+  // Wait for the capability check to resolve before hiding the panel, so a
+  // capable user never sees a brief "no permission" card while it loads.
+  if (caps.loaded && !caps.hasAny) {
+    return (
+      <div className="space-y-6" id="xero-csv-integration-no-permission">
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('integrations.xero.csv.settings.overview.title', { defaultValue: 'Xero CSV Integration' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.xero.csv.settings.noPermissionDescription', { defaultValue: 'You do not have permission to view or configure accounting integrations.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Success/Error messages */}
@@ -115,6 +137,13 @@ const XeroCsvIntegrationSettings: React.FC = () => {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
+      {!canManageConnections ? (
+        <Alert variant="info" id="xero-csv-connections-permission-notice">
+          <AlertDescription>
+            {t('integrations.xero.csv.settings.connectionsPermissionNotice', { defaultValue: 'You can view Xero CSV settings, but changing them requires the manage-connections capability. Ask an administrator to grant it.' })}
+          </AlertDescription>
+        </Alert>
+      ) : null}
 
       {/* Overview Card */}
       <Card id="xero-csv-integration-overview-card">
@@ -191,7 +220,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
               </div>
             </div>
 
-            <Button id="xero-csv-integration-acknowledge-setup-button" onClick={handleAcknowledgeSetup} disabled={isSaving}>
+            <Button id="xero-csv-integration-acknowledge-setup-button" onClick={handleAcknowledgeSetup} disabled={isSaving || !canManageConnections}>
               {t('integrations.xero.csv.settings.setup.acknowledge', { defaultValue: "I've completed the setup" })}
             </Button>
           </CardContent>
@@ -221,7 +250,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
                 onValueChange={(value) =>
                   handleSave({ dateFormat: value as 'DD/MM/YYYY' | 'MM/DD/YYYY' })
                 }
-                disabled={isSaving}
+                disabled={isSaving || !canManageConnections}
               />
             </div>
 
@@ -239,7 +268,7 @@ const XeroCsvIntegrationSettings: React.FC = () => {
                 options={CURRENCY_SELECT_OPTIONS}
                 placeholder={t('integrations.xero.csv.settings.selectCurrency', { defaultValue: 'Select currency' })}
                 showPlaceholderInDropdown={false}
-                disabled={isSaving}
+                disabled={isSaving || !canManageConnections}
               />
             </div>
           </div>
@@ -255,7 +284,15 @@ const XeroCsvIntegrationSettings: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <XeroCsvMappingManager />
+          {canManageMappings ? (
+            <XeroCsvMappingManager />
+          ) : (
+            <Alert variant="info" id="xero-csv-mapping-permission-notice">
+              <AlertDescription>
+                {t('integrations.xero.csv.settings.mappings.permissionNotice', { defaultValue: 'Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
@@ -345,14 +382,16 @@ const XeroCsvIntegrationSettings: React.FC = () => {
             </AlertDescription>
           </Alert>
         </CardContent>
-        <CardFooter className="justify-end">
-          <Button id="xero-csv-open-accounting-exports" asChild size="lg">
-            <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-              {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-              <ExternalLink className="h-4 w-4 opacity-90" />
-            </Link>
-          </Button>
-        </CardFooter>
+        {caps.exportsExecute && (
+          <CardFooter className="justify-end">
+            <Button id="xero-csv-open-accounting-exports" asChild size="lg">
+              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
+                <ExternalLink className="h-4 w-4 opacity-90" />
+              </Link>
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   );

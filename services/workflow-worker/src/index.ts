@@ -15,6 +15,8 @@ import { WorkflowDataStoreSweepWorker } from '@alga-psa/workflows/workers';
 import { WorkflowRuntimeV2EventStreamWorker } from './v2/WorkflowRuntimeV2EventStreamWorker.js';
 import { WorkflowRuntimeV2TemporalWorker } from './v2/WorkflowRuntimeV2TemporalWorker.js';
 import logger from '@alga-psa/core/logger';
+import { registerFeatureFlagChecker } from '@alga-psa/core/features';
+import { featureFlags } from '@alga-psa/core/server';
 import { TenantEmailService, StaticTemplateProcessor, EmailProviderManager } from '@alga-psa/email';
 import { HealthServer } from './healthServer.js';
 import { registerEnterpriseStorageProviders } from './registerEnterpriseStorageProviders.js';
@@ -40,6 +42,10 @@ async function startServices() {
       verbose,
       logLevel: process.env.LOG_LEVEL ?? null,
     });
+
+    // Workflow activities run outside the Next.js server process, so register
+    // the same PostHog-backed feature evaluator in this process as well.
+    registerFeatureFlagChecker((flag, context) => featureFlags.isEnabled(flag, context));
 
     initializeWorkflowRuntimeV2();
 

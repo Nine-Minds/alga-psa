@@ -16,6 +16,7 @@ const hoisted = vi.hoisted(() => {
     ticket_number: string;
     title: string;
     client_id: string;
+    contact_name_id?: string | null;
     status_id: string;
     entered_at: string;
   };
@@ -28,6 +29,19 @@ const hoisted = vi.hoisted(() => {
     is_inactive: boolean;
   };
   type Client = { tenant: string; client_id: string; client_name: string; is_inactive: boolean };
+  type TeamsIntegration = {
+    tenant: string;
+    install_status: string;
+    selected_profile_id: string | null;
+  };
+  type TelephonyProvider = { tenant: string; provider: string; status: string };
+  type TelephonyCallIntent = Record<string, unknown> & { tenant: string; intent_id: string };
+  type UserAuthAccount = {
+    tenant: string;
+    user_id: string;
+    provider: string;
+    provider_account_id: string;
+  };
 
   const state = {
     mockUser: { user_id: 'user-1', user_type: 'internal' } as any,
@@ -38,7 +52,13 @@ const hoisted = vi.hoisted(() => {
     statuses: [] as Status[],
     contacts: [] as Contact[],
     clients: [] as Client[],
+    teamsIntegrations: [] as TeamsIntegration[],
+    telephonyProviders: [] as TelephonyProvider[],
+    callIntents: [] as TelephonyCallIntent[],
+    userAuthAccounts: [] as UserAuthAccount[],
   };
+
+  let sequence = 0;
 
   const clone = <T,>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -49,6 +69,10 @@ const hoisted = vi.hoisted(() => {
     if (table.startsWith('statuses')) return state.statuses as any;
     if (table.startsWith('contacts')) return state.contacts as any;
     if (table.startsWith('clients')) return state.clients as any;
+    if (table.startsWith('teams_integrations')) return state.teamsIntegrations as any;
+    if (table.startsWith('telephony_providers')) return state.telephonyProviders as any;
+    if (table.startsWith('telephony_call_intents')) return state.callIntents as any;
+    if (table.startsWith('user_auth_accounts')) return state.userAuthAccounts as any;
     return [];
   };
 
@@ -67,9 +91,15 @@ const hoisted = vi.hoisted(() => {
         if (typeof conditions === 'string') {
           const column = conditions.split('.').pop() as string;
           if (operand !== undefined) {
-            // Three-argument form; the resolution-target search uses ilike.
-            const pattern = String(operand).replace(/^%|%$/g, '').toLowerCase();
-            columnFilters.push((row) => String(row[column] ?? '').toLowerCase().includes(pattern));
+            if (operator === '<') {
+              columnFilters.push((row) => new Date(row[column]).getTime() < new Date(operand as any).getTime());
+            } else if (operator === '>') {
+              columnFilters.push((row) => new Date(row[column]).getTime() > new Date(operand as any).getTime());
+            } else {
+              // Three-argument form; the resolution-target search uses ilike.
+              const pattern = String(operand).replace(/^%|%$/g, '').toLowerCase();
+              columnFilters.push((row) => String(row[column] ?? '').toLowerCase().includes(pattern));
+            }
           } else {
             columnFilters.push((row) => row[column] === operator);
           }
@@ -101,6 +131,15 @@ const hoisted = vi.hoisted(() => {
       },
       // knex's select is chainable; the builder executes when awaited.
       select(..._columns: unknown[]) { return query; },
+      insert(values: Record<string, unknown>) {
+        sequence += 1;
+        const row = { intent_id: `intent-${sequence}`, ...values } as any;
+        rowsFor(table).push(row);
+        return {
+          returning: async () => [clone(row)],
+          then: (resolve: (rows: unknown[]) => unknown) => Promise.resolve([clone(row)]).then(resolve),
+        };
+      },
       async update(values: Record<string, unknown>) {
         const rows = filtered();
         rows.forEach((row) => Object.assign(row, values));
@@ -146,7 +185,18 @@ const hoisted = vi.hoisted(() => {
   };
 });
 
-const { calls, interactions, tickets, statuses, contacts, clients } = hoisted.state;
+const {
+  calls,
+  interactions,
+  tickets,
+  statuses,
+  contacts,
+  clients,
+  teamsIntegrations,
+  telephonyProviders,
+  callIntents,
+  userAuthAccounts,
+} = hoisted.state;
 const {
   activateMock,
   autoTicketPolicyMock,
@@ -205,7 +255,9 @@ vi.mock('@alga-psa/telephony', async (importOriginal) => ({
 }));
 
 import {
+  createTelephonyCallIntent,
   createTicketFromTelephonyCall,
+  getTelephonyCallLinkState,
   getTelephonyOverview,
   linkTelephonyCallToTicket,
   listTelephonyLinkableTickets,
@@ -223,6 +275,10 @@ describe('telephony link-to-ticket', () => {
     statuses.length = 0;
     contacts.length = 0;
     clients.length = 0;
+    teamsIntegrations.length = 0;
+    telephonyProviders.length = 0;
+    callIntents.length = 0;
+    userAuthAccounts.length = 0;
     hoisted.state.mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
@@ -246,7 +302,7 @@ describe('telephony link-to-ticket', () => {
     tickets.push(
       {
         tenant: 'tenant-1', ticket_id: 'ticket-1', ticket_number: '1001', title: 'Printer down',
-        client_id: 'client-1', status_id: 'status-open', entered_at: '2026-08-01T00:00:00Z',
+        client_id: 'client-1', contact_name_id: 'contact-1', status_id: 'status-open', entered_at: '2026-08-01T00:00:00Z',
       },
       {
         tenant: 'tenant-1', ticket_id: 'ticket-2', ticket_number: '1002', title: 'Old request',
@@ -257,6 +313,109 @@ describe('telephony link-to-ticket', () => {
         client_id: 'client-2', status_id: 'status-open', entered_at: '2026-08-02T00:00:00Z',
       },
     );
+  });
+
+  describe('ticket call affordance', () => {
+    it('requires an active Teams integration and active Teams Phone provider', async () => {
+      teamsIntegrations.push({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+      });
+
+      await expect(getTelephonyCallLinkState()).resolves.toMatchObject({
+        success: true,
+        teamsIntegrationActive: true,
+        teamsPhoneConnected: false,
+      });
+
+      telephonyProviders.push({ tenant: 'tenant-1', provider: 'teams-phone', status: 'active' });
+
+      await expect(getTelephonyCallLinkState()).resolves.toMatchObject({
+        success: true,
+        teamsIntegrationActive: true,
+        teamsPhoneConnected: true,
+      });
+
+      teamsIntegrations[0].install_status = 'error';
+      await expect(getTelephonyCallLinkState()).resolves.toMatchObject({
+        teamsIntegrationActive: false,
+        teamsPhoneConnected: false,
+      });
+    });
+
+    it('persists a normalized, tenant-scoped call intent from the ticket', async () => {
+      teamsIntegrations.push({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+      });
+      telephonyProviders.push({ tenant: 'tenant-1', provider: 'teams-phone', status: 'active' });
+      userAuthAccounts.push({
+        tenant: 'tenant-1',
+        user_id: 'user-1',
+        provider: 'microsoft',
+        provider_account_id: 'entra-user-1',
+      });
+      callIntents.push({
+        tenant: 'tenant-1',
+        intent_id: 'intent-expired',
+        status: 'pending',
+        expires_at: '2020-01-01T00:00:00.000Z',
+      });
+
+      const result = await createTelephonyCallIntent({
+        ticketId: 'ticket-1',
+        phoneNumber: '+375 (29) 123-45-67',
+      });
+
+      expect(result).toMatchObject({ success: true, intentId: expect.any(String) });
+      expect(callIntents).toHaveLength(2);
+      expect(callIntents[0]).toMatchObject({ status: 'expired' });
+      expect(callIntents[1]).toMatchObject({
+        tenant: 'tenant-1',
+        provider: 'teams-phone',
+        user_id: 'user-1',
+        provider_user_id: 'entra-user-1',
+        ticket_id: 'ticket-1',
+        client_id: 'client-1',
+        contact_id: 'contact-1',
+        phone_number_raw: '+375 (29) 123-45-67',
+        phone_number_e164: '+375291234567',
+        status: 'pending',
+      });
+    });
+
+    it('does not create an intent when Teams itself is inactive', async () => {
+      telephonyProviders.push({ tenant: 'tenant-1', provider: 'teams-phone', status: 'active' });
+
+      const result = await createTelephonyCallIntent({
+        ticketId: 'ticket-1',
+        phoneNumber: '+15551234567',
+      });
+
+      expect(result).toEqual({ success: false, error: 'Teams Phone is not connected.' });
+      expect(callIntents).toHaveLength(0);
+    });
+
+    it('requires both ticket read and interaction create permissions', async () => {
+      teamsIntegrations.push({
+        tenant: 'tenant-1',
+        install_status: 'active',
+        selected_profile_id: 'profile-1',
+      });
+      telephonyProviders.push({ tenant: 'tenant-1', provider: 'teams-phone', status: 'active' });
+      hasPermissionMock.mockResolvedValue(false);
+
+      const result = await createTelephonyCallIntent({
+        ticketId: 'ticket-1',
+        phoneNumber: '+15551234567',
+      });
+
+      expect(result.success).toBe(false);
+      expect(result.error).toMatch(/Permission denied/);
+      expect(callIntents).toHaveLength(0);
+    });
   });
 
   function addCall(overrides: Partial<(typeof calls)[number]> = {}) {
@@ -490,13 +649,13 @@ describe('telephony link-to-ticket', () => {
       addCall();
       availabilityMock.mockResolvedValue({
         enabled: false,
-        reason: 'addon_required',
-        message: 'Telephony integrations require the Microsoft Teams add-on.',
+        reason: 'feature_disabled',
+        message: 'Telephony integrations are not enabled for this tenant.',
       } as any);
 
       const result = await getTelephonyOverview();
 
-      expect(result).toMatchObject({ success: true, available: false, reason: 'addon_required' });
+      expect(result).toMatchObject({ success: true, available: false, reason: 'feature_disabled' });
       expect(result.recentCalls).toEqual([]);
     });
   });
@@ -533,17 +692,17 @@ describe('telephony link-to-ticket', () => {
       expect(resolveCallMatchMock).toHaveBeenCalled();
     });
 
-    it('T044: resolving is refused without the Teams add-on', async () => {
+    it('T044: resolving is refused when the release feature is disabled', async () => {
       availabilityMock.mockResolvedValue({
         enabled: false,
-        reason: 'addon_required',
-        message: 'Telephony integrations require the Microsoft Teams add-on.',
+        reason: 'feature_disabled',
+        message: 'Telephony integrations are not enabled for this tenant.',
       } as any);
 
       const result = await resolveTelephonyCall({ callRecordId: 'call-1', contactId: 'contact-1' });
 
       expect(result.success).toBe(false);
-      expect(result.error).toMatch(/Microsoft Teams add-on/);
+      expect(result.error).toMatch(/not enabled/);
       expect(resolveCallMatchMock).not.toHaveBeenCalled();
     });
 
@@ -561,17 +720,17 @@ describe('telephony link-to-ticket', () => {
   });
 
   describe('provider activation', () => {
-    it('T030: activation is refused without the Teams add-on', async () => {
+    it('T030: activation is refused when the release feature is disabled', async () => {
       availabilityMock.mockResolvedValue({
         enabled: false,
-        reason: 'addon_required',
-        message: 'Telephony integrations require the Microsoft Teams add-on.',
+        reason: 'feature_disabled',
+        message: 'Telephony integrations are not enabled for this tenant.',
       } as any);
 
       const result = await setTelephonyProviderEnabled({ provider: 'teams-phone', enabled: true });
 
       expect(result.success).toBe(false);
-      expect(result.error).toMatch(/Microsoft Teams add-on/);
+      expect(result.error).toMatch(/not enabled/);
       expect(activateMock).not.toHaveBeenCalled();
     });
 
@@ -648,6 +807,15 @@ describe('telephony link-to-ticket', () => {
       const result = await listTelephonyResolutionTargets({ search: 'kansas' });
 
       expect(result.targets).toEqual([
+        { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
+      ]);
+    });
+
+    it('T010: supplies the full client-only data source used by ClientPicker', async () => {
+      const result = await listTelephonyResolutionTargets({ clientsOnly: true });
+
+      expect(result.targets).toEqual([
+        { contactId: null, clientId: 'client-1', label: 'Emerald City', sublabel: null },
         { contactId: null, clientId: 'client-2', label: 'Kansas Farms', sublabel: null },
       ]);
     });

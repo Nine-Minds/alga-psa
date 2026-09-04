@@ -1162,14 +1162,6 @@
       "saveFailed": "Impossibile creare il programma di manutenzione"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documenti e password",
-    "description": "Scheda combinata per documenti relativi agli asset, credenziali e relativi record protetti",
-    "passwords": {
-      "title": "Password e segreti",
-      "comingSoon": "Presto disponibile la gestione sicura delle password."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Programmi di manutenzione",
     "description": "Scheda di gestione del programma di manutenzione per il servizio pianificato e il lavoro ricorrente",

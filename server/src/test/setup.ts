@@ -359,6 +359,7 @@ vi.mock('@alga-psa/auth', async () => {
   const getApiKeyUserOverride = () => apiKeyUserStorage.getStore();
 
   const getCurrentUser = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
+  const getCurrentUserWithRevocationCheck = vi.fn(async () => getApiKeyUserOverride() ?? defaultUser);
   const hasPermission = vi.fn().mockResolvedValue(true);
 
   const resolveTenant = async (user: any): Promise<string> => {
@@ -416,6 +417,7 @@ vi.mock('@alga-psa/auth', async () => {
     getSession: vi.fn().mockResolvedValue(null),
     getSessionWithRevocationCheck: vi.fn().mockResolvedValue(null),
     getCurrentUser,
+    getCurrentUserWithRevocationCheck,
     hasPermission,
     withAuth,
     withAuthCheck,

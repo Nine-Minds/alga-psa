@@ -17,6 +17,8 @@ interface ConnectionMethodChooserProps {
   onChange: (method: EntraConnectionMethod) => void;
   onContinue: () => void;
   busy?: boolean;
+  directProfileBound?: boolean;
+  directProfilePicker?: React.ReactNode;
 }
 
 const DIRECT_PREREQUISITE_KEYS = [
@@ -62,6 +64,8 @@ export function ConnectionMethodChooser({
   onChange,
   onContinue,
   busy = false,
+  directProfileBound = false,
+  directProfilePicker,
 }: ConnectionMethodChooserProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
 
@@ -98,6 +102,8 @@ export function ConnectionMethodChooser({
         <Zap className="h-4 w-4 flex-shrink-0 text-primary-500" aria-hidden="true" />
         <p className="text-sm font-semibold">{t('integrations.entra.setup.chooser.title')}</p>
       </div>
+
+      {value === 'direct' ? directProfilePicker : null}
 
       {cippAvailable ? (
         <Alert variant="info" id="entra-connection-method-recommendation">
@@ -179,7 +185,7 @@ export function ConnectionMethodChooser({
           id="entra-connection-method-continue"
           type="button"
           onClick={onContinue}
-          disabled={busy || !value}
+          disabled={busy || !value || (value === 'direct' && !directProfileBound)}
         >
           {busy
             ? t('integrations.entra.setup.chooser.continuing')

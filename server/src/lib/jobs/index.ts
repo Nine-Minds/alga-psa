@@ -29,6 +29,11 @@ import {
   InboundEmailRecoveryJobData,
   INBOUND_EMAIL_RECOVERY_JOB,
 } from './handlers/inboundEmailRecoveryHandler';
+import {
+  providerDisconnectRetryJobHandler,
+  ProviderDisconnectRetryJobData,
+  PROVIDER_DISCONNECT_RETRY_JOB,
+} from './handlers/providerDisconnectRetryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -255,6 +260,12 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register inbound email recovery handler (per-tenant durable sweep/backfill/mirror)
     jobScheduler.registerJobHandler<InboundEmailRecoveryJobData>(INBOUND_EMAIL_RECOVERY_JOB, async (job: Job<InboundEmailRecoveryJobData>) => {
       await inboundEmailRecoveryHandler(job);
+    });
+
+    // Register provider disconnect retry handler (per-tenant, resumes pending
+    // QBO/Xero disconnect provider cleanup when its retry window has arrived)
+    jobScheduler.registerJobHandler<ProviderDisconnectRetryJobData>(PROVIDER_DISCONNECT_RETRY_JOB, async (job: Job<ProviderDisconnectRetryJobData>) => {
+      await providerDisconnectRetryJobHandler(job);
     });
 
     // Register renewal queue processing handler
@@ -939,6 +950,21 @@ export const scheduleInboundEmailRecoveryJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<InboundEmailRecoveryJobData>(
     INBOUND_EMAIL_RECOVERY_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleProviderDisconnectRetryJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/5 * * * *' // Every 5 minutes
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ProviderDisconnectRetryJobData>(
+    PROVIDER_DISCONNECT_RETRY_JOB,
     cronExpression,
     { tenantId }
   );

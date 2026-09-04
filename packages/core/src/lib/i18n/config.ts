@@ -198,6 +198,7 @@ export const ROUTE_NAMESPACES = {
   '/msp/contacts': ['common', 'msp/core', 'msp/contacts'],
   '/msp/interactions': ['common', 'msp/core', 'msp/clients', 'msp/integrations'],
   '/msp/assets': ['common', 'msp/core', 'msp/assets'],
+  '/msp/assets/maintenance': ['common', 'msp/core', 'msp/assets'],
   '/msp/onboarding': ['common', 'msp/core', 'msp/onboarding'],
   '/msp/workflows': ['common', 'msp/core', 'msp/workflows'],
   '/msp/workflows/runs': ['common', 'msp/core', 'msp/workflows'],

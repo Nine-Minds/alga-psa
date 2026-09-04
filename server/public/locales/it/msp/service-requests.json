@@ -124,6 +124,10 @@
         "descriptionPrefix": "Prefisso della descrizione",
         "save": "Salva instradamento dei ticket"
       },
+      "storeOnly": {
+        "title": "Solo archiviazione",
+        "description": "Gli invii completati vengono conservati con le risposte e gli allegati nella cronologia delle richieste. Non viene creato alcun ticket di supporto."
+      },
       "workflow": {
         "title": "Configurazione del workflow",
         "workflowId": "ID workflow",
@@ -199,7 +203,17 @@
       "executionError": "Errore di esecuzione",
       "submittedAtStatus": "{{date}} · {{status}}",
       "loadingTicket": "Caricamento…",
-      "ticketLoadError": "Impossibile caricare i dettagli del ticket."
+      "ticketLoadError": "Impossibile caricare i dettagli del ticket.",
+      "formVersion": "Versione del modulo",
+      "formVersionValue": "Versione {{version}}",
+      "historyTitle": "Cronologia",
+      "historyEmpty": "Nessuna cronologia registrata per questo invio.",
+      "historyActor": "da {{actor}}",
+      "historyOperations": {
+        "service_request_submission_created": "Invio creato",
+        "service_request_submission_execution_succeeded": "Esecuzione riuscita",
+        "service_request_submission_execution_failed": "Esecuzione non riuscita"
+      }
     }
   },
   "icons": {

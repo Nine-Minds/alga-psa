@@ -16,6 +16,8 @@
     "documentsAll": "Alle Dokumente",
     "knowledgeBase": "Wissensdatenbank",
     "assets": "Assets",
+    "assetsAll": "Alle Assets",
+    "assetsMaintenance": "Wartung",
     "inventory": {
       "label": "Lagerbestand",
       "sections": {
@@ -197,6 +199,12 @@
           "description": "Neues Produkt zu Ihrem Katalog hinzufügen"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Ressourcen und Hilfe",
+      "title": "Ressourcen",
+      "documentation": "Dokumentation",
+      "support": "Support kontaktieren"
     },
     "jobs": {
       "ariaLabel": "Aktivität der Hintergrundjobs anzeigen",

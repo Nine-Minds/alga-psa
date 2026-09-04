@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { generateKeyPairSync } from 'node:crypto';
 import os from 'os';
 import path from 'path';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -160,6 +161,7 @@ describe('portal domain git integration helpers', () => {
   afterEach(async () => {
     __setCommandRunnerForTests(null);
     __setConnectionFactoryForTests(null);
+    vi.unstubAllGlobals();
     process.env = { ...originalEnv };
     await rm(tmpDir, { recursive: true, force: true });
   });
@@ -169,12 +171,60 @@ describe('portal domain git integration helpers', () => {
     process.env.PORTAL_DOMAIN_GIT_REPO = 'https://example.com/mock/nm-mock-config.git';
     process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
 
-    const config = resolveGitConfiguration();
+    const config = await resolveGitConfiguration();
     await prepareGitRepository(config);
 
     expect(commands.map((entry) => entry.command)).toEqual(['git', 'git', 'git', 'git', 'git']);
     expect(commands[0]).toMatchObject({ command: 'git', args: ['clone', config.authenticatedRepoUrl, config.repoDir] });
     expect(commands[commands.length - 1]).toMatchObject({ command: 'git', args: ['pull', 'origin', config.branch], cwd: config.repoDir });
+  });
+
+  it('uses a GitHub App installation token for authenticated git operations', async () => {
+    const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 });
+    const privateKeyPath = path.join(tmpDir, 'github-app-private-key.pem');
+    await fs.writeFile(
+      privateKeyPath,
+      privateKey.export({ type: 'pkcs8', format: 'pem' }),
+      'utf8',
+    );
+
+    delete process.env.GITHUB_ACCESS_TOKEN;
+    process.env.GITHUB_APP_ID = '2787854';
+    process.env.GITHUB_APP_INSTALLATION_ID = '107758512';
+    process.env.GITHUB_APP_PRIVATE_KEY_PATH = privateKeyPath;
+    process.env.PORTAL_DOMAIN_GIT_REPO = 'https://github.com/Nine-Minds/nm-kube-config.git';
+    process.env.PORTAL_DOMAIN_GIT_WORKDIR = tmpDir;
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        token: 'installation-token',
+        expires_at: '2099-01-01T00:00:00Z',
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const config = await resolveGitConfiguration();
+    const authenticatedUrl = new URL(config.authenticatedRepoUrl);
+
+    expect(authenticatedUrl.username).toBe('x-access-token');
+    expect(authenticatedUrl.password).toBe('installation-token');
+    expect(config.maskValues).toContain('installation-token');
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    const [requestUrl, requestOptions] = fetchMock.mock.calls[0];
+    expect(requestUrl).toBe(
+      'https://api.github.com/app/installations/107758512/access_tokens',
+    );
+    expect(requestOptions).toMatchObject({ method: 'POST' });
+
+    const authorization = requestOptions.headers.Authorization as string;
+    const jwt = authorization.replace(/^Bearer /, '');
+    const jwtPayload = JSON.parse(
+      Buffer.from(jwt.split('.')[1], 'base64url').toString('utf8'),
+    );
+    expect(jwtPayload.iss).toBe('2787854');
   });
 
   it('renders manifest yaml with expected documents', () => {

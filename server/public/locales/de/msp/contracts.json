@@ -833,7 +833,6 @@
         "editPricingSchedule": "Preisplan bearbeiten"
       },
       "validation": {
-        "currencySettingsLoading": "Währungseinstellungen werden noch geladen; bitte versuchen Sie es gleich erneut",
         "customRatePositive": "Benutzerdefinierter Tarif muss eine positive Zahl sein",
         "customRateRequired": "Benutzerdefinierter Tarif ist erforderlich, wenn der Standardtarif nicht verwendet wird",
         "durationPositive": "Dauer muss eine positive Zahl sein",
@@ -2178,8 +2177,8 @@
     },
     "runBar": {
       "compareToggle": "Änderungen gegenüber aktuellem Vertrag anzeigen",
-      "horizonOption": "{{count}} Abrechnungszeiträume",
-      "lastRun": "Simulation aktuell · {{count}} Abrechnungszeiträume",
+      "horizonOption": "{{count}} Kundenabrechnungszeiträume",
+      "lastRun": "Simulation aktuell · {{count}} Kundenabrechnungszeiträume",
       "neverRun": "Noch nicht simuliert",
       "simulate": "Simulieren",
       "simulating": "Simulation läuft…",
@@ -2348,7 +2347,7 @@
       "scopeCatchAll": "Deckt alle Dienste der Vertragslinie ab (zugeordnete Dienste überschreiben den Multiplikator)",
       "scopeMembers": "Nur zugeordnete Dienste",
       "totalHours": "Gesamtstunden",
-      "overageRate": "Überschreitungstarif ($/Std.)",
+      "overageRate": "Überschreitungstarif pro Stunde",
       "rollover": "Übertrag erlauben",
       "afterHours": "Verbrauchsmultiplikator außerhalb der Geschäftszeiten",
       "afterHoursMultiplier": "Multiplikator (z. B. 1,5)",
@@ -2357,16 +2356,21 @@
       "members": "Zugeordnete Dienste",
       "multiplier": "×",
       "noMembers": "Keine Dienste zugeordnet.",
+      "noServicesOnLine": "Fügen Sie dieser Vertragszeile einen Dienst hinzu, bevor Sie ein Stundenkontingent erstellen.",
       "selectService": "Dienst auswählen…",
       "poolName": "Kontingentname (optional)",
       "poolNamePlaceholder": "z. B. Standardstunden",
-      "coversAll": "Deckt alle Dienste dieser Vertragslinie ab"
+      "coversAll": "Deckt alle Dienste dieser Vertragslinie ab",
+      "burnMultiplier": "Verbrauchsmultiplikator"
     },
     "badges": {
       "dormant": "keine Dienste zugeordnet — aus diesem Kontingent wird nichts verbraucht"
     },
     "errors": {
-      "catchAllExists": "Diese Vertragslinie hat bereits ein Sammelkontingent."
+      "catchAllExists": "Diese Vertragslinie hat bereits ein Sammelkontingent.",
+      "invalidAfterHoursRule": "Geben Sie eine gültige Regel für außerhalb der Geschäftszeiten ein.",
+      "scheduleLoadFailed": "Geschäftszeitenpläne konnten nicht geladen werden.",
+      "scheduleRequired": "Wählen Sie einen Geschäftszeitenplan aus, bevor Sie diese Regel anwenden."
     }
   },
   "wizardBucketPools": {

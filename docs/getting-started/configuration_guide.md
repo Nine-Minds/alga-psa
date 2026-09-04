@@ -91,6 +91,43 @@ NEXTAUTH_SESSION_EXPIRES=86400  # Required: Number greater than 0
 - Development: both use `http://localhost:3000`
 - Production: both use `https://your-domain.com`
 
+#### Reverse proxy host trust (TRUST_FORWARDED_HOST)
+```
+TRUST_FORWARDED_HOST=false  # Optional: set to true only behind a proxy that rewrites Host
+```
+
+By default the server takes the request host from the `Host` header and ignores
+`X-Forwarded-Host`. Most reverse proxies can preserve `Host` (Caddy and Traefik do
+by default; nginx needs `proxy_set_header Host $host;`), and then nothing needs to
+be set. If your proxy has to rewrite `Host`, set `TRUST_FORWARDED_HOST=true` and
+have the proxy send the original hostname in `X-Forwarded-Host`.
+
+Because that header decides which tenant's branded client portal is served, only
+enable it when every path to the server goes through a proxy that sets the header
+itself and discards client-supplied values. Never enable it on a server that is
+reachable without the proxy.
+
+Custom client-portal domains on a self-hosted install depend on the server seeing
+the original host. See the
+[custom domain reverse proxy guide](../features/client-portal/custom-domain-reverse-proxy.md).
+
+#### Deployment profile (DEPLOYMENT_PROFILE)
+```
+DEPLOYMENT_PROFILE=hosted  # Optional: 'hosted' (default) or 'appliance'
+```
+
+Community Edition never needs this setting. It exists for the Enterprise Edition
+on-premise appliance, whose chart sets `appliance`. That profile bundles three
+behaviors:
+
+- Custom client-portal domains provision directly instead of through the hosted
+  DNS and certificate workflow: a domain entered in Settings → Client Portal
+  activates immediately and your proxy owns DNS, TLS, and routing. Community
+  Edition always provisions this way.
+- `X-Forwarded-Host` is trusted, exactly as with `TRUST_FORWARDED_HOST=true`.
+- Microsoft 365 mailbox OAuth uses the customer-owned app registration's tenant
+  authority instead of the shared multi-tenant app.
+
 #### Crypto Settings (CRYPTO_*)
 ```
 CRYPTO_SALT_BYTES=16
@@ -129,6 +166,7 @@ secrets/
 ├── crypto_key
 ├── token_secret_key
 ├── nextauth_secret
+├── credential_encryption_key
 ├── google_oauth_client_id
 └── google_oauth_client_secret
 ```

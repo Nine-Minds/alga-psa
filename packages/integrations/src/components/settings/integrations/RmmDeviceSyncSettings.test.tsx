@@ -3,7 +3,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { RmmIntegrationStatus } from '../../../actions/integrations/rmmIntegrationStatusActions';
+import type { RmmIntegrationStatus } from '../../../lib/rmm/rmmIntegrationStatus';
 
 const { getStatusesMock, updateMock } = vi.hoisted(() => ({
   getStatusesMock: vi.fn(),

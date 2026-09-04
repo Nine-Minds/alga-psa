@@ -3,9 +3,10 @@ export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 import logger from '@alga-psa/core/logger';
+import { AppError } from '@alga-psa/core';
 
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { getSession } from '@alga-psa/auth';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 
 import {
   getQboRedirectUri,
@@ -14,11 +15,23 @@ import {
   QBO_TOKEN_URL
 } from '../../../../lib/qbo/qboClientService';
 import {
+  getProviderCredentialWriteDisposition,
+  PROVIDER_QBO,
+  withProviderCredentialLock
+} from '../../../../lib/providerDisconnect';
+import {
   buildClearedQboOAuthStateCookie,
   getQboStateSigningSecret,
   QBO_OAUTH_STATE_COOKIE,
   validateQboOAuthState
 } from '../../../../lib/qbo/qboOAuthState';
+import {
+  authorizeAccountingOAuthCallback,
+  reauthorizeAccountingOAuthCallback,
+  revokeAccountingOAuthGrant,
+  type AccountingOAuthAuthzErrorCode
+} from '../../../../lib/accountingConnectionAuth';
+import { consumeAccountingOAuthNonce } from '../../../../lib/accountingOAuthStateStore';
 
 const NEXTAUTH_URL = process.env.NEXTAUTH_URL || 'http://localhost:3000';
 
@@ -26,6 +39,16 @@ const SUCCESS_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=qbo&qbo_status=success';
 const FAILURE_PATH =
   '/msp/settings?tab=integrations&category=accounting&accounting_integration=qbo&qbo_status=failure';
+
+// Neutral, actionable callback error params surfaced in the settings UI. They
+// never include provider-side org/company details.
+const AUTHZ_ERROR_TO_PARAM: Record<AccountingOAuthAuthzErrorCode, string> = {
+  STATE_REPLAYED: 'state_replayed',
+  AUTH_REQUIRED: 'session_expired',
+  USER_MISMATCH: 'user_mismatch',
+  TENANT_MISMATCH: 'tenant_mismatch',
+  FORBIDDEN: 'forbidden'
+};
 
 function isEnterpriseEdition(): boolean {
   return (
@@ -63,6 +86,24 @@ function createRedirect(path: string, params?: Record<string, string | undefined
   return response;
 }
 
+// A provider-side denial (error param) still leaves no reusable state: burn the
+// state nonce when a valid state is present, best-effort.
+async function burnQboOAuthStateIfPresent(request: Request): Promise<void> {
+  try {
+    const signingSecret = await getQboStateSigningSecret();
+    const statePayload = validateQboOAuthState({
+      stateParam: new URL(request.url).searchParams.get('state'),
+      cookieValue: readCookie(request, QBO_OAUTH_STATE_COOKIE),
+      secret: signingSecret ?? undefined
+    });
+    if (statePayload) {
+      await consumeAccountingOAuthNonce('qbo', statePayload.nonce);
+    }
+  } catch {
+    // Best-effort only: denial redirects must never fail because a burn did.
+  }
+}
+
 export async function GET(request: Request): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json(
@@ -78,6 +119,7 @@ export async function GET(request: Request): Promise<NextResponse> {
   const realmId = searchParams.get('realmId');
 
   if (errorParam) {
+    await burnQboOAuthStateIfPresent(request);
     return createRedirect(FAILURE_PATH, { qbo_error: errorParam });
   }
 
@@ -97,24 +139,66 @@ export async function GET(request: Request): Promise<NextResponse> {
     return createRedirect(FAILURE_PATH, { qbo_error: 'invalid_state' });
   }
 
-  // Defense in depth on top of the signed state cookie: the callback must be
-  // completed by an authenticated session belonging to the same tenant that
-  // started the flow (mirrors the session-tenant binding added on main).
-  const session = await getSession();
-  const sessionTenant = (session?.user as { tenant?: string } | undefined)?.tenant;
-  if (!sessionTenant) {
-    logger.warn('[qboOAuth] Callback received without an authenticated session');
-    return createRedirect(FAILURE_PATH, { qbo_error: 'session_expired' });
-  }
-  if (sessionTenant !== statePayload.tenantId) {
-    logger.warn('[qboOAuth] Callback state tenant does not match session tenant', {
-      stateTenant: statePayload.tenantId,
-      sessionTenant
+  // Re-authorize the current live user before exchanging the code: the state is
+  // atomically consumed here, and the callback proceeds only if the live user
+  // is still the initiating user in the initiating tenant with the
+  // connection-admin permission.
+  const authz = await authorizeAccountingOAuthCallback({
+    provider: 'qbo',
+    tenantId: statePayload.tenantId,
+    userId: statePayload.userId,
+    nonce: statePayload.nonce,
+    initiatedAt: statePayload.initiatedAt
+  });
+  if (!authz.ok) {
+    let errorParam = AUTHZ_ERROR_TO_PARAM[authz.code];
+    if (authz.code === 'STATE_REPLAYED') {
+      // Disconnect initiation invalidates outstanding nonces. Distinguish that
+      // deliberate invalidation from an ordinary replay while the disconnect
+      // is still active, without ever reaching the provider token endpoint.
+      const { knex } = await createTenantKnex(statePayload.tenantId);
+      const disposition = await withProviderCredentialLock(
+        knex,
+        statePayload.tenantId,
+        PROVIDER_QBO,
+        (trx) => getProviderCredentialWriteDisposition(
+          trx,
+          statePayload.tenantId,
+          PROVIDER_QBO,
+          statePayload.initiatedAt
+        )
+      ).catch(() => 'disconnect_in_progress' as const);
+      if (disposition === 'disconnect_in_progress') {
+        errorParam = disposition;
+      }
+    }
+    logger.warn('[qboOAuth] Callback authorization failed', {
+      tenantId: statePayload.tenantId,
+      code: authz.code
     });
-    return createRedirect(FAILURE_PATH, { qbo_error: 'tenant_mismatch' });
+    return createRedirect(FAILURE_PATH, { qbo_error: errorParam });
   }
 
   const tenantId = statePayload.tenantId;
+
+  // Check the trusted flow start under the same lock as disconnect initiation.
+  // This rejects active disconnects and pre-disconnect flows even after their
+  // record finalized. The storage layer repeats the check atomically with the
+  // credential write in case a disconnect starts after this early gate.
+  const { knex } = await createTenantKnex(tenantId);
+  const writeDisposition = await withProviderCredentialLock(knex, tenantId, PROVIDER_QBO, (trx) =>
+    getProviderCredentialWriteDisposition(trx, tenantId, PROVIDER_QBO, authz.flowInitiatedAt)
+  ).catch(() => 'disconnect_in_progress' as const);
+  if (writeDisposition !== 'allowed') {
+    logger.info('[qboOAuth] Callback blocked by credential-write provenance gate', {
+      tenantId,
+      disposition: writeDisposition
+    });
+    return createRedirect(FAILURE_PATH, {
+      qbo_error: writeDisposition === 'stale_authorization' ? 'state_replayed' : writeDisposition
+    });
+  }
+
   const secretProvider = await getSecretProviderInstance();
   const redirectUri = await getQboRedirectUri(secretProvider);
 
@@ -154,6 +238,27 @@ export async function GET(request: Request): Promise<NextResponse> {
       return createRedirect(FAILURE_PATH, { qbo_error: 'token_exchange_failed' });
     }
 
+    // Re-check authorization immediately before persisting. If a denial lands
+    // here (permission/user/tenant changed between the exchange and the write),
+    // revoke the just-obtained grant provider-side and store nothing.
+    const reauthz = await reauthorizeAccountingOAuthCallback({
+      tenantId,
+      userId: statePayload.userId
+    });
+    if (!reauthz.ok) {
+      await revokeAccountingOAuthGrant({
+        provider: 'qbo',
+        clientId: credentials.clientId,
+        clientSecret: credentials.clientSecret,
+        refreshToken
+      });
+      logger.warn('[qboOAuth] Persistence-time authorization failed; grant revoked', {
+        tenantId,
+        code: reauthz.code
+      });
+      return createRedirect(FAILURE_PATH, { qbo_error: AUTHZ_ERROR_TO_PARAM[reauthz.code] });
+    }
+
     const expiresInSeconds =
       typeof tokenData.expires_in === 'number' ? tokenData.expires_in : 3600;
     const refreshExpiresInSeconds =
@@ -168,7 +273,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       realmId,
       accessTokenExpiresAt: new Date(now + expiresInSeconds * 1000).toISOString(),
       refreshTokenExpiresAt: new Date(now + refreshExpiresInSeconds * 1000).toISOString()
-    });
+    }, { authorizationFlowStartedAt: authz.flowInitiatedAt });
 
     logger.info('[qboOAuth] Completed QuickBooks OAuth callback', {
       tenantId,
@@ -176,8 +281,37 @@ export async function GET(request: Request): Promise<NextResponse> {
       credentialSource: credentials.source
     });
 
+    // Audit the connection lifecycle event (no secrets recorded). The actor is
+    // the re-verified initiating user carried on the OAuth state. Auditing is
+    // strictly best-effort: a failure while recording the audit entry must
+    // never turn a completed connection into a failed one, so the whole block
+    // — including obtaining the knex handle — is guarded.
+    try {
+      const { knex: auditKnex } = await createTenantKnex();
+      await writeAccountingAudit(auditKnex, tenantId, 'accounting_connected', {
+        userId: statePayload.userId,
+        provider: 'qbo',
+        recordId: realmId,
+        details: { realmId },
+      });
+    } catch (error) {
+      logger.warn('[qboOAuth] Failed to write connect audit entry', { tenantId, error });
+    }
+
     return createRedirect(SUCCESS_PATH);
   } catch (error) {
+    // The storage layer refuses the write when a disconnect started after the
+    // route-level gate above passed (its check-and-write is atomic with
+    // disconnect initiation). Surface the same accurate status as the
+    // route-level rejection instead of a generic failure.
+    if (error instanceof AppError && error.code === 'QBO_DISCONNECT_IN_PROGRESS') {
+      logger.info('[qboOAuth] Callback blocked at credential storage: QuickBooks disconnect in progress', { tenantId });
+      return createRedirect(FAILURE_PATH, { qbo_error: 'disconnect_in_progress' });
+    }
+    if (error instanceof AppError && error.code === 'QBO_STALE_AUTHORIZATION') {
+      logger.info('[qboOAuth] Callback blocked at credential storage: stale QuickBooks authorization', { tenantId });
+      return createRedirect(FAILURE_PATH, { qbo_error: 'state_replayed' });
+    }
     logger.error('[qboOAuth] Failed to complete OAuth callback', {
       tenantId,
       error: error instanceof Error ? error.message : 'unknown_error'

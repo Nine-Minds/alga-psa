@@ -17,7 +17,13 @@ export default defineConfig({
       'tests/SchedulePage.dialogRestore.test.tsx',
       'tests/SchedulePage.headerStability.test.tsx',
     ],
-    testTimeout: 10000,
+    // 20s, matching the other heavy action-layer packages (billing, tickets,
+    // client-portal, integrations). Mock factories here close over module-level
+    // consts, so tests must defer to `await import(...)` inside the test body;
+    // the first test to do so pays the entire cold transform of the
+    // source-aliased graph aliased below (~1.2s idle, 10s+ on a loaded CI
+    // runner) while every later test in the file runs in ~1ms.
+    testTimeout: 20000,
   },
   resolve: {
     alias: [
@@ -28,6 +34,11 @@ export default defineConfig({
       { find: /^@alga-psa\/authorization(.*)$/, replacement: path.resolve(__dirname, '../authorization/src$1') },
       { find: /^@alga-psa\/auth(.*)$/, replacement: path.resolve(__dirname, '../auth/src$1') },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../core/src/index.ts') },
+      // The generic core rule below maps subpaths into src/lib, but the
+      // "./server" export lives at src/server.ts (mirrors the package's
+      // exports map); without this, suites importing scheduleActions fail
+      // to resolve @alga-psa/core/server.
+      { find: /^@alga-psa\/core\/server$/, replacement: path.resolve(__dirname, '../core/src/server.ts') },
       { find: /^@alga-psa\/core\/(.*)$/, replacement: path.resolve(__dirname, '../core/src/lib/$1') },
       { find: /^@alga-psa\/db(.*)$/, replacement: path.resolve(__dirname, '../db/src$1') },
       { find: /^@alga-psa\/types(.*)$/, replacement: path.resolve(__dirname, '../types/src$1') },

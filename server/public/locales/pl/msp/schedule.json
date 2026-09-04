@@ -683,6 +683,14 @@
     },
     "errors": {
       "loadWorkItem": "Nie udało się wczytać elementu pracy."
+    },
+    "teamsMeeting": {
+      "create": "Utwórz spotkanie Teams",
+      "creating": "Tworzenie spotkania Teams…",
+      "join": "Dołącz do spotkania Teams",
+      "created": "Utworzono spotkanie Microsoft Teams",
+      "createFailed": "Nie udało się utworzyć spotkania Teams",
+      "recurringUnsupported": "Spotkania Teams można dodawać tylko do pojedynczych wpisów, nie do serii cyklicznych."
     }
   },
   "actions": {

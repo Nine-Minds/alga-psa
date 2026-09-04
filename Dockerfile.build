@@ -71,6 +71,7 @@ RUN mkdir -p /app/secrets && \
     echo "secure-32char-crypto-key-placeholder-xxxx" > /app/secrets/crypto_key && \
     echo "secure-32char-token-key-placeholder-xxxx" > /app/secrets/token_secret_key && \
     echo "secure-32char-nextauth-key-placeholder-xx" > /app/secrets/nextauth_secret && \
+    echo "secure-32char-credential-encryption-key" > /app/secrets/credential_encryption_key && \
     echo "secure-email-password-placeholder" > /app/secrets/email_password && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \

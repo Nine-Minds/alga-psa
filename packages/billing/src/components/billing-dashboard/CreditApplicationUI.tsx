@@ -12,7 +12,6 @@ import CreditExpirationBadge from '@alga-psa/ui/components/CreditExpirationBadge
 import { formatDateOnly } from '@alga-psa/core';
 import { listClientCredits, applyCreditToInvoice, getResolvedCreditDrawdownPolicy } from '@alga-psa/billing/actions/creditActions';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface CreditApplicationUIProps {
   clientId: string;
@@ -42,9 +41,6 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   onCancel
 }) => {
   const { t } = useTranslation('msp/credits');
-  const { enabled: creditDrawdownEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const [availableCredits, setAvailableCredits] = useState<ICreditTracking[]>([]);
   const [selectedCreditId, setSelectedCreditId] = useState<string>('');
   const [applicationAmount, setApplicationAmount] = useState<number>(0);
@@ -57,13 +53,8 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
   const [creditOrder, setCreditOrder] = useState<'expiration_first' | 'oldest_first' | 'newest_first'>('expiration_first');
 
   // Surface the resolved draw-down order so the note reflects the real policy
-  // rather than a hardcoded "expiration date (oldest first)" claim. Gated behind
-  // the feature flag: with it off, keep the original note and skip the fetch.
+  // rather than a hardcoded "expiration date (oldest first)" claim.
   useEffect(() => {
-    if (!creditDrawdownEnabled) {
-      return;
-    }
-
     const fetchOrder = async () => {
       try {
         const result = await getResolvedCreditDrawdownPolicy(clientId);
@@ -78,7 +69,7 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
     };
 
     fetchOrder();
-  }, [clientId, creditDrawdownEnabled]);
+  }, [clientId]);
 
   // Fetch available credits
   useEffect(() => {
@@ -309,21 +300,17 @@ const CreditApplicationUI: React.FC<CreditApplicationUIProps> = ({
                 className="w-full"
               />
               <p className="text-xs text-muted-foreground">
-                {!creditDrawdownEnabled
-                  ? t('application.creditOrderNote', {
-                    defaultValue: 'Credits are applied in order of expiration date (oldest first)',
+                {creditOrder === 'oldest_first'
+                  ? t('application.creditOrderNoteOldestFirst', {
+                    defaultValue: 'Credits are applied in order of creation date (oldest first)',
                   })
-                  : creditOrder === 'oldest_first'
-                    ? t('application.creditOrderNoteOldestFirst', {
-                      defaultValue: 'Credits are applied in order of creation date (oldest first)',
+                  : creditOrder === 'newest_first'
+                    ? t('application.creditOrderNoteNewestFirst', {
+                      defaultValue: 'Credits are applied in order of creation date (newest first)',
                     })
-                    : creditOrder === 'newest_first'
-                      ? t('application.creditOrderNoteNewestFirst', {
-                        defaultValue: 'Credits are applied in order of creation date (newest first)',
-                      })
-                      : t('application.creditOrderNoteExpirationFirst', {
-                        defaultValue: 'Credits are applied in order of expiration date (soonest first)',
-                      })}
+                    : t('application.creditOrderNoteExpirationFirst', {
+                      defaultValue: 'Credits are applied in order of expiration date (soonest first)',
+                    })}
               </p>
             </div>
           </div>

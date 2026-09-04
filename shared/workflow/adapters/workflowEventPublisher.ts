@@ -5,6 +5,8 @@
  */
 
 import type { IEventPublisher } from '@alga-psa/types';
+import { registerAfterCommit } from '@alga-psa/db';
+import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
 
 /**
@@ -38,11 +40,32 @@ async function publishNotificationEvent(
 
 export class WorkflowEventPublisher implements IEventPublisher {
   private readonly suppressCommentEmail: boolean;
+  private readonly trx?: Knex.Transaction;
 
   // suppressCommentEmail keeps comment events on the in-app channel only. Used for the
   // first comment on a new inbound-email ticket, which the TICKET_CREATED email already covers.
-  constructor(options?: { suppressCommentEmail?: boolean }) {
+  constructor(options?: { suppressCommentEmail?: boolean; transaction?: Knex.Transaction }) {
     this.suppressCommentEmail = options?.suppressCommentEmail ?? false;
+    this.trx = options?.transaction;
+  }
+
+  private async publish(
+    eventType: string,
+    payload: Record<string, any>,
+    options?: PublishOptions
+  ): Promise<void> {
+    const publish = () => publishNotificationEvent(eventType, payload, options);
+
+    if (this.trx) {
+      registerAfterCommit(
+        this.trx,
+        publish,
+        `${eventType} ticket=${String(payload.ticketId ?? 'unknown')}`
+      );
+      return;
+    }
+
+    await publish();
   }
 
   async publishTicketCreated(data: {
@@ -58,7 +81,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       ...data.metadata
     };
 
-    await publishNotificationEvent('TICKET_CREATED', payload);
+    await this.publish('TICKET_CREATED', payload);
   }
 
   async publishTicketUpdated(data: {
@@ -76,7 +99,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       ...data.metadata
     };
 
-    await publishNotificationEvent('TICKET_UPDATED', payload);
+    await this.publish('TICKET_UPDATED', payload);
   }
 
   async publishTicketClosed(data: {
@@ -92,7 +115,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
       ...data.metadata
     };
 
-    await publishNotificationEvent('TICKET_CLOSED', payload);
+    await this.publish('TICKET_CLOSED', payload);
   }
 
   async publishCommentCreated(data: {
@@ -122,7 +145,7 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const options = this.suppressCommentEmail
       ? { channel: 'internal-notifications' }
       : undefined;
-    await publishNotificationEvent('TICKET_COMMENT_ADDED', payload, options);
+    await this.publish('TICKET_COMMENT_ADDED', payload, options);
   }
 
   /**
@@ -141,6 +164,6 @@ export class WorkflowEventPublisher implements IEventPublisher {
       assignedByUserId: data.assignedByUserId
     };
 
-    await publishNotificationEvent('TICKET_ASSIGNED', payload);
+    await this.publish('TICKET_ASSIGNED', payload);
   }
 }

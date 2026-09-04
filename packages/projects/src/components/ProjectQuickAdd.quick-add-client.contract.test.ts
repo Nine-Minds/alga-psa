@@ -16,5 +16,6 @@ describe('project quick add client creation wiring contract', () => {
     expect(source).toContain('open: isQuickAddClientOpen,');
     expect(source).toContain('setLocalClients(prev => [...prev, newClient]);');
     expect(source).toContain('setSelectedClientId(newClient.client_id);');
+    expect(source).toContain('skipSuccessDialog: true,');
   });
 });

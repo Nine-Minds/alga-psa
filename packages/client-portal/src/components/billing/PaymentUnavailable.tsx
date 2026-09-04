@@ -1,8 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { useFeatureFlag } from '@alga-psa/ui';
 import { ArrowLeft, Loader2, RefreshCw, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -42,24 +41,13 @@ function reasonKey(code: ClientPaymentErrorCode): string {
 
 /**
  * Failure state shown on the portal Pay page when a payment link cannot be
- * created or online payment is not configured.
- *
- * While `release-v1-5-feature` resolves it renders the existing loading
- * treatment; when disabled it preserves the legacy Billing redirect; when
- * enabled it explains the failure, offers a retry for creation failures, and
- * links back to the invoices tab.
+ * created or online payment is not configured. Explains the failure, offers
+ * a retry for creation failures, and links back to the invoices tab.
  */
 export function PaymentUnavailable({ code, invoiceId, retryable }: PaymentUnavailableProps) {
   const { t } = useTranslation('features/billing');
-  const { enabled, loading } = useFeatureFlag('release-v1-5-feature');
   const [retrying, setRetrying] = useState(false);
   const [retryMessage, setRetryMessage] = useState('');
-
-  useEffect(() => {
-    if (!loading && !enabled) {
-      window.location.replace(billingBackUrl(invoiceId));
-    }
-  }, [loading, enabled, invoiceId]);
 
   const handleTryAgain = useCallback(async () => {
     setRetrying(true);
@@ -81,17 +69,6 @@ export function PaymentUnavailable({ code, invoiceId, retryable }: PaymentUnavai
       setRetrying(false);
     }
   }, [invoiceId, t]);
-
-  if (loading || !enabled) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">{t('paymentUnavailable.loading', { defaultValue: 'Loading...' })}</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-lg mx-auto py-12 px-4">

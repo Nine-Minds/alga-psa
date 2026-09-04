@@ -65,7 +65,7 @@ export const previewQboItemImport = withAuth(async (
 ): Promise<QboItemImportPreview> => {
   assertEnterpriseEdition();
   await assertFeatureEnabled(user, tenant);
-  await requirePermission(user, 'billing_settings', 'read');
+  await requirePermission(user, 'accounting_integrations', 'catalog_read');
 
   const realm = await requireDefaultRealm(tenant);
 
@@ -86,7 +86,7 @@ export const executeQboItemImport = withAuth(async (
 ): Promise<QboItemImportResult> => {
   assertEnterpriseEdition();
   await assertFeatureEnabled(user, tenant);
-  await requirePermission(user, 'billing_settings', 'update');
+  await requirePermission(user, 'accounting_integrations', 'exports_execute');
   await requirePermission(user, 'service', 'create');
 
   const realm = await requireDefaultRealm(tenant);

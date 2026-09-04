@@ -163,19 +163,23 @@ describe('hasPermission', () => {
     ).resolves.toBe(false);
   });
 
-  it('canonicalizes legacy resource spellings in both the check and the stored permission', async () => {
+  // Resources are compared verbatim. The legacy `timeentry` / `timesheet`
+  // spellings were renamed in the catalog and in every tenant, so no alias
+  // table stands between the requested resource and the stored one; a check
+  // that misses is a real miss, not a spelling the map forgot.
+  it('matches the resource verbatim, with no alias translation', async () => {
     roleStore['tenant-a:user-1'] = [
       role({ msp: true }, [
-        { resource: 'timeentry', action: 'read' },
+        { resource: 'time_entry', action: 'read' },
         { resource: 'time_sheet', action: 'submit' },
       ]),
     ];
 
     const subject = { user_id: 'user-1', user_type: 'internal' as const, tenant: 'tenant-a' };
     await expect(hasPermission(subject, 'time_entry', 'read', stubKnex)).resolves.toBe(true);
-    await expect(hasPermission(subject, 'timeentry', 'read', stubKnex)).resolves.toBe(true);
-    await expect(hasPermission(subject, 'timesheet', 'submit', stubKnex)).resolves.toBe(true);
     await expect(hasPermission(subject, 'time_sheet', 'submit', stubKnex)).resolves.toBe(true);
+    await expect(hasPermission(subject, 'timeentry', 'read', stubKnex)).resolves.toBe(false);
+    await expect(hasPermission(subject, 'timesheet', 'submit', stubKnex)).resolves.toBe(false);
   });
 
   describe('tenant scoping', () => {

@@ -151,9 +151,9 @@ describe('processTelephonyCallNotification', () => {
     expect(mocks.autoTicket).not.toHaveBeenCalled();
   });
 
-  it('T027: an ingestion the add-on gate skipped stops before the ticket policy', async () => {
+  it('T027: an ingestion the release gate skipped stops before the ticket policy', async () => {
     mocks.providerState.mockResolvedValue({ autoCreateTickets: true } as any);
-    mocks.ingest.mockResolvedValue({ status: 'skipped', reason: 'addon_inactive' } as any);
+    mocks.ingest.mockResolvedValue({ status: 'skipped', reason: 'feature_disabled' } as any);
 
     await processTelephonyCallNotification({ tenantId: 'tenant-1', notification });
 

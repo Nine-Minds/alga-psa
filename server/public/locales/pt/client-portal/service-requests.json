@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Solicitações de serviço",
-    "description": "Envie uma solicitação estruturada e criaremos um ticket para ela automaticamente.",
+    "description": "Envie uma solicitação estruturada e cuidaremos do resto.",
     "myRequests": "Minhas solicitações",
     "empty": "Nenhum serviço de solicitação está disponível no momento.",
     "fallbackCategory": "Serviço",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "Anexos",
     "noAttachments": "Nenhum anexo incluído.",
     "fileIdLabel": "ID do arquivo: {{id}}",
-    "fileTypeLabel": "Tipo: {{mime}}"
+    "fileTypeLabel": "Tipo: {{mime}}",
+    "versionLabel": "Versão {{version}}",
+    "historyTitle": "Histórico",
+    "historyEmpty": "Nenhum histórico registrado ainda.",
+    "historyActor": "por {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Solicitação enviada",
+      "service_request_submission_execution_succeeded": "Processamento concluído",
+      "service_request_submission_execution_failed": "Falha no processamento"
+    }
   },
   "recent": {
     "title": "Suas solicitações recentes",

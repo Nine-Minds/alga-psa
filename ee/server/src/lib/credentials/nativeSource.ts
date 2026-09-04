@@ -174,6 +174,28 @@ function notFound(): never {
   throw Object.assign(new Error('Credential not found'), { code: 'CREDENTIAL_NOT_FOUND' });
 }
 
+/**
+ * Field names that changed in an update — names only, never values. Secret-
+ * bearing fields record only the fact of change (the caller provided them),
+ * which is itself audit-worthy ("the password was rotated") and value-free.
+ */
+function changedFieldsForUpdate(
+  input: Partial<CredentialWriteInput>,
+  existing: CredentialRowProjection
+): string[] {
+  const changed: string[] = [];
+  if (input.name !== undefined && input.name.trim() !== existing.name) changed.push('name');
+  if (input.username !== undefined && (input.username || null) !== existing.username) changed.push('username');
+  if (input.password !== undefined) changed.push('password');
+  if (input.otpSecret !== undefined) changed.push('otp_secret');
+  if (input.url !== undefined && (input.url || null) !== existing.url) changed.push('url');
+  if (input.description !== undefined && (input.description || null) !== existing.description) {
+    changed.push('description');
+  }
+  if (input.clientId !== undefined && input.clientId !== existing.client_id) changed.push('client_id');
+  return changed;
+}
+
 function applyListFilters(
   builder: Knex.QueryBuilder,
   filter: CredentialListFilter,
@@ -525,7 +547,7 @@ export class NativeCredentialSource implements CredentialSource {
         userId: ctx.userId,
         credentialId: id,
         clientId: input.clientId ?? existing.client_id,
-      });
+      }, { changed_fields: changedFieldsForUpdate(input, existing) });
 
       const associations = await loadAssociations(trx, ctx.tenant, [id]);
       return toSummary(row, null, associations.get(id) ?? []);
@@ -560,6 +582,8 @@ export class NativeCredentialSource implements CredentialSource {
       // Item-level ACL first: a caller who cannot see this restricted row must
       // not be able to un-restrict it (which would defeat the restriction).
       if (!(await isCredentialAuthorizedForUser(trx, ctx, existing))) notFound();
+      // Snapshot the grants BEFORE the replace so the audit records the delta.
+      const existingGrants = await fetchGrantsForCredential(trx, ctx.tenant, id);
       await tenantDb(trx, ctx.tenant)
         .table('credentials')
         .where('credential_id', id)
@@ -585,11 +609,16 @@ export class NativeCredentialSource implements CredentialSource {
           );
       }
 
+      const existingGrantKeys = new Set(existingGrants.map((g) => `${g.subject_type}:${g.subject_id}`));
+      const newGrantKeys = new Set(uniqueGrants.map((g) => `${g.subjectType}:${g.subjectId}`));
+      const grantsAdded = Array.from(newGrantKeys).filter((key) => !existingGrantKeys.has(key)).length;
+      const grantsRemoved = Array.from(existingGrantKeys).filter((key) => !newGrantKeys.has(key)).length;
+
       await writeCredentialAudit(trx, ctx.tenant, 'credential_grants_changed', {
         userId: ctx.userId,
         credentialId: id,
         clientId: existing.client_id,
-      });
+      }, { grants_added: grantsAdded, grants_removed: grantsRemoved });
 
       const grants = await fetchGrantsForCredential(trx, ctx.tenant, id);
       return {

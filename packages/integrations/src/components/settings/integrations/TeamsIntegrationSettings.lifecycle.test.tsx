@@ -18,7 +18,6 @@ const probeTeamsGraphPermissionsMock = vi.hoisted(() => vi.fn());
 const validateTeamsBotConnectorMock = vi.hoisted(() => vi.fn());
 const listTeamsDeliveriesMock = vi.hoisted(() => vi.fn());
 const listTeamsAuditEventsMock = vi.hoisted(() => vi.fn());
-const getTeamsAddonPurchaseAccessMock = vi.hoisted(() => vi.fn());
 
 vi.mock('../../../actions', () => ({
   getMicrosoftIntegrationStatus: (...a: unknown[]) => getMicrosoftIntegrationStatusMock(...a),
@@ -32,7 +31,6 @@ vi.mock('../../../actions', () => ({
   validateTeamsBotConnector: (...a: unknown[]) => validateTeamsBotConnectorMock(...a),
   listTeamsDeliveries: (...a: unknown[]) => listTeamsDeliveriesMock(...a),
   listTeamsAuditEvents: (...a: unknown[]) => listTeamsAuditEventsMock(...a),
-  getTeamsAddonPurchaseAccess: (...a: unknown[]) => getTeamsAddonPurchaseAccessMock(...a),
 }));
 
 import { TeamsIntegrationSettings } from './TeamsIntegrationSettings';
@@ -73,7 +71,6 @@ function integration(overrides: Record<string, unknown> = {}) {
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
     botConnectorConfigured: true,
-    addOnState: 'active',
     ...overrides,
   };
 }
@@ -114,7 +111,6 @@ beforeEach(() => {
   validateTeamsBotConnectorMock.mockResolvedValue({ status: 'ok', appId: 'bot' });
   listTeamsDeliveriesMock.mockResolvedValue({ rows: [], nextCursor: null });
   listTeamsAuditEventsMock.mockResolvedValue({ rows: [], nextCursor: null });
-  getTeamsAddonPurchaseAccessMock.mockResolvedValue({ canPurchase: true });
 });
 
 afterEach(() => {
@@ -122,35 +118,7 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe('TeamsIntegrationSettings add-on lifecycle + stale manifest', () => {
-  it('F064: renders only the paywall when the add-on is absent', async () => {
-    getTeamsIntegrationStatusMock.mockResolvedValue({ success: false, error: 'Teams add-on required', addOnState: 'absent' });
-    render(<TeamsIntegrationSettings />);
-
-    await waitFor(() => expect(document.querySelector('#teams-paywall-card')).toBeInTheDocument());
-    // The manage/config surfaces are not rendered.
-    expect(screen.queryByText('Diagnostics & Test Message')).not.toBeInTheDocument();
-    expect(document.querySelector('#teams-setup-wizard')).not.toBeInTheDocument();
-    expect(document.querySelector('#teams-delivery-log-viewer')).not.toBeInTheDocument();
-  });
-
-  it('F065: shows the expired banner (and manage view) when the add-on is expired', async () => {
-    getTeamsIntegrationStatusMock.mockResolvedValue({ success: true, integration: integration({ addOnState: 'expired' }) });
-    render(<TeamsIntegrationSettings />);
-
-    await waitFor(() => expect(document.querySelector('#teams-addon-expired-banner')).toBeInTheDocument());
-    // Configuration/history is preserved: the manage view still renders.
-    expect(screen.getByText('Diagnostics & Test Message')).toBeInTheDocument();
-    // Same renew destination as the paywall.
-    expect(screen.getByRole('link', { name: /Renew Teams add-on/i })).toHaveAttribute('href', '/msp/add-ons?addon=teams');
-  });
-
-  it('F065: hides the expired banner when the add-on is active', async () => {
-    render(<TeamsIntegrationSettings />);
-    await waitFor(() => expect(screen.getByText('Diagnostics & Test Message')).toBeInTheDocument());
-    expect(document.querySelector('#teams-addon-expired-banner')).not.toBeInTheDocument();
-  });
-
+describe('TeamsIntegrationSettings stale manifest', () => {
   it('T096: shows the stale-manifest warning when the deployment base URL changed, and regeneration clears it', async () => {
     getTeamsIntegrationStatusMock.mockResolvedValue({
       success: true,

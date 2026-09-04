@@ -49,7 +49,6 @@ describe('HourlyServicesStep i18n wiring contract', () => {
       'wizardHourly.labels.hourlyRatePlaceholder',
       'wizardHourly.labels.hourlyRatePerHour',
       'wizardHourly.labels.enterHourlyRate',
-      'wizardHourly.labels.setBucketOfHours',
       'wizardHourly.actions.addHourlyService',
       'wizardHourly.emptyState',
       'wizardHourly.alternateFrequencyLabel',

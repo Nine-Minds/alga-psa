@@ -310,6 +310,81 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(grouped.CreditMemo.map((row: any) => row.Id)).toContain(seededCm.result.Id);
   });
 
+  // The catalog projections the hardened mapping/onboarding screens read:
+  // allowlisted field lists only, paginated where the integration paginates.
+  it('serves the allowlisted catalog projections the mapping screens issue', async () => {
+    await controlPost('/control/qbo/seed/account', { id: 'acct-income', name: 'Service Income', accountType: 'Income' });
+    await controlPost('/control/qbo/seed/class', { id: 'class-east', name: 'East Region' });
+    await controlPost('/control/qbo/seed/department', { id: 'dept-sea', name: 'Seattle' });
+    await controlPost('/control/qbo/seed/term', { id: 'term-net30', name: 'Net 30' });
+    await controlPost('/control/qbo/seed/item', { name: 'Managed Desktop', type: 'Service' });
+    await controlPost('/control/qbo/seed/customer', { name: 'Projection Co' });
+    await controlPost('/control/qbo/seed/customer', { name: 'Retired Co', active: false });
+
+    const run = async (q: string) =>
+      (await (await fetch(api(`/query?query=${encodeURIComponent(q)}`), { headers: authed })).json()) as any;
+
+    const accounts = await run('SELECT Id, Name, AccountType FROM Account');
+    const income = accounts.QueryResponse.Account.find((row: any) => row.Id === 'acct-income');
+    expect(income).toEqual({ Id: 'acct-income', Name: 'Service Income', AccountType: 'Income' });
+
+    const classes = await run('SELECT Id, Name FROM Class');
+    expect(classes.QueryResponse.Class).toContainEqual({ Id: 'class-east', Name: 'East Region' });
+
+    const departments = await run('SELECT Id, Name FROM Department');
+    expect(departments.QueryResponse.Department).toContainEqual({ Id: 'dept-sea', Name: 'Seattle' });
+
+    const terms = await run('SELECT Id, Name FROM Term');
+    expect(terms.QueryResponse.Term).toContainEqual({ Id: 'term-net30', Name: 'Net 30' });
+
+    const items = await run('SELECT Id, Name FROM Item');
+    const itemNames = items.QueryResponse.Item.map((row: any) => row.Name);
+    expect(itemNames).toContain('Managed Desktop');
+    // Projection rows carry only the allowlisted fields — no pricing or SKUs.
+    for (const row of items.QueryResponse.Item) {
+      expect(Object.keys(row).sort()).toEqual(['Id', 'Name']);
+    }
+
+    const company = await run('SELECT CompanyName FROM CompanyInfo');
+    expect(company.QueryResponse.CompanyInfo).toEqual([{ CompanyName: 'Alga Emulated Co' }]);
+
+    // Customer projection is paginated the way queryAllPages walks it, and
+    // (like QBO) omits inactive customers by default.
+    const pageOne = await run('SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 1 MAXRESULTS 2');
+    expect(pageOne.QueryResponse.Customer).toHaveLength(2);
+    const pageRest = await run('SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 3 MAXRESULTS 100');
+    const allCustomers = [...pageOne.QueryResponse.Customer, ...(pageRest.QueryResponse.Customer ?? [])];
+    const names = allCustomers.map((row: any) => row.DisplayName);
+    expect(names).toContain('Projection Co');
+    expect(names).not.toContain('Retired Co');
+    for (const row of allCustomers) {
+      expect(Object.keys(row).sort()).toEqual(['Active', 'DisplayName', 'Id']);
+    }
+
+    // Historical-onboarding invoice sweep: projected fields, TxnDate window.
+    const buyer = (await controlPost('/control/qbo/seed/customer', { name: 'History Co' })).result;
+    await controlPost('/control/qbo/seed/invoice', { customerId: buyer.Id, amountCents: 10_000, docNumber: 'H-1' });
+    const invoices = await run(
+      'SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice STARTPOSITION 1 MAXRESULTS 1000',
+    );
+    const hist = invoices.QueryResponse.Invoice.find((row: any) => row.DocNumber === 'H-1');
+    expect(hist.TotalAmt).toBe(100);
+    expect(hist.CustomerRef.value).toBe(buyer.Id);
+    expect(Object.keys(hist).sort()).toEqual(['CustomerRef', 'DocNumber', 'Id', 'SyncToken', 'TotalAmt']);
+    const windowed = await run(
+      "SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice WHERE TxnDate >= '2099-01-01' STARTPOSITION 1 MAXRESULTS 1000",
+    );
+    expect(windowed.QueryResponse.Invoice).toBeUndefined();
+
+    // An unmodeled projection still fails loud instead of leaking extra data.
+    const unmodeled = await fetch(
+      api(`/query?query=${encodeURIComponent('SELECT * FROM Customer')}`),
+      { headers: authed },
+    );
+    expect(unmodeled.status).toBe(400);
+    expect(((await unmodeled.json()) as any).Fault.Error[0].code).toBe('SIM_UNSUPPORTED');
+  });
+
   it('rejects wrong realms and expired tokens (and refresh recovers)', async () => {
     const wrongRealm = await fetch(`${base}/v3/company/other-realm/customer/1`, { headers: authed });
     expect(wrongRealm.status).toBe(403);
@@ -330,6 +405,53 @@ describe('qbo emulator', { shuffle: false }, () => {
       headers: { authorization: `Bearer ${tokens.access_token}` },
     });
     expect(recovered.status).toBe(200);
+  });
+
+  it('hosts multiple company files whose colliding ids stay isolated per realm', async () => {
+    const minted = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'alga-app' })).result;
+    const twoRealmAuthed = { authorization: `Bearer ${minted.access_token}`, 'content-type': 'application/json' };
+    const realmApi = (realm: string, path: string) => `${base}/v3/company/${realm}${path}`;
+
+    // Two fresh company files seeded in the same order → colliding entity ids.
+    await controlPost('/control/qbo/seed/realm', { realmId: 'realm-one' });
+    await controlPost('/control/qbo/seed/realm', { realmId: 'realm-two' });
+
+    const customerA = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-one' })).result;
+    const customerB = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-two' })).result;
+    expect(customerA.Id).toBe(customerB.Id);
+    const invoiceA = (await controlPost('/control/qbo/seed/invoice', {
+      customerId: customerA.Id,
+      amountCents: 10_000,
+      realmId: 'realm-one',
+    })).result;
+    const invoiceB = (await controlPost('/control/qbo/seed/invoice', {
+      customerId: customerB.Id,
+      amountCents: 25_000,
+      realmId: 'realm-two',
+    })).result;
+    expect(invoiceA.Id).toBe(invoiceB.Id);
+
+    // A payment received in realm-two only changes realm-two's books.
+    await controlPost('/control/qbo/actions/receive-payment', {
+      invoiceId: invoiceB.Id,
+      amountCents: 25_000,
+      realmId: 'realm-two',
+    });
+    const readA = (await (await fetch(realmApi('realm-one', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    const readB = (await (await fetch(realmApi('realm-two', `/invoice/${invoiceB.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    expect(readA.Invoice.Balance).toBe(100);
+    expect(readB.Invoice.Balance).toBe(0);
+
+    // Per-realm state assertion through the control API.
+    const paymentsA = (await controlPost('/control/qbo/actions/entities', { entityType: 'Payment', realmId: 'realm-one' })).result;
+    const paymentsB = (await controlPost('/control/qbo/actions/entities', { entityType: 'Payment', realmId: 'realm-two' })).result;
+    expect(paymentsA).toHaveLength(0);
+    expect(paymentsB).toHaveLength(1);
+
+    // A realm with no company file still fails like Intuit does.
+    const unknown = await fetch(realmApi('realm-nope', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed });
+    expect(unknown.status).toBe(403);
+    expect(((await unknown.json()) as any).Fault.Error[0].code).toBe('3202');
   });
 
   it('mints tokens directly for harness wiring', async () => {

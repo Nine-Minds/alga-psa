@@ -26,6 +26,8 @@
     "documentsAll": "⟦Ȧŀŀ Ḓȯƈŭḿḗƞŧş⟧",
     "knowledgeBase": "⟦Ķƞȯẇŀḗḓɠḗ Ɓȧşḗ⟧",
     "assets": "⟦Ȧşşḗŧş⟧",
+    "assetsAll": "⟦Ȧŀŀ Ȧşşḗŧş⟧",
+    "assetsMaintenance": "⟦Ḿȧīƞŧḗƞȧƞƈḗ⟧",
     "passwords": "⟦Ƥȧşşẇȯřḓş⟧",
     "inventory": {
       "label": "⟦Īƞṽḗƞŧȯřẏ⟧",
@@ -554,6 +556,12 @@
           "description": "⟦Ȧḓḓ ȧ ƞḗẇ ƥřȯḓŭƈŧ ŧȯ ẏȯŭř ƈȧŧȧŀȯɠ⟧"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "⟦Řḗşȯŭřƈḗş ȧƞḓ ħḗŀƥ⟧",
+      "title": "⟦Řḗşȯŭřƈḗş⟧",
+      "documentation": "⟦Ḓȯƈŭḿḗƞŧȧŧīȯƞ⟧",
+      "support": "⟦Ƈȯƞŧȧƈŧ Şŭƥƥȯřŧ⟧"
     },
     "jobs": {
       "ariaLabel": "⟦Ṽīḗẇ ƀȧƈķɠřȯŭƞḓ ĵȯƀ ȧƈŧīṽīŧẏ⟧",

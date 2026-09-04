@@ -1320,6 +1320,12 @@
         "templateNameRequired": "O nome do modelo é obrigatório",
         "createFailed": "Falha ao criar modelo"
       }
+    },
+    "discardConfirmation": {
+      "title": "Descartar o modelo não salvo?",
+      "message": "Seu modelo tem alterações não salvas. Se sair agora, essas alterações serão perdidas.",
+      "keepEditing": "Continuar editando",
+      "discard": "Descartar modelo"
     }
   },
   "documents": {

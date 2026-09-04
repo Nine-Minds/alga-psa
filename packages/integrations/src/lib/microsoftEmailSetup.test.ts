@@ -26,7 +26,7 @@ describe('Microsoft email setup builders', () => {
     expect(url.searchParams.get('scope')).toBe('https://graph.microsoft.com/.default');
   });
 
-  it('builds a multi-tenant application manifest with only the required read-only delegated permissions', () => {
+  it('builds a multi-tenant application manifest with required inbound and outbound delegated permissions', () => {
     const manifest = buildMicrosoftEmailApplicationManifest({
       displayName: '  Alga   Email  ',
       mailboxRedirectUri: 'https://psa.example.com/api/auth/microsoft/callback',
@@ -44,11 +44,12 @@ describe('Microsoft email setup builders', () => {
       resourceAccess: [
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.mailRead, type: 'Scope' },
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.mailReadShared, type: 'Scope' },
+        { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.mailSend, type: 'Scope' },
+        { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.mailSendShared, type: 'Scope' },
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.offlineAccess, type: 'Scope' },
         { id: MICROSOFT_EMAIL_DELEGATED_PERMISSION_IDS.userRead, type: 'Scope' },
       ],
     }]);
-    expect(JSON.stringify(manifest)).not.toContain('Mail.Send');
     expect(JSON.stringify(manifest)).not.toContain('Mail.ReadWrite');
   });
 

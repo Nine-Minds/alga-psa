@@ -1,7 +1,7 @@
 import type { MicrosoftProfileConsumer } from '../actions/integrations/microsoftShared';
 
 const CE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso', 'email'];
-const EE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso', 'email', 'calendar', 'teams'];
+const EE_VISIBLE_MICROSOFT_CONSUMERS: MicrosoftProfileConsumer[] = ['msp_sso', 'email', 'calendar', 'teams', 'entra'];
 
 export function isMicrosoftConsumerEnterpriseEdition(): boolean {
   const edition = (process.env.EDITION ?? '').toLowerCase();

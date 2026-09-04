@@ -73,7 +73,7 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 ### Existing Adapter Modules
 - **QuickBooks CSV**: `createCsvMappingModules()` surfaces Client, Items/Services, Tax Codes, and Payment Terms mappings. The external identifier is entered manually (no OAuth catalog lookup).
 - **QuickBooks Online (OAuth)**: `createQboLiveMappingModules()` surfaces Items/Services, Tax Codes, and Payment Terms. Each tab loads its external options live from the connected realm through the `getQboItems` / `getQboTaxCodes` / `getQboTerms` actions, so the dialog offers catalog-backed selectors. Tax-code options are labelled with their combined rate and disambiguated by QuickBooks id when Automated Sales Tax has generated codes sharing a name; the two AST pseudo codes (`TAX`, `NON`) are appended when the realm is in AST mode.
-- **Xero (OAuth)**: `createXeroLiveMappingModules()` surfaces Items/Services and Tax Codes (Xero `TaxRate`), also catalog-backed.
+- **Xero (OAuth)**: `createXeroLiveMappingModules()` surfaces Items/Services and Tax Codes (Xero `TaxRate`), also catalog-backed. A service mapping targets either a **Xero Item** (line exports with `ItemCode`) or a **Xero Revenue Account** (line exports with `AccountCode` and no `ItemCode` — for organisations that invoice without Products & Services items). The target type is an explicit choice stored as `metadata.xeroTargetKind`; it is never inferred from the code's shape because an Item Code and an Account Code can be identical strings. Account mode offers only active revenue-class accounts (`REVENUE`, `SALES`, `OTHERINCOME`) with a code, from the exact connected organisation. Mappings saved before account mode existed remain item mappings; one whose code no longer resolves to an Item is flagged invalid in the UI and requires an explicit re-selection (valid Item, or deliberate switch to an Account) — it is never converted automatically.
 
 ### Realm Handling
 - `AccountingMappingContext.realmId` is optional. OAuth adapters pass realm/tenant identifiers (QBO realm ID, Xero tenant ID); CSV exports omit it (single-tenant manual flow).
@@ -110,6 +110,7 @@ Each adapter defines a factory that returns `AccountingMappingModule[]`. For CSV
 ### Xero Adapter Highlights (Phase 5)
 - Uses `XeroClientService` for OAuth token refresh and catalog access (`listAccounts`, `listItems`, `listTaxRates`, `listTrackingCategories`).
 - Supports multi-component tax lines, tracking category metadata, and error normalization into export line records.
+- Line construction follows the mapping's explicit target kind (`metadata.xeroTargetKind`): item mode sends `ItemCode` (plus optional metadata `accountCode`), account mode sends `AccountCode` and omits the `ItemCode` property entirely. Tax type, quantities, amounts, tracking, and service periods behave identically in both modes. Each transform snapshots the resolved target (`kind`/`code`/`realm`) into the export line's `mapping_resolution.serviceTarget` as diagnostic evidence; retries re-resolve from the live mapping, so remediating a mapping and retrying the batch picks up the fix.
 - Manual retry trigger UI remains outstanding but service already flags failed lines for rerun.
 
 ---

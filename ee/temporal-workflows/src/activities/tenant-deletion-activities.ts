@@ -163,7 +163,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'teams_integrations', 'microsoft_profiles',
 
   // Telephony (artifacts hang off call records; providers hold the subscription)
-  'telephony_call_artifacts', 'telephony_call_records', 'telephony_providers',
+  'telephony_call_artifacts', 'telephony_call_intents', 'telephony_call_records', 'telephony_providers',
 
   // Authorization bundles
   // assignments/rules must be deleted before revisions and bundles; revisions and
@@ -349,6 +349,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
 
+  // Accounting provider disconnect state machine: one row per (tenant, provider)
+  // tracking QBO/Xero revocation progress. A leaf table — its only FK is to
+  // tenants (CASCADE) and nothing references it — so position is free; kept with
+  // the other integration rows for readability.
+  'provider_disconnect_records',
+
   // Project billing: schedule entries and cap usage reference project_billing_configs;
   // configs reference projects; phase rate overrides reference project_phases and
   // service_catalog. All must be deleted before those parents.
@@ -482,6 +488,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Permissions and roles (must be deleted before users)
   'permissions', 'roles', 'teams',
+
+  // Tenant secrets metadata references the creating and updating users. Audit
+  // history deliberately has no FK to the secret so delete it explicitly too.
+  'tenant_secrets_audit_log', 'tenant_secrets',
 
   // The correct order to avoid constraint violations:
   // 0. Delete contact child rows first (phones/emails reference contacts)

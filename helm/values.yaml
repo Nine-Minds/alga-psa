@@ -595,6 +595,12 @@ istio:
     # Optional CIDR ranges to allow via Envoy only (string). Leave empty to disable.
     includeOutboundIPRanges: ""
 
+# Deployment profile: "hosted" (default) or "appliance" (EE on-premise appliance).
+deploymentProfile: hosted
+# Trust X-Forwarded-Host from the reverse proxy without adopting the appliance
+# profile (self-hosted behind a Host-rewriting proxy). Off by default.
+trustForwardedHost: false
+
 # Hosted Environment Configuration
 # Used for cloud-hosted environments (different from dev environments)
 hostedEnv:

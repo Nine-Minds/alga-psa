@@ -65,7 +65,7 @@ describe('fetchEligibleTimeEntrySubjects', () => {
     };
 
     vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       if (action === 'approve') return true;
       if (action === 'read_all') return false;
       return false;
@@ -127,7 +127,7 @@ describe('fetchEligibleTimeEntrySubjects', () => {
     };
 
     vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       return action === 'approve' || action === 'read_all';
     });
 

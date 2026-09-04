@@ -8,11 +8,6 @@ export {
 } from './lib/phoneNumbers';
 export { auditContactPhoneNormalization, matchCallParty } from './lib/callMatching';
 export {
-  assertTelephonyEntitlement,
-  TelephonyEntitlementInactiveError,
-  tenantHasTelephonyEntitlement,
-} from './lib/telephonyAddOnGate';
-export {
   buildCallInteractionNotes,
   buildCallInteractionTitle,
   CALL_INTERACTION_TYPE_NAME,
@@ -34,7 +29,11 @@ export type {
   CaptureCallArtifactsInput,
   CaptureCallArtifactsOutcome,
 } from './services/captureCallArtifacts';
-export { createCallInteraction, ingestCanonicalCall } from './services/ingestCanonicalCall';
+export {
+  createCallInteraction,
+  ingestCanonicalCall,
+  resolveTenantPhoneCountryCode,
+} from './services/ingestCanonicalCall';
 export type { IngestCanonicalCallInput, IngestCanonicalCallOutcome } from './services/ingestCanonicalCall';
 export { autoCreateTicketForCall } from './services/autoTicketFromCall';
 export type { AutoTicketFromCallInput, AutoTicketFromCallOutcome, TicketCreationDefaults } from './services/autoTicketFromCall';

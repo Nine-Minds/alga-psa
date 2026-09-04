@@ -1,9 +1,7 @@
 'use client';
 
-import React, { useMemo } from 'react';
-import { Info } from 'lucide-react';
+import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ClientBucketUsageResult } from '@alga-psa/client-portal/actions';
 import {
@@ -18,94 +16,7 @@ interface BucketUsageChartProps {
 
 const BucketUsageChart: React.FC<BucketUsageChartProps> = React.memo(({ bucketData }) => {
   const { t } = useTranslation('features/billing');
-  // The legacy (flag-off) rendering was i18n-wired on main under the
-  // client-portal namespace; the flag-on meter uses features/billing keys.
-  const { t: tLegacy } = useTranslation('client-portal');
-  const { enabled: remainingFirstEnabled } = useFeatureFlag('release-v1-5-feature', {
-    defaultValue: false,
-  });
   const percentage = Math.round(bucketData.percentage_used);
-
-  // Format dates consistently - memoized to prevent recalculation
-  const formatPeriodDate = useMemo(() => {
-    return (dateStr: string | undefined) => {
-      if (!dateStr) return '';
-      const date = new Date(dateStr);
-      return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
-    };
-  }, []);
-
-  // Determine color based on usage percentage - memoized to prevent recalculation
-  const getColorClasses = useMemo(() => {
-    return (percent: number) => {
-      if (percent >= 90) return {
-        text: 'text-destructive',
-        bg: 'bg-destructive',
-        bgLight: 'bg-destructive/10',
-        border: 'border-destructive/30'
-      };
-      if (percent >= 75) return {
-        text: 'text-warning',
-        bg: 'bg-warning',
-        bgLight: 'bg-warning/10',
-        border: 'border-warning/30'
-      };
-      return {
-        text: 'text-success',
-        bg: 'bg-success',
-        bgLight: 'bg-success/10',
-        border: 'border-success/30'
-      };
-    };
-  }, []);
-
-  // Memoize the color classes to prevent unnecessary recalculation
-  const colorClasses = useMemo(() => getColorClasses(percentage), [getColorClasses, percentage]);
-
-  if (!remainingFirstEnabled) {
-    return (
-      <div className={`border rounded-lg p-4 shadow-sm ${colorClasses.bgLight} ${colorClasses.border}`}>
-        <div className="flex justify-between items-start mb-2">
-          <div>
-            <h4 className="font-medium text-gray-900">{bucketData.service_name}</h4>
-            <p className="text-sm text-gray-500">
-              {formatPeriodDate(bucketData.period_start)} - {formatPeriodDate(bucketData.period_end)}
-            </p>
-          </div>
-          <div className="flex items-center">
-            <span className="text-sm text-gray-500 mr-1">{tLegacy('billing.bucketUsage.contractLineLabel', { defaultValue: 'Bucket Contract Line' })}</span>
-            <Info className="h-4 w-4 text-gray-400" />
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <div className="flex justify-between items-center mb-1">
-            <span className="text-sm font-medium">{tLegacy('billing.bucketUsage.usage', { defaultValue: 'Usage' })}</span>
-            <span className={`text-sm font-medium ${colorClasses.text}`}>
-              {percentage}%
-            </span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2.5">
-            <div
-              className={`h-2.5 rounded-full ${colorClasses.bg}`}
-              style={{ width: `${percentage}%` }}
-            ></div>
-          </div>
-          <div className="flex justify-between mt-1 text-xs text-gray-500">
-            <span>{tLegacy('billing.bucketUsage.hoursUsed', { defaultValue: '{{hours}} hours used', hours: bucketData.hours_used.toFixed(1) })}</span>
-            <span>{tLegacy('billing.bucketUsage.hoursTotal', { defaultValue: '{{hours}} hours total', hours: bucketData.hours_total.toFixed(1) })}</span>
-          </div>
-        </div>
-
-        {bucketData.rolled_over_minutes > 0 && (
-          <div className="mt-3 text-xs text-gray-500 flex items-center">
-            <span className="mr-1">{tLegacy('billing.bucketUsage.rolloverHours', { defaultValue: 'Includes {{hours}} rollover hours', hours: (bucketData.rolled_over_minutes / 60).toFixed(1) })}</span>
-            <Info className="h-3 w-3 text-gray-400" />
-          </div>
-        )}
-      </div>
-    );
-  }
 
   const remainingMinutes = getRemainingMinutes(bucketData);
   const totalWithRollover = bucketData.total_minutes + bucketData.rolled_over_minutes;

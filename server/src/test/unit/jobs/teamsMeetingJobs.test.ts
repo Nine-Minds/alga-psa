@@ -149,13 +149,13 @@ describe('teamsMeetingCleanupHandler', () => {
   });
 
   it('records skip reasons when the tenant can no longer reach Graph', async () => {
-    hoisted.deleteTeamsMeetingWithResultMock.mockResolvedValue({ status: 'skipped', reason: 'addon_inactive' });
+    hoisted.deleteTeamsMeetingWithResultMock.mockResolvedValue({ status: 'skipped', reason: 'feature_disabled' });
 
     await teamsMeetingCleanupHandler({ tenantId: TENANT, meetingId: 'meeting-row-1' });
 
     expect(hoisted.updateMock).toHaveBeenCalledWith(
       'meeting-row-1',
-      { status: 'cancelled', error_code: 'cleanup_skipped_addon_inactive' },
+      { status: 'cancelled', error_code: 'cleanup_skipped_feature_disabled' },
       TENANT,
     );
   });

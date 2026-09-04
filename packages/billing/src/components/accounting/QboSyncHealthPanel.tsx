@@ -25,9 +25,14 @@ import type { AccountingSyncHealth } from '../../actions/accountingSyncActions';
 import { getQboAccounts, getQboClasses, getQboDepartments } from '@alga-psa/integrations/actions/qboActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- type-only import for the QBO catalog shapes above
 import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions/qboActions';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing panel gates its controls on the same capability hook the integrations settings panels use
+import { useAccountingCapabilities } from '@alga-psa/integrations/components/settings/integrations/useAccountingCapabilities';
 
 export default function QboSyncHealthPanel() {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
+  const canManageConnections = caps.connectionsManage;
+  const canExecuteExports = caps.exportsExecute;
 
   const [health, setHealth] = React.useState<AccountingSyncHealth | null>(null);
   const [healthHidden, setHealthHidden] = React.useState(false);
@@ -62,7 +67,10 @@ export default function QboSyncHealthPanel() {
   }, [loadHealth]);
 
   React.useEffect(() => {
-    if (!health?.connected || catalogLoaded) return;
+    // The sync-configuration pickers are connection administration
+    // (connections_manage), so only load the QBO catalogs they need when the
+    // user can actually change those settings.
+    if (!health?.connected || catalogLoaded || !canManageConnections) return;
     setCatalogError(null);
     Promise.all([
       getQboAccounts(),
@@ -82,7 +90,7 @@ export default function QboSyncHealthPanel() {
       setCatalogError(t('integrations.qbo.sync.catalogLoadError', { defaultValue: 'Failed to load QuickBooks sync configuration options.' }));
       setCatalogLoaded(true);
     });
-  }, [health?.connected, catalogLoaded, t]);
+  }, [health?.connected, catalogLoaded, canManageConnections, t]);
 
   if (healthHidden || !health) {
     return null;
@@ -243,7 +251,7 @@ export default function QboSyncHealthPanel() {
                       <Badge variant="secondary">
                         {t('integrations.qbo.sync.defaultRealm', { defaultValue: 'Default' })}
                       </Badge>
-                    ) : (
+                    ) : canManageConnections ? (
                       <Button
                         id={`qbo-make-default-${realm.realmId}`}
                         variant="outline"
@@ -263,15 +271,17 @@ export default function QboSyncHealthPanel() {
                           ? t('integrations.qbo.sync.saving', { defaultValue: 'Saving…' })
                           : t('integrations.qbo.sync.makeDefault', { defaultValue: 'Make default' })}
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Sync configuration: deposit / class / department pickers */}
-          {health.connected && (
+          {/* Sync configuration: deposit / class / department pickers. These
+              write the connection settings, so they are connection
+              administration (connections_manage). */}
+          {health.connected && canManageConnections && (
             <div id="qbo-sync-config-section" className="rounded-lg border p-4 space-y-4 text-sm">
               <p className="font-medium text-foreground">
                 {t('integrations.qbo.sync.configTitle', { defaultValue: 'Sync Configuration' })}
@@ -342,61 +352,65 @@ export default function QboSyncHealthPanel() {
             </div>
           )}
 
-          {/* Auto-sync toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium">
-              {t('integrations.qbo.sync.autoSyncLabel', { defaultValue: 'Auto-sync enabled' })}
-            </span>
-            <Switch
-              id="qbo-sync-auto-sync-toggle"
-              checked={health.settings.autoSyncEnabled}
-              disabled={autoSyncToggling}
-              onCheckedChange={async (checked) => {
-                setAutoSyncToggling(true);
-                try {
-                  const updated = await updateAccountingSyncSettingsAction({ autoSyncEnabled: checked });
-                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
-                } catch {
-                  // Silently ignore — badge state stays as-is
-                } finally {
-                  setAutoSyncToggling(false);
-                }
-              }}
-            />
-          </div>
-
-          {/* Customer auto-provisioning toggle */}
-          <div className="flex items-center justify-between">
-            <div className="pr-4">
+          {/* Auto-sync toggle (connection administration — connections_manage) */}
+          {canManageConnections && (
+            <div className="flex items-center justify-between">
               <span className="text-sm font-medium">
-                {t('integrations.qbo.sync.autoProvisionCustomersLabel', {
-                  defaultValue: 'Create QuickBooks customers automatically'
-                })}
+                {t('integrations.qbo.sync.autoSyncLabel', { defaultValue: 'Auto-sync enabled' })}
               </span>
-              <p className="text-xs text-muted-foreground">
-                {t('integrations.qbo.sync.autoProvisionCustomersHint', {
-                  defaultValue:
-                    'Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.'
-                })}
-              </p>
+              <Switch
+                id="qbo-sync-auto-sync-toggle"
+                checked={health.settings.autoSyncEnabled}
+                disabled={autoSyncToggling}
+                onCheckedChange={async (checked) => {
+                  setAutoSyncToggling(true);
+                  try {
+                    const updated = await updateAccountingSyncSettingsAction({ autoSyncEnabled: checked });
+                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                  } catch {
+                    // Silently ignore — badge state stays as-is
+                  } finally {
+                    setAutoSyncToggling(false);
+                  }
+                }}
+              />
             </div>
-            <Switch
-              id="qbo-sync-auto-provision-toggle"
-              checked={Boolean(health.settings.autoProvisionCustomers)}
-              disabled={autoProvisionToggling}
-              onCheckedChange={async (checked) => {
-                setAutoProvisionToggling(true);
-                try {
-                  const updated = await updateAccountingSyncSettingsAction({ autoProvisionCustomers: checked });
-                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
-                } catch {
-                  // Silently ignore — badge state stays as-is
-                } finally {
-                  setAutoProvisionToggling(false);
-                }
-              }}
-            />
-          </div>
+          )}
+
+          {/* Customer auto-provisioning toggle (connection administration — connections_manage) */}
+          {canManageConnections && (
+            <div className="flex items-center justify-between">
+              <div className="pr-4">
+                <span className="text-sm font-medium">
+                  {t('integrations.qbo.sync.autoProvisionCustomersLabel', {
+                    defaultValue: 'Create QuickBooks customers automatically'
+                  })}
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  {t('integrations.qbo.sync.autoProvisionCustomersHint', {
+                    defaultValue:
+                      'Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.'
+                  })}
+                </p>
+              </div>
+              <Switch
+                id="qbo-sync-auto-provision-toggle"
+                checked={Boolean(health.settings.autoProvisionCustomers)}
+                disabled={autoProvisionToggling}
+                onCheckedChange={async (checked) => {
+                  setAutoProvisionToggling(true);
+                  try {
+                    const updated = await updateAccountingSyncSettingsAction({ autoProvisionCustomers: checked });
+                    setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                  } catch {
+                    // Silently ignore — badge state stays as-is
+                  } finally {
+                    setAutoProvisionToggling(false);
+                  }
+                }}
+              />
+            </div>
+          )}
         </>
       </CardContent>
       <CardFooter>
@@ -404,8 +418,9 @@ export default function QboSyncHealthPanel() {
           id="qbo-sync-now-button"
           type="button"
           variant="outline"
-          disabled={syncNowRunning}
+          disabled={syncNowRunning || !canExecuteExports}
           onClick={async () => {
+            if (!canExecuteExports) return;
             setSyncNowRunning(true);
             setSyncNowFeedback(null);
             try {

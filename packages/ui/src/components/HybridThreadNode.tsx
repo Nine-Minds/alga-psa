@@ -30,6 +30,12 @@ export interface HybridThreadNodeProps<TComment> {
   }) => React.ReactNode;
   onOpenPanel?: (commentId: string) => void;
   depth?: number;
+  /**
+   * When a root thread has more direct replies than this, only the newest
+   * ones are shown with a "Show N earlier replies" control above them.
+   * Applies to the root level only; omit to always render every reply.
+   */
+  autoCollapseAfter?: number;
 }
 
 const MAX_VISUAL_DEPTH = 4;
@@ -112,8 +118,11 @@ export function HybridThreadNode<TComment>({
   renderThreadBar = defaultThreadBar,
   onOpenPanel,
   depth = 0,
+  autoCollapseAfter,
 }: HybridThreadNodeProps<TComment>): React.ReactElement | null {
+  const { t } = useTranslation('common');
   const [isExpanded, setIsExpanded] = React.useState(true);
+  const [showAllChildren, setShowAllChildren] = React.useState(false);
   const commentId = getCommentId(comment);
   const children = commentId ? group.childrenByParentId.get(commentId) ?? [] : [];
   const prevChildCountRef = React.useRef(children.length);
@@ -130,6 +139,17 @@ export function HybridThreadNode<TComment>({
   const childVisualDepth = Math.min(depth + 1, MAX_VISUAL_DEPTH);
   const hasChildren = children.length > 0;
   const isSubThread = depth > 0;
+
+  // Root-level long threads start with only the newest replies visible; the
+  // hidden count is recoverable via the "Show earlier replies" control.
+  const collapseTail =
+    depth === 0 &&
+    !showAllChildren &&
+    typeof autoCollapseAfter === 'number' &&
+    autoCollapseAfter > 0 &&
+    children.length > autoCollapseAfter;
+  const visibleChildren = collapseTail ? children.slice(children.length - autoCollapseAfter) : children;
+  const hiddenCount = children.length - visibleChildren.length;
 
   return (
     <div className={['hybrid-thread-node', `depth-${visualDepth}`].join(' ')}>
@@ -159,7 +179,23 @@ export function HybridThreadNode<TComment>({
                 isSubThread ? 'thread-children-subthread' : null,
               ].filter(Boolean).join(' ')}
             >
-              {children.map((child) => {
+              {collapseTail && (
+                <button
+                  type="button"
+                  className="comment-thread-bar-pill comment-thread-bar-pill-button thread-show-earlier"
+                  onClick={() => setShowAllChildren(true)}
+                >
+                  <ChevronDown size={12} strokeWidth={2} aria-hidden focusable={false} />
+                  {t('commentThread.showEarlierReplies', {
+                    count: hiddenCount,
+                    defaultValue:
+                      hiddenCount === 1
+                        ? 'Show 1 earlier reply'
+                        : `Show ${hiddenCount} earlier replies`,
+                  })}
+                </button>
+              )}
+              {visibleChildren.map((child) => {
                 const childId = getCommentId(child);
                 return (
                   <HybridThreadNode
@@ -171,6 +207,7 @@ export function HybridThreadNode<TComment>({
                     renderThreadBar={renderThreadBar}
                     onOpenPanel={onOpenPanel}
                     depth={depth + 1}
+                    autoCollapseAfter={autoCollapseAfter}
                   />
                 );
               })}

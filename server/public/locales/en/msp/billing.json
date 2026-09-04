@@ -387,7 +387,10 @@
       "loadingBatches": "Loading batches...",
       "empty": "No export batches yet.",
       "loadingDetails": "Loading batch details...",
-      "batchNotFound": "Batch not found."
+      "batchNotFound": "Batch not found.",
+      "checkingAccess": "Checking access...",
+      "accessDeniedTitle": "Access denied",
+      "accessDeniedDescription": "You do not have permission to access accounting exports."
     },
     "createDialog": {
       "title": "New Accounting Export",

@@ -77,7 +77,6 @@
     "invoiceAmount": "Factuurbedrag:",
     "selectCreditToApply": "Krediet selecteren om toe te passen",
     "amountToApply": "Toe te passen bedrag",
-    "creditOrderNote": "Kredieten worden toegepast op volgorde van vervaldatum (oudste eerst)",
     "creditOrderNoteExpirationFirst": "Kredieten worden toegepast op volgorde van vervaldatum (eerst het snelst vervallende)",
     "creditOrderNoteOldestFirst": "Kredieten worden toegepast op volgorde van aanmaakdatum (oudste eerst)",
     "creditOrderNoteNewestFirst": "Kredieten worden toegepast op volgorde van aanmaakdatum (nieuwste eerst)",
@@ -144,7 +143,9 @@
       "reason": "Waarom wordt dit krediet overgeboekt?"
     },
     "hints": {
-      "amount": "Tot {{amount}} beschikbaar"
+      "amount": "Tot {{amount}} beschikbaar",
+      "currencyMatch": "De geselecteerde klant gebruikt dezelfde valuta.",
+      "currencyMismatch": "De geselecteerde klant gebruikt een andere valuta; er kan een omrekening worden toegepast."
     },
     "impact": {
       "current": "Huidig restant",

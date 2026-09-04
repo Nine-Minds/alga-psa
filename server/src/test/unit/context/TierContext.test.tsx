@@ -106,13 +106,12 @@ describe('TierContext', () => {
     useSession.mockReturnValue({
       status: 'authenticated',
       update: vi.fn(),
-      data: { user: { plan: 'solo', addons: [ADD_ONS.AI_ASSISTANT, ADD_ONS.TEAMS, ADD_ONS.ENTERPRISE] } },
+      data: { user: { plan: 'solo', addons: [ADD_ONS.AI_ASSISTANT, ADD_ONS.ENTERPRISE] } },
     });
 
     const { result } = renderHook(() => useTier(), { wrapper });
 
     expect(result.current.hasAddOn(ADD_ONS.AI_ASSISTANT)).toBe(true);
-    expect(result.current.hasAddOn(ADD_ONS.TEAMS)).toBe(true);
     expect(result.current.hasAddOn(ADD_ONS.ENTERPRISE)).toBe(true);
   });
 

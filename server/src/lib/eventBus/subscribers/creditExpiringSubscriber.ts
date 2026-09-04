@@ -58,6 +58,7 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
     await runWithTenant(tenantId, async () => {
       const { knex } = await createTenantKnex();
 
+      const emailLocale = await getTenantDefaultLocale(tenantId, 'client');
       await withTransaction(knex, async (trx: Knex.Transaction) => {
         const scopedDb = tenantDb(trx, tenantId);
 
@@ -124,7 +125,6 @@ async function handleCreditExpiringEvent(event: unknown): Promise<void> {
               .first()
           )?.default_currency_code ||
           'USD';
-        const emailLocale = await getTenantDefaultLocale(tenantId, 'client');
 
         // Format credit data for the email template
         const creditItems = credits.map((credit) => {

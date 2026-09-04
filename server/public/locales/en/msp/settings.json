@@ -77,6 +77,7 @@
       }
     },
     "messages": {
+      "permissionDenied": "You do not have permission to view secrets.",
       "success": {
         "tenantNameUpdated": "Tenant name updated successfully",
         "timezoneUpdated": "Default timezone updated successfully",
@@ -1281,11 +1282,11 @@
         "canonicalHostFallback": "canonical host"
       },
       "appliance": {
-        "helpText": "Point this hostname at your appliance and have your reverse proxy forward the original Host header before saving.",
+        "helpText": "Point this hostname at your server and have your reverse proxy forward the original Host header before saving.",
         "checklistTitle": "Reverse proxy setup",
         "step1Prefix": "Point ",
-        "step1Suffix": " at this appliance (an A record to its address, or a CNAME to your appliance host).",
-        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this appliance on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
+        "step1Suffix": " at this server (an A record to its address, or a CNAME to your server's hostname).",
+        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this server on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
         "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
         "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
         "docLinkText": "Reverse proxy setup & troubleshooting guide",
@@ -1902,7 +1903,8 @@
         "valueRequired": "Secret value is required",
         "noChanges": "No changes to save",
         "fixValidation": "Please fix the validation errors"
-      }
+      },
+      "permissionDenied": "You do not have permission to view secrets."
     }
   },
   "importExport": {
@@ -3162,6 +3164,7 @@
       "notFound": "Secret not found. It may have already been deleted. Please refresh and try again.",
       "invalidName": "Invalid tenant or secret name.",
       "readOnly": "Secret storage is read-only in this environment.",
+      "noDurablePath": "Secret storage is not configured for durable writes in this environment.",
       "recordInvalid": "One of the selected secret records is invalid. Please refresh and try again.",
       "referenceMissing": "One of the selected secret records no longer exists. Please refresh and try again.",
       "duplicate": "A secret with this name already exists.",
@@ -3223,7 +3226,7 @@
       "needsDot": "Domain must include at least one dot.",
       "notCanonicalHost": "Please choose a domain other than the canonical host.",
       "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
-      "notApplianceHost": "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
+      "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
       "nothingToRetry": "No failed custom domain registration to retry.",
       "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }

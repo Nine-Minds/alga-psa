@@ -430,9 +430,6 @@ const nextConfig = {
       '@alga-psa/integrations/entra/routes/entry': isEE
         ? '../packages/integrations/src/entra/routes/ee/entry'
         : '../packages/integrations/src/entra/routes/oss/entry',
-      '@alga-psa/client-portal/domain-settings/entry': isEE
-        ? '@alga-psa/client-portal/domain-settings/ee/entry'
-        : '@alga-psa/client-portal/domain-settings/oss/entry',
       '@alga-psa/workflows/entry': isEE
         ? '../ee/server/src/workflows/entry'
         : '../packages/ee/src/workflows/entry',
@@ -709,9 +706,6 @@ const nextConfig = {
       '@alga-psa/integrations/entra/routes/entry': isEE
         ? path.join(__dirname, '../packages/integrations/src/entra/routes/ee/entry.ts')
         : path.join(__dirname, '../packages/integrations/src/entra/routes/oss/entry.ts'),
-      '@alga-psa/client-portal/domain-settings/entry': isEE
-        ? path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx')
-        : path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
       '@alga-psa/workflows/entry': isEE
         ? path.join(__dirname, '../ee/server/src/workflows/entry.tsx')
         : path.join(__dirname, '../packages/ee/src/workflows/entry.tsx'),
@@ -777,12 +771,6 @@ const nextConfig = {
       const pkgMcpEeEntry = path.join(__dirname, '../packages/product-mcp/ee/entry.ts');
       config.resolve.alias[pkgMcpEntry] = pkgMcpEeEntry;
 
-      const pkgClientPortalEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.ts');
-      const pkgClientPortalEntryIndex = path.join(__dirname, '../packages/client-portal/src/domain-settings/entry.tsx');
-      const pkgClientPortalEeEntry = path.join(__dirname, '../packages/client-portal/src/domain-settings/ee/entry.tsx');
-      config.resolve.alias[pkgClientPortalEntry] = pkgClientPortalEeEntry;
-      config.resolve.alias[pkgClientPortalEntryIndex] = pkgClientPortalEeEntry;
-
       const pkgEmailDomainsEntry = path.join(__dirname, '../packages/integrations/src/email/domains/entry.ts');
       const pkgEmailDomainsEeEntry = path.join(__dirname, '../packages/integrations/src/email/domains/ee/entry.ts');
       config.resolve.alias[pkgEmailDomainsEntry] = pkgEmailDomainsEeEntry;
@@ -800,13 +788,6 @@ const nextConfig = {
           fromCandidates: [
             path.join(__dirname, '../packages/product-settings-extensions/oss/entry.ts'),
             path.join(__dirname, '../packages/product-settings-extensions/oss/entry.tsx'),
-          ],
-        },
-        {
-          to: pkgClientPortalEeEntry,
-          fromCandidates: [
-            path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.ts'),
-            path.join(__dirname, '../packages/client-portal/src/domain-settings/oss/entry.tsx'),
           ],
         },
         {
@@ -1212,6 +1193,20 @@ const nextConfig = {
   // Explicitly disable production browser source maps (default but be explicit).
   // Eliminates source-map emit work for every client chunk.
   productionBrowserSourceMaps: false,
+  // OAuth callback routes receive one-time credentials (authorization codes,
+  // PKCE state nonces, and provider error text) on the query string. The dev
+  // access-log line prints the full request URL, so suppress it for callback
+  // paths; the routes' own coarse diagnostics remain. Dev-only — Next ignores
+  // incoming-request logging outside the dev server.
+  logging: {
+    incomingRequests: {
+      ignore: [/\/callback([\/?]|$)/],
+    },
+    // Server-function timing lines serialize the action's arguments, which for
+    // several settings actions include field values users just typed. Keep the
+    // timing noise off entirely. Dev-only — same scope as incomingRequests.
+    serverFunctions: false,
+  },
   // SWC compiler: strip console.* in production output (excluding error/warn).
   // Cuts bytes; minify pass also has less to walk.
   compiler: {

@@ -1432,6 +1432,9 @@
       "viewTranscript": "View transcript"
     },
     "quickAdd": {
+      "clientRequired": "Select a client for this interaction",
+      "contactPlaceholder": "Select contact",
+      "selectClientFirst": "Select client first",
       "teams": {
         "attendees": {
           "add": "Add",
@@ -1464,7 +1467,7 @@
         "invitesSummary": "Microsoft will email calendar invites to: {{recipients}}.",
         "invitesSummaryYou": "you (creator)",
         "reason": {
-          "addon_required": "The Teams add-on is not active for this tenant.",
+          "feature_disabled": "Microsoft Teams integration is not enabled for this tenant.",
           "ee_disabled": "Teams integration requires Enterprise Edition.",
           "no_organizer": "No default meeting organizer is configured in Teams settings.",
           "not_configured": "The Teams integration has not been configured."
@@ -1477,7 +1480,7 @@
       "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
-      "addInteraction": "Add interaction",
+      "addInteraction": "Add Interaction",
       "allTypes": "All Types",
       "applyFilters": "Apply Filters",
       "endDate": "End Date",
@@ -1498,6 +1501,10 @@
       "columns": { "type": "Type", "title": "Title", "client": "Client", "contact": "Contact", "user": "User", "date": "Date", "status": "Status" },
       "empty": "No interactions match these filters.",
       "loading": "Loading interactions…",
+      "openClient": "Open client {{name}}",
+      "openContact": "Open contact {{name}}",
+      "openInteraction": "Open interaction {{title}}",
+      "openUser": "Open user {{name}}",
       "byUser": "By {{name}}",
       "collapse": "Collapse Recent Interactions",
       "contactsFromClient": "Contacts from selected client",

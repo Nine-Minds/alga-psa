@@ -16,6 +16,8 @@
     "documentsAll": "Wszystkie dokumenty",
     "knowledgeBase": "Baza wiedzy",
     "assets": "Zasoby",
+    "assetsAll": "Wszystkie zasoby",
+    "assetsMaintenance": "Konserwacja",
     "inventory": {
       "label": "Zapasy",
       "sections": {
@@ -197,6 +199,12 @@
           "description": "Dodaj nowy produkt do katalogu"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Zasoby i pomoc",
+      "title": "Zasoby",
+      "documentation": "Dokumentacja",
+      "support": "Skontaktuj się z pomocą techniczną"
     },
     "jobs": {
       "ariaLabel": "Wyświetl aktywność zadań w tle",

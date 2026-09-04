@@ -4,13 +4,12 @@ import { ADD_ONS, ADD_ON_DESCRIPTIONS, ADD_ON_LABELS, tenantHasAddOn } from './a
 describe('addOns', () => {
   it('exports supported add-on keys', () => {
     expect(ADD_ONS.AI_ASSISTANT).toBe('ai_assistant');
-    expect(ADD_ONS.TEAMS).toBe('teams');
     expect(ADD_ONS.ENTERPRISE).toBe('enterprise');
+    expect(Object.values(ADD_ONS)).not.toContain('teams');
   });
 
-  it('T001: telephony ships inside the Teams add-on, not a key of its own', () => {
+  it('does not expose telephony as an add-on', () => {
     expect(Object.values(ADD_ONS)).not.toContain('telephony');
-    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('call');
   });
 
   it('defines labels and descriptions for every add-on', () => {
@@ -21,13 +20,7 @@ describe('addOns', () => {
   });
 
   it('checks tenant add-on membership', () => {
-    expect(tenantHasAddOn([ADD_ONS.TEAMS], ADD_ONS.TEAMS)).toBe(true);
-    expect(tenantHasAddOn([ADD_ONS.TEAMS], ADD_ONS.ENTERPRISE)).toBe(false);
-  });
-
-  it('T108: the Teams add-on description covers meetings and recording/transcript capture', () => {
-    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('meetings');
-    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('recording');
-    expect(ADD_ON_DESCRIPTIONS[ADD_ONS.TEAMS]).toContain('transcript');
+    expect(tenantHasAddOn([ADD_ONS.AI_ASSISTANT], ADD_ONS.AI_ASSISTANT)).toBe(true);
+    expect(tenantHasAddOn([ADD_ONS.AI_ASSISTANT], ADD_ONS.ENTERPRISE)).toBe(false);
   });
 });

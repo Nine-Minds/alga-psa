@@ -315,6 +315,9 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         .where({ service_id: serviceId, tenant })
         .first();
       if (!service) throw new Error(`Service ${serviceId} not found`);
+      if (service.billing_method !== 'hourly') {
+        throw new Error('Hour blocks can only be sold for hourly services');
+      }
 
       const currencyCode = client.default_currency_code || 'USD';
       const currentDate = Temporal.Now.plainDateISO().toString();

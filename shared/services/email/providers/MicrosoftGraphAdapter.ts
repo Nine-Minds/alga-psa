@@ -9,6 +9,7 @@ import type {
   DiagnosticsStepStatus,
 } from '../../../interfaces/microsoft365-diagnostics.interfaces';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
+import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -159,7 +160,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     if (this.authenticatedUserEmail) {
       // Normalize emails for comparison (case-insensitive)
       const normalizedConfigured = configuredMailbox.toLowerCase();
-      const normalizedAuthenticated = this.authenticatedUserEmail.toLowerCase();
+      const normalizedAuthenticated = this.authenticatedUserEmail.trim().toLowerCase();
 
       // If they match, this is the authenticated user's personal mailbox → use /me
       if (normalizedConfigured === normalizedAuthenticated) {
@@ -358,7 +359,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
+      const isHosted = resolveDeploymentCapabilities().microsoftOAuth.sharedApp;
 
       // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
       // tenant-independent authority used when the refresh grant was issued.
@@ -488,7 +489,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       throw new Error('Microsoft sending mailbox is not configured');
     }
 
-    const endpoint = `/users/${encodeURIComponent(mailbox)}/sendMail`;
+    const endpoint = `${this.getMailboxBasePath()}/sendMail`;
     const send = () => payload.kind === 'mime'
       ? this.httpClient.post(endpoint, payload.content, {
           headers: { 'Content-Type': 'text/plain' },

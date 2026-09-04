@@ -100,8 +100,6 @@ async function getStripeConfig() {
   const soloBaseAnnualPriceId = process.env.STRIPE_SOLO_BASE_ANNUAL_PRICE_ID || null;
   const aiAddOnPriceId = process.env.STRIPE_AI_ADDON_PRICE_ID || null;
   const aiAddOnAnnualPriceId = process.env.STRIPE_AI_ADDON_ANNUAL_PRICE_ID || null;
-  const teamsAddOnPriceId = process.env.STRIPE_TEAMS_ADDON_PRICE_ID || null;
-  const teamsAddOnAnnualPriceId = process.env.STRIPE_TEAMS_ADDON_ANNUAL_PRICE_ID || null;
   const enterpriseAddOnPriceId = process.env.STRIPE_ENTERPRISE_ADDON_PRICE_ID || null;
   const enterpriseAddOnAnnualPriceId = process.env.STRIPE_ENTERPRISE_ADDON_ANNUAL_PRICE_ID || null;
 
@@ -144,8 +142,6 @@ async function getStripeConfig() {
     soloBaseAnnualPriceId,
     aiAddOnPriceId,
     aiAddOnAnnualPriceId,
-    teamsAddOnPriceId,
-    teamsAddOnAnnualPriceId,
     enterpriseAddOnPriceId,
     enterpriseAddOnAnnualPriceId,
     earlyAdoptersBasePriceId,
@@ -1921,12 +1917,18 @@ export class StripeService {
     product: 'ALGADESK' | 'ALGAPSA',
     interval: 'month' | 'year',
   ): string {
-    const envName = `STRIPE_${product}_USER_${interval === 'year' ? 'ANNUAL_' : ''}PRICE_ID`;
+    const annual = interval === 'year';
+    // The AlgaPSA per-seat price is the Pro price; STRIPE_ALGAPSA_USER_* only overrides it.
     const priceId = product === 'ALGADESK'
-      ? (interval === 'year' ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
-      : (interval === 'year' ? this.config.algapsaUserAnnualPriceId : this.config.algapsaUserPriceId);
+      ? (annual ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
+      : (annual
+        ? (this.config.algapsaUserAnnualPriceId || this.config.proAnnualPriceId)
+        : (this.config.algapsaUserPriceId || this.config.proPriceId));
 
     if (!priceId) {
+      const envName = product === 'ALGADESK'
+        ? `STRIPE_ALGADESK_USER_${annual ? 'ANNUAL_' : ''}PRICE_ID`
+        : `STRIPE_PRO_${annual ? 'ANNUAL_' : ''}PRICE_ID`;
       throw new Error(`${envName} environment variable is not configured`);
     }
 
@@ -1941,10 +1943,6 @@ export class StripeService {
       [ADD_ONS.AI_ASSISTANT]: {
         monthly: this.config.aiAddOnPriceId,
         annual: this.config.aiAddOnAnnualPriceId,
-      },
-      [ADD_ONS.TEAMS]: {
-        monthly: this.config.teamsAddOnPriceId,
-        annual: this.config.teamsAddOnAnnualPriceId,
       },
       [ADD_ONS.ENTERPRISE]: {
         monthly: this.config.enterpriseAddOnPriceId,

@@ -7,6 +7,7 @@ import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomS
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 function toIsoDateString(value: Date | undefined): string {
   if (!value) return '';
@@ -44,6 +45,12 @@ interface RequestServiceFormProps {
   fields: RequestServiceFormField[];
   initialValues: Record<string, unknown>;
   labels: RequestServiceFormLabels;
+  /**
+   * Idempotency key minted once per rendered form attempt. Submitting the same
+   * rendered form again (a retry or double-click) resends the same key, so the
+   * server resolves duplicates to the original submission.
+   */
+  clientSubmissionKey: string;
 }
 
 export function RequestServiceForm({
@@ -51,6 +58,7 @@ export function RequestServiceForm({
   fields,
   initialValues,
   labels,
+  clientSubmissionKey,
 }: RequestServiceFormProps) {
   const [selectValues, setSelectValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -82,6 +90,11 @@ export function RequestServiceForm({
 
   return (
     <form action={action} encType="multipart/form-data" noValidate className="space-y-4">
+      <input
+        type="hidden"
+        name={CLIENT_SUBMISSION_KEY_FIELD_NAME}
+        value={clientSubmissionKey}
+      />
       {fields.map((field, index) => {
         const key = field.key || `field_${index}`;
         const label = field.label || key;

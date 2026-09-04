@@ -82,8 +82,8 @@
       "linkQuote": "Associer un devis existant",
       "loadFailed": "Échec du chargement de l'opportunité",
       "loading": "Chargement de l'opportunité...",
-      "markLost": "Marc a perdu",
-      "markWon": "Marc a gagné",
+      "markLost": "Marquer comme perdue",
+      "markWon": "Marquer comme gagnée",
       "metadataTitle": "Opportunité",
       "nextAction": "Action suivante",
       "nextActionOverdue": "Action suivante · en retard",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} une fois",
       "thisQuarter": "Ce trimestre ({{q}})",
       "weighted": "{{stage}} · {{pct}} % pondérés",
-      "won": "A gagné cette période"
+      "won": "Gagné sur cette période"
     },
     "linkQuoteDialog": {
       "confirm": "Lier le devis",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "Que doit savoir l’équipe si l’affaire revient ?",
       "reason": "Motif",
       "reasonPlaceholder": "Pourquoi n'a-t-elle pas avancé ?",
-      "submit": "Marc a perdu",
-      "title": "Marc a perdu"
+      "submit": "Marquer comme perdue",
+      "title": "Marquer comme perdue"
     },
     "lossReason": {
       "chose_competitor": "Choisissez un concurrent",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Examiner le pipeline",
         "viewAssessmentDeals": "Voir les offres d'évaluation"
       },
-      "markLost": "Marc a perdu",
+      "markLost": "Marquer comme perdue",
       "moneyFound": "Argent trouvé",
       "moneyFoundSource": "de la facturation, des contrats et des actifs",
       "needsYou_one": "{{count}} chose a besoin de vous aujourd'hui.",
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "L'affaire est clôturée comme gagnée.",
       "bodyProspect": "{{client}} devient un client actif.",
-      "confirm": "Marc a gagné",
+      "confirm": "Marquer comme gagnée",
       "convertQuote": "Convertir un devis accepté en projet d'accord (facultatif)",
       "nextConvert": "Convertissez le devis accepté en contrat ci-dessous, ou depuis l'écran du devis ensuite.",
       "nextSendQuote": "Aucun devis accepté n’est encore lié. Envoyez le devis, faites-le approuver, puis convertissez-le en contrat. Vous pouvez tout de même marquer l’affaire gagnée dès maintenant.",
@@ -558,7 +558,7 @@
       "projectStart": "Date de début",
       "projectStatus": "Statut initial",
       "projectTemplate": "Créer un projet d'intégration (facultatif)",
-      "title": "Marc a gagné"
+      "title": "Marquer comme gagnée"
     }
   }
 }

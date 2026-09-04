@@ -25,6 +25,18 @@ export default defineConfig({
       'src/components/billing-dashboard/quotes/QuoteDocumentTemplateEditor.existingQuote.test.tsx',
       'src/components/invoice-designer/DesignerVisualWorkspace.test.tsx',
       'src/components/invoice-designer/preview/tenantBrandingOverlay.test.ts',
+      // Behavioral coverage for realm-exact QBO mapping resolution — listed
+      // explicitly for the same reason as the suites above.
+      'src/services/accountingSync/realmScopedOperations.test.ts',
+      // Ticket-level billed-time detail: snapshot aggregation, standard-template
+      // bindings, and render parity — listed for the same reason as above.
+      'src/lib/adapters/invoiceAdapters.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.test.ts',
+      'src/lib/invoice-template-ast/standardTemplates.byTicket.test.ts',
+      // Timezone-safe date-only rendering: the renderer and field formatting
+      // share one UTC-pinned formatter — listed for the same reason as above.
+      'src/lib/invoice-template-ast/fieldFormatting.test.ts',
+      'src/lib/invoice-template-ast/react-renderer.test.tsx',
     ],
     testTimeout: 20000,
     // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing

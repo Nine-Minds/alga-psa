@@ -15,6 +15,7 @@ import { IClient } from '@alga-psa/types';
 import { useToast } from '@alga-psa/ui';
 import { useRouter } from 'next/navigation';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { useQuickAddClient } from '@alga-psa/ui/context';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import { getTemplates, applyTemplate } from '../../actions/projectTemplateActions';
 import { getAllClientsForProjects, getProjectStatuses } from '../../actions/projectActions';
@@ -44,11 +45,13 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
   const { t } = useTranslation(['features/projects', 'common']);
   const router = useRouter();
   const { toast } = useToast();
+  const { renderQuickAddClient } = useQuickAddClient();
   const [templates, setTemplates] = useState<IProjectTemplate[]>([]);
   const [clients, setClients] = useState<IClient[]>([]);
   const [statuses, setStatuses] = useState<IStatus[]>([]);
   const [loading, setLoading] = useState(false);
   const [showQuickAddStatus, setShowQuickAddStatus] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -323,6 +326,7 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
               onClientTypeFilterChange={setClientTypeFilter}
               placeholder={t('templates.apply.clientPlaceholder', 'Select a client')}
               className={hasAttemptedSubmit && !formData.client_id ? 'ring-1 ring-red-500' : ''}
+              onAddNew={() => setIsQuickAddClientOpen(true)}
             />
           </div>
 
@@ -450,6 +454,23 @@ export function ApplyTemplateDialog({ open, onClose, onSuccess, initialTemplateI
 
         </form>
     </Dialog>
+    {renderQuickAddClient({
+      open: isQuickAddClientOpen,
+      onOpenChange: setIsQuickAddClientOpen,
+      onClientAdded: (newClient) => {
+        setClients((currentClients) => {
+          const existingIndex = currentClients.findIndex(
+            (client) => client.client_id === newClient.client_id,
+          );
+          if (existingIndex === -1) return [...currentClients, newClient];
+          const nextClients = [...currentClients];
+          nextClients[existingIndex] = newClient;
+          return nextClients;
+        });
+        setFormData((current) => ({ ...current, client_id: newClient.client_id }));
+      },
+      skipSuccessDialog: true,
+    })}
     <QuickAddStatus
       open={showQuickAddStatus}
       onOpenChange={setShowQuickAddStatus}

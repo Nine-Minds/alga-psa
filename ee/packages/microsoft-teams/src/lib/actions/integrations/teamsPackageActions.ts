@@ -3,7 +3,7 @@ import { withAuth } from '@alga-psa/auth/withAuth';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { getMicrosoftProfileReadiness } from './providerReadiness';
-import { getTeamsAvailability, resolveTeamsAvailability } from '../../teams/teamsAvailability';
+import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   buildTeamsPersonalTabDeepLink,
   TEAMS_PERSONAL_TAB_ENTITY_ID,
@@ -403,8 +403,9 @@ export const getTeamsAppPackageStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<TeamsAppPackageStatusResponse> => {
-  const availability = resolveTeamsAvailability({
+  const availability = await getTeamsAvailability({
     tenantId: tenant,
+    userId: (user as any)?.user_id,
   });
   if (availability.enabled === false) {
     return { success: false, error: availability.message };

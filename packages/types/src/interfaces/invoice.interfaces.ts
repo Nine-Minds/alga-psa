@@ -2,7 +2,7 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
-import type { BillingProfileSource } from './billing.interfaces';
+import type { BillingProfileSource, InvoiceTimeEntrySnapshot } from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -27,6 +27,8 @@ export function getTaxImportState(taxSource?: TaxSource | null): TaxImportState 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   client_id: string;
+  /** Optional text shown on the credit issuance created by a prepayment invoice. */
+  prepayment_description?: string | null;
   /** Snapshot of the purchase order number for this invoice (nullable). */
   po_number?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */
@@ -72,6 +74,11 @@ export interface IInvoiceChargeRecurringDetailPeriod {
   billing_timing?: 'arrears' | 'advance' | null;
 }
 
+/** Snapshot row attached to a rendered invoice charge, keyed by source entry. */
+export interface IInvoiceChargeTimeEntrySnapshot extends InvoiceTimeEntrySnapshot {
+  entryId: string;
+}
+
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
@@ -86,6 +93,12 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    * Historical flat invoices and non-recurring charges omit this field.
    */
   recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
+  /**
+   * Immutable billed-time snapshots linked to this charge at generation.
+   * Present only on time-backed charges generated after snapshot support;
+   * renderer-only metadata — accounting exports must keep ignoring it.
+   */
+  time_entry_snapshots?: IInvoiceChargeTimeEntrySnapshot[];
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;
@@ -322,6 +335,13 @@ export interface IConditionalRule {
   format?: any;
 }
 
+/**
+ * Known, safe recurring-invoice failure codes that may cross the action boundary
+ * for localized, actionable UI remediation. Absent for unknown/internal failures,
+ * which keep the generic error string. Only allowlisted codes belong here.
+ */
+export type RecurringInvoiceFailureCode = 'NO_BILLING_EMAIL';
+
 export type PreviewInvoiceResponse = {
   success: true;
   data: WasmInvoiceViewModel; // Use the imported ViewModel alias
@@ -329,6 +349,10 @@ export type PreviewInvoiceResponse = {
   success: false;
   error: string;
   executionIdentityKey?: string;
+  /** Safe, known failure code so the UI can render localized guidance. */
+  code?: RecurringInvoiceFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
 };
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';

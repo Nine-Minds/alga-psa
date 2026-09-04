@@ -104,6 +104,9 @@
           "confirmLabel": "Eliminar proveedor",
           "cancelLabel": "Mantener proveedor"
         }
+      },
+      "errors": {
+        "notAuthorized": "Este proveedor de calendario aún no ha completado la autorización OAuth. Abra su configuración, haga clic en Autorizar y vuelva a sincronizar."
       }
     },
     "sync": {

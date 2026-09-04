@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { tenantDb } from '@alga-psa/db';
+import { convertSpreadsheets, inferSpreadsheetMapping } from '@alga-psa/migration-connectors/csv';
 import { buildSamplePackage, sampleEntityRows } from '@alga-psa/migration-sdk';
 import type { AmpPackageRows } from '@alga-psa/migration-spec';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
@@ -459,6 +460,38 @@ describe('AMP migration pipeline integration', () => {
     const packagePath = buildPackage('empty-package', {});
     expect(MigrationStager.hasImportableRecords(packagePath)).toBe(false);
   });
+
+  it('stages a legacy asset CSV after conversion through the upload guard', async () => {
+    const fixture = await createFixture();
+    const inputPath = path.join(packageDir, `legacy-assets-${uuidv4()}.csv`);
+    const packagePath = path.join(packageDir, `legacy-assets-${uuidv4()}.amp`);
+    await fs.promises.writeFile(
+      inputPath,
+      'Asset Name,Asset Type,Serial Number,MAC Address\nrouter,network_device,R-1,00:11:22:33:44:55\n'
+    );
+
+    const mapping = await inferSpreadsheetMapping(inputPath, 'assets');
+    const conversion = await convertSpreadsheets({
+      outputPath: packagePath,
+      namespace: `csv:${fixture.tenantId}`,
+      sourceSystem: 'csv-upload',
+      files: [{ entityType: 'assets', path: inputPath, mapping }],
+    }, packageDir);
+
+    expect(conversion.rowCounts).toEqual({ assets: 1 });
+    expect(MigrationStager.hasImportableRecords(packagePath)).toBe(true);
+
+    const migrationJobId = await createJob(fixture);
+    const staging = await new MigrationStager(db, fixture.tenantId).stage(migrationJobId, packagePath);
+    expect(staging.rejected).toBe(false);
+    expect(staging.stagedCounts).toMatchObject({ assets: 1 });
+    expect(await stagedCountsByEntity(fixture.tenantId, migrationJobId)).toEqual({ assets: 1 });
+
+    const job = await tenantTable(fixture.tenantId, 'migration_jobs')
+      .where({ migration_job_id: migrationJobId })
+      .first();
+    expect(job.state).toBe('needs_configuration');
+  }, HOOK_TIMEOUT);
 
   it('re-running the same job creates no duplicates', async () => {
     const fixture = await createFixture();

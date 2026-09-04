@@ -1251,7 +1251,7 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
       };
 
       // Create adapters for client portal context
-      const eventPublisher = new ServerEventPublisher();
+      const eventPublisher = new ServerEventPublisher(trx);
       const analyticsTracker = new ServerAnalyticsTracker();
 
       // Use shared TicketModel with retry logic, events, and analytics
@@ -1294,14 +1294,11 @@ export const createClientTicket = withAuth(async (user, { tenant }, data: FormDa
 
       // Publish TICKET_ASSIGNED event if a default agent was set
       if (createTicketInput.assigned_to) {
-        await publishEvent({
-          eventType: 'TICKET_ASSIGNED',
-          payload: {
-            tenantId: tenant,
-            ticketId: ticketResult.ticket_id,
-            userId: createTicketInput.assigned_to,
-            assignedByUserId: userId
-          }
+        await eventPublisher.publishTicketAssigned({
+          tenantId: tenant,
+          ticketId: ticketResult.ticket_id,
+          userId: createTicketInput.assigned_to,
+          assignedByUserId: userId,
         });
       }
 

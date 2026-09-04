@@ -2,6 +2,13 @@ import { z } from 'zod';
 import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { QboEmulatorCore } from './core';
 
+/**
+ * Every entity seeder/action takes an optional realmId so scenarios can run
+ * several company files side by side (colliding entity ids included); omitted
+ * it targets the default realm the emulator boots with.
+ */
+const realmParam = { realmId: z.string().optional() };
+
 export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   reg.seeder({
     name: 'client',
@@ -14,10 +21,17 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   });
 
   reg.seeder({
+    name: 'realm',
+    description: 'Add a separately-stated QBO company file under its own realm id',
+    params: z.object({ realmId: z.string() }),
+    run: ({ realmId }) => core.addRealm(realmId),
+  });
+
+  reg.seeder({
     name: 'customer',
     description: 'Create a QBO customer',
-    params: z.object({ name: z.string(), active: z.boolean().optional() }),
-    run: ({ name, active }) => core.sim.seedCustomer({ name, active }),
+    params: z.object({ name: z.string(), active: z.boolean().optional(), ...realmParam }),
+    run: ({ realmId, ...params }) => core.simFor(realmId).seedCustomer(params),
   });
 
   reg.seeder({
@@ -33,15 +47,49 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       active: z.boolean().optional(),
       taxCodeId: z.string().optional(),
       fullyQualifiedName: z.string().optional(),
+      ...realmParam,
     }),
-    run: (params) => core.sim.seedItem(params),
+    run: ({ realmId, ...params }) => core.simFor(realmId).seedItem(params),
+  });
+
+  reg.seeder({
+    name: 'account',
+    description: 'Create a QBO chart-of-accounts entry',
+    params: z.object({
+      name: z.string(),
+      accountType: z.string(),
+      id: z.string().optional(),
+      active: z.boolean().optional(),
+    }),
+    run: (params) => core.sim.seedAccount(params),
+  });
+
+  reg.seeder({
+    name: 'class',
+    description: 'Create a QBO Class (tracking category)',
+    params: z.object({ name: z.string(), id: z.string().optional(), active: z.boolean().optional() }),
+    run: (params) => core.sim.seedClass(params),
+  });
+
+  reg.seeder({
+    name: 'department',
+    description: 'Create a QBO Department (location tracking)',
+    params: z.object({ name: z.string(), id: z.string().optional(), active: z.boolean().optional() }),
+    run: (params) => core.sim.seedDepartment(params),
+  });
+
+  reg.seeder({
+    name: 'term',
+    description: 'Create a QBO payment Term',
+    params: z.object({ name: z.string(), id: z.string().optional(), active: z.boolean().optional() }),
+    run: (params) => core.sim.seedTerm(params),
   });
 
   reg.seeder({
     name: 'tax-rate',
     description: 'Create a QBO TaxRate component (RateValue is a percentage: 8 means 8%)',
-    params: z.object({ name: z.string(), ratePercent: z.number(), id: z.string().optional() }),
-    run: (params) => core.sim.seedTaxRate(params),
+    params: z.object({ name: z.string(), ratePercent: z.number(), id: z.string().optional(), ...realmParam }),
+    run: ({ realmId, ...params }) => core.simFor(realmId).seedTaxRate(params),
   });
 
   reg.seeder({
@@ -54,8 +102,9 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       taxRateIds: z.array(z.string()).optional(),
       pseudo: z.boolean().optional(),
       active: z.boolean().optional(),
+      ...realmParam,
     }),
-    run: (params) => core.sim.seedTaxCode(params),
+    run: ({ realmId, ...params }) => core.simFor(realmId).seedTaxCode(params),
   });
 
   reg.seeder({
@@ -65,8 +114,9 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       customerId: z.string(),
       amountCents: z.number().int(),
       docNumber: z.string().optional(),
+      ...realmParam,
     }),
-    run: (params) => core.sim.seedInvoice(params),
+    run: ({ realmId, ...params }) => core.simFor(realmId).seedInvoice(params),
   });
 
   reg.seeder({
@@ -76,8 +126,9 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       customerId: z.string(),
       amountCents: z.number().int(),
       docNumber: z.string().optional(),
+      ...realmParam,
     }),
-    run: (params) => core.sim.seedCreditMemo(params),
+    run: ({ realmId, ...params }) => core.simFor(realmId).seedCreditMemo(params),
   });
 
   reg.action({
@@ -95,8 +146,9 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       amountCents: z.number().int(),
       referenceNumber: z.string().optional(),
       txnDate: z.string().optional(),
+      ...realmParam,
     }),
-    run: (params) => core.sim.receivePaymentInQbo(params),
+    run: ({ realmId, ...params }) => core.simFor(realmId).receivePaymentInQbo(params),
   });
 
   reg.action({
@@ -106,8 +158,9 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       creditMemoId: z.string(),
       invoiceId: z.string(),
       amountCents: z.number().int(),
+      ...realmParam,
     }),
-    run: (params) => core.sim.applyCreditInQbo(params),
+    run: ({ realmId, ...params }) => core.simFor(realmId).applyCreditInQbo(params),
   });
 
   reg.action({
@@ -118,8 +171,30 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
       autoApplyCredits: z.boolean().optional(),
       taxAdjustmentCents: z.number().int().optional(),
       automatedSalesTaxDefaultTaxCodeId: z.string().nullable().optional(),
+      ...realmParam,
     }),
-    run: (params) => core.configure(params),
+    run: ({ realmId, ...params }) => core.configure(params, realmId),
+  });
+
+  reg.action({
+    name: 'entities',
+    description: 'Read one entity type from one company file (per-realm state assertion)',
+    params: z.object({
+      entityType: z.enum(['Customer', 'Invoice', 'CreditMemo', 'Payment', 'Item', 'TaxCode', 'TaxRate']),
+      ...realmParam,
+    }),
+    run: ({ realmId, entityType }) => core.simFor(realmId).entities(entityType),
+  });
+
+  reg.action({
+    name: 'select-company',
+    description: "Choose which company the authorize flow's company picker returns (null resets to default)",
+    params: z.object({ realmId: z.string().nullable() }),
+    run: ({ realmId }) => {
+      if (realmId !== null) core.simFor(realmId); // validate it exists
+      core.authorizeRealmId = realmId;
+      return { authorizeRealmId: realmId };
+    },
   });
 
   reg.action({
@@ -143,10 +218,14 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
     ['items', 'Item'],
     ['tax-codes', 'TaxCode'],
     ['tax-rates', 'TaxRate'],
+    ['accounts', 'Account'],
+    ['classes', 'Class'],
+    ['departments', 'Department'],
+    ['terms', 'Term'],
   ] as const) {
     reg.stateView({
       name: view,
-      description: `QBO ${entityType} entities`,
+      description: `QBO ${entityType} entities (default realm)`,
       get: () => core.sim.entities(entityType),
     });
   }
@@ -154,6 +233,6 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   reg.stateView({
     name: 'config',
     description: 'Company behavior configuration and realm',
-    get: () => ({ realmId: core.realmId, ...core.config() }),
+    get: () => ({ realmId: core.realmId, realms: core.realmIds(), ...core.config() }),
   });
 }

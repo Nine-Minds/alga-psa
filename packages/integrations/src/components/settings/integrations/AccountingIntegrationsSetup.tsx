@@ -11,6 +11,7 @@ import XeroIntegrationSettings from './XeroIntegrationSettings';
 import XeroCsvIntegrationSettings from './XeroCsvIntegrationSettings';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type AccountingIntegrationId = 'quickbooks_online' | 'xero' | 'quickbooks_csv' | 'xero_csv';
 
@@ -77,6 +78,7 @@ interface AccountingIntegrationsSetupProps {
 
 export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnboardingSlot }: AccountingIntegrationsSetupProps = {}) {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
 
@@ -191,6 +193,29 @@ export default function AccountingIntegrationsSetup({ qboSyncHealthSlot, qboOnbo
     const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;
     window.history.pushState({}, '', newUrl);
   };
+
+  // Permission-aware navigation: the accounting integration screens are an
+  // Admin/Finance surface. Until the capability check resolves, keep showing
+  // the setup grid (no flicker); once resolved, a user with none of the five
+  // accounting capabilities sees a notice instead of an actionable configure
+  // surface. Users holding at least one capability keep every card — the
+  // per-panel controls are gated individually inside each settings panel.
+  if (caps.loaded && !caps.hasAny) {
+    return (
+      <div className="space-y-6" id="accounting-integrations-setup">
+        <Card id="accounting-integrations-no-permission-card">
+          <CardHeader>
+            <CardTitle>
+              {t('integrations.accounting.setup.noPermission.title', { defaultValue: 'No access to accounting integrations' })}
+            </CardTitle>
+            <CardDescription>
+              {t('integrations.accounting.setup.noPermission.description', { defaultValue: 'You do not have permission to view or configure accounting integrations. Ask an administrator for access.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" id="accounting-integrations-setup">

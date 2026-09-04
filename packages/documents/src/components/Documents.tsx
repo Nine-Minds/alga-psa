@@ -1203,7 +1203,7 @@ const Documents = ({
     }
 
     // For other files, trigger download
-    const downloadUrl = getDocumentDownloadUrl(document.file_id);
+    const downloadUrl = getDocumentDownloadUrl(document.document_id);
     const filename = document.document_name || 'download';
     try {
       await downloadDocument(downloadUrl, filename, true);
@@ -1887,21 +1887,21 @@ const Documents = ({
                 </button>
                 {previewDocument.mime_type?.startsWith('image/') && (
                   <img
-                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.file_id}`}
+                    src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
                     alt={previewDocument.document_name}
                     className="max-w-full max-h-[90vh] object-contain mx-auto"
                   />
                 )}
                 {previewDocument.mime_type?.startsWith('video/') && (
                   <video
-                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    src={`/api/documents/view/${previewDocument.document_id}`}
                     controls
                     className="max-w-full max-h-[90vh] mx-auto"
                   />
                 )}
                 {previewDocument.mime_type === 'application/pdf' && (
                   <iframe
-                    src={`/api/documents/view/${previewDocument.file_id}`}
+                    src={`/api/documents/view/${previewDocument.document_id}`}
                     className="w-full h-[90vh] bg-white"
                     title={previewDocument.document_name}
                   />
@@ -2080,21 +2080,21 @@ const Documents = ({
               </button>
               {previewDocument.mime_type?.startsWith('image/') && (
                 <img
-                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.file_id}`}
+                  src={previewDocument.preview_file_id ? `/api/documents/${previewDocument.document_id}/preview` : `/api/documents/view/${previewDocument.document_id}`}
                   alt={previewDocument.document_name}
                   className="max-w-full max-h-[90vh] object-contain mx-auto"
                 />
               )}
               {previewDocument.mime_type?.startsWith('video/') && (
                 <video
-                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  src={`/api/documents/view/${previewDocument.document_id}`}
                   controls
                   className="max-w-full max-h-[90vh] mx-auto"
                 />
               )}
               {previewDocument.mime_type === 'application/pdf' && (
                 <iframe
-                  src={`/api/documents/view/${previewDocument.file_id}`}
+                  src={`/api/documents/view/${previewDocument.document_id}`}
                   className="w-full h-[90vh] bg-white"
                   title={previewDocument.document_name}
                 />

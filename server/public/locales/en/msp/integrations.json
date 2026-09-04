@@ -14,6 +14,7 @@
         "manualEntryHelp": "Enter the identifier exactly as it appears in your accounting system.",
         "metadataLabel": "Metadata (JSON)",
         "metadataPlaceholder": "Optional metadata as JSON",
+        "noKindOptions": "No usable records of this type were found in the connected organisation.",
         "realmIdLabel": "Realm ID",
         "saveMapping": "Save Mapping",
         "saving": "Saving…",
@@ -73,6 +74,10 @@
         "unavailable": {
           "description": "This integration is not yet available. Select QuickBooks CSV or Xero CSV to configure manual exports.",
           "title": "Configuration unavailable"
+        },
+        "noPermission": {
+          "title": "No access to accounting integrations",
+          "description": "You do not have permission to view or configure accounting integrations. Ask an administrator for access."
         }
       },
       "modules": {
@@ -215,11 +220,13 @@
           "intro": "This integration provides an alternative to OAuth-based QuickBooks connectivity:",
           "mappings": {
             "description": "Map Alga clients, services, tax codes, and payment terms to the identifiers used in your QuickBooks company. These values are used when generating the CSV export.",
-            "title": "QuickBooks CSV Mappings"
+            "title": "QuickBooks CSV Mappings",
+            "permissionNotice": "Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it."
           },
           "note": "Note: Configure mappings below before exporting. CSV exports and tax imports are managed from Billing → Accounting Exports.",
           "title": "QuickBooks CSV Integration"
-        }
+        },
+        "noPermissionDescription": "You do not have permission to view or configure accounting integrations."
       },
       "taxImport": {
         "actions": {
@@ -863,7 +870,8 @@
         "overview": {
           "connectionTypeLabel": "Connection Type:",
           "label": "Overview",
-          "mappedTenantsLabel": "Mapped Tenants:"
+          "mappedTenantsLabel": "Mapped Tenants:",
+          "microsoftAppLabel": "Microsoft app:"
         },
         "skipped": {
           "empty": "No tenants are currently marked as skipped.",
@@ -920,6 +928,16 @@
         }
       },
       "setup": {
+        "appRegistration": {
+          "addButton": "Add app registration",
+          "bindFailed": "Could not save the Microsoft app choice for Entra.",
+          "emptyBody": "Direct connect runs on your own Microsoft app registration. Register a multi-tenant app in your partner tenant, add the Entra redirect URI, and grant admin consent for ManagedTenants.Read.All and Directory.Read.All.",
+          "label": "Microsoft app registration",
+          "placeholder": "Select an app registration",
+          "reconnectRequired": "Select a Microsoft app registration and reconnect.",
+          "redirectUriLabel": "Redirect URI to add in Entra",
+          "scopesLabel": "Delegated scopes (admin consent required)"
+        },
         "backToCurrentStep": "Back to {{step}}",
         "chooser": {
           "cipp": {
@@ -940,7 +958,7 @@
             "description": "Alga talks to Microsoft Graph through your partner relationship.",
             "label": "Direct Microsoft partner",
             "prerequisites": {
-              "appRegistration": "Microsoft OAuth credentials configured for this tenant.",
+              "appRegistration": "A Microsoft app registration chosen below — Direct always connects with your organization's own app.",
               "globalAdmin": "A Global Administrator who can approve the permissions.",
               "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage.",
               "lighthouse": "Microsoft 365 Lighthouse onboarded in your partner tenant."
@@ -956,6 +974,7 @@
         "description": "Bring the people from the Microsoft tenants you manage into Alga as client contacts. Nothing is written to your contacts until you have seen a preview and approved it.",
         "directConsent": {
           "adminNote": "A Global Administrator must approve these permissions. If you are not one, the sign-in will complete but the connection will be refused, and nothing will be saved.",
+          "appRegistration": "App registration: {{name}}.",
           "cancel": "Cancel",
           "continue": "Continue to Microsoft",
           "intro": "You are about to leave Alga and sign in at Microsoft. These are the permissions that will be requested.",
@@ -1665,6 +1684,11 @@
             "reconnect": "Existing Outlook email connections need re-authorization to grant Mail.Send before they can send outbound email.",
             "perProviderIssuerNote": "Existing mailbox connections keep their current Microsoft app until they are reconnected. This choice applies to new mailbox connections."
           },
+          "entra": {
+            "description": "Choose the Microsoft app for Entra GDAP and Lighthouse sync.",
+            "label": "Entra Direct",
+            "reconnect": "Changing this app disconnects the current Entra connection and requires reconsent."
+          },
           "mspSso": {
             "description": "Choose the Microsoft app for staff sign-in and login-domain discovery.",
             "label": "Staff sign-in"
@@ -1726,6 +1750,9 @@
           "currentProfileTitle": "Saved app values",
           "emailRedirect": "Inbound email redirect URI",
           "emailTitle": "Email",
+          "entraConsent": "Requirement",
+          "entraConsentValue": "Register this app as multitenant and grant admin consent in your partner Microsoft tenant.",
+          "entraTitle": "Entra Direct",
           "mspSsoTitle": "Staff sign-in",
           "notConfigured": "Not configured",
           "redirectUri": "Redirect URI",
@@ -1843,7 +1870,9 @@
           "reconnect": "Reconnect QuickBooks",
           "refresh": "Refresh",
           "saveCredentials": "Save QuickBooks Credentials",
-          "saving": "Saving…"
+          "saving": "Saving…",
+          "retryDisconnect": "Retry Disconnect",
+          "forceFinalizeDisconnect": "Force Finalize"
         },
         "badges": {
           "connectionExpired": "Connection Needs Attention",
@@ -1855,11 +1884,17 @@
         "callback": {
           "accessDenied": "QuickBooks access was denied before the connection completed.",
           "configMissing": "QuickBooks OAuth could not start because the client ID and client secret were not fully configured.",
+          "disconnectInProgress": "QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.",
+          "forbidden": "You no longer have permission to manage accounting connections. Ask an administrator for access.",
           "generic": "QuickBooks returned an OAuth error: {{code}}",
           "invalidState": "The QuickBooks OAuth state was invalid or expired. Start the connect flow again.",
           "missingParams": "The QuickBooks callback was missing required parameters. Start the connect flow again.",
           "oauthFailed": "The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.",
-          "tokenExchangeFailed": "Intuit did not return the expected tokens. Try connecting again."
+          "sessionExpired": "Your session is no longer valid. Sign in and start the QuickBooks connection again.",
+          "stateReplayed": "This QuickBooks connection request was already used. Start the connect flow again.",
+          "tenantMismatch": "This QuickBooks connection request belongs to another workspace. Sign in to the correct workspace and start again.",
+          "tokenExchangeFailed": "Intuit did not return the expected tokens. Try connecting again.",
+          "userMismatch": "This QuickBooks connection request belongs to another user. Sign in as the user who started it and try again."
         },
         "clientIdLabel": "QuickBooks Client ID",
         "clientIdPlaceholder": "Paste your Intuit app client ID",
@@ -1897,7 +1932,8 @@
           "descriptionPrefix": "Configure live QuickBooks mappings for the connected company. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first QuickBooks company is connected and set as the default live QuickBooks context.",
           "placeholderDescription": "Connect a QuickBooks company before configuring live QuickBooks item and tax mappings.",
-          "title": "Live QuickBooks Mapping & Configuration"
+          "title": "Live QuickBooks Mapping & Configuration",
+          "permissionNotice": "You can view the connected company, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it."
         },
         "noClientId": "No client ID is stored for this tenant yet.",
         "noClientSecret": "No client secret is stored for this tenant yet.",
@@ -1920,7 +1956,20 @@
           "none": "No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.",
           "tenant": "This tenant connects through its own Intuit app, using the credentials stored below."
         },
-        "setupGuideLink": "QuickBooks setup guide"
+        "setupGuideLink": "QuickBooks setup guide",
+        "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
+        "connectionsPermissionNotice": "You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
+        "disconnectPending": "QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
+        "disconnectForceFinalized": "The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reason for force-finalizing the QuickBooks disconnect (recorded in the audit log):",
+          "inProgressTitle": "QuickBooks disconnect in progress",
+          "inProgressDescription": "Provider grants are being revoked. Sync and exports stay paused until every connected company is confirmed revoked.",
+          "targetRevoked": "revoked",
+          "targetFailed": "needs attention",
+          "targetPending": "pending",
+          "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        }
       },
       "sync": {
         "healthCardTitle": "Sync Health",
@@ -3021,7 +3070,6 @@
           "test": {
             "sent": "Teams test message sent.",
             "failed": "Teams test message failed.",
-            "addonInactive": "The Teams add-on is not active for this tenant.",
             "integrationInactive": "Activate the Teams integration before sending a test message.",
             "capabilityDisabled": "Enable the personal bot capability before sending a test message.",
             "botNotConfigured": "Configure the Teams bot credentials before sending a test message.",
@@ -3030,7 +3078,6 @@
             "skipped": "Teams test message was skipped."
           },
           "steps": {
-            "addonEntitlement": "Teams add-on entitlement",
             "integrationStatus": "Teams integration status",
             "capabilities": "Teams capabilities",
             "microsoftProfile": "Microsoft profile readiness",
@@ -3042,7 +3089,6 @@
             "recentDeliveryHealth": "Recent Teams delivery health"
           },
           "recommendation": {
-            "addon": "Enable the Microsoft Teams add-on for this tenant.",
             "activate": "Activate the Teams integration in settings.",
             "capabilities": "Enable personal bot and activity notifications for Teams.",
             "profile": "Select a ready Microsoft profile for Teams.",
@@ -3232,9 +3278,9 @@
               "cause": "The recipient has not signed in to AlgaPSA with Microsoft, so no account mapping exists.",
               "remedy": "Have the user sign in with Microsoft (MSP portal SSO or the Teams tab) so their account is mapped."
             },
-            "addon_inactive": {
-              "cause": "The Teams add-on is expired or absent, so sends are skipped while configuration is preserved.",
-              "remedy": "Renew the Teams add-on for this tenant."
+            "feature_disabled": {
+              "cause": "The Teams feature was disabled for this tenant when the delivery was attempted (pre-1.5).",
+              "remedy": "Teams is now generally available; retry the send."
             },
             "integration_inactive": {
               "cause": "The Teams integration is not active for this tenant.",
@@ -3265,26 +3311,6 @@
               "remedy": "Check the server logs for the delivery error detail and re-run diagnostics."
             }
           }
-        },
-        "paywall": {
-          "title": "Microsoft Teams add-on",
-          "description": "The Microsoft Teams integration requires the Teams add-on for this tenant.",
-          "includedTitle": "What's included",
-          "feature": {
-            "tab": "Personal tab: open AlgaPSA inside Microsoft Teams.",
-            "bot": "Personal and group-chat bot for tickets, approvals, time, and notes.",
-            "messageExtension": "Message extension and quick actions to act on PSA records from any message.",
-            "meetings": "Teams meetings on appointment approvals with real Outlook/Teams calendar invites.",
-            "recordings": "Automatic capture of meeting recordings and transcripts onto interactions.",
-            "notifications": "Activity-feed and bot-DM notifications for assignments, replies, approvals, and SLA risk."
-          },
-          "cta": "Purchase Teams add-on",
-          "nonBilling": "Contact a billing administrator to purchase the Teams add-on for this tenant."
-        },
-        "addonExpiredBanner": {
-          "title": "Microsoft Teams add-on expired",
-          "message": "The Microsoft Teams add-on has expired. Your configuration and delivery history are preserved, but Teams notifications are being skipped until the add-on is renewed.",
-          "cta": "Renew Teams add-on"
         },
         "staleManifest": {
           "title": "Teams app package is out of date",
@@ -3355,7 +3381,8 @@
             "s3": "After changes in Xero, export contacts from Xero",
             "s4": "Import the Xero contacts CSV back into Alga to sync updates"
           },
-          "workflowTitle": "Client Sync Workflow"
+          "workflowTitle": "Client Sync Workflow",
+          "permissionNotice": "Exporting and importing clients requires the execute-exports capability. Ask an administrator to grant it."
         },
         "settings": {
           "dateFormat": "Date Format",
@@ -3379,7 +3406,8 @@
           "managedSuffix": "to select invoices, generate Xero CSV exports, import tax reports, and manage batches.",
           "mappings": {
             "description": "Map Alga clients, services, and tax codes to the identifiers used in your Xero organisation. These values are used when generating the CSV export.",
-            "title": "Xero CSV Mappings"
+            "title": "Xero CSV Mappings",
+            "permissionNotice": "Editing CSV mappings requires the manage-mappings capability. Ask an administrator to grant it."
           },
           "overview": {
             "description": "Export invoices to CSV for manual import into Xero, and import tax data from Xero reports.",
@@ -3431,7 +3459,9 @@
             "title": "CSV Workflow",
             "trackingDescription": "The CSV export includes tracking category columns that link each Xero invoice back to its Alga source. When you import tax from Xero, these tracking categories are used to automatically match invoices - no manual reconciliation needed.",
             "trackingTitle": "Tracking Categories for Reconciliation"
-          }
+          },
+          "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
+          "connectionsPermissionNotice": "You can view Xero CSV settings, but changing them requires the manage-connections capability. Ask an administrator to grant it."
         }
       },
       "live": {
@@ -3445,7 +3475,9 @@
           "reconnect": "Reconnect Xero",
           "refresh": "Refresh",
           "saveCredentials": "Save Xero Credentials",
-          "saving": "Saving…"
+          "saving": "Saving…",
+          "retryDisconnect": "Retry Disconnect",
+          "forceFinalizeDisconnect": "Force Finalize"
         },
         "badges": {
           "connectionExpired": "Connection Expired",
@@ -3458,11 +3490,17 @@
           "accessDenied": "Xero access was denied before the connection completed.",
           "configMissing": "Xero OAuth could not start because the tenant client ID and client secret were not fully configured.",
           "connectionsUnmapped": "Xero returned organisations, but none included the identifiers required to save a connection.",
+          "disconnectInProgress": "Xero is being disconnected. Finish or finalize the disconnect before connecting again.",
+          "forbidden": "You no longer have permission to manage accounting connections. Ask an administrator for access.",
           "generic": "Xero returned an OAuth error: {{code}}",
           "invalidState": "The Xero OAuth state was invalid or expired. Start the connect flow again.",
           "missingParams": "The Xero callback was missing required parameters. Start the connect flow again.",
           "noConnections": "Xero did not return any organisations for this login. Check your Xero app and organisation access, then try again.",
-          "oauthFailed": "The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes."
+          "oauthFailed": "The Xero OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.",
+          "sessionExpired": "Your session is no longer valid. Sign in and start the Xero connection again.",
+          "stateReplayed": "This Xero connection request was already used. Start the connect flow again.",
+          "tenantMismatch": "This Xero connection request belongs to another workspace. Sign in to the correct workspace and start again.",
+          "userMismatch": "This Xero connection request belongs to another user. Sign in as the user who started it and try again."
         },
         "clientIdLabel": "Xero Client ID",
         "clientIdPlaceholder": "Paste your tenant-owned Xero client ID",
@@ -3496,18 +3534,36 @@
           "descriptionPrefix": "Configure live Xero mappings for the default connected organisation. These mappings are scoped to",
           "placeholderAlert": "The mapping manager becomes available after the first Xero organisation is connected and set as the default live Xero context.",
           "placeholderDescription": "Connect a live Xero organisation before configuring live Xero item and tax mappings.",
-          "title": "Live Xero Mapping & Configuration"
+          "title": "Live Xero Mapping & Configuration",
+          "permissionNotice": "You can view the default connected organisation, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it."
         },
         "noClientId": "No client ID is stored for this tenant yet.",
         "noClientSecret": "No client secret is stored for this tenant yet.",
         "redirectUri": "Redirect URI",
         "requiredScopes": "Required Scopes",
+        "scopeOverride": "Deployment override (XERO_OAUTH_SCOPES)",
+        "scopeOverrideInvalid": "The XERO_OAUTH_SCOPES override was ignored because it contains invalid entries ({{scopes}}). The default scopes are used instead.",
+        "scopeReconnectNote": "These scopes apply to new authorizations. An existing connection keeps the scopes it was originally granted; to apply the current set, disconnect and reconnect Xero. You can also remove this app from Connected apps in Xero to revoke earlier grants.",
         "storedClientId": "Stored client ID: {{value}}",
         "storedClientSecret": "Stored client secret: {{value}}",
         "tenantOauthDescription": "Paste the Xero app credentials registered for this tenant. Secret values are never returned to the browser after they are saved.",
         "tenantOauthTitle": "Tenant-Owned OAuth App",
         "title": "Xero",
-        "xeroCsv": "Xero CSV"
+        "xeroCsv": "Xero CSV",
+        "noPermissionDescription": "You do not have permission to view or configure accounting integrations.",
+        "connectionsPermissionNotice": "You can view Xero settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.",
+        "disconnectPending": "Xero is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.",
+        "disconnectForceFinalized": "The Xero disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.",
+        "disconnect": {
+          "forceFinalizePrompt": "Reason for force-finalizing the Xero disconnect (recorded in the audit log):",
+          "inProgressTitle": "Xero disconnect in progress",
+          "inProgressDescription": "Provider connections are being revoked. Sync and exports stay paused until every connection is confirmed removed.",
+          "grantTarget": "OAuth grant revocation",
+          "targetRevoked": "revoked",
+          "targetFailed": "needs attention",
+          "targetPending": "pending",
+          "failedPermanentDescription": "Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record."
+        }
       }
     },
     "stripe": {
@@ -3615,15 +3671,16 @@
         "assignTo": "Assign to",
         "searchPlaceholder": "Search contacts and clients…",
         "noTargets": "No matching contacts or clients.",
-        "chooseTarget": "Assign to a contact or client…"
+        "chooseTarget": "Assign to client…"
       },
       "forbidden": "You do not have permission to view telephony settings for this tenant.",
       "paywall": {
-        "title": "Microsoft Teams add-on",
-        "description": "Telephony integrations require the Microsoft Teams add-on for this tenant.",
+        "title": "Telephony",
+        "description": "Telephony integrations are not available for this tenant.",
+        "unavailable": "Telephony integrations are not available for this tenant.",
         "ceOnly": "Telephony integrations are only available in Enterprise Edition.",
         "includedTitle": "What's included",
-        "cta": "Manage add-ons",
+        "cta": "Manage integrations",
         "feature": {
           "recognition": "Caller recognition against contacts and clients on every captured call.",
           "history": "Call history on the contact and client timeline as first-class interactions.",
@@ -3665,7 +3722,10 @@
       "updateFailed": "Unable to update mapping. Please try again.",
       "idRequiredForDelete": "Mapping ID is required for deletion.",
       "notFound": "Mapping not found. Refresh mappings and try again.",
-      "deleteFailed": "Unable to delete mapping. Please try again."
+      "deleteFailed": "Unable to delete mapping. Please try again.",
+      "invoiceCancelled": "The invoice has been voided and cannot be mapped to the accounting integration.",
+      "invoiceNotFound": "The invoice no longer exists and cannot be mapped to the accounting integration.",
+      "scopeRequired": "Mapping lookups require an integration, an entity type, and a realm scope."
     },
     "qbo": {
       "enterpriseOnly": "QuickBooks Online integration is only available in Enterprise Edition.",

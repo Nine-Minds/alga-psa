@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import type { IClient } from '@alga-psa/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
-import { Input } from '@alga-psa/ui/components/Input';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { PhoneMissed, PhoneIncoming, PhoneOutgoing } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -36,21 +37,13 @@ function formatDuration(seconds: number | null): string {
 }
 
 export interface TelephonyCallsPanelProps {
-  /**
-   * 'settings' embeds the panel under the provider cards on the integrations
-   * settings page; 'operational' is the standalone surface for techs and
-   * dispatchers — it hides itself entirely (no error, no empty shell) when the
-   * tenant has no telephony or the caller may not read the call log.
-   */
-  variant?: 'settings' | 'operational';
   initialOverview?: TelephonyOverview | null;
   showHeading?: boolean;
 }
 
 export function TelephonyCallsPanel({
-  variant = 'settings',
   initialOverview = null,
-  showHeading = variant === 'operational',
+  showHeading = true,
 }: TelephonyCallsPanelProps) {
   const { t } = useTranslation('msp/integrations');
   const [overview, setOverview] = useState<TelephonyOverview | null>(initialOverview);
@@ -59,9 +52,7 @@ export function TelephonyCallsPanel({
   // Call currently showing the ticket picker, and the options loaded for it.
   const [linkingCallId, setLinkingCallId] = useState<string | null>(null);
   const [linkableTickets, setLinkableTickets] = useState<TelephonyLinkableTicket[]>([]);
-  // Call currently showing the attribution picker, its search text and results.
-  const [resolvingCallId, setResolvingCallId] = useState<string | null>(null);
-  const [targetSearch, setTargetSearch] = useState('');
+  // Active clients backing the standard attribution picker shared by all rows.
   const [targets, setTargets] = useState<TelephonyResolutionTarget[]>([]);
 
   const load = useCallback(async () => {
@@ -127,8 +118,8 @@ export function TelephonyCallsPanel({
     }
   };
 
-  const loadTargets = useCallback(async (search: string) => {
-    const result = await listTelephonyResolutionTargets({ search });
+  const loadResolutionClients = useCallback(async () => {
+    const result = await listTelephonyResolutionTargets({ clientsOnly: true });
     if (!result.success) {
       setError(result.error ?? null);
       setTargets([]);
@@ -137,20 +128,29 @@ export function TelephonyCallsPanel({
     setTargets(result.targets);
   }, []);
 
-  const openResolutionPicker = async (call: TelephonyCallSummary) => {
-    setError(null);
-    setResolvingCallId(call.callRecordId);
-    setTargetSearch('');
-    setTargets([]);
-    await loadTargets('');
-  };
-
-  // Searching hits the database, so wait for the typist to pause.
   useEffect(() => {
-    if (!resolvingCallId) return;
-    const handle = setTimeout(() => void loadTargets(targetSearch), 250);
-    return () => clearTimeout(handle);
-  }, [resolvingCallId, targetSearch, loadTargets]);
+    if (!canResolve || !overview?.unresolvedCalls.length) {
+      setTargets([]);
+      return;
+    }
+    void loadResolutionClients();
+  }, [canResolve, overview?.unresolvedCalls.length, loadResolutionClients]);
+
+  const resolutionClients = useMemo<IClient[]>(() => targets.flatMap((target) => {
+    if (target.contactId || !target.clientId) return [];
+    return [{
+      client_id: target.clientId,
+      client_name: target.label,
+      client_type: target.clientType ?? null,
+      url: '',
+      is_inactive: false,
+      created_at: '',
+      updated_at: '',
+      billing_cycle: 'monthly',
+      is_tax_exempt: false,
+      tenant: '',
+    }];
+  }), [targets]);
 
   const resolveCall = async (call: TelephonyCallSummary, contactId: string | null, clientId: string | null) => {
     setBusy(true);
@@ -159,9 +159,6 @@ export function TelephonyCallsPanel({
       const result = await resolveTelephonyCall({ callRecordId: call.callRecordId, contactId, clientId });
       if (!result.success) {
         setError(result.error ?? null);
-      } else {
-        setResolvingCallId(null);
-        setTargets([]);
       }
       await load();
     } finally {
@@ -169,14 +166,9 @@ export function TelephonyCallsPanel({
     }
   };
 
-  // The operational surface never explains itself: no telephony, no permission,
-  // still loading — all render nothing rather than an error or an empty shell.
-  if (variant === 'operational' && (!overview || !overview.success || !overview.available)) {
-    return null;
-  }
-  // Embedded in settings the parent owns the paywall/forbidden states; bow out
-  // if the panel's own load disagrees rather than render a second message.
-  if (variant === 'settings' && overview && (!overview.success || !overview.available)) {
+  // This is an operational surface for Interactions → Calls. No telephony, no
+  // permission, or still loading all render nothing rather than an empty shell.
+  if (!overview || !overview.success || !overview.available) {
     return null;
   }
 
@@ -322,56 +314,20 @@ export function TelephonyCallsPanel({
                       ))}
                     </div>
                   )}
-                  {/* Unmatched calls have no candidates at all, so search is the
-                      only way to attribute them. */}
-                  {resolvingCallId === call.callRecordId ? (
-                    <div className="space-y-2">
-                      <Input
-                        id={`telephony-resolve-search-${call.callRecordId}`}
-                        value={targetSearch}
-                        disabled={!canResolve || busy}
-                        placeholder={t('integrations.telephony.unmatched.searchPlaceholder', {
-                          defaultValue: 'Search contacts and clients…',
-                        })}
-                        onChange={(event) => setTargetSearch(event.target.value)}
-                      />
-                      {targets.length === 0 ? (
-                        <p className="text-xs text-muted-foreground" id={`telephony-resolve-no-targets-${call.callRecordId}`}>
-                          {t('integrations.telephony.unmatched.noTargets', {
-                            defaultValue: 'No matching contacts or clients.',
-                          })}
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {targets.map((target, index) => (
-                            <Button
-                              key={`${call.callRecordId}-target-${target.contactId ?? target.clientId ?? index}`}
-                              size="sm"
-                              variant="outline"
-                              disabled={!canResolve || busy}
-                              onClick={() => void resolveCall(call, target.contactId, target.clientId)}
-                              id={`telephony-resolve-target-${call.callRecordId}-${index}`}
-                            >
-                              {t('integrations.telephony.unmatched.assignTo', { defaultValue: 'Assign to' })}{' '}
-                              {target.sublabel ? `${target.label} · ${target.sublabel}` : target.label}
-                            </Button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      disabled={!canResolve || busy}
-                      onClick={() => void openResolutionPicker(call)}
-                      id={`telephony-resolve-open-picker-${call.callRecordId}`}
-                    >
-                      {t('integrations.telephony.unmatched.chooseTarget', {
-                        defaultValue: 'Assign to a contact or client…',
+                  <div className="max-w-sm">
+                    <ClientPicker
+                      id={`telephony-resolve-client-${call.callRecordId}`}
+                      clients={resolutionClients}
+                      selectedClientId={null}
+                      onSelect={(clientId) => {
+                        if (clientId) void resolveCall(call, null, clientId);
+                      }}
+                      placeholder={t('integrations.telephony.unmatched.chooseTarget', {
+                        defaultValue: 'Assign to client…',
                       })}
-                    </Button>
-                  )}
+                      disabled={!canResolve || busy}
+                    />
+                  </div>
                 </li>
               ))}
             </ul>

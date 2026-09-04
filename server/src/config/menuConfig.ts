@@ -58,7 +58,8 @@ import {
   Star,
   Target,
   Ticket,
-  BadgeCheck
+  BadgeCheck,
+  Wrench
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -77,6 +78,7 @@ export interface MenuItem {
   availableEditions?: readonly MenuEdition[];
   underConstruction?: boolean;
   requiresSelfHost?: boolean;
+  requiredPermission?: string;
 }
 
 export interface NavigationSection {
@@ -179,7 +181,10 @@ export const navigationSections: NavigationSection[] = [
         name: 'Assets',
         translationKey: 'nav.assets',
         icon: Monitor,
-        href: '/msp/assets'
+        subItems: [
+          { name: 'All Assets', translationKey: 'nav.assetsAll', icon: Monitor, href: '/msp/assets' },
+          { name: 'Maintenance', translationKey: 'nav.assetsMaintenance', icon: Wrench, href: '/msp/assets/maintenance' }
+        ]
       },
       {
         name: 'Passwords',
@@ -481,7 +486,13 @@ export const billingNavigationSections: NavigationSection[] = [
     items: [
       { name: 'Usage Tracking', translationKey: 'nav.billing.usageTracking', icon: Gauge, href: '/msp/billing?tab=usage-tracking' },
       { name: 'Reports', translationKey: 'nav.billing.reports', icon: FileBarChart, href: '/msp/billing?tab=reports' },
-      { name: 'Accounting Exports', translationKey: 'nav.billing.accountingExports', icon: FileOutput, href: '/msp/billing?tab=accounting-exports' },
+      {
+        name: 'Accounting Exports',
+        translationKey: 'nav.billing.accountingExports',
+        icon: FileOutput,
+        href: '/msp/billing?tab=accounting-exports',
+        requiredPermission: 'accounting_integrations:exports_execute',
+      },
     ]
   }
 ];

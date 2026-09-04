@@ -397,6 +397,12 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
   });
 
   reg.stateView({
+    name: 'send-mails',
+    description: 'Outbound Graph sendMail requests captured by the simulator; these are not delivered email',
+    get: () => [...core.capturedSendMail],
+  });
+
+  reg.stateView({
     name: 'teams',
     description: 'Teams and their channels',
     get: () => [...core.teams.values()],

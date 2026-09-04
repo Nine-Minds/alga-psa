@@ -137,7 +137,7 @@ export const fetchTimeEntryChangeRequestsForTimeSheet = withAuth(async (
   try {
     const { knex: db } = await createTenantKnex();
 
-    if (!await hasPermission(user, 'timeentry', 'read', db)) {
+    if (!await hasPermission(user, 'time_entry', 'read', db)) {
       throw new Error('Permission denied: Cannot read time entry change requests');
     }
 

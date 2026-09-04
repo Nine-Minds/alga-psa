@@ -7,23 +7,17 @@ import type { RmmProvider } from '@alga-psa/types';
 import {
   readRmmIntegrationStatuses,
   writeDeviceSyncSettings,
-  type RmmIntegrationStatus as RmmIntegrationStatusType,
+  type RmmIntegrationStatus,
 } from '../../lib/rmm/rmmIntegrationStatus';
 
-// Re-declared rather than `export type { RmmIntegrationStatus }`: in a
-// 'use server' module the server-actions transform emits a runtime re-export
-// for the imported binding, and the erased type leaves a dev-only
-// "RmmIntegrationStatus is not defined" the moment any action in this graph is
-// invoked. An alias declaration has no binding to re-export.
-export type RmmIntegrationStatus = RmmIntegrationStatusType;
-
 // The device-sync bounds are NOT re-exported here: a 'use server' module may
-// only export async functions. Import them from lib/rmm/contracts instead.
+// only export async functions. Import shared types from lib/rmm/rmmIntegrationStatus
+// and bounds from lib/rmm/contracts instead.
 
 export const getRmmIntegrationStatuses = withAuth(async (user, { tenant }): Promise<{
   success: boolean;
   error?: string;
-  statuses?: Record<string, RmmIntegrationStatusType>;
+  statuses?: Record<string, RmmIntegrationStatus>;
 }> => {
   const permitted = await hasPermission(user as any, 'system_settings', 'read');
   if (!permitted) return { success: false, error: 'Forbidden' };

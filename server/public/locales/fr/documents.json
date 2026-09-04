@@ -4,6 +4,7 @@
     "amount": "Montant",
     "authorizedBy": "Autorisé par",
     "billTo": "Facturer à",
+    "billedTimeByTicket": "Temps facturé par ticket",
     "date": "Date",
     "description": "Description",
     "discounts": "Remises",
@@ -12,6 +13,7 @@
     "from": "De",
     "fulfilled": "Livré",
     "fulfillment": "Traitement",
+    "hours": "Heures",
     "invoice": "Facture",
     "invoiceNumber": "Facture n°",
     "invoiceTitle": "FACTURE",
@@ -44,6 +46,7 @@
     "quoteTitle": "DEVIS",
     "rate": "Tarif",
     "recurring": "Récurrent",
+    "service": "Service",
     "shipDate": "Date d'expédition",
     "shipTo": "Livrer à",
     "shipped": "Expédié",
@@ -53,6 +56,7 @@
     "subtotal": "Sous-total",
     "tax": "Taxes",
     "termsAndConditions": "Conditions générales",
+    "ticket": "Ticket",
     "total": "Total",
     "unitPrice": "Prix unitaire",
     "validUntil": "Valable jusqu'au",
@@ -60,6 +64,7 @@
     "yourPoNumber": "Votre bon de commande",
     "emptyState": {
       "noBillableLineItems": "Aucun article facturable",
+      "noBilledTimeDetail": "Aucun détail de temps facturé n’est disponible pour cette facture.",
       "noItemsOnOrder": "Aucun article sur cette commande",
       "noItemsToPick": "Aucun article à prélever",
       "noLineItems": "Aucun article",
@@ -68,6 +73,7 @@
       "noPhasesDefined": "Aucune phase définie"
     },
     "note": {
+      "billedTimePortalDetail": "Le détail des entrées de temps de chaque ticket est disponible dans le portail client.",
       "pickedBy": "Prélevé par : ____________________     Date : ____________",
       "preTaxTotals": "Les totaux indiqués sont hors taxes. Les taxes applicables sont calculées sur votre facture.",
       "thankYouForOrder": "Merci pour votre commande."

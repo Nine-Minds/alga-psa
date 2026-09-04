@@ -60,17 +60,58 @@ export class KnexInvoiceMappingRepository {
         builder
           .where('integration_type', params.adapterType)
           .where('alga_entity_type', 'invoice')
-          .where('alga_entity_id', params.invoiceId);
+          .where('alga_entity_id', params.invoiceId)
+          .whereNull('deleted_at');
       });
 
+    // Exact tenant + provider + type + realm match, no NULL-realm fallback:
+    // a live mapping in another company is not this company's document.
     if (params.targetRealm) {
+      query.andWhere('external_realm_id', params.targetRealm);
+    } else {
       query.andWhere((builder) => {
-        builder.where('external_realm_id', params.targetRealm as string).orWhereNull('external_realm_id');
+        builder.whereNull('external_realm_id');
       });
-      query.orderByRaw(
-        'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NULL THEN 1 ELSE 2 END',
-        [params.targetRealm]
-      );
+    }
+
+    const row = await query.first();
+    if (!row) {
+      return null;
+    }
+
+    return this.normalizeRow(row);
+  }
+
+  /**
+   * Like findInvoiceMapping, but returns a tombstoned (unlinked) row too, so
+   * the export path can distinguish "this invoice was never exported" from
+   * "this invoice was exported and then unlinked". A tombstoned document must
+   * be explicitly relinked or re-created — it must never silently re-export as
+   * a brand-new remote document (a duplicate).
+   */
+  async findUnlinkedInvoiceMapping(params: FindInvoiceMappingParams): Promise<InvoiceMappingRow | null> {
+    const query = tenantDb(this.knex, params.tenantId).table<InvoiceMappingDbRow>(TABLE_NAME)
+      .select(
+        'id',
+        'integration_type',
+        'alga_entity_id',
+        'external_entity_id',
+        'external_realm_id',
+        'metadata'
+      )
+      .where((builder) => {
+        builder
+          .where('integration_type', params.adapterType)
+          .where('alga_entity_type', 'invoice')
+          .where('alga_entity_id', params.invoiceId)
+          .whereNotNull('deleted_at');
+      });
+
+    // Realm-exact: external entity ids are provider-company-local, so a
+    // mapping from another realm — or a legacy realm-less row — must never
+    // resolve for a realm-scoped export or write.
+    if (params.targetRealm) {
+      query.andWhere('external_realm_id', params.targetRealm);
     } else {
       query.andWhere((builder) => {
         builder.whereNull('external_realm_id');
@@ -104,7 +145,9 @@ export class KnexInvoiceMappingRepository {
         created_at: now,
         updated_at: now
       })
-      .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+      // Matches idx_unique_alga_mapping, which includes the realm expression —
+      // the same invoice may be mapped once per realm.
+      .onConflict(this.knex.raw("(tenant, integration_type, alga_entity_type, alga_entity_id, COALESCE(external_realm_id, ''))"))
       .merge({
         external_entity_id: params.externalInvoiceId,
         external_realm_id: params.targetRealm ?? null,

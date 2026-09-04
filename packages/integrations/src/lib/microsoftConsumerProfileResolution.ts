@@ -74,6 +74,7 @@ export interface MicrosoftConsumerProfileResolution {
   tenantId: string;
   consumerType: MicrosoftProfileConsumer;
   profileId?: string;
+  profileDisplayName?: string;
   clientId?: string;
   clientSecret?: string;
   clientSecretRef?: string;
@@ -201,7 +202,20 @@ function getConsumerLabel(consumerType: MicrosoftProfileConsumer): string {
       return 'Calendar';
     case 'teams':
       return 'Teams';
+    case 'entra':
+      return 'Entra';
   }
+}
+
+/** Resolve an explicit persisted binding only; this is deliberately non-migrating. */
+export async function resolveMicrosoftConsumerProfileConfigBound(
+  tenantId: string,
+  consumerType: MicrosoftProfileConsumer
+): Promise<MicrosoftConsumerProfileResolution> {
+  const db = await getAdminConnection();
+  const secretProvider = await getSecretProviderInstance();
+  const binding = await getMicrosoftConsumerBindingRow(db, tenantId, consumerType);
+  return resolveConsumerProfileFromBinding({ db, tenantId, consumerType, secretProvider, binding });
 }
 
 function tenantScopedTable(db: any, table: string, tenant: string) {
@@ -586,6 +600,7 @@ async function resolveConsumerProfileFromBinding(input: {
     tenantId,
     consumerType,
     profileId: profile.profile_id,
+    profileDisplayName: profile.display_name,
     clientId: profile.client_id,
     clientSecret: clientSecret || undefined,
     clientSecretRef: profile.client_secret_ref,

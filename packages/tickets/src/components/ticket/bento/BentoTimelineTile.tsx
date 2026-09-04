@@ -18,6 +18,7 @@ import {
 import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEditorSkeleton';
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
+import { ClampedContent } from '@alga-psa/ui/components/ClampedContent';
 import StickyComposerDock from '@alga-psa/ui/components/StickyComposerDock';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
@@ -34,7 +35,7 @@ import {
   toggleCommentReaction,
   getCommentsReactionsBatch,
 } from '../../../actions/comment-actions/commentReactionActions';
-import type { CommentUserAuthor, CommentContactAuthor } from '../../../lib/commentAuthorResolution';
+import { resolveCommentAuthor, type CommentUserAuthor, type CommentContactAuthor } from '../../../lib/commentAuthorResolution';
 import type { TicketReactionsBootstrap } from '../../../lib/ticketScreenBootstrap';
 import { filterHiddenNoiseComments } from '../../../lib/commentNoise';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
@@ -598,6 +599,18 @@ export function BentoTimelineTile({
 
   const visible = filterByLane(nodes, filter);
 
+  // Clamp threshold scales with the reader's screen: ~1.5 viewports of
+  // timeline before the "Show all activity" fold. SSR fallback of 1000px is
+  // replaced on mount.
+  const [historyClampHeight, setHistoryClampHeight] = useState(1000);
+  useEffect(() => {
+    const update = () => setHistoryClampHeight(Math.max(800, Math.round(window.innerHeight * 1.3)));
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+
   const toggleOrder = useCallback(() => {
     const next = order === 'asc' ? 'desc' : 'asc';
     setOrder(next);
@@ -707,28 +720,19 @@ export function BentoTimelineTile({
           userNames={reactionUserNames}
           canViewCommentMetadataDebug={canViewCommentMetadataDebug}
         />
-        {replyingToCommentId === commentId && commentId ? (
-          <InlineReplyComposer
-            id={`${id}-reply-${commentId}`}
-            parentCommentId={commentId}
-            roomName={`ticket-${ticketId}-reply-${commentId}`}
-            initialInternal={Boolean(comment.is_internal)}
-            showInternalToggle={false}
-            isSubmitting={isSubmitting}
-            uploadFile={editUploadSession.uploadFile}
-            searchMentions={searchUsersForMentions}
-            onSubmit={async ({ content, parentCommentId, isInternal }) => {
-              const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
-              if (success) {
-                setReplyingToCommentId(null);
-              }
-            }}
-            onCancel={() => setReplyingToCommentId(null)}
-          />
-        ) : null}
       </>
     );
   };
+
+  // The active reply target: rendered as a screen-wide sticky dock at the
+  // bottom of the tile (like the add-comment dock) rather than inline under
+  // the comment, so the composer stays visible however tall the comment is.
+  const replyTargetComment = replyingToCommentId
+    ? conversations.find((comment) => comment.comment_id === replyingToCommentId) ?? null
+    : null;
+  const replyTargetName = replyTargetComment
+    ? resolveCommentAuthor(replyTargetComment, { userMap, contactMap }).displayName
+    : null;
 
   const composer = (
     <div id={`${id}-composer`} ref={composerRef} className="p-3">
@@ -950,6 +954,17 @@ export function BentoTimelineTile({
             : t('bento.timeline.nothingInLane', 'Nothing in this lane yet.')}
         </BentoTileEmpty>
       ) : (
+        // Height-based history clamp: a long timeline collapses to about 1.5
+        // viewports of content regardless of how items mix (one-line events vs
+        // tall comments). The visible top follows the chosen sort order.
+        // Disabled while an inline reply composer is open — its position:
+        // sticky can't escape an overflow-hidden clamp.
+        <ClampedContent
+          id={`${id}-history-clamp`}
+          maxHeight={historyClampHeight}
+          showMoreLabel={t('bento.timeline.showAllActivity', 'Show all activity')}
+          showLessLabel={t('bento.timeline.collapseActivity', 'Collapse older activity')}
+        >
         <ol id={`${id}-stream`} className="relative">
           {/* Continuous spine: a single line down the pin gutter (left-3 = the
               centre of the w-6 gutter), behind the coloured pins. */}
@@ -994,6 +1009,7 @@ export function BentoTimelineTile({
                           comment={group.root}
                           getCommentId={(comment) => comment.comment_id}
                           renderComment={(comment) => renderThreadComment(comment)}
+                          autoCollapseAfter={3}
                         />
                       );
                     })() : (
@@ -1005,11 +1021,41 @@ export function BentoTimelineTile({
             );
           })}
         </ol>
+        </ClampedContent>
+      )}
+
+      {replyTargetComment && replyingToCommentId && (
+        <div id={`${id}-reply-dock`} className="sticky bottom-2 z-20 pt-3">
+          <div className="rounded-lg bg-[rgb(var(--color-card))] shadow-lg">
+            <p className="px-3 pt-2 text-xs font-medium text-[rgb(var(--color-text-500))]">
+              {t('bento.timeline.replyingToComment', 'Replying to {{name}}', {
+                name: replyTargetName ?? t('bento.timeline.someone', 'Someone'),
+              })}
+            </p>
+            <InlineReplyComposer
+              id={`${id}-reply-${replyingToCommentId}`}
+              parentCommentId={replyingToCommentId}
+              roomName={`ticket-${ticketId}-reply-${replyingToCommentId}`}
+              initialInternal={Boolean(replyTargetComment.is_internal)}
+              showInternalToggle={false}
+              isSubmitting={isSubmitting}
+              uploadFile={editUploadSession.uploadFile}
+              searchMentions={searchUsersForMentions}
+              onSubmit={async ({ content, parentCommentId, isInternal }) => {
+                const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
+                if (success) {
+                  setReplyingToCommentId(null);
+                }
+              }}
+              onCancel={() => setReplyingToCommentId(null)}
+            />
+          </div>
+        </div>
       )}
 
       <StickyComposerDock
         id={`${id}-composer-dock`}
-        visible={showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible}
+        visible={!replyingToCommentId && (showComposer ? composerPlacement === 'bottom' : !headerAnchorVisible)}
         expanded={showComposer && composerPlacement === 'bottom'}
         placeholder={
           contactFirstName

@@ -666,11 +666,13 @@ async function simulateUsageCharges(
     );
     if (!(assumedQuantity > 0)) continue;
     if (!hasResolvableUsageRate(service)) {
-      diagnostics.push({
-        severity: "warning",
-        line_key: line.key,
-        message: `${service.service_name} has no ${currencyCode} usage rate, so its activity was omitted from invoice ${periodIndex + 1}.`,
-      });
+      if (!diagnostics.some((diagnostic) => diagnostic.line_key === line.key && diagnostic.message.startsWith(`${service.service_name} has no ${currencyCode} usage rate`))) {
+        diagnostics.push({
+          severity: "warning",
+          line_key: line.key,
+          message: `${service.service_name} has no ${currencyCode} usage rate, so its activity is omitted. Add a catalog or service rate to include it.`,
+        });
+      }
       continue;
     }
     usageRecords.push(
@@ -1001,11 +1003,13 @@ async function simulateHourlyCharges(
     }
 
     if (!hasResolvableHourlyRate(service)) {
-      diagnostics.push({
-        severity: "warning",
-        line_key: line.key,
-        message: `${service.service_name} has no ${currencyCode} hourly rate, so its hours were omitted from invoice ${periodIndex + 1}.`,
-      });
+      if (!diagnostics.some((diagnostic) => diagnostic.line_key === line.key && diagnostic.message.startsWith(`${service.service_name} has no ${currencyCode} hourly rate`))) {
+        diagnostics.push({
+          severity: "warning",
+          line_key: line.key,
+          message: `${service.service_name} has no ${currencyCode} hourly rate, so its hours are omitted. Add a catalog or service rate to include it.`,
+        });
+      }
       continue;
     }
 

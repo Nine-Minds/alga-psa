@@ -5,8 +5,12 @@ import { z } from 'zod';
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 export const dateStringSchema = z.string().regex(dateRegex, 'Date must be in YYYY-MM-DD format');
 
-const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-export const timeStringSchema = z.string().regex(timeRegex, 'Time must be in HH:MM format (24-hour)');
+// Seconds accepted and trimmed: Postgres `time` columns read back as HH:MM:SS.
+const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
+export const timeStringSchema = z
+  .string()
+  .regex(timeRegex, 'Time must be in HH:MM format (24-hour)')
+  .transform((value) => value.slice(0, 5));
 
 export const appointmentRequestStatusSchema = z.enum(['pending', 'approved', 'declined', 'cancelled']);
 

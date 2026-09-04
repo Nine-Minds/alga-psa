@@ -82,8 +82,8 @@
       "linkQuote": "Vincular um orçamento existente",
       "loadFailed": "Falha ao carregar a oportunidade",
       "loading": "Carregando oportunidade...",
-      "markLost": "Marca perdida",
-      "markWon": "Marcos venceu",
+      "markLost": "Marcar como perdida",
+      "markWon": "Marcar como ganha",
       "metadataTitle": "Oportunidade",
       "nextAction": "Próxima ação",
       "nextActionOverdue": "Próxima ação · atrasada",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} único",
       "thisQuarter": "Este trimestre ({{q}})",
       "weighted": "{{stage}} · ponderado {{pct}}%",
-      "won": "Venceu este período"
+      "won": "Ganho neste período"
     },
     "linkQuoteDialog": {
       "confirm": "Vincular cotação",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "O que a equipa deve saber se isto voltar?",
       "reason": "Motivo",
       "reasonPlaceholder": "Por que não avançou?",
-      "submit": "Marca perdida",
-      "title": "Marca perdida"
+      "submit": "Marcar como perdida",
+      "title": "Marcar como perdida"
     },
     "lossReason": {
       "chose_competitor": "Escolha um concorrente",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Revise o funil de vendas",
         "viewAssessmentDeals": "Ver ofertas de avaliação"
       },
-      "markLost": "Marca perdida",
+      "markLost": "Marcar como perdida",
       "moneyFound": "Dinheiro encontrado",
       "moneyFoundSource": "de faturamento, contratos e ativos",
       "needsYou_one": "{{count}} coisa precisa de você hoje.",
@@ -352,12 +352,12 @@
       "lost": "Perdido",
       "proposed": "Proposto",
       "qualified": "Qualificado",
-      "verbal": "verbais",
-      "won": "Ganhou"
+      "verbal": "Acordo verbal",
+      "won": "Ganho"
     },
     "status": {
       "lost": "Perdido",
-      "won": "Ganhou"
+      "won": "Ganho"
     },
     "steps": {
       "add": "Adicionar um passo",
@@ -464,7 +464,7 @@
       "whitespaceSuggestionCreated": "Sugestão pronta para revisão",
       "whitespaceSuggestionDismissed": "Esta sugestão foi rejeitada anteriormente",
       "whitespaceSuggestionKnown": "Esta sugestão já é conhecida",
-      "won": "Ganhou"
+      "won": "Ganho"
     },
     "type": {
       "expansion": "Expansão",
@@ -548,7 +548,7 @@
     "winDialog": {
       "body": "O negócio é fechado como ganho.",
       "bodyProspect": "{{client}} torna-se um cliente ativo.",
-      "confirm": "Marcos venceu",
+      "confirm": "Marcar como ganha",
       "convertQuote": "Converter uma cotação aceita em um rascunho de contrato (opcional)",
       "nextConvert": "Converta o orçamento aceito em um contrato abaixo, ou depois na tela do orçamento.",
       "nextSendQuote": "Nenhum orçamento aceito está vinculado ainda. Envie o orçamento, obtenha a aprovação e depois converta em contrato. Você ainda pode marcar como ganho agora.",
@@ -558,7 +558,7 @@
       "projectStart": "Data de início",
       "projectStatus": "Estado inicial",
       "projectTemplate": "Crie um projeto de integração (opcional)",
-      "title": "Marcos venceu"
+      "title": "Marcar como ganha"
     }
   }
 }

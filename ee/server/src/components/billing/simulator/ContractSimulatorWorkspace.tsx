@@ -507,7 +507,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
         .map((count) => ({
           value: String(count),
           label: t("contractSimulator.runBar.horizonOption", {
-            defaultValue: "{{count}} billing periods",
+            defaultValue: "{{count}} client billing periods",
             count,
           }),
         })),
@@ -700,7 +700,7 @@ const ContractSimulatorWorkspace: React.FC<ContractSimulatorWorkspaceProps> = ({
                   <CheckCircle2 className="h-3.5 w-3.5" />
                   {t("contractSimulator.runBar.lastRun", {
                     defaultValue:
-                      "Simulation current · {{count}} billing periods",
+                      "Simulation current · {{count}} client billing periods",
                     count: result?.periods.length ?? horizonCount,
                   })}
                 </>

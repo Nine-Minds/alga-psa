@@ -63,36 +63,37 @@ describe('T002: tenantDb metadata coverage (no DB required)', () => {
 
 describeDb('T002: FK direction guard', () => {
   let db: Knex;
+  let edges: Array<{ src_table: string; dst_table: string }>;
+
+  // Read the FK edges straight from pg_catalog (pg_constraint) rather than the
+  // information_schema views. The equivalent information_schema query joins
+  // constraint_column_usage, which is a very expensive view on a schema this
+  // size (~8s per call); under parallel CI load two such calls blew past the
+  // 20s test timeout. The catalog query is the same edge set in milliseconds,
+  // and computing it once in beforeAll keeps both assertions cheap.
+  async function foreignKeyEdges(): Promise<Array<{ src_table: string; dst_table: string }>> {
+    const result = await db.raw(
+      `SELECT DISTINCT src.relname AS src_table, dst.relname AS dst_table
+       FROM pg_constraint c
+       JOIN pg_class src ON src.oid = c.conrelid
+       JOIN pg_class dst ON dst.oid = c.confrelid
+       JOIN pg_namespace n ON n.oid = src.relnamespace
+       WHERE c.contype = 'f'
+         AND n.nspname = 'public'`,
+    );
+    return result.rows as Array<{ src_table: string; dst_table: string }>;
+  }
 
   beforeAll(async () => {
     db = await createTestDbConnection({ runSeeds: false });
+    edges = await foreignKeyEdges();
   }, 120_000);
 
   afterAll(async () => {
     await db?.destroy();
   });
 
-  async function foreignKeyEdges(): Promise<Array<{ src_table: string; dst_table: string }>> {
-    const result = await db.raw(
-      `SELECT DISTINCT kcu.table_name AS src_table, ccu.table_name AS dst_table
-       FROM information_schema.table_constraints tc
-       JOIN information_schema.key_column_usage kcu
-         ON kcu.constraint_catalog = tc.constraint_catalog
-        AND kcu.constraint_schema = tc.constraint_schema
-        AND kcu.constraint_name = tc.constraint_name
-        AND kcu.table_name = tc.table_name
-       JOIN information_schema.constraint_column_usage ccu
-         ON ccu.constraint_catalog = tc.constraint_catalog
-        AND ccu.constraint_schema = tc.constraint_schema
-        AND ccu.constraint_name = tc.constraint_name
-       WHERE tc.constraint_type = 'FOREIGN KEY'
-         AND tc.table_schema = 'public'`,
-    );
-    return result.rows as Array<{ src_table: string; dst_table: string }>;
-  }
-
   it('has no foreign key from any core table into a marketing table', async () => {
-    const edges = await foreignKeyEdges();
     const coreToMarketing = edges.filter(
       (edge) =>
         (CORE_TABLES as readonly string[]).includes(edge.src_table) &&
@@ -102,7 +103,6 @@ describeDb('T002: FK direction guard', () => {
   });
 
   it('has foreign keys from marketing tables into core tables', async () => {
-    const edges = await foreignKeyEdges();
     const marketingToCore = edges.filter(
       (edge) =>
         (MARKETING_TABLES as readonly string[]).includes(edge.src_table) &&

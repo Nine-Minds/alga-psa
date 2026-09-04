@@ -999,7 +999,7 @@ async function searchApprovalHits(params: {
   query: string;
   limit: number;
 }): Promise<TeamsMessageSearchHit[]> {
-  if (!(await hasPermission(params.user, 'timesheet', 'approve'))) {
+  if (!(await hasPermission(params.user, 'time_sheet', 'approve'))) {
     return [];
   }
 
