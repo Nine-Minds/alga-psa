@@ -397,8 +397,17 @@ const MONTH_END_CLOSE_REASON_LABELS: Record<CalendarMonthEndCloseEligibilityReas
   not_final_calendar_day: 'today is not the final calendar day of the service period',
 };
 
+/**
+ * Truncates a date-ish value to its date-only (YYYY-MM-DD) form. The recurring
+ * service-period `date` columns come back from the pg driver hydrated as
+ * JavaScript `Date` objects, so `String(value).slice(0, 10)` would render the
+ * English `Date#toString()` prefix ("Thu Oct 01") instead of the ISO day —
+ * which the month-end policy then rejects as an invalid ISO 8601 string.
+ * Normalize `Date` values through the same UTC-day slice the rest of the
+ * billing package uses for these columns; plain strings fall through untouched.
+ */
 function normalizeWindowDate(value: unknown): string {
-  return String(value).slice(0, 10);
+  return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
 }
 
 function monthEndClosePeriodLabel(servicePeriodStart: string, servicePeriodEnd: string): string {
@@ -410,9 +419,11 @@ async function fetchClientCadenceServicePeriodForMonthEndClose(params: {
   tenant: string;
   selectorInput: IRecurringDueSelectionInput;
 }): Promise<{
-  service_period_start: string;
-  service_period_end: string;
-  invoice_window_start: string;
+  // The pg driver hydrates the `date` columns it selects below as JavaScript
+  // `Date` objects (never strings); the union is honest about that hydration.
+  service_period_start: string | Date;
+  service_period_end: string | Date;
+  invoice_window_start: string | Date;
   due_position: 'arrears' | 'advance';
 } | null> {
   const executionWindow = params.selectorInput.executionWindow;
