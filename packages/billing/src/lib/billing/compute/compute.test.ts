@@ -420,6 +420,98 @@ describe("computeTimeBasedCharges", () => {
       ),
     ).toThrow(/Missing pricing for time entry/);
   });
+
+  it("freezes a ticket work-item snapshot with billed (rounded) minutes and integer money", async () => {
+    const config = {
+      config: {
+        ...HOURLY_CONFIG.config,
+        minimum_billable_time: 30,
+        round_up_to_nearest: 15,
+      },
+      userTypeRates: new Map<string, number>(),
+    };
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        serviceConfigMap: new Map([["svc-h", config]]),
+        timeEntries: [
+          entry({
+            billable_duration: 70, // rounds up to 75
+            work_item_id: "ticket-1",
+            work_item_type: "ticket",
+            ticket_number: "T-20260818-002",
+            ticket_title: "Email outage",
+            ticket_description: "Mail flow failed for all users.",
+            notes: "internal-only troubleshooting notes",
+          }),
+        ],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    const snapshot = result.charges[0].workItemSnapshot;
+    expect(snapshot).toMatchObject({
+      version: 1,
+      workItemType: "ticket",
+      workItemId: "ticket-1",
+      ticketNumber: "T-20260818-002",
+      title: "Email outage",
+      description: "Mail flow failed for all users.",
+      entryDate: "2026-08-05",
+      billedMinutes: 75,
+      rate: 15000,
+      netAmount: Math.round(1.25 * 15000),
+      serviceId: "svc-h",
+      serviceName: "Remote support",
+    });
+    // Customer-visibility rule: internal time-entry notes never enter the snapshot.
+    expect(JSON.stringify(snapshot)).not.toContain("internal-only");
+    // Snapshot is renderer metadata only — the canonical description input is untouched.
+    expect(result.charges[0].serviceName).toBe("Remote support");
+  });
+
+  it("snapshots project-task time under the task name with no ticket fields", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        timeEntries: [
+          entry({
+            work_item_id: "task-9",
+            work_item_type: "project_task",
+            project_task_name: "Data sync validation",
+            // Loader joins can leave stale ticket columns null for tasks.
+            ticket_number: null,
+            ticket_title: null,
+            ticket_description: null,
+          }),
+        ],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].workItemSnapshot).toMatchObject({
+      workItemType: "project_task",
+      workItemId: "task-9",
+      ticketNumber: null,
+      title: "Data sync validation",
+      description: null,
+    });
+  });
+
+  it("snapshots entries without a known work item as ad_hoc", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({ timeEntries: [entry()] }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].workItemSnapshot).toMatchObject({
+      workItemType: "ad_hoc",
+      workItemId: null,
+      ticketNumber: null,
+      title: null,
+      description: null,
+      billedMinutes: 120,
+      netAmount: 30000,
+    });
+  });
 });
 
 describe("computeUsageBasedCharges", () => {

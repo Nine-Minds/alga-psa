@@ -1838,7 +1838,9 @@
         "productItems": "Voci di prodotto",
         "items": "Elementi",
         "transformsSource": "{{binding}} (origine trasformazioni)",
-        "transformsOutput": "{{binding}} (output trasformazioni)"
+        "transformsOutput": "{{binding}} (output trasformazioni)",
+        "ticketGroups": "Tempo fatturato per ticket",
+        "timeEntries": "Inserimenti ore fatturati"
       },
       "presets": {
         "description": {
@@ -1856,6 +1858,46 @@
         "amount": {
           "label": "Importo",
           "hint": "Totale riga"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Numero e titolo del ticket"
+        },
+        "ticketDescription": {
+          "hint": "Descrizione del ticket visibile al cliente"
+        },
+        "hours": {
+          "label": "Ore"
+        },
+        "ticketHours": {
+          "hint": "Totale ore fatturate per il ticket"
+        },
+        "ticketRate": {
+          "hint": "Tariffa oraria («Tariffe miste» quando gli inserimenti differiscono)"
+        },
+        "ticketAmount": {
+          "hint": "Importo totale fatturato per il ticket"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data in cui è stato svolto il lavoro"
+        },
+        "entryTicket": {
+          "hint": "Numero del ticket di origine"
+        },
+        "entryTitle": {
+          "hint": "Titolo del ticket o nome dell'attività"
+        },
+        "entryHours": {
+          "hint": "Ore fatturate per l'inserimento"
+        },
+        "entryRate": {
+          "hint": "Tariffa oraria dell'inserimento"
+        },
+        "entryAmount": {
+          "hint": "Importo fatturato per l'inserimento"
         }
       },
       "sourceBinding": {

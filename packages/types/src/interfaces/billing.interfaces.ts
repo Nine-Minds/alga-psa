@@ -104,6 +104,43 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   // taxAllocationDetails?: any[]; // Removed in favor of direct fields and new tables
 }
 
+/**
+ * Immutable, renderer-safe snapshot of the source work item behind one billed
+ * time entry, captured at invoice generation and persisted on the
+ * `invoice_time_entries` link row (`work_item_snapshot`, nullable jsonb).
+ *
+ * Finalized invoices and their PDFs render from this snapshot only — never
+ * from the live ticket or time entry — so later edits to the source records
+ * cannot change an issued invoice. Invoices generated before the snapshot
+ * existed have NULL here and simply render without ticket-level detail
+ * (no backfill from mutable data, by design).
+ *
+ * Customer-visibility rule: only the ticket's own title and description are
+ * captured. Internal comments and time-entry notes are never included.
+ */
+export interface InvoiceTimeEntrySnapshot {
+  version: 1;
+  /** 'ticket' | 'project_task' | 'ad_hoc' provenance of the billed time. */
+  workItemType: 'ticket' | 'project_task' | 'ad_hoc' | null;
+  /** Ticket id or project-task id, preserved for traceability. */
+  workItemId: string | null;
+  ticketNumber: string | null;
+  /** Ticket title or project-task name. */
+  title: string | null;
+  /** Customer-visible ticket description (never internal notes/comments). */
+  description: string | null;
+  /** ISO date the billed work started. */
+  entryDate: string | null;
+  /** Billed duration in whole minutes, after minimum/rounding rules. */
+  billedMinutes: number;
+  /** Effective hourly rate in minor currency units. */
+  rate: number;
+  /** Net (pre-tax) amount in minor currency units. */
+  netAmount: number;
+  serviceId: string | null;
+  serviceName: string | null;
+}
+
 export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   serviceId: string;
   serviceName: string;
@@ -113,6 +150,12 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'time';
   entryId: string; // Added field for source time entry ID
+  /**
+   * Work-item snapshot persisted to `invoice_time_entries.work_item_snapshot`
+   * when this charge is invoiced. Renderer-only metadata: it must never feed
+   * the canonical charge description or accounting exports.
+   */
+  workItemSnapshot?: InvoiceTimeEntrySnapshot | null;
   write_down_amount?: number;
   write_down_reason?: 'project_cap';
 }
