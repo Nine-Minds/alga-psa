@@ -390,7 +390,7 @@
       "noServicesConfigured": "Nie skonfigurowano usług dla tego presetu",
       "notSet": "Nie ustawiono",
       "overrideBaseRate": "Nadpisz stawkę bazową",
-      "quantity": "Ilość",
+      "usageRecordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć te usługi.",
       "quantityShort": "Ilość: {{quantity}}",
       "ratePerUnit": "Stawka (za jednostkę)",
       "roundUpToNearestMinutes": "Zaokrąglij w górę do najbliższych (minuty)",
@@ -668,7 +668,7 @@
     "title": "Dodaj linie kontraktowe z presetów",
     "usageConfig": {
       "defaultRate": "Domyślnie: ${{rate}}",
-      "quantity": "Ilość",
+      "recordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć te usługi.",
       "ratePerUnit": "Stawka (za jednostkę)",
       "unitHint": "np. GB, wywołanie API, użytkownik",
       "unitOfMeasure": "Jednostka miary",

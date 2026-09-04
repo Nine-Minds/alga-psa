@@ -390,7 +390,7 @@
       "noServicesConfigured": "Nenhum serviço configurado para esta predefinição",
       "notSet": "Não definido",
       "overrideBaseRate": "Substituir taxa básica",
-      "quantity": "Quantidade",
+      "usageRecordDrivenNote": "Os serviços por utilização são faturados com base na utilização registada no acompanhamento de utilização para cada período de serviço. Um período sem registo de utilização não gera cobrança — registe a utilização (ou um zero explícito) em cada período para faturar estes serviços.",
       "quantityShort": "Quantidade: {{quantity}}",
       "ratePerUnit": "Taxa (por unidade)",
       "roundUpToNearestMinutes": "Arredondar para o mais próximo (minutos)",
@@ -668,7 +668,7 @@
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
       "defaultRate": "Padrão: ${{rate}}",
-      "quantity": "Quantidade",
+      "recordDrivenNote": "Os serviços por utilização são faturados com base na utilização registada no acompanhamento de utilização para cada período de serviço. Um período sem registo de utilização não gera cobrança — registe a utilização (ou um zero explícito) em cada período para faturar estes serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",
       "unitOfMeasure": "Unidade de Medida",

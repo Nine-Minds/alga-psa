@@ -390,7 +390,7 @@
       "noServicesConfigured": "No hay servicios configurados para este preajuste",
       "notSet": "Sin definir",
       "overrideBaseRate": "Anular tarifa base",
-      "quantity": "Cantidad",
+      "usageRecordDrivenNote": "Los servicios por uso se facturan según el uso registrado en el seguimiento de uso para cada período de servicio. Un período sin registro de uso no genera cargo: registre el uso (o un cero explícito) en cada período para facturar estos servicios.",
       "quantityShort": "Cant.: {{quantity}}",
       "ratePerUnit": "Tarifa (por unidad)",
       "roundUpToNearestMinutes": "Redondear al más cercano (minutos)",
@@ -668,7 +668,7 @@
     "title": "Agregar líneas de contrato desde preajustes",
     "usageConfig": {
       "defaultRate": "Predeterminado: ${{rate}}",
-      "quantity": "Cantidad",
+      "recordDrivenNote": "Los servicios por uso se facturan según el uso registrado en el seguimiento de uso para cada período de servicio. Un período sin registro de uso no genera cargo: registre el uso (o un cero explícito) en cada período para facturar estos servicios.",
       "ratePerUnit": "Tarifa (por unidad)",
       "unitHint": "p. ej., GB, llamada a API, usuario",
       "unitOfMeasure": "Unidad de medida",

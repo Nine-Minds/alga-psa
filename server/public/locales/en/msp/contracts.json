@@ -390,7 +390,7 @@
       "noServicesConfigured": "No services configured for this preset",
       "notSet": "Not set",
       "overrideBaseRate": "Override Base Rate",
-      "quantity": "Quantity",
+      "usageRecordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "quantityShort": "Qty: {{quantity}}",
       "ratePerUnit": "Rate (per unit)",
       "roundUpToNearestMinutes": "Round up to nearest (minutes)",
@@ -668,7 +668,7 @@
     "title": "Add Contract Lines from Presets",
     "usageConfig": {
       "defaultRate": "Default: ${{rate}}",
-      "quantity": "Quantity",
+      "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill these services.",
       "ratePerUnit": "Rate (per unit)",
       "unitHint": "e.g., GB, API call, user",
       "unitOfMeasure": "Unit of Measure",

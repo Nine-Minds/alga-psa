@@ -390,7 +390,7 @@
       "noServicesConfigured": "Geen services geconfigureerd voor deze preset",
       "notSet": "Niet ingesteld",
       "overrideBaseRate": "Basistarief overschrijven",
-      "quantity": "Hoeveelheid",
+      "usageRecordDrivenNote": "Verbruiksdiensten worden gefactureerd op basis van het in Verbruiksregistratie geregistreerde verbruik per serviceperiode. Een periode zonder verbruiksrecord levert geen kosten op — registreer het verbruik (of een expliciete nul) per periode om deze services te factureren.",
       "quantityShort": "Aantal: {{quantity}}",
       "ratePerUnit": "Tarief (per eenheid)",
       "roundUpToNearestMinutes": "Naar boven afronden op dichtstbijzijnde (minuten)",
@@ -668,7 +668,7 @@
     "title": "Contractregels uit presets toevoegen",
     "usageConfig": {
       "defaultRate": "Standaard: ${{rate}}",
-      "quantity": "Hoeveelheid",
+      "recordDrivenNote": "Verbruiksdiensten worden gefactureerd op basis van het in Verbruiksregistratie geregistreerde verbruik per serviceperiode. Een periode zonder verbruiksrecord levert geen kosten op — registreer het verbruik (of een expliciete nul) per periode om deze services te factureren.",
       "ratePerUnit": "Tarief (per eenheid)",
       "unitHint": "bijv. GB, API-aanroep, gebruiker",
       "unitOfMeasure": "Meeteenheid",

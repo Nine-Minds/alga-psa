@@ -387,7 +387,7 @@ export const copyPresetToContractLine = withAuth(async (
     presetId: string,
     overrides?: {
         base_rate?: number | null;
-        services?: Record<string, { quantity?: number; custom_rate?: number }>;
+        services?: Record<string, { custom_rate?: number }>;
         minimum_billable_time?: number;
         round_up_to_nearest?: number;
         cadence_owner?: CadenceOwner;
@@ -510,13 +510,17 @@ export const copyPresetToContractLine = withAuth(async (
                     // Determine configuration type based on contract line type
                     let configurationType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = preset.contract_line_type as any;
 
-                    // Create the base configuration
+                    // Create the base configuration.
+                    // Usage billing is record-driven: a configured quantity is never a billing
+                    // input, so new Usage configurations are created without one.
                     const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
                         contract_line_id: contractLineId,
                         service_id: presetService.service_id,
                         configuration_type: configurationType,
                         custom_rate: serviceOverride?.custom_rate ?? presetService.custom_rate ?? undefined,
-                        quantity: serviceOverride?.quantity ?? presetService.quantity ?? 1,
+                        quantity: configurationType === 'Usage'
+                            ? undefined
+                            : presetService.quantity ?? 1,
                         instance_name: undefined,
                         tenant: tenantId
                     };

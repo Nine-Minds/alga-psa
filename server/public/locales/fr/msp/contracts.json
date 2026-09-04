@@ -390,7 +390,7 @@
       "noServicesConfigured": "Aucun service configuré pour ce préréglage",
       "notSet": "Non défini",
       "overrideBaseRate": "Remplacer le tarif de base",
-      "quantity": "Quantité",
+      "usageRecordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ces services.",
       "quantityShort": "Qté : {{quantity}}",
       "ratePerUnit": "Tarif (par unité)",
       "roundUpToNearestMinutes": "Arrondir au plus proche (minutes)",
@@ -668,7 +668,7 @@
     "title": "Ajouter des lignes de contrat à partir des préréglages",
     "usageConfig": {
       "defaultRate": "Par défaut : ${{rate}}",
-      "quantity": "Quantité",
+      "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ces services.",
       "ratePerUnit": "Tarif (par unité)",
       "unitHint": "par ex., Go, appel API, utilisateur",
       "unitOfMeasure": "Unité de mesure",

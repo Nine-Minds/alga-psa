@@ -390,7 +390,7 @@
       "noServicesConfigured": "Keine Services für diesen Vorlagenbaustein konfiguriert",
       "notSet": "Nicht festgelegt",
       "overrideBaseRate": "Grundtarif überschreiben",
-      "quantity": "Menge",
+      "usageRecordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diese Dienste abzurechnen.",
       "quantityShort": "Menge: {{quantity}}",
       "ratePerUnit": "Tarif (pro Einheit)",
       "roundUpToNearestMinutes": "Auf nächstes (Minuten) aufrunden",
@@ -668,7 +668,7 @@
     "title": "Vertragslinien aus Vorlagenbausteinen hinzufügen",
     "usageConfig": {
       "defaultRate": "Standard: ${{rate}}",
-      "quantity": "Menge",
+      "recordDrivenNote": "Nutzungsbasierte Dienste werden anhand des in der Verbrauchserfassung erfassten Verbrauchs je Leistungszeitraum abgerechnet. Ein Zeitraum ohne Verbrauchsdatensatz erzeugt keine Abrechnung — erfasse den Verbrauch (oder eine explizite Null) für jeden Zeitraum, um diese Dienste abzurechnen.",
       "ratePerUnit": "Tarif (pro Einheit)",
       "unitHint": "z. B. GB, API-Aufruf, Benutzer",
       "unitOfMeasure": "Maßeinheit",
