@@ -210,6 +210,7 @@ export async function uploadEntityImage(
         // Logos preserve aspect ratio (avatars keep the square cover-crop). See
         // StorageService.uploadFile image-processing branch (alga0002162).
         isEntityLogo: isLogoUpload || false,
+        isFavicon: logoVariant === 'favicon',
       },
     );
 

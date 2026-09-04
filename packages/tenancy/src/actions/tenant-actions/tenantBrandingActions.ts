@@ -18,6 +18,16 @@ export interface TenantBranding {
    * pages). Absent means every surface keeps using `logoUrl`.
    */
   logoDarkUrl?: string;
+  /**
+   * Optional landscape wordmark (usually with the company name in it) for the
+   * expanded MSP side menu. Enterprise white-labeling only; every square frame
+   * keeps using `logoUrl`.
+   */
+  logoWideUrl?: string;
+  /** Wide wordmark for dark surfaces; falls back to `logoWideUrl`. */
+  logoWideDarkUrl?: string;
+  /** Browser tab icon for this tenant. Enterprise white-labeling only. */
+  faviconUrl?: string;
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
@@ -68,6 +78,9 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
   // Carry forward optional fields the caller didn't send so an older client or
   // another settings tab can never wipe them.
   const logoDarkUrl = branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl;
+  const logoWideUrl = branding.logoWideUrl ?? existingSettings.branding?.logoWideUrl;
+  const logoWideDarkUrl = branding.logoWideDarkUrl ?? existingSettings.branding?.logoWideDarkUrl;
+  const faviconUrl = branding.faviconUrl ?? existingSettings.branding?.faviconUrl;
   const portalSidebarStyle = branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle;
   const portalSidebarColor = branding.portalSidebarColor ?? existingSettings.branding?.portalSidebarColor;
   const portalFollowsTheme = isEnterprise
@@ -95,6 +108,9 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
     branding: {
       logoUrl: branding.logoUrl,
       logoDarkUrl,
+      logoWideUrl,
+      logoWideDarkUrl,
+      faviconUrl,
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,

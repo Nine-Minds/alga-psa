@@ -10,8 +10,16 @@ const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
 /** Branding key each logo variant writes to inside settings.branding. */
+const BRANDING_LOGO_KEYS: Record<EntityLogoVariant, string> = {
+  default: 'logoUrl',
+  dark: 'logoDarkUrl',
+  wide: 'logoWideUrl',
+  'wide-dark': 'logoWideDarkUrl',
+  favicon: 'faviconUrl',
+};
+
 const brandingLogoKey = (variant: EntityLogoVariant) =>
-  variant === 'dark' ? 'logoDarkUrl' : 'logoUrl';
+  BRANDING_LOGO_KEYS[variant] ?? BRANDING_LOGO_KEYS.default;
 
 /**
  * Upload a logo for the tenant
