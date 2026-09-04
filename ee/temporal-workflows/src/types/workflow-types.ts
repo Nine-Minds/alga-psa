@@ -188,6 +188,7 @@ export interface TenantCreationWorkflowState {
   adminUserId?: string;
   clientId?: string;
   emailSent?: boolean;
+  trialReminderScheduled?: boolean;
   error?: string;
   progress: number; // 0-100
 }
@@ -201,6 +202,72 @@ export interface TenantCreationCancelSignal {
 export interface TenantCreationUpdateSignal {
   field: string;
   value: any;
+}
+
+// Trial Payment Reminder Types
+//
+// Scheduled as an abandoned child of tenant creation: it waits until two days
+// before the Stripe trial converts to a paid subscription, re-checks that the
+// tenant is still billable, and only then emails the admin.
+export interface TrialPaymentReminderWorkflowInput {
+  tenantId: string;
+  stripeSubscriptionId: string; // Stripe external id (sub_...)
+  tenantName: string;
+  companyName?: string;
+  productCode?: 'psa' | 'algadesk';
+}
+
+export type TrialPaymentReminderSkipReason =
+  | 'no_trial'
+  | 'trial_already_ended'
+  | 'tenant_missing'
+  | 'tenant_suspended'
+  | 'subscription_cancelled'
+  | 'cancellation_scheduled'
+  | 'trial_end_unstable'
+  | 'unverifiable';
+
+export interface TrialPaymentReminderWorkflowResult {
+  emailSent: boolean;
+  skipped?: TrialPaymentReminderSkipReason;
+  trialEnd?: ISO8601String;
+  messageId?: string;
+  error?: string;
+}
+
+export interface ResolveTrialEndActivityInput {
+  stripeSubscriptionId: string;
+}
+
+export interface ResolveTrialEndActivityResult {
+  // null when the subscription never had a trial.
+  trialEndIso: ISO8601String | null;
+}
+
+export interface VerifyTrialReminderActivityInput {
+  tenantId: string;
+  stripeSubscriptionId: string;
+}
+
+export interface VerifyTrialReminderActivityResult {
+  sendable: boolean;
+  reason?: TrialPaymentReminderSkipReason;
+  // Live trial end, so the workflow can detect a trial that moved later.
+  currentTrialEndIso?: ISO8601String | null;
+}
+
+export interface SendTrialPaymentReminderActivityInput {
+  tenantId: string;
+  tenantName: string;
+  trialEndIso: ISO8601String;
+  companyName?: string;
+  productCode?: 'psa' | 'algadesk';
+}
+
+export interface SendTrialPaymentReminderActivityResult {
+  emailSent: boolean;
+  messageId?: string;
+  error?: string;
 }
 
 // Portal User Creation Types
