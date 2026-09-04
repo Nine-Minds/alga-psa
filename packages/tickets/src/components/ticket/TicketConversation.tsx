@@ -227,9 +227,9 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     componentLabel: 'TicketConversation',
     ticketId: ticket.ticket_id,
     userId: currentUser?.id,
-    trackDraftUploads: false,
+    trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: onClose,
+    onDiscard: () => { setReplyingToCommentId(null); closeCommentThreadPanel(); onClose(); },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
@@ -502,7 +502,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           contactMap={contactMap}
           onContentChange={onContentChange}
           onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
-          onClose={onClose}
+          onClose={existingCommentUploadSession.requestDiscard}
           onEdit={() => onEdit(mergedConversation)}
           onDelete={onDelete}
           onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
@@ -526,10 +526,11 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
               if (existingCommentUploadSession.isUploading) return;
               const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
               if (success) {
+                existingCommentUploadSession.resetDraftTracking();
                 setReplyingToCommentId(null);
               }
             }}
-            onCancel={() => setReplyingToCommentId(null)}
+            onCancel={existingCommentUploadSession.requestDiscard}
           />
         )}
       </>
@@ -906,7 +907,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <CommentThreadDrawer<IComment>
         id={`${compId}-comment-thread-drawer`}
         isOpen={Boolean(openPanelThreadGroup)}
-        onClose={closeCommentThreadPanel}
+        onClose={existingCommentUploadSession.requestDiscard}
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
@@ -914,9 +915,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
         showInternalToggle={false}
+        uploadFile={existingCommentUploadSession.uploadFile}
         onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
+          if (existingCommentUploadSession.isUploading) return;
           const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
           if (success) {
+            existingCommentUploadSession.resetDraftTracking();
             closeCommentThreadPanel();
           }
         }}

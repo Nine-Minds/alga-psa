@@ -329,6 +329,26 @@ export function TicketDetails({
     }
   };
 
+  const handleAddReplyComment = async (content: PartialBlock[], parentCommentId: string): Promise<boolean> => {
+    try {
+      const result = await addClientTicketComment(ticketId, JSON.stringify(content), false, false, parentCommentId);
+      if (isReturnedActionError(result)) {
+        handleReturnedActionError(result);
+        return false;
+      }
+      const details = await getClientTicketDetails(ticketId);
+      if (isReturnedActionError(details)) {
+        handleReturnedActionError(details);
+        return false;
+      }
+      setTicket(details);
+      return true;
+    } catch (error) {
+      handleError(error, t('messages.commentError', 'Failed to add comment'));
+      return false;
+    }
+  };
+
   const handleEdit = (comment: IComment) => {
     setCurrentComment(comment);
     setIsEditing(true);
@@ -849,6 +869,7 @@ export function TicketDetails({
                 editorKey={editorKey}
                 onNewCommentContentChange={handleNewCommentContentChange}
                 onAddNewComment={handleAddNewComment}
+                onAddReplyComment={handleAddReplyComment}
                 onTabChange={(tab) => {
                   if (tab !== 'internal') {
                     setActiveTab(tab);

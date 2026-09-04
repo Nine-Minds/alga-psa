@@ -411,7 +411,10 @@ export function BentoTimelineTile({
     userId: currentUser?.id,
     trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: () => { setHasDraft(false); setShowComposer(false); },
+    onDiscard: () => {
+      onNewCommentContentChange(DEFAULT_BLOCK);
+      setHasDraft(false); setShowComposer(false); setIsScheduleToggle(false); setScheduledPublishAt(undefined);
+    },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
@@ -422,9 +425,9 @@ export function BentoTimelineTile({
     componentLabel: 'BentoTimelineTile',
     ticketId,
     userId: currentUser?.id,
-    trackDraftUploads: false,
+    trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: onCloseEdit,
+    onDiscard: () => { setReplyingToCommentId(null); onCloseEdit(); },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
@@ -657,14 +660,8 @@ export function BentoTimelineTile({
   }, [composeUploadSession.isUploading, onAddNewComment, composerLane, resolutionCloseStatusId, notificationSuppression, isScheduleToggle, scheduledInstant, composeUploadSession]);
 
   const handleCancelCompose = useCallback(async () => {
-    if (composeUploadSession.isUploading) return;
-    await composeUploadSession.deleteTrackedDraftClipboardImages();
-    onNewCommentContentChange(DEFAULT_BLOCK);
-    setHasDraft(false);
-    setShowComposer(false);
-    setIsScheduleToggle(false);
-    setScheduledPublishAt(undefined);
-  }, [onNewCommentContentChange, composeUploadSession]);
+    await composeUploadSession.requestDiscard();
+  }, [composeUploadSession]);
 
   useEffect(() => {
     if (composerLane !== 'resolution') {
@@ -711,7 +708,7 @@ export function BentoTimelineTile({
           contactMap={contactMap}
           onContentChange={onContentChange}
           onSave={updates => { if (!editUploadSession.isUploading) onSaveComment(updates); }}
-          onClose={onCloseEdit}
+          onClose={editUploadSession.requestDiscard}
           onEdit={() => onEditComment(comment)}
           onDelete={onDeleteComment}
           onReply={
@@ -1051,10 +1048,11 @@ export function BentoTimelineTile({
                 if (editUploadSession.isUploading) return;
                 const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
                 if (success) {
+                  editUploadSession.resetDraftTracking();
                   setReplyingToCommentId(null);
                 }
               }}
-              onCancel={() => setReplyingToCommentId(null)}
+              onCancel={editUploadSession.requestDiscard}
             />
           </div>
         </div>

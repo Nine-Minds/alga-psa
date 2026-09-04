@@ -289,8 +289,8 @@ export class EventBus {
     }
   }
 
-  private getProcessedSetKey(tenantId: string): string {
-    return `processed_events:${tenantId}`;
+  private getProcessedSetKey(tenantId: string, channel: string): string {
+    return channel === this.defaultChannel ? `processed_events:${tenantId}` : `processed_events:${tenantId}:${channel}`;
   }
 
   private getEventTenantId(event: Event): string {
@@ -299,15 +299,15 @@ export class EventBus {
     return typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : 'unknown';
   }
 
-  private async isEventProcessed(event: Event): Promise<boolean> {
+  private async isEventProcessed(event: Event, channel: string): Promise<boolean> {
     const client = await getClient();
-    const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
+    const setKey = this.getProcessedSetKey(this.getEventTenantId(event), channel);
     return await client.sIsMember(setKey, event.id);
   }
 
-  private async markEventProcessed(event: Event): Promise<void> {
+  private async markEventProcessed(event: Event, channel: string): Promise<void> {
     const client = await getClient();
-    const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
+    const setKey = this.getProcessedSetKey(this.getEventTenantId(event), channel);
     await client.sAdd(setKey, event.id);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
@@ -317,19 +317,19 @@ export class EventBus {
     return this.handlerIds.get(handler) || handler.name || 'anonymous';
   }
 
-  private getProcessedHandlersSetKey(tenantId: string): string {
-    return `processed_event_handlers:${tenantId}`;
+  private getProcessedHandlersSetKey(tenantId: string, channel: string): string {
+    return channel === this.defaultChannel ? `processed_event_handlers:${tenantId}` : `processed_event_handlers:${tenantId}:${channel}`;
   }
 
-  private async isHandlerProcessed(event: Event, handlerKey: string): Promise<boolean> {
+  private async isHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<boolean> {
     const client = await getClient();
-    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
+    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event), channel);
     return await client.sIsMember(setKey, `${event.id}:${handlerKey}`);
   }
 
-  private async markHandlerProcessed(event: Event, handlerKey: string): Promise<void> {
+  private async markHandlerProcessed(event: Event, handlerKey: string, channel: string): Promise<void> {
     const client = await getClient();
-    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
+    const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event), channel);
     await client.sAdd(setKey, `${event.id}:${handlerKey}`);
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
@@ -501,7 +501,7 @@ export class EventBus {
       const forceRedelivery = message.message.force === '1';
 
       if (handlers.length > 0) {
-        const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event);
+        const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event, subscription.channel);
         if (!isProcessed) {
           // Invoke every registered handler for (eventType, channel) — not
           // just the first — and track success per (event, handler) so a
@@ -511,11 +511,11 @@ export class EventBus {
           for (const handler of handlers) {
             const handlerKey = this.getHandlerKey(handler);
             try {
-              if (!forceRedelivery && await this.isHandlerProcessed(event, handlerKey)) {
+              if (!forceRedelivery && await this.isHandlerProcessed(event, handlerKey, subscription.channel)) {
                 continue;
               }
               await handler(event);
-              await this.markHandlerProcessed(event, handlerKey);
+              await this.markHandlerProcessed(event, handlerKey, subscription.channel);
             } catch (error) {
               anyFailure = true;
               logger.error('[EventBus] Error in event handler:', {
@@ -532,7 +532,7 @@ export class EventBus {
             return;
           }
           if (!forceRedelivery) {
-            await this.markEventProcessed(event);
+            await this.markEventProcessed(event, subscription.channel);
           }
         } else {
           logger.info('[EventBus] Skipping already processed event:', {

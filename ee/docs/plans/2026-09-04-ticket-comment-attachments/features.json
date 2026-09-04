@@ -23,5 +23,20 @@
     "id": "F005",
     "description": "Committed publication and safe remove/abandon/edit/delete/scheduled lifecycle",
     "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Recipient email-code verification without an account and current document authorization for email bytes",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Durable publication recovery, observable provider outcomes and recoverable retry leases",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Tracked reply/edit cancellation and bounded exclusively owned draft storage cleanup",
+    "implemented": true
   }
 ]

@@ -494,13 +494,15 @@ export abstract class BaseEmailService {
         logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${providerInitError}`);
         return {
           success: false,
-          error: `Email provider not ready: ${providerInitError}`
+          error: `Email provider not ready: ${providerInitError}`,
+          metadata: { definitelyNotSent: true, retryable: true, errorCode: 'PROVIDER_NOT_READY' }
         };
       }
       logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
       return {
         success: false,
-        error: 'Email service is disabled or not configured'
+        error: 'Email service is disabled or not configured',
+        metadata: { definitelyNotSent: true, retryable: false, errorCode: 'PROVIDER_DISABLED' }
       };
     }
 
@@ -784,9 +786,9 @@ export abstract class BaseEmailService {
         error: error instanceof Error ? error.message : 'Unknown error',
         providerId: emailProvider.providerId,
         providerType: emailProvider.providerType,
-        metadata: error instanceof EmailProviderError ? {
-          retryable: error.isRetryable, errorCode: error.errorCode,
-          ...(error.metadata || {}),
+        metadata: error && typeof error === 'object' && (error as any).name === 'EmailProviderError' ? {
+          retryable: (error as any).isRetryable, errorCode: (error as any).errorCode,
+          ...((error as any).metadata || {}),
         } : undefined,
       };
     }

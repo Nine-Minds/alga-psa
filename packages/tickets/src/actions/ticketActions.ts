@@ -1,4 +1,5 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
@@ -1551,7 +1552,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
 
       // Publish comment added event
-      registerAfterCommit(trx, () => publishEvent({
+      await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -1566,7 +1567,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
             isInternal
           }
         }
-      }));
+      }, publishEvent);
 
       // Publish workflow v2 ticket message events (additive).
       try {

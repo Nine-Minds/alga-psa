@@ -1,3 +1,5 @@
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { persistCommentPublication } from '@shared/lib/ticketCommentAttachments';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
@@ -2204,25 +2206,16 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: null
       };
 
-      return {
-        response,
-        eventPayload: {
-          ticketId: ticketId,
-          userId: context.userId,
-          comment: {
-            id: comment.comment_id,
-            content: comment.note,
-            author: authorName,
-            isInternal: comment.is_internal
-          },
-          ...notificationSuppression,
-        }
+      const eventPayload = {
+        tenantId: context.tenant, ticketId, commentId: comment.comment_id, userId: context.userId,
+        comment: { id: comment.comment_id, content: comment.note, author: authorName, isInternal: comment.is_internal },
+        ...notificationSuppression,
       };
+      await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: eventPayload }, publishEvent);
+      return { response };
     });
 
-    // Publish after the transaction commits so email and in-app notification
-    // subscribers can load the ticket/comment rows reliably.
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
+    // Intent is persisted; after-commit dispatch and recurring recovery deliver it.
 
     return result.response;
   }

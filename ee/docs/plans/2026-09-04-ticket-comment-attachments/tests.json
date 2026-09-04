@@ -17,6 +17,21 @@
   {
     "id": "T004",
     "description": "Local UI and resulting controlled email smoke; focused regression tests and typechecks",
-    "implemented": false
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "description": "Actual portal listings, counts, folders and download actions enforce attachment lifecycle and board policy",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "description": "Provider/service/queue partial-recipient recovery, explicit 429 non-delivery and observable ambiguous outcomes",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "description": "Publication recovery after failed dispatch, recipient verification, upload cancellation and shared storage retry preservation",
+    "implemented": true
   }
 ]

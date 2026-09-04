@@ -1,7 +1,62 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, getConnection, registerAfterCommit } from '@alga-psa/db';
+import { randomUUID } from 'node:crypto';
 
 type Connection = Knex | Knex.Transaction;
+
+type CommentPublisher = (event: any, options?: { eventId: string; strict: boolean }) => Promise<void>;
+
+/** Reuse the scheduled publication outbox columns for immediate comments, including raw transactions. */
+export async function persistCommentPublication(trx: Knex.Transaction, event: any, publish?: CommentPublisher): Promise<void> {
+  if (!trx.isTransaction) throw new Error('Comment publication intent requires a transaction');
+  const { tenantId, commentId = event.payload.comment?.id } = event.payload;
+  const db = tenantDb(trx, tenantId);
+  const comment = await db.table('comments').where({ comment_id: commentId }).forUpdate().first();
+  if (!comment || comment.deleted_at || comment.publish_state !== 'published') return;
+  const eventId = comment.scheduled_publish_event_id || randomUUID();
+  await db.table('comments').where({ comment_id: commentId }).update({
+    scheduled_publish_event_id: eventId,
+    comment_publication_payload: comment.comment_publication_payload || JSON.stringify({ ...event.payload, commentId }),
+  });
+  if (publish) registerAfterCommit(trx, async () => {
+    await dispatchCommentPublication(await getConnection(tenantId), tenantId, commentId, publish);
+  }, `comment-publication:${commentId}`);
+}
+
+export async function dispatchCommentPublication(conn: Connection, tenant: string, commentId: string, publish: CommentPublisher): Promise<void> {
+  const db = tenantDb(conn, tenant);
+  const comment = await db.table('comments').where({ comment_id: commentId, publish_state: 'published' })
+    .whereNull('deleted_at').whereNull('scheduled_publish_dispatched_at').first();
+  if (!comment?.scheduled_publish_event_id || !comment.comment_publication_payload) return;
+  const payload = comment.comment_publication_payload;
+  await publish({ eventType: 'TICKET_COMMENT_ADDED', payload: { ...payload,
+    comment: { ...payload.comment, content: comment.note, isInternal: comment.is_internal },
+  } }, { eventId: comment.scheduled_publish_event_id, strict: true });
+  await db.table('comments').where({ comment_id: commentId, scheduled_publish_event_id: comment.scheduled_publish_event_id })
+    .whereNull('scheduled_publish_dispatched_at').update({ scheduled_publish_dispatched_at: conn.fn.now() });
+}
+
+/** Apply before DISTINCT, pagination and counts; other document associations cannot bypass this gate. */
+export function applyPublicCommentAttachmentFilter(query: Knex.QueryBuilder, conn: Connection, tenant: string, userId: string, alias = 'd') {
+  const db = tenantDb(conn, tenant);
+  const managed = db.table('ticket_comment_attachments as ca').select('ca.attachment_id')
+    .whereRaw('?? = ??', ['ca.document_id', `${alias}.document_id`]);
+  const publicRows = managed.clone().where('ca.state', 'attached');
+  db.tenantJoin(publicRows, 'comments as cc', 'cc.comment_id', 'ca.comment_id');
+  db.tenantJoin(publicRows, 'comment_threads as ct', 'ct.thread_id', 'cc.thread_id');
+  db.tenantJoin(publicRows, 'tickets as tk', 'tk.ticket_id', 'ca.ticket_id');
+  db.tenantJoin(publicRows, 'contacts as cp', 'cp.client_id', 'tk.client_id');
+  db.tenantJoin(publicRows, 'users as cu', 'cu.contact_id', 'cp.contact_name_id');
+  publicRows.whereRaw('?? = ??', ['cc.ticket_id', 'ca.ticket_id']).whereRaw('?? = ??', ['ct.ticket_id', 'ca.ticket_id'])
+    .where({ 'cc.publish_state': 'published', 'cc.is_internal': false, 'ct.is_internal': false,
+      'cu.user_id': userId, 'cu.user_type': 'client', 'cu.is_inactive': false }).whereNull('cc.deleted_at');
+  const boards = db.table('client_portal_visibility_groups as vg').select('vg.group_id')
+    .whereRaw('?? = ??', ['vg.group_id', 'cp.portal_visibility_group_id']).whereRaw('?? = ??', ['vg.client_id', 'cp.client_id']);
+  db.tenantJoin(boards, 'client_portal_visibility_group_boards as vb', 'vb.group_id', 'vg.group_id');
+  boards.whereRaw('?? = ??', ['vb.board_id', 'tk.board_id']);
+  publicRows.where(builder => builder.whereNull('cp.portal_visibility_group_id').orWhereExists(boards));
+  return query.where(builder => builder.whereNotExists(managed).orWhereExists(publicRows));
+}
 const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 
 /** Only server upload URLs are claim candidates; ordinary links never adopt documents. */

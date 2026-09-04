@@ -7,7 +7,7 @@ export function signAttachmentLink(claims: AttachmentLinkClaims, secret: string)
   const body = Buffer.from(JSON.stringify(claims)).toString('base64url');
   return `${body}.${createHmac('sha256', secret).update(`ticket-comment-attachment:v1:${body}`).digest('base64url')}`;
 }
-export function verifyAttachmentLink(token: string, secret: string, recipient: string, now = Date.now()): AttachmentLinkClaims | null {
+export function verifyAttachmentLink(token: string, secret: string, recipient?: string, now = Date.now()): AttachmentLinkClaims | null {
   if (!secret || token.length > 4096) return null;
   try {
     const [body, signature, extra] = token.split('.');
@@ -17,7 +17,8 @@ export function verifyAttachmentLink(token: string, secret: string, recipient: s
     if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) return null;
     const claims = JSON.parse(Buffer.from(body, 'base64url').toString()) as AttachmentLinkClaims;
     if (!Number.isFinite(claims.expiresAt) || claims.expiresAt <= now ||
-      claims.recipient !== recipient.trim().toLowerCase() ||
+      typeof claims.recipient !== 'string' || !claims.recipient.includes('@') ||
+      (recipient !== undefined && claims.recipient !== recipient.trim().toLowerCase()) ||
       ![claims.tenant, claims.ticketId, claims.commentId, claims.documentId].every(id => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id))) return null;
     return claims;
   } catch { return null; }

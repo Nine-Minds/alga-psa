@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Comment model method signature changes
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import Comment from '../../models/comment';
@@ -342,10 +343,10 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
         // Publish TICKET_COMMENT_ADDED event for mention notifications
-        // Note: Using try-catch to avoid blocking comment creation if event publishing fails
+        // Persist notification intent with the comment; failed intent writes must roll back.
         try {
           const eventComment = await Comment.get(trx, commentTenant, commentId);
-          registerAfterCommit(trx, () => publishEvent({
+          await persistCommentPublication(trx, {
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
@@ -367,11 +368,11 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
             }
-          }));
-          console.log(`[createComment] Published TICKET_COMMENT_ADDED event for comment:`, commentId);
+          }, publishEvent);
+          console.log(`[createComment] Persisted TICKET_COMMENT_ADDED intent for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
-          // Don't throw - allow comment creation to succeed even if event publishing fails
+          throw eventError; // A comment must not commit without its publication intent.
         }
 
         // Publish workflow v2 domain ticket message events (additive; no impact on legacy comment events).

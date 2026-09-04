@@ -8,11 +8,15 @@ import { NextRequest } from 'next/server';
 
 const routeSession = vi.hoisted(() => ({ user: null as any, permitted: true }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => routeSession.user }));
+vi.mock('@alga-psa/auth', async importOriginal => ({ ...await importOriginal<typeof import('@alga-psa/auth')>(),
+  withAuth: (fn: any) => (...args: any[]) => fn(routeSession.user, { tenant: routeSession.user?.tenant }, ...args),
+  hasPermission: async () => routeSession.permitted,
+}));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
 import {
   canReadCommentAttachment, reconcileCommentAttachments, expireCommentAttachmentDrafts,
-  listPublishedCommentAttachments, filterReadableCommentAttachments,
+  listPublishedCommentAttachments, filterReadableCommentAttachments, dispatchCommentPublication, persistCommentPublication,
 } from '@shared/lib/ticketCommentAttachments';
 import { signAttachmentLink, verifyAttachmentLink } from '@shared/lib/ticketCommentAttachmentToken';
 import {
@@ -110,7 +114,10 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     await service.updateComment(ticket,reply.comment_id,{comment_text:'[]'},context);
     expect(await listPublishedCommentAttachments(trx,tenant,ticket,reply.comment_id)).toEqual([]);
     expect((await listPublishedCommentAttachments(trx,tenant,ticket,created.comment_id)).map(d=>d.document_id)).toEqual([pdf.document]);
-    expect(publish).toHaveBeenCalledTimes(2); // Edits never resend existing files.
+    expect(publish).not.toHaveBeenCalled();
+    const intents = await table('comments').whereIn('comment_id',[created.comment_id,reply.comment_id]);
+    expect(intents.every(row => row.scheduled_publish_event_id && row.comment_publication_payload)).toBe(true);
+    expect(intents.every(row => !row.scheduled_publish_dispatched_at)).toBe(true);
   });
   it('rejects other actors, expired uploads, another ticket and a second comment claim', async () => {
     const {document,file} = await upload();
@@ -229,7 +236,7 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       await table('comments').where({comment_id:comment}).update({is_internal:true});
       expect((await GET(request())).status).toBe(403);
       routeSession.user = null;
-      expect((await GET(request())).status).toBe(401);
+      expect(await (await GET(request())).text()).toContain('A portal account is not required');
       expect(storage).toHaveBeenCalledTimes(1);
     } finally { connection.mockRestore(); storage.mockRestore(); }
   });
@@ -241,7 +248,14 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     await TicketModel.createComment({ticket_id:ticket,content:'Committed publication',author_id:actor,author_type:'internal'},tenant,trx,publisher as any,undefined,actor);
     expect(publisher.publishCommentCreated).not.toHaveBeenCalled();
     await trx.commit();
-    await vi.waitFor(() => expect(publisher.publishCommentCreated).toHaveBeenCalledTimes(1));
+    const intent = await tenantDb(conn,tenant).table('comments').whereNotNull('comment_publication_payload').first();
+    const dispatch = vi.fn().mockRejectedValueOnce(new Error('stream unavailable')).mockResolvedValue(undefined);
+    await expect(dispatchCommentPublication(conn,tenant,intent.comment_id,dispatch)).rejects.toThrow('stream unavailable');
+    expect((await tenantDb(conn,tenant).table('comments').where({comment_id:intent.comment_id}).first()).scheduled_publish_dispatched_at).toBeNull();
+    await dispatchCommentPublication(conn,tenant,intent.comment_id,dispatch);
+    await dispatchCommentPublication(conn,tenant,intent.comment_id,dispatch);
+    expect(dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatch.mock.calls[0][1].eventId).toBe(dispatch.mock.calls[1][1].eventId);
     try {
       const results = await Promise.allSettled([first,second].map(id => conn.transaction(async competing => {
         await reconcileCommentAttachments(competing,tenant,id,actor);
@@ -256,6 +270,229 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       }
       await tenantDb(conn,tenant).unscoped('tenants','remove isolated fixture tenant').where({tenant}).delete();
     }
+  });
+
+  it.each(['internal','draft','removed','scheduled','board-restricted'])('portal global actions exclude %s before pagination, counts and folder discovery', async state => {
+    const hidden = await upload('hidden.pdf');
+    await table('documents').where({document_id:hidden.document}).update({folder_path:'/secret-folder'});
+    if (state !== 'draft') await attach(hidden.file);
+    if (state === 'internal') await table('comments').where({comment_id:comment}).update({is_internal:true});
+    if (state === 'removed') await table('ticket_comment_attachments').where({document_id:hidden.document}).update({state:'removed'});
+    if (state === 'scheduled') await table('comments').where({comment_id:comment}).update({publish_state:'scheduled'});
+    if (state === 'board-restricted') {
+      const group = randomUUID();
+      await table('client_portal_visibility_groups').insert({tenant,group_id:group,client_id:client,name:'Restricted'});
+      const u = await table('users').where({user_id:clientUser}).first();
+      await table('contacts').where({contact_name_id:u.contact_id}).update({portal_visibility_group_id:group});
+    }
+    // A direct/shared association must never bypass the attachment policy.
+    await table('document_associations').insert({tenant,document_id:hidden.document,entity_type:'client',entity_id:client});
+    const normal = await upload('ordinary.pdf');
+    await table('ticket_comment_attachments').where({document_id:normal.document}).delete();
+    await table('documents').where({document_id:normal.document}).update({folder_path:'/ordinary'});
+    routeSession.user = {...await table('users').where({user_id:clientUser}).first(),tenant};
+    routeSession.permitted = true;
+    const connection = vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
+    try {
+      const {getClientDocuments,getClientDocumentFolders,downloadClientDocument} = await import('@alga-psa/client-portal/actions/client-portal-actions/client-documents');
+      const page = await getClientDocuments(1,1) as any;
+      expect(page.total).toBe(1); expect(page.totalPages).toBe(1);
+      expect(page.documents.map((d:any)=>d.document_id)).toEqual([normal.document]);
+      expect(page.documents[0].file_size).toBe(12);
+      expect(JSON.stringify(await getClientDocumentFolders())).not.toContain('secret-folder');
+      expect((await downloadClientDocument(normal.document) as any).document_id).toBe(normal.document);
+      await expect(downloadClientDocument(hidden.document)).rejects.toThrow('access denied');
+    } finally { connection.mockRestore(); }
+  });
+  it('rechecks document visibility before email bytes and guest fallback redemption', async () => {
+    const pdf = await upload(); await attach(pdf.file);
+    await table('documents').where({document_id:pdf.document}).update({is_client_visible:false});
+    const download=vi.fn();
+    const prepared=await prepareCommentAttachmentEmail({db:trx,tenant,ticketId:ticket,commentId:comment,recipient,maxAttachmentBytes:3000000,supportsAttachments:true,baseUrl:'http://localhost',download});
+    expect(download).not.toHaveBeenCalled(); expect(prepared.attachments).toEqual([]); expect(prepared.downloadLinks).toEqual([]);
+  });
+  it('guest mailbox verification binds browser, expires, limits attempts and rechecks current access', async () => {
+    const {issueAttachmentChallenge,redeemAttachmentChallenge} = await import('@/lib/notifications/ticketCommentAttachmentVerification');
+    const {authorizedRecipientCommentDocument} = await import('@/lib/notifications/ticketCommentAttachmentEmail');
+    const pdf = await upload(); await attach(pdf.file);
+    await table('users').where({user_id:clientUser}).delete();
+    const claims={tenant,ticketId:ticket,commentId:comment,documentId:pdf.document,recipient,expiresAt:Date.now()+3600000};
+    const token=signAttachmentLink(claims,'secret'); let code='';
+    const browser=await issueAttachmentChallenge(trx,claims,token,'secret',async c=>{code=c;});
+    expect(await authorizedRecipientCommentDocument(trx,tenant,ticket,comment,pdf.document,recipient)).toBeTruthy();
+    expect(await redeemAttachmentChallenge(trx,claims,token,'secret','other-browser',code)).toBe(false);
+    expect(await redeemAttachmentChallenge(trx,claims,token,'secret',browser,code,claims.expiresAt)).toBe(false);
+    expect(await redeemAttachmentChallenge(trx,claims,token,'secret',browser,code)).toBe(true);
+    expect(await redeemAttachmentChallenge(trx,claims,token,'secret',browser,code)).toBe(false);
+    await table('comments').where({comment_id:comment}).update({is_internal:true});
+    expect(await authorizedRecipientCommentDocument(trx,tenant,ticket,comment,pdf.document,recipient)).toBeNull();
+    const token2=signAttachmentLink({...claims,expiresAt:claims.expiresAt+1},'secret');
+    const browser2=await issueAttachmentChallenge(trx,claims,token2,'secret',async c=>{code=c;});
+    for(let i=0;i<5;i++) expect(await redeemAttachmentChallenge(trx,claims,token2,'secret',browser2,'000000')).toBe(false);
+    expect(await redeemAttachmentChallenge(trx,claims,token2,'secret',browser2,code)).toBe(false);
+  });
+  it('cleans expired exclusively owned drafts with retryable storage deletion and preserves shared content', async () => {
+    const {cleanupCommentAttachmentDrafts} = await import('@/lib/jobs/handlers/cleanupCommentAttachmentDrafts');
+    const owned=await upload(), shared=await upload('shared.pdf');
+    await table('document_associations').insert({tenant,document_id:shared.document,entity_type:'client',entity_id:client});
+    await table('ticket_comment_attachments').update({expires_at:new Date(0)});
+    const remove=vi.fn().mockRejectedValueOnce(new Error('storage unavailable')).mockResolvedValue(undefined);
+    await cleanupCommentAttachmentDrafts(trx,tenant,remove);
+    expect(await table('documents').where({document_id:owned.document}).first()).toBeUndefined();
+    expect(await table('documents').where({document_id:shared.document}).first()).toBeTruthy();
+    expect((await table('ticket_comment_attachments').where({document_id:shared.document}).first()).cleanup_completed_at).toBeTruthy();
+    expect(remove).toHaveBeenCalledTimes(1);
+    await cleanupCommentAttachmentDrafts(trx,tenant,remove);
+    expect(remove).toHaveBeenCalledTimes(2);
+    expect((await table('ticket_comment_attachments').where({document_id:owned.document}).first()).cleanup_completed_at).toBeTruthy();
+  });
+  it('preserves a file acquired by another document between failed cleanup and retry', async () => {
+    const { cleanupCommentAttachmentDrafts } = await import('@/lib/jobs/handlers/cleanupCommentAttachmentDrafts');
+    const owned = await upload();
+    await table('ticket_comment_attachments').update({ expires_at: new Date(0) });
+    const remove = vi.fn().mockRejectedValueOnce(new Error('storage unavailable'));
+    await cleanupCommentAttachmentDrafts(trx, tenant, remove);
+    const sharedId = randomUUID();
+    await table('documents').insert({ tenant, document_id: sharedId, file_id: owned.file,
+      document_name: 'Shared after staging', user_id: actor, created_by: actor });
+    await cleanupCommentAttachmentDrafts(trx, tenant, remove);
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(await table('documents').where({ document_id: sharedId }).first()).toBeTruthy();
+    expect((await table('external_files').where({ file_id: owned.file }).first()).deleted_at).toBeNull();
+  });
+  it('portal action claims new and reply files, keeps the public thread, and rejects hidden parents', async () => {
+    routeSession.user = { ...await table('users').where({ user_id: clientUser }).first(), tenant };
+    routeSession.permitted = true;
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const publisher = await import('@alga-psa/event-bus/publishers');
+    const live = await import('@alga-psa/tickets/lib/liveUpdates');
+    const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
+    const update = vi.spyOn(live, 'publishTicketUpdate').mockResolvedValue(undefined);
+    try {
+      const { addClientTicketComment } = await import('@alga-psa/client-portal/actions/client-portal-actions/client-tickets');
+      const pdf = await upload('portal.pdf', 'application/pdf', 12, clientUser);
+      expect(await addClientTicketComment(ticket, note(pdf.file), false, false)).toBe(true);
+      const root = await table('comments').where({ user_id: clientUser }).first();
+      const reply = await upload('portal-reply.webm', 'video/webm', 12, clientUser);
+      expect(await addClientTicketComment(ticket, note(reply.file), false, false, root.comment_id)).toBe(true);
+      const child = await table('comments').where({ parent_comment_id: root.comment_id }).first();
+      expect(child.thread_id).toBe(root.thread_id);
+      expect((await table('ticket_comment_attachments').where({ document_id: reply.document }).first()).comment_id).toBe(child.comment_id);
+      expect(child.comment_publication_payload).toBeTruthy();
+      expect((await table('comment_threads').where({ thread_id: root.thread_id }).first()).reply_count).toBe(1);
+      await table('comments').where({ comment_id: root.comment_id }).update({ is_internal: true });
+      expect(await addClientTicketComment(ticket, note(reply.file), false, false, root.comment_id)).not.toBe(true);
+    } finally { connection.mockRestore(); publish.mockRestore(); update.mockRestore(); }
+  });
+  it('recovers confirmed provider non-delivery through the queue without repeating a successful recipient, and exposes ambiguous outcomes', async () => {
+    const {TenantEmailService}=await import('@alga-psa/email');
+    const {ResendEmailProvider}=await import('@alga-psa/email/providers/ResendEmailProvider');
+    const {sendEventEmail}=await import('@/lib/notifications/sendEventEmail');
+    const {EventEmailRetryQueue}=await import('@/lib/notifications/EventEmailRetryQueue');
+    const pdf=await upload(); await attach(pdf.file);
+    await table('contacts').insert({tenant,contact_name_id:randomUUID(),client_id:client,full_name:'Second',email:'second@example.test'});
+    await table('tenant_email_templates').insert({tenant,name:'ticket-comment-added',language_code:'en',subject:'Recovery',html_content:'{{{comment.content}}}',text_content:'{{comment.text}}'});
+    const provider=new ResendEmailProvider('test-resend');
+    // Transport seam only: actual provider, Base/Tenant service, send boundary, ledger and queue execute.
+    (provider as any).initialized=true; (provider as any).config={apiKey:'test'};
+    let outcome: 'success'|'rejected'|'unknown'='success';
+    const transport=vi.fn(async()=>{
+      if(outcome==='rejected') throw {response:{status:429,data:{message:'Rate limited'},headers:{'retry-after':'1'}}};
+      if(outcome==='unknown') throw {code:'ECONNRESET'};
+      return {data:{id:randomUUID()}};
+    });
+    (provider as any).client={post:transport};
+    vi.spyOn(provider as any,'delay').mockResolvedValue(undefined);
+    const service=TenantEmailService.getInstance(tenant);
+    const snapshot=vi.spyOn(service as any,'refreshProviderState').mockResolvedValue({emailProvider:provider,providerInitError:null,fromAddress:'agent@example.test'});
+    const connection=vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
+    const tenantConnection=vi.spyOn(dbModule,'createTenantKnex').mockResolvedValue({knex:trx,tenant} as any);
+    const storage=vi.spyOn(StorageService,'downloadFile').mockResolvedValue({buffer:Buffer.from('%PDF-recovery')} as any);
+    const data=new Map<string,string>(), scores=new Map<string,Map<string,number>>();
+    const redis={get:async(k:string)=>data.get(k)||null,set:async(k:string,v:string)=>{data.set(k,v);},del:async(k:string)=>Number(data.delete(k)),
+      eval:async(script:string,args:any)=>{if(script.startsWith('local ids'))return 0;return Number(scores.get(args.keys[0])?.delete(args.arguments[0]));},
+      zAdd:async(k:string,x:any)=>{if(!scores.has(k))scores.set(k,new Map());scores.get(k)!.set(x.value,x.score);return 1;},
+      zRem:async(k:string,id:string)=>Number(scores.get(k)?.delete(id)),zRangeByScore:async(k:string)=>[...(scores.get(k)?.keys()||[])],zCard:async(k:string)=>scores.get(k)?.size||0};
+    (EventEmailRetryQueue as any).instance=null;
+    const queue=EventEmailRetryQueue.getInstance({checkIntervalMs:3600000}); await queue.initialize(async()=>redis as any);
+    const params={tenantId:tenant,to:recipient,subject:'Recovery',template:'ticket-comment-added',context:{ticket:{id:'ATT-1'},comment:{content:'ignored'}},replyContext:{ticketId:ticket,commentId:comment}};
+    routeSession.permitted=true;
+    try {
+      await sendEventEmail(params);
+      expect(transport).toHaveBeenCalledTimes(1);
+      outcome='rejected';
+      const second={...params,to:'second@example.test'};
+      await expect(sendEventEmail(second)).rejects.toMatchObject({isRetryable:true,errorCode:'429',metadata:{definitelyNotSent:true}});
+      expect((await table('ticket_comment_email_deliveries').where({recipient:second.to}).first()).state).toBe('failed');
+      await queue.enqueue(second); await queue.enqueue(params);
+      outcome='success';
+      await (queue as any).processReady();
+      expect(transport).toHaveBeenCalledTimes(6); // one accepted + four rejected HTTP attempts + one recovered
+      expect((await table('ticket_comment_email_deliveries').where({recipient:second.to}).first())).toMatchObject({state:'sent',attempts:2});
+      expect((await table('ticket_comment_email_deliveries').where({recipient}).first())).toMatchObject({state:'sent',attempts:1});
+      const ambiguous=await makeComment(); const otherPdf=await upload(); await attach(otherPdf.file,ambiguous);
+      outcome='unknown'; const unknown={...params,replyContext:{ticketId:ticket,commentId:ambiguous}};
+      await expect(sendEventEmail(unknown)).rejects.toMatchObject({isRetryable:false,errorCode:'ECONNRESET'});
+      const before=transport.mock.calls.length;
+      await queue.enqueue(unknown); await (queue as any).processReady();
+      expect(transport).toHaveBeenCalledTimes(before);
+      expect((await table('ticket_comment_email_deliveries').where({comment_id:ambiguous}).first())).toMatchObject({state:'sending',requires_reconciliation:true,error_code:'ECONNRESET'});
+      expect([...data.keys()].some(k=>k.includes('reconciliation:'))).toBe(true);
+    } finally { await queue.shutdown(); connection.mockRestore();tenantConnection.mockRestore();storage.mockRestore();snapshot.mockRestore(); }
+  });
+
+  it('scheduled handler commits publication and retries failed dispatch with the same ID', async () => {
+    const publishers=await import('@alga-psa/event-bus/publishers');
+    const pdf=await upload();await attach(pdf.file);
+    await table('comments').where({comment_id:comment}).update({publish_state:'scheduled',scheduled_publish_at:new Date(Date.now()-60000)});
+    await table('tickets').where({ticket_id:ticket}).update({response_state:'awaiting_client'});
+    expect(await listPublishedCommentAttachments(trx,tenant,ticket,comment)).toEqual([]);
+    const connection=vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
+    const publish=vi.spyOn(publishers,'publishEvent').mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
+    try {
+      const {publishScheduledCommentHandler}=await import('@/lib/jobs/handlers/publishScheduledCommentHandler');
+      await expect(publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:comment})).rejects.toThrow('Redis unavailable');
+      const pending=await table('comments').where({comment_id:comment}).first();
+      expect(pending.publish_state).toBe('published');expect(pending.scheduled_publish_dispatched_at).toBeNull();
+      await publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:comment});
+      await publishScheduledCommentHandler({tenantId:tenant,ticketId:ticket,commentId:comment});
+      expect(publish).toHaveBeenCalledTimes(2);
+      expect(publish.mock.calls[0][1]?.eventId).toBe(publish.mock.calls[1][1]?.eventId);
+      expect(await listPublishedCommentAttachments(trx,tenant,ticket,comment)).toHaveLength(1);
+    } finally {connection.mockRestore();publish.mockRestore();}
+  });
+  it('guest download POST requires the delivered code and denies revoked or expired links without an account', async () => {
+    const {TenantEmailService}=await import('@alga-psa/email');
+    const {GET,POST}=await import('@/app/api/ticket-comment-attachments/download/route');
+    const pdf=await upload();await attach(pdf.file);
+    await table('users').where({user_id:clientUser}).delete();routeSession.user=null;
+    const connection=vi.spyOn(dbModule,'createTenantKnex').mockResolvedValue({knex:trx,tenant} as any);
+    const storage=vi.spyOn(StorageService,'downloadFile').mockResolvedValue({buffer:Buffer.from('%PDF-guest')} as any);
+    let code='';
+    const send=vi.spyOn(TenantEmailService.getInstance(tenant),'sendEmail').mockImplementation(async params=>{
+      expect(params.to).toBe(recipient);
+      const rendered=await params.templateProcessor!.process({});
+      code=rendered.text!.match(/code is (\d{6})/)![1];return {success:true};
+    });
+    try {
+      const secret=await attachmentSigningSecret();
+      const claims={tenant,ticketId:ticket,commentId:comment,documentId:pdf.document,recipient,expiresAt:Date.now()+3600000};
+      const token=signAttachmentLink(claims,secret);
+      const post=(action:string,entered='',cookie='',signed=token)=>{
+        const body=new FormData();body.set('token',signed);body.set('action',action);body.set('code',entered);
+        return new NextRequest('http://localhost/api/ticket-comment-attachments/download',{method:'POST',body,headers:{origin:'http://localhost',...(cookie?{cookie}: {})}});
+      };
+      const page=await GET(new NextRequest('http://localhost/api/ticket-comment-attachments/download?token='+encodeURIComponent(token)));
+      expect(page.headers.get('referrer-policy')).toBe('same-origin');
+      const challenge=await POST(post('send'));expect(challenge.status).toBe(200);expect(send).toHaveBeenCalledOnce();
+      const cookie=challenge.headers.get('set-cookie')!.split(';')[0];
+      expect((await POST(post('verify',code))).status).toBe(403);
+      const response=await POST(post('verify',code,cookie));expect(response.status).toBe(200);expect(await response.text()).toBe('%PDF-guest');
+      expect((await POST(post('verify',code,cookie))).status).toBe(403);
+      expect((await POST(post('send','','',signAttachmentLink({...claims,expiresAt:0},secret)))).status).toBe(403);
+      await table('documents').where({document_id:pdf.document}).update({is_client_visible:false});
+      expect((await POST(post('send'))).status).toBe(403);expect(send).toHaveBeenCalledOnce();
+    } finally {connection.mockRestore();storage.mockRestore();send.mockRestore();}
   });
 
 });

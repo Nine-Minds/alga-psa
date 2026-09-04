@@ -390,7 +390,8 @@ export class ResendEmailProvider implements IEmailProvider {
   private shouldRetry(error: any): boolean {
     const status = error?.response?.status;
     if (!status) return false;
-    return status === 429 || status >= 500;
+    // Only an explicit rejection is safe to retry without provider idempotency.
+    return status === 429;
   }
 
   private calculateBackoffDelay(attempt: number, baseDelay: number): number {
@@ -410,7 +411,12 @@ export class ResendEmailProvider implements IEmailProvider {
       `${message}${status ? ` (status ${status})` : ''}${data?.message ? `: ${data.message}` : ''}`,
       this.providerId,
       this.providerType,
-      shouldRetry
+      shouldRetry,
+      status ? String(status) : String(error?.code || 'RESEND_OUTCOME_UNKNOWN'),
+      { definitelyNotSent: Boolean(status && status >= 400 && status < 500),
+        requiresReconciliation: !status || status >= 500,
+        ...(status === 429 ? { retryAfterMs: Math.max(1000, Number(error?.response?.headers?.['retry-after'] || 30) * 1000) } : {}),
+      }
     );
   }
 }

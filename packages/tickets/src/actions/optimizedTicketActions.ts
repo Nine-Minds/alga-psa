@@ -1,4 +1,5 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
@@ -3404,8 +3405,7 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) registerAfterCommit(trx, () =>
-      publishEvent({
+    if (!isScheduled) await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -3423,9 +3423,7 @@ export const addTicketCommentWithCache = withAuth(async (
           suppressContactNotifications,
           suppressInternalNotifications,
         }
-      }),
-      `TICKET_COMMENT_ADDED ticket=${ticketId}`
-    );
+      }, publishEvent);
 
     // Publish workflow v2 ticket message events (additive).
     if (!isScheduled) try {

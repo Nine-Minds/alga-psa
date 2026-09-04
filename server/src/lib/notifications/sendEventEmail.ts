@@ -403,7 +403,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
           baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
         });
-        if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (sign in with this recipient email):\n' + prepared.downloadLinks.join('\n');
+        if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (verify the recipient email; no portal account required):\n' + prepared.downloadLinks.join('\n');
         params = { ...params, attachments: prepared.attachments, context: {
           ...params.context,
           comment: { ...(params.context.comment as Record<string, unknown> || {}),
@@ -470,7 +470,13 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
-    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) return;
+    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) {
+      const delivery = await tenantDb(knex, params.tenantId).table('ticket_comment_email_deliveries')
+        .where({ comment_id: attachmentCommentId!, recipient: params.to.trim().toLowerCase() }).first();
+      if (delivery?.state === 'sent') return;
+      throw new EmailProviderError('Comment email has an unresolved provider outcome; reconcile before retrying.',
+        'unknown', 'unknown', false, 'COMMENT_DELIVERY_RECONCILIATION_REQUIRED', { requiresReconciliation: true });
+    }
     const result = await service.sendEmail({
       revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
@@ -488,6 +494,16 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       providerId: params.providerId,
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
+    }).catch(async (error: unknown) => {
+      if (!managedCommentDelivery) throw error;
+      const providerError = error as { message?: string; errorCode?: string; metadata?: Record<string, unknown>; isRetryable?: boolean };
+      const notSent = providerError.metadata?.definitelyNotSent === true;
+      await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, notSent ? 'failed' : 'sending', {
+        error: providerError.message || 'Email service failed with an unknown outcome', errorCode: providerError.errorCode || 'OUTCOME_UNKNOWN',
+      });
+      throw new EmailProviderError(providerError.message || 'Email delivery requires reconciliation', 'unknown', 'unknown',
+        notSent && providerError.isRetryable === true, providerError.errorCode || 'OUTCOME_UNKNOWN',
+        { ...providerError.metadata, requiresReconciliation: !notSent });
     });
 
     if (managedCommentDelivery) {
@@ -496,7 +512,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
       } else if (result.metadata?.definitelyNotSent === true ||
         ['COMMENT_RATE_LIMITED', '429', 'TooManyRequests', 'EAUTH', 'EENVELOPE'].includes(String(result.metadata?.errorCode))) {
-        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed');
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
+      } else {
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
       }
     }
 

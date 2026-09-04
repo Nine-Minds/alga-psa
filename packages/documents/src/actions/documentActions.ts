@@ -611,7 +611,8 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
   trx: Knex.Transaction,
   tenant: string,
   user: IUser,
-  documents: T[]
+  documents: T[],
+  verifiedRecipientLifecycleAccess?: (documentId: string) => Promise<boolean>
 ): Promise<T[]> {
   if (documents.length === 0) {
     return [];
@@ -673,7 +674,7 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
       const deniedByClientVisibility =
         user.user_type === 'client' && !isOwnedBySubject && !isClientVisible;
       const allowed = decision.allowed && !deniedByClientVisibility &&
-        await canReadCommentAttachment(trx, tenant, user.user_id, document.document_id);
+        await (verifiedRecipientLifecycleAccess ? verifiedRecipientLifecycleAccess(document.document_id) : canReadCommentAttachment(trx, tenant, user.user_id, document.document_id));
 
       return {
         allowed,

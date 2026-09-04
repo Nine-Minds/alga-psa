@@ -43,7 +43,7 @@ export class EventEmailRetryQueue {
   private isInitialized = false;
   private isProcessing = false;
   private readonly config: EventEmailRetryQueueConfig;
-  private readonly prefix = 'alga-psa:event-email-retry:';
+  private readonly prefix = `${process.env.REDIS_EVENT_STREAM_PREFIX || 'alga-psa:'}event-email-retry:`;
 
   private constructor(config: Partial<EventEmailRetryQueueConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
@@ -153,12 +153,13 @@ export class EventEmailRetryQueue {
       return;
     }
 
+    await this.recoverInterruptedProcessing();
     const ids = await this.redis.zRangeByScore(this.getQueueKey(), 0, Date.now(), {
       LIMIT: { offset: 0, count: this.config.batchSize },
     });
 
     for (const id of ids) {
-      const claimed = await this.redis.zRem(this.getQueueKey(), id);
+      const claimed = await this.claimForProcessing(id);
       if (claimed === 0) {
         continue;
       }
@@ -166,10 +167,10 @@ export class EventEmailRetryQueue {
       const dataKey = this.getDataKey(id);
       const raw = await this.redis.get(dataKey);
       if (!raw) {
+        await this.redis.set(`${this.prefix}reconciliation:${id}`, JSON.stringify({ id, failedAt: Date.now(), error: 'Retry payload expired or missing' }));
+        await this.completeProcessing(id);
         continue;
       }
-
-      await this.redis.del(dataKey);
 
       let entry: EventEmailRetryEntry;
       try {
@@ -179,11 +180,14 @@ export class EventEmailRetryQueue {
           id,
           error: error instanceof Error ? error.message : 'Unknown error',
         });
+        await this.redis.set(`${this.prefix}reconciliation:${id}`, JSON.stringify({ id, raw, failedAt: Date.now(), error: 'Malformed retry payload' }));
+        await this.completeProcessing(id);
         continue;
       }
 
       try {
         await sendEventEmail(entry.params);
+        await this.completeProcessing(id);
         logger.info('[EventEmailRetryQueue] Retried event email successfully', {
           id: entry.id,
           tenantId: entry.params.tenantId,
@@ -192,26 +196,29 @@ export class EventEmailRetryQueue {
           retryCount: entry.retryCount,
         });
       } catch (error) {
-        if (error instanceof EmailProviderError && error.isRetryable) {
+        if (error && typeof error === 'object' && (error as EmailProviderError).name === 'EmailProviderError' && (error as EmailProviderError).isRetryable) {
           const nextRetryCount = entry.retryCount + 1;
           if (nextRetryCount < this.config.maxRetries) {
             await this.enqueue(entry.params, {
               retryCount: nextRetryCount,
-              retryAfterMs: this.extractRetryAfterMs(error),
+              retryAfterMs: this.extractRetryAfterMs(error as EmailProviderError),
             });
 
+            await this.completeProcessing(id);
             logger.warn('[EventEmailRetryQueue] Retryable event email failure requeued', {
               id: entry.id,
               tenantId: entry.params.tenantId,
               to: entry.params.to,
               template: entry.params.template,
               retryCount: nextRetryCount,
-              error: error.message,
+              error: (error as Error).message,
             });
             continue;
           }
         }
 
+        await this.redis.set(`${this.prefix}reconciliation:${entry.id}`, JSON.stringify({ ...entry, failedAt: Date.now(), error: error instanceof Error ? error.message : String(error) }));
+        await this.completeProcessing(id);
         logger.error('[EventEmailRetryQueue] Event email retry exhausted or became non-retryable', {
           id: entry.id,
           tenantId: entry.params.tenantId,
@@ -222,6 +229,26 @@ export class EventEmailRetryQueue {
         });
       }
     }
+  }
+
+  /** Atomic move retains the payload until completion; expired processing leases are recovered. */
+  private async claimForProcessing(id: string): Promise<number> {
+    const redis = this.redis as RedisClientLike & { eval(script: string, args: { keys: string[]; arguments: string[] }): Promise<number> };
+    return redis.eval(`if redis.call('ZREM', KEYS[1], ARGV[1]) == 1 then
+      redis.call('ZADD', KEYS[2], ARGV[2], ARGV[1]); return 1 end; return 0`,
+      { keys: [this.getQueueKey(), `${this.prefix}processing`], arguments: [id, String(Date.now() + 10 * 60_000)] });
+  }
+
+  private async recoverInterruptedProcessing(): Promise<void> {
+    const redis = this.redis as RedisClientLike & { eval(script: string, args: { keys: string[]; arguments: string[] }): Promise<number> };
+    await redis.eval(`local ids = redis.call('ZRANGEBYSCORE', KEYS[1], 0, ARGV[1], 'LIMIT', 0, 100)
+      for _, id in ipairs(ids) do redis.call('ZREM', KEYS[1], id); redis.call('ZADD', KEYS[2], ARGV[1], id) end
+      return #ids`, { keys: [`${this.prefix}processing`, this.getQueueKey()], arguments: [String(Date.now())] });
+  }
+
+  private async completeProcessing(id: string): Promise<void> {
+    await this.redis!.del(this.getDataKey(id));
+    await this.redis!.zRem(`${this.prefix}processing`, id);
   }
 
   private resolveDelay(retryCount: number, retryAfterMs?: number): number {

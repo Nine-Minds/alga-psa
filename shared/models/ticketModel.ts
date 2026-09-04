@@ -1,3 +1,4 @@
+import { persistCommentPublication } from '../lib/ticketCommentAttachments';
 /**
  * Shared Ticket Model - Core business logic for ticket operations
  * This model contains the essential ticket business logic extracted from
@@ -1398,18 +1399,15 @@ export class TicketModel {
           // The inbound publisher writes its durable outbox in this transaction.
           await eventPublisher.publishCommentCreated(event);
         } else {
-          // Shared model callers also use raw Knex transactions. executionPromise
-          // resolves only on commit and rejects on rollback, unlike a callback-local hook.
-          void trx.executionPromise.then(
-            () => eventPublisher.publishCommentCreated(event),
-            () => undefined,
-          ).catch(error => console.error('Failed to publish committed comment event:', error));
+          await persistCommentPublication(trx, { eventType: 'TICKET_COMMENT_ADDED', payload: {
+            tenantId: tenant, ticketId: validatedData.ticket_id, commentId, userId,
+            comment: { id: commentId, content: validatedData.content, author: authorName,
+              isInternal: commentIsInternal, authorType: dbAuthorType },
+          } });
         }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
-        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
-          throw error;
-        }
+        throw error;
       }
     }
 

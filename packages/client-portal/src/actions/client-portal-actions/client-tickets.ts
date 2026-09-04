@@ -1,8 +1,10 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
 import { registerAfterCommit } from '@alga-psa/db';
+import Comment from '@alga-psa/tickets/models/comment';
 import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
@@ -567,7 +569,8 @@ export const addClientTicketComment = withAuth(async (
   ticketId: string,
   content: string,
   isInternal: boolean = false,
-  isResolution: boolean = false
+  isResolution: boolean = false,
+  parentCommentId?: string
 ): Promise<ClientTicketActionResult<boolean>> => {
   // Client portal contacts can never create internal notes/threads. Force the
   // flag server-side — the portal UI always passes false, but server actions
@@ -617,49 +620,24 @@ export const addClientTicketComment = withAuth(async (
         markdownContent = "[Error converting content to markdown]";
       }
 
-      // comments.thread_id is NOT NULL — generate IDs and create the thread row first.
-      const clientCommentIds = await trx.raw(
-        'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-      );
-      const clientGeneratedIds = clientCommentIds.rows?.[0] as
-        | { comment_id: string; thread_id: string }
-        | undefined;
-      if (!clientGeneratedIds?.comment_id || !clientGeneratedIds?.thread_id) {
-        throw new Error('Database UUID generation did not return comment/thread identifiers.');
+      if (parentCommentId) {
+        const parent = await tenantDb(trx, tenant).table('comments')
+          .where({ comment_id: parentCommentId, ticket_id: ticketId, is_internal: false, publish_state: 'published' })
+          .whereNull('deleted_at').forUpdate().first();
+        if (!parent) throw expectedClientTicketActionError('Parent comment not found');
       }
-      const clientNowIso = new Date().toISOString();
-
-      await tenantDb(trx, tenant).table('comment_threads').insert({
-        tenant,
-        thread_id: clientGeneratedIds.thread_id,
+      const commentId = await Comment.insert(trx, tenant, {
         ticket_id: ticketId,
-        project_task_id: null,
-        root_comment_id: clientGeneratedIds.comment_id,
-        is_internal: isInternal,
-        reply_count: 0,
-        last_activity_at: clientNowIso,
-        created_at: clientNowIso,
-        created_by: userId,
-      });
-
-      const [newComment] = await tenantDb(trx, tenant).table('comments').insert({
-        tenant,
-        comment_id: clientGeneratedIds.comment_id,
-        thread_id: clientGeneratedIds.thread_id,
-        ticket_id: ticketId,
+        parent_comment_id: parentCommentId,
         author_type: 'client',
         note: content,
-        is_internal: isInternal,
+        is_internal: false,
         is_resolution: isResolution,
-        metadata: JSON.stringify({
-          responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL,
-        }),
-        created_at: clientNowIso,
+        metadata: { responseSource: COMMENT_RESPONSE_SOURCES.CLIENT_PORTAL },
         user_id: userId,
-        markdown_content: markdownContent
-      }).returning('*');
-
-      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, userId);
+        markdown_content: markdownContent,
+      });
+      const newComment = await tenantDb(trx, tenant).table('comments').where({ comment_id: commentId }).first();
 
       if (!isInternal) {
         await tenantDb(trx, tenant).table('tickets')
@@ -672,7 +650,7 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      registerAfterCommit(trx, () => publishEvent({
+      await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -687,7 +665,7 @@ export const addClientTicketComment = withAuth(async (
             isInternal
           }
         }
-      }));
+      }, publishEvent);
 
       await publishTicketUpdate({
         tenantId: tenant,
