@@ -69,6 +69,35 @@ function installDbRow(row: ServicePeriodRowFixture | null) {
   mocks.tenantDb.mockReturnValue({ table: vi.fn(() => builder) });
 }
 
+/**
+ * Serve a different recurring_service_period row per selector window so a run
+ * can carry both an eligible and an ineligible group (the fetch keys on
+ * invoice_window_start). Unknown windows materialize as nothing.
+ */
+function installDbRowsByInvoiceWindow(
+  rowsByWindow: Record<string, ServicePeriodRowFixture | null>,
+) {
+  let whereClause: Record<string, unknown> | null = null;
+  const builder: any = {
+    where: vi.fn((arg: unknown) => {
+      if (arg && typeof arg === 'object') {
+        whereClause = arg as Record<string, unknown>;
+      }
+      return builder;
+    }),
+    whereIn: vi.fn(() => builder),
+    whereNotIn: vi.fn(() => builder),
+    orderBy: vi.fn(() => builder),
+    first: vi.fn(async () => {
+      const windowStart = whereClause?.invoice_window_start ?? whereClause?.['rsp.invoice_window_start'];
+      const row = typeof windowStart === 'string' ? rowsByWindow[windowStart] : undefined;
+      return row ? { ...row } : undefined;
+    }),
+  };
+  mocks.createTenantKnex.mockResolvedValue({ knex: {} });
+  mocks.tenantDb.mockReturnValue({ table: vi.fn(() => builder) });
+}
+
 function buildClientCadenceTarget(windowStart: string, windowEnd: string) {
   const selectorInput = buildClientCadenceDueSelectionInput({
     clientId: 'client-1',
@@ -308,5 +337,39 @@ describe('generateCalendarMonthEndCloseInvoices', () => {
     expect(result).toMatchObject({
       messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotMaterialized',
     });
+  });
+
+  it('pre-validates every target before generating any: one ineligible group blocks the whole run', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-06-30T12:00:00.000Z'));
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('UTC');
+    installDbRowsByInvoiceWindow({
+      '2026-07-01': {
+        service_period_start: '2026-06-01',
+        service_period_end: '2026-07-01',
+        invoice_window_start: '2026-07-01',
+        due_position: 'arrears',
+      },
+      '2026-07-10': {
+        service_period_start: '2026-06-10',
+        service_period_end: '2026-07-10',
+        invoice_window_start: '2026-07-10',
+        due_position: 'arrears',
+      },
+    });
+
+    const result = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [
+        { groupKey: 'g1', selectorInputs: [buildClientCadenceTarget('2026-07-01', '2026-08-01')] },
+        { groupKey: 'g2', selectorInputs: [buildClientCadenceTarget('2026-07-10', '2026-08-10')] },
+      ],
+    });
+
+    // The eligible group must not have been invoiced: validation of the second
+    // (anchored, non-calendar-month) target fails before any generation starts.
+    expect(result).toMatchObject({
+      messageKey: 'msp/billing:errors.recurringRun.monthEndCloseNotEligible',
+    });
+    expect(mocks.generateInvoiceForSelectionInputs).not.toHaveBeenCalled();
   });
 });

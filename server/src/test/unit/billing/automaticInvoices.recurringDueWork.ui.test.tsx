@@ -733,6 +733,45 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(onGenerateSuccess).toHaveBeenCalled();
   });
 
+  it('T-EC2: a not-yet-due group the server did not flag month-end-eligible offers no early-close action', async () => {
+    const clientRow = {
+      ...createClientRow(),
+      duePosition: 'arrears' as const,
+      servicePeriodStart: '2025-03-01',
+      servicePeriodEnd: '2025-04-01',
+      invoiceWindowStart: '2025-04-01',
+      invoiceWindowEnd: '2025-05-01',
+      canGenerate: false,
+      isEarly: true,
+    };
+    const candidate = {
+      ...buildInvoiceCandidate([clientRow], { candidateKey: 'candidate-month-end-ineligible' }),
+      canGenerate: false,
+      notYetDue: true,
+      availableOnDate: '2025-04-01',
+      monthEndCloseEligible: false,
+    };
+    getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
+      invoiceCandidates: [candidate],
+      materializationGaps: [],
+      total: 1,
+      page: 1,
+      pageSize: 10,
+      totalPages: 1,
+    });
+
+    render(<AutomaticInvoices onGenerateSuccess={vi.fn()} />);
+
+    // Let the not-yet-due group render, then assert the month-end action is
+    // absent: the button must never appear for a group the server policy did
+    // not flag, even though the group is otherwise not-yet-due.
+    await waitFor(() => {
+      expect(generateCalendarMonthEndCloseInvoicesMock).not.toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('button', { name: 'Generate month-end invoice' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('calendar-month-end-close-warning')).not.toBeInTheDocument();
+  });
+
   it('handles an empty recurring due-work and history page', async () => {
     getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
       invoiceCandidates: [],
