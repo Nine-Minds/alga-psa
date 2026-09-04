@@ -1429,7 +1429,7 @@
     "whiteLabel": {
       "title": "Własna marka w aplikacji MSP",
       "description": "Prześlij swoje logo jeden raz. Zastępuje ono znak Alga w menu bocznym MSP, a portal klienta korzysta z tych samych obrazów.",
-      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Zawsze ciemne menu boczne najpierw sięga po warianty na ciemne tła, a w razie ich braku po jasne.",
+      "logoHelp": "Kwadratowy znak jest używany wszędzie tam, gdzie miejsce jest kwadratowe: w zwiniętym menu bocznym i w okrągłych ramkach. Opcjonalne szerokie logo zastępuje znak i nazwę w rozwiniętym menu bocznym, prześlij więc takie, które zawiera już nazwę Twojej firmy. Menu boczne dopasowuje się do własnego tła: przy ciemnym menu używa wariantów na ciemne tła, przy jasnym — jasnych, a jeśli pasującego brakuje, sięga po ten, który przesłano.",
       "fields": {
         "mark": "Znak kwadratowy",
         "markDark": "Znak kwadratowy na ciemne tła",
@@ -1441,7 +1441,7 @@
         "mark": "Używany w zwiniętym menu bocznym i w każdej okrągłej ramce. Najlepiej sprawdza się format kwadratowy.",
         "markDark": "Opcjonalne. W razie braku używany jest znak kwadratowy.",
         "wide": "Wyświetlane tylko w rozwiniętym menu bocznym, o wysokości 32 px. Umieść nazwę firmy na obrazie.",
-        "wideDark": "Opcjonalne. Menu boczne jest ciemne w obu motywach, więc ten wariant jest używany w pierwszej kolejności.",
+        "wideDark": "Opcjonalne. Używane, dopóki tło menu bocznego jest ciemne, tak jak we wszystkich dostarczonych motywach.",
         "favicon": "PNG, SVG lub ICO. Obrazy rastrowe są zmniejszane do 32x32. Dotyczy aplikacji MSP i portalu klienta Twojej organizacji."
       },
       "warnings": {

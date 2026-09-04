@@ -1423,7 +1423,7 @@
     "whiteLabel": {
       "title": "Marca propia en la aplicación MSP",
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
-      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral, siempre oscuro, prefiere las variantes para fondos oscuros y recurre a las claras si no existen.",
+      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "fields": {
         "mark": "Marca cuadrada",
         "markDark": "Marca cuadrada para fondos oscuros",
@@ -1435,7 +1435,7 @@
         "mark": "Se usa en el menú lateral contraído y en todos los marcos circulares. Lo cuadrado funciona mejor.",
         "markDark": "Opcional. Recurre a la marca cuadrada.",
         "wide": "Solo se muestra en el menú lateral expandido, con 32 px de alto. Incluya el nombre de su empresa en la imagen.",
-        "wideDark": "Opcional. El menú lateral es oscuro en ambos temas, así que esta es la primera variante que se usa.",
+        "wideDark": "Opcional. Se usa mientras el fondo del menú lateral sea oscuro, como ocurre en todos los temas incluidos.",
         "favicon": "PNG, SVG o ICO. Las imágenes de mapa de bits se redimensionan a 32x32. Se aplica a la aplicación MSP y al portal de clientes de su organización."
       },
       "warnings": {

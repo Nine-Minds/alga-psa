@@ -475,7 +475,7 @@ const AppearanceSettings = () => {
                 <p className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
                   {t('appearance.whiteLabel.logoHelp', {
                     defaultValue:
-                      'The square mark is used wherever the space is square — the collapsed side menu and circular frames. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The always-dark side menu prefers the dark-background variants and falls back to the light ones.',
+                      'The square mark is used wherever the space is square — the collapsed side menu and circular frames. The optional wide logo replaces the mark and the name in the expanded side menu, so upload one that already contains your company name. The side menu follows its own background: dark-background variants on a dark menu, light ones on a light menu, falling back to whichever variant you uploaded.',
                   })}
                 </p>
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -569,7 +569,7 @@ const AppearanceSettings = () => {
                     <p className="mt-2 text-xs text-[rgb(var(--color-text-500))]">
                       {t('appearance.whiteLabel.hints.wideDark', {
                         defaultValue:
-                          'Optional. The side menu is dark in both themes, so this is the one it reaches for first.',
+                          'Optional. Used while the side menu background is dark, which is the case in every built-in theme.',
                       })}
                     </p>
                   </div>

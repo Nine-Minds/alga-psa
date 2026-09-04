@@ -1423,7 +1423,7 @@
     "whiteLabel": {
       "title": "Personalizza il marchio dell’app MSP",
       "description": "Carica il tuo logo una volta sola. Sostituisce il marchio Alga nel menu laterale MSP e il portale clienti usa le stesse immagini.",
-      "logoHelp": "Il marchio quadrato viene usato ovunque lo spazio sia quadrato: nel menu laterale compresso e nelle cornici circolari. Il logo largo facoltativo sostituisce il marchio e il nome nel menu laterale espanso, quindi caricane uno che contenga già il nome della tua azienda. Il menu laterale, sempre scuro, preferisce le varianti per sfondi scuri e ricorre a quelle chiare.",
+      "logoHelp": "Il marchio quadrato viene usato ovunque lo spazio sia quadrato: nel menu laterale compresso e nelle cornici circolari. Il logo largo facoltativo sostituisce il marchio e il nome nel menu laterale espanso, quindi caricane uno che contenga già il nome della tua azienda. Il menu laterale segue il proprio sfondo: le varianti per sfondi scuri quando il menu è scuro e quelle chiare quando è chiaro, ricorrendo comunque alla variante che hai caricato.",
       "fields": {
         "mark": "Marchio quadrato",
         "markDark": "Marchio quadrato per sfondi scuri",
@@ -1435,7 +1435,7 @@
         "mark": "Usato nel menu laterale compresso e in ogni cornice circolare. Il formato quadrato è il migliore.",
         "markDark": "Facoltativo. Ricorre al marchio quadrato.",
         "wide": "Mostrato solo nel menu laterale espanso, alto 32 px. Includi il nome della tua azienda nell’immagine.",
-        "wideDark": "Facoltativo. Il menu laterale è scuro in entrambi i temi, quindi è questa la variante usata per prima.",
+        "wideDark": "Facoltativo. Usato finché lo sfondo del menu laterale è scuro, come accade in tutti i temi inclusi.",
         "favicon": "PNG, SVG o ICO. Le immagini raster vengono ridimensionate a 32x32. Vale per l’app MSP e per il portale clienti della tua organizzazione."
       },
       "warnings": {

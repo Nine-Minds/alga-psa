@@ -1423,7 +1423,7 @@
     "whiteLabel": {
       "title": "MSP-App mit eigener Marke",
       "description": "Laden Sie Ihr Logo einmal hoch. Es ersetzt die Alga-Marke im MSP-Seitenmenü, und das Kundenportal verwendet dieselben Bilder.",
-      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das stets dunkle Seitenmenü bevorzugt die Varianten für dunkle Hintergründe und greift sonst auf die hellen zurück.",
+      "logoHelp": "Das quadratische Zeichen wird überall dort verwendet, wo der Platz quadratisch ist: im eingeklappten Seitenmenü und in runden Rahmen. Das optionale breite Logo ersetzt im ausgeklappten Seitenmenü das Zeichen und den Namen — laden Sie daher eines hoch, das Ihren Firmennamen bereits enthält. Das Seitenmenü richtet sich nach seinem eigenen Hintergrund: bei dunklem Menü die Varianten für dunkle Hintergründe, bei hellem Menü die hellen — und andernfalls die Variante, die Sie hochgeladen haben.",
       "fields": {
         "mark": "Quadratisches Zeichen",
         "markDark": "Quadratisches Zeichen für dunkle Hintergründe",
@@ -1435,7 +1435,7 @@
         "mark": "Wird im eingeklappten Seitenmenü und in jedem runden Rahmen verwendet. Quadratisch funktioniert am besten.",
         "markDark": "Optional. Fällt auf das quadratische Zeichen zurück.",
         "wide": "Wird nur im ausgeklappten Seitenmenü angezeigt, 32 px hoch. Nehmen Sie Ihren Firmennamen mit ins Bild auf.",
-        "wideDark": "Optional. Das Seitenmenü ist in beiden Designs dunkel, daher wird zuerst diese Variante verwendet.",
+        "wideDark": "Optional. Wird verwendet, solange der Hintergrund des Seitenmenüs dunkel ist — wie in allen mitgelieferten Designs.",
         "favicon": "PNG, SVG oder ICO. Rasterbilder werden auf 32x32 verkleinert. Gilt für die MSP-App und das Kundenportal Ihrer Organisation."
       },
       "warnings": {

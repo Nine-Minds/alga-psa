@@ -1423,7 +1423,7 @@
     "whiteLabel": {
       "title": "Marca própria no aplicativo MSP",
       "description": "Envie seu logotipo uma vez. Ele substitui a marca Alga no menu lateral MSP, e o portal do cliente usa as mesmas imagens.",
-      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral, sempre escuro, prefere as variantes para fundos escuros e recorre às claras.",
+      "logoHelp": "A marca quadrada é usada sempre que o espaço é quadrado: no menu lateral recolhido e nas molduras circulares. O logotipo largo opcional substitui a marca e o nome no menu lateral expandido, então envie um que já contenha o nome da sua empresa. O menu lateral segue o próprio fundo: usa as variantes para fundos escuros quando o menu é escuro e as claras quando é claro, recorrendo à variante que você enviou.",
       "fields": {
         "mark": "Marca quadrada",
         "markDark": "Marca quadrada para fundos escuros",
@@ -1435,7 +1435,7 @@
         "mark": "Usada no menu lateral recolhido e em todas as molduras circulares. O formato quadrado funciona melhor.",
         "markDark": "Opcional. Recorre à marca quadrada.",
         "wide": "Exibido apenas no menu lateral expandido, com 32 px de altura. Inclua o nome da sua empresa na imagem.",
-        "wideDark": "Opcional. O menu lateral é escuro nos dois temas, por isso esta é a variante usada primeiro.",
+        "wideDark": "Opcional. Usado enquanto o fundo do menu lateral for escuro, como acontece em todos os temas fornecidos.",
         "favicon": "PNG, SVG ou ICO. Imagens raster são redimensionadas para 32x32. Vale para o aplicativo MSP e para o portal do cliente da sua organização."
       },
       "warnings": {

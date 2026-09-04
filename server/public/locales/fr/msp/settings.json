@@ -1423,7 +1423,7 @@
     "whiteLabel": {
       "title": "Personnaliser la marque de l’application MSP",
       "description": "Téléversez votre logo une seule fois. Il remplace la marque Alga dans le menu latéral MSP, et le portail client utilise les mêmes images.",
-      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral, toujours sombre, privilégie les variantes pour arrière-plans sombres et se rabat sur les claires.",
+      "logoHelp": "La marque carrée est utilisée partout où l’espace est carré : le menu latéral réduit et les cadres circulaires. Le logo large facultatif remplace la marque et le nom dans le menu latéral déployé : téléversez-en donc un qui contient déjà le nom de votre entreprise. Le menu latéral s’adapte à son propre arrière-plan : les variantes pour arrière-plans sombres sur un menu sombre, les claires sur un menu clair, et à défaut la variante que vous avez téléversée.",
       "fields": {
         "mark": "Marque carrée",
         "markDark": "Marque carrée pour arrière-plans sombres",
@@ -1435,7 +1435,7 @@
         "mark": "Utilisée dans le menu latéral réduit et dans tous les cadres circulaires. Le format carré fonctionne le mieux.",
         "markDark": "Facultatif. Se rabat sur la marque carrée.",
         "wide": "Affiché uniquement dans le menu latéral déployé, sur 32 px de haut. Intégrez le nom de votre entreprise à l’image.",
-        "wideDark": "Facultatif. Le menu latéral est sombre dans les deux thèmes : c’est donc cette variante qui est utilisée en premier.",
+        "wideDark": "Facultatif. Utilisé tant que l’arrière-plan du menu latéral est sombre, ce qui est le cas dans tous les thèmes fournis.",
         "favicon": "PNG, SVG ou ICO. Les images matricielles sont redimensionnées en 32x32. S’applique à l’application MSP et au portail client de votre organisation."
       },
       "warnings": {
