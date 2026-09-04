@@ -82,6 +82,44 @@ interface ProviderOption {
   configured: boolean;
 }
 
+const SSO_DISCOVERY_ENDPOINT = "/api/auth/msp/sso/discover";
+const SSO_RESOLVE_ENDPOINT = "/api/auth/msp/sso/resolve";
+const SSO_LINK_CALLBACK_URL = "/msp/profile?tab=Single%20Sign-On&linked=1";
+
+// Same discover -> resolve handshake the sign-in page runs: it issues the MSP SSO
+// resolution cookie so NextAuth registers the provider from the tenant profile when
+// no app-level OAuth secrets exist.
+async function ensureMspSsoResolutionCookie(providerId: string, email: string): Promise<boolean> {
+  const discoveryResponse = await fetch(SSO_DISCOVERY_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ email }),
+  });
+
+  if (!discoveryResponse.ok) return false;
+
+  const resolveResponse = await fetch(SSO_RESOLVE_ENDPOINT, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({
+      provider: providerId,
+      email,
+      callbackUrl: SSO_LINK_CALLBACK_URL,
+    }),
+  });
+
+  let resolveResult: { ok?: boolean } | null = null;
+  try {
+    resolveResult = await resolveResponse.json();
+  } catch {
+    resolveResult = null;
+  }
+
+  return resolveResponse.ok && resolveResult?.ok === true;
+}
+
 interface ConnectSsoClientProps {
   email: string;
   twoFactorEnabled: boolean;
@@ -98,6 +136,7 @@ export default function ConnectSsoClient({
   linkStatus,
 }: ConnectSsoClientProps) {
   const { t } = useTranslation("msp/profile");
+  const { t: tCommon } = useTranslation("common");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -161,6 +200,22 @@ export default function ConnectSsoClient({
   const handleProviderClick = async (providerId: string) => {
     if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
       setFormError(t("connectSso.verify.verifyBeforeProvider"));
+      return;
+    }
+
+    const genericStartFailureMessage = tCommon("auth.sso.startFailed", {
+      defaultValue: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
+    });
+
+    let resolved = false;
+    try {
+      resolved = await ensureMspSsoResolutionCookie(providerId, email);
+    } catch {
+      resolved = false;
+    }
+
+    if (!resolved) {
+      setFormError(genericStartFailureMessage);
       return;
     }
 
