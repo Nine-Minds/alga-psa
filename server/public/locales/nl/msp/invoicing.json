@@ -1,12 +1,12 @@
 {
   "automaticInvoices": {
     "monthEndClose": {
-      "action": "Generate month-end invoice",
-      "title": "Close {{servicePeriod}} at month end?",
-      "warning": "This invoices {{servicePeriod}} on its final calendar day. Time or usage entries recorded after this close will not be included, so only close the period once its work is fully recorded.",
-      "confirm": "Generate at month end",
-      "omissionWarning": "Time or usage entries recorded after this close will NOT be included on the invoice.",
-      "generationFailed": "Could not generate the month-end invoice. Please try again."
+      "action": "Factuur aan het einde van de maand genereren",
+      "title": "Periode {{servicePeriod}} aan het einde van de maand afsluiten?",
+      "warning": "Hiermee factureert u {{servicePeriod}} op de laatste kalenderdag. Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden niet meegenomen. Sluit de periode daarom pas af als al het werk volledig is vastgelegd.",
+      "confirm": "Genereren aan het einde van de maand",
+      "omissionWarning": "Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden NIET opgenomen in de factuur.",
+      "generationFailed": "Kan de factuur aan het einde van de maand niet genereren. Probeer het opnieuw."
     },
     "ready": {
       "title": "Klaar om te factureren",

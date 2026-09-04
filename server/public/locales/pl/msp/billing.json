@@ -667,8 +667,8 @@
     "recurringRun": {
       "selectPeriods": "Wybierz co najmniej jeden cykliczny okres rozliczeniowy do wygenerowania.",
       "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur",
-      "monthEndCloseNotMaterialized": "Recurring service periods were not materialized for this recurring execution window.",
-      "monthEndCloseNotEligible": "The {{servicePeriod}} period can only be closed at month end on {{finalCalendarDay}}. Only calendar-month arrears service periods can be closed early on their final calendar day."
+      "monthEndCloseNotMaterialized": "Nie zmaterializowano cyklicznych okresów usługi dla tego cyklicznego okna wykonywania.",
+      "monthEndCloseNotEligible": "Okres {{servicePeriod}} można zamknąć na koniec miesiąca tylko w dniu {{finalCalendarDay}}. Tylko rozliczane z dołu okresy usługi obejmujące pełny miesiąc kalendarzowy można zamknąć wcześniej, w ich ostatnim dniu kalendarzowym."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Do sprawdzenia cyklicznych okresów usługi wymagany jest klucz harmonogramu.",

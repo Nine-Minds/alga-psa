@@ -667,8 +667,8 @@
     "recurringRun": {
       "selectPeriods": "Selecteer minstens één terugkerende factuurperiode om te genereren.",
       "invoicePermission": "Toestemming geweigerd: rechten voor het aanmaken of genereren van facturen vereist",
-      "monthEndCloseNotMaterialized": "Recurring service periods were not materialized for this recurring execution window.",
-      "monthEndCloseNotEligible": "The {{servicePeriod}} period can only be closed at month end on {{finalCalendarDay}}. Only calendar-month arrears service periods can be closed early on their final calendar day."
+      "monthEndCloseNotMaterialized": "Er zijn geen terugkerende serviceperioden gematerialiseerd voor dit terugkerende uitvoeringsvenster.",
+      "monthEndCloseNotEligible": "De periode {{servicePeriod}} kan alleen aan het einde van de maand worden afgesloten op {{finalCalendarDay}}. Alleen achteraf gefactureerde serviceperioden die een volledige kalendermaand beslaan, kunnen vroegtijdig worden afgesloten op hun laatste kalenderdag."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Er is een planningssleutel vereist om terugkerende serviceperioden te bekijken.",
