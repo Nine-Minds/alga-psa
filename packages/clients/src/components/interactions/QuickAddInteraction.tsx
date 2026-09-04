@@ -1,7 +1,7 @@
 // server/src/components/interactions/QuickAddInteraction.tsx
 'use client'
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, Suspense } from 'react';
 import dynamic from 'next/dynamic';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -170,6 +170,25 @@ export function QuickAddInteraction({
   const willCreateScheduleEntry = teamsMeetingWillSchedule || (canAddToSchedule && addToSchedule);
   const canPickScheduleAssignees = !isEditMode && willCreateScheduleEntry && canAssignScheduleToOthers;
   const isSchedulingForOthers = scheduleAssignedUserIds.some((userId) => userId !== session?.user?.id);
+
+  const resetSchedulingState = useCallback(() => {
+    setAddToSchedule(false);
+    setHasTouchedScheduleToggle(false);
+    setCanAssignScheduleToOthers(false);
+    setScheduleAssignedUserIds([]);
+    setHasTouchedAssignedUser(false);
+    setHasTouchedScheduleAssignees(false);
+  }, []);
+
+  const handleClose = () => {
+    resetSchedulingState();
+    setHasAttemptedSubmit(false);
+    setValidationErrors([]);
+    setLoadErrors([]);
+    setEndTimeError('');
+    setIsQuickAddContactOpen(false);
+    onClose();
+  };
 
   // UI Reflection System Integration
   const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -423,8 +442,12 @@ export function QuickAddInteraction({
   // Booking someone else's calendar is an update of *their* schedule, so the picker only
   // appears for users who hold that permission. Reopening the dialog resets the choice.
   useEffect(() => {
-    if (!isOpen || isEditMode) return;
+    if (!isOpen || isEditMode) {
+      resetSchedulingState();
+      return;
+    }
 
+    setCanAssignScheduleToOthers(false);
     setScheduleAssignedUserIds(session?.user?.id ? [session.user.id] : []);
     setSelectedUserId(session?.user?.id || '');
     setHasTouchedAssignedUser(false);
@@ -446,14 +469,14 @@ export function QuickAddInteraction({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, isEditMode, session?.user?.id]);
+  }, [isOpen, isEditMode, session?.user?.id, resetSchedulingState]);
 
   // Scheduling something ahead should land on the calendar; logging what already happened
   // should not. Stops steering once the user has flipped the switch themselves.
   useEffect(() => {
-    if (isEditMode || hasTouchedScheduleToggle) return;
+    if (!isOpen || isEditMode || hasTouchedScheduleToggle) return;
     setAddToSchedule(!!startTime && startTime.getTime() > Date.now() + 60000);
-  }, [startTime, isEditMode, hasTouchedScheduleToggle]);
+  }, [isOpen, startTime, isEditMode, hasTouchedScheduleToggle]);
 
   // Note: ContactPicker handles client filtering internally,
   // so we don't need to refetch contacts when client changes
@@ -816,8 +839,7 @@ export function QuickAddInteraction({
       }
       
       onInteractionAdded(fullInteraction);
-      setIsQuickAddContactOpen(false);
-      onClose();
+      handleClose();
       
       // Clear form fields only if not editing
       if (!isEditMode) {
@@ -843,11 +865,6 @@ export function QuickAddInteraction({
         setClientDefaultEmail(null);
         setClientDefaultName(null);
         setHasLoadedAttendeeOptions(false);
-        setAddToSchedule(false);
-        setHasTouchedScheduleToggle(false);
-        setScheduleAssignedUserIds([]);
-        setHasTouchedAssignedUser(false);
-        setHasTouchedScheduleAssignees(false);
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -906,13 +923,7 @@ export function QuickAddInteraction({
         type="button"
         variant="outline"
         className="flex-1"
-        onClick={() => {
-          setHasAttemptedSubmit(false);
-          setValidationErrors([]);
-          setLoadErrors([]);
-          setEndTimeError('');
-          onClose();
-        }}
+        onClick={handleClose}
       >
         Cancel
       </Button>
@@ -932,14 +943,7 @@ export function QuickAddInteraction({
     <ReflectionContainer id={id} label="Quick Add Interaction">
       <Dialog
         isOpen={isOpen}
-        onClose={() => {
-        setHasAttemptedSubmit(false);
-        setValidationErrors([]);
-        setLoadErrors([]);
-        setEndTimeError('');
-        setIsQuickAddContactOpen(false);
-        onClose();
-      }}
+        onClose={handleClose}
         title={isEditMode ? 'Edit Interaction' : 'Add New Interaction'}
         className="max-w-2xl"
         hideCloseButton={false}
@@ -1028,9 +1032,13 @@ export function QuickAddInteraction({
                                       t('interactions.quickAdd.teams.invitesSummaryYou', { defaultValue: 'you (creator)' }),
                                     ].join(', '),
                                   })}{' '}
-                              {t('interactions.quickAdd.teams.scheduleSummary', {
-                                defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
-                              })}
+                              {isSchedulingForOthers
+                                ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                                    defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                                  })
+                                : t('interactions.quickAdd.teams.scheduleSummary', {
+                                    defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                                  })}
                             </p>
                           </>
                         )}

@@ -35,7 +35,7 @@ describe('quick add interaction schedule toggle wiring contract', () => {
   it('defaults on for future starts and off for past-dated logging', () => {
     const source = readSource();
 
-    expect(source).toContain('if (isEditMode || hasTouchedScheduleToggle) return;');
+    expect(source).toContain('if (!isOpen || isEditMode || hasTouchedScheduleToggle) return;');
     expect(source).toContain('setAddToSchedule(!!startTime && startTime.getTime() > Date.now() + 60000);');
     expect(source).toContain('setHasTouchedScheduleToggle(true);');
     // Reopening the dialog hands the switch back to the start-time rule.
@@ -99,7 +99,8 @@ describe('quick add interaction schedule toggle wiring contract', () => {
 
     expect(source).toContain('const usersList = isEditMode');
     expect(source).toContain("await getAllUsersBasicAsync(false, 'internal');");
-    // The Teams attendee load must not repeat the user query the dialog already ran.
+    // The approved owner picker needs these options immediately, including on tickets.
+    // Schedule and Teams pickers reuse them without a second internal-user request.
     expect(source.match(/getAllUsersBasicAsync\(false, 'internal'\)/g)).toHaveLength(1);
     expect(source).toContain('const contactsList = await getAllContacts();');
   });
