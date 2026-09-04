@@ -1,9 +1,10 @@
 # White-label round 2 — rectangular logo, collapsed rail, attribution, favicon
 
-Enterprise-only follow-up to the MSP white-label work. Open `mockups.html` in a browser
-(no build step, no server) to review the design. `mockups.png` is a local full-page render of
-the same file — the repo ignores `*.png`, so re-render it when the HTML changes rather than
-expecting it in a diff.
+Enterprise-only follow-up to the MSP white-label work. The static `mockups.html` /
+`mockups.png` pair that carried this design through review was a local artifact and is not
+committed: it had already drifted twice from the shipped UI inside one round, and a
+hand-maintained copy of a screen that exists for real is a second source of truth nobody
+updates. The rules it illustrated are written out below, and the app itself is the picture.
 
 ## What the feedback asked for
 
