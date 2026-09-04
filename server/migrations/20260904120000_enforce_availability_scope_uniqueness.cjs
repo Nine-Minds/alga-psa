@@ -1,9 +1,15 @@
 /**
  * Collapse ambiguous availability scopes and prevent them from recurring.
  * The newest row wins deterministically, with IDs breaking timestamp ties.
+ *
+ * Runs untransacted: availability_settings is distributed on `tenant`, and
+ * Citus refuses DDL on a distributed table that was already modified in the
+ * same transaction. Every statement is idempotent (the deletes only ever
+ * remove losing duplicates, the indexes are IF NOT EXISTS), so a partial run
+ * is safe to repeat. Matches the sibling dedupe-then-guard migrations
+ * 20260831090000_unique_pending_accounting_sync_operations and
+ * 20260903160000_unique_active_online_meeting_per_schedule_entry.
  */
-
-exports.config = { transaction: true };
 
 exports.up = async function up(knex) {
   await knex.raw(`
@@ -75,7 +81,10 @@ exports.up = async function up(knex) {
 };
 
 exports.down = async function down(knex) {
+  // Collapsed duplicates are not resurrected — their removal is a fact.
   await knex.raw('DROP INDEX IF EXISTS availability_settings_user_day_unique');
   await knex.raw('DROP INDEX IF EXISTS availability_settings_service_unique');
   await knex.raw('DROP INDEX IF EXISTS availability_settings_general_unique');
 };
+
+exports.config = { transaction: false };
