@@ -81,6 +81,40 @@ describe('saveUserAvailabilityWeek', () => {
     ]));
   });
 
+  // Postgres `time` columns read back as HH:MM:SS. A week assembled from rows
+  // that skipped the editor's normalization must still save, and must be
+  // written as HH:MM rather than round-tripping the seconds back into the DB.
+  it('accepts a week submitted with HH:MM:SS times and stores them trimmed', async () => {
+    hasPermissionMock.mockResolvedValue(true);
+    const userQuery = query({ first: { user_id: targetUserId } });
+    const deleteQuery = query();
+    const insertQuery = query();
+    const readQuery = query({ rows: input.days.map((day, index) => ({
+      availability_setting_id: `row-${index}`,
+      setting_type: 'user_hours',
+      user_id: targetUserId,
+      ...day,
+    })) });
+    const availabilityQueries = [deleteQuery, insertQuery, readQuery];
+    tenantDbMock.mockReturnValue({
+      table: vi.fn((tableName: string) => tableName === 'users' ? userQuery : availabilityQueries.shift()),
+    });
+
+    const result = await saveUserAvailabilityWeek({
+      ...input,
+      days: input.days.map((day) => ({
+        ...day,
+        start_time: `${day.start_time}:00`,
+        end_time: `${day.end_time}:00`,
+      })),
+    } as typeof input);
+
+    expect(result.success).toBe(true);
+    expect(insertQuery.insert).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ day_of_week: 3, start_time: '09:00', end_time: '17:00' }),
+    ]));
+  });
+
   it('returns failure without claiming success when the transactional write fails', async () => {
     hasPermissionMock.mockResolvedValue(true);
     const userQuery = query({ first: { user_id: targetUserId } });

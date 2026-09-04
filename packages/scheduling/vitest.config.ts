@@ -6,9 +6,9 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
-    // The pre-existing tests/*.test.tsx files predate tsx inclusion here and
-    // no longer collect/pass; they stay dormant until repaired, so only the
-    // availability component regression is listed explicitly.
+    // The older tests/*.test.tsx files predate tsx inclusion here and no
+    // longer collect/pass; they stay dormant until repaired, so the tsx
+    // suites that do pass are listed explicitly instead of globbed.
     include: [
       'tests/**/*.test.ts',
       'src/**/*.test.ts',
@@ -16,6 +16,8 @@ export default defineConfig({
       'tests/SchedulePage.accessRetry.test.tsx',
       'tests/SchedulePage.dialogRestore.test.tsx',
       'tests/SchedulePage.headerStability.test.tsx',
+      'tests/entryPopup.teamsMeetingRefresh.test.tsx',
+      'tests/scheduleCalendar.teamsMeetingRefresh.test.tsx',
     ],
     // 20s, matching the other heavy action-layer packages (billing, tickets,
     // client-portal, integrations). Mock factories here close over module-level
@@ -29,6 +31,9 @@ export default defineConfig({
     alias: [
       // Lets component tests vi.mock the same specifier the components import.
       { find: /^@alga-psa\/scheduling\/actions$/, replacement: path.resolve(__dirname, 'src/actions/index.ts') },
+      // EntryPopup/ScheduleCalendar self-import deep component paths the
+      // package's exports map does not publish; resolve those from source.
+      { find: /^@alga-psa\/scheduling\/components\/(.*)$/, replacement: path.resolve(__dirname, 'src/components/$1') },
       // Must precede the @alga-psa/auth alias, whose regex would otherwise
       // swallow "@alga-psa/authorization/..." specifiers.
       { find: /^@alga-psa\/authorization(.*)$/, replacement: path.resolve(__dirname, '../authorization/src$1') },
