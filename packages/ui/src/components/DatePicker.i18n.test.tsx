@@ -33,11 +33,12 @@ describe('DatePicker locale display', () => {
     mockLocale = 'en';
   });
 
-  it('renders short date per locale (fr 10/06/2026, de 10.06.2026, en 06/10/2026)', () => {
+  it('renders short date per locale (fr 10/06/2026, de 10.06.2026, en 06/10/2026, en-AU 10/06/2026)', () => {
     const cases: Array<[string, string]> = [
       ['fr', '10/06/2026'],
       ['de', '10.06.2026'],
       ['en', '06/10/2026'],
+      ['en-AU', '10/06/2026'],
     ];
     for (const [locale, expected] of cases) {
       mockLocale = locale;

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { filterPseudoLocales, getBestMatchingLocale, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
+import { filterPseudoLocales, getBestMatchingLocale, getTranslationLanguageCode, INCOMPLETE_LOCALES, normalizeLocale, PREVIEW_LOCALES, LOCALE_CONFIG } from './config';
 
 describe('filterPseudoLocales', () => {
   afterEach(() => {
@@ -43,10 +43,14 @@ describe('filterPseudoLocales', () => {
     expect(LOCALE_CONFIG.localeNames.pt).toBe('Português (Brasil)');
   });
 
+  it('labels en-AU as English (Australia)', () => {
+    expect(LOCALE_CONFIG.localeNames['en-AU']).toBe('English (Australia)');
+  });
+
   it('keeps production locales untouched', () => {
     vi.stubEnv('NODE_ENV', 'production');
     expect(filterPseudoLocales(LOCALE_CONFIG.supportedLocales)).toEqual([
-      'en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt',
+      'en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt',
     ]);
   });
 });
@@ -63,6 +67,15 @@ describe('normalizeLocale', () => {
     ['  de  ', 'de'],
     ['fr', 'fr'],
   ])('normalizes %s to %s', (input, expected) => {
+    expect(normalizeLocale(input)).toBe(expected);
+  });
+
+  it.each([
+    ['en-AU', 'en-AU'],
+    ['en-au', 'en-AU'],
+    ['en_AU', 'en-AU'],
+    ['EN-AU', 'en-AU'],
+  ])('preserves the en-AU regional tag from %s', (input, expected) => {
     expect(normalizeLocale(input)).toBe(expected);
   });
 
@@ -86,7 +99,14 @@ describe('normalizeLocale', () => {
 
   it('lets Accept-Language matching share the same rules', () => {
     expect(getBestMatchingLocale(['pt_BR'])).toBe('pt');
+    expect(getBestMatchingLocale(['en-AU', 'fr-CA'])).toBe('en-AU');
     expect(getBestMatchingLocale(['zh-CN', 'fr-CA'])).toBe('fr');
     expect(getBestMatchingLocale(['zh-CN'])).toBe(LOCALE_CONFIG.defaultLocale);
+  });
+
+  it('exposes the translation language code for region-tagged locales', () => {
+    expect(getTranslationLanguageCode('en-AU')).toBe('en');
+    expect(getTranslationLanguageCode('fr')).toBe('fr');
+    expect(getTranslationLanguageCode('xx')).toBe('xx');
   });
 });

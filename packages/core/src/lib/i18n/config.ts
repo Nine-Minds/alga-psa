@@ -17,8 +17,14 @@ export const LOCALE_CONFIG = {
   /**
    * Array of supported locales
    * Add new languages here to enable them throughout the application
+   *
+   * Region-tagged entries (`en-AU`) are regional variants of a shipped language:
+   * their text reuses the language pack via fallback (see I18N_CONFIG.load), but
+   * their full tag is preserved so date/currency formatting follows the region
+   * (e.g. en-AU writes DD/MM/YYYY while en writes MM/DD/YYYY). Adding another
+   * regional variant is data — a list entry plus names — not new code.
    */
-  supportedLocales: ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
+  supportedLocales: ['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'] as const,
 
   /**
    * Human-readable names for each locale
@@ -26,6 +32,7 @@ export const LOCALE_CONFIG = {
    */
   localeNames: {
     en: 'English',
+    'en-AU': 'English (Australia)',
     fr: 'Français',
     es: 'Español',
     de: 'Deutsch',
@@ -75,17 +82,51 @@ export function isSupportedLocale(locale: string): locale is SupportedLocale {
  * check rejected all of them and the setting silently did nothing. Anything that
  * still does not name a shipped language returns null so callers can fall
  * through deliberately rather than guess.
+ *
+ * Region matters for shipped regional variants: `en-AU` is a first-class locale
+ * whose dates must render DD/MM/YYYY, so it is preserved as `en-AU` rather than
+ * collapsed to `en`. Only region tags that name no shipped variant (`en-US`,
+ * `pt_BR`) fall back to their language code.
  */
 export function normalizeLocale(value: unknown): SupportedLocale | null {
   if (typeof value !== 'string') return null;
 
   const trimmed = value.trim().toLowerCase();
   if (!trimmed) return null;
+
+  // Case- and separator-insensitive match against the shipped list first, so a
+  // regional variant ('en-AU', 'en_au', 'EN-AU') resolves to its canonical tag.
+  const normalizedSeparators = trimmed.replace(/[_-]/g, '-');
+  for (const supported of LOCALE_CONFIG.supportedLocales) {
+    if (supported.toLowerCase().replace(/[_-]/g, '-') === normalizedSeparators) {
+      return supported;
+    }
+  }
   if (isSupportedLocale(trimmed)) return trimmed;
 
   // 'pt_BR' / 'pt-BR' / 'zh-Hans-CN' -> leading language subtag
   const languagePart = trimmed.split(/[-_]/)[0];
   return isSupportedLocale(languagePart) ? languagePart : null;
+}
+
+/**
+ * The language-code key under which a locale's translation resources are stored.
+ *
+ * Translation packs are language-only: i18next runs with `load: 'languageOnly'`,
+ * so a region-tagged locale (`en-AU`) resolves its resources from the bare
+ * language code (`en`). Resource seeding, preload bookkeeping and
+ * `hasResourceBundle` checks must key on this code or the regional tag would
+ * appear "missing" and re-trigger fetches for every namespace. It is the
+ * mirror image of `normalizeLocale`: that preserves the tag for formatting,
+ * this points resource loading at the pack that actually exists.
+ */
+export function getTranslationLanguageCode(locale: SupportedLocale): SupportedLocale {
+  const hyphen = locale.indexOf('-');
+  if (hyphen === -1) {
+    return locale;
+  }
+  const languagePart = locale.slice(0, hyphen) as SupportedLocale;
+  return isSupportedLocale(languagePart) ? languagePart : locale;
 }
 
 /**
@@ -116,7 +157,7 @@ export const I18N_CONFIG = {
   interpolation: {
     escapeValue: false, // React already escapes values
   },
-  load: 'languageOnly' as const, // Don't load region-specific variants
+  load: 'languageOnly' as const, // Regional variants reuse the language pack's resources
   cleanCode: true,
   nonExplicitSupportedLngs: true,
 };
