@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { usePathname, useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import * as Tooltip from '@radix-ui/react-tooltip';
@@ -19,6 +19,7 @@ import {
   type NavMode,
 } from '@/config/menuConfig';
 import { useMspBranding } from './MspBrandingContext';
+import { isLightSurface, pickLogoForSurface, surfaceLuminance } from './mspBranding';
 import SidebarMenuItem from './SidebarMenuItem';
 import SidebarSubMenuItem from './SidebarSubMenuItem';
 import SidebarBottomMenuItem from './SidebarBottomMenuItem';
@@ -45,6 +46,44 @@ interface SidebarProps {
   inventorySectionsOverride?: NavigationSection[];
 }
 
+// The server cannot measure a colour, so it renders the dark-rail assumption and
+// the client corrects it before paint.
+const useBrowserLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
+
+/**
+ * Reads the colour the rail actually painted — theme pair, light/dark mode and a
+ * hand-edited `sidebarBg` all land here — so logo variants and muted text can
+ * follow the surface instead of a hardcoded "always dark" assumption.
+ */
+function useRailIsLight(railRef: React.RefObject<HTMLElement | null>): boolean {
+  const [isLight, setIsLight] = useState(false);
+
+  useBrowserLayoutEffect(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+
+    const read = () => {
+      const styles = window.getComputedStyle(rail);
+      // A transparent or unreadable background leaves the raw token as fallback,
+      // and an unreadable token leaves the dark-rail default in place.
+      const painted = styles.backgroundColor;
+      const surface = surfaceLuminance(painted) !== null ? painted : styles.getPropertyValue('--color-sidebar-bg');
+      setIsLight(isLightSurface(surface));
+    };
+
+    read();
+    // Mode lands as `html.light`/`html.dark`, the pair as `html[data-theme-pair]`.
+    const observer = new MutationObserver(read);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class', 'style', 'data-theme-pair'],
+    });
+    return () => observer.disconnect();
+  }, [railRef]);
+
+  return isLight;
+}
+
 const Sidebar: React.FC<SidebarProps> = ({
   sidebarOpen,
   setSidebarOpen,
@@ -65,12 +104,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   const appVersion = getAppVersion();
   const { t } = useTranslation('msp/core');
   const mspBranding = useMspBranding();
-  // The rail is dark in both themes, but a tenant that uploaded a dark-surface
-  // variant means it for exactly this kind of surface.
-  const tenantLogoUrl = mspBranding.logoDarkUrl || mspBranding.logoUrl;
+  const railRef = useRef<HTMLElement | null>(null);
+  // Every shipped theme paints a dark rail, but a custom theme can set a light
+  // `sidebarBg` — so ask the rail what colour it actually is.
+  const railIsLight = useRailIsLight(railRef);
+  const tenantLogoUrl = pickLogoForSurface(mspBranding.logoUrl, mspBranding.logoDarkUrl, railIsLight);
   // The wide wordmark already contains the tenant name, so it replaces both the
   // circular mark and the name span — but only where there is room for it.
-  const tenantWideLogoUrl = mspBranding.logoWideDarkUrl || mspBranding.logoWideUrl;
+  const tenantWideLogoUrl = pickLogoForSurface(mspBranding.logoWideUrl, mspBranding.logoWideDarkUrl, railIsLight);
   const [failedTenantLogoUrl, setFailedTenantLogoUrl] = useState<string | null>(null);
   const [failedWideLogoUrl, setFailedWideLogoUrl] = useState<string | null>(null);
   const brandDisplayName = mspBranding.displayName || appDisplayName;
@@ -284,6 +325,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
+      ref={railRef}
       data-automation-id={sidebarAutomationId}
       className={`bg-sidebar-bg text-sidebar-text h-screen flex flex-col relative ${
         disableTransition ? '' : 'transition-all duration-300 ease-in-out'
@@ -309,7 +351,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : (
           <>
             {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
-              <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+              <div className="w-8 h-8 bg-sidebar-text/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
                 <img
                   src={tenantLogoUrl}
                   alt={brandDisplayName}
@@ -399,12 +441,12 @@ const Sidebar: React.FC<SidebarProps> = ({
         {sectionsToRender.map((section, sectionIndex) => (
           <div key={section.title || 'nav-section'} className="px-2">
             {sidebarOpen && section.title ? (
-              <p className={`text-xs uppercase tracking-wide text-gray-400 px-2 mb-2 ${sectionIndex === 0 ? 'mt-0' : 'mt-6'}`} aria-label={section.title}>
+              <p className={`text-xs uppercase tracking-wide text-sidebar-text/60 px-2 mb-2 ${sectionIndex === 0 ? 'mt-0' : 'mt-6'}`} aria-label={section.title}>
                 {section.title}
               </p>
             ) : (
               !sidebarOpen && section.title ? (
-                <div className={`h-px bg-gray-700 ${sectionIndex === 0 ? 'mt-0 mb-3' : 'my-3'}`} aria-hidden="true" />
+                <div className={`h-px bg-sidebar-text/20 ${sectionIndex === 0 ? 'mt-0 mb-3' : 'my-3'}`} aria-hidden="true" />
               ) : null
             )}
             <ul className="space-y-1">
@@ -414,7 +456,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ))}
         {/* Extension navigation items - shown in extensions mode as installed extensions */}
         {isExtensionsMode && (
-          <div className="mt-4 border-t border-gray-700 pt-4 px-2">
+          <div className="mt-4 border-t border-sidebar-text/20 pt-4 px-2">
             <DynamicNavigationSlot collapsed={!sidebarOpen} />
           </div>
         )}
@@ -465,14 +507,14 @@ const Sidebar: React.FC<SidebarProps> = ({
       )}
 
       {/* Version info */}
-      <div className="px-4 py-3 border-t border-gray-700">
+      <div className="px-4 py-3 border-t border-sidebar-text/20">
         <div className="flex items-center justify-between">
           <a
             id="app-version-link"
             href="https://github.com/Nine-Minds/alga-psa/releases"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-400 hover:text-gray-200 transition-colors flex items-center gap-1"
+            className="text-xs text-sidebar-text/60 hover:text-sidebar-text transition-colors flex items-center gap-1"
             title={sidebarOpen ? undefined : `Version ${appVersion}`}
           >
             {sidebarOpen ? (
@@ -495,7 +537,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             target="_blank"
             rel="noopener noreferrer"
             title={`Powered by AlgaPSA v${appVersion}`}
-            className={`mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-gray-200 transition-colors ${
+            className={`mt-1.5 flex items-center gap-1.5 text-[11px] text-sidebar-text/60 hover:text-sidebar-text transition-colors ${
               sidebarOpen ? '' : 'justify-center'
             }`}
           >
