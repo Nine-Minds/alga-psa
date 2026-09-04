@@ -9,6 +9,7 @@ import type {
   DiagnosticsStepStatus,
 } from '../../../interfaces/microsoft365-diagnostics.interfaces';
 import { getSecretProviderInstance } from '../../../core/secretProvider';
+import { resolveDeploymentCapabilities } from '../../../core/deploymentProfile';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import {
@@ -358,7 +359,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
-      const isHosted = (process.env.DEPLOYMENT_PROFILE || 'hosted').trim().toLowerCase() !== 'appliance';
+      const isHosted = resolveDeploymentCapabilities().microsoftOAuth.sharedApp;
 
       // Hosted uses Alga's shared multi-tenant Microsoft app, so preserve the
       // tenant-independent authority used when the refresh grant was issued.

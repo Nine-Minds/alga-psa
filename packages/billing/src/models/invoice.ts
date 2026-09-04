@@ -16,10 +16,12 @@ import type {
   IInvoice,
   IInvoiceCharge,
   IInvoiceChargeRecurringDetailPeriod,
+  IInvoiceChargeTimeEntrySnapshot,
   IInvoiceTemplate,
   ICustomField,
   IConditionalRule,
   IInvoiceAnnotation,
+  InvoiceTimeEntrySnapshot,
   InvoiceViewModel,
 } from '@alga-psa/types';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
@@ -35,6 +37,13 @@ type InvoiceChargeDetailPeriodRow = {
 
 type InvoiceChargeDisplayRow = IInvoiceCharge & {
   name?: string | null;
+};
+
+type InvoiceTimeEntrySnapshotRow = {
+  item_id: string | null;
+  entry_id: string;
+  /** jsonb — parsed object from pg, or a JSON string from some drivers. */
+  work_item_snapshot: unknown;
 };
 
 type InvoiceAnnotationRow = IInvoiceAnnotation & {
@@ -128,6 +137,65 @@ function sortInvoiceChargesForDisplay(charges: IInvoiceCharge[]): IInvoiceCharge
       return left.index - right.index;
     })
     .map(({ charge }) => charge);
+}
+
+/**
+ * Attach immutable billed-time snapshots (invoice_time_entries.work_item_snapshot)
+ * to their invoice charges. Reads only the frozen jsonb column — never the
+ * mutable tickets/time_entries tables — so finalized invoices stay stable.
+ * Rows without a snapshot (all pre-feature invoices) are simply skipped.
+ */
+function attachTimeEntrySnapshots(
+  charges: IInvoiceCharge[],
+  snapshotRows: InvoiceTimeEntrySnapshotRow[]
+): IInvoiceCharge[] {
+  if (snapshotRows.length === 0) {
+    return charges;
+  }
+
+  const snapshotsByItemId = new Map<string, IInvoiceChargeTimeEntrySnapshot[]>();
+  for (const row of snapshotRows) {
+    if (!row.item_id) {
+      continue;
+    }
+    const parsed = typeof row.work_item_snapshot === 'string'
+      ? (() => {
+          try {
+            return JSON.parse(row.work_item_snapshot);
+          } catch {
+            return null;
+          }
+        })()
+      : row.work_item_snapshot;
+    if (!parsed || typeof parsed !== 'object') {
+      continue;
+    }
+    const snapshot: IInvoiceChargeTimeEntrySnapshot = {
+      ...(parsed as InvoiceTimeEntrySnapshot),
+      entryId: row.entry_id,
+    };
+    const existing = snapshotsByItemId.get(row.item_id) ?? [];
+    existing.push(snapshot);
+    snapshotsByItemId.set(row.item_id, existing);
+  }
+
+  if (snapshotsByItemId.size === 0) {
+    return charges;
+  }
+
+  return charges.map((charge) => {
+    const snapshots = snapshotsByItemId.get(charge.item_id);
+    if (!snapshots || snapshots.length === 0) {
+      return charge;
+    }
+    const ordered = [...snapshots].sort((left, right) => {
+      if (left.entryDate !== right.entryDate) {
+        return String(left.entryDate ?? '').localeCompare(String(right.entryDate ?? ''));
+      }
+      return left.entryId.localeCompare(right.entryId);
+    });
+    return { ...charge, time_entry_snapshots: ordered };
+  });
 }
 
 function attachCanonicalRecurringDetailPeriods(
@@ -720,7 +788,23 @@ const Invoice = {
             .whereIn('item_id', itemIds)
             .orderBy('service_period_start', 'asc');
 
-      return sortInvoiceChargesForDisplay(attachCanonicalRecurringDetailPeriods(items, detailRows));
+      // Frozen billed-time snapshots for ticket-level detail. Snapshot-less
+      // rows (all invoices generated before the feature) are dropped below so
+      // legacy invoices take the no-detail path untouched.
+      const snapshotRows: InvoiceTimeEntrySnapshotRow[] = itemIds.length === 0
+        ? []
+        : (
+            await tenantScopedTable<InvoiceTimeEntrySnapshotRow>(knexOrTrx, tenant, 'invoice_time_entries')
+              .select('item_id', 'entry_id', 'work_item_snapshot')
+              .whereIn('item_id', itemIds)
+          ).filter((row) => row.work_item_snapshot != null);
+
+      return sortInvoiceChargesForDisplay(
+        attachTimeEntrySnapshots(
+          attachCanonicalRecurringDetailPeriods(items, detailRows),
+          snapshotRows,
+        ),
+      );
     } catch (error) {
       console.error(`Error getting invoice items for invoice ${invoiceId} in tenant ${tenant}:`, error);
       throw new Error(`Failed to get invoice items: ${error instanceof Error ? error.message : 'Unknown error'}`);

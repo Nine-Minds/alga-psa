@@ -661,6 +661,14 @@
     },
     "errors": {
       "loadWorkItem": "No se pudo cargar el elemento de trabajo."
+    },
+    "teamsMeeting": {
+      "create": "Crear reunión de Teams",
+      "creating": "Creando reunión de Teams…",
+      "join": "Unirse a la reunión de Teams",
+      "created": "Reunión de Microsoft Teams creada",
+      "createFailed": "No se pudo crear la reunión de Teams",
+      "recurringUnsupported": "Las reuniones de Teams solo se pueden añadir a entradas individuales, no a series recurrentes."
     }
   },
   "actions": {

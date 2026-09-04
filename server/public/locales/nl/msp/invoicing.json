@@ -1838,7 +1838,9 @@
         "productItems": "Productregels",
         "items": "Elementen",
         "transformsSource": "{{binding}} (transformatiebron)",
-        "transformsOutput": "{{binding}} (transformatie-uitvoer)"
+        "transformsOutput": "{{binding}} (transformatie-uitvoer)",
+        "ticketGroups": "Gefactureerde tijd per ticket",
+        "timeEntries": "Gefactureerde tijdregistraties"
       },
       "presets": {
         "description": {
@@ -1856,6 +1858,46 @@
         "amount": {
           "label": "Bedrag",
           "hint": "Regeltotaal"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Ticketnummer en titel"
+        },
+        "ticketDescription": {
+          "hint": "Voor de klant zichtbare ticketomschrijving"
+        },
+        "hours": {
+          "label": "Uren"
+        },
+        "ticketHours": {
+          "hint": "Totaal gefactureerde uren voor het ticket"
+        },
+        "ticketRate": {
+          "hint": "Uurtarief ('Gemengde tarieven' wanneer registraties verschillen)"
+        },
+        "ticketAmount": {
+          "hint": "Totaal gefactureerd bedrag voor het ticket"
+        },
+        "date": {
+          "label": "Datum"
+        },
+        "entryDate": {
+          "hint": "Datum waarop het werk is uitgevoerd"
+        },
+        "entryTicket": {
+          "hint": "Nummer van het bronticket"
+        },
+        "entryTitle": {
+          "hint": "Tickettitel of taaknaam"
+        },
+        "entryHours": {
+          "hint": "Gefactureerde uren voor de registratie"
+        },
+        "entryRate": {
+          "hint": "Uurtarief voor de registratie"
+        },
+        "entryAmount": {
+          "hint": "Gefactureerd bedrag voor de registratie"
         }
       },
       "sourceBinding": {

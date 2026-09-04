@@ -57,6 +57,7 @@ x-environment: &shared-environment
   # ---- AUTH ----
   NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
   NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+  TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
 
   # ---- DEPLOY INFO  ----
   PROJECT_NAME: ${PROJECT_NAME}

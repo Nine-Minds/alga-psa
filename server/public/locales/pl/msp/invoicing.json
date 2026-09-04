@@ -1888,7 +1888,9 @@
         "productItems": "Pozycje produktów",
         "items": "Elementy",
         "transformsSource": "{{binding}} (źródło transformacji)",
-        "transformsOutput": "{{binding}} (wynik transformacji)"
+        "transformsOutput": "{{binding}} (wynik transformacji)",
+        "ticketGroups": "Rozliczony czas według zgłoszeń",
+        "timeEntries": "Rozliczone wpisy czasu"
       },
       "presets": {
         "description": {
@@ -1906,6 +1908,46 @@
         "amount": {
           "label": "Kwota",
           "hint": "Suma wiersza"
+        },
+        "ticket": {
+          "label": "Zgłoszenie",
+          "hint": "Numer i tytuł zgłoszenia"
+        },
+        "ticketDescription": {
+          "hint": "Widoczny dla klienta opis zgłoszenia"
+        },
+        "hours": {
+          "label": "Godziny"
+        },
+        "ticketHours": {
+          "hint": "Łączna liczba rozliczonych godzin dla zgłoszenia"
+        },
+        "ticketRate": {
+          "hint": "Stawka godzinowa („Stawki mieszane”, gdy wpisy się różnią)"
+        },
+        "ticketAmount": {
+          "hint": "Łączna rozliczona kwota dla zgłoszenia"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data wykonania pracy"
+        },
+        "entryTicket": {
+          "hint": "Numer zgłoszenia źródłowego"
+        },
+        "entryTitle": {
+          "hint": "Tytuł zgłoszenia lub nazwa zadania"
+        },
+        "entryHours": {
+          "hint": "Rozliczone godziny dla wpisu"
+        },
+        "entryRate": {
+          "hint": "Stawka godzinowa dla wpisu"
+        },
+        "entryAmount": {
+          "hint": "Rozliczona kwota dla wpisu"
         }
       },
       "sourceBinding": {

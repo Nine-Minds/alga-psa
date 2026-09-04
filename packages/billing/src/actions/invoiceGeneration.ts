@@ -40,6 +40,7 @@ import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
+import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -288,6 +289,24 @@ function resolvePreviewRecurringSummary(
     servicePeriodEnd,
     billingTiming,
   };
+}
+
+/**
+ * Preview items carry the same immutable work-item snapshot the persisted
+ * path writes to invoice_time_entries, so the preview's ticket-level
+ * collections are built by the exact adapter the PDF path uses.
+ */
+function previewTimeEntrySnapshots(
+  charge: IBillingCharge,
+): IInvoiceCharge['time_entry_snapshots'] {
+  if (charge.type !== 'time') {
+    return undefined;
+  }
+  const timeCharge = charge as ITimeBasedCharge;
+  if (!timeCharge.workItemSnapshot) {
+    return undefined;
+  }
+  return [{ ...timeCharge.workItemSnapshot, entryId: timeCharge.entryId }];
 }
 
 function buildPreviewViewModelItem(item: IInvoiceCharge) {
@@ -1865,7 +1884,7 @@ async function adaptToWasmViewModel(
 
   const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
-  return {
+  const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
@@ -1882,6 +1901,12 @@ async function adaptToWasmViewModel(
     total: billingResult.totalAmount + previewTax,
     // notes: undefined, // Add if needed
   };
+
+  // Same collection builder as the persisted-invoice read path, so the
+  // preview's ticket-level detail matches the generated PDF by construction.
+  attachInvoiceTimeCollections(previewViewModel, invoiceItems);
+
+  return previewViewModel;
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -1990,6 +2015,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         service_period_end: period.servicePeriodEnd ?? null,
         billing_timing: period.billingTiming ?? null,
       })),
+      time_entry_snapshots: previewTimeEntrySnapshots(charge),
     });
   });
 
@@ -2064,6 +2090,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
   }
@@ -2113,6 +2140,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
   }

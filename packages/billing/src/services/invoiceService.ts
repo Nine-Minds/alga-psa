@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
 import { generateInvoiceNumber } from '@alga-psa/billing/actions/invoiceGeneration';
 import type { InvoiceViewModel, IInvoiceCharge as ManualInvoiceItem, NetAmountItem, DiscountType } from '@alga-psa/types'; // Renamed for clarity
-import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge } from '@alga-psa/types'; // Added import
+import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, RecurringChargeFamily, IHourBlockCharge, InvoiceTimeEntrySnapshot } from '@alga-psa/types'; // Added import
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
@@ -137,11 +137,18 @@ async function linkAndMarkSourceBillingRecord(params: {
       throw new Error(`Internal error: Time entry ${entryId} could not be marked invoiced for invoice ${invoiceId}.`);
     }
 
+    // Freeze the work-item snapshot at generation time. This row is the only
+    // source ticket-level PDF detail may render from — finalized invoices
+    // never re-join the mutable tickets/time_entries tables.
+    const workItemSnapshot =
+      (charge as { workItemSnapshot?: InvoiceTimeEntrySnapshot | null }).workItemSnapshot ?? null;
+
     await tenantScopedTable(tx, tenant, 'invoice_time_entries').insert({
       invoice_time_entry_id: uuidv4(),
       invoice_id: invoiceId,
       item_id: invoiceItemId,
       entry_id: entryId,
+      work_item_snapshot: workItemSnapshot ? JSON.stringify(workItemSnapshot) : null,
       tenant,
       created_at: linkedAt,
     });

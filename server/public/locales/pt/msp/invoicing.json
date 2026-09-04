@@ -1838,7 +1838,9 @@
         "productItems": "Itens de produto",
         "items": "Itens",
         "transformsSource": "{{binding}} (origem das transformações)",
-        "transformsOutput": "{{binding}} (saída das transformações)"
+        "transformsOutput": "{{binding}} (saída das transformações)",
+        "ticketGroups": "Tempo faturado por ticket",
+        "timeEntries": "Lançamentos de horas faturados"
       },
       "presets": {
         "description": {
@@ -1856,6 +1858,46 @@
         "amount": {
           "label": "Valor",
           "hint": "Total da linha"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Número e título do ticket"
+        },
+        "ticketDescription": {
+          "hint": "Descrição do ticket visível para o cliente"
+        },
+        "hours": {
+          "label": "Horas"
+        },
+        "ticketHours": {
+          "hint": "Total de horas faturadas do ticket"
+        },
+        "ticketRate": {
+          "hint": "Taxa horária (\"Tarifas mistas\" quando os lançamentos diferem)"
+        },
+        "ticketAmount": {
+          "hint": "Valor total faturado do ticket"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data em que o trabalho foi realizado"
+        },
+        "entryTicket": {
+          "hint": "Número do ticket de origem"
+        },
+        "entryTitle": {
+          "hint": "Título do ticket ou nome da tarefa"
+        },
+        "entryHours": {
+          "hint": "Horas faturadas do lançamento"
+        },
+        "entryRate": {
+          "hint": "Taxa horária do lançamento"
+        },
+        "entryAmount": {
+          "hint": "Valor faturado do lançamento"
         }
       },
       "sourceBinding": {

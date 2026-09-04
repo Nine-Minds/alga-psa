@@ -2,7 +2,7 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
-import type { BillingProfileSource } from './billing.interfaces';
+import type { BillingProfileSource, InvoiceTimeEntrySnapshot } from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -74,6 +74,11 @@ export interface IInvoiceChargeRecurringDetailPeriod {
   billing_timing?: 'arrears' | 'advance' | null;
 }
 
+/** Snapshot row attached to a rendered invoice charge, keyed by source entry. */
+export interface IInvoiceChargeTimeEntrySnapshot extends InvoiceTimeEntrySnapshot {
+  entryId: string;
+}
+
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
@@ -88,6 +93,12 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    * Historical flat invoices and non-recurring charges omit this field.
    */
   recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
+  /**
+   * Immutable billed-time snapshots linked to this charge at generation.
+   * Present only on time-backed charges generated after snapshot support;
+   * renderer-only metadata — accounting exports must keep ignoring it.
+   */
+  time_entry_snapshots?: IInvoiceChargeTimeEntrySnapshot[];
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;

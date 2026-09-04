@@ -661,6 +661,14 @@
     },
     "errors": {
       "loadWorkItem": "Failed to load work item."
+    },
+    "teamsMeeting": {
+      "create": "Create Teams meeting",
+      "creating": "Creating Teams meeting…",
+      "join": "Join Teams Meeting",
+      "created": "Microsoft Teams meeting created",
+      "createFailed": "Failed to create Teams meeting",
+      "recurringUnsupported": "Teams meetings can only be added to standalone entries, not recurring series."
     }
   },
   "actions": {

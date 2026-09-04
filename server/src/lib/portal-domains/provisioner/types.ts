@@ -10,8 +10,9 @@ import type { PortalDomain } from '@/models/PortalDomainModel';
  * Two drivers implement this seam:
  *  - `temporalProvisioner` (hosted/cloud): drives DNS verification, cert issuance,
  *    and Istio routing via a Temporal workflow.
- *  - `directProvisioner` (appliance): trust-on-submit — the row goes straight to
- *    `active`; the operator owns DNS, TLS, and routing via their own reverse proxy.
+ *  - `directProvisioner` (CE, and EE in appliance mode): trust-on-submit — the row
+ *    goes straight to `active`; the operator owns DNS, TLS, and routing via their
+ *    own reverse proxy.
  */
 
 export interface RegisterInput {

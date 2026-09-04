@@ -121,7 +121,8 @@ export interface ScheduleTeamsMeetingFromClientInput {
 export interface ScheduleTeamsMeetingFromClientResult {
   success: boolean;
   data?: {
-    interaction_id: string;
+    /** Null when the meeting was attached to an existing schedule entry (no interaction is created). */
+    interaction_id: string | null;
     meeting_id: string;
     schedule_entry_id: string | null;
     join_url: string;

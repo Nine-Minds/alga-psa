@@ -111,15 +111,52 @@ export const resolveFieldPreviewValue = (params: {
 
 export const resolveTableItemBindingRawValue = (
   invoice: WasmInvoiceViewModel | null,
-  item: WasmInvoiceViewModel['items'][number],
+  item: Record<string, unknown>,
   columnKey: string
 ): unknown => {
   const normalizedKey = asTrimmedString(columnKey);
   if (!normalizedKey) {
     return null;
   }
-  if (normalizedKey.startsWith('item.')) {
-    return item[normalizedKey.slice('item.'.length) as keyof typeof item];
+  // Both authoring prefixes resolve against the current row, mirroring the
+  // evaluator's row-scope-first rule ('entry.' is the nested time-entry
+  // table's conventional item binding).
+  for (const prefix of ['item.', 'entry.', 'group.']) {
+    if (normalizedKey.startsWith(prefix)) {
+      return getModelPathValue(item, normalizedKey.slice(prefix.length));
+    }
+  }
+  const rowValue = getModelPathValue(item, normalizedKey);
+  if (!isNullish(rowValue)) {
+    return rowValue;
   }
   return resolveInvoiceBindingRawValue(invoice, normalizedKey);
+};
+
+/**
+ * Map a table's collection binding id to the sample rows the WYSIWYG canvas
+ * should preview. Known collection bindings resolve to their view-model
+ * arrays; unknown ids fall back to `items` so legacy workspaces keep their
+ * previous behavior.
+ */
+const CANVAS_COLLECTION_PATHS: Record<string, keyof WasmInvoiceViewModel> = {
+  items: 'items',
+  lineItems: 'items',
+  recurringItems: 'recurringItems',
+  onetimeItems: 'onetimeItems',
+  groupsByLocation: 'groupsByLocation',
+  ticketGroups: 'ticketGroups',
+  timeEntries: 'timeEntries',
+};
+
+export const resolveCanvasCollectionRows = (
+  invoice: WasmInvoiceViewModel | null,
+  sourceBindingId: string
+): Record<string, unknown>[] => {
+  if (!invoice) {
+    return [];
+  }
+  const path = CANVAS_COLLECTION_PATHS[asTrimmedString(sourceBindingId)] ?? 'items';
+  const value: unknown = invoice[path];
+  return Array.isArray(value) ? (value as Record<string, unknown>[]) : [];
 };

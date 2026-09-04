@@ -1838,7 +1838,9 @@
         "productItems": "Conceptos de producto",
         "items": "Elementos",
         "transformsSource": "{{binding}} (origen de transformaciones)",
-        "transformsOutput": "{{binding}} (salida de transformaciones)"
+        "transformsOutput": "{{binding}} (salida de transformaciones)",
+        "ticketGroups": "Tiempo facturado por ticket",
+        "timeEntries": "Entradas de tiempo facturadas"
       },
       "presets": {
         "description": {
@@ -1856,6 +1858,46 @@
         "amount": {
           "label": "Importe",
           "hint": "Total de la línea"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Número y título del ticket"
+        },
+        "ticketDescription": {
+          "hint": "Descripción del ticket visible para el cliente"
+        },
+        "hours": {
+          "label": "Horas"
+        },
+        "ticketHours": {
+          "hint": "Total de horas facturadas del ticket"
+        },
+        "ticketRate": {
+          "hint": "Tarifa por hora («Tarifas mixtas» cuando las entradas difieren)"
+        },
+        "ticketAmount": {
+          "hint": "Importe total facturado del ticket"
+        },
+        "date": {
+          "label": "Fecha"
+        },
+        "entryDate": {
+          "hint": "Fecha en que se realizó el trabajo"
+        },
+        "entryTicket": {
+          "hint": "Número del ticket de origen"
+        },
+        "entryTitle": {
+          "hint": "Título del ticket o nombre de la tarea"
+        },
+        "entryHours": {
+          "hint": "Horas facturadas de la entrada"
+        },
+        "entryRate": {
+          "hint": "Tarifa por hora de la entrada"
+        },
+        "entryAmount": {
+          "hint": "Importe facturado de la entrada"
         }
       },
       "sourceBinding": {
