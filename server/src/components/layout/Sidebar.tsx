@@ -528,9 +528,7 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-[10px]">v{appVersion.split('.')[0]}.{appVersion.split('.')[1]}</span>
             )}
           </a>
-          {/* A tenant-branded rail should not advertise our repository to their
-              staff; the attribution row below takes that spot instead. */}
-          {sidebarOpen && !isWhiteLabeled && <GitHubStarButton />}
+          {sidebarOpen && <GitHubStarButton />}
         </div>
         {isWhiteLabeled && (
           <a

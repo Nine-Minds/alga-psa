@@ -148,8 +148,8 @@ describe('MSP sidebar branding', () => {
     expect(sidebar).toContain('{isWhiteLabeled && (');
     expect(sidebar).toContain("t('sidebar.poweredBy', { defaultValue: 'Powered by' })} AlgaPSA");
     expect(sidebar).toContain('title={`Powered by AlgaPSA v${appVersion}`}');
-    // The star button links to our repository, so it steps aside for tenant branding.
-    expect(sidebar).toContain('{sidebarOpen && !isWhiteLabeled && <GitHubStarButton />}');
+    // The star button is not white-label chrome — it stays put, branded or not.
+    expect(sidebar).toContain('{sidebarOpen && <GitHubStarButton />}');
   });
 
   it('lets a tenant favicon override the stock one on both shells', () => {

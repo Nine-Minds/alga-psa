@@ -20,8 +20,8 @@ expecting it in a diff.
 |---|---|---|
 | a | **Wide logo is optional**, square mark stays the single required asset | The collapsed rail, the browser tab and every circular frame need a square image. Requiring both would block tenants who only have a wordmark; making wide optional means the worst case is today's behavior. |
 | b | **“Powered by AlgaPSA” only while white-labeled** | An un-branded tenant already reads “AlgaPSA” at the top of the rail; a second line is noise. Once the tenant's own mark is up there, the attribution is the only place our name appears. |
-| c | **GitHub star button hides while white-labeled** | It links to `Nine-Minds/alga-psa` with our star count. On an MSP-branded rail shown to their staff that is the one control that gives the game away, and it sits in exactly the row the attribution now occupies. It comes straight back when white-labeling is switched off. |
-| d | **Favicon covers the MSP app and the client portal; the portal sidebar wide logo is out of scope** | The favicon is per-tenant metadata, so both surfaces should follow it for free. The portal sidebar has its own 32×32 circle and its own branding contract — worth a separate round rather than a drive-by. |
+| c | **GitHub star button stays, white-labeled or not** | The first cut hid it, on the theory that a link to `Nine-Minds/alga-psa` gives the game away on an MSP-branded rail. Review overruled that: the attribution row already says “Powered by AlgaPSA” one line below, so hiding the star buys no discretion and only costs us stars. It sits beside the version link exactly as before. |
+| d | **The wide logo covers the client portal side panel too, and the favicon covers both shells** | The favicon is per-tenant metadata, so both surfaces follow it for free. The portal panel was going to be a later round, but the same wordmark, the same slots and the same “name is already in the image” rule apply there, so it ships together. |
 
 ### Rail behavior
 
@@ -73,6 +73,5 @@ surrounding label/help copy gets i18n keys.
 
 * Should the attribution also appear in the **client portal** sidebar of a white-labeled tenant?
   The card only mentions the menu section of the MSP app, so this round leaves the portal alone.
-* Is hiding the GitHub star button acceptable, or should white-labeled tenants still see it?
 * Do we want a size ceiling on the wide logo's rendered width (currently `max-w-full` inside the
   16rem rail, which lets a very wide wordmark shrink itself to fit)?
