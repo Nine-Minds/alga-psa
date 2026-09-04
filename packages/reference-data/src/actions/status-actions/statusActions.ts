@@ -228,16 +228,19 @@ export const updateStatus = withAuth(async (_user, { tenant }, statusId: string,
       }
 
       // New records are created with the default status, so it must stay open — otherwise
-      // every logged interaction/ticket is born closed. Existing closed defaults (the old
-      // interaction seed) stay editable so they can be repaired.
+      // every logged interaction is born closed. Existing closed defaults (the old interaction
+      // seed) stay editable so they can be repaired. Only interactions pick a default this way
+      // and offer a UI to move it, so other status types are left alone — guarding them would
+      // make a default-flagged status impossible to close with no way to clear the flag.
       const nextIsClosed = statusData.is_closed !== undefined ? statusData.is_closed : currentStatus.is_closed;
       const nextIsDefault = statusData.is_default !== undefined ? statusData.is_default : currentStatus.is_default;
       const wasClosedDefault = !!currentStatus.is_closed && !!currentStatus.is_default;
+      const defaultPicksNewRecords = effectiveStatusType === ('interaction' as ItemType);
 
-      if (currentStatus.is_default && nextIsClosed && !currentStatus.is_closed) {
+      if (defaultPicksNewRecords && currentStatus.is_default && nextIsClosed && !currentStatus.is_closed) {
         throw new Error('Set another status as the default before closing this one');
       }
-      if (nextIsDefault && nextIsClosed && !wasClosedDefault) {
+      if (defaultPicksNewRecords && nextIsDefault && nextIsClosed && !wasClosedDefault) {
         throw new Error('A closed status cannot be the default status');
       }
 

@@ -93,6 +93,17 @@ describe('updateStatus default/closed guards', () => {
     expect(state.updates.at(-1)).toMatchObject({ order_number: 5 });
   });
 
+  it('leaves status types with no default UI free to close a default status', async () => {
+    // Only interactions pick their default automatically and offer a way to move it; guarding
+    // e.g. a project status would strand it as un-closable.
+    state.status = { ...openDefault, status_id: 'status-project-open', status_type: 'project' };
+
+    const result = await updateStatus('status-project-open', { is_closed: true, is_default: true });
+
+    expect(isStatusActionError(result)).toBe(false);
+    expect(state.updates.at(-1)).toMatchObject({ is_closed: true });
+  });
+
   it('allows promoting an open status to default', async () => {
     state.status = { ...openDefault, status_id: 'status-in-progress', name: 'In Progress', is_default: false };
 
