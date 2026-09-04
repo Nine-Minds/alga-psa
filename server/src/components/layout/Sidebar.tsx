@@ -68,8 +68,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   // The rail is dark in both themes, but a tenant that uploaded a dark-surface
   // variant means it for exactly this kind of surface.
   const tenantLogoUrl = mspBranding.logoDarkUrl || mspBranding.logoUrl;
+  // The wide wordmark already contains the tenant name, so it replaces both the
+  // circular mark and the name span — but only where there is room for it.
+  const tenantWideLogoUrl = mspBranding.logoWideDarkUrl || mspBranding.logoWideUrl;
   const [failedTenantLogoUrl, setFailedTenantLogoUrl] = useState<string | null>(null);
+  const [failedWideLogoUrl, setFailedWideLogoUrl] = useState<string | null>(null);
   const brandDisplayName = mspBranding.displayName || appDisplayName;
+  const isWhiteLabeled = Boolean(tenantLogoUrl || tenantWideLogoUrl);
+  const showWideLogo = sidebarOpen && !!tenantWideLogoUrl && failedWideLogoUrl !== tenantWideLogoUrl;
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -290,27 +296,41 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
-        {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
-          <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-            <img
-              src={tenantLogoUrl}
-              alt={brandDisplayName}
-              className="w-full h-full object-contain"
-              onError={() => setFailedTenantLogoUrl(tenantLogoUrl)}
-            />
-          </div>
+        {showWideLogo ? (
+          // Natural width, no circle: a wordmark cropped into 32x32 is unreadable,
+          // which is the whole reason this slot exists.
+          <img
+            src={tenantWideLogoUrl!}
+            alt={brandDisplayName}
+            className="h-8 w-auto max-w-full object-contain object-left"
+            onError={() => setFailedWideLogoUrl(tenantWideLogoUrl)}
+            data-automation-id="sidebar-wide-logo"
+          />
         ) : (
-          <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
-            <Image
-              src="/images/avatar-purple-background.png"
-              alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
-              width={200}
-              height={200}
-              className="w-full h-full object-cover"
-            />
-          </div>
+          <>
+            {tenantLogoUrl && failedTenantLogoUrl !== tenantLogoUrl ? (
+              <div className="w-8 h-8 bg-white/5 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                <img
+                  src={tenantLogoUrl}
+                  alt={brandDisplayName}
+                  className="w-full h-full object-contain"
+                  onError={() => setFailedTenantLogoUrl(tenantLogoUrl)}
+                />
+              </div>
+            ) : (
+              <div className="w-8 h-8 bg-[rgb(var(--color-primary-600))] rounded-full flex items-center justify-center overflow-hidden flex-shrink-0">
+                <Image
+                  src="/images/avatar-purple-background.png"
+                  alt={t('sidebar.logoAlt', { defaultValue: appLogoAlt })}
+                  width={200}
+                  height={200}
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            )}
+            <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{brandDisplayName}</span>
+          </>
         )}
-        <span className={`text-xl font-semibold truncate ${sidebarOpen ? '' : 'hidden'}`}>{brandDisplayName}</span>
       </a>
 
       {/* Back to Main button - shown in settings and billing modes */}
@@ -464,8 +484,38 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-[10px]">v{appVersion.split('.')[0]}.{appVersion.split('.')[1]}</span>
             )}
           </a>
-          {sidebarOpen && <GitHubStarButton />}
+          {/* A tenant-branded rail should not advertise our repository to their
+              staff; the attribution row below takes that spot instead. */}
+          {sidebarOpen && !isWhiteLabeled && <GitHubStarButton />}
         </div>
+        {isWhiteLabeled && (
+          <a
+            id="powered-by-alga-link"
+            href="https://github.com/Nine-Minds/alga-psa/releases"
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Powered by AlgaPSA v${appVersion}`}
+            className={`mt-1.5 flex items-center gap-1.5 text-[11px] text-gray-400 hover:text-gray-200 transition-colors ${
+              sidebarOpen ? '' : 'justify-center'
+            }`}
+          >
+            <Image
+              src="/images/avatar-purple-background.png"
+              alt=""
+              width={200}
+              height={200}
+              aria-hidden="true"
+              className={`rounded-full object-cover ${sidebarOpen ? 'w-3.5 h-3.5' : 'w-4 h-4'}`}
+            />
+            {/* "AlgaPSA" is a product name, so only the lead-in is translated.
+                The version sits in the link above; the tooltip repeats it here. */}
+            {sidebarOpen && (
+              <span className="truncate">
+                {t('sidebar.poweredBy', { defaultValue: 'Powered by' })} AlgaPSA
+              </span>
+            )}
+          </a>
+        )}
       </div>
 
       <CollapseToggleButton

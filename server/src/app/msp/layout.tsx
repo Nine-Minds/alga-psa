@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
@@ -15,13 +16,32 @@ import { resolveMspBranding } from "@/components/layout/mspBranding";
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
+/**
+ * Client-portal branding must never leak into the staff app by itself. The
+ * dedicated Enterprise white-label setting is the explicit MSP opt-in.
+ *
+ * generateMetadata and the layout body both need this, so cache() keeps it to
+ * one round trip per request.
+ */
+const loadMspWhiteLabel = cache(async (tenantId: string) => {
+  const tenantTheme = isEnterprise
+    ? await getTenantThemeByTenantId(tenantId).catch(() => null)
+    : null;
+  const mspWhiteLabel = tenantTheme?.mspWhiteLabel === true;
+  const tenantBranding = mspWhiteLabel
+    ? await getTenantBrandingByTenantId(tenantId).catch(() => null)
+    : null;
+
+  return { mspWhiteLabel, tenantBranding };
+});
+
 // This template overrides the root layout's template for all /msp/* pages.
 // The default includes the suffix because defaults bypass their own template
 // (i.e. 'Dashboard | AlgaPSA' is rendered literally, not wrapped by the template).
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getServerTranslation(undefined, 'metadata');
 
-  return {
+  const metadata: Metadata = {
     title: {
       // '%s' is Next's own slot for the child route's title, not an i18next
       // placeholder — it passes through translation untouched.
@@ -29,6 +49,19 @@ export async function generateMetadata(): Promise<Metadata> {
       default: t('msp.layout.defaultTitle', { defaultValue: 'Dashboard | AlgaPSA' }),
     },
   };
+
+  // A white-labeled tenant owns the browser tab too. Next merges icons from the
+  // leaf segment, so this replaces the root layout's /favicon.ico.
+  const session = await getSession().catch(() => null);
+  const tenantId = session?.user?.tenant;
+  if (tenantId) {
+    const { tenantBranding } = await loadMspWhiteLabel(tenantId);
+    if (tenantBranding?.faviconUrl) {
+      metadata.icons = { icon: tenantBranding.faviconUrl };
+    }
+  }
+
+  return metadata;
 }
 
 export default async function MspLayout({
@@ -81,16 +114,10 @@ export default async function MspLayout({
   const selfHostLicensing = await isSelfHostLicensing();
   const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
 
-  // Client-portal branding must never leak into the staff app by itself. The
-  // dedicated Enterprise white-label setting is the explicit MSP opt-in.
   const tenantId = session.user.tenant;
-  const tenantTheme = isEnterprise && tenantId
-    ? await getTenantThemeByTenantId(tenantId).catch(() => null)
-    : null;
-  const mspWhiteLabel = tenantTheme?.mspWhiteLabel === true;
-  const tenantBranding = mspWhiteLabel && tenantId
-    ? await getTenantBrandingByTenantId(tenantId).catch(() => null)
-    : null;
+  const { mspWhiteLabel, tenantBranding } = tenantId
+    ? await loadMspWhiteLabel(tenantId)
+    : { mspWhiteLabel: false, tenantBranding: null };
   const mspBranding = resolveMspBranding(tenantBranding, { isEnterprise, mspWhiteLabel });
 
   return (

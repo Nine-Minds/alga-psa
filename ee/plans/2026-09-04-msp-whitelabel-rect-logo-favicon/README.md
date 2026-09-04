@@ -36,8 +36,9 @@ same file for anyone reading this in a diff.
 ### Footer attribution
 
 Sits under the existing release-notes version link inside the same bordered block: the tiny Alga
-mark plus `AlgaPSA v1.5.0`, linking to the release notes. Collapsed rail shows the mark alone with
-the full string in the `title` tooltip. “Powered by AlgaPSA” stays untranslated brand text; the
+mark plus “Powered by AlgaPSA”, linking to the release notes. The version stays in the link above
+rather than being printed twice; the tooltip carries `Powered by AlgaPSA v1.5.0`. The collapsed rail
+shows the mark alone with that same tooltip. “Powered by AlgaPSA” stays untranslated brand text; the
 surrounding label/help copy gets i18n keys.
 
 ### Settings card
