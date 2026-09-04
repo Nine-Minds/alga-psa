@@ -491,7 +491,32 @@ async function fetchPersistedRecurringDueWorkDbRows(
     const contractLineRows = await contractLineRowsQuery;
     const clientContractLineRows = await clientContractLineRowsQuery as PersistedRecurringDueWorkDbRow[];
 
-    return [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[];
+    // The client_billing_cycles left-join matches on invoice window dates, so
+    // duplicate cycle rows for the same period fan a single persisted
+    // recurring_service_periods record out into several due-work rows that
+    // share an execution identity but disagree on billing_cycle_id. One
+    // persisted record is one obligation: collapse the fan-out per record_id,
+    // preferring a resolved billing cycle and then the lowest id so repeated
+    // reads stay deterministic.
+    const rowsByRecordId = new Map<string, PersistedRecurringDueWorkDbRow>();
+    for (const row of [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[]) {
+        const existing = rowsByRecordId.get(row.record_id);
+        if (!existing) {
+            rowsByRecordId.set(row.record_id, row);
+            continue;
+        }
+
+        const rowCycle = row.billing_cycle_id ?? null;
+        const existingCycle = existing.billing_cycle_id ?? null;
+        const rowWins = existingCycle === null
+            ? rowCycle !== null
+            : rowCycle !== null && rowCycle < existingCycle;
+        if (rowWins) {
+            rowsByRecordId.set(row.record_id, row);
+        }
+    }
+
+    return Array.from(rowsByRecordId.values());
 }
 
 async function fetchClientCadenceMaterializationGaps(
@@ -1285,9 +1310,16 @@ function buildRecurringDueWorkInvoiceCandidates(
 
     const candidates = grouped
         .map((candidate): IRecurringDueWorkInvoiceCandidate | null => {
+            // Members are the atomic execution units the UI renders and submits;
+            // a duplicated execution identity here becomes two identical child
+            // rows and a double-submitted selection, so dedupe by identity even
+            // if the source rows carried duplicates.
             const members = candidate.dueSelections
                 .map((selection) => rowByExecutionIdentityKey.get(selection.servicePeriod.sourceObligation.obligationId))
-                .filter((row): row is IRecurringDueWorkRow => Boolean(row));
+                .filter((row): row is IRecurringDueWorkRow => Boolean(row))
+                .filter((row, index, allRows) =>
+                    allRows.findIndex((other) => other.executionIdentityKey === row.executionIdentityKey) === index,
+                );
 
             if (members.length === 0) {
                 return null;

@@ -243,6 +243,42 @@ describe('usage tracking deep-link prefill', () => {
       expect(screen.getAllByText('Standard Seat').length).toBeGreaterThan(0);
     });
   });
+
+  it('synchronizes filters when prefills arrive as a prop change after mount', async () => {
+    // The billing dashboard renders this tab from a server-side query snapshot
+    // and swaps to the live URL params on hydration without remounting, so the
+    // prefills can land as a prop change rather than the initial props.
+    const services = [
+      {
+        service_id: 'svc-usage',
+        service_name: 'Standard Seat',
+        billing_method: 'usage',
+      } as never,
+    ];
+
+    const { rerender } = render(
+      <UsageTracking initialServices={services} initialClientId={null} initialServiceId={null} />
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByText('All Services').length).toBeGreaterThan(0);
+    });
+
+    rerender(
+      <UsageTracking
+        initialServices={services}
+        initialClientId="client-1"
+        initialServiceId="svc-usage"
+      />
+    );
+
+    // Both filters follow the hydrated props: the client select shows the
+    // prefilled client and the service select the prefilled service.
+    await waitFor(() => {
+      expect(screen.getAllByText('Standard Seat').length).toBeGreaterThan(0);
+      expect(screen.getAllByText('Solutions by Swift').length).toBeGreaterThan(0);
+    });
+  });
 });
 
 describe('contract reports variable usage labeling', () => {

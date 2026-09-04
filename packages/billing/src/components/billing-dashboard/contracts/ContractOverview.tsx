@@ -50,6 +50,7 @@ const ContractLineCard: React.FC<{
   isExpanded: boolean;
   onToggle: () => void;
   currencyCode: string;
+  clientId: string | null;
   formatCurrencyCents: (cents: number | null, currencyCode?: string) => string;
   formatFrequencyLabel: (frequency: string) => string;
   formatServiceCountLabel: (count: number) => string;
@@ -62,6 +63,7 @@ const ContractLineCard: React.FC<{
   isExpanded,
   onToggle,
   currencyCode,
+  clientId,
   formatCurrencyCents,
   formatFrequencyLabel,
   formatServiceCountLabel,
@@ -127,8 +129,10 @@ const ContractLineCard: React.FC<{
                     <span>x{service.quantity}</span>
                   )}
                   {line.contract_line_type === 'Usage' && (
+                    // Deep link carries the owning client and the service so
+                    // Usage Tracking opens filtered to this exact obligation.
                     <a
-                      href={`/msp/billing?tab=usage-tracking&serviceId=${service.service_id}`}
+                      href={`/msp/billing?tab=usage-tracking${clientId ? `&clientId=${clientId}` : ''}&serviceId=${service.service_id}`}
                       className="italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
                       data-testid={`usage-recorded-usage-hint-${service.service_id}`}
                       onClick={(event) => event.stopPropagation()}
@@ -385,6 +389,7 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   isExpanded={expandedLines.has(line.contract_line_id)}
                   onToggle={() => toggleLine(line.contract_line_id)}
                   currencyCode={overview.currencyCode}
+                  clientId={overview.clientId ?? null}
                   formatCurrencyCents={formatCurrencyCents}
                   formatFrequencyLabel={formatFrequencyLabel}
                   formatServiceCountLabel={formatServiceCountLabel}

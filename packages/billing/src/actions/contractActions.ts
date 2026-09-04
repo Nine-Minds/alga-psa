@@ -1002,6 +1002,8 @@ export interface IContractOverview {
   hasUsageServices: boolean;
   hasFixedServices: boolean;
   currencyCode: string;  // ISO currency code (e.g., 'USD', 'AUD')
+  /** Owning client for contract-backed overviews (null for templates); lets usage deep links prefill the client filter. */
+  clientId: string | null;
 }
 
 /**
@@ -1021,14 +1023,16 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
 
     // Get currency code - templates default to USD, contracts have their own currency
     let currencyCode = 'USD';
+    let clientId: string | null = null;
     if (!isTemplate) {
       const contractRecord = await tenantScopedTable(knex, tenant, 'contracts')
         .where({ contract_id: contractId })
-        .select('currency_code')
+        .select('currency_code', 'owner_client_id')
         .first();
       if (contractRecord?.currency_code) {
         currencyCode = contractRecord.currency_code;
       }
+      clientId = contractRecord?.owner_client_id ?? null;
     }
 
     let contractLines: IContractLineOverview[] = [];
@@ -1210,7 +1214,8 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
       hasFixedServices,
       hasHourlyServices,
       hasUsageServices,
-      currencyCode
+      currencyCode,
+      clientId
     };
   } catch (error) {
     console.error(`Error fetching contract overview for ${contractId}:`, error);

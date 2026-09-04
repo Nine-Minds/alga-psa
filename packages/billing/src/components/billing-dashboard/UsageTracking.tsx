@@ -130,6 +130,23 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
     loadClients();
   }, []);
 
+  // Deep-link prefills can arrive after mount: the billing dashboard renders
+  // this tab from a server-side query snapshot first and swaps to the live URL
+  // params on hydration, and client-side navigation (e.g. following "Billed on
+  // recorded usage") re-renders with new props instead of remounting. The
+  // filters must follow those prop changes, not just the initial render.
+  useEffect(() => {
+    if (initialClientId) {
+      setSelectedClient(initialClientId);
+    }
+  }, [initialClientId]);
+
+  useEffect(() => {
+    if (initialServiceId) {
+      setSelectedService(initialServiceId);
+    }
+  }, [initialServiceId]);
+
   useEffect(() => {
     loadUsageRecords();
   }, [selectedClient, selectedService]);

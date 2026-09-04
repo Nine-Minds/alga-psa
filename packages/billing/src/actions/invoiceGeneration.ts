@@ -77,6 +77,7 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY, NO_BILLING_EMAIL_MESSAGE_KEY, USAGE_RECORDS_MISSING_MESSAGE_KEY } from './invoiceGeneration.constants';
 import {
   ManualInvoiceError,
@@ -618,6 +619,7 @@ function buildMissingUsageRecordsError(
       statuses.map((status) => status.service_name ?? status.service_id),
     ),
   );
+  const serviceIds = Array.from(new Set(statuses.map((status) => status.service_id)));
   const periodStart = statuses[0].service_period_start;
   const periodEnd = statuses[0].service_period_end;
   return new ManualInvoiceError(
@@ -625,6 +627,9 @@ function buildMissingUsageRecordsError(
     `No eligible usage records for ${serviceNames.join(', ')} in the service period ${periodStart} to ${periodEnd}. Record usage for this period (or a zero-usage entry) to bill these services.`,
     {
       services: serviceNames.join(', '),
+      // Not interpolated into copy; lets the UI prefill the Usage Tracking
+      // route so "Record Usage" lands on the affected service directly.
+      serviceIds: serviceIds.join(','),
       periodStart,
       periodEnd,
     },
@@ -1117,13 +1122,26 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
           this.where('cc.end_date', '>=', params.windowStart)
             .orWhereNull('cc.end_date');
         })
-        .select('cl.contract_line_id');
+        .select('cl.contract_line_id', 'cl.billing_timing', 'cc.start_date', 'cc.end_date');
     },
   );
 
   const activeRecurringLineIds = Array.from(
     new Set(
       activeRecurringLineRows
+        // Only lines whose assignment actually has a service period settling in
+        // this window are expected: an arrears line assigned at (or after) the
+        // window start bills its first period in a later window, and demanding
+        // materialization for it would falsely block every other line here.
+        .filter((row) =>
+          isRecurringLineExpectedInClientCadenceWindow({
+            duePosition: row.billing_timing === 'arrears' ? 'arrears' : 'advance',
+            assignmentStart: toISODate(toPlainDate(row.start_date)),
+            assignmentEnd: row.end_date ? toISODate(toPlainDate(row.end_date)) : null,
+            windowStart: params.windowStart,
+            windowEnd: params.windowEnd,
+          }),
+        )
         .map((row) => row.contract_line_id)
         .filter((value): value is string => Boolean(value)),
     ),

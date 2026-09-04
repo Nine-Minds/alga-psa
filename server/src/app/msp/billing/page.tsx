@@ -51,6 +51,11 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
   const presetId = typeof params.presetId === 'string' ? params.presetId : undefined;
   const contractId = typeof params.contractId === 'string' ? params.contractId : undefined;
   const contractView = typeof params.contractView === 'string' ? params.contractView : undefined;
+  // Usage Tracking deep links (contract overview, missing-usage invoice
+  // preview) carry client/service prefills; they must survive the initial
+  // server render or the filters mount as "All Clients / All Services".
+  const clientId = typeof params.clientId === 'string' ? params.clientId : undefined;
+  const serviceId = typeof params.serviceId === 'string' ? params.serviceId : undefined;
 
   // Fetch services (always needed)
   const servicesResponse = await getServices();
@@ -86,7 +91,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
         initialServices={services}
         contractDocuments={contractDocuments}
         currentUserId={currentUserId}
-        initialQuery={{ tab, subtab, templateId, presetId, contractId, contractView }}
+        initialQuery={{ tab, subtab, templateId, presetId, contractId, contractView, clientId, serviceId }}
       />
     </Suspense>
   );

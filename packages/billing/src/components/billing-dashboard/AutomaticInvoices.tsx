@@ -242,7 +242,16 @@ const getParentGroupSummary = ({
 
 // Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
-  candidates.map((candidate) => {
+  candidates.map((rawCandidate) => {
+    // An execution identity must appear exactly once: duplicated members (e.g.
+    // an upstream join fan-out) would render identical child rows/DOM ids and
+    // submit the same identity twice on preview/generation.
+    const dedupedMembers = rawCandidate.members.filter((member, index, allMembers) =>
+      allMembers.findIndex((other) => other.executionIdentityKey === member.executionIdentityKey) === index,
+    );
+    const candidate: ReadyPeriod = dedupedMembers.length === rawCandidate.members.length
+      ? rawCandidate
+      : { ...rawCandidate, members: dedupedMembers, memberCount: dedupedMembers.length };
     const memberAmounts = candidate.members
       .map((member) => (member as { amountCents?: number | null }).amountCents)
       .filter((amount): amount is number => typeof amount === 'number' && Number.isFinite(amount));
@@ -311,6 +320,19 @@ const getTodayDate = (): Date => {
 
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
+
+// Usage Tracking deep link with optional filter prefills so "Record Usage"
+// lands on the affected client/service instead of All Clients / All Services.
+const buildUsageTrackingHref = (input: { clientId?: string | null; serviceId?: string | null } = {}) => {
+  const params = new URLSearchParams({ tab: 'usage-tracking' });
+  if (input.clientId) {
+    params.set('clientId', input.clientId);
+  }
+  if (input.serviceId) {
+    params.set('serviceId', input.serviceId);
+  }
+  return `/msp/billing?${params.toString()}`;
+};
 
 const AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM = 'automaticClientFilter';
 
@@ -743,6 +765,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   // Structured code of the last preview failure; drives actionable remediation
   // (e.g. USAGE_RECORDS_MISSING links to Usage Tracking for the period).
   const [previewFailureCode, setPreviewFailureCode] = useState<RecurringInvoiceFailureCode | null>(null);
+  // Prefill context for the failure's remediation route: the previewed
+  // selection's client and the failure's affected services (when the coded
+  // params name exactly one, Usage Tracking can preselect it).
+  const [previewFailureUsageRoute, setPreviewFailureUsageRoute] = useState<{
+    clientId: string | null;
+    serviceId: string | null;
+  }>({ clientId: null, serviceId: null });
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
@@ -1515,6 +1544,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setErrorOperation('finalize');
     setErrors({}); // Clear previous errors
     setPreviewFailureCode(null);
+    setPreviewFailureUsageRoute({ clientId: null, serviceId: null });
     const response = await previewGroupedInvoicesForSelectionInputs(
       groups.map((group) => ({
         previewGroupKey: group.groupKey,
@@ -1541,6 +1571,22 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInput: null,
       }); // Clear preview state on error
       setPreviewFailureCode(response.code ?? null);
+      // Prefill the remediation route from what was previewed: the selection's
+      // unanimous client, and the failing service when the params name exactly
+      // one (multi-service failures fall back to the client-only filter).
+      const previewedClientIds = Array.from(
+        new Set(
+          groups.flatMap((group) => group.selectorInputs.map((selectorInput) => selectorInput.clientId)),
+        ),
+      );
+      const failedServiceIds = (response.params?.serviceIds ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      setPreviewFailureUsageRoute({
+        clientId: previewedClientIds.length === 1 ? previewedClientIds[0] : null,
+        serviceId: failedServiceIds.length === 1 ? failedServiceIds[0] : null,
+      });
       setErrors({
         preview: localizePreviewFailure(t, response)
       });
@@ -3017,6 +3063,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
           });
           setErrors({}); // Clear preview-specific errors on close
           setPreviewFailureCode(null);
+          setPreviewFailureUsageRoute({ clientId: null, serviceId: null });
         }}
         title={t('automaticInvoices.dialogs.preview.title', {
           defaultValue: 'Invoice Preview',
@@ -3037,6 +3084,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 }); // Reset state on close
                 setErrors({}); // Clear errors on close
                 setPreviewFailureCode(null);
+                setPreviewFailureUsageRoute({ clientId: null, serviceId: null });
               }}
               disabled={isGeneratingFromPreview} // Disable while generating
             >
@@ -3080,7 +3128,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                 <Button
                   id="preview-record-usage-button"
                   variant="outline"
-                  onClick={() => router.push('/msp/billing?tab=usage-tracking')}
+                  onClick={() => router.push(buildUsageTrackingHref(previewFailureUsageRoute))}
                 >
                   {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
                 </Button>
@@ -3135,7 +3183,19 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                         id={`preview-record-usage-${previewIndex}-button`}
                         variant="outline"
                         className="mt-2"
-                        onClick={() => router.push('/msp/billing?tab=usage-tracking')}
+                        onClick={() => {
+                          const missingServiceIds = Array.from(
+                            new Set(
+                              (previewEntry.usageServicePeriodStatuses ?? []).map(
+                                (status) => status.service_id,
+                              ),
+                            ),
+                          );
+                          router.push(buildUsageTrackingHref({
+                            clientId: previewEntry.selectorInputs[0]?.clientId ?? null,
+                            serviceId: missingServiceIds.length === 1 ? missingServiceIds[0] : null,
+                          }));
+                        }}
                       >
                         {t('automaticInvoices.actions.recordUsage', { defaultValue: 'Record Usage' })}
                       </Button>
