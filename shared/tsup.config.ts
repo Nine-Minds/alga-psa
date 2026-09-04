@@ -6,6 +6,7 @@ export default defineConfig({
     'types/index': 'types/index.ts',
     'core/logger': 'core/logger.ts',
     'core/secretProvider': 'core/secretProvider.ts',
+    'core/deploymentProfile': 'core/deploymentProfile.ts',
     'db/index': 'db/index.ts',
     'db/admin': 'db/admin.ts',
     'db/connection': 'db/connection.ts',

@@ -153,7 +153,7 @@ function validateDirectModeDomain(domain: string): ActionMessageError | null {
 
   const appHost = getNextAuthHostname();
   if (appHost && domain === appHost) {
-    return actionError("Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.", 'msp/settings:errors.clientPortalDomain.notApplianceHost');
+    return actionError("Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.", 'msp/settings:errors.clientPortalDomain.notApplianceHost');
   }
 
   return null;

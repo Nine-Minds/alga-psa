@@ -2,10 +2,13 @@ import {
   resolveDeploymentCapabilities,
   type PortalDomainProvisionerKind,
 } from '@/lib/deployment/deploymentProfile';
-import { hostedProvisioner } from '@ee/lib/portal-domains/provisioner/hosted';
+import { hostedProvisioner as hostedSeam } from '@ee/lib/portal-domains/provisioner/hosted';
 
 import { directProvisioner } from './directProvisioner';
 import type { PortalDomainProvisioner } from './types';
+
+// EE resolves the seam to the Temporal driver; the CE stub exports null.
+const hostedProvisioner: PortalDomainProvisioner | null = hostedSeam;
 
 export interface PortalDomainProvisioning {
   /** The mode actually in effect, which the UI and validation branch on. */

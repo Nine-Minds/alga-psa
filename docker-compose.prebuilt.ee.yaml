@@ -40,6 +40,7 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}
       # Workflow configuration
@@ -112,6 +113,7 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-noreply@example.com}
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
       NEXTAUTH_SESSION_EXPIRES: ${NEXTAUTH_SESSION_EXPIRES:-86400}
+      TRUST_FORWARDED_HOST: ${TRUST_FORWARDED_HOST:-false}
       # Secret provider configuration for setup (EE edition)
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem,vault}
       SECRET_WRITE_PROVIDER: ${SECRET_WRITE_PROVIDER:-filesystem}

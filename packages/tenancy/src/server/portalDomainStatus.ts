@@ -29,7 +29,7 @@ function formatResponse(record: PortalDomain | null, canonicalHost: string): Por
     domain: record?.domain ?? null,
     canonicalHost,
     status: record?.status ?? 'disabled',
-    statusMessage: record?.statusMessage ?? 'Custom portal domains are available in Pro.',
+    statusMessage: record?.statusMessage ?? 'No custom domain registered yet.',
     lastCheckedAt: toIsoString(record?.lastCheckedAt),
     verificationMethod: record?.verificationMethod ?? 'cname',
     verificationDetails: buildVerificationDetails(record, canonicalHost),
