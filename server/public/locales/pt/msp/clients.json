@@ -1479,8 +1479,11 @@
       "loadFailed": "Não foi possível carregar as opções de interação. Tente novamente.",
       "saveFailed": "Não foi possível salvar a interação. Tente novamente.",
       "schedule": {
-        "addToggle": "Adicionar à minha agenda",
-        "addHelp": "Uma entrada de agendamento será adicionada ao seu calendário do AlgaPSA."
+        "addToggle": "Adicionar à agenda",
+        "addHelp": "Uma entrada de agendamento será adicionada ao seu calendário do AlgaPSA.",
+        "addHelpOthers": "Uma entrada de agendamento será adicionada aos calendários do AlgaPSA dos usuários selecionados.",
+        "assigneesLabel": "Agendar para",
+        "assigneesPlaceholder": "Selecionar usuários"
       }
     },
     "feed": {

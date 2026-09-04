@@ -26,7 +26,8 @@ import { IInteraction, IInteractionType } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useSession } from 'next-auth/react';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
+import { getCurrentUserPermissions, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
@@ -124,6 +125,9 @@ export function QuickAddInteraction({
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
   const [addToSchedule, setAddToSchedule] = useState(false);
   const [hasTouchedScheduleToggle, setHasTouchedScheduleToggle] = useState(false);
+  const [canAssignScheduleToOthers, setCanAssignScheduleToOthers] = useState(false);
+  const [scheduleAssignedUserIds, setScheduleAssignedUserIds] = useState<string[]>([]);
+  const [hasLoadedScheduleUserOptions, setHasLoadedScheduleUserOptions] = useState(false);
 
   const isEditMode = !!editingInteraction;
   const isStandaloneCreate = !isEditMode && !entityId;
@@ -160,6 +164,11 @@ export function QuickAddInteraction({
   // duplicate control there. Every other interaction type gets it as soon as it has a start.
   const teamsMeetingWillSchedule = createTeamsMeeting && canCreateTeamsMeeting;
   const canAddToSchedule = !isEditMode && !!startTime && !teamsMeetingWillSchedule;
+  // Whoever books a calendar block gets to choose whose it is — as long as they may update
+  // other people's schedules. Without the permission the dialog stays "my schedule".
+  const willCreateScheduleEntry = teamsMeetingWillSchedule || (canAddToSchedule && addToSchedule);
+  const canPickScheduleAssignees = !isEditMode && willCreateScheduleEntry && canAssignScheduleToOthers;
+  const isSchedulingForOthers = scheduleAssignedUserIds.some((userId) => userId !== session?.user?.id);
 
   // UI Reflection System Integration
   const { automationIdProps: typeSelectProps } = useAutomationIdAndRegister<FormFieldComponent>({
@@ -405,6 +414,53 @@ export function QuickAddInteraction({
     }
   }, [isOpen, isEditMode, isStandaloneCreate, editingInteraction, session?.user?.id, t]);
 
+  // Booking someone else's calendar is an update of *their* schedule, so the picker only
+  // appears for users who hold that permission. Reopening the dialog resets the choice.
+  useEffect(() => {
+    if (!isOpen || isEditMode) return;
+
+    setScheduleAssignedUserIds(session?.user?.id ? [session.user.id] : []);
+    setSelectedUserId(session?.user?.id || '');
+
+    let cancelled = false;
+    getCurrentUserPermissions()
+      .then((permissions) => {
+        if (!cancelled) setCanAssignScheduleToOthers(permissions.includes('user_schedule:update'));
+      })
+      .catch((error) => {
+        console.error('Failed to load schedule permissions:', error);
+        if (!cancelled) setCanAssignScheduleToOthers(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, isEditMode, session?.user?.id]);
+
+  // Same deal as the attendee options: fetch the internal users only once the assignee
+  // picker is actually on screen, and only once per dialog session.
+  useEffect(() => {
+    if (!canPickScheduleAssignees || hasLoadedScheduleUserOptions || hasLoadedAttendeeOptions) {
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const usersList = await getAllUsersBasicAsync(false, 'internal');
+        if (cancelled) return;
+        setUsers(usersList);
+        setHasLoadedScheduleUserOptions(true);
+      } catch (error) {
+        console.error('Failed to load schedule assignee options:', error);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canPickScheduleAssignees, hasLoadedScheduleUserOptions, hasLoadedAttendeeOptions]);
+
   // Scheduling something ahead should land on the calendar; logging what already happened
   // should not. Stops steering once the user has flipped the switch themselves.
   useEffect(() => {
@@ -624,6 +680,13 @@ export function QuickAddInteraction({
     }
   };
 
+  // Booking a single colleague's calendar logs the interaction for them too, so the record
+  // and its calendar block never disagree about whose work it is.
+  const handleScheduleAssigneesChange = (values: string[]) => {
+    setScheduleAssignedUserIds(values);
+    setSelectedUserId(values.length === 1 ? values[0] : (session?.user?.id || ''));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setHasAttemptedSubmit(true);
@@ -679,7 +742,8 @@ export function QuickAddInteraction({
         start_time: startTime,
         end_time: endTime,
         status_id: statusId,
-        user_id: isEditMode ? selectedUserId : session.user.id,
+        // Honour an explicitly chosen owner in both modes; the session user is only the fallback.
+        user_id: selectedUserId || session.user.id,
         tenant: tenant
       };
   
@@ -725,6 +789,7 @@ export function QuickAddInteraction({
           // The scheduled meeting must exist on the AlgaPSA calendar too;
           // the creator is the default assignee server-side.
           createScheduleEntry: true,
+          scheduleAssignedUserIds,
         });
         if (!scheduleResult.success || !scheduleResult.data?.interaction_id) {
           throw new Error(scheduleResult.error || t('interactions.quickAdd.teams.createFailed', {
@@ -738,7 +803,7 @@ export function QuickAddInteraction({
         console.log('Create data:', interactionData);
         const newInteraction = await addInteraction(
           interactionData as Omit<IInteraction, 'interaction_date'>,
-          { createScheduleEntry: canAddToSchedule && addToSchedule },
+          { createScheduleEntry: canAddToSchedule && addToSchedule, scheduleAssignedUserIds },
         );
         if (isReturnedActionError(newInteraction)) {
           throw new Error(getErrorMessage(newInteraction));
@@ -783,6 +848,8 @@ export function QuickAddInteraction({
         setHasLoadedAttendeeOptions(false);
         setAddToSchedule(false);
         setHasTouchedScheduleToggle(false);
+        setScheduleAssignedUserIds([]);
+        setHasLoadedScheduleUserOptions(false);
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
@@ -1245,23 +1312,45 @@ export function QuickAddInteraction({
                   </div>
                 </div>
               </div>
-              {canAddToSchedule && (
-                <div className="space-y-1">
-                  <Switch
-                    id={`${id}-add-to-schedule-toggle`}
-                    checked={addToSchedule}
-                    onCheckedChange={(checked) => {
-                      setHasTouchedScheduleToggle(true);
-                      setAddToSchedule(checked);
-                    }}
-                    label={t('interactions.quickAdd.schedule.addToggle', {
-                      defaultValue: 'Add to my schedule',
-                    })}
-                  />
+              {(canAddToSchedule || canPickScheduleAssignees) && (
+                <div className="space-y-2">
+                  {canAddToSchedule && (
+                    <Switch
+                      id={`${id}-add-to-schedule-toggle`}
+                      checked={addToSchedule}
+                      onCheckedChange={(checked) => {
+                        setHasTouchedScheduleToggle(true);
+                        setAddToSchedule(checked);
+                      }}
+                      label={t('interactions.quickAdd.schedule.addToggle', {
+                        defaultValue: 'Add to schedule',
+                      })}
+                    />
+                  )}
+                  {canPickScheduleAssignees && (
+                    <MultiUserPicker
+                      id={`${id}-schedule-assignees`}
+                      label={t('interactions.quickAdd.schedule.assigneesLabel', {
+                        defaultValue: 'Schedule for',
+                      })}
+                      values={scheduleAssignedUserIds}
+                      onValuesChange={handleScheduleAssigneesChange}
+                      users={users}
+                      getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                      placeholder={t('interactions.quickAdd.schedule.assigneesPlaceholder', {
+                        defaultValue: 'Select users',
+                      })}
+                      showSearch
+                    />
+                  )}
                   <p className="text-xs text-gray-600">
-                    {t('interactions.quickAdd.schedule.addHelp', {
-                      defaultValue: 'Creates a matching entry on your AlgaPSA calendar.',
-                    })}
+                    {isSchedulingForOthers
+                      ? t('interactions.quickAdd.schedule.addHelpOthers', {
+                          defaultValue: "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+                        })
+                      : t('interactions.quickAdd.schedule.addHelp', {
+                          defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                        })}
                   </p>
                 </div>
               )}

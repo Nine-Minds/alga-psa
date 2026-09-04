@@ -1479,8 +1479,11 @@
       "loadFailed": "Impossible de charger les options d'interaction. Réessayez.",
       "saveFailed": "Impossible d'enregistrer l'interaction. Réessayez.",
       "schedule": {
-        "addToggle": "Ajouter à mon planning",
-        "addHelp": "Une entrée de planification sera ajoutée à votre calendrier AlgaPSA."
+        "addToggle": "Ajouter au planning",
+        "addHelp": "Une entrée de planification sera ajoutée à votre calendrier AlgaPSA.",
+        "addHelpOthers": "Une entrée de planification sera ajoutée aux calendriers AlgaPSA des utilisateurs sélectionnés.",
+        "assigneesLabel": "Planifier pour",
+        "assigneesPlaceholder": "Sélectionner des utilisateurs"
       }
     },
     "feed": {

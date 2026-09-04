@@ -1479,8 +1479,11 @@
       "loadFailed": "Interaction options could not be loaded. Please try again.",
       "saveFailed": "The interaction could not be saved. Please try again.",
       "schedule": {
-        "addToggle": "Add to my schedule",
-        "addHelp": "A schedule entry will be added to your AlgaPSA calendar."
+        "addToggle": "Add to schedule",
+        "addHelp": "A schedule entry will be added to your AlgaPSA calendar.",
+        "addHelpOthers": "A schedule entry will be added to the selected users' AlgaPSA calendars.",
+        "assigneesLabel": "Schedule for",
+        "assigneesPlaceholder": "Select users"
       }
     },
     "feed": {

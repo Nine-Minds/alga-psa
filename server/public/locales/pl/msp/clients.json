@@ -1531,8 +1531,11 @@
       "loadFailed": "Nie udało się wczytać opcji interakcji. Spróbuj ponownie.",
       "saveFailed": "Nie udało się zapisać interakcji. Spróbuj ponownie.",
       "schedule": {
-        "addToggle": "Dodaj do mojego harmonogramu",
-        "addHelp": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA."
+        "addToggle": "Dodaj do harmonogramu",
+        "addHelp": "Wpis harmonogramu zostanie dodany do Twojego kalendarza AlgaPSA.",
+        "addHelpOthers": "Wpis harmonogramu zostanie dodany do kalendarzy AlgaPSA wybranych użytkowników.",
+        "assigneesLabel": "Zaplanuj dla",
+        "assigneesPlaceholder": "Wybierz użytkowników"
       }
     },
     "feed": {

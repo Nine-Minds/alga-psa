@@ -1479,8 +1479,11 @@
       "loadFailed": "Die Interaktionsoptionen konnten nicht geladen werden. Versuchen Sie es erneut.",
       "saveFailed": "Die Interaktion konnte nicht gespeichert werden. Versuchen Sie es erneut.",
       "schedule": {
-        "addToggle": "Zu meinem Zeitplan hinzufügen",
-        "addHelp": "Ein Zeitplaneintrag wird zu Ihrem AlgaPSA-Kalender hinzugefügt."
+        "addToggle": "Zum Zeitplan hinzufügen",
+        "addHelp": "Ein Zeitplaneintrag wird zu Ihrem AlgaPSA-Kalender hinzugefügt.",
+        "addHelpOthers": "Ein Zeitplaneintrag wird zu den AlgaPSA-Kalendern der ausgewählten Benutzer hinzugefügt.",
+        "assigneesLabel": "Planen für",
+        "assigneesPlaceholder": "Benutzer auswählen"
       }
     },
     "feed": {

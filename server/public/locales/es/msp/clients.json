@@ -1479,8 +1479,11 @@
       "loadFailed": "No se pudieron cargar las opciones de interacción. Inténtelo de nuevo.",
       "saveFailed": "No se pudo guardar la interacción. Inténtelo de nuevo.",
       "schedule": {
-        "addToggle": "Agregar a mi calendario",
-        "addHelp": "Se añadirá una entrada de programación a su calendario de AlgaPSA."
+        "addToggle": "Agregar al calendario",
+        "addHelp": "Se añadirá una entrada de programación a su calendario de AlgaPSA.",
+        "addHelpOthers": "Se añadirá una entrada de programación a los calendarios de AlgaPSA de los usuarios seleccionados.",
+        "assigneesLabel": "Programar para",
+        "assigneesPlaceholder": "Seleccionar usuarios"
       }
     },
     "feed": {

@@ -1479,8 +1479,11 @@
       "loadFailed": "Interactieopties konden niet worden geladen. Probeer het opnieuw.",
       "saveFailed": "De interactie kon niet worden opgeslagen. Probeer het opnieuw.",
       "schedule": {
-        "addToggle": "Toevoegen aan mijn planning",
-        "addHelp": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda."
+        "addToggle": "Toevoegen aan planning",
+        "addHelp": "Er wordt een planningsinvoer toegevoegd aan uw AlgaPSA-agenda.",
+        "addHelpOthers": "Er wordt een planningsinvoer toegevoegd aan de AlgaPSA-agenda's van de geselecteerde gebruikers.",
+        "assigneesLabel": "Plannen voor",
+        "assigneesPlaceholder": "Gebruikers selecteren"
       }
     },
     "feed": {
