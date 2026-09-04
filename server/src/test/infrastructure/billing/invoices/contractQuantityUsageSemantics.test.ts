@@ -641,6 +641,62 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       const config = await context.db('contract_line_service_usage_config').where({ tenant: context.tenantId, config_id: configId }).first();
       expect(config?.measurement_mode).toBe('period_total');
     });
+
+    it('an identical additive request-id replay is one event; changed content is rejected; distinct ids stay separate', async () => {
+      const { serviceId, contractLineId, billingCycleId } = await setupUsageLine({ measurementMode: 'additive', minimumUsage: 0 });
+      const requestId = uuidv4();
+
+      const first = await createUsageRecord({
+        client_id: context.clientId,
+        service_id: serviceId,
+        quantity: 10,
+        usage_date: '2023-01-10',
+        contract_line_id: contractLineId,
+        request_id: requestId
+      });
+      if ('actionError' in (first as object)) throw new Error(JSON.stringify(first));
+
+      // Identical replay: returns the original record, no second row.
+      const replay = await createUsageRecord({
+        client_id: context.clientId,
+        service_id: serviceId,
+        quantity: 10,
+        usage_date: '2023-01-10',
+        contract_line_id: contractLineId,
+        request_id: requestId
+      });
+      expect('actionError' in (replay as object)).toBe(false);
+      expect((replay as any).usage_id).toBe((first as any).usage_id);
+
+      // Reusing the id with different content is rejected.
+      const changed = await createUsageRecord({
+        client_id: context.clientId,
+        service_id: serviceId,
+        quantity: 12,
+        usage_date: '2023-01-10',
+        contract_line_id: contractLineId,
+        request_id: requestId
+      });
+      expect('actionError' in (changed as object)).toBe(true);
+
+      // Distinct request ids with identical content are separate legitimate events.
+      const second = await createUsageRecord({
+        client_id: context.clientId,
+        service_id: serviceId,
+        quantity: 10,
+        usage_date: '2023-01-10',
+        contract_line_id: contractLineId,
+        request_id: uuidv4()
+      });
+      expect('actionError' in (second as object)).toBe(false);
+
+      const rows = await context.db('usage_tracking').where({ tenant: context.tenantId });
+      expect(rows).toHaveLength(2);
+
+      // 10 + 10 bill additively.
+      const invoice = unwrapInvoiceResult(await generateInvoice(billingCycleId));
+      expect(invoice).toMatchObject({ subtotal: 20000 });
+    });
   });
 
   describe('recurring seats (R2 / F004–F005)', () => {
@@ -740,6 +796,55 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       // The earlier invoice row is untouched.
       const earlier = await context.db('invoices').where({ tenant: context.tenantId, invoice_id: invoice1.invoice_id }).first();
       expect(Number(earlier?.subtotal)).toBe(189000);
+    });
+
+    it('scheduling a change inside an already-billed service period is rejected at the boundary guard', async () => {
+      const setup = await setupSeatLine({ year: 2023, month: 2, day: 1 });
+
+      // A billed recurring service period for the seat line covering January
+      // [2023-01-01, 2023-02-01): retroactively changing seats inside it must
+      // be refused (billed periods are immutable).
+      await context.db('recurring_service_periods').insert({
+        tenant: context.tenantId,
+        record_id: uuidv4(),
+        schedule_key: uuidv4(),
+        period_key: uuidv4(),
+        revision: 1,
+        obligation_id: setup.contractLineId,
+        obligation_type: 'client_contract_line',
+        charge_family: 'fixed',
+        cadence_owner: 'client',
+        due_position: 'arrears',
+        lifecycle_state: 'billed',
+        service_period_start: '2023-01-01',
+        service_period_end: '2023-02-01',
+        invoice_window_start: '2023-02-01',
+        invoice_window_end: '2023-03-01',
+        provenance_kind: 'generated',
+        source_rule_version: 'test|monthly'
+      });
+
+      const insideBilled = await scheduleUnitPricingRevision({
+        contract_line_id: setup.contractLineId,
+        service_id: setup.standard.serviceId,
+        config_id: setup.standard.configId,
+        quantity: 12,
+        unit_rate_cents: 10000,
+        effective_period_start: '2023-01-15'
+      });
+      expect('actionError' in (insideBilled as object)).toBe(true);
+
+      // The boundary exactly on the billed period's end is the legal next
+      // period and remains schedulable.
+      const nextBoundary = await scheduleUnitPricingRevision({
+        contract_line_id: setup.contractLineId,
+        service_id: setup.standard.serviceId,
+        config_id: setup.standard.configId,
+        quantity: 12,
+        unit_rate_cents: 10000,
+        effective_period_start: '2023-02-01'
+      });
+      expect('actionError' in (nextBoundary as object)).toBe(false);
     });
 
     it('zero agreed quantity bills zero, never a fallback to one', async () => {

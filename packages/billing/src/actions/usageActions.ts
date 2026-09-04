@@ -139,6 +139,29 @@ async function rejectAdditiveWriteToPeriodTotalConfig(params: {
   return null;
 }
 
+function normalizeUsageDayForComparison(value: string | Date): string {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  const text = String(value ?? '');
+  return text.length >= 10 ? text.slice(0, 10) : text;
+}
+
+async function replayMatchesExistingUsage(
+  existing: IUsageRecord,
+  data: ICreateUsageRecord,
+  contractLineId: string | null | undefined,
+): Promise<boolean> {
+  return (
+    existing.client_id === data.client_id &&
+    existing.service_id === data.service_id &&
+    Number(existing.quantity) === Number(data.quantity) &&
+    normalizeUsageDayForComparison(existing.usage_date) ===
+      normalizeUsageDayForComparison(toCanonicalUsageDateISO(data.usage_date)) &&
+    (existing.contract_line_id ?? null) === (contractLineId ?? null)
+  );
+}
+
 function usageActionErrorFrom(error: unknown): UsageActionError | null {  // Typed bucket failures name their cause; prefer them over the string match.
   const bucketError = findBucketUsageError(error);
   if (bucketError) {
@@ -231,6 +254,24 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
       return actionError(modeGuard);
     }
 
+    // Request-id replay: an identical retry of the same additive event returns
+    // the original record instead of creating a second consumption event;
+    // reusing the id with different content is rejected. Distinct request ids
+    // legitimately remain separate events even when their content matches.
+    if (data.request_id) {
+      const existingByRequest = await tenantScopedTable(trx, tenant, 'usage_tracking')
+        .where({ tenant, request_id: data.request_id })
+        .first<IUsageRecord | undefined>();
+      if (existingByRequest) {
+        if (await replayMatchesExistingUsage(existingByRequest, data, contractLineId)) {
+          return existingByRequest;
+        }
+        return actionError(
+          'This request id was already used for a different usage entry. Retrying an earlier request with changed content is not allowed; issue a new request.',
+        );
+      }
+    }
+
     // Insert the usage record
     const [record] = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .insert({
@@ -242,6 +283,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
         contract_line_id: contractLineId, // Use determined or provided plan ID
         contract_line_source: contractLineSource,
         contract_line_unresolved_reason: contractLineUnresolvedReason,
+        request_id: data.request_id ?? null,
       })
       .returning('*');
 
