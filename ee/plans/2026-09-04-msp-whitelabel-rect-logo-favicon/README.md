@@ -40,6 +40,18 @@ expecting it in a diff.
 * **Fallback chain** — a broken wide-logo URL falls back to the square mark, which falls back to the
   stock Alga avatar. Each `<img>` keeps its own `onError` latch.
 
+### Client portal side panel
+
+The same three rules, on the surface a client actually sees. The expanded panel wears the wordmark
+at `h-8` and then prints the company name **nowhere** — neither in the brand row beside the mark nor
+in the “Organization” row underneath, both of which were saying the same thing the image now says.
+Collapsed, it is the square mark again. The panel measures its own colour through the same hook the
+MSP rail uses, which matters more here: a portal admin can hand-pick the side-panel colour outright,
+and a pale pick makes the dark-background artwork the wrong one. Its section headings and dividers
+moved onto `sidebar-text` for the same reason. The wide slots appear in **Settings → Client Portal →
+Branding** only in Enterprise, next to the square ones — the storage is shared with the MSP card, so
+uploading in one place fills both.
+
 ### Footer attribution
 
 Sits under the existing release-notes version link inside the same bordered block: the tiny Alga
@@ -71,7 +83,8 @@ surrounding label/help copy gets i18n keys.
 
 ## Open questions for review
 
-* Should the attribution also appear in the **client portal** sidebar of a white-labeled tenant?
-  The card only mentions the menu section of the MSP app, so this round leaves the portal alone.
+* Should “Powered by AlgaPSA” also appear in the **client portal** side panel? The portal now wears
+  the wide logo, but the attribution stays MSP-only: the portal is the tenant's shop window to their
+  own clients, and the card only asked for the menu section of the MSP app.
 * Do we want a size ceiling on the wide logo's rendered width (currently `max-w-full` inside the
   16rem rail, which lets a very wide wordmark shrink itself to fit)?

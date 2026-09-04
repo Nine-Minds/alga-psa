@@ -1132,6 +1132,8 @@
         "companyName": "Company Name",
         "companyLogo": "Company Logo",
         "companyLogoDark": "Logo for dark backgrounds",
+        "companyLogoWide": "Wide logo (optional)",
+        "companyLogoWideDark": "Wide logo for dark backgrounds (optional)",
         "colorPalette": "Color Palette",
         "primaryColor": "Primary Color",
         "secondaryColor": "Secondary Color",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Recommended: PNG or SVG, max 2MB, transparent background",
         "companyLogoMsp": "This logo also replaces the Alga mark in the MSP side menu.",
         "companyLogoDark": "Optional. Used on the portal side panel and dark mode screens. Falls back to the company logo when empty.",
+        "companyLogoWide": "Shown at the top of the expanded portal side panel, at 32px tall. Include your company name in the image — the panel stops printing it separately.",
+        "companyLogoWideDark": "Optional. Used while the side panel background is dark. Falls back to the wide logo.",
         "primaryColor": "Used for buttons, links, and highlights",
         "secondaryColor": "Used for accents and secondary actions",
         "supportEmail": "Shown to clients in appointment confirmations and other outbound emails as the address to contact for help.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Preview Sign-in Page",
         "hideSignIn": "Hide Sign-in Page"
       },
-      "customDomainRequired": "Must have custom domain set up"
+      "customDomainRequired": "Must have custom domain set up",
+      "warnings": {
+        "expectSquare": "That image is much wider than it is tall. This slot fills square spaces — the wide logo slot is probably the one you want.",
+        "expectWide": "That image is close to square. The wide logo slot is for a landscape wordmark — a square mark belongs in the slot above."
+      }
     },
     "dashboardPreview": {
       "title": "Your Client Portal",

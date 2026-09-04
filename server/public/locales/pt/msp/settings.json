@@ -1132,6 +1132,8 @@
         "companyName": "nome da empresa",
         "companyLogo": "Logotipo da empresa",
         "companyLogoDark": "Logotipo para fundos escuros",
+        "companyLogoWide": "Logotipo largo (opcional)",
+        "companyLogoWideDark": "Logotipo largo para fundos escuros (opcional)",
         "colorPalette": "Paleta de cores",
         "primaryColor": "Cor Primária",
         "secondaryColor": "Cor Secundária",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Recomendado: PNG ou SVG, máximo de 2 MB, fundo transparente",
         "companyLogoMsp": "Este logotipo também substitui a marca Alga no menu lateral MSP.",
         "companyLogoDark": "Opcional. Usado no painel lateral do portal e nas telas em modo escuro. Se ficar vazio, o logotipo da empresa é usado.",
+        "companyLogoWide": "Exibido no topo do painel lateral expandido do portal, com 32 px de altura. Inclua o nome da sua empresa na imagem — o painel deixa de escrevê-lo separadamente.",
+        "companyLogoWideDark": "Opcional. Usado enquanto o fundo do painel lateral for escuro. Recorre ao logotipo largo.",
         "primaryColor": "Usado para botões, links e destaques",
         "secondaryColor": "Usado para acentos e ações secundárias",
         "supportEmail": "Mostrado aos clientes em confirmações de compromissos e outros e-mails enviados como o endereço de contato para obter ajuda.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Visualizar página de login",
         "hideSignIn": "Ocultar página de login"
       },
-      "customDomainRequired": "Deve ter um domínio personalizado configurado"
+      "customDomainRequired": "Deve ter um domínio personalizado configurado",
+      "warnings": {
+        "expectSquare": "Essa imagem é bem mais larga do que alta. Este espaço preenche áreas quadradas — você provavelmente quer o espaço do logotipo largo.",
+        "expectWide": "Essa imagem é quase quadrada. O espaço do logotipo largo espera um logotipo em paisagem — uma marca quadrada vai no espaço acima."
+      }
     },
     "dashboardPreview": {
       "title": "Seu Portal do Cliente",

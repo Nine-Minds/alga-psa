@@ -13,6 +13,7 @@ import { Palette, Sparkles } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import type { EntityLogoVariant } from '@alga-psa/types';
 import {
   getTenantThemeAction,
   updateTenantThemeAction,
@@ -37,9 +38,6 @@ import ThemePairPreview from './ThemePairPreview';
 import CustomThemeEditor from './CustomThemeEditor';
 
 type CustomThemePair = { light: CustomThemeTokens; dark: CustomThemeTokens };
-
-/** Logo slots this card can write. Mirrors EntityLogoVariant in @alga-psa/storage. */
-type TenantLogoVariant = 'default' | 'dark' | 'wide' | 'wide-dark' | 'favicon';
 
 /** ICO is not covered by `image/*` in every browser's file picker. */
 const FAVICON_ACCEPT = 'image/png,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico';
@@ -243,7 +241,7 @@ const AppearanceSettings = () => {
     toast.success(t('appearance.messages.discarded', { defaultValue: 'Preview discarded' }));
   };
 
-  const handleLogoUpload = (variant: TenantLogoVariant) =>
+  const handleLogoUpload = (variant: EntityLogoVariant) =>
     async (entityId: string, formData: FormData) => {
       const result = await uploadTenantLogo(entityId, formData, variant);
       // The sidebar mark is resolved server-side; refresh so the new logo lands
@@ -253,7 +251,7 @@ const AppearanceSettings = () => {
       }
       return result;
     };
-  const handleLogoDelete = (variant: TenantLogoVariant) =>
+  const handleLogoDelete = (variant: EntityLogoVariant) =>
     async (entityId: string) => {
       const result = await deleteTenantLogo(entityId, variant);
       if (result?.success) {

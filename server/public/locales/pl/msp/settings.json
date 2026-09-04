@@ -1138,6 +1138,8 @@
         "companyName": "Nazwa firmy",
         "companyLogo": "Logo firmy",
         "companyLogoDark": "Logo na ciemne tło",
+        "companyLogoWide": "Szerokie logo (opcjonalnie)",
+        "companyLogoWideDark": "Szerokie logo na ciemne tła (opcjonalnie)",
         "colorPalette": "Paleta kolorów",
         "primaryColor": "Kolor główny",
         "secondaryColor": "Kolor dodatkowy",
@@ -1154,6 +1156,8 @@
         "companyLogo": "Zalecane: PNG lub SVG, maks. 2 MB, przezroczyste tło",
         "companyLogoMsp": "To logo zastępuje również znak Alga w menu bocznym MSP.",
         "companyLogoDark": "Opcjonalnie. Używane w panelu bocznym portalu i w trybie ciemnym. Gdy pole jest puste, używane jest logo firmy.",
+        "companyLogoWide": "Wyświetlane u góry rozwiniętego panelu bocznego portalu, o wysokości 32 px. Umieść nazwę firmy na obrazie — panel przestanie wypisywać ją osobno.",
+        "companyLogoWideDark": "Opcjonalne. Używane, dopóki tło panelu bocznego jest ciemne. W razie braku używane jest szerokie logo.",
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",
         "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
@@ -1183,7 +1187,11 @@
         "previewSignIn": "Podgląd strony logowania",
         "hideSignIn": "Ukryj stronę logowania"
       },
-      "customDomainRequired": "Wymagana jest konfiguracja domeny niestandardowej"
+      "customDomainRequired": "Wymagana jest konfiguracja domeny niestandardowej",
+      "warnings": {
+        "expectSquare": "Ten obraz jest znacznie szerszy niż wyższy. To miejsce wypełnia przestrzenie kwadratowe — prawdopodobnie chodzi o miejsce na szerokie logo.",
+        "expectWide": "Ten obraz jest niemal kwadratowy. Miejsce na szerokie logo oczekuje logo poziomego — znak kwadratowy należy do miejsca powyżej."
+      }
     },
     "dashboardPreview": {
       "title": "Państwa portal klienta",

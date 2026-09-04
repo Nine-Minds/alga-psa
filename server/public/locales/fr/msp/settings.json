@@ -1132,6 +1132,8 @@
         "companyName": "Nom de l'entreprise",
         "companyLogo": "Logo de l'entreprise",
         "companyLogoDark": "Logo pour fonds sombres",
+        "companyLogoWide": "Logo large (facultatif)",
+        "companyLogoWideDark": "Logo large pour arrière-plans sombres (facultatif)",
         "colorPalette": "Palette de couleurs",
         "primaryColor": "Couleur principale",
         "secondaryColor": "Couleur secondaire",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Recommandé : PNG ou SVG, 2 Mo max, fond transparent",
         "companyLogoMsp": "Ce logo remplace également la marque Alga dans le menu latéral MSP.",
         "companyLogoDark": "Facultatif. Utilisé dans le panneau latéral du portail et sur les écrans en mode sombre. À défaut, le logo de l'entreprise est utilisé.",
+        "companyLogoWide": "Affiché en haut du panneau latéral déployé du portail, sur 32 px de haut. Intégrez le nom de votre entreprise à l’image : le panneau cesse alors de l’afficher séparément.",
+        "companyLogoWideDark": "Facultatif. Utilisé tant que l’arrière-plan du panneau latéral est sombre. Se rabat sur le logo large.",
         "primaryColor": "Utilisée pour les boutons, les liens et les éléments mis en avant",
         "secondaryColor": "Utilisée pour les accents et les actions secondaires",
         "supportEmail": "Affiché aux clients dans les confirmations de rendez-vous et autres e-mails sortants comme adresse de contact pour obtenir de l'aide.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Aperçu de la page de connexion",
         "hideSignIn": "Masquer la page de connexion"
       },
-      "customDomainRequired": "Un domaine personnalisé doit être configuré"
+      "customDomainRequired": "Un domaine personnalisé doit être configuré",
+      "warnings": {
+        "expectSquare": "Cette image est bien plus large que haute. Cet emplacement remplit des espaces carrés — vous cherchez probablement celui du logo large.",
+        "expectWide": "Cette image est presque carrée. L’emplacement du logo large attend un logo au format paysage — une marque carrée va dans l’emplacement ci-dessus."
+      }
     },
     "dashboardPreview": {
       "title": "Votre portail client",

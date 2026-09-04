@@ -1132,6 +1132,8 @@
         "companyName": "Nome dell'azienda",
         "companyLogo": "Logo dell'azienda",
         "companyLogoDark": "Logo per sfondi scuri",
+        "companyLogoWide": "Logo largo (facoltativo)",
+        "companyLogoWideDark": "Logo largo per sfondi scuri (facoltativo)",
         "colorPalette": "Palette di colori",
         "primaryColor": "Colore primario",
         "secondaryColor": "Colore secondario",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Consigliato: PNG o SVG, massimo 2 MB, sfondo trasparente",
         "companyLogoMsp": "Questo logo sostituisce anche il marchio Alga nel menu laterale MSP.",
         "companyLogoDark": "Facoltativo. Utilizzato nel pannello laterale del portale e nelle schermate in modalità scura. Se vuoto, viene usato il logo dell'azienda.",
+        "companyLogoWide": "Mostrato in cima al pannello laterale espanso del portale, alto 32 px. Includi il nome della tua azienda nell’immagine: il pannello smette di scriverlo separatamente.",
+        "companyLogoWideDark": "Facoltativo. Usato finché lo sfondo del pannello laterale è scuro. Ricorre al logo largo.",
         "primaryColor": "Utilizzato per pulsanti, link e evidenziazioni",
         "secondaryColor": "Utilizzato per accenti e azioni secondarie",
         "supportEmail": "Viene mostrata ai clienti nelle conferme degli appuntamenti e in altre e-mail in uscita come indirizzo di contatto per ricevere assistenza.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Anteprima pagina di accesso",
         "hideSignIn": "Nascondi pagina di accesso"
       },
-      "customDomainRequired": "E necessario configurare un dominio personalizzato"
+      "customDomainRequired": "E necessario configurare un dominio personalizzato",
+      "warnings": {
+        "expectSquare": "Questa immagine è molto più larga che alta. Questo spazio riempie aree quadrate: probabilmente cerchi lo spazio del logo largo.",
+        "expectWide": "Questa immagine è quasi quadrata. Lo spazio del logo largo si aspetta un logo orizzontale: un marchio quadrato va nello spazio qui sopra."
+      }
     },
     "dashboardPreview": {
       "title": "Il tuo portale clienti",

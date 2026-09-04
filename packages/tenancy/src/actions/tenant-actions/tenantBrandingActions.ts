@@ -20,8 +20,8 @@ export interface TenantBranding {
   logoDarkUrl?: string;
   /**
    * Optional landscape wordmark (usually with the company name in it) for the
-   * expanded MSP side menu. Enterprise white-labeling only; every square frame
-   * keeps using `logoUrl`.
+   * expanded MSP side menu and client portal side panel. Enterprise
+   * white-labeling only; every square frame keeps using `logoUrl`.
    */
   logoWideUrl?: string;
   /** Wide wordmark for dark surfaces; falls back to `logoWideUrl`. */

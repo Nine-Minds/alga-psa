@@ -1132,6 +1132,8 @@
         "companyName": "Nombre de la empresa",
         "companyLogo": "Logotipo de la empresa",
         "companyLogoDark": "Logotipo para fondos oscuros",
+        "companyLogoWide": "Logotipo ancho (opcional)",
+        "companyLogoWideDark": "Logotipo ancho para fondos oscuros (opcional)",
         "colorPalette": "Paleta de colores",
         "primaryColor": "Color primario",
         "secondaryColor": "Color secundario",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Recomendado: PNG o SVG, máximo 2 MB, fondo transparente",
         "companyLogoMsp": "Este logotipo también sustituye la marca de Alga en el menú lateral MSP.",
         "companyLogoDark": "Opcional. Se usa en el panel lateral del portal y en las pantallas en modo oscuro. Si se deja vacío, se usa el logotipo de la empresa.",
+        "companyLogoWide": "Se muestra en la parte superior del panel lateral expandido del portal, con 32 px de alto. Incluya el nombre de su empresa en la imagen: el panel deja de escribirlo por separado.",
+        "companyLogoWideDark": "Opcional. Se usa mientras el fondo del panel lateral sea oscuro. Recurre al logotipo ancho.",
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Vista previa de la página de inicio de sesión",
         "hideSignIn": "Ocultar página de inicio de sesión"
       },
-      "customDomainRequired": "Debe tener configurado un dominio personalizado"
+      "customDomainRequired": "Debe tener configurado un dominio personalizado",
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. Este espacio rellena zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio del logotipo ancho espera un logotipo apaisado; una marca cuadrada va en el espacio de arriba."
+      }
     },
     "dashboardPreview": {
       "title": "Su portal del cliente",

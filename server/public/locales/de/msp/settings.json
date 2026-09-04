@@ -1132,6 +1132,8 @@
         "companyName": "Firmenname",
         "companyLogo": "Firmenlogo",
         "companyLogoDark": "Logo für dunkle Hintergründe",
+        "companyLogoWide": "Breites Logo (optional)",
+        "companyLogoWideDark": "Breites Logo für dunkle Hintergründe (optional)",
         "colorPalette": "Farbpalette",
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Empfohlen: PNG oder SVG, max. 2 MB, transparenter Hintergrund",
         "companyLogoMsp": "Dieses Logo ersetzt außerdem die Alga-Marke im MSP-Seitenmenü.",
         "companyLogoDark": "Optional. Wird in der Seitenleiste des Portals und im dunklen Modus verwendet. Ohne Angabe wird das Firmenlogo verwendet.",
+        "companyLogoWide": "Wird oben im ausgeklappten Seitenbereich des Portals angezeigt, 32 px hoch. Nehmen Sie Ihren Firmennamen mit ins Bild auf — der Seitenbereich gibt ihn dann nicht mehr separat aus.",
+        "companyLogoWideDark": "Optional. Wird verwendet, solange der Hintergrund des Seitenbereichs dunkel ist. Fällt auf das breite Logo zurück.",
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Anmeldeseite-Vorschau",
         "hideSignIn": "Anmeldeseite ausblenden"
       },
-      "customDomainRequired": "Benutzerdefinierte Domain muss eingerichtet sein"
+      "customDomainRequired": "Benutzerdefinierte Domain muss eingerichtet sein",
+      "warnings": {
+        "expectSquare": "Dieses Bild ist deutlich breiter als hoch. Dieser Platz füllt quadratische Flächen — gemeint ist vermutlich der Platz für das breite Logo.",
+        "expectWide": "Dieses Bild ist nahezu quadratisch. Der Platz für das breite Logo erwartet ein Querformat-Logo — ein quadratisches Zeichen gehört in den Platz darüber."
+      }
     },
     "dashboardPreview": {
       "title": "Ihr Kundenportal",
