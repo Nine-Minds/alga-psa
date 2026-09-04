@@ -127,10 +127,10 @@ describe('MSP sidebar branding', () => {
     expect(sidebar).toContain('mspBranding.logoWideDarkUrl || mspBranding.logoWideUrl');
     // The collapsed 4rem rail has no room for a wordmark, so the square mark wins there.
     expect(sidebar).toContain('const showWideLogo = sidebarOpen && !!tenantWideLogoUrl');
-    expect(sidebar).toContain('src={tenantWideLogoUrl!}');
+    expect(sidebar).toContain('src={tenantWideLogoUrl}');
     // Natural width, no circular frame — and the name span lives in the other branch.
     expect(sidebar).toContain('h-8 w-auto max-w-full object-contain');
-    const wideBranch = sidebar.indexOf('{showWideLogo ? (');
+    const wideBranch = sidebar.indexOf('{showWideLogo && tenantWideLogoUrl ? (');
     const nameSpan = sidebar.indexOf('{brandDisplayName}</span>');
     expect(wideBranch).toBeGreaterThan(-1);
     expect(wideBranch).toBeLessThan(nameSpan);

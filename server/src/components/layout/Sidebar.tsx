@@ -296,11 +296,11 @@ const Sidebar: React.FC<SidebarProps> = ({
         aria-label={t('sidebar.goToDashboard', { defaultValue: 'Go to dashboard' })}
         id="logo-home-link"
       >
-        {showWideLogo ? (
+        {showWideLogo && tenantWideLogoUrl ? (
           // Natural width, no circle: a wordmark cropped into 32x32 is unreadable,
           // which is the whole reason this slot exists.
           <img
-            src={tenantWideLogoUrl!}
+            src={tenantWideLogoUrl}
             alt={brandDisplayName}
             className="h-8 w-auto max-w-full object-contain object-left"
             onError={() => setFailedWideLogoUrl(tenantWideLogoUrl)}
