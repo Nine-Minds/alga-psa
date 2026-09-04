@@ -176,6 +176,53 @@ describe('evaluateCalendarMonthEndEarlyCloseEligibility', () => {
     expect(honolulu.eligible).toBe(true);
   });
 
+  it('is month-end in Australia/Sydney while UTC still reads the day before', () => {
+    // Australia/Sydney in June is UTC+10 (AEST): 2026-06-29T15:00Z is already
+    // 2026-06-30T01:00 in Sydney — the final calendar day of the June period —
+    // but still 2026-06-29 in UTC. A host-UTC "today" would wrongly refuse the
+    // close a Sydney tenant is entitled to.
+    const instant = '2026-06-29T15:00:00.000Z';
+
+    const sydney = evaluateCalendarMonthEndEarlyCloseEligibility({
+      ...JUNE_2026,
+      asOf: instant,
+      timeZone: 'Australia/Sydney',
+    });
+    expect(sydney.eligible).toBe(true);
+
+    const utc = evaluateCalendarMonthEndEarlyCloseEligibility({
+      ...JUNE_2026,
+      asOf: instant,
+      timeZone: 'UTC',
+    });
+    expect(utc.eligible).toBe(false);
+    expect(utc.reason).toBe('not_final_calendar_day');
+  });
+
+  it('is NOT month-end in Australia/Sydney once UTC has reached the final day', () => {
+    // 2026-06-30T15:00Z is 2026-07-01T01:00 in Sydney — the window has opened
+    // there, so the manual close is refused — while UTC still reads June 30 and
+    // a naive UTC calendar would wrongly offer it.
+    const instant = '2026-06-30T15:00:00.000Z';
+
+    const sydney = evaluateCalendarMonthEndEarlyCloseEligibility({
+      ...JUNE_2026,
+      asOf: instant,
+      timeZone: 'Australia/Sydney',
+    });
+    expect(sydney.eligible).toBe(false);
+    expect(sydney.reason).toBe('not_final_calendar_day');
+
+    // Same instant resolved to UTC is the final calendar day (eligible on the
+    // naive clock) — demonstrating why the billing timezone must decide.
+    const utc = evaluateCalendarMonthEndEarlyCloseEligibility({
+      ...JUNE_2026,
+      asOf: instant,
+      timeZone: 'UTC',
+    });
+    expect(utc.eligible).toBe(true);
+  });
+
   it('falls back to UTC when no instant is provided and no asOfDate is set', () => {
     const result = evaluateCalendarMonthEndEarlyCloseEligibility({ ...JUNE_2026 });
     expect(result.eligible).toBe(false);
