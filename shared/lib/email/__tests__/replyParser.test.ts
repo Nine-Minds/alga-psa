@@ -3,13 +3,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { getDefaultReplyParserConfig, parseEmailReply } from './replyParser';
+import { getDefaultReplyParserConfig, parseEmailReply } from '../replyParser';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function readFixture(file: string): string {
-  return fs.readFileSync(path.join(__dirname, '__fixtures__', file), 'utf8');
+  return fs.readFileSync(path.join(__dirname, '..', '__fixtures__', file), 'utf8');
 }
 
 describe('replyParser', () => {

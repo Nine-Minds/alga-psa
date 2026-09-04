@@ -32,6 +32,7 @@ import {
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -2209,7 +2210,11 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   /**
-   * Update an existing comment (only the comment author may edit)
+   * Update an existing comment. Only the comment author may edit their own
+   * comment. Comments with no authoring user (user_id null — e.g. inbound
+   * email comments attributed to a contact) have no owner who could ever
+   * edit them, so an operator holding the `comment:update` RBAC permission
+   * may repair them; the repair is recorded in the comment metadata.
    */
   async updateComment(
     ticketId: string,
@@ -2232,16 +2237,46 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('System-generated comments cannot be edited');
       }
 
+      let operatorRepair = false;
       if (comment.user_id !== context.userId) {
-        throw new ValidationError('You can only edit your own comments');
+        // Fail closed: the operator path requires a loaded caller user record
+        // (the API controller always provides one) and the RBAC permission.
+        const canOperatorRepair =
+          comment.user_id == null &&
+          context.user != null &&
+          (await hasPermission(context.user, 'comment', 'update', trx));
+        if (!canOperatorRepair) {
+          throw new ValidationError('You can only edit your own comments');
+        }
+        operatorRepair = true;
+      }
+
+      const update: Record<string, unknown> = {
+        note: data.comment_text,
+        updated_at: knex.raw('now()'),
+      };
+      if (operatorRepair) {
+        // Preserve existing metadata (parser results, email threading data,
+        // attachments references) and append an attributable audit record.
+        const existingMetadata =
+          typeof comment.metadata === 'string'
+            ? JSON.parse(comment.metadata)
+            : comment.metadata ?? {};
+        const operatorEdits = Array.isArray(existingMetadata.operatorEdits)
+          ? existingMetadata.operatorEdits
+          : [];
+        update.metadata = {
+          ...existingMetadata,
+          operatorEdits: [
+            ...operatorEdits,
+            { userId: context.userId, at: new Date().toISOString() },
+          ],
+        };
       }
 
       const [updated] = await tenantScopedTable(trx, 'comments', context.tenant)
         .where({ comment_id: commentId })
-        .update({
-          note: data.comment_text,
-          updated_at: knex.raw('now()'),
-        })
+        .update(update)
         .returning('*');
 
       return {
