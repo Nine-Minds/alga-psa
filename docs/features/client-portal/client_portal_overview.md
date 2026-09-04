@@ -133,6 +133,17 @@ if (pathname.startsWith(clientPortalPrefix) && !isAuthPage) {
 - **Cookie Minting**: `buildSessionCookie()` guarantees Auth.js-compatible cookie attributes (`__Secure-` prefix, `Lax` SameSite, `Secure`, `HttpOnly`).
 - **Cleanup**: Expired or consumed OTTs can be pruned with `pnpm cli portal-domain sessions prune [--tenant <tenantId>] [--minutes 10] [--dry-run]`.
 
+### Custom Domains
+
+A tenant can serve the portal on its own hostname (for example `portal.acme.com`). The domain is managed in **Settings → Client Portal → Custom Domain** and stored in `portal_domains`. Every edition can register one; which provisioner runs depends on the edition and, for Enterprise Edition, the deployment profile (`DEPLOYMENT_PROFILE`, see the [configuration guide](../../getting-started/configuration_guide.md#deployment-profile-deployment_profile)):
+
+| Provisioner | When it runs | What happens on save |
+| --- | --- | --- |
+| `temporal` | Enterprise Edition under the default `hosted` profile. | DNS verification, certificate issuance, and ingress routing run as a Temporal workflow; the domain becomes `active` once every step succeeds. |
+| `direct` | Community Edition always; Enterprise Edition when `DEPLOYMENT_PROFILE=appliance`. | Trust-on-submit: the domain becomes `active` immediately and the operator's reverse proxy owns DNS, TLS, and routing. |
+
+Direct provisioning fits a self-hosted install that already sits behind nginx, Caddy, or a similar proxy. Follow the [custom domain reverse proxy guide](custom-domain-reverse-proxy.md) to wire DNS, TLS, and the `Host` header contract before saving the domain, since portal links switch to it right away.
+
 ## Features & Capabilities
 
 ### Core Features
@@ -188,7 +199,7 @@ See [Client Portal Projects](client_portal_projects.md) for detailed configurati
 **Branding Configuration:**
 - Tenant-specific branding: a primary logo (`logoUrl`) for light surfaces, plus an **optional** dark-surface variant (`logoDarkUrl`) that renders on the portal side panel and dark-themed auth pages. When no dark variant is supplied, the primary logo renders on every surface unchanged. Configured through the tenant branding settings and served to the portal shell, sidebar, and sign-in flow through `TenantBranding` / `tenantBrandingActions`.
 - Custom brand colors, applied through generated CSS variables (`generateBrandingStyles`) so the tenant's palette follows every branded surface consistently. See [UI theming](../../ui/theming.md) for the underlying token conventions and skeleton/loading behavior.
-- Custom domain support
+- Custom domain support (see [Custom Domains](#custom-domains))
 - Localization settings
 
 Enterprise-edition tenants can additionally opt into extending their branding (logo + brand colors) onto the MSP shell via `packages/tenancy/src/lib/tenantTheme.ts`. This is off by default, so tenants that have only ever configured client-portal branding keep the stock Alga chrome on the MSP side.

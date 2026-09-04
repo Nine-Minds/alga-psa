@@ -14,7 +14,7 @@ import type {
 const PORTAL_DOMAIN_SERVICE_PORT = 3000;
 
 /**
- * The appliance's primary host, derived from NEXTAUTH_URL. Used both as the
+ * The server's primary host, derived from NEXTAUTH_URL. Used both as the
  * informational proxy target and to reject a vanity domain that collides with
  * the primary host (which the middleware would never redirect).
  */
@@ -31,8 +31,8 @@ function getAppHost(): string | null {
 }
 
 /**
- * Appliance provisioner — trust-on-submit. There is no DNS verification, no
- * certificate issuance, and no Istio routing on the appliance: the operator owns
+ * Direct provisioner (CE, and EE in appliance mode) — trust-on-submit. There is no
+ * DNS verification, certificate issuance, or Istio routing: the operator owns
  * DNS, TLS, and routing through their own reverse proxy. Registering a domain
  * marks it `active` immediately; disabling deletes the row.
  */
@@ -43,7 +43,7 @@ export const directProvisioner: PortalDomainProvisioner = {
     const appHost = getAppHost();
     if (appHost && domain === appHost) {
       throw new Error(
-        "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here."
+        "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here."
       );
     }
 
@@ -51,7 +51,7 @@ export const directProvisioner: PortalDomainProvisioner = {
       domain,
       status: 'active',
       statusMessage:
-        `Active. Ensure ${domain} resolves to this appliance and that your reverse proxy ` +
+        `Active. Ensure ${domain} resolves to this server and that your reverse proxy ` +
         'terminates TLS and forwards the original Host header to it.',
       verificationDetails: {
         requested_domain: domain,
@@ -67,12 +67,12 @@ export const directProvisioner: PortalDomainProvisioner = {
     return { enqueued: false };
   },
 
-  // Nothing to poll: the appliance has no asynchronous provisioning. Idempotent no-op.
+  // Nothing to poll: direct mode has no asynchronous provisioning. Idempotent no-op.
   async refresh(_input: ReconcileInput): Promise<void> {
     return;
   },
 
-  // No transient/failed states exist on the appliance (register goes straight to
+  // No transient/failed states exist in direct mode (register goes straight to
   // `active`), so there is nothing to retry. The action's retry guard never lets
   // this run; it is a defensive no-op.
   async retry(_input: ReconcileInput): Promise<void> {

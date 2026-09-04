@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { PortalDomain } from 'server/src/models/PortalDomainModel';
+import type { PortalDomain } from '@/models/PortalDomainModel';
+import type { PortalDomainRegistrationActionResult } from '@/lib/actions/tenant-actions/portalDomainActions';
 
 type MockWorkflowResult = { enqueued: boolean };
 
@@ -41,42 +42,21 @@ vi.mock('@/lib/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexStub, tenant: 'tenant-123' })),
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getCurrentUser: vi.fn(async () => ({ id: 'user-1' })),
-}));
-
-vi.mock('@alga-psa/auth', () => ({
-  hasPermission: vi.fn(async () => true),
-}));
+vi.mock('@alga-psa/auth', () => {
+  const user = { user_id: 'user-1', tenant: 'tenant-123', user_type: 'internal' };
+  return {
+    withAuth: (handler: (...args: any[]) => any) =>
+      (...args: any[]) => handler(user, { tenant: 'tenant-123' }, ...args),
+    hasPermission: vi.fn(async () => true),
+  };
+});
 
 vi.mock('@ee/lib/portal-domains/workflowClient', () => ({
   enqueuePortalDomainWorkflow: vi.fn((args) => enqueueWorkflow(args)),
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
-  secretProvider: {
-    getSecret: vi.fn(async () => null),
-  },
-}));
-
-vi.mock('@alga-psa/core', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock('@alga-psa/core/logger', () => ({
-  logger: {
-    info: vi.fn(),
-    warn: vi.fn(),
-    error: vi.fn(),
-  },
-}));
-
-vi.mock('server/src/models/PortalDomainModel', async () => {
-  const actual = await vi.importActual('server/src/models/PortalDomainModel') as typeof import('server/src/models/PortalDomainModel');
+vi.mock('@/models/PortalDomainModel', async () => {
+  const actual = await vi.importActual('@/models/PortalDomainModel') as typeof import('@/models/PortalDomainModel');
 
   return {
     ...actual,
@@ -118,39 +98,49 @@ vi.mock('server/src/models/PortalDomainModel', async () => {
   };
 });
 
-const { requestPortalDomainRegistrationAction } = await import('../../lib/actions/tenant-actions/portalDomainActions');
+const { requestPortalDomainRegistrationAction } = await import('@/lib/actions/tenant-actions/portalDomainActions');
 
-describe('requestPortalDomainRegistrationAction', () => {
+function expectRegistered(result: PortalDomainRegistrationActionResult) {
+  if (!('status' in result)) {
+    throw new Error(`Expected a registration result, got ${JSON.stringify(result)}`);
+  }
+  return result.status;
+}
+
+describe('requestPortalDomainRegistrationAction (hosted / temporal driver)', () => {
   beforeEach(() => {
     portalDomainStore = { ...baseRecord };
     analyticsCapture.mockClear();
     enqueueWorkflow.mockClear();
+    delete process.env.DEPLOYMENT_PROFILE;
   });
 
   it('enqueues register trigger when no prior domain exists', async () => {
     portalDomainStore = null;
 
-    const result = await requestPortalDomainRegistrationAction({ domain: 'first.example.com' });
+    const status = expectRegistered(await requestPortalDomainRegistrationAction({ domain: 'first.example.com' }));
 
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: 'tenant-123',
       portalDomainId: 'portal-domain-1',
       trigger: 'register',
     });
-    expect(result.status.domain).toBe('first.example.com');
-    expect(result.status.status).toBe('pending_dns');
-    expect(result.status.statusMessage).toContain('Waiting for DNS verification');
+    expect(status.domain).toBe('first.example.com');
+    expect(status.status).toBe('pending_dns');
+    expect(status.statusMessage).toContain('Waiting for DNS verification');
+    expect(status.mode).toBe('temporal');
+    expect(status.isEditable).toBe(true);
   });
 
   it('resets state and enqueues refresh when changing to a new domain', async () => {
-    const result = await requestPortalDomainRegistrationAction({ domain: 'new.example.com' });
+    const status = expectRegistered(await requestPortalDomainRegistrationAction({ domain: 'new.example.com' }));
 
-    expect(portalDomainStore.domain).toBe('new.example.com');
-    expect(portalDomainStore.status).toBe('pending_dns');
-    expect(portalDomainStore.certificateSecretName).toBeNull();
+    expect(portalDomainStore!.domain).toBe('new.example.com');
+    expect(portalDomainStore!.status).toBe('pending_dns');
+    expect(portalDomainStore!.certificateSecretName).toBeNull();
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: 'tenant-123',
-      portalDomainId: portalDomainStore.id,
+      portalDomainId: portalDomainStore!.id,
       trigger: 'refresh',
     });
 
@@ -161,22 +151,22 @@ describe('requestPortalDomainRegistrationAction', () => {
       was_update: true,
     }));
 
-    expect(result.status.domain).toBe('new.example.com');
-    expect(result.status.status).toBe('pending_dns');
-    expect(result.status.statusMessage).toContain('Updating custom domain');
+    expect(status.domain).toBe('new.example.com');
+    expect(status.status).toBe('pending_dns');
+    expect(status.statusMessage).toContain('Updating custom domain');
   });
 
   it('keeps register trigger when domain remains the same', async () => {
     portalDomainStore = {
-      ...portalDomainStore,
+      ...portalDomainStore!,
       domain: 'existing.example.com',
     };
 
-    const result = await requestPortalDomainRegistrationAction({ domain: 'existing.example.com' });
+    const status = expectRegistered(await requestPortalDomainRegistrationAction({ domain: 'existing.example.com' }));
 
     expect(enqueueWorkflow).toHaveBeenCalledWith({
       tenantId: 'tenant-123',
-      portalDomainId: portalDomainStore.id,
+      portalDomainId: portalDomainStore!.id,
       trigger: 'register',
     });
 
@@ -185,7 +175,7 @@ describe('requestPortalDomainRegistrationAction', () => {
       was_update: false,
     }));
 
-    expect(result.status.statusMessage).toContain('Waiting for DNS verification');
+    expect(status.statusMessage).toContain('Waiting for DNS verification');
   });
 });
 
@@ -194,43 +184,38 @@ describe('portal domain canonical host with NEXTAUTH_URL', () => {
     portalDomainStore = { ...baseRecord };
     analyticsCapture.mockClear();
     enqueueWorkflow.mockClear();
+    delete process.env.DEPLOYMENT_PROFILE;
     // Clear any existing NEXTAUTH_URL for clean test state
     delete process.env.NEXTAUTH_URL;
   });
 
   it('uses domain from NEXTAUTH_URL for canonical host in staging environment', async () => {
-    // Set staging environment NEXTAUTH_URL
     process.env.NEXTAUTH_URL = 'https://sebastian.9minds.ai';
-    portalDomainStore = null; // No existing domain
+    portalDomainStore = null;
 
-    const result = await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' });
+    const status = expectRegistered(await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' }));
 
-    // Verify canonical host uses domain from NEXTAUTH_URL
-    expect(result.status.canonicalHost).toBe('tenant-.portal.sebastian.9minds.ai');
-    expect(result.status.verificationDetails.expected_cname).toBe('tenant-.portal.sebastian.9minds.ai');
+    expect(status.canonicalHost).toBe('tenant-.portal.sebastian.9minds.ai');
+    expect(status.verificationDetails.expected_cname).toBe('tenant-.portal.sebastian.9minds.ai');
   });
 
   it('uses domain from NEXTAUTH_URL for canonical host in production environment', async () => {
-    // Set production environment NEXTAUTH_URL
     process.env.NEXTAUTH_URL = 'https://app.algapsa.com';
-    portalDomainStore = null; // No existing domain
+    portalDomainStore = null;
 
-    const result = await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' });
+    const status = expectRegistered(await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' }));
 
-    // Verify canonical host uses domain from NEXTAUTH_URL
-    expect(result.status.canonicalHost).toBe('tenant-.portal.app.algapsa.com');
-    expect(result.status.verificationDetails.expected_cname).toBe('tenant-.portal.app.algapsa.com');
+    expect(status.canonicalHost).toBe('tenant-.portal.app.algapsa.com');
+    expect(status.verificationDetails.expected_cname).toBe('tenant-.portal.app.algapsa.com');
   });
 
   it('falls back to default domain when NEXTAUTH_URL is not set', async () => {
-    // Ensure NEXTAUTH_URL is not set
     delete process.env.NEXTAUTH_URL;
-    portalDomainStore = null; // No existing domain
+    portalDomainStore = null;
 
-    const result = await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' });
+    const status = expectRegistered(await requestPortalDomainRegistrationAction({ domain: 'custom.example.com' }));
 
-    // Verify canonical host falls back to default
-    expect(result.status.canonicalHost).toBe('tenant-.portal.algapsa.com');
-    expect(result.status.verificationDetails.expected_cname).toBe('tenant-.portal.algapsa.com');
+    expect(status.canonicalHost).toBe('tenant-.portal.algapsa.com');
+    expect(status.verificationDetails.expected_cname).toBe('tenant-.portal.algapsa.com');
   });
 });

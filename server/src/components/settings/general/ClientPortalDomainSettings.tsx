@@ -24,12 +24,12 @@ import {
   refreshPortalDomainStatusAction,
   requestPortalDomainRegistrationAction,
   retryPortalDomainRegistrationAction,
-} from '@ee/lib/actions/tenant-actions/portalDomainActions';
+} from '@/lib/actions/tenant-actions/portalDomainActions';
 import type { PortalDomainStatusResponse } from '@alga-psa/tenancy/actions/tenant-actions/portalDomain.types';
-import type { PortalDomainStatus } from 'server/src/models/PortalDomainModel';
+import type { PortalDomainStatus } from '@/models/PortalDomainModel';
 
-// Operator-facing reverse-proxy setup guide for appliance ("direct") deployments.
-const PROXY_SETUP_DOC_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/ee/docs/guides/appliance-custom-portal-domain-proxy.md';
+// Operator-facing reverse-proxy setup guide for direct-mode (self-hosted) deployments.
+const PROXY_SETUP_DOC_URL = 'https://github.com/Nine-Minds/alga-psa/blob/main/docs/features/client-portal/custom-domain-reverse-proxy.md';
 
 interface StatusBadgeConfig {
   label: string;
@@ -275,7 +275,7 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
 
   const isFailureState = portalStatus?.status === 'dns_failed' || portalStatus?.status === 'certificate_failed';
 
-  // Appliance ("direct") deployments do their own DNS/TLS/routing via an
+  // Direct-mode deployments (CE, EE appliance) do their own DNS/TLS/routing via an
   // operator-managed reverse proxy, so the UI shows the proxy contract instead
   // of the hosted CNAME-to-canonical instructions.
   const isDirectMode = portalStatus?.mode === 'direct';
@@ -442,7 +442,7 @@ const ClientPortalDomainSettings = ({ headerAction }: ClientPortalDomainSettings
                       id="client-portal-domain-cancel-edit"
                       type="button"
                       variant="ghost"
-                      onClick={() => setDomainInput(existingDomain)}
+                      onClick={() => setDomainInput(existingDomain ?? '')}
                       disabled={submitting}
                     >
                       {t('clientPortal.domain.actions.cancelEdit')}
