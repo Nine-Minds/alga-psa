@@ -511,7 +511,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         // Record success before ancillary reply-token/log writes can fail.
         await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
       } else if (result.metadata?.definitelyNotSent === true ||
-        ['COMMENT_RATE_LIMITED', '429', 'TooManyRequests', 'EAUTH', 'EENVELOPE'].includes(String(result.metadata?.errorCode))) {
+        Number(result.metadata?.status) === 429) {
         await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed', { error: result.error, errorCode: String(result.metadata?.errorCode || 'NOT_SENT') });
       } else {
         await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sending', { error: result.error || 'Provider outcome is unknown', errorCode: String(result.metadata?.errorCode || 'OUTCOME_UNKNOWN') });
@@ -533,7 +533,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
 
       const providerId = result.providerId || params.providerId || 'unknown';
       const providerType = result.providerType || 'unknown';
-      const isRetryable = result.metadata?.retryable === true;
+      const isRetryable = result.metadata?.retryable === true && (!managedCommentDelivery ||
+        result.metadata?.definitelyNotSent === true || Number(result.metadata?.status) === 429);
       const errorCode = typeof result.metadata?.errorCode === 'string' ? result.metadata.errorCode : undefined;
 
       throw new EmailProviderError(

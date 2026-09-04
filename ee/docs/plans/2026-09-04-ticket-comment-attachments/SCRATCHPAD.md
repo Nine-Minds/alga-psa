@@ -29,3 +29,11 @@
 - Revision evidence: 101 focused tests (29 PostgreSQL attachment tests), two package event-bus tests, package builds, server typecheck and production Next build. Live new/reply/edit/cancel/internal/portal/scheduled/video flows and actual MIME were checked; guest fallback delivered original 18 MB PDF bytes. Paid Resend/Graph and EE Temporal/Citus execution remain outside local verification; REVIEW.md records exact blockers.
 
 - Final Redis lease tests use REAL_REDIS=1 to bypass the repository Redis stub and random key prefixes that are removed after each test. Two tests passed against Redis 6380. The registered dev-server PTY was stale; recreating the same service command produced session :2 and restored HTTP 200 on port 3653 with no smoke stream override.
+
+## Round-2 targeted review
+
+- Graph's named ErrorTooManyRequests did not match the send boundary's code allowlist. More deeply, MicrosoftGraphAdapter sanitization also discarded Retry-After. Preserve that header alone (not Axios config/tokens), classify HTTP 429 as rejected in the provider, and protect ambiguous acceptance independently of code spelling.
+- recover-comment-publications was missing from the Temporal worker registry. It now uses the scheduled-comment forwarding pattern with strict event publication, and a behavioral worker → event → subscriber → server registration test covers it.
+- Startup-only recovery schedule installation missed new tenants and never retried failed installations. Process-local one-minute discovery follows the existing RMM discovery pattern, starts before the first scheduler attempt, coalesces ticks and tracks only successful per-runner installations. Stable singleton keys are reused after partial failures. PostgreSQL tests cover new tenant discovery plus actual publication/cleanup recovery.
+
+- Round-2 final verification: 118 focused tests plus 15 adapter/subscriber regressions pass; the 30-test attachment integration suite also passes after feeding the actual provider retry hint into the queue. Shared/email/Temporal worker builds, server and worker typechecks, and production Next build pass. No live Temporal cluster or paid Graph send was used. Development server still responds HTTP 200 on port 3653.

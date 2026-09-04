@@ -489,22 +489,15 @@ function logConfiguration() {
 
 // Helper function to initialize job scheduler
 async function initializeJobScheduler(storageService: StorageService) {
+  const { startCommentRecoveryScheduleDiscovery } = await import('./jobs/commentRecoveryScheduleDiscovery');
+  // The discovery timer survives failed initialization and sees tenants created later.
+  await startCommentRecoveryScheduleDiscovery(initializeJobRunner);
   // Initialize the new job runner abstraction (handles all core handler registration)
   try {
     const jobRunner = await initializeJobRunner();
     logger.info(`Job runner initialized: ${jobRunner.getRunnerType()}`);
     try {
       const { reconcileScheduledCommentPublications } = await import('./jobs/handlers/publishScheduledCommentHandler');
-      // Jobs require an attributable tenant user. Install one tenant-scoped recovery schedule per active MSP.
-      const recoveryRoot = await getConnection(null);
-      const recoveryTenants = await recoveryRoot('users').distinct('tenant').where({ user_type: 'internal', is_inactive: false });
-      for (const row of recoveryTenants) {
-        try {
-          await jobRunner.scheduleRecurringJob('recover-comment-publications', { tenantId: row.tenant }, '* * * * *', { singletonKey: `recover-comment-publications:${row.tenant}` });
-        } catch (error) {
-          logger.error('Failed to install tenant comment recovery schedule', { tenantId: row.tenant, error });
-        }
-      }
       await reconcileScheduledCommentPublications();
     } catch (error) {
       logger.error('Failed to reconcile scheduled comment publications:', error);

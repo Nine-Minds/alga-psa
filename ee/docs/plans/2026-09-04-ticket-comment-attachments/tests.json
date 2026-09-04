@@ -33,5 +33,15 @@
     "id": "T007",
     "description": "Publication recovery after failed dispatch, recipient verification, upload cancellation and shared storage retry preservation",
     "implemented": true
+  },
+  {
+    "id": "T008",
+    "description": "Graph adapter/provider/queue named-429 recovery and successful-recipient deduplication",
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "description": "Behavioral Temporal activity-to-server recovery dispatch and PostgreSQL new-tenant/scheduler-failure recovery",
+    "implemented": true
   }
 ]

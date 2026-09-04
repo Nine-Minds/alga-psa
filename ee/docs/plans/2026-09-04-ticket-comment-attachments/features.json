@@ -38,5 +38,15 @@
     "id": "F008",
     "description": "Tracked reply/edit cancellation and bounded exclusively owned draft storage cleanup",
     "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Graph HTTP-status rejection classification with preserved retry timing and ambiguous acceptance protection",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Temporal recovery forwarding and periodic discovery for new tenants and failed schedule installations",
+    "implemented": true
   }
 ]

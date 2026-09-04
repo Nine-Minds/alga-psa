@@ -384,7 +384,7 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       expect(await addClientTicketComment(ticket, note(reply.file), false, false, root.comment_id)).not.toBe(true);
     } finally { connection.mockRestore(); publish.mockRestore(); update.mockRestore(); }
   });
-  it('recovers confirmed provider non-delivery through the queue without repeating a successful recipient, and exposes ambiguous outcomes', async () => {
+  it.each(['resend', 'graph'])('%s recovers confirmed provider non-delivery through the queue without repeating a successful recipient, and exposes ambiguous outcomes', async providerKind => {
     const {TenantEmailService}=await import('@alga-psa/email');
     const {ResendEmailProvider}=await import('@alga-psa/email/providers/ResendEmailProvider');
     const {sendEventEmail}=await import('@/lib/notifications/sendEventEmail');
@@ -392,17 +392,25 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     const pdf=await upload(); await attach(pdf.file);
     await table('contacts').insert({tenant,contact_name_id:randomUUID(),client_id:client,full_name:'Second',email:'second@example.test'});
     await table('tenant_email_templates').insert({tenant,name:'ticket-comment-added',language_code:'en',subject:'Recovery',html_content:'{{{comment.content}}}',text_content:'{{comment.text}}'});
-    const provider=new ResendEmailProvider('test-resend');
-    // Transport seam only: actual provider, Base/Tenant service, send boundary, ledger and queue execute.
+    const {MicrosoftGraphEmailProvider}=await import('@alga-psa/email/providers/MicrosoftGraphEmailProvider');
+    const {MicrosoftGraphAdapter}=await import('@shared/services/email/providers/MicrosoftGraphAdapter');
+    const provider = providerKind === 'graph' ? new MicrosoftGraphEmailProvider('test-graph') : new ResendEmailProvider('test-resend');
+    // Transport seam only: actual adapter/provider, service, ledger and queue execute.
     (provider as any).initialized=true; (provider as any).config={apiKey:'test'};
     let outcome: 'success'|'rejected'|'unknown'='success';
     const transport=vi.fn(async()=>{
-      if(outcome==='rejected') throw {response:{status:429,data:{message:'Rate limited'},headers:{'retry-after':'1'}}};
+      if(outcome==='rejected') throw {response:{status:429,data:{error:{code:'ErrorTooManyRequests',message:'Rate limited'},message:'Rate limited'},headers:{'retry-after':'17'}}};
       if(outcome==='unknown') throw {code:'ECONNRESET'};
-      return {data:{id:randomUUID()}};
+      return {data:{id:randomUUID()},headers:{'request-id':'graph-request'}};
     });
-    (provider as any).client={post:transport};
-    vi.spyOn(provider as any,'delay').mockResolvedValue(undefined);
+    if (providerKind === 'graph') {
+      const adapter = new MicrosoftGraphAdapter({mailbox:'agent@example.test',provider_type:'microsoft',provider_config:{}} as any);
+      (adapter as any).httpClient={post:transport};
+      (provider as any).adapter=adapter; (provider as any).mailbox='agent@example.test';
+    } else {
+      (provider as any).client={post:transport};
+      vi.spyOn(provider as any,'delay').mockResolvedValue(undefined);
+    }
     const service=TenantEmailService.getInstance(tenant);
     const snapshot=vi.spyOn(service as any,'refreshProviderState').mockResolvedValue({emailProvider:provider,providerInitError:null,fromAddress:'agent@example.test'});
     const connection=vi.spyOn(dbModule,'getConnection').mockResolvedValue(trx);
@@ -422,12 +430,14 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       expect(transport).toHaveBeenCalledTimes(1);
       outcome='rejected';
       const second={...params,to:'second@example.test'};
-      await expect(sendEventEmail(second)).rejects.toMatchObject({isRetryable:true,errorCode:'429',metadata:{definitelyNotSent:true}});
+      const rejection = await sendEventEmail(second).catch(error => error);
+      expect(rejection).toMatchObject({isRetryable:true,errorCode:providerKind === 'graph' ? 'ErrorTooManyRequests' : '429',metadata:{definitelyNotSent:true,retryAfterMs:17000}});
       expect((await table('ticket_comment_email_deliveries').where({recipient:second.to}).first()).state).toBe('failed');
-      await queue.enqueue(second); await queue.enqueue(params);
+      await queue.enqueue(second,{retryAfterMs:rejection.metadata.retryAfterMs}); await queue.enqueue(params);
+      expect([...scores.values()].flatMap(values=>[...values.values()]).some(at=>at>Date.now()+16000)).toBe(true);
       outcome='success';
       await (queue as any).processReady();
-      expect(transport).toHaveBeenCalledTimes(6); // one accepted + four rejected HTTP attempts + one recovered
+      expect(transport).toHaveBeenCalledTimes(providerKind === 'graph' ? 3 : 6); // success + rejection(s) + recovered recipient
       expect((await table('ticket_comment_email_deliveries').where({recipient:second.to}).first())).toMatchObject({state:'sent',attempts:2});
       expect((await table('ticket_comment_email_deliveries').where({recipient}).first())).toMatchObject({state:'sent',attempts:1});
       const ambiguous=await makeComment(); const otherPdf=await upload(); await attach(otherPdf.file,ambiguous);
