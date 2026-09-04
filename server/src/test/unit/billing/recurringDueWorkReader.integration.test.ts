@@ -242,6 +242,7 @@ const mocks = vi.hoisted(() => {
     rowsByTable,
     trx,
     createTenantKnex: vi.fn(async () => ({ knex: trx })),
+    resolveEffectiveTimeZone: vi.fn(async () => 'UTC'),
     withTransaction: vi.fn(async (_knex: unknown, callback: (trx: any) => Promise<unknown>) =>
       callback(trx),
     ),
@@ -296,6 +297,7 @@ vi.mock('@alga-psa/db', () => ({
   }),
   createTenantKnex: mocks.createTenantKnex,
   withTransaction: mocks.withTransaction,
+  resolveEffectiveTimeZone: mocks.resolveEffectiveTimeZone,
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   getTenantContext: vi.fn(async () => 'tenant-1'),
 }));
@@ -307,6 +309,8 @@ const { getAvailableRecurringDueWork } = await import(
 describe('recurring due-work reader', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.useRealTimers();
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('UTC');
     mocks.missingTables.clear();
 
     mocks.rowsByTable.client_billing_cycles = [
@@ -445,6 +449,10 @@ describe('recurring due-work reader', () => {
         contract_line_name: 'Archived Line',
       },
     ];
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it('T001/T002: due-work reader loads persisted client-cadence and contract-cadence rows when `client_contract_lines` is absent', async () => {
@@ -588,7 +596,7 @@ describe('recurring due-work reader', () => {
     });
   });
 
-  it('T-EC1: client-arrears calendar-month candidates surface month-end-close eligibility only on the final calendar day', async () => {
+  function installMarchArrearsClient3Row() {
     mocks.rowsByTable.recurring_service_periods = [
       {
         tenant: 'tenant-1',
@@ -613,6 +621,15 @@ describe('recurring due-work reader', () => {
         contract_line_name: 'Wonder Fixed Fee',
       },
     ];
+  }
+
+  it('T-EC1: client-arrears calendar-month candidates surface month-end-close eligibility only on the final calendar day', async () => {
+    installMarchArrearsClient3Row();
+
+    // The billing-calendar "today" drives the flag: UTC timezone, so the tenant
+    // local date equals the injected clock's UTC date.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-03-31T12:00:00.000Z'));
 
     const finalDay = await getAvailableRecurringDueWork({
       page: 1,
@@ -634,6 +651,8 @@ describe('recurring due-work reader', () => {
       monthEndCloseEligible: true,
     });
 
+    vi.setSystemTime(new Date('2025-03-30T12:00:00.000Z'));
+
     const dayBefore = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
@@ -648,6 +667,8 @@ describe('recurring due-work reader', () => {
       monthEndCloseEligible: false,
     });
 
+    vi.setSystemTime(new Date('2025-04-01T12:00:00.000Z'));
+
     const windowOpened = await getAvailableRecurringDueWork({
       page: 1,
       pageSize: 10,
@@ -661,6 +682,97 @@ describe('recurring due-work reader', () => {
     expect(openCandidate).toMatchObject({
       notYetDue: false,
       canGenerate: true,
+      monthEndCloseEligible: false,
+    });
+  });
+
+  it('T-EC3: month-end flag tracks the billing-calendar today, not the search to-date', async () => {
+    installMarchArrearsClient3Row();
+    vi.useFakeTimers();
+
+    // 2025-03-30T14:00Z is still 2025-03-30 in UTC but already
+    // 2025-03-31T01:00 AEDT in Australia/Sydney — the final calendar day.
+    // A search window ending EARLIER (matching the UTC date) must not hide the
+    // flag, and a search ending LATER (after the window would open) must not
+    // either: eligibility is decided by the tenant's billing calendar alone.
+    vi.setSystemTime(new Date('2025-03-30T14:00:00.000Z'));
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('Australia/Sydney');
+
+    const earlierSearch = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-03-30' },
+    });
+    const earlierCandidate = earlierSearch.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    expect(earlierCandidate).toMatchObject({
+      monthEndCloseEligible: true,
+      // asOf semantics are untouched: the window has not opened for this
+      // search end, so the candidate is still surfaced as not-yet-due.
+      canGenerate: false,
+      notYetDue: true,
+    });
+
+    const laterSearch = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-04-10' },
+    });
+    const laterCandidate = laterSearch.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    expect(laterCandidate).toMatchObject({
+      monthEndCloseEligible: true,
+      canGenerate: true,
+      notYetDue: false,
+    });
+  });
+
+  it('T-EC4: month-end flag stays off when the billing-calendar today is not the final calendar day, even if the search to-date is', async () => {
+    installMarchArrearsClient3Row();
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2025-03-29T12:00:00.000Z'));
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('UTC');
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-03-31' },
+    });
+    const candidate = result.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    // The search says the 31st (the old code would have flagged it), but the
+    // tenant's billing calendar reads the 29th — the server gate would reject
+    // the close, so the listing must not offer it.
+    expect(candidate).toMatchObject({
+      notYetDue: true,
+      canGenerate: false,
+      monthEndCloseEligible: false,
+    });
+  });
+
+  it('T-EC5: Sydney/UTC boundary — flag off when UTC still reads the final day but the tenant calendar has not reached it', async () => {
+    installMarchArrearsClient3Row();
+    vi.useFakeTimers();
+
+    // 2025-03-31T05:00Z is already 2025-03-31 in UTC (naively the final day)
+    // but still 2025-03-30T19:00 in Pacific/Honolulu (UTC-10) — the day before,
+    // so the manual close must not be offered. A UTC-host "today" fallback would
+    // wrongly flag it.
+    vi.setSystemTime(new Date('2025-03-31T05:00:00.000Z'));
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('Pacific/Honolulu');
+
+    const result = await getAvailableRecurringDueWork({
+      page: 1,
+      pageSize: 10,
+      dateRange: { to: '2025-03-31' },
+    });
+    const candidate = result.invoiceCandidates.find(
+      (candidate) => candidate.clientId === 'client-3',
+    );
+    expect(candidate).toMatchObject({
       monthEndCloseEligible: false,
     });
   });

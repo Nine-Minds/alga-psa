@@ -156,6 +156,44 @@ describe('generateCalendarMonthEndCloseInvoices', () => {
 
     expect(result).toMatchObject({ invoicesCreated: 1, failedCount: 0, failures: [] });
     expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledTimes(1);
+    // The invoice date must be the tenant-local final calendar day, threaded as
+    // the explicit invoiceDate override, never the server host's calendar date.
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ invoiceDate: '2026-06-30' }),
+    );
+  });
+
+  it('stamps the tenant-local final calendar day when the billing timezone and UTC disagree', async () => {
+    // 2026-01-30T22:00Z is already 2026-01-31T09:00 AEDT in Australia/Sydney —
+    // the final calendar day of the January period — but still 2026-01-30 in UTC.
+    // The eligibility gate approves (Sydney) and the invoice must be dated
+    // 2026-01-31, not the server-local 2026-01-30.
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-01-30T22:00:00.000Z'));
+    mocks.resolveEffectiveTimeZone.mockResolvedValue('Australia/Sydney');
+    installDbRow({
+      service_period_start: '2026-01-01',
+      service_period_end: '2026-02-01',
+      invoice_window_start: '2026-02-01',
+      due_position: 'arrears',
+    });
+
+    const result = await generateCalendarMonthEndCloseInvoices({
+      groupedTargets: [
+        { groupKey: 'g1', selectorInputs: [buildClientCadenceTarget('2026-02-01', '2026-03-01')] },
+      ],
+    });
+
+    expect(result).toMatchObject({ invoicesCreated: 1, failedCount: 0, failures: [] });
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.objectContaining({ invoiceDate: '2026-01-31' }),
+    );
+    expect(mocks.generateInvoiceForSelectionInputs).toHaveBeenCalledWith(
+      expect.any(Array),
+      expect.not.objectContaining({ invoiceDate: '2026-01-30' }),
+    );
   });
 
   it('rejects the same instant where the billing timezone has already rolled to the 1st', async () => {

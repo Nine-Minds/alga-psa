@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
@@ -1228,6 +1228,7 @@ function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
     asOf?: ISO8601String,
+    monthEndCloseEligibilityDate?: ISO8601String,
 ): IRecurringDueWorkInvoiceCandidate[] {
     if (rows.length === 0) {
         return [];
@@ -1331,10 +1332,15 @@ function buildRecurringDueWorkInvoiceCandidates(
                 ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
                 : null;
             // Month-end early close: every member is a calendar-month arrears
-            // period whose final calendar day is the listing's as-of date. This
-            // mirrors (and must stay in lock-step with) the server-side policy
-            // re-validation the generation action runs.
-            const asOfDate = asOf ? String(asOf).slice(0, 10) : undefined;
+            // period whose final calendar day is TODAY on the account's effective
+            // billing calendar. It now genuinely is in lock-step with the
+            // server-side policy re-validation the generation action runs — both
+            // resolve "today" with the same timezone function — and it is
+            // deliberately independent of `asOf` (the user's date-range search
+            // end), which would otherwise hide the flag on the one valid day or
+            // invent it early for future-dated searches.
+            const monthEndAsOfDate = monthEndCloseEligibilityDate
+                ?? (asOf ? String(asOf).slice(0, 10) : undefined);
             const monthEndCloseEligible = members.length > 0 && members.every((member) =>
                 evaluateCalendarMonthEndEarlyCloseEligibility({
                     duePosition: member.duePosition,
@@ -1342,7 +1348,7 @@ function buildRecurringDueWorkInvoiceCandidates(
                     servicePeriodStart: member.servicePeriodStart,
                     servicePeriodEnd: member.servicePeriodEnd,
                     invoiceWindowStart: member.invoiceWindowStart,
-                    asOfDate,
+                    asOfDate: monthEndAsOfDate,
                 }).eligible,
             );
             const explicitContractCount = members.filter(
@@ -1789,6 +1795,16 @@ export const getAvailableRecurringDueWork = withAuth(async (
     } = options;
     const { knex } = await createTenantKnex();
     const asOf = options.dateRange?.to ?? toISODate(Temporal.Now.plainDateISO());
+    // Month-end early-close eligibility is defined on the account's effective
+    // billing calendar — the same timezone-resolution function the generation
+    // action re-validates with — never on the user's search window end and never
+    // on the server host's clock. Resolve it once per listing so the flag and the
+    // server-side gate cannot disagree about which day is the final calendar day.
+    const effectiveTimeZone = await resolveEffectiveTimeZone(knex, tenant);
+    const monthEndCloseEligibilityDate = Temporal.Now.instant()
+      .toZonedDateTimeISO(effectiveTimeZone)
+      .toPlainDate()
+      .toString();
 
     try {
         // candidateBillingPeriods and persistedDbRows both derive straight from
@@ -1885,6 +1901,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
             [...readyPersistedRows, ...unresolvedNonContractRows],
             groupingMetadataByRecordId,
             asOf,
+            monthEndCloseEligibilityDate,
         );
         const blockedInvoiceCandidates = applyClientCadenceMaterializationGapBlocks(
             invoiceCandidates,

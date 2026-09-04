@@ -1,6 +1,7 @@
 'use server';
 
 import { v4 as uuidv4 } from 'uuid';
+import { Temporal } from '@js-temporal/polyfill';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import {
@@ -497,6 +498,15 @@ export async function generateCalendarMonthEndCloseInvoices(params: {
   const { knex } = await createTenantKnex();
   const effectiveTimeZone = await resolveEffectiveTimeZone(knex, tenantId);
   const now = new Date();
+  // The tenant-local calendar date of this instant. On an eligible close this is
+  // provably the service period's final calendar day (`evaluation.finalCalendarDay`
+  // below): the policy only approves when the local date equals that day. Stamping
+  // invoices from the tenant's billing calendar (never the server host's clock)
+  // keeps the gate and the invoice it approves on the same date.
+  const monthEndCloseInvoiceDate = Temporal.Instant.from(now.toISOString())
+    .toZonedDateTimeISO(effectiveTimeZone)
+    .toPlainDate()
+    .toString();
 
   // Server-side revalidation: the UI convenience flag is not the policy.
   for (const group of groupedTargets) {
@@ -550,11 +560,12 @@ export async function generateCalendarMonthEndCloseInvoices(params: {
       const invoice = group.billingCycleId
         ? await generateInvoiceForSelectionInputs(
             group.selectorInputs,
-            { allowPoOverage: params.allowPoOverage },
+            { allowPoOverage: params.allowPoOverage, invoiceDate: monthEndCloseInvoiceDate },
             { billingCycleId: group.billingCycleId },
           )
         : await generateInvoiceForSelectionInputs(group.selectorInputs, {
             allowPoOverage: params.allowPoOverage,
+            invoiceDate: monthEndCloseInvoiceDate,
           });
 
       // The duplicate guard refuses an already-invoiced period; unlike the

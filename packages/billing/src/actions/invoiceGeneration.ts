@@ -2719,7 +2719,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   tenant: string;
   knex: Knex;
   normalizedSelectorInputs: IRecurringDueSelectionInput[];
-  options?: { allowPoOverage?: boolean };
+  options?: { allowPoOverage?: boolean; invoiceDate?: string };
   bridgeMetadata?: RecurringBridgeMetadata;
 }): Promise<InvoiceViewModel | null> {
   const { user, tenant, knex } = params;
@@ -2856,6 +2856,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
       cycleEnd,
       billing_cycle_id,
       user.user_id,
+      { invoiceDate: params.options?.invoiceDate },
     );
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
@@ -2884,6 +2885,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
     cycleEnd,
     billing_cycle_id,
     user.user_id,
+    { invoiceDate: params.options?.invoiceDate },
   );
 
   return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
@@ -2893,7 +2895,7 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
   user,
   { tenant },
   selectorInputs: IRecurringDueSelectionInput[],
-  options: { allowPoOverage?: boolean } = {},
+  options: { allowPoOverage?: boolean; invoiceDate?: string } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
 ): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
   return withInvoiceGenerationActionErrors(async () => {
@@ -3053,7 +3055,7 @@ export async function createInvoiceFromBillingResultImpl(
   cycleEnd: ISO8601String,
   billing_cycle_id: string | null,
   userId: string,
-  options: { projectId?: string } = {},
+  options: { projectId?: string; invoiceDate?: string } = {},
 ): Promise<IInvoice> {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
@@ -3080,7 +3082,12 @@ export async function createInvoiceFromBillingResultImpl(
     console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code) even after auto-configuration attempt.`);
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
-  const currentDate = Temporal.Now.plainDateISO().toString();
+  // `invoice_date` (and the `getDueDate` input it feeds) is the invoice's "today".
+  // The calendar month-end close passes `options.invoiceDate` — the tenant-local
+  // final calendar day its eligibility gate approved — so the draft is stamped on
+  // the billing calendar. Every other caller omits it and this stays exactly the
+  // server-host calendar date it has always been.
+  const currentDate = options.invoiceDate ?? Temporal.Now.plainDateISO().toString();
   const due_date = unwrapBillingHelperResult(await getDueDate(clientId, currentDate));
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
