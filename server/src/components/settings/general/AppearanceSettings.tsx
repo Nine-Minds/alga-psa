@@ -491,6 +491,7 @@ const AppearanceSettings = () => {
                       uploadAction={handleLogoUpload('default')}
                       deleteAction={handleLogoDelete('default')}
                       onImageChange={(next) => setLogoUrl(next || '')}
+                      previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
                       size="lg"
                     />
@@ -514,6 +515,7 @@ const AppearanceSettings = () => {
                       uploadAction={handleLogoUpload('dark')}
                       deleteAction={handleLogoDelete('dark')}
                       onImageChange={(next) => setLogoDarkUrl(next || '')}
+                      previewShape="square"
                       aspectHint={{ expects: 'square', warning: squareWarning }}
                       size="lg"
                     />

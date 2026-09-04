@@ -44,10 +44,12 @@ interface EntityImageUploadProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   /**
-   * 'rect' previews the image in a landscape frame instead of the circular
-   * avatar, for slots (wide wordmarks, favicons) that are never cropped round.
+   * How the current image is previewed. 'circle' is the cover-cropped avatar.
+   * 'square' keeps the round frame the app renders logos in but contains the
+   * image instead of cropping it; 'rect' is the landscape frame for wide
+   * wordmarks and favicons.
    */
-  previewShape?: 'circle' | 'rect';
+  previewShape?: 'circle' | 'square' | 'rect';
   /** File input `accept` filter; defaults to any image. */
   accept?: string;
   /**
@@ -301,16 +303,21 @@ const EntityImageUpload = ({
     // Use the preview URL if available, otherwise use the current image URL
     const displayUrl = previewUrl || currentImageUrl;
 
-    if (previewShape === 'rect') {
+    // Logo slots preview uncropped: the avatar frame covers-and-crops, which is
+    // not what these images do where they are actually rendered.
+    if (previewShape !== 'circle') {
+      const frame = previewShape === 'rect'
+        ? 'h-20 w-56 rounded-md'
+        : 'h-20 w-20 rounded-full';
       return (
         <div
-          className="flex h-20 w-56 items-center justify-center overflow-hidden rounded-md border border-dashed border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-2"
-          data-automation-id={`${entityType}-image-rect-preview`}
+          className={`flex ${frame} items-center justify-center overflow-hidden border border-dashed border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-2`}
+          data-automation-id={`${entityType}-image-${previewShape}-preview`}
         >
           {displayUrl ? (
             <img src={displayUrl} alt={entityName} className="max-h-full max-w-full object-contain" />
           ) : (
-            <span className="text-xs text-[rgb(var(--color-text-400))]">{entityName}</span>
+            <span className="truncate px-1 text-xs text-[rgb(var(--color-text-400))]">{entityName}</span>
           )}
         </div>
       );

@@ -45,8 +45,10 @@ surrounding label/help copy gets i18n keys.
 
 * The two existing slots are renamed **Square mark** / **Square mark for dark backgrounds**.
 * Two new optional **Wide logo** slots (light + dark) and one **Favicon** slot.
-* Tenant logo slots preview in a **rectangular frame** instead of the circular `ClientAvatar`, so a
-  wordmark is no longer shown cropped into a circle it will never actually be cropped into.
+* No logo slot previews through the cover-cropping avatar any more. The square marks keep a round
+  frame — that is what the rail renders — but *contain* the image instead of cropping it; the wide
+  and favicon slots preview in a **rectangular frame**, so a wordmark is no longer shown squeezed
+  into a circle it will never actually be squeezed into.
 * A client-side dimension read warns when a near-square image lands in a wide slot (and a wide image
   in a square slot). Warning only — it never blocks the upload.
 
