@@ -13,3 +13,12 @@ export async function authorizeSsoLinkingAction(
     error: "Single sign-on linking is only available in Enterprise Edition.",
   };
 }
+
+export async function prepareSsoLinkResolutionAction(
+  _providerId: string
+): Promise<{ success: false; error: string }> {
+  return {
+    success: false,
+    error: "Single sign-on linking is only available in Enterprise Edition.",
+  };
+}
