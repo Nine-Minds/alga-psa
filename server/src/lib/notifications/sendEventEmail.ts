@@ -1,3 +1,5 @@
+import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery } from './ticketCommentAttachmentEmail';
+import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { getConnection } from '../db/db';
@@ -375,6 +377,41 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
+    const attachmentCommentId = params.template === 'ticket-comment-added' ? params.replyContext?.commentId : undefined;
+    const attachmentTicketId = params.replyContext?.ticketId;
+    let managedCommentDelivery = false;
+    let attachmentDownloadText = '';
+    if (attachmentCommentId && attachmentTicketId) {
+      managedCommentDelivery = Boolean(await db.table('ticket_comment_attachments').where({ comment_id: attachmentCommentId }).first());
+      if (managedCommentDelivery) {
+        // Recheck persisted visibility on each queued attempt, never trust an old event payload.
+        if (!await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId, attachmentTicketId)) {
+          const current = await db.table('comments').where({ comment_id: attachmentCommentId, ticket_id: attachmentTicketId }).first();
+          const staffRecipient = await db.table('users').where({ user_type: 'internal', is_inactive: false })
+            .whereRaw('lower(email) = ?', [params.to.trim().toLowerCase()]).first();
+          // Preserve staff text notifications; never send private files or stale
+          // public-event content to a customer after a visibility change.
+          if (!current || current.deleted_at || current.publish_state !== 'published' || !staffRecipient) return;
+        }
+        const service = TenantEmailService.getInstance(params.tenantId);
+        const capabilities = await service.getAttachmentCapabilities();
+        const prepared = await prepareCommentAttachmentEmail({
+          db: knex, tenant: params.tenantId, ticketId: attachmentTicketId,
+          commentId: attachmentCommentId, recipient: params.to,
+          supportsAttachments: capabilities.supportsAttachments,
+          blockedAttachmentExtensions: capabilities.blockedAttachmentExtensions,
+          maxAttachmentBytes: capabilities.maxAttachmentSize || 0,
+          baseUrl: process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || '',
+        });
+        if (prepared.downloadLinks.length) attachmentDownloadText = '\nDownload attachments within one hour (sign in with this recipient email):\n' + prepared.downloadLinks.join('\n');
+        params = { ...params, attachments: prepared.attachments, context: {
+          ...params.context,
+          comment: { ...(params.context.comment as Record<string, unknown> || {}),
+            content: prepared.html, html: prepared.html, text: prepared.text, plainText: prepared.text },
+        } };
+      }
+    }
+
     let html = htmlTemplate(params.context);
     let subject = subjectTemplate(params.context).replace(/[\r\n]+/g, ' ').trim();
 
@@ -408,6 +445,8 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       .replace(/\s+/g, ' ')
       .trim();
 
+    text += attachmentDownloadText;
+
     let replyPayload: ReplyMarkerPayload | null = null;
     let effectiveReplyContext = params.replyContext;
     if (params.replyContext?.ticketId || params.replyContext?.projectId) {
@@ -431,7 +470,9 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // Send via TenantEmailService (handles tenant provider and EE fallback)
     const service = TenantEmailService.getInstance(params.tenantId);
     const processor = new StaticTemplateProcessor(subject, html, text);
+    if (managedCommentDelivery && !await claimCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to)) return;
     const result = await service.sendEmail({
+      revalidateCommentOnRetry: managedCommentDelivery,
       to: params.to,
       tenantId: params.tenantId,
       entityType: params.entityType,
@@ -448,6 +489,16 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
     });
+
+    if (managedCommentDelivery) {
+      if (result.success && !result.queued) {
+        // Record success before ancillary reply-token/log writes can fail.
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'sent');
+      } else if (result.metadata?.definitelyNotSent === true ||
+        ['COMMENT_RATE_LIMITED', '429', 'TooManyRequests', 'EAUTH', 'EENVELOPE'].includes(String(result.metadata?.errorCode))) {
+        await finishCommentEmailDelivery(knex, params.tenantId, attachmentCommentId!, params.to, 'failed');
+      }
+    }
 
     if (!result.success) {
       // If email delivery is intentionally disabled/unconfigured, treat as an informational skip (common in dev/test).

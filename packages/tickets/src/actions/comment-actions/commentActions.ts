@@ -2,6 +2,7 @@
 // TODO: Comment model method signature changes
 'use server'
 
+import { withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import Comment from '../../models/comment';
 import { IComment } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
@@ -11,7 +12,7 @@ import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils'
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
-import { withAuth } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { buildTicketCommunicationWorkflowEvents } from '../../lib/workflowTicketCommunicationEvents';
 import { isResponseStateTrackingEnabled } from '../../lib/responseStateSettings';
 import { publishTicketUpdate } from '../../lib/liveUpdates';
@@ -226,6 +227,8 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
 
 export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string | TicketActionError> => {
   try {
+    if (!await hasPermission(user, 'ticket', 'update')) throw new Error('Permission denied: Cannot add comment');
+    comment.user_id = user.user_id;
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
       is_internal: comment.is_internal,
@@ -342,7 +345,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         // Note: Using try-catch to avoid blocking comment creation if event publishing fails
         try {
           const eventComment = await Comment.get(trx, commentTenant, commentId);
-          await publishEvent({
+          registerAfterCommit(trx, () => publishEvent({
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
@@ -364,7 +367,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
                 is_reply: Boolean(eventComment?.parent_comment_id)
               }
             }
-          });
+          }));
           console.log(`[createComment] Published TICKET_COMMENT_ADDED event for comment:`, commentId);
         } catch (eventError) {
           console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
@@ -638,7 +641,7 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
     });
 
       // Use the Comment model to update the comment
-      await Comment.update(trx, commentTenant, id, commentToUpdate);
+      await Comment.update(trx, commentTenant, id, commentToUpdate, user.user_id);
       console.log(`[updateComment] Successfully updated comment with ID: ${id}`);
 
       // Verify the comment was updated correctly
@@ -845,6 +848,7 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
       publish_state: 'canceled', deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });
+    await withdrawCommentAttachments(trx, tenant, id);
     if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
     await writeTicketActivity(trx, {
       tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,

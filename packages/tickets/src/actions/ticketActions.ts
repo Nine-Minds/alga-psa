@@ -1,5 +1,6 @@
 'use server'
 
+import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
   ITicket,
   ITicketListItem,
@@ -1547,8 +1548,10 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         created_at: nowIso,
       }).returning('*');
 
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, user.user_id);
+
       // Publish comment added event
-      await publishEvent({
+      registerAfterCommit(trx, () => publishEvent({
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -1563,7 +1566,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
             isInternal
           }
         }
-      });
+      }));
 
       // Publish workflow v2 ticket message events (additive).
       try {

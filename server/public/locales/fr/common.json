@@ -1598,5 +1598,10 @@
   },
   "callLink": {
     "teamsCall": "Appeler dans Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Joindre des fichiers",
+    "uploadingFiles": "Envoi des fichiers…",
+    "fileUploadFailed": "Échec de l’envoi du fichier."
   }
 }

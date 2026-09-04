@@ -3,6 +3,7 @@
  * Business logic for ticket-related operations
  */
 
+import { reconcileCommentAttachments, canReadCommentAttachment, filterReadableCommentAttachments, canAccessAttachmentTicket } from '@shared/lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
@@ -685,7 +686,7 @@ export class TicketService extends BaseService<ITicket> {
       )
       .orderBy('d.updated_at', 'desc');
 
-    return documents as IDocument[];
+    return filterReadableCommentAttachments(knex, context.tenant, context.userId, documents) as Promise<IDocument[]>;
   }
 
   /**
@@ -1015,7 +1016,7 @@ export class TicketService extends BaseService<ITicket> {
     };
   }
 
-  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
+  async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext, commentAttachmentDraft = false): Promise<IDocument> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
@@ -1034,6 +1035,7 @@ export class TicketService extends BaseService<ITicket> {
       ]);
     }
 
+    if (commentAttachmentDraft && !await canAccessAttachmentTicket(knex, context.tenant, context.userId, ticketId)) throw new NotFoundError('Ticket not found');
     const mimeType = file.type || 'application/octet-stream';
     try {
       await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
@@ -1053,6 +1055,8 @@ export class TicketService extends BaseService<ITicket> {
       uploaded_by_id: context.userId,
     });
 
+    let documentCommitted = false;
+    try {
     const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
         entity_id: ticketId,
@@ -1078,10 +1082,15 @@ export class TicketService extends BaseService<ITicket> {
       mime_type: mimeType,
       file_size: file.size,
       folder_path: folderRecord?.folder_path,
+      ...(commentAttachmentDraft ? { is_client_visible: true } : {}),
     };
 
     await withTransaction(knex, async (trx) => {
       await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
+      if (commentAttachmentDraft) await tenantDb(trx, context.tenant).table('ticket_comment_attachments').insert({
+        tenant: context.tenant, ticket_id: ticketId, document_id: documentId,
+        created_by: context.userId, state: 'draft', expires_at: new Date(Date.now() + 86400000),
+      });
       await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
         association_id: uuidv4(),
         document_id: documentId,
@@ -1112,12 +1121,19 @@ export class TicketService extends BaseService<ITicket> {
       });
     });
 
+    documentCommitted = true;
     const createdDocument = await this.getDocumentById(documentId, context);
     if (!createdDocument) {
       throw new Error('Uploaded document could not be loaded');
     }
 
     return createdDocument;
+    } finally {
+      if (commentAttachmentDraft && !documentCommitted) {
+        try { await StorageService.deleteFile(uploadResult.file_id, context.userId); }
+        catch (error) { console.error('Unable to remove unclaimed comment attachment storage', error); }
+      }
+    }
   }
 
   async downloadTicketDocument(
@@ -1148,7 +1164,7 @@ export class TicketService extends BaseService<ITicket> {
       .select('d.file_id', 'd.document_name', 'd.mime_type')
       .first();
 
-    if (!doc || !doc.file_id) {
+    if (!doc || !doc.file_id || !await canReadCommentAttachment(knex, context.tenant, context.userId, documentId)) {
       throw new NotFoundError('Document not found');
     }
 
@@ -2146,6 +2162,8 @@ export class TicketService extends BaseService<ITicket> {
 
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
+      await reconcileCommentAttachments(trx, context.tenant, comment.comment_id, context.userId);
+
       if (apiIsReply) {
         await tenantScopedTable(trx, 'comment_threads', context.tenant)
           .where({ thread_id: apiThreadId })
@@ -2279,6 +2297,8 @@ export class TicketService extends BaseService<ITicket> {
         .where({ comment_id: commentId })
         .update(update)
         .returning('*');
+
+      await reconcileCommentAttachments(trx, context.tenant, commentId, context.userId);
 
       return {
         ...updated,

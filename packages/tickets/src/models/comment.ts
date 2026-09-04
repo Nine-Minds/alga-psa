@@ -1,3 +1,4 @@
+import { reconcileCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
@@ -168,6 +169,7 @@ const Comment = {
           });
       }
 
+      await reconcileCommentAttachments(knexOrTrx, tenant, inserted.comment_id, comment.user_id!);
       return inserted.comment_id as string;
     } catch (error) {
       logger.error('Error inserting comment:', error);
@@ -175,7 +177,7 @@ const Comment = {
     }
   },
 
-  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>): Promise<void> => {
+  update: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, id: string, comment: Partial<IComment>, actorId?: string): Promise<void> => {
     try {
       // Get existing comment first
       const existingComment = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
@@ -229,6 +231,7 @@ const Comment = {
       await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .where('comment_id', id)
         .update(updateData);
+      if (comment.note !== undefined) await reconcileCommentAttachments(knexOrTrx, tenant, id, actorId || existingComment.user_id!);
     } catch (error) {
       console.error(`Error updating comment with id ${id}:`, error);
       throw error;
@@ -245,6 +248,8 @@ const Comment = {
       if (!existingComment) {
         return;
       }
+
+      await withdrawCommentAttachments(knexOrTrx, tenant, id);
 
       const child = await tenantScopedTable<IComment>(knexOrTrx, 'comments', tenant)
         .select('comment_id')

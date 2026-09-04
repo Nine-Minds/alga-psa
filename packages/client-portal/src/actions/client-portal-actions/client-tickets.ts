@@ -2,6 +2,8 @@
 
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Client portal ticket actions intentionally compose ticketing feature APIs for client-facing workflows. */
 
+import { registerAfterCommit } from '@alga-psa/db';
+import { reconcileCommentAttachments, filterReadableCommentAttachments, withdrawCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import { validateData } from '@alga-psa/validation';
 import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWithDetails, TICKET_ORIGINS } from '@alga-psa/types';
 import { IDocument } from '@alga-psa/types';
@@ -459,7 +461,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         linkedAssetsQuery
       ]);
 
-      return { ticket, conversations, documents, users, linkedAssets };
+      return { ticket, conversations, documents: await filterReadableCommentAttachments(trx, tenant, userId, documents), users, linkedAssets };
     }) as any;
 
     if (!result.ticket) {
@@ -657,6 +659,8 @@ export const addClientTicketComment = withAuth(async (
         markdown_content: markdownContent
       }).returning('*');
 
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id, userId);
+
       if (!isInternal) {
         await tenantDb(trx, tenant).table('tickets')
           .where({
@@ -668,7 +672,7 @@ export const addClientTicketComment = withAuth(async (
       }
 
       // Publish comment added event
-      await publishEvent({
+      registerAfterCommit(trx, () => publishEvent({
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -683,7 +687,7 @@ export const addClientTicketComment = withAuth(async (
             isInternal
           }
         }
-      });
+      }));
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -782,6 +786,7 @@ export const updateClientTicketComment = withAuth(async (
           updated_at: new Date().toISOString()
           // Removed updated_by as it doesn't exist in the comments table
         });
+      await reconcileCommentAttachments(trx, tenant, commentId, userId);
 
       await publishTicketUpdate({
         tenantId: tenant,
@@ -1047,6 +1052,7 @@ export const deleteClientTicketComment = withAuth(async (user, { tenant }, comme
 
       await resolveVisibleTicket(trx, tenant, userRecord.contact_id, comment.ticket_id);
 
+      await withdrawCommentAttachments(trx, tenant, commentId);
       await tenantDb(trx, tenant).table('comments')
         .where({
           comment_id: commentId
@@ -1117,12 +1123,13 @@ export const getClientTicketDocuments = withAuth(async (user, { tenant }, ticket
       const documentsQuery = scopedDb.table('documents as d').select('d.*');
       scopedDb.tenantJoin(documentsQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
 
-      return documentsQuery
+      const rows = await documentsQuery
         .where({
           'da.entity_id': ticketId,
           'da.entity_type': 'ticket',
           'd.is_client_visible': true,
-        }) as unknown as Promise<IDocument[]>;
+        });
+      return filterReadableCommentAttachments(trx, tenant, userId, rows) as Promise<IDocument[]>;
     });
 
     return documents;

@@ -1,5 +1,6 @@
 'use server'
 
+import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
   ITicket,
   ITicketListItem,
@@ -3304,6 +3305,8 @@ export const addTicketCommentWithCache = withAuth(async (
       // truth when the UI is closing the ticket immediately after.
       ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
+
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
 
     // Update ticket response state based on comment visibility and author (F005-F008)
     if (!isScheduled) {

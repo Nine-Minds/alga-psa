@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   IEmailProvider,
+  EmailProviderError,
   EmailMessage as ProviderEmailMessage,
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
@@ -60,6 +61,7 @@ export interface EmailTemplateContent {
 }
 
 export interface BaseEmailParams {
+  revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
   from?: string | EmailAddress;
   fromName?: string;
@@ -781,7 +783,11 @@ export abstract class BaseEmailService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         providerId: emailProvider.providerId,
-        providerType: emailProvider.providerType
+        providerType: emailProvider.providerType,
+        metadata: error instanceof EmailProviderError ? {
+          retryable: error.isRetryable, errorCode: error.errorCode,
+          ...(error.metadata || {}),
+        } : undefined,
       };
     }
   }

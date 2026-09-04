@@ -2,6 +2,8 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: {
+    'lib/ticketCommentAttachments': 'lib/ticketCommentAttachments.ts',
+    'lib/ticketCommentAttachmentToken': 'lib/ticketCommentAttachmentToken.ts',
     'index': 'index.ts',
     'types/index': 'types/index.ts',
     'core/logger': 'core/logger.ts',

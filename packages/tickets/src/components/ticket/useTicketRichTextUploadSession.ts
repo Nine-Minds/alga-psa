@@ -1,5 +1,6 @@
 'use client';
 
+import { discardCommentAttachmentDrafts } from '../../actions/comment-actions/commentAttachmentDraftActions';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -20,6 +21,7 @@ export interface TicketRichTextDraftClipboardImage {
 
 interface UseTicketRichTextUploadSessionOptions {
   componentLabel: string;
+  commentAttachments?: boolean;
   ticketId?: string | null;
   userId?: string | null;
   trackDraftUploads: boolean;
@@ -40,6 +42,7 @@ interface UseTicketRichTextUploadSessionOptions {
 
 export function useTicketRichTextUploadSession({
   componentLabel,
+  commentAttachments = false,
   ticketId,
   userId,
   trackDraftUploads,
@@ -57,6 +60,7 @@ export function useTicketRichTextUploadSession({
   );
   const [showDraftCancelDialog, setShowDraftCancelDialog] = useState(false);
   const [isDeletingDraftImages, setIsDeletingDraftImages] = useState(false);
+  const [pendingUploads, setPendingUploads] = useState(0);
   const clipboardUploadSequenceRef = useRef(0);
 
   const resetDraftTracking = useCallback(() => {
@@ -80,7 +84,7 @@ export function useTicketRichTextUploadSession({
     }
   }, [componentLabel, onDocumentsChanged, ticketId, userId]);
 
-  const uploadFile = useCallback(
+  const performUpload = useCallback(
     async (file: File): Promise<string> => {
       if (!ticketId) {
         throw new Error('Ticket ID is required for clipboard image upload.');
@@ -89,7 +93,7 @@ export function useTicketRichTextUploadSession({
         throw new Error('User session is required for clipboard image upload.');
       }
 
-      const validation = validateClipboardImageFile(file);
+      const validation = commentAttachments && !file.type.startsWith('image/') ? { valid: true, error: undefined } : validateClipboardImageFile(file);
       if (!validation.valid) {
         console.warn(`[${componentLabel}] Clipboard upload rejected by validation`, {
           ticketId,
@@ -103,7 +107,7 @@ export function useTicketRichTextUploadSession({
 
       const sequence = (clipboardUploadSequenceRef.current += 1);
       const timestamp = new Date();
-      const renamedFile = renameClipboardImageForUpload({
+      const renamedFile = !file.type.startsWith('image/') ? file : renameClipboardImageForUpload({
         file,
         timestamp,
         sequence,
@@ -111,6 +115,7 @@ export function useTicketRichTextUploadSession({
 
       const formData = new FormData();
       formData.append('file', renamedFile);
+      if (commentAttachments) formData.append('commentAttachmentDraft', 'true');
 
       const activeUploadDocumentAction =
         uploadDocumentAction ??
@@ -158,7 +163,9 @@ export function useTicketRichTextUploadSession({
         sequence,
         mimeType: renamedFile.type,
       });
-      const viewUrl = resolveDocumentViewUrl
+      const viewUrl = commentAttachments && !file.type.startsWith('image/')
+        ? `/api/documents/download/${uploadedDocument.file_id}`
+        : resolveDocumentViewUrl
         ? resolveDocumentViewUrl(uploadedDocument)
         : uploadedDocument.file_id
           ? `/api/documents/view/${uploadedDocument.file_id}`
@@ -198,6 +205,7 @@ export function useTicketRichTextUploadSession({
     },
     [
       componentLabel,
+      commentAttachments,
       refreshDocuments,
       ticketId,
       toastApi,
@@ -207,6 +215,12 @@ export function useTicketRichTextUploadSession({
       userId,
     ]
   );
+
+  const uploadFile = useCallback(async (file: File) => {
+    setPendingUploads(count => count + 1);
+    try { return await performUpload(file); }
+    finally { setPendingUploads(count => count - 1); }
+  }, [performUpload]);
 
   const requestDiscard = useCallback(() => {
     if (trackDraftUploads && draftClipboardImages.length > 0) {
@@ -229,6 +243,7 @@ export function useTicketRichTextUploadSession({
   }, [componentLabel, draftClipboardImages.length, onDiscard, resetDraftTracking, ticketId]);
 
   const deleteTrackedDraftClipboardImages = useCallback(async () => {
+    if (pendingUploads > 0) return;
     if (!ticketId) {
       toastApi.error('Ticket context is missing for draft image deletion.');
       return;
@@ -243,11 +258,11 @@ export function useTicketRichTextUploadSession({
 
     setIsDeletingDraftImages(true);
     try {
-      if (!deleteDraftClipboardImagesAction && !deleteDocumentFn) {
+      if (!commentAttachments && !deleteDraftClipboardImagesAction && !deleteDocumentFn) {
         throw new Error('Either deleteDraftClipboardImagesAction or deleteDocumentFn is required for draft image cleanup');
       }
       const activeDeleteDraftClipboardImagesAction =
-        deleteDraftClipboardImagesAction ??
+        (commentAttachments ? discardCommentAttachmentDrafts : deleteDraftClipboardImagesAction) ??
         ((input: { ticketId: string; documentIds: string[] }) =>
           deleteDraftClipboardImagesInternal({ ...input, deleteDocumentFn: deleteDocumentFn! }));
       const result = await activeDeleteDraftClipboardImagesAction({
@@ -267,7 +282,7 @@ export function useTicketRichTextUploadSession({
       });
 
       if (deletedCount > 0) {
-        toastApi.success(t('messages.pastedImagesDeleted', { defaultValue: 'Deleted {{count}} pasted images.', count: deletedCount }));
+        toastApi.success(commentAttachments ? 'Draft attachments removed.' : t('messages.pastedImagesDeleted', { defaultValue: 'Deleted {{count}} pasted images.', count: deletedCount }));
         await refreshDocuments();
       }
       if (failedCount > 0) {
@@ -286,6 +301,8 @@ export function useTicketRichTextUploadSession({
   }, [
     componentLabel,
     deleteDraftClipboardImagesAction,
+    pendingUploads,
+    commentAttachments,
     draftClipboardImages,
     onDiscard,
     refreshDocuments,
@@ -296,9 +313,10 @@ export function useTicketRichTextUploadSession({
 
   return {
     draftClipboardImages,
+    isUploading: pendingUploads > 0,
     isDeletingDraftImages,
     keepDraftClipboardImages,
-    requestDiscard,
+    requestDiscard: commentAttachments ? deleteTrackedDraftClipboardImages : requestDiscard,
     resetDraftTracking,
     showDraftCancelDialog,
     setShowDraftCancelDialog,

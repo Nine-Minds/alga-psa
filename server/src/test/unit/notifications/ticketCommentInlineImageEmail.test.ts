@@ -19,7 +19,8 @@ function createMockDb(rows: any[]) {
     select: vi.fn().mockResolvedValue(rows),
   };
 
-  const db = vi.fn().mockImplementation(() => builder);
+  const db = vi.fn().mockImplementation((table: string) => table === 'ticket_comment_attachments'
+    ? { ...builder, select: vi.fn().mockResolvedValue([]) } : builder);
   return { db: db as any, builder };
 }
 

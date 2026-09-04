@@ -4,6 +4,7 @@
  * server actions and used by both server actions and workflow actions.
  */
 
+import { reconcileCommentAttachments } from '../lib/ticketCommentAttachments';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
@@ -1331,6 +1332,7 @@ export class TicketModel {
     }
 
     await db.table('comments').insert(baseCommentData);
+    await reconcileCommentAttachments(trx, tenant, commentId, userId || validatedData.author_id || '');
 
     if (parentCommentId) {
       await db.table('comment_threads')
@@ -1378,7 +1380,7 @@ export class TicketModel {
           authorName = u ? `${u.first_name ?? ''} ${u.last_name ?? ''}`.trim() || undefined : undefined;
         }
 
-        await eventPublisher.publishCommentCreated({
+        const event = {
           tenantId: tenant,
           ticketId: validatedData.ticket_id,
           commentId: commentId,
@@ -1391,7 +1393,18 @@ export class TicketModel {
             content: validatedData.content,
             author: authorName
           }
-        });
+        };
+        if ((eventPublisher as any).__inboundOutboxPublisher === true) {
+          // The inbound publisher writes its durable outbox in this transaction.
+          await eventPublisher.publishCommentCreated(event);
+        } else {
+          // Shared model callers also use raw Knex transactions. executionPromise
+          // resolves only on commit and rejects on rollback, unlike a callback-local hook.
+          void trx.executionPromise.then(
+            () => eventPublisher.publishCommentCreated(event),
+            () => undefined,
+          ).catch(error => console.error('Failed to publish committed comment event:', error));
+        }
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
         if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
