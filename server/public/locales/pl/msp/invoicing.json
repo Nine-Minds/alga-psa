@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Generuj fakturę na koniec miesiąca",
+      "title": "Zamknąć okres {{servicePeriod}} na koniec miesiąca?",
+      "warning": "Spowoduje to zafakturowanie okresu {{servicePeriod}} w jego ostatnim dniu kalendarzowym. Wpisy czasu lub zużycia zarejestrowane po tym zamknięciu nie zostaną uwzględnione. Zamknij okres dopiero po pełnym zarejestrowaniu całej pracy.",
+      "confirm": "Generuj na koniec miesiąca",
+      "omissionWarning": "Wpisy czasu lub zużycia zarejestrowane po tym zamknięciu NIE zostaną uwzględnione na fakturze.",
+      "generationFailed": "Nie udało się wygenerować faktury na koniec miesiąca. Spróbuj ponownie."
+    },
     "ready": {
       "title": "Gotowy do wystawienia faktury",
       "description": "Przeglądaj powtarzające się terminy prac i generuj wersje robocze faktur za wybrane okresy.",

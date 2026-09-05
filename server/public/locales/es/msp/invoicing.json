@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Generar factura de fin de mes",
+      "title": "¿Cerrar el período {{servicePeriod}} a fin de mes?",
+      "warning": "Esto factura {{servicePeriod}} en su último día calendario. Los partes de tiempo o uso registrados después de este cierre no se incluirán. Cierre el período solo cuando todo el trabajo esté completamente registrado.",
+      "confirm": "Generar a fin de mes",
+      "omissionWarning": "Los partes de tiempo o uso registrados después de este cierre NO se incluirán en la factura.",
+      "generationFailed": "No se pudo generar la factura de fin de mes. Inténtelo de nuevo."
+    },
     "ready": {
       "title": "Listo para facturar",
       "description": "Revise el trabajo pendiente recurrente y genere borradores de facturas para los períodos seleccionados.",

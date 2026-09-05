@@ -132,6 +132,15 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     join: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     update: vi.fn(async () => 1),
+    delete: vi.fn(async () => {
+      const deletedCount = resultRows.length;
+      for (const row of resultRows) {
+        const index = rows.indexOf(row);
+        if (index !== -1) rows.splice(index, 1);
+      }
+      resultRows = [];
+      return deletedCount;
+    }),
     insert: vi.fn((payload: Row) => {
       insertedRow = {
         invoice_id: payload.invoice_id ?? `invoice-${rows.length + 1}`,
@@ -267,6 +276,7 @@ const mocks = vi.hoisted(() => {
       tax_region: 'US-NY',
     })),
     calculateAndDistributeTax: vi.fn(async () => 200),
+    claimRecurringServicePeriodsForSelectionInputs: vi.fn(async () => undefined),
     persistInvoiceCharges: vi.fn(async () => 4200),
     updateInvoiceTotalsAndRecordTransaction: vi.fn(async () => undefined),
     getNextBillingDate: vi.fn(async () => '2025-03-01T00:00:00.000Z'),
@@ -352,6 +362,7 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   validateClientBillingEmail: mocks.validateClientBillingEmail,
   getClientDetails: mocks.getClientDetails,
   calculateAndDistributeTax: mocks.calculateAndDistributeTax,
+  claimRecurringServicePeriodsForSelectionInputs: mocks.claimRecurringServicePeriodsForSelectionInputs,
   persistInvoiceCharges: mocks.persistInvoiceCharges,
   updateInvoiceTotalsAndRecordTransaction: mocks.updateInvoiceTotalsAndRecordTransaction,
 }));
