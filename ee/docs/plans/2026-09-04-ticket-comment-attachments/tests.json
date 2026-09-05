@@ -76,7 +76,7 @@
   },
   {
     "id": "T016",
-    "description": "Ordinary UI-to-email acceptance with all active stream consumers running this implementation; mixed-worktree routing prevented verification",
-    "implemented": false
+    "description": "Actual Enterprise Next startup: MSP public PDF and portal reply through exclusive real Redis routing, subscriber, sendEventEmail, real storage and GreenMail; exact MIME bytes, sent recipient ledger, replay deduplication and internal/canceled exclusion",
+    "implemented": true
   }
 ]
