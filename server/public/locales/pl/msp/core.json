@@ -114,7 +114,8 @@
     "collapseSidebar": "Zwiń pasek boczny",
     "collapseSection": "Zwiń {{section}}",
     "expandSection": "Rozwiń {{section}}",
-    "appLogoAlt": "Logo {{appName}}"
+    "appLogoAlt": "Logo {{appName}}",
+    "poweredBy": "Obsługiwane przez"
   },
   "settings": {
     "sections": {

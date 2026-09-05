@@ -37,8 +37,18 @@ describe('tenant branding actions tenant-scoped query contract', () => {
 
   it('writes each tenant logo variant to its own branding key', () => {
     const source = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
-    expect(source).toContain("variant === 'dark' ? 'logoDarkUrl' : 'logoUrl'");
+    expect(source).toContain("dark: 'logoDarkUrl'");
+    expect(source).toContain("wide: 'logoWideUrl'");
+    expect(source).toContain("'wide-dark': 'logoWideDarkUrl'");
+    expect(source).toContain("favicon: 'faviconUrl'");
     expect(source).toContain('[brandingLogoKey(logoVariant)]');
+  });
+
+  it('carries the wide wordmark and favicon forward on a partial save', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(source).toContain('branding.logoWideUrl ?? existingSettings.branding?.logoWideUrl');
+    expect(source).toContain('branding.logoWideDarkUrl ?? existingSettings.branding?.logoWideDarkUrl');
+    expect(source).toContain('branding.faviconUrl ?? existingSettings.branding?.faviconUrl');
   });
 
   it('uses structural tenant scoping for tenant settings branding roots', () => {

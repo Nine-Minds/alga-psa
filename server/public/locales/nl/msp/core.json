@@ -114,7 +114,8 @@
     "collapseSidebar": "Zijbalk inklappen",
     "collapseSection": "{{section}} samenvouwen",
     "expandSection": "{{section}} uitvouwen",
-    "appLogoAlt": "{{appName}}-logo"
+    "appLogoAlt": "{{appName}}-logo",
+    "poweredBy": "Mogelijk gemaakt door"
   },
   "settings": {
     "sections": {

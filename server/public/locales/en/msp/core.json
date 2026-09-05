@@ -466,7 +466,8 @@
     "collapseSidebar": "Collapse sidebar",
     "collapseSection": "Collapse {{section}}",
     "expandSection": "Expand {{section}}",
-    "appLogoAlt": "{{appName}} Logo"
+    "appLogoAlt": "{{appName}} Logo",
+    "poweredBy": "Powered by"
   },
   "settings": {
     "sections": {

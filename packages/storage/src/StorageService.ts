@@ -43,6 +43,9 @@ async function streamToBuffer(stream: Readable): Promise<Buffer> {
   });
 }
 
+/** Square canvas every raster favicon is rendered onto. */
+const FAVICON_DIMENSION = 32;
+
 function changeFileExtension(filename: string, newExtension: string): string {
   const nameParts = filename.split('.');
   if (nameParts.length > 1) {
@@ -117,6 +120,9 @@ export class StorageService {
       metadata?: Record<string, any>;
       isImageAvatar?: boolean;
       isEntityLogo?: boolean;
+      // Browser tab icon: raster input is flattened to a 32x32 PNG, SVG/ICO are
+      // stored untouched. Takes precedence over isEntityLogo.
+      isFavicon?: boolean;
       // Derived artifacts (e.g. preview/thumbnail regenerations) are not
       // first-class documents. Set this to skip DOCUMENT_UPLOADED /
       // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
@@ -168,6 +174,37 @@ export class StorageService {
           processedBuffer = fileBuffer;
           processedMimeType = 'image/svg+xml';
           processedFileSize = fileBuffer.length;
+        } else if (options.isFavicon) {
+          const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
+          const icoMimeTypes = ['image/x-icon', 'image/vnd.microsoft.icon'];
+
+          if (detectedType && icoMimeTypes.includes(detectedType.mime)) {
+            // An .ico is already an icon container at the sizes its author chose.
+            processedBuffer = fileBuffer;
+            processedMimeType = detectedType.mime;
+            processedFileSize = fileBuffer.length;
+          } else {
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+            if (!detectedType || !allowedMimeTypes.includes(detectedType.mime)) {
+              throw new Error('Invalid file format. Only PNG, ICO, SVG, JPEG, GIF, WebP are allowed for favicons.');
+            }
+
+            const sharp = await loadSharp();
+            // Browsers accept PNG favicons, so a single 32x32 PNG is enough and
+            // keeps every raster source (including a wide one) uncropped.
+            processedBuffer = await sharp(fileBuffer)
+              .resize(FAVICON_DIMENSION, FAVICON_DIMENSION, {
+                fit: 'contain',
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+              })
+              .png()
+              .toBuffer();
+
+            processedMimeType = 'image/png';
+            processedFileSize = processedBuffer.length;
+            processedOriginalName = changeFileExtension(originalName, 'png');
+          }
         } else {
           const detectedType = await fileTypeFromBuffer(new Uint8Array(fileBuffer));
           const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];

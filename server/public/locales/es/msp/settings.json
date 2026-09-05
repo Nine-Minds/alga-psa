@@ -1132,6 +1132,8 @@
         "companyName": "Nombre de la empresa",
         "companyLogo": "Logotipo de la empresa",
         "companyLogoDark": "Logotipo para fondos oscuros",
+        "companyLogoWide": "Logotipo ancho (opcional)",
+        "companyLogoWideDark": "Logotipo ancho para fondos oscuros (opcional)",
         "colorPalette": "Paleta de colores",
         "primaryColor": "Color primario",
         "secondaryColor": "Color secundario",
@@ -1148,6 +1150,8 @@
         "companyLogo": "Recomendado: PNG o SVG, máximo 2 MB, fondo transparente",
         "companyLogoMsp": "Este logotipo también sustituye la marca de Alga en el menú lateral MSP.",
         "companyLogoDark": "Opcional. Se usa en el panel lateral del portal y en las pantallas en modo oscuro. Si se deja vacío, se usa el logotipo de la empresa.",
+        "companyLogoWide": "Se muestra en la parte superior del panel lateral expandido del portal, con 32 px de alto. Incluya el nombre de su empresa en la imagen: el panel deja de escribirlo por separado.",
+        "companyLogoWideDark": "Opcional. Se usa mientras el fondo del panel lateral sea oscuro. Recurre al logotipo ancho.",
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
@@ -1177,7 +1181,11 @@
         "previewSignIn": "Vista previa de la página de inicio de sesión",
         "hideSignIn": "Ocultar página de inicio de sesión"
       },
-      "customDomainRequired": "Debe tener configurado un dominio personalizado"
+      "customDomainRequired": "Debe tener configurado un dominio personalizado",
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. Este espacio rellena zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio del logotipo ancho espera un logotipo apaisado; una marca cuadrada va en el espacio de arriba."
+      }
     },
     "dashboardPreview": {
       "title": "Su portal del cliente",
@@ -1423,10 +1431,24 @@
     "whiteLabel": {
       "title": "Marca propia en la aplicación MSP",
       "description": "Suba su logotipo una vez. Sustituye la marca de Alga en el menú lateral MSP, y el portal de clientes usa las mismas imágenes.",
-      "logoHelp": "El menú lateral MSP es oscuro en ambos temas, así que usa el logotipo para fondos oscuros cuando lo proporciona y, si no, el logotipo principal.",
+      "logoHelp": "La marca cuadrada se usa dondequiera que el espacio sea cuadrado: el menú lateral contraído y los marcos circulares. El logotipo ancho opcional sustituye a la marca y al nombre en el menú lateral expandido, así que suba uno que ya incluya el nombre de su empresa. El menú lateral se adapta a su propio fondo: usa las variantes para fondos oscuros cuando el menú es oscuro y las claras cuando es claro, y recurre a la variante que haya subido.",
       "fields": {
-        "logo": "Logotipo",
-        "logoDark": "Logotipo para fondos oscuros"
+        "mark": "Marca cuadrada",
+        "markDark": "Marca cuadrada para fondos oscuros",
+        "wide": "Logotipo ancho (opcional)",
+        "wideDark": "Logotipo ancho para fondos oscuros (opcional)",
+        "favicon": "Icono del navegador (favicon)"
+      },
+      "hints": {
+        "mark": "Se usa en el menú lateral contraído y en todos los marcos circulares. Lo cuadrado funciona mejor.",
+        "markDark": "Opcional. Recurre a la marca cuadrada.",
+        "wide": "Solo se muestra en el menú lateral expandido, con 32 px de alto. Incluya el nombre de su empresa en la imagen.",
+        "wideDark": "Opcional. Se usa mientras el fondo del menú lateral sea oscuro, como ocurre en todos los temas incluidos.",
+        "favicon": "PNG, SVG o ICO. Las imágenes de mapa de bits se redimensionan a 32x32. Se aplica a la aplicación MSP y al portal de clientes de su organización."
+      },
+      "warnings": {
+        "expectSquare": "Esa imagen es mucho más ancha que alta. El espacio de la marca cuadrada se usa en zonas cuadradas; probablemente busque el espacio del logotipo ancho.",
+        "expectWide": "Esa imagen es casi cuadrada. El espacio ancho espera un logotipo apaisado; probablemente busque el espacio de la marca cuadrada."
       },
       "colors": {
         "label": "Usar sus colores de marca en la aplicación MSP",

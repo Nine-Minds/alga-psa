@@ -3,7 +3,9 @@ import type { TenantBranding } from '@alga-psa/tenancy/actions';
 /**
  * Keep Community branding limited to portal branding controls. Recompute the
  * cached CSS so a previously stored Enterprise-only `portalFollowsTheme` value
- * cannot keep affecting a CE tenant after an edition change.
+ * cannot keep affecting a CE tenant after an edition change. The wide wordmark
+ * and the custom favicon are Enterprise-only too, so they are dropped rather
+ * than left to paint a CE install after a downgrade.
  */
 export function scopeBrandingToEdition(
   branding: TenantBranding | null,
@@ -15,6 +17,9 @@ export function scopeBrandingToEdition(
 
   const scopedBranding: TenantBranding = {
     ...branding,
+    logoWideUrl: undefined,
+    logoWideDarkUrl: undefined,
+    faviconUrl: undefined,
     portalFollowsTheme: false,
   };
 

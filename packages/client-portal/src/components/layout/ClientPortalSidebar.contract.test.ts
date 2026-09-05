@@ -34,6 +34,27 @@ describe('ClientPortalSidebar persistence + skeleton contract', () => {
     expect(sidebarSource).toMatch(/['"]\/client-portal\/request-services['"]/);
   });
 
+  it('wears the wide wordmark instead of repeating the company name', () => {
+    // The panel colour is admin-configurable, so the variant follows the paint.
+    expect(sidebarSource).toContain("useSurfaceIsLight(panelRef, '--color-sidebar-bg')");
+    expect(sidebarSource).toContain(
+      'pickLogoForSurface(branding?.logoWideUrl, branding?.logoWideDarkUrl, panelIsLight)',
+    );
+    // The 4rem collapsed panel has no room for a wordmark; the square mark wins.
+    expect(sidebarSource).toContain('const showWideLogo = sidebarOpen && !!wideLogoUrl');
+    // The name is inside the image, so neither the brand row nor the
+    // organization row prints it a second time.
+    const wideBranch = sidebarSource.indexOf('{showWideLogo && wideLogoUrl ? (');
+    const nameSpan = sidebarSource.indexOf('{brandLabel}');
+    expect(wideBranch).toBeGreaterThan(-1);
+    expect(wideBranch).toBeLessThan(nameSpan);
+    expect(sidebarSource).toContain('{sidebarOpen && !showWideLogo && branding?.clientName && (');
+    expect(sidebarSource).toContain('onError={() => setFailedWideLogoUrl(wideLogoUrl)}');
+    // Muted panel chrome has to survive a light side panel too.
+    expect(sidebarSource).not.toContain('text-gray-400');
+    expect(sidebarSource).not.toContain('bg-gray-700');
+  });
+
   it('contains explicit AlgaDesk portal navigation gating', () => {
     expect(sidebarSource).toContain('const isAlgaDeskPortal = productCode === \'algadesk\'');
     expect(sidebarSource).toContain('/client-portal/knowledge-base');
