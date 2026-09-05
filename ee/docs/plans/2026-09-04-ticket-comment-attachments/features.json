@@ -48,5 +48,10 @@
     "id": "F010",
     "description": "Temporal recovery forwarding and periodic discovery for new tenants and failed schedule installations",
     "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Reuse successful and in-flight runner initialization; retry failed initialization without repeating completed worker registrations",
+    "implemented": true
   }
 ]

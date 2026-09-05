@@ -37,3 +37,13 @@
 - Startup-only recovery schedule installation missed new tenants and never retried failed installations. Process-local one-minute discovery follows the existing RMM discovery pattern, starts before the first scheduler attempt, coalesces ticks and tracks only successful per-runner installations. Stable singleton keys are reused after partial failures. PostgreSQL tests cover new tenant discovery plus actual publication/cleanup recovery.
 
 - Round-2 final verification: 118 focused tests plus 15 adapter/subscriber regressions pass; the 30-test attachment integration suite also passes after feeding the actual provider retry hint into the queue. Shared/email/Temporal worker builds, server and worker typechecks, and production Next build pass. No live Temporal cluster or paid Graph send was used. Development server still responds HTTP 200 on port 3653.
+
+## Round-3 worker registration review
+
+- Reproduced three boss.work registrations per handler over three discovery ticks through the real factory, initializer, registry and PgBoss runner. Asynchronous registration failure also incorrectly allowed discovery to proceed.
+- Cache in-flight and successful application initialization per factory runner. Retain completed handler names across failed attempts and await PgBoss registration before marking a handler installed. Failed attempts retry; factory replacement gets fresh state. No attachment/schema changes.
+
+- Six actual-path initialization regressions pass after failing before repair. Across focused runs, 74 distinct behavioral tests pass, including an isolated real PgBoss → committed publication → SMTP PDF recovery smoke. It registered 36 handlers once over three ticks, retried a failed publication with its stable ID, and delivered once. Smoke transport routing/storage use explicit seams; no new browser, paid-provider or live Temporal verification. Temporary PostgreSQL schema and committed fixture rows were removed.
+- Jobs/shared/email builds, jobs/server/Temporal typechecks and the Temporal production build pass. Next production build uses isolated `.next-worker-review`; existing development environment and unrelated diffs are byte-identical.
+
+- Final production Next build passed (exit 0), with warnings in unchanged workflow imports and dynamic rendering and separate passing server typecheck. Removed only its generated `.next-worker-review` output. Port 3653 returned HTTP 200; environment and unrelated diffs remain unchanged.

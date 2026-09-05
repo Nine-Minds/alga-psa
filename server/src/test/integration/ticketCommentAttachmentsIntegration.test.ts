@@ -451,6 +451,101 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     } finally { await queue.shutdown(); connection.mockRestore();tenantConnection.mockRestore();storage.mockRestore();snapshot.mockRestore(); }
   });
 
+  it.runIf(process.env.COMMENT_RECOVERY_LIVE_SMOKE === '1')('live PgBoss discovery reuses workers and recovers a committed publication to SMTP once', async () => {
+    const { default: PgBoss } = await import('pg-boss');
+    const { PgBossJobRunner } = await import('@/lib/jobs/runners/PgBossJobRunner');
+    const factory = await import('@/lib/jobs/JobRunnerFactory');
+    const { initializeJobRunner } = await import('@/lib/jobs/initializeJobRunner');
+    const { createCommentRecoveryScheduleDiscovery } = await import('@/lib/jobs/commentRecoveryScheduleDiscovery');
+    const { registerAllJobHandlers } = await import('@/lib/jobs/registerAllHandlers');
+    const { JobHandlerRegistry } = await import('@/lib/jobs/jobHandlerRegistry');
+    const { JobService } = await import('@/services/job.service');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
+    const publishers = await import('@alga-psa/event-bus/publishers');
+    const schema = `worker_smoke_${randomUUID().replaceAll('-', '')}`;
+    const boss = new PgBoss({ schema, pollingIntervalSeconds: 0.5, db: {
+      async executeSql(sql, values) {
+        const connection = await conn.client.acquireConnection();
+        try { return await connection.query(sql, values); }
+        finally { await conn.client.releaseConnection(connection); }
+      },
+    } });
+    const errors: unknown[] = [];
+    boss.on('error', error => errors.push(error));
+    const provider = new SMTPEmailProvider('local-worker-recovery-smoke');
+    const bytes = Buffer.from('%PDF-1.4 worker recovery smoke');
+    const filename = `worker-recovery-${comment}.pdf`;
+    const mailbox = `worker-recovery-${comment}@example.test`;
+    const restores: Array<() => void> = [];
+    const spy = (mock: { mockRestore(): void }) => { restores.push(() => mock.mockRestore()); return mock; };
+    let committed = false;
+    try {
+      await table('contacts').where({ client_id: client }).update({ email: mailbox });
+      await table('users').where({ user_id: clientUser }).update({ email: mailbox });
+      const pdf = await upload(filename, 'application/pdf', bytes.length); await attach(pdf.file);
+      await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en', subject: 'Worker recovery', html_content: '{{{comment.content}}}', text_content: '{{comment.text}}' });
+      await persistCommentPublication(trx, { payload: { tenantId: tenant, ticketId: ticket, commentId: comment, userId: actor } });
+      await trx.commit(); committed = true;
+      spy(vi.spyOn(dbModule, 'getConnection').mockResolvedValue(conn));
+      spy(vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: conn, tenant } as any));
+      spy(vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: bytes } as any));
+      await provider.initialize({ host: '127.0.0.1', port: 3025, secure: false, from: 'agent@example.test' });
+      spy(vi.spyOn(TenantEmailService.getInstance(tenant) as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' }));
+      await boss.start();
+      // Use a dedicated real PgBoss transport/schema; the factory boundary is
+      // substituted only to avoid touching any existing scheduler's queues.
+      const runner = new (PgBossJobRunner as any)(boss, await JobService.create(), new StorageService());
+      spy(vi.spyOn(factory, 'getJobRunner').mockResolvedValue(runner));
+      // Schedule installation is covered separately against PostgreSQL. Here
+      // manually dispatch only this tenant's recovery job, never other tenants.
+      spy(vi.spyOn(runner, 'scheduleRecurringJob').mockResolvedValue({ jobId: randomUUID() }));
+      await registerAllJobHandlers({ includeEnterprise: false });
+      for (const name of JobHandlerRegistry.getAll().keys()) await boss.createQueue(name);
+      const registrations = vi.spyOn(boss, 'work');
+      const discovery = createCommentRecoveryScheduleDiscovery(initializeJobRunner);
+      await discovery.tick(); await discovery.tick(); await discovery.tick();
+      for (const name of JobHandlerRegistry.getAll().keys()) {
+        expect(registrations.mock.calls.filter(([queue]) => queue === name), name).toHaveLength(1);
+      }
+      const publish = vi.spyOn(publishers, 'publishEvent')
+        .mockRejectedValueOnce(new Error('Recoverable publication transport outage'))
+        .mockImplementation(async () => sendEventEmail({ tenantId: tenant, to: mailbox, subject: 'Worker recovery', template: 'ticket-comment-added', context: { comment: { content: 'Recovery smoke' } }, replyContext: { ticketId: ticket, commentId: comment } }));
+      spy(publish);
+      const runRecovery = async () => {
+        const id = await boss.send('recover-comment-publications', { tenantId: tenant });
+        await vi.waitFor(async () => expect((await boss.getJobById('recover-comment-publications', id!))?.state).toBe('completed'), { timeout: 15000, interval: 100 });
+      };
+      const stored = () => tenantDb(conn, tenant).table('comments').where({ comment_id: comment }).first();
+      const eventId = (await stored()).scheduled_publish_event_id;
+      await runRecovery(); expect((await stored()).scheduled_publish_dispatched_at).toBeNull();
+      await runRecovery(); expect((await stored()).scheduled_publish_dispatched_at).toBeTruthy();
+      await runRecovery();
+      expect(publish).toHaveBeenCalledTimes(2);
+      expect(publish.mock.calls.every(call => call[1]?.eventId === eventId)).toBe(true);
+      expect(await tenantDb(conn, tenant).table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient: mailbox }).first()).toMatchObject({ state: 'sent', attempts: 1 });
+      const messages = await (await fetch(`http://127.0.0.1:8080/api/user/${encodeURIComponent(mailbox)}/messages`)).json();
+      expect(messages).toHaveLength(1);
+      const mime = await simpleParser(messages[0].mimeMessage);
+      expect(mime.attachments).toHaveLength(1); expect(mime.attachments[0].filename).toBe(filename);
+      expect(mime.attachments[0].content.equals(bytes)).toBe(true);
+      expect(errors).toEqual([]);
+      console.log(`Live PgBoss: ${registrations.mock.calls.length} handlers registered once over three ticks; failed committed publication recovered with one SMTP PDF delivery.`);
+    } finally {
+      await boss.stop({ graceful: true });
+      (provider as any).transporter?.close();
+      for (const restore of restores.reverse()) restore();
+      await conn.raw('DROP SCHEMA IF EXISTS ?? CASCADE', [schema]);
+      if (committed) {
+        for (const name of ['email_reply_tokens', 'email_sending_logs', 'ticket_comment_email_deliveries', 'tenant_email_templates', 'ticket_comment_attachments', 'comments', 'comment_threads', 'document_associations', 'documents', 'external_files', 'tickets', 'users', 'contacts', 'clients']) {
+          await tenantDb(conn, tenant).table(name).delete();
+        }
+        await tenantDb(conn, tenant).unscoped('tenants', 'remove isolated worker smoke tenant').where({ tenant }).delete();
+      }
+    }
+  }, 60000);
+
   it('scheduled handler commits publication and retries failed dispatch with the same ID', async () => {
     const publishers=await import('@alga-psa/event-bus/publishers');
     const pdf=await upload();await attach(pdf.file);
