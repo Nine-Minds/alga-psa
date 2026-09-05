@@ -88,7 +88,7 @@ import {
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
-import { authorizeAndRedactDocuments } from '@alga-psa/documents/actions/documentActions';
+import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };

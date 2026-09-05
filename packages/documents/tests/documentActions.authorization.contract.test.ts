@@ -3,7 +3,8 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const readActionSource = () =>
-  readFileSync(path.resolve(__dirname, '../src/actions/documentActions.ts'), 'utf8');
+  readFileSync(path.resolve(__dirname, '../src/actions/documentActions.ts'), 'utf8') +
+  readFileSync(path.resolve(__dirname, '../../../shared/lib/documentAuthorization.ts'), 'utf8');
 
 describe('document authorization kernel wiring contracts', () => {
   const source = readActionSource();

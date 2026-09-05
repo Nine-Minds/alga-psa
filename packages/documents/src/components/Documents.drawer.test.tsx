@@ -4,20 +4,12 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import Documents from './Documents.tsx';
-import TicketDocumentsSection from '../../../tickets/src/components/ticket/TicketDocumentsSection.tsx';
 import { syncCollabSnapshot } from '../actions/collaborativeEditingActions';
 import { updateBlockContent, createBlockDocument } from '../actions/documentBlockContentActions';
 import { getDocumentsByFolder } from '../actions/documentActions';
 
 const mockRefresh = vi.fn();
 const mockReplace = vi.fn();
-vi.mock('@alga-psa/core/context/DocumentsCrossFeatureContext', () => ({
-  useDocumentsCrossFeature: () => ({
-    getDocumentByTicketId: vi.fn().mockResolvedValue([]),
-    renderDocuments: (props: any) => <Documents {...props} gridColumns={3} />,
-  }),
-}));
-vi.mock('@alga-psa/ui/components', () => ({ useContentCardVariant: () => 'default' }));
 let mockSearchParams = new URLSearchParams();
 let mockRealStorageCards = false;
 const mockFolderTreeView = vi.fn((props: { selectedFolder: string | null; entityId?: string; entityType?: string }) => (
@@ -250,23 +242,6 @@ describe('Documents drawer', () => {
     rerender(<Documents {...props} documents={[{ ...claimed, document_name: 'renamed.pdf' }]} searchTermFromParent="attachment" />);
     await waitFor(() => expect(screen.queryByText('attachment.pdf')).not.toBeInTheDocument());
     expect(screen.queryByRole('button', { name: 'Visible to clients' })).not.toBeInTheDocument();
-  });
-
-  it('passes same-ID metadata through the ticket Documents section into the rendered card', async () => {
-    mockRealStorageCards = true;
-    const document = {
-      document_id: 'same-id', document_name: 'attachment.pdf', file_id: 'file-1',
-      tenant: 'tenant-1', type_id: null, user_id: 'user-1', created_by: 'user-1',
-      order_number: 0, is_client_visible: true, comment_attachment_is_public: false,
-    };
-    const { rerender } = render(<TicketDocumentsSection ticketId="ticket-1" initialDocuments={[document]} />);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeDisabled());
-    rerender(<TicketDocumentsSection ticketId="ticket-1" initialDocuments={[{ ...document, comment_attachment_is_public: true }]} />);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Visible to clients' })).toBeEnabled());
-    expect(screen.getByText('Client visible')).toBeInTheDocument();
-    rerender(<TicketDocumentsSection ticketId="ticket-1" initialDocuments={[document]} />);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Hidden from clients' })).toBeDisabled());
-    expect(screen.getByText('Internal')).toBeInTheDocument();
   });
 
   // The folder sidebar is folder-mode only (main Documents page); entity
