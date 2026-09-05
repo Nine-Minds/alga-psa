@@ -88,8 +88,8 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.services.hourlyRate',
       'contractLines.services.unitRate',
       'contractLines.services.rateTaxAllocation',
-      'contractLines.services.unitOfMeasure',
-      'contractLines.services.unitPlaceholder',
+      // Unit-of-measure editing moved into UsageServiceConfigPanel, which uses the
+      // 'msp/service-catalog' namespace ('usageConfig.*' keys) instead of this component.
       'contractLines.bucket.enableTracking',
       'contractLines.bucket.title',
       'contractLines.bucket.included',
