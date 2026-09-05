@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Genera fattura di fine mese",
+      "title": "Chiudere il periodo {{servicePeriod}} a fine mese?",
+      "warning": "Questa operazione fattura {{servicePeriod}} nell'ultimo giorno di calendario. Le registrazioni di tempo o utilizzo inserite dopo questa chiusura non verranno incluse. Chiudere il periodo solo quando tutto il lavoro è stato completamente registrato.",
+      "confirm": "Genera a fine mese",
+      "omissionWarning": "Le registrazioni di tempo o utilizzo inserite dopo questa chiusura NON saranno incluse nella fattura.",
+      "generationFailed": "Impossibile generare la fattura di fine mese. Riprova."
+    },
     "ready": {
       "title": "Pronto per la fatturazione",
       "description": "Esamina il lavoro ricorrente dovuto e genera bozze di fatture per i periodi selezionati.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Fattura inversa",
       "deleteInvoice": "Elimina fattura",
       "closePreview": "Chiudi anteprima",
-      "generateInvoice": "Genera fattura"
+      "generateInvoice": "Genera fattura",
+      "recordUsage": "Registra utilizzo"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Totale"
         },
         "generating": "Generazione...",
-        "generateError": "Impossibile generare la fattura dall'anteprima"
+        "generateError": "Impossibile generare la fattura dall'anteprima",
+        "missingUsageHeading": "Nessun utilizzo registrato per questo periodo",
+        "missingUsageService": "{{service}}: nessun record di utilizzo dal {{periodStart}} al {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: l'utilizzo registrato dal {{periodStart}} al {{periodEnd}} è escluso finché non viene risolta l'attribuzione alla riga di contratto — risolvi l'attribuzione invece di registrare altro utilizzo",
+        "usageCalculationError": "{{service}}: l'utilizzo registrato dal {{periodStart}} al {{periodEnd}} non ha potuto essere prezzato — correggi i prezzi del servizio invece di registrare altro utilizzo",
+        "recordScopedUsage": "Registra utilizzo: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: dal {{periodStart}} al {{periodEnd}} — non è stato possibile prezzare l'utilizzo registrato. Verifica la configurazione dei prezzi di questo servizio.",
+        "reportedPeriodTotalsHeading": "Conteggi di periodo comunicati"
       },
       "poOverage": {
         "title": "Eccessioni del limite dell'ordine di acquisto",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Procedere comunque?",
         "proceedConfirm": "Procedi comunque",
         "skippedError": "Saltato a causa dell'eccesso di PO ({{poLabel}}): superato da {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Utilizzo non registrato per questo periodo",
+        "description": "Questi servizi a utilizzo non hanno alcuna registrazione per la finestra di fatturazione. Generando ora resteranno fuori dalla fattura; torneranno fatturabili una volta registrato il loro utilizzo.",
+        "omittedItem": "{{services}}: nessun utilizzo registrato dal {{periodStart}} al {{periodEnd}}",
+        "question": "Generare senza questi servizi?",
+        "confirm": "Genera senza l'utilizzo non registrato"
       }
     },
     "history": {
@@ -344,6 +367,7 @@
       "updateFailed": "Errore durante l'aggiornamento della fattura",
       "generateFailed": "Errore nella generazione della fattura",
       "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita e riprova.",
+      "USAGE_RECORDS_MISSING": "Nessun record di utilizzo idoneo per {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra l'utilizzo per questo periodo (o una voce di utilizzo zero) per fatturare questi servizi.",
       "CLIENT_NOT_FOUND": "Il cliente selezionato non è stato trovato. Aggiorna la pagina e riprova.",
       "SERVICE_NOT_FOUND": "Il servizio {{serviceId}} non è stato trovato. Aggiorna la pagina e riprova.",
       "INVALID_QUANTITY": "La quantità deve essere maggiore di zero.",
@@ -354,7 +378,10 @@
       "UNEXPECTED": "Si è verificato un errore durante la generazione della fattura. Indica il riferimento {{ref}} quando contatti l'assistenza.",
       "salesOrderGenerateFailed": "Impossibile generare la fattura dell'ordine di vendita.",
       "salesOrderNothingToInvoice": "Non resta nulla da fatturare per questo ordine di vendita.",
-      "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione."
+      "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Questa finestra di fatturazione contiene addebiti fatturabili, ma {{services}} non ha utilizzo registrato per il periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra prima l'utilizzo oppure conferma esplicitamente la generazione senza di esso: i servizi non registrati resteranno fatturabili in seguito.",
+      "USAGE_PERIOD_TOTAL_STALE": "L'anteprima non è aggiornata: {{details}}. Riesegui l'anteprima per vedere i valori attuali, poi genera di nuovo.",
+      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo."
     },
     "warnings": {
       "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
@@ -2111,5 +2138,17 @@
       "missingField": "Manca un campo obbligatorio del modello di fattura.",
       "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Configurazione del cliente o del servizio mancante per questo report.",
+    "invalidQuantity": "Inserisci un numero intero maggiore o uguale a 0 per il conteggio del periodo.",
+    "saveError": "Impossibile salvare il conteggio del periodo.",
+    "retryError": "Impossibile salvare il conteggio del periodo. Riprova l'invio.",
+    "correct": "Correggi il conteggio comunicato di {{quantity}} per {{service}} (dal {{periodStart}} al {{periodEnd}})",
+    "report": "Comunica un conteggio di periodo per {{service}} (dal {{periodStart}} al {{periodEnd}})",
+    "quantityLabel": "Conteggio del periodo per {{service}}",
+    "saving": "Salvataggio…",
+    "saveCorrection": "Salva correzione",
+    "save": "Salva"
   }
 }

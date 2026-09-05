@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Gerar fatura de fim de mês",
+      "title": "Fechar o período {{servicePeriod}} no fim do mês?",
+      "warning": "Isso fatura {{servicePeriod}} em seu último dia de calendário. As entradas de tempo ou uso registradas após este fechamento não serão incluídas. Feche o período somente quando todo o trabalho estiver totalmente registrado.",
+      "confirm": "Gerar no fim do mês",
+      "omissionWarning": "As entradas de tempo ou uso registradas após este fechamento NÃO serão incluídas na fatura.",
+      "generationFailed": "Não foi possível gerar a fatura de fim de mês. Tente novamente."
+    },
     "ready": {
       "title": "Pronto para faturar",
       "description": "Revise o trabalho devido recorrente e gere projetos de faturas para os períodos selecionados.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Fatura reversa",
       "deleteInvoice": "Excluir fatura",
       "closePreview": "Fechar visualização",
-      "generateInvoice": "Gerar fatura"
+      "generateInvoice": "Gerar fatura",
+      "recordUsage": "Registar utilização"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Total"
         },
         "generating": "Gerando...",
-        "generateError": "Falha ao gerar fatura da visualização"
+        "generateError": "Falha ao gerar fatura da visualização",
+        "missingUsageHeading": "Nenhuma utilização registada para este período",
+        "missingUsageService": "{{service}}: sem registos de utilização de {{periodStart}} a {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: a utilização registada de {{periodStart}} a {{periodEnd}} fica excluída até que a atribuição à linha de contrato seja resolvida — resolva a atribuição em vez de registar mais utilização",
+        "usageCalculationError": "{{service}}: não foi possível calcular o preço da utilização registada de {{periodStart}} a {{periodEnd}} — corrija os preços do serviço em vez de registar mais utilização",
+        "recordScopedUsage": "Registrar uso: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} a {{periodEnd}} — não foi possível precificar o uso registrado. Revise a configuração de preços deste serviço.",
+        "reportedPeriodTotalsHeading": "Contagens de período informadas"
       },
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Continuar mesmo assim?",
         "proceedConfirm": "Prossiga de qualquer maneira",
         "skippedError": "Ignorado devido ao excesso de PO ({{poLabel}}): ultrapassado por {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Utilização não registada para este período",
+        "description": "Esses serviços baseados em uso não têm informação de uso para a janela de faturamento. Gerar agora os deixa fora da fatura; eles continuam faturáveis assim que o uso for informado.",
+        "omittedItem": "{{services}}: sem utilização registada de {{periodStart}} a {{periodEnd}}",
+        "question": "Gerar sem estes serviços?",
+        "confirm": "Gerar sem a utilização não registada"
       }
     },
     "history": {
@@ -344,6 +367,7 @@
       "updateFailed": "Erro ao atualizar fatura",
       "generateFailed": "Erro ao gerar fatura",
       "NO_BILLING_EMAIL": "{{clientName}} não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida e tente novamente.",
+      "USAGE_RECORDS_MISSING": "Não há registos de utilização elegíveis para {{services}} no período de serviço de {{periodStart}} a {{periodEnd}}. Registe a utilização deste período (ou uma entrada de utilização zero) para faturar estes serviços.",
       "CLIENT_NOT_FOUND": "O cliente selecionado não foi encontrado. Atualize a página e tente novamente.",
       "SERVICE_NOT_FOUND": "O serviço {{serviceId}} não foi encontrado. Atualize a página e tente novamente.",
       "INVALID_QUANTITY": "A quantidade deve ser maior que zero.",
@@ -354,7 +378,10 @@
       "UNEXPECTED": "Ocorreu um erro ao gerar a fatura. Indique a referência {{ref}} ao contactar o suporte.",
       "salesOrderGenerateFailed": "Não foi possível gerar a fatura do pedido de venda.",
       "salesOrderNothingToInvoice": "Não há mais nada para faturar neste pedido de venda.",
-      "salesOrderNotInvoiceable": "Esse pedido de venda não está mais disponível para faturamento."
+      "salesOrderNotInvoiceable": "Esse pedido de venda não está mais disponível para faturamento.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Esta janela de faturação tem lançamentos faturáveis, mas {{services}} não tem utilização registada para o período de serviço de {{periodStart}} a {{periodEnd}}. Registe primeiro a utilização ou confirme explicitamente a geração sem ela — os serviços não registados continuam faturáveis mais tarde.",
+      "USAGE_PERIOD_TOTAL_STALE": "A pré-visualização está desatualizada: {{details}}. Volte a executar a pré-visualização para ver os valores atuais e gere novamente.",
+      "USAGE_CALCULATION_ERROR": "A utilização de {{services}} no período de serviço de {{periodStart}} a {{periodEnd}} está registada, mas não foi possível calcular o preço. Corrija os preços do serviço (preço de catálogo na moeda do contrato, uma tarifa personalizada ou escalões de tarifas) e tente novamente. Não registe utilização de substituição."
     },
     "warnings": {
       "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um contato de faturação, um e-mail de faturação do cliente ou um endereço de e-mail na localização de faturação ou predefinida antes de gerar a fatura."
@@ -2111,5 +2138,17 @@
       "missingField": "Falta um campo obrigatório do modelo de fatura.",
       "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Configuração de cliente ou serviço ausente para esta informação.",
+    "invalidQuantity": "Insira um número inteiro igual ou maior que 0 para a contagem do período.",
+    "saveError": "Não foi possível salvar a contagem do período.",
+    "retryError": "Não foi possível salvar a contagem do período. Tente enviar novamente.",
+    "correct": "Corrigir a contagem informada de {{quantity}} para {{service}} ({{periodStart}} a {{periodEnd}})",
+    "report": "Informar uma contagem do período para {{service}} ({{periodStart}} a {{periodEnd}})",
+    "quantityLabel": "Contagem do período para {{service}}",
+    "saving": "Salvando…",
+    "saveCorrection": "Salvar correção",
+    "save": "Salvar"
   }
 }

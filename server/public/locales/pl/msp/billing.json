@@ -211,6 +211,12 @@
       "updateError": "Nie udało się zaktualizować rekordu użycia",
       "deleteSuccess": "Zapis użycia został pomyślnie usunięty",
       "deleteError": "Nie udało się usunąć rekordu użycia"
+    },
+    "periodReport": "Raport użycia za okres",
+    "periodAlreadyInvoiced": "Ten okres jest już zafakturowany. Popraw go w procesie korekty faktury.",
+    "periodFilter": {
+      "notice": "Wyświetlane jest użycie dla okresu usługi od {{start}} do {{end}}",
+      "clear": "Wyczyść"
     }
   },
   "lineItem": {
@@ -666,7 +672,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Wybierz co najmniej jeden cykliczny okres rozliczeniowy do wygenerowania.",
-      "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur"
+      "invoicePermission": "Odmowa uprawnień: wymagane uprawnienie tworzenia lub generowania faktur",
+      "monthEndCloseNotMaterialized": "Nie zmaterializowano cyklicznych okresów usługi dla tego cyklicznego okna wykonywania.",
+      "monthEndCloseNotEligible": "Okres {{servicePeriod}} można zamknąć na koniec miesiąca tylko w dniu {{finalCalendarDay}}. Tylko rozliczane z dołu okresy usługi obejmujące pełny miesiąc kalendarzowy można zamknąć wcześniej, w ich ostatnim dniu kalendarzowym."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Do sprawdzenia cyklicznych okresów usługi wymagany jest klucz harmonogramu.",

@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Dodaj linie kontraktowe, aby określić, co jest objęte tą umową",
       "noContractLinesYet": "Brak linii kontraktowych",
       "noServicesConfigured": "Nie skonfigurowano usług",
+      "billedOnRecordedUsage": "Rozliczane według zarejestrowanego użycia",
       "serviceCountOne": "Liczba usług: {{count}}",
-      "serviceCountOther": "Liczba usług: {{count}}"
+      "serviceCountOther": "Liczba usług: {{count}}",
+      "previouslyConfiguredQuantity": "Wcześniej skonfigurowana ilość: {{count}} — nieużywana do rozliczeń",
+      "billedOnPeriodCount": "Fakturowane według liczby zgłoszonej dla każdego okresu",
+      "recurringSeats": "{{count}} × {{rate}} (cykliczne stanowiska)",
+      "bundleAllocation": "Podział ceny pakietu — to nie są fakturowane stanowiska",
+      "setUpRecurringSeats": "Skonfiguruj cykliczne stanowiska",
+      "reportPeriodCount": "Zgłoś liczbę dla okresu"
     },
     "stats": {
       "contractLines": "Linie kontraktowe",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ zmienna (godzinowa/zużycie)",
       "viewDetails": "Zobacz szczegóły"
     },
-    "title": "Co jest wliczone"
+    "title": "Co jest wliczone",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Skonfiguruj cykliczne stanowiska",
+        "explanation": "Cykliczne stanowiska fakturują ilość × stawkę jednostkową w każdym okresie bez wpisów zużycia, więc należą do stałej pozycji umowy wycenianej jako cykliczne stanowiska/jednostki — a nie do tej pozycji zużyciowej.",
+        "nextStep": "Przejdź do pozycji umowy, dodaj (lub otwórz) pozycję stałą, dodaj tę usługę i wybierz „Cykliczne stanowiska/jednostki”, a następnie potwierdź ilość i stawkę jednostkową. Zmiana obowiązuje od następnego niezafakturowanego okresu usługi; ta pozycja zużyciowa i jej historia pozostają bez zmian, dopóki jej nie usuniesz.",
+        "manualHandoff": "Przejdź do sekcji Linie kontraktowe → Utwórz niestandardowy, wybierz typ Opłata stała, dodaj tę usługę i zaznacz „Cykliczne stanowiska/jednostki”. Przed zapisaniem sprawdź ilość, stawkę jednostkową i harmonogram rozliczeń. Powstaje w ten sposób osobne zobowiązanie cykliczne; nie przekształca ono ani nie zamyka tej usługi zużyciowej. Skoordynuj jego początek z zakończeniem rozliczania zużycia i przejrzyj niezafakturowane zużycie, zanim włączysz oba mechanizmy dla tego samego okresu."
+      },
+      "periodCount": {
+        "title": "Zgłoś liczbę dla okresu",
+        "explanation": "Zgłaszanie liczby dla okresu przełącza tę usługę na jedną zastępowalną liczbę na okres usługi: korekta z 10 na 12 daje 12 na fakturze, nigdy 22, a minimum obowiązuje raz. Kolejny okres zaczyna się bez zgłoszenia — nic nie jest przenoszone.",
+        "nextStep": "Potwierdzenie zmienia tylko sposób pomiaru tej usługi od następnego niezafakturowanego okresu usługi. Istniejące wpisy pozostają sumowane i nie jest tworzona żadna liczba — zgłoś liczbę dla okresu później w module śledzenia zużycia."
+      },
+      "referenceHeading": "Niepotwierdzone dane referencyjne z poprzedniej konfiguracji",
+      "referenceQuantity": "Wcześniej skonfigurowana ilość: {{count}}",
+      "referenceRate": "Zapisana stawka: {{rate}}",
+      "referenceCaveat": "Te wartości nigdy nie były fakturowane. Nic tu nie jest zapisywane ani naliczane, dopóki samodzielnie nie potwierdzisz wartości w poniższym procesie.",
+      "actions": {
+        "close": "Zamknij",
+        "cancel": "Anuluj",
+        "switching": "Przełączanie…",
+        "confirmPeriodCount": "Przełącz na liczby okresowe"
+      },
+      "errors": {
+        "missingConfiguration": "Ta usługa nie ma zapisanej konfiguracji do przekształcenia. Odśwież i spróbuj ponownie.",
+        "failed": "Nie udało się zmienić sposobu pomiaru tej usługi."
+      },
+      "effectiveFrom": "Zmiana sposobu pomiaru obowiązuje od"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Nie skonfigurowano usług dla tego presetu",
       "notSet": "Nie ustawiono",
       "overrideBaseRate": "Nadpisz stawkę bazową",
-      "quantity": "Ilość",
+      "usageRecordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć te usługi.",
       "quantityShort": "Ilość: {{quantity}}",
       "ratePerUnit": "Stawka (za jednostkę)",
       "roundUpToNearestMinutes": "Zaokrąglij w górę do najbliższych (minuty)",
@@ -559,7 +594,12 @@
       "typeLabel": "Usługa {{type}}",
       "unitOfMeasure": "Jednostka miary",
       "unitPlaceholder": "jednostka",
-      "unitRate": "Stawka jednostkowa"
+      "unitRate": "Stawka jednostkowa",
+      "effectiveFrom": "Zmiany cyklicznych stanowisk obowiązują od",
+      "prospectiveSeatHelp": "Stanowiska są rozliczane jako ilość × stawka jednostkowa. Zmiany obowiązują od tej granicy okresu usługi; wcześniejsze ilości i ceny pozostają bez zmian.",
+      "recurringUnits": "Cykliczne stanowiska/jednostki",
+      "semanticsEffectiveFrom": "Zmiany cen i sposobu pomiaru usługi obowiązują od",
+      "prospectiveSemanticsHelp": "Zmiany obowiązują od tej granicy okresu usługi; wcześniejsze ilości, sposób pomiaru i ceny pozostają bez zmian. Zmiana daty ponownie wczytuje obowiązujące ustawienia do przeglądu."
     },
     "title": "Linie kontraktowe"
   },
@@ -667,7 +707,7 @@
     "title": "Dodaj linie kontraktowe z presetów",
     "usageConfig": {
       "defaultRate": "Domyślnie: ${{rate}}",
-      "quantity": "Ilość",
+      "recordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć te usługi.",
       "ratePerUnit": "Stawka (za jednostkę)",
       "unitHint": "np. GB, wywołanie API, użytkownik",
       "unitOfMeasure": "Jednostka miary",
@@ -692,7 +732,8 @@
       "hourlyDescription": "Rozliczaj na podstawie zatwierdzonych wpisów czasu.",
       "hourlyTitle": "Godzinowa",
       "usageDescription": "Fakturuj za zużyte jednostki.",
-      "usageTitle": "Według zużycia"
+      "usageTitle": "Według zużycia",
+      "fixedSemantics": "Rozliczaj cenę pakietową albo cykliczną ilość × stawkę jednostkową w każdym okresie."
     },
     "billingTiming": {
       "advance": "Z góry (rozliczenie na początku okresu)",
@@ -758,8 +799,15 @@
       "unitOfMeasureRequired": "Usługa {{index}}: jednostka miary jest wymagana",
       "unitRateRequired": "Usługa {{index}}: stawka jednostkowa jest wymagana",
       "usageServiceRequired": "Wymagana jest co najmniej jedna usługa rozliczana według zużycia",
-      "usageServiceSelectRequired": "Usługa {{index}}: wybierz usługę"
-    }
+      "usageServiceSelectRequired": "Usługa {{index}}: wybierz usługę",
+      "invalidQuantity": "Ilość musi wynosić zero lub więcej.",
+      "recurringUnitRateRequired": "Podaj stawkę jednostkową dla każdej usługi cyklicznej."
+    },
+    "fixedServicesPricingIntent": "Dla każdej usługi wybierz cenę pakietową albo cykliczne stanowiska/jednostki.",
+    "fixedServicesPricingExplanation": "Alokacje pakietowe dzielą stawkę bazową linii. Cykliczne stanowiska rozliczają uzgodnioną ilość × stawkę jednostkową w każdym okresie bez wpisów zużycia.",
+    "recurringQuantity": "Ilość cykliczna",
+    "allocationQuantity": "Ilość alokacji",
+    "bundleBaseRateHelp": "Cykliczna opłata za usługi w cenie pakietowej. Cykliczne stanowiska są rozliczane osobno według ilości × stawki jednostkowej."
   },
   "pricingSchedules": {
     "list": {

@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Factuur aan het einde van de maand genereren",
+      "title": "Periode {{servicePeriod}} aan het einde van de maand afsluiten?",
+      "warning": "Hiermee factureert u {{servicePeriod}} op de laatste kalenderdag. Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden niet meegenomen. Sluit de periode daarom pas af als al het werk volledig is vastgelegd.",
+      "confirm": "Genereren aan het einde van de maand",
+      "omissionWarning": "Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden NIET opgenomen in de factuur.",
+      "generationFailed": "Kan de factuur aan het einde van de maand niet genereren. Probeer het opnieuw."
+    },
     "ready": {
       "title": "Klaar om te factureren",
       "description": "Beoordeel terugkerende werkzaamheden en genereer conceptfacturen voor de geselecteerde perioden.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Omgekeerde factuur",
       "deleteInvoice": "Factuur verwijderen",
       "closePreview": "Voorbeeld sluiten",
-      "generateInvoice": "Factuur genereren"
+      "generateInvoice": "Factuur genereren",
+      "recordUsage": "Verbruik registreren"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Totaal"
         },
         "generating": "Genereren...",
-        "generateError": "Kan factuur niet genereren vanuit voorbeeld"
+        "generateError": "Kan factuur niet genereren vanuit voorbeeld",
+        "missingUsageHeading": "Geen verbruik geregistreerd voor deze periode",
+        "missingUsageService": "{{service}}: geen verbruiksrecords voor {{periodStart}} tot {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} is uitgesloten totdat de toewijzing aan een contractregel is opgelost — los de toewijzing op in plaats van meer verbruik te registreren",
+        "usageCalculationError": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} kon niet worden geprijsd — corrigeer de serviceprijzen in plaats van meer verbruik te registreren",
+        "recordScopedUsage": "Verbruik registreren: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} tot {{periodEnd}} — geregistreerd verbruik kon niet worden geprijsd. Controleer de prijsconfiguratie van deze service.",
+        "reportedPeriodTotalsHeading": "Doorgegeven periodeaantallen"
       },
       "poOverage": {
         "title": "Overschrijdingen van inkooporderlimieten",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Toch doorgaan?",
         "proceedConfirm": "Ga hoe dan ook door",
         "skippedError": "Overgeslagen vanwege PO-overschrijding ({{poLabel}}): voorbij door {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Geen verbruik gemeld voor deze periode",
+        "description": "Deze verbruiksservices hebben geen melding voor het factuurvenster. Nu genereren laat ze buiten de factuur; ze blijven factureerbaar zodra hun verbruik is gemeld.",
+        "omittedItem": "{{services}}: geen verbruik gemeld voor {{periodStart}} tot {{periodEnd}}",
+        "question": "Genereren zonder deze services?",
+        "confirm": "Genereren zonder niet-gemeld verbruik"
       }
     },
     "history": {
@@ -344,6 +367,7 @@
       "updateFailed": "Fout bij bijwerken factuur",
       "generateFailed": "Fout bij genereren factuur",
       "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in en probeer het opnieuw.",
+      "USAGE_RECORDS_MISSING": "Geen in aanmerking komende verbruiksrecords voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer het verbruik voor deze periode (of een invoer met nulverbruik) om deze services te factureren.",
       "CLIENT_NOT_FOUND": "De geselecteerde klant is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "SERVICE_NOT_FOUND": "Service {{serviceId}} is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "INVALID_QUANTITY": "De hoeveelheid moet groter zijn dan nul.",
@@ -354,7 +378,10 @@
       "UNEXPECTED": "Er is iets misgegaan bij het genereren van de factuur. Vermeld referentie {{ref}} wanneer u contact opneemt met ondersteuning.",
       "salesOrderGenerateFailed": "Kan de verkooporderfactuur niet genereren.",
       "salesOrderNothingToInvoice": "Er resteert niets om voor deze verkooporder te factureren.",
-      "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering."
+      "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dit factuurvenster bevat factureerbare regels, maar voor {{services}} is geen verbruik gemeld voor de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer eerst het verbruik, of bevestig uitdrukkelijk het genereren zonder dit verbruik — de niet-gemelde services blijven later factureerbaar.",
+      "USAGE_PERIOD_TOTAL_STALE": "De voorvertoning is verouderd: {{details}}. Voer de voorvertoning opnieuw uit om de actuele cijfers te zien en genereer daarna opnieuw.",
+      "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik."
     },
     "warnings": {
       "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
@@ -2111,5 +2138,17 @@
       "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Klant- of serviceconfiguratie ontbreekt voor dit rapport.",
+    "invalidQuantity": "Voer een geheel getal van 0 of hoger in voor het periodeaantal.",
+    "saveError": "Kan het periodeaantal niet opslaan.",
+    "retryError": "Kan het periodeaantal niet opslaan. Dien de opgave opnieuw in.",
+    "correct": "Corrigeer het doorgegeven aantal van {{quantity}} voor {{service}} ({{periodStart}} tot {{periodEnd}})",
+    "report": "Geef een periodeaantal door voor {{service}} ({{periodStart}} tot {{periodEnd}})",
+    "quantityLabel": "Periodeaantal voor {{service}}",
+    "saving": "Opslaan…",
+    "saveCorrection": "Correctie opslaan",
+    "save": "Opslaan"
   }
 }

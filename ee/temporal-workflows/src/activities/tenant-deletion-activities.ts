@@ -303,6 +303,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'credit_allocations', 'credit_tracking',
   // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  // Usage semantics stores are FK-less leaves (they reference contract lines,
+  // clients, and configs by id only), as are the seat-pricing revision store
+  // and the per-tenant billing-semantics lock row.
+  'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)

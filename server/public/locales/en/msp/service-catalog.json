@@ -266,12 +266,30 @@
         "label": "Billing Cycle Alignment",
         "placeholder": "Select alignment",
         "help": "Controls how partial-period coverage is calculated when the recurring fee needs to scale to less than a full service period."
+      },
+      "unitRate": {
+        "label": "Unit rate",
+        "placeholder": "0.00",
+        "help": "Rate billed for each seat/unit in every service period."
       }
     },
     "options": {
       "start": "Start of Billing Cycle",
       "end": "End of Billing Cycle",
       "prorated": "Proportional Coverage"
+    },
+    "pricingBasis": {
+      "label": "How does this service price?",
+      "bundle": {
+        "label": "Bundle price",
+        "description": "The contract line's fixed total is what bills. Quantities on this service only allocate a share of that total for reporting — they are not billable seats, and changing one does not change the amount billed.",
+        "allocationNote": "Allocation quantity: {{quantity}} — used to split the bundle total for reporting, not billed as seats."
+      },
+      "unit": {
+        "label": "Recurring seats/units",
+        "description": "Bills quantity × unit rate every period, with no line total taking precedence. The same quantity and rate bill again next period until you schedule a change. A quantity of zero bills zero.",
+        "summary": "{{quantity}} × {{rate}} (recurring seats) = {{total}} per period"
+      }
     }
   },
   "hourlyConfig": {
@@ -319,6 +337,7 @@
   },
   "usageConfig": {
     "title": "Usage-Based Configuration",
+    "recordDrivenNote": "Usage services bill from usage recorded in Usage Tracking for each service period. A period with no usage record produces no charge — record usage (or an explicit zero) each period to bill this service.",
     "defaults": {
       "unitOfMeasure": "Unit"
     },
@@ -332,8 +351,12 @@
       "minimumUsage": {
         "label": "Minimum Usage Threshold",
         "placeholder": "0",
-        "help": "Minimum billable usage per period (0 for no minimum)",
-        "errorNegative": "Minimum usage cannot be negative"
+        "help": "Floor applied to recorded usage (0 for no minimum). It only applies when the period has a usage record — even an explicit zero — and never creates a charge on its own.",
+        "errorNegative": "Minimum usage cannot be negative",
+        "labelAdditive": "Minimum per entry",
+        "labelPeriodTotal": "Minimum per period report",
+        "helpAdditive": "Floor applied to each recorded entry (0 for no minimum). It only applies when the period has a usage record — even an explicit zero — and never creates a charge on its own.",
+        "helpPeriodTotal": "Floor applied once to the reported period count (0 for no minimum). It only applies when a count is reported — even an explicit zero — and never creates a charge on its own."
       },
       "enableTieredPricing": "Enable Tiered Pricing"
     },
@@ -352,6 +375,18 @@
         "upperGreaterThanLower": "Tier upper bound must be greater than lower bound",
         "rateNegative": "Tier rates cannot be negative"
       }
+    },
+    "measurementMode": {
+      "label": "How is usage measured?",
+      "additive": {
+        "label": "Record consumption as it occurs",
+        "description": "Dated entries add together: entries of 10 and 12 bill 22. The minimum and any tiers apply to each entry. The next period starts with no entries."
+      },
+      "periodTotal": {
+        "label": "Report a count for each period",
+        "description": "One count per service period replaces the previous one: correcting 10 to 12 bills 12, never 22. The minimum and any tiers apply once to that count. The next period starts unreported — no count carries forward."
+      },
+      "transitionNote": "Changing the mode takes effect from the next unbilled service period. Recorded entries or counts already in an open period must be billed or removed first."
     }
   },
   "bucketConfig": {

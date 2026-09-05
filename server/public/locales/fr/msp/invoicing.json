@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Générer la facture de fin de mois",
+      "title": "Clôturer la période {{servicePeriod}} en fin de mois ?",
+      "warning": "Cela facture {{servicePeriod}} le dernier jour calendaire de la période. Les saisies de temps ou d'utilisation enregistrées après cette clôture ne seront pas incluses. Ne clôturez la période qu'une fois tout le travail entièrement saisi.",
+      "confirm": "Générer en fin de mois",
+      "omissionWarning": "Les saisies de temps ou d'utilisation enregistrées après cette clôture ne seront PAS incluses sur la facture.",
+      "generationFailed": "Impossible de générer la facture de fin de mois. Veuillez réessayer."
+    },
     "ready": {
       "title": "Prêt à facturer",
       "description": "Examinez les travaux récurrents dus et générez des projets de factures pour les périodes sélectionnées.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Annuler la facture",
       "deleteInvoice": "Supprimer la facture",
       "closePreview": "Fermer l'aperçu",
-      "generateInvoice": "Générer une facture"
+      "generateInvoice": "Générer une facture",
+      "recordUsage": "Enregistrer l'utilisation"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Total"
         },
         "generating": "Générateur...",
-        "generateError": "Échec de la génération de la facture à partir de l'aperçu"
+        "generateError": "Échec de la génération de la facture à partir de l'aperçu",
+        "missingUsageHeading": "Aucune utilisation enregistrée pour cette période",
+        "missingUsageService": "{{service}} : aucun enregistrement d'utilisation du {{periodStart}} au {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} est exclue tant que son rattachement à une ligne de contrat n'est pas résolu — résolvez le rattachement au lieu d'enregistrer davantage d'utilisation",
+        "usageCalculationError": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} n'a pas pu être tarifée — corrigez la tarification du service au lieu d'enregistrer davantage d'utilisation",
+        "recordScopedUsage": "Enregistrer l'utilisation : {{service}} — {{line}}",
+        "calculationContext": "{{service}} : du {{periodStart}} au {{periodEnd}} — l'utilisation enregistrée n'a pas pu être tarifée. Vérifiez la configuration tarifaire de ce service.",
+        "reportedPeriodTotalsHeading": "Décomptes de période déclarés"
       },
       "poOverage": {
         "title": "Dépassements de la limite des bons de commande",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Continuer quand même ?",
         "proceedConfirm": "Continuer quand même",
         "skippedError": "Ignoré en raison d'un dépassement du bon de commande ({{poLabel}}) : terminé par {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Utilisation non déclarée pour cette période",
+        "description": "Ces services à l'utilisation n'ont aucune déclaration pour la fenêtre de facturation. Générer maintenant les laisse hors de la facture ; ils resteront facturables une fois leur utilisation déclarée.",
+        "omittedItem": "{{services}} : aucune utilisation déclarée du {{periodStart}} au {{periodEnd}}",
+        "question": "Générer sans ces services ?",
+        "confirm": "Générer sans l'utilisation non déclarée"
       }
     },
     "history": {
@@ -344,6 +367,7 @@
       "updateFailed": "Erreur lors de la mise à jour de la facture",
       "generateFailed": "Erreur lors de la génération de la facture",
       "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à l'emplacement de facturation ou par défaut, puis réessayez.",
+      "USAGE_RECORDS_MISSING": "Aucun enregistrement d'utilisation éligible pour {{services}} sur la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez l'utilisation pour cette période (ou une entrée d'utilisation nulle) afin de facturer ces services.",
       "CLIENT_NOT_FOUND": "Le client sélectionné est introuvable. Actualisez la page et réessayez.",
       "SERVICE_NOT_FOUND": "Le service {{serviceId}} est introuvable. Actualisez la page et réessayez.",
       "INVALID_QUANTITY": "La quantité doit être supérieure à zéro.",
@@ -354,7 +378,10 @@
       "UNEXPECTED": "Une erreur s'est produite lors de la génération de la facture. Indiquez la référence {{ref}} lorsque vous contactez le support.",
       "salesOrderGenerateFailed": "Impossible de générer la facture de la commande client.",
       "salesOrderNothingToInvoice": "Il ne reste plus rien à facturer pour cette commande client.",
-      "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée."
+      "salesOrderNotInvoiceable": "Cette commande client ne peut plus être facturée.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Cette fenêtre de facturation comporte des éléments facturables, mais {{services}} n'a aucune utilisation déclarée pour la période de service du {{periodStart}} au {{periodEnd}}. Enregistrez d'abord l'utilisation, ou confirmez explicitement la génération sans elle — les services non déclarés resteront facturables plus tard.",
+      "USAGE_PERIOD_TOTAL_STALE": "L'aperçu est obsolète : {{details}}. Relancez l'aperçu pour voir les chiffres actuels, puis générez à nouveau.",
+      "USAGE_CALCULATION_ERROR": "L'utilisation de {{services}} sur la période de service du {{periodStart}} au {{periodEnd}} est enregistrée mais n'a pas pu être tarifée. Corrigez la tarification du service (prix catalogue dans la devise du contrat, tarif personnalisé ou paliers de tarifs), puis réessayez. N'enregistrez pas d'utilisation de remplacement."
     },
     "warnings": {
       "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez un contact de facturation, une adresse e-mail de facturation du client ou une adresse e-mail à son emplacement de facturation ou par défaut avant de générer la facture."
@@ -2111,5 +2138,17 @@
       "missingField": "Un champ obligatoire du modèle de facture est manquant.",
       "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Configuration du client ou du service manquante pour ce rapport.",
+    "invalidQuantity": "Saisissez un nombre entier supérieur ou égal à 0 pour le décompte de période.",
+    "saveError": "Impossible d'enregistrer le décompte de période.",
+    "retryError": "Impossible d'enregistrer le décompte de période. Réessayez l'envoi.",
+    "correct": "Corriger le décompte déclaré de {{quantity}} pour {{service}} (du {{periodStart}} au {{periodEnd}})",
+    "report": "Déclarer un décompte de période pour {{service}} (du {{periodStart}} au {{periodEnd}})",
+    "quantityLabel": "Décompte de période pour {{service}}",
+    "saving": "Enregistrement…",
+    "saveCorrection": "Enregistrer la correction",
+    "save": "Enregistrer"
   }
 }

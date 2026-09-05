@@ -9,8 +9,9 @@ import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, Recu
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
-import type { ISO8601String } from '@alga-psa/types';
+import type { ISO8601String, IRecurringDueSelectionInput } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
 import { resolveChargeProfile } from '../lib/billing/billingProfileResolution';
 import { resolveInvoiceBillingRecipient } from './invoiceBillingRecipientService';
@@ -113,6 +114,118 @@ function assertRecurringPeriodLinked(params: {
   }
 }
 
+/**
+ * Truncates a recurring window boundary to its date-only (YYYY-MM-DD) form.
+ * Selector inputs may carry full ISO timestamps; the `date` columns they are
+ * compared against are calendar dates.
+ */
+function toRecurringWindowDate(value: string): string {
+  return value.slice(0, 10);
+}
+
+/**
+ * Claims every recurring service period represented by the generated
+ * selection's execution windows for `invoiceId` — atomically with charge
+ * persistence, inside the same transaction.
+ *
+ * Charge persistence links a period only when a charge references it. A
+ * grouped window whose lines produced NO charges (zero-dollar usage/bucket
+ * periods with no activity in the month) would otherwise leave its
+ * recurring_service_periods rows at lifecycle_state=generated with no
+ * invoice_id: invisible to the duplicate detector, so the same window could
+ * be invoiced twice. This sweep claims the leftover rows for the invoice (or
+ * aborts the whole transaction if a row was concurrently claimed by another
+ * invoice), making the created invoice the window's single owner.
+ *
+ * Swept rows keep `invoice_charge_detail_id` NULL — honestly recording that
+ * no charge line backs them — while `lifecycle_state='billed'` + `invoice_id`
+ * removes them from due-work listings and arms the duplicate guard.
+ */
+export async function claimRecurringServicePeriodsForSelectionInputs(params: {
+  tx: Knex.Transaction;
+  tenant: string;
+  invoiceId: string;
+  selectorInputs: IRecurringDueSelectionInput[];
+  linkedAt: string;
+}): Promise<void> {
+  const { tx, tenant, invoiceId, selectorInputs, linkedAt } = params;
+
+  for (const selectorInput of selectorInputs) {
+    const executionWindow = selectorInput.executionWindow;
+    const windowStart = toRecurringWindowDate(String(selectorInput.windowStart));
+    const windowEnd = toRecurringWindowDate(String(selectorInput.windowEnd));
+
+    const query = tenantScopedTable(tx, tenant, 'recurring_service_periods')
+      .where({
+        invoice_window_start: windowStart,
+        invoice_window_end: windowEnd,
+      })
+      .whereNotIn('lifecycle_state', ['archived', 'superseded']);
+
+    if (executionWindow.kind === 'client_cadence_window') {
+      query
+        .where({
+          cadence_owner: 'client',
+          schedule_key: executionWindow.scheduleKey ?? null,
+          period_key: executionWindow.periodKey ?? null,
+        })
+        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES]);
+    } else if (executionWindow.kind === 'contract_cadence_window') {
+      if (!executionWindow.contractLineId) {
+        // Without a line identity the window cannot be resolved to period
+        // rows; those windows keep linking exclusively through their charges.
+        continue;
+      }
+      query.where({
+        cadence_owner: 'contract',
+        obligation_type: 'contract_line',
+        obligation_id: executionWindow.contractLineId,
+      });
+    } else {
+      continue;
+    }
+
+    const rows = await query.select<{ record_id: string; invoice_id: string | null }[]>(
+      'record_id',
+      'invoice_id',
+    );
+
+    if (rows.length === 0) {
+      throw new Error(
+        'Recurring service periods were not materialized for this recurring execution window.',
+      );
+    }
+
+    for (const row of rows) {
+      if (row.invoice_id === invoiceId) {
+        continue; // Already linked through one of this invoice's charges.
+      }
+      if (row.invoice_id) {
+        throw new Error(
+          `Internal error: recurring service period ${row.record_id} is already claimed by invoice ${row.invoice_id}; cannot also claim it for invoice ${invoiceId}.`,
+        );
+      }
+
+      const updatedCount = await tenantScopedTable(tx, tenant, 'recurring_service_periods')
+        .where({ record_id: row.record_id })
+        .whereNull('invoice_id')
+        .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
+        .update({
+          lifecycle_state: 'billed',
+          invoice_id: invoiceId,
+          invoice_linked_at: linkedAt,
+          updated_at: linkedAt,
+        });
+
+      if (updatedCount !== 1) {
+        throw new Error(
+          `Internal error: recurring service period ${row.record_id} could not be claimed for invoice ${invoiceId}.`,
+        );
+      }
+    }
+  }
+}
+
 async function linkAndMarkSourceBillingRecord(params: {
   tx: Knex.Transaction;
   tenant: string;
@@ -156,6 +269,39 @@ async function linkAndMarkSourceBillingRecord(params: {
   }
 
   if (charge.type === 'usage') {
+    const periodTotalId = (charge as { usagePeriodTotalId?: string | null })
+      .usagePeriodTotalId;
+    if (periodTotalId) {
+      // Period-total report: consume exactly the recorded total revision the
+      // charge carried. The conditional UPDATE (recorded + matching revision)
+      // is the single-consumption lock: concurrent generation or a retry
+      // cannot bill the total twice, and an invoiced total cannot be consumed
+      // again. The total row itself records invoice linkage.
+      const expectedRevision = (charge as {
+        usagePeriodTotalRevision?: number | null;
+      }).usagePeriodTotalRevision;
+      const totalUpdate = tenantScopedTable(tx, tenant, 'usage_period_totals')
+        .where({ period_total_id: periodTotalId, tenant })
+        .where('lifecycle_state', 'recorded');
+      if (expectedRevision != null) {
+        totalUpdate.where('revision', expectedRevision);
+      }
+      const updatedCount = await totalUpdate.update({
+        lifecycle_state: 'billed',
+        invoice_id: invoiceId,
+        invoice_charge_id: invoiceItemId,
+        consumed_at: linkedAt,
+        updated_at: linkedAt,
+      });
+
+      if (updatedCount !== 1) {
+        throw new Error(
+          `Internal error: Usage period total ${periodTotalId} (revision ${expectedRevision ?? 'any'}) could not be marked invoiced for invoice ${invoiceId}. It may have been edited, already invoiced, or deleted.`,
+        );
+      }
+      return;
+    }
+
     const usageId = (charge as { usageId?: string | null }).usageId;
     if (!usageId) {
       return;

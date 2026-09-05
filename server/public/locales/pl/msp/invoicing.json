@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Generuj fakturę na koniec miesiąca",
+      "title": "Zamknąć okres {{servicePeriod}} na koniec miesiąca?",
+      "warning": "Spowoduje to zafakturowanie okresu {{servicePeriod}} w jego ostatnim dniu kalendarzowym. Wpisy czasu lub zużycia zarejestrowane po tym zamknięciu nie zostaną uwzględnione. Zamknij okres dopiero po pełnym zarejestrowaniu całej pracy.",
+      "confirm": "Generuj na koniec miesiąca",
+      "omissionWarning": "Wpisy czasu lub zużycia zarejestrowane po tym zamknięciu NIE zostaną uwzględnione na fakturze.",
+      "generationFailed": "Nie udało się wygenerować faktury na koniec miesiąca. Spróbuj ponownie."
+    },
     "ready": {
       "title": "Gotowy do wystawienia faktury",
       "description": "Przeglądaj powtarzające się terminy prac i generuj wersje robocze faktur za wybrane okresy.",
@@ -116,7 +124,8 @@
       "closePreview": "Zamknij podgląd",
       "generateInvoice": "Wygeneruj fakturę",
       "generateSelected_few": "Generuj faktury za wybrane okresy ({{count}})",
-      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})"
+      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})",
+      "recordUsage": "Zarejestruj użycie"
     },
     "dialogs": {
       "reverse": {
@@ -181,7 +190,14 @@
         "generating": "Generowanie...",
         "generateError": "Nie udało się wygenerować faktury z podglądu",
         "summary_few": "Wybrano {{count}} faktury",
-        "summary_many": "Wybrano {{count}} faktur"
+        "summary_many": "Wybrano {{count}} faktur",
+        "missingUsageHeading": "Nie zarejestrowano użycia dla tego okresu",
+        "missingUsageService": "{{service}}: brak rekordów użycia od {{periodStart}} do {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: zarejestrowane użycie od {{periodStart}} do {{periodEnd}} jest wykluczone, dopóki nie zostanie rozstrzygnięte przypisanie do pozycji umowy — rozstrzygnij przypisanie zamiast rejestrować kolejne użycie",
+        "usageCalculationError": "{{service}}: zarejestrowanego użycia od {{periodStart}} do {{periodEnd}} nie udało się wycenić — popraw ceny usługi zamiast rejestrować kolejne użycie",
+        "recordScopedUsage": "Zarejestruj użycie: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: od {{periodStart}} do {{periodEnd}} — zarejestrowanego użycia nie udało się wycenić. Przejrzyj konfigurację cen tej usługi.",
+        "reportedPeriodTotalsHeading": "Zgłoszone liczby dla okresów"
       },
       "poOverage": {
         "title": "Przekroczenie limitu zamówienia zakupu",
@@ -196,6 +212,13 @@
         "proceedAnyway": "Kontynuować mimo to?",
         "proceedConfirm": "Kontynuuj mimo to",
         "skippedError": "Pominięte ze względu na nadmiar zamówienia ({{poLabel}}): przekroczone przez {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Brak zgłoszonego użycia za ten okres",
+        "description": "Te usługi rozliczane według użycia nie mają zgłoszenia w oknie fakturowania. Wygenerowanie teraz pominie je na fakturze; pozostaną rozliczalne po zgłoszeniu użycia.",
+        "omittedItem": "{{services}}: brak zgłoszonego użycia od {{periodStart}} do {{periodEnd}}",
+        "question": "Wygenerować bez tych usług?",
+        "confirm": "Generuj bez niezgłoszonego użycia"
       }
     },
     "history": {
@@ -362,6 +385,7 @@
       "updateFailed": "Błąd podczas aktualizowania faktury",
       "generateFailed": "Błąd podczas generowania faktury",
       "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej i spróbuj ponownie.",
+      "USAGE_RECORDS_MISSING": "Brak kwalifikujących się rekordów użycia dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}}. Zarejestruj użycie dla tego okresu (lub wpis zerowego użycia), aby rozliczyć te usługi.",
       "CLIENT_NOT_FOUND": "Nie znaleziono wybranego klienta. Odśwież stronę i spróbuj ponownie.",
       "SERVICE_NOT_FOUND": "Nie znaleziono usługi {{serviceId}}. Odśwież stronę i spróbuj ponownie.",
       "INVALID_QUANTITY": "Ilość musi być większa od zera.",
@@ -372,7 +396,10 @@
       "UNEXPECTED": "Wystąpił błąd podczas generowania faktury. Kontaktując się z pomocą techniczną, podaj numer referencyjny {{ref}}.",
       "salesOrderGenerateFailed": "Nie udało się utworzyć faktury z zamówienia sprzedaży.",
       "salesOrderNothingToInvoice": "To zamówienie sprzedaży nie zawiera już niczego do zafakturowania.",
-      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży."
+      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "To okno fakturowania zawiera pozycje do rozliczenia, ale dla {{services}} nie zgłoszono użycia za okres rozliczeniowy od {{periodStart}} do {{periodEnd}}. Najpierw zarejestruj użycie albo wyraźnie potwierdź wygenerowanie bez niego — niezgłoszone usługi pozostaną rozliczalne później.",
+      "USAGE_PERIOD_TOTAL_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć aktualne wartości, a następnie wygeneruj fakturę jeszcze raz.",
+      "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego."
     },
     "warnings": {
       "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
@@ -2161,5 +2188,17 @@
       "missingField": "Brakuje wymaganego pola szablonu faktury.",
       "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Brak konfiguracji klienta lub usługi dla tego raportu.",
+    "invalidQuantity": "Podaj liczbę całkowitą 0 lub większą jako liczbę dla okresu.",
+    "saveError": "Nie udało się zapisać liczby dla okresu.",
+    "retryError": "Nie udało się zapisać liczby dla okresu. Ponów przesłanie.",
+    "correct": "Popraw zgłoszoną liczbę {{quantity}} dla usługi {{service}} (od {{periodStart}} do {{periodEnd}})",
+    "report": "Zgłoś liczbę dla okresu usługi {{service}} (od {{periodStart}} do {{periodEnd}})",
+    "quantityLabel": "Liczba dla okresu usługi {{service}}",
+    "saving": "Zapisywanie…",
+    "saveCorrection": "Zapisz korektę",
+    "save": "Zapisz"
   }
 }

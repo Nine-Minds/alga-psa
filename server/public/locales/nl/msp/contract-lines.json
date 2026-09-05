@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Ontbrekende abonnements- of service-informatie"
       },
       "loading": "Serviceconfiguratie laden...",
-      "title": "Serviceconfiguratie bewerken"
+      "title": "Serviceconfiguratie bewerken",
+      "effectiveFrom": "Wijziging van hoeveelheid of meting geldt vanaf",
+      "effectiveHelp": "Wijzigingen gaan in op deze serviceperiodegrens. Eerdere perioden behouden hun prijzen en meting."
     },
     "tierEditor": {
       "actions": {

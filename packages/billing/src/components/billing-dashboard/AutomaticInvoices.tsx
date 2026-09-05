@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { UsagePeriodTotalQuickEntry } from './UsagePeriodTotalQuickEntry';
 import { toPlainDate } from '@alga-psa/core';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -13,6 +14,7 @@ import { DateRangePicker, DateRange } from '@alga-psa/ui/components/DateRangePic
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertTriangle, X, MoreVertical, Eye, ChevronRight, ChevronDown, Check, Link2, Clock, Hourglass, Wrench, FileText, Filter } from 'lucide-react';
 import type {
+  IExpectedUsagePeriodTotal,
   IRecurringDueSelectionInput,
   IRecurringDueWorkInvoiceCandidate,
   IRecurringDueWorkMaterializationGap,
@@ -23,12 +25,14 @@ import {
   type RecurringGroupedPreviewResponse,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
+  generateCalendarMonthEndCloseInvoices,
   generateGroupedInvoicesAsRecurringBillingRun,
   generateInvoicesAsRecurringBillingRun,
   type RecurringBillingRunInvoiceFailure,
 } from '@alga-psa/billing/actions/recurringBillingRunActions';
 import { repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
-import { WasmInvoiceViewModel, type PreviewInvoiceResponse } from '@alga-psa/types';
+import { upsertUsagePeriodTotal } from '@alga-psa/billing/actions/usagePeriodTotalActions';
+import { WasmInvoiceViewModel, type PreviewInvoiceResponse, type IUsageServicePeriodStatus, type RecurringInvoiceFailureCode } from '@alga-psa/types';
 import {
   getRecurringInvoiceHistoryPaginated,
   reverseRecurringInvoice,
@@ -108,6 +112,19 @@ function localizePreviewFailure(
   });
 }
 
+/**
+ * A recurring-run failure that requires an explicit omission acknowledgement:
+ * the window has billable charges, but one or more usage services are
+ * unreported and would be left off the invoice. The confirm control re-runs
+ * the same generation with `acknowledgeUnreportedUsage`; the omitted services
+ * stay billable once their usage is reported.
+ */
+function isUnreportedUsageAckRequiredFailure(
+  failure: RecurringBillingRunInvoiceFailure,
+): boolean {
+  return failure.code === 'USAGE_RECORDS_MISSING' && failure.params?.acknowledgeRequired === 'true';
+}
+
 // Placeholder for a DataTable while its (independent) section data loads, so the
 // rest of the screen can render immediately instead of waiting behind one spinner.
 function BillingTableSkeleton({ rows = 5, columns = 5 }: { rows?: number; columns?: number }) {
@@ -168,6 +185,7 @@ interface RecurringInvoiceParentGroup {
 }
 
 type RecurringSelectionGroup = {
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
   billingCycleId: string | null;
@@ -242,7 +260,16 @@ const getParentGroupSummary = ({
 
 // Each parent row groups due obligations by client and invoice window. Child obligations remain the atomic execution units.
 const buildRecurringInvoiceParentGroups = (candidates: ReadyPeriod[]): RecurringInvoiceParentGroup[] =>
-  candidates.map((candidate) => {
+  candidates.map((rawCandidate) => {
+    // An execution identity must appear exactly once: duplicated members (e.g.
+    // an upstream join fan-out) would render identical child rows/DOM ids and
+    // submit the same identity twice on preview/generation.
+    const dedupedMembers = rawCandidate.members.filter((member, index, allMembers) =>
+      allMembers.findIndex((other) => other.executionIdentityKey === member.executionIdentityKey) === index,
+    );
+    const candidate: ReadyPeriod = dedupedMembers.length === rawCandidate.members.length
+      ? rawCandidate
+      : { ...rawCandidate, members: dedupedMembers, memberCount: dedupedMembers.length };
     const memberAmounts = candidate.members
       .map((member) => (member as { amountCents?: number | null }).amountCents)
       .filter((amount): amount is number => typeof amount === 'number' && Number.isFinite(amount));
@@ -311,6 +338,39 @@ const getTodayDate = (): Date => {
 
 const buildServicePeriodRepairHref = (scheduleKey: string) =>
   `/msp/billing?tab=service-periods&scheduleKey=${encodeURIComponent(scheduleKey)}`;
+
+// Usage Tracking deep link with optional filter prefills so "Record Usage"
+// lands on the affected client/service — and the affected service period —
+// instead of All Clients / All Services with no period context.
+const buildUsageTrackingHref = (
+  input: {
+    clientId?: string | null;
+    serviceId?: string | null;
+    contractLineId?: string | null;
+    configId?: string | null;
+    periodStart?: string | null;
+    periodEnd?: string | null;
+  } = {},
+) => {
+  const params = new URLSearchParams({ tab: 'usage-tracking' });
+  if (input.clientId) {
+    params.set('clientId', input.clientId);
+  }
+  if (input.serviceId) {
+    params.set('serviceId', input.serviceId);
+  }
+  if (input.contractLineId) params.set('contractLineId', input.contractLineId);
+  if (input.configId) params.set('configId', input.configId);
+  params.set('returnToPreview', '1');
+  if (input.periodStart) {
+    params.set('periodStart', input.periodStart.slice(0, 10));
+  }
+  if (input.periodEnd) {
+    // Usage Tracking filters are half-open; billing diagnostics expose an inclusive last day.
+    params.set('periodEnd', toPlainDate(input.periodEnd.slice(0, 10)).add({days: 1}).toString());
+  }
+  return `/msp/billing?${params.toString()}`;
+};
 
 const AUTOMATIC_INVOICES_CLIENT_FILTER_QUERY_PARAM = 'automaticClientFilter';
 
@@ -728,14 +788,44 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     cadenceSource: string | null | undefined;
   } | null>(null);
   // State to hold preview data and the canonical selector metadata used to generate it.
-  const [previewState, setPreviewState] = useState<{
-    previews: Array<{ previewGroupKey: string; data: WasmInvoiceViewModel; selectorInputs: IRecurringDueSelectionInput[] }>;
+  const [previewState, setPreviewState] = useState<{    previews: Array<{
+      previewGroupKey: string;
+      data: WasmInvoiceViewModel;
+      selectorInputs: IRecurringDueSelectionInput[];
+      usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+      expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
+    }>;
     invoiceCount: number;
     billingCycleId: string | null;
     executionIdentityKey: string | null;
     selectorInput: IRecurringDueSelectionInput | null;
-  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null });
+    /**
+     * Previewed period-total identities for the single-selection generate
+     * path. Handed to generation so finalization refuses (stale preview)
+     * when a report or its pricing changed after this preview was shown.
+     */
+    expectedUsagePeriodTotals: IExpectedUsagePeriodTotal[] | null;
+  }>({ previews: [], invoiceCount: 0, billingCycleId: null, executionIdentityKey: null, selectorInput: null, expectedUsagePeriodTotals: null });
+  // Structured code of the last preview failure; drives actionable remediation
+  // (e.g. USAGE_RECORDS_MISSING links to Usage Tracking for the period).
+  const [previewFailureCode, setPreviewFailureCode] = useState<RecurringInvoiceFailureCode | null>(null);
+  // Prefill context for the failure's remediation route: the previewed
+  // selection's client and the failure's affected services (when the coded
+  // params name exactly one, Usage Tracking can preselect it).
+  const [previewFailureUsageRoute, setPreviewFailureUsageRoute] = useState<{
+    clientId: string | null;
+    serviceId: string | null;
+    periodStart: string | null;
+    periodEnd: string | null;
+  }>({ clientId: null, serviceId: null, periodStart: null, periodEnd: null });
+  // Structured per-service diagnoses from a failed (all-unreported /
+  // all-error) preview, so the failure state still offers inline remediation:
+  // period-total services get the same quick entry a successful preview shows.
+  const [previewFailureUsageStatuses, setPreviewFailureUsageStatuses] = useState<
+    IUsageServicePeriodStatus[]
+  >([]);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const lastPreviewGroupsRef = useRef<RecurringSelectionGroup[]>([]);
   const [isGeneratingFromPreview, setIsGeneratingFromPreview] = useState(false); // Loading state for generate from preview
   const [poOverageDialogState, setPoOverageDialogState] = useState<{
     isOpen: boolean;
@@ -761,6 +851,28 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     overageCents: 0,
     poNumber: null,
   });
+  // Pending "generate without the unreported usage services?" confirmation.
+  // Captures the exact generation request that failed with the
+  // acknowledgement-required code so confirming retries it unchanged, plus the
+  // explicit acknowledgement; windows generated in the meantime are skipped by
+  // the run's duplicate guard.
+  const [unreportedUsageAckState, setUnreportedUsageAckState] = useState<{
+    isOpen: boolean;
+    retry:
+      | { kind: 'grouped'; groupedTargets: RecurringSelectionGroup[]; allowPoOverage?: boolean }
+      | {
+          kind: 'targets';
+          targets: Array<{
+            selectorInput: IRecurringDueSelectionInput;
+            executionWindow: IRecurringDueSelectionInput['executionWindow'];
+            billingCycleId: string | null;
+          }>;
+          allowPoOverage?: boolean;
+        }
+      | null;
+    failures: RecurringBillingRunInvoiceFailure[];
+    fromPreview: boolean;
+  }>({ isOpen: false, retry: null, failures: [], fromPreview: false });
   const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -772,6 +884,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     servicePeriodLabel: string;
     cadenceSource: string | null | undefined;
   } | null>(null);
+
+  // Calendar month-end early close: offered per not-yet-due group when the
+  // server flagged it month-end eligible; re-validated server-side on generate.
+  const [monthEndCloseGroup, setMonthEndCloseGroup] = useState<RecurringInvoiceParentGroup | null>(null);
+  const [isMonthEndClosing, setIsMonthEndClosing] = useState(false);
 
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
@@ -1009,9 +1126,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             : null,
       })),
   ].filter((group) => group.selectorInputs.length > 0);
-  const previewSupportsDirectGeneration =
-    selectedSelectionGroups.length === 1
-    && selectedSelectionGroups[0].selectorInputs.length === 1;
+
   const isGroupFullySelected = (group: RecurringInvoiceParentGroup): boolean => {
     if (selectedTargets.has(group.parentSummary.parentSelectionKey)) {
       return true;
@@ -1497,15 +1612,26 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     return clientName || failure.billingCycleId || failure.executionIdentityKey || 'Recurring invoice window';
   };
 
+  const navigateToUsage = (clientId: string | null, status: IUsageServicePeriodStatus) => {
+    sessionStorage.setItem('billing-usage-return-selection', JSON.stringify(lastPreviewGroupsRef.current));
+    router.push(buildUsageTrackingHref({clientId, serviceId: status.service_id,
+      contractLineId: status.client_contract_line_id, configId: status.config_id,
+      periodStart: status.service_period_start, periodEnd: status.service_period_end}));
+  };
+
   const handlePreviewSelection = async (groups: RecurringSelectionGroup[]) => {
     if (groups.length === 0) {
       return;
     }
+    lastPreviewGroupsRef.current = groups;
 
     const primarySelection = groups[0]?.selectorInputs[0] ?? null;
     setIsPreviewLoading(true);
     setErrorOperation('finalize');
     setErrors({}); // Clear previous errors
+    setPreviewFailureCode(null);
+    setPreviewFailureUsageRoute({ clientId: null, serviceId: null, periodStart: null, periodEnd: null });
+    setPreviewFailureUsageStatuses([]);
     const response = await previewGroupedInvoicesForSelectionInputs(
       groups.map((group) => ({
         previewGroupKey: group.groupKey,
@@ -1521,6 +1647,10 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         selectorInput: response.previews.length === 1 && response.previews[0].selectorInputs.length === 1
           ? response.previews[0].selectorInputs[0]
           : null,
+        expectedUsagePeriodTotals:
+          response.previews.length === 1
+            ? response.previews[0].expectedUsagePeriodTotals ?? null
+            : null,
       });
       setShowPreviewDialog(true);
     } else {
@@ -1530,7 +1660,30 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         billingCycleId: null,
         executionIdentityKey: null,
         selectorInput: null,
+        expectedUsagePeriodTotals: null,
       }); // Clear preview state on error
+      setPreviewFailureCode(response.code ?? null);
+      // Prefill the remediation route from what was previewed: the selection's
+      // unanimous client, and the failing service when the params name exactly
+      // one (multi-service failures fall back to the client-only filter).
+      const previewedClientIds = Array.from(
+        new Set(
+          groups.flatMap((group) => group.selectorInputs.map((selectorInput) => selectorInput.clientId)),
+        ),
+      );
+      const failedServiceIds = (response.params?.serviceIds ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      setPreviewFailureUsageRoute({
+        clientId: previewedClientIds.length === 1 ? previewedClientIds[0] : null,
+        serviceId: failedServiceIds.length === 1 ? failedServiceIds[0] : null,
+        periodStart: response.params?.periodStart ?? null,
+        periodEnd: response.params?.periodEnd ?? null,
+      });
+      setPreviewFailureUsageStatuses(
+        previewedClientIds.length === 1 ? response.usageServicePeriodStatuses ?? [] : [],
+      );
       setErrors({
         preview: localizePreviewFailure(t, response)
       });
@@ -1539,6 +1692,14 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     }
     setIsPreviewLoading(false);
   };
+
+  useEffect(() => {
+    const saved = sessionStorage.getItem('billing-usage-return-selection');
+    if (saved && new URLSearchParams(window.location.search).get('resumeUsagePreview') === '1') {
+      sessionStorage.removeItem('billing-usage-return-selection');
+      try { void handlePreviewSelection(JSON.parse(saved)); } catch { /* Invalid expired navigation context. */ }
+    }
+  }, []);
 
   const handleGenerateInvoices = async () => {
     const selectedExecutionPeriods = selectedExecutionRows.filter((period) => period.canGenerate);
@@ -1602,25 +1763,41 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
+      const groupedTargets = selectedSelectionGroups.map((group) => ({
+        groupKey: group.groupKey,
+        selectorInputs: group.selectorInputs,
+        billingCycleId: group.billingCycleId,
+      }));
       const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
-        groupedTargets: selectedSelectionGroups.map((group) => ({
-          groupKey: group.groupKey,
-          selectorInputs: group.selectorInputs,
-          billingCycleId: group.billingCycleId,
-        })),
+        groupedTargets,
       });
       if (isReturnedActionError(runResult)) {
         setErrors({ generation: getErrorMessage(runResult) });
         return;
       }
+      const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
       const newErrors: { [key: string]: string } = {};
       for (const failure of runResult.failures) {
+        if (isUnreportedUsageAckRequiredFailure(failure)) {
+          continue;
+        }
         const label = resolveRecurringFailureLabel(failure);
         newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
+      }
+      if (ackFailures.length > 0) {
+        setUnreportedUsageAckState({
+          isOpen: true,
+          retry: { kind: 'grouped', groupedTargets },
+          failures: ackFailures,
+          fromPreview: false,
+        });
+        return;
+      }
+      if (Object.keys(newErrors).length > 0) {
         return;
       }
 
@@ -1629,6 +1806,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       onGenerateSuccess();
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleCalendarMonthEndClose = async () => {
+    const group = monthEndCloseGroup;
+    if (!group) {
+      return;
+    }
+    setIsMonthEndClosing(true);
+    setErrorOperation('finalize');
+    setErrors({});
+
+    try {
+      const runResult = await generateCalendarMonthEndCloseInvoices({
+        groupedTargets: [
+          {
+            groupKey: group.parentSummary.candidateKey,
+            selectorInputs: group.childExecutionRows.map((member) => member.selectorInput),
+            billingCycleId: resolveSelectionGroupBillingCycleId(group.childExecutionRows),
+          },
+        ],
+      });
+      if (isReturnedActionError(runResult)) {
+        setErrors({ [group.parentSummary.clientName ?? 'generation']: getErrorMessage(runResult) });
+        return;
+      }
+      setMonthEndCloseGroup(null);
+      // Let onGenerateSuccess trigger refresh via refreshTrigger.
+      onGenerateSuccess();
+    } catch (error) {
+      console.error('Error generating calendar month-end close invoice:', error);
+      setErrors({
+        [group.parentSummary.clientName ?? 'generation']:
+          t('automaticInvoices.monthEndClose.generationFailed', {
+            defaultValue: 'Could not generate the month-end invoice. Please try again.',
+          }),
+      });
+    } finally {
+      setIsMonthEndClosing(false);
     }
   };
 
@@ -1664,25 +1880,41 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }
       }
 
+      const groupedTargets = toGenerate.map((period) => ({
+        groupKey: `child-selection:${period.executionIdentityKey}`,
+        selectorInputs: [period.selectorInput],
+        billingCycleId: period.billingCycleId ?? null,
+      }));
       const runResult = await generateGroupedInvoicesAsRecurringBillingRun({
-        groupedTargets: toGenerate.map((period) => ({
-          groupKey: `child-selection:${period.executionIdentityKey}`,
-          selectorInputs: [period.selectorInput],
-          billingCycleId: period.billingCycleId ?? null,
-        })),
+        groupedTargets,
         allowPoOverage: decision === 'allow',
       });
       if (isReturnedActionError(runResult)) {
         setErrors({ generation: getErrorMessage(runResult) });
         return;
       }
+      const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
       for (const failure of runResult.failures) {
+        if (isUnreportedUsageAckRequiredFailure(failure)) {
+          continue;
+        }
         const label = resolveRecurringFailureLabel(failure);
         newErrors[label] = localizeRecurringFailure(t, failure);
       }
 
       if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
+      }
+      if (ackFailures.length > 0) {
+        setUnreportedUsageAckState({
+          isOpen: true,
+          retry: { kind: 'grouped', groupedTargets, allowPoOverage: decision === 'allow' },
+          failures: ackFailures,
+          fromPreview: false,
+        });
+        return;
+      }
+      if (Object.keys(newErrors).length > 0) {
         return;
       }
 
@@ -1759,13 +1991,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
   };
 
   const handleGenerateFromPreview = async () => {
-    if (!previewState.selectorInput) return;
+    if (previewState.previews.length === 0) return;
 
     setIsGeneratingFromPreview(true);
     setErrors({}); // Clear previous errors
 
     try {
-      const overage = await getPurchaseOrderOverageForSelectionInput(previewState.selectorInput);
+      const overage = previewState.selectorInput ? await getPurchaseOrderOverageForSelectionInput(previewState.selectorInput) : null;
       if (isReturnedActionError(overage)) {
         setErrors({ preview: getErrorMessage(overage) });
         return;
@@ -1782,19 +2014,44 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
 
-      const runResult = await generateInvoicesAsRecurringBillingRun({
-        targets: [
-          buildRecurringRunTargetFromSelection({
+      const targets = previewState.selectorInput ? [
+        {
+          ...buildRecurringRunTargetFromSelection({
             selectorInput: previewState.selectorInput,
             billingCycleId: previewState.billingCycleId,
           }),
-        ],
-      });
+          // Bind generation to exactly what this preview showed: a report or
+          // pricing change since the preview refuses with a stale-preview
+          // failure instead of silently billing different numbers.
+          ...(previewState.expectedUsagePeriodTotals
+            ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
+            : {}),
+        },
+      ] : [];
+      const groupedTargets = previewState.previews.map(preview => ({
+        groupKey: preview.previewGroupKey,
+        selectorInputs: preview.selectorInputs,
+        billingCycleId: lastPreviewGroupsRef.current.find(group => group.groupKey === preview.previewGroupKey)?.billingCycleId ?? null,
+        expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals,
+      }));
+      const runResult = targets.length > 0
+        ? await generateInvoicesAsRecurringBillingRun({ targets })
+        : await generateGroupedInvoicesAsRecurringBillingRun({ groupedTargets });
       if (isReturnedActionError(runResult)) {
         setErrors({ preview: getErrorMessage(runResult) });
         return;
       }
       if (runResult.failures.length > 0) {
+        const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
+        if (ackFailures.length === runResult.failures.length) {
+          setUnreportedUsageAckState({
+            isOpen: true,
+            retry: targets.length > 0 ? { kind: 'targets', targets } : { kind: 'grouped', groupedTargets },
+            failures: ackFailures,
+            fromPreview: true,
+          });
+          return;
+        }
         setErrors({
           preview: localizeRecurringFailure(t, runResult.failures[0])
             || t('automaticInvoices.dialogs.preview.generateError', {
@@ -1810,6 +2067,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         billingCycleId: null,
         executionIdentityKey: null,
         selectorInput: null,
+        expectedUsagePeriodTotals: null,
       }); // Reset preview state
       onGenerateSuccess(); // Refresh data lists
     } catch (err) {
@@ -1844,13 +2102,21 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     setErrors({});
 
     try {
-      const runResult = await generateInvoicesAsRecurringBillingRun({
-        targets: [
-          buildRecurringRunTargetFromSelection({
+      const targets = [
+        {
+          ...buildRecurringRunTargetFromSelection({
             selectorInput,
             billingCycleId: poOverageSingleConfirm.billingCycleId,
           }),
-        ],
+          // Still a from-preview generation: keep the previewed period-total
+          // identity binding across the PO-overage confirmation.
+          ...(previewState.expectedUsagePeriodTotals
+            ? { expectedUsagePeriodTotals: previewState.expectedUsagePeriodTotals }
+            : {}),
+        },
+      ];
+      const runResult = await generateInvoicesAsRecurringBillingRun({
+        targets,
         allowPoOverage: true,
       });
       if (isReturnedActionError(runResult)) {
@@ -1858,6 +2124,16 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         return;
       }
       if (runResult.failures.length > 0) {
+        const ackFailures = runResult.failures.filter(isUnreportedUsageAckRequiredFailure);
+        if (ackFailures.length === runResult.failures.length) {
+          setUnreportedUsageAckState({
+            isOpen: true,
+            retry: { kind: 'targets', targets, allowPoOverage: true },
+            failures: ackFailures,
+            fromPreview: true,
+          });
+          return;
+        }
         setErrors({
           preview: localizeRecurringFailure(t, runResult.failures[0]) || 'Failed to generate invoice from preview',
         });
@@ -1870,6 +2146,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         billingCycleId: null,
         executionIdentityKey: null,
         selectorInput: null,
+        expectedUsagePeriodTotals: null,
       });
       onGenerateSuccess();
     } catch (err) {
@@ -1878,6 +2155,75 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       });
     } finally {
       setIsGeneratingFromPreview(false);
+    }
+  };
+
+  /**
+   * Retries the captured generation request with the explicit
+   * acknowledgement that unreported usage services are omitted from the
+   * invoice. The omitted obligations are not consumed server-side and stay
+   * billable once their usage is reported.
+   */
+  const handleAcknowledgeUnreportedUsage = async () => {
+    const { retry, fromPreview } = unreportedUsageAckState;
+    setUnreportedUsageAckState({ isOpen: false, retry: null, failures: [], fromPreview: false });
+    if (!retry) {
+      return;
+    }
+
+    if (fromPreview) {
+      setIsGeneratingFromPreview(true);
+    } else {
+      setIsGenerating(true);
+      setErrorOperation('finalize');
+    }
+    setErrors({});
+    try {
+      const runResult = retry.kind === 'grouped'
+        ? await generateGroupedInvoicesAsRecurringBillingRun({
+            groupedTargets: retry.groupedTargets,
+            allowPoOverage: retry.allowPoOverage,
+            acknowledgeUnreportedUsage: true,
+          })
+        : await generateInvoicesAsRecurringBillingRun({
+            targets: retry.targets,
+            allowPoOverage: retry.allowPoOverage,
+            acknowledgeUnreportedUsage: true,
+          });
+      if (isReturnedActionError(runResult)) {
+        setErrors(fromPreview
+          ? { preview: getErrorMessage(runResult) }
+          : { generation: getErrorMessage(runResult) });
+        return;
+      }
+      if (runResult.failures.length > 0) {
+        const newErrors: { [key: string]: string } = {};
+        for (const failure of runResult.failures) {
+          const label = fromPreview ? 'preview' : resolveRecurringFailureLabel(failure);
+          newErrors[label] = localizeRecurringFailure(t, failure);
+        }
+        setErrors(newErrors);
+        return;
+      }
+      if (fromPreview) {
+        setShowPreviewDialog(false);
+        setPreviewState({
+          previews: [],
+          invoiceCount: 0,
+          billingCycleId: null,
+          executionIdentityKey: null,
+          selectorInput: null,
+          expectedUsagePeriodTotals: null,
+        });
+      }
+      setSelectedTargets(new Set());
+      onGenerateSuccess();
+    } finally {
+      if (fromPreview) {
+        setIsGeneratingFromPreview(false);
+      } else {
+        setIsGenerating(false);
+      }
     }
   };
 
@@ -2401,13 +2747,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               </span>
             )}
           </div>
-          {!previewSupportsDirectGeneration && selectedSelectionGroups.length > 0 ? (
-            <p className="mb-2 text-xs text-muted-foreground" data-testid="grouped-preview-unavailable-copy">
-              {t('automaticInvoices.ready.groupedPreviewUnavailable', {
-                defaultValue: 'Preview supports grouped selections; direct "Generate from preview" remains single-selection only.',
-              })}
-            </p>
-          ) : null}
+
 
           {/* LEVERAGE: friction datatable-column-sizing — column proportions here are coaxed via
               per-column dataIndex tricks (select/tags → compact ids) + mixed px/% widths because
@@ -2653,6 +2993,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     return null;
                   }
                   const summary = record.group.parentSummary;
+                  const monthEndCloseEligible =
+                    record.group.candidate.monthEndCloseEligible === true;
                   return (
                     <div className="space-y-0.5">
                       {renderStatusPill(summary, countSeparateInvoices(record.group.childExecutionRows))}
@@ -2663,6 +3005,22 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             defaultValue: `Opens ${formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}`,
                           })}
                         </div>
+                      ) : null}
+                      {summary.notYetDue && monthEndCloseEligible ? (
+                        <Button
+                          id={`month-end-close-${record.group.parentSummary.parentGroupKey}`}
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 h-7 text-xs font-medium"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setMonthEndCloseGroup(record.group);
+                          }}
+                        >
+                          {t('automaticInvoices.monthEndClose.action', {
+                            defaultValue: 'Generate month-end invoice',
+                          })}
+                        </Button>
                       ) : null}
                     </div>
                   );
@@ -3004,8 +3362,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             billingCycleId: null,
             executionIdentityKey: null,
             selectorInput: null,
+            expectedUsagePeriodTotals: null,
           });
           setErrors({}); // Clear preview-specific errors on close
+          setPreviewFailureCode(null);
+          setPreviewFailureUsageRoute({ clientId: null, serviceId: null, periodStart: null, periodEnd: null });
+          setPreviewFailureUsageStatuses([]);
         }}
         title={t('automaticInvoices.dialogs.preview.title', {
           defaultValue: 'Invoice Preview',
@@ -3023,8 +3385,12 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                   billingCycleId: null,
                   executionIdentityKey: null,
                   selectorInput: null,
+                  expectedUsagePeriodTotals: null,
                 }); // Reset state on close
                 setErrors({}); // Clear errors on close
+                setPreviewFailureCode(null);
+                setPreviewFailureUsageRoute({ clientId: null, serviceId: null, periodStart: null, periodEnd: null });
+                setPreviewFailureUsageStatuses([]);
               }}
               disabled={isGeneratingFromPreview} // Disable while generating
             >
@@ -3038,10 +3404,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
               disabled={
                 !!errors.preview
                 || previewState.previews.length === 0
-                || !previewState.selectorInput
                 || isGeneratingFromPreview
                 || isPreviewLoading
-                || !previewSupportsDirectGeneration
               }
             >
               {isGeneratingFromPreview
@@ -3058,9 +3422,59 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
             })}
           </DialogDescription>
           {errors.preview ? (
-            <div className="text-center py-8">
+            <div className="text-center py-8 space-y-4" data-testid="preview-failure-state">
               {/* Display error message if present */}
               <p className="text-destructive">{errors.preview}</p>
+              {previewFailureCode === 'USAGE_CALCULATION_ERROR' && (
+                <ul data-testid="preview-calculation-diagnostics">
+                  {previewFailureUsageStatuses.map(status => <li key={`${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}>
+                    {t('automaticInvoices.dialogs.preview.calculationContext', {service: status.service_name ?? status.service_id, periodStart: status.service_period_start, periodEnd: status.service_period_end, defaultValue: `${status.service_name ?? status.service_id}: ${status.service_period_start} to ${status.service_period_end} — recorded usage could not be priced. Review this service’s pricing configuration.`})}
+                  </li>)}
+                </ul>
+              )}
+              {previewFailureCode === 'USAGE_RECORDS_MISSING' && (() => {
+                // Missing usage is an actionable state, not a dead end. A
+                // window whose ONLY due obligations are unreported usage
+                // fails as a whole, so the structured statuses ride the
+                // failure: period-total services report their count inline
+                // right here, additive services route to Usage Tracking with
+                // full client/service/period context.
+                const failurePeriodTotalStatuses = previewFailureUsageStatuses.filter(
+                  (status) =>
+                    status.measurement_mode === 'period_total' &&
+                    (status.status === 'missing_usage' || status.status === 'unreported'),
+                );
+                return (
+                  <>
+                    {previewFailureUsageRoute.clientId && failurePeriodTotalStatuses.length > 0 && (
+                      <ul
+                        className="mx-auto max-w-xl space-y-2 text-left text-sm"
+                        data-testid="preview-failure-period-total-entries"
+                      >
+                        {failurePeriodTotalStatuses.map((status) => (
+                          <UsagePeriodTotalQuickEntry
+                            key={`failure:${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                            status={status}
+                            clientId={previewFailureUsageRoute.clientId}
+                            entryId={`failure:${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                            onSaved={() => {
+                              if (lastPreviewGroupsRef.current.length > 0) {
+                                void handlePreviewSelection(lastPreviewGroupsRef.current);
+                              }
+                            }}
+                          />
+                        ))}
+                      </ul>
+                    )}
+                    {previewFailureUsageStatuses.map((status, index) => (
+                      <Button key={`${status.client_contract_line_id}:${status.service_id}`} id={`preview-record-usage-button-${index}`} variant="outline"
+                        onClick={() => navigateToUsage(previewFailureUsageRoute.clientId, status)}>
+                        {t('automaticInvoices.dialogs.preview.recordScopedUsage', {service: status.service_name ?? status.service_id, line: status.contract_line_name ?? status.client_contract_line_id, defaultValue: `Record usage: ${status.service_name ?? status.service_id} — ${status.contract_line_name ?? status.client_contract_line_id}`})}
+                      </Button>
+                    ))}
+                  </>
+                );
+              })()}
             </div>
           ) : previewState.previews.length > 0 && (
             <div className="space-y-4">
@@ -3082,6 +3496,155 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                       defaultValue: `Invoice ${previewIndex + 1}`,
                     })}
                   </h3>
+                  {(previewEntry.usageServicePeriodStatuses?.length ?? 0) > 0 && (() => {
+                    const usageStatuses = previewEntry.usageServicePeriodStatuses ?? [];
+                    const actionableStatuses = usageStatuses.filter(
+                      (status) => status.status === 'missing_usage' || status.status === 'unreported',
+                    );
+                    const periodTotalStatuses = actionableStatuses.filter(
+                      (status) => status.measurement_mode === 'period_total',
+                    );
+                    const additiveStatuses = actionableStatuses.filter(
+                      (status) => status.measurement_mode !== 'period_total',
+                    );
+                    // Billable statuses are represented by the priced line
+                    // items themselves (they exist so generation can consume
+                    // the exact previewed period-total revision); the evidence
+                    // panel shows only the states that produce no charge.
+                    const evidenceStatuses = usageStatuses.filter(
+                      (status) => !actionableStatuses.includes(status) && status.status !== 'billable',
+                    );
+                    // Reported period totals stay correctable from the same
+                    // place they were reported: the correction carries the
+                    // reviewed revision, so a stale edit is refused rather
+                    // than silently replacing someone else's newer report.
+                    const reportedPeriodTotalStatuses = usageStatuses.filter(
+                      (status) =>
+                        ['billable', 'explicit_zero', 'minimum_raised_zero'].includes(status.status) &&
+                        status.measurement_mode === 'period_total' &&
+                        status.revision != null,
+                    );
+                    const previewClientId = previewEntry.selectorInputs[0]?.clientId ?? null;
+                    return (
+                      <>
+                        {actionableStatuses.length > 0 && (
+                          // Usage billing invoices recorded usage only. These
+                          // services are due this period but have no report, so
+                          // they are absent from the preview rather than billed at
+                          // zero. Period-total services report a whole-period
+                          // count inline; additive services route to Usage Tracking.
+                          <div
+                            className="rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-sm text-[rgb(var(--badge-warning-text))]"
+                            data-testid={`preview-missing-usage-${previewEntry.previewGroupKey}`}
+                          >
+                            <p className="font-medium">
+                              {t('automaticInvoices.dialogs.preview.missingUsageHeading', {
+                                defaultValue: 'Usage not recorded for this period',
+                              })}
+                            </p>
+                            <ul className="mt-1 list-disc pl-5 space-y-1">
+                              {additiveStatuses.map((status) => (
+                                <li key={`${status.client_contract_line_id}:${status.service_id}`}>
+                                  {t('automaticInvoices.dialogs.preview.missingUsageService', {
+                                    service: status.service_name ?? status.service_id,
+                                    periodStart: status.service_period_start,
+                                    periodEnd: status.service_period_end,
+                                    defaultValue: `${status.service_name ?? status.service_id}: no usage records for ${status.service_period_start} to ${status.service_period_end}`,
+                                  })}
+                                </li>
+                              ))}
+                              {periodTotalStatuses.map((status) => (
+                                <UsagePeriodTotalQuickEntry
+                                  key={`${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                                  status={status}
+                                  clientId={previewClientId}
+                                  entryId={`${previewEntry.previewGroupKey}:${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                                  onSaved={() => {
+                                    if (lastPreviewGroupsRef.current.length > 0) {
+                                      void handlePreviewSelection(lastPreviewGroupsRef.current);
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </ul>
+                            {actionableStatuses.map((status, index) => (
+                              <Button key={`${status.client_contract_line_id}:${status.service_id}`} id={`preview-record-usage-${previewIndex}-${index}-button`}
+                                variant="outline" className="mt-2" onClick={() => navigateToUsage(previewClientId, status)}>
+                                {t('automaticInvoices.dialogs.preview.recordScopedUsage', {service: status.service_name ?? status.service_id, line: status.contract_line_name ?? status.client_contract_line_id, defaultValue: `Record usage: ${status.service_name ?? status.service_id} — ${status.contract_line_name ?? status.client_contract_line_id}`})}
+                              </Button>
+                            ))}
+                          </div>
+                        )}
+                        {reportedPeriodTotalStatuses.length > 0 && (
+                          // Reported counts backing the priced usage items;
+                          // corrections re-preview the same selection so the
+                          // operator confirms the new amount in place.
+                          <div
+                            className="rounded-md border border-border/70 bg-[rgb(var(--color-card))] px-3 py-2 text-sm"
+                            data-testid={`preview-reported-period-totals-${previewEntry.previewGroupKey}`}
+                          >
+                            <p className="font-medium">
+                              {t('automaticInvoices.dialogs.preview.reportedPeriodTotalsHeading', {
+                                defaultValue: 'Reported period counts',
+                              })}
+                            </p>
+                            <ul className="mt-1 space-y-1">
+                              {reportedPeriodTotalStatuses.map((status) => (
+                                <UsagePeriodTotalQuickEntry
+                                  key={`reported:${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                                  status={status}
+                                  clientId={previewClientId}
+                                  entryId={`reported:${previewEntry.previewGroupKey}:${status.client_contract_line_id}:${status.service_id}:${status.service_period_start}`}
+                                  existing={{
+                                    quantity: Number(status.quantity ?? 0),
+                                    revision: Number(status.revision ?? 1),
+                                  }}
+                                  onSaved={() => {
+                                    if (lastPreviewGroupsRef.current.length > 0) {
+                                      void handlePreviewSelection(lastPreviewGroupsRef.current);
+                                    }
+                                  }}
+                                />
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {evidenceStatuses.length > 0 && (
+                          <div
+                            className="rounded-md border border-border/70 bg-[rgb(var(--color-card))] px-3 py-2 text-sm text-muted-foreground"
+                            data-testid={`preview-usage-evidence-${previewEntry.previewGroupKey}`}
+                          >
+                            <ul className="list-disc pl-5">
+                              {evidenceStatuses.map((status) => {
+                                const label = status.status === 'already_invoiced'
+                                  ? `${status.service_name ?? status.service_id}: already recorded and invoiced for ${status.service_period_start} to ${status.service_period_end} — no further usage to report`
+                                  : status.status === 'explicit_zero'
+                                    ? `${status.service_name ?? status.service_id}: reported zero for ${status.service_period_start} to ${status.service_period_end}`
+                                    : status.status === 'minimum_raised_zero'
+                                      ? `${status.service_name ?? status.service_id}: reported zero for ${status.service_period_start} to ${status.service_period_end} — the ${status.minimum_usage} minimum applies`
+                                      : status.status === 'attribution_excluded'
+                                        ? t('automaticInvoices.dialogs.preview.usageAttributionExcluded', {
+                                          service: status.service_name ?? status.service_id,
+                                          periodStart: status.service_period_start,
+                                          periodEnd: status.service_period_end,
+                                          defaultValue: `${status.service_name ?? status.service_id}: usage recorded for ${status.service_period_start} to ${status.service_period_end} is excluded until its contract-line attribution is resolved — resolve the attribution instead of recording more usage`,
+                                        })
+                                        : status.status === 'calculation_error'
+                                          ? t('automaticInvoices.dialogs.preview.usageCalculationError', {
+                                            service: status.service_name ?? status.service_id,
+                                            periodStart: status.service_period_start,
+                                            periodEnd: status.service_period_end,
+                                            defaultValue: `${status.service_name ?? status.service_id}: recorded usage for ${status.service_period_start} to ${status.service_period_end} could not be priced — fix the service pricing instead of recording more usage`,
+                                          })
+                                          : `${status.service_name ?? status.service_id}: ${status.status} for ${status.service_period_start} to ${status.service_period_end}`;
+                                return <li key={`${status.client_contract_line_id}:${status.service_id}`}>{label}</li>;
+                              })}
+                            </ul>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
                   <div className="border-b pb-4">
                     <h4 className="font-semibold">
                       {t('automaticInvoices.dialogs.preview.sections.clientDetails', {
@@ -3228,6 +3791,49 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       />
 
       <ConfirmationDialog
+        id="unreported-usage-omission-confirm"
+        isOpen={unreportedUsageAckState.isOpen}
+        onClose={() =>
+          setUnreportedUsageAckState({ isOpen: false, retry: null, failures: [], fromPreview: false })
+        }
+        title={t('automaticInvoices.dialogs.unreportedUsage.title', {
+          defaultValue: 'Usage not reported for this period',
+        })}
+        message={
+          <div className="space-y-2">
+            <p>
+              {t('automaticInvoices.dialogs.unreportedUsage.description', {
+                defaultValue:
+                  'These usage services have no report for the invoice window. Generating now leaves them off the invoice; they stay billable once their usage is reported.',
+              })}
+            </p>
+            <ul className="list-disc pl-5" data-testid="unreported-usage-omission-list">
+              {unreportedUsageAckState.failures.map((failure, index) => (
+                <li key={failure.executionIdentityKey ?? `ack-${index}`}>
+                  {t('automaticInvoices.dialogs.unreportedUsage.omittedItem', {
+                    services: failure.params?.services ?? '',
+                    periodStart: failure.params?.periodStart ?? '',
+                    periodEnd: failure.params?.periodEnd ?? '',
+                    defaultValue: `${failure.params?.services ?? ''}: no usage reported for ${failure.params?.periodStart ?? ''} to ${failure.params?.periodEnd ?? ''}`,
+                  })}
+                </li>
+              ))}
+            </ul>
+            <p>
+              {t('automaticInvoices.dialogs.unreportedUsage.question', {
+                defaultValue: 'Generate without these services?',
+              })}
+            </p>
+          </div>
+        }
+        confirmLabel={t('automaticInvoices.dialogs.unreportedUsage.confirm', {
+          defaultValue: 'Generate without unreported usage',
+        })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        onConfirm={handleAcknowledgeUnreportedUsage}
+      />
+
+      <ConfirmationDialog
         id="po-overage-batch-decision"
         isOpen={poOverageDialogState.isOpen}
         onClose={() =>
@@ -3312,6 +3918,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         confirmLabel={t('automaticInvoices.dialogs.poOverage.proceedConfirm', { defaultValue: 'Proceed Anyway' })}
         cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         onConfirm={handlePoOverageSingleConfirm}
+      />
+
+      <ConfirmationDialog
+        id="calendar-month-end-close-confirmation"
+        isOpen={monthEndCloseGroup !== null}
+        onClose={() => {
+          if (!isMonthEndClosing) {
+            setMonthEndCloseGroup(null);
+          }
+        }}
+        onConfirm={handleCalendarMonthEndClose}
+        title={t('automaticInvoices.monthEndClose.title', {
+          servicePeriod: monthEndCloseGroup?.parentSummary.servicePeriodLabel ?? '',
+          defaultValue: 'Close this period at month end?',
+        })}
+        message={
+          <div className="space-y-2" data-testid="calendar-month-end-close-warning">
+            <p>
+              {t('automaticInvoices.monthEndClose.warning', {
+                servicePeriod: monthEndCloseGroup?.parentSummary.servicePeriodLabel ?? '',
+                defaultValue:
+                  `This generates the arrears invoice for ${monthEndCloseGroup?.parentSummary.servicePeriodLabel ?? 'the period'} `
+                  + 'now, on its final calendar day, instead of waiting for the invoice window to open tomorrow.',
+              })}
+            </p>
+            <p className="font-medium text-warning">
+              {t('automaticInvoices.monthEndClose.omissionWarning', {
+                defaultValue: 'Time or usage entries recorded after this close will NOT be included on the invoice.',
+              })}
+            </p>
+          </div>
+        }
+        confirmLabel={isMonthEndClosing
+          ? t('manualInvoices.actions.processing', { defaultValue: 'Processing...' })
+          : t('automaticInvoices.monthEndClose.confirm', {
+            defaultValue: 'Generate at month end',
+          })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={isMonthEndClosing}
       />
       </>
   // Removed TooltipProvider closing tag

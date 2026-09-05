@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Rechnung zum Monatsende generieren",
+      "title": "Serviceperiode {{servicePeriod}} zum Monatsende abschließen?",
+      "warning": "Dadurch wird {{servicePeriod}} an seinem letzten Kalendertag abgerechnet. Zeit- oder Nutzungseinträge, die nach diesem Abschluss erfasst werden, werden nicht berücksichtigt. Schließen Sie die Periode daher erst ab, wenn die gesamte Arbeit vollständig erfasst ist.",
+      "confirm": "Zum Monatsende generieren",
+      "omissionWarning": "Zeit- oder Nutzungseinträge, die nach diesem Abschluss erfasst werden, werden NICHT auf der Rechnung berücksichtigt.",
+      "generationFailed": "Die Rechnung zum Monatsende konnte nicht generiert werden. Bitte versuchen Sie es erneut."
+    },
     "ready": {
       "title": "Bereit zur Rechnungsstellung",
       "description": "Überprüfen Sie wiederkehrende fällige Arbeiten und erstellen Sie Rechnungsentwürfe für die ausgewählten Zeiträume.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Rechnung stornieren",
       "deleteInvoice": "Rechnung löschen",
       "closePreview": "Vorschau schließen",
-      "generateInvoice": "Rechnung erstellen"
+      "generateInvoice": "Rechnung erstellen",
+      "recordUsage": "Verbrauch erfassen"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Gesamt"
         },
         "generating": "Generieren...",
-        "generateError": "Die Rechnung konnte aus der Vorschau nicht erstellt werden"
+        "generateError": "Die Rechnung konnte aus der Vorschau nicht erstellt werden",
+        "missingUsageHeading": "Für diesen Zeitraum wurde kein Verbrauch erfasst",
+        "missingUsageService": "{{service}}: keine Verbrauchsdatensätze für {{periodStart}} bis {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} ist ausgeschlossen, bis die Zuordnung zur Vertragsposition geklärt ist – kläre die Zuordnung, statt weiteren Verbrauch zu erfassen",
+        "usageCalculationError": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} konnte nicht bepreist werden – korrigiere die Dienstpreise, statt weiteren Verbrauch zu erfassen",
+        "recordScopedUsage": "Verbrauch erfassen: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} bis {{periodEnd}} — der erfasste Verbrauch konnte nicht bepreist werden. Prüfen Sie die Preiskonfiguration dieses Dienstes.",
+        "reportedPeriodTotalsHeading": "Gemeldete Zeitraummengen"
       },
       "poOverage": {
         "title": "Überschreitungen des Bestelllimits",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Trotzdem weitermachen?",
         "proceedConfirm": "Fahren Sie trotzdem fort",
         "skippedError": "Übersprungen wegen PO-Überschreitung ({{poLabel}}): über {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Kein Verbrauch für diesen Zeitraum gemeldet",
+        "description": "Für diese Verbrauchsdienste liegt im Rechnungsfenster keine Meldung vor. Bei der Erstellung jetzt bleiben sie von der Rechnung ausgenommen; sie bleiben abrechenbar, sobald ihr Verbrauch gemeldet ist.",
+        "omittedItem": "{{services}}: kein Verbrauch gemeldet für {{periodStart}} bis {{periodEnd}}",
+        "question": "Ohne diese Dienste erstellen?",
+        "confirm": "Ohne nicht gemeldeten Verbrauch erstellen"
       }
     },
     "history": {
@@ -344,6 +367,7 @@
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
       "generateFailed": "Fehler beim Generieren der Rechnung",
       "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest und versuche es erneut.",
+      "USAGE_RECORDS_MISSING": "Keine berücksichtigungsfähigen Verbrauchsdatensätze für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}}. Erfasse den Verbrauch für diesen Zeitraum (oder einen Null-Verbrauchseintrag), um diese Dienste abzurechnen.",
       "CLIENT_NOT_FOUND": "Der ausgewählte Kunde wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "SERVICE_NOT_FOUND": "Der Dienst {{serviceId}} wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
       "INVALID_QUANTITY": "Die Menge muss größer als null sein.",
@@ -354,7 +378,10 @@
       "UNEXPECTED": "Beim Generieren der Rechnung ist ein Fehler aufgetreten. Gib bei der Kontaktaufnahme mit dem Support die Referenz {{ref}} an.",
       "salesOrderGenerateFailed": "Die Kundenauftragsrechnung konnte nicht erstellt werden.",
       "salesOrderNothingToInvoice": "Für diesen Kundenauftrag ist nichts mehr abzurechnen.",
-      "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden."
+      "salesOrderNotInvoiceable": "Dieser Kundenauftrag kann nicht mehr abgerechnet werden.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dieses Rechnungsfenster enthält abrechenbare Positionen, aber für {{services}} wurde im Leistungszeitraum {{periodStart}} bis {{periodEnd}} kein Verbrauch gemeldet. Erfasse zuerst den Verbrauch oder bestätige ausdrücklich die Erstellung ohne ihn – die nicht gemeldeten Dienste bleiben später abrechenbar.",
+      "USAGE_PERIOD_TOTAL_STALE": "Die Vorschau ist veraltet: {{details}}. Führe die Vorschau erneut aus, um die aktuellen Zahlen zu sehen, und erstelle die Rechnung dann erneut.",
+      "USAGE_CALCULATION_ERROR": "Der Verbrauch für {{services}} im Leistungszeitraum {{periodStart}} bis {{periodEnd}} ist erfasst, konnte aber nicht bepreist werden. Korrigiere die Dienstpreise (Katalogpreis in der Vertragswährung, ein individueller Satz oder Preisstaffeln) und versuche es erneut. Erfasse keinen Ersatzverbrauch."
     },
     "warnings": {
       "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung einen Rechnungskontakt, eine Rechnungs-E-Mail-Adresse des Kunden oder eine E-Mail-Adresse am Rechnungs- oder Standardstandort fest."
@@ -2111,5 +2138,17 @@
       "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Für diese Meldung fehlt die Kunden- oder Dienstkonfiguration.",
+    "invalidQuantity": "Geben Sie für die Zeitraummenge eine ganze Zahl von 0 oder mehr ein.",
+    "saveError": "Die Zeitraummenge konnte nicht gespeichert werden.",
+    "retryError": "Die Zeitraummenge konnte nicht gespeichert werden. Wiederholen Sie die Übermittlung.",
+    "correct": "Gemeldete Menge von {{quantity}} für {{service}} korrigieren ({{periodStart}} bis {{periodEnd}})",
+    "report": "Zeitraummenge für {{service}} melden ({{periodStart}} bis {{periodEnd}})",
+    "quantityLabel": "Zeitraummenge für {{service}}",
+    "saving": "Wird gespeichert …",
+    "saveCorrection": "Korrektur speichern",
+    "save": "Speichern"
   }
 }

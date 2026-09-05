@@ -135,6 +135,16 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Calendar month-end close and grouped zero-dollar claims added persisted
+  // window readers and regression fixtures after the pass-0 snapshot.
+  'packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts',
+  'packages/billing/src/actions/groupedZeroDollarRecurringClaim.db.test.ts',
+  'packages/billing/src/actions/recurringBillingRunActions.ts',
+  'packages/billing/src/lib/billing/clientCadenceWindowMaterialization.ts',
+  'server/src/test/integration/billing/recurringInvoiceHistory.db.test.tsx',
+  'server/src/test/unit/billing/calendarMonthEndCloseActions.test.ts',
+  'server/src/test/unit/billing/calendarMonthEndClosePolicy.test.ts',
+  'shared/billingClients/calendarMonthEndClosePolicy.ts',
   'packages/billing/src/actions/billingAndTax.ts',
   'packages/billing/src/actions/billingCycleActions.ts',
   // Deferred-revenue reporting reads persisted service-period boundaries to

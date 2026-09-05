@@ -28,6 +28,7 @@ export interface ContractLineServiceMembershipAddition {
   quantity?: number;
   customRate?: number | null;
   configurationType: 'Fixed' | 'Hourly' | 'Usage';
+  rateTiers?: IContractLineServiceRateTier[];
   typeConfig?: Partial<
     IContractLineServiceFixedConfig |
     IContractLineServiceHourlyConfig |
@@ -45,6 +46,7 @@ type ContractLineServiceWithConfiguration = {
   configuration: IContractLineServiceConfiguration;
   typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
   userTypeRates?: IUserTypeRate[];
+  rateTiers?: IContractLineServiceRateTier[];
   bucketConfig?: IContractLineServiceBucketConfig | null;
 };
 
@@ -369,6 +371,7 @@ async function addServiceToLiveContractLine(
     IContractLineServiceUsageConfig |
     IContractLineServiceBucketConfig
   >,
+  rateTiers?: IContractLineServiceRateTier[],
 ): Promise<string> {
   const service = await tenantScopedTable(trx, tenant, 'service_catalog')
     .where({ service_id: serviceId })
@@ -464,9 +467,10 @@ async function addServiceToLiveContractLine(
       {
         configuration_type: configurationType,
         custom_rate: customRate,
-        quantity: quantity || 1,
+        quantity: configurationType === 'Usage' ? undefined : quantity ?? 1,
       },
       resolvedTypeConfig,
+      rateTiers,
     );
     return existingConfig.config_id;
   }
@@ -478,9 +482,10 @@ async function addServiceToLiveContractLine(
       service_id: serviceId,
       configuration_type: configurationType,
       custom_rate: customRate,
-      quantity: quantity || 1,
+      quantity: configurationType === 'Usage' ? undefined : quantity ?? 1,
     },
     resolvedTypeConfig,
+    rateTiers,
   );
 }
 
@@ -570,6 +575,7 @@ async function addServiceToContractLineInTransaction(
     IContractLineServiceUsageConfig |
     IContractLineServiceBucketConfig
   >,
+  rateTiers?: IContractLineServiceRateTier[],
 ): Promise<string> {
   const templateLine = await findTemplateLine(trx, tenant, contractLineId);
   if (templateLine) {
@@ -591,6 +597,7 @@ async function addServiceToContractLineInTransaction(
     customRate,
     configType,
     typeConfig,
+    rateTiers,
   );
 }
 
@@ -689,15 +696,9 @@ export const updateContractLineService = withAuth(async (
         baseUpdates.custom_rate = updates.customRate;
       }
 
-      const updateResult = await planServiceConfigActions.updateConfiguration(
-        config.config_id,
-        Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
-        updates.typeConfig,
-        rateTiers
-      );
-      if (isReturnedActionError(updateResult)) {
-        return updateResult;
-      }
+      const txService = new ContractLineServiceConfigurationService(trx, tenant);
+      await txService.updateConfiguration(config.config_id,
+        Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined, updates.typeConfig, rateTiers);
 
       if (
         config.configuration_type === 'Hourly' &&
@@ -811,6 +812,7 @@ export const applyContractLineServiceMembershipChanges = withAuth(async (
           addition.customRate,
           addition.configurationType,
           addition.typeConfig,
+          addition.rateTiers,
         );
       }
       return true;
@@ -970,8 +972,9 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
 
     result.push({
       service,
-      configuration: configToUse,
+      configuration: {...configToUse, ...configDetails.baseConfig},
       typeConfig: configDetails.typeConfig,
+      rateTiers: configDetails.rateTiers,
       userTypeRates: userTypeRates,
       bucketConfig: bucketConfigDetails // Add the merged bucket config
       });

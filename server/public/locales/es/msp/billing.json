@@ -211,6 +211,12 @@
       "updateError": "No se pudo actualizar el registro de uso",
       "deleteSuccess": "Registro de uso eliminado correctamente",
       "deleteError": "No se pudo eliminar el registro de uso"
+    },
+    "periodReport": "Informe de uso del período",
+    "periodAlreadyInvoiced": "Este período ya está facturado. Corríjalo mediante el proceso de ajuste de facturas.",
+    "periodFilter": {
+      "notice": "Mostrando el uso del período de servicio del {{start}} al {{end}}",
+      "clear": "Limpiar"
     }
   },
   "lineItem": {
@@ -666,7 +672,9 @@
     },
     "recurringRun": {
       "selectPeriods": "Seleccione al menos un período de facturación recurrente para generar.",
-      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas"
+      "invoicePermission": "Permiso denegado: se requiere permiso para crear o generar facturas",
+      "monthEndCloseNotMaterialized": "No se materializaron períodos de servicio recurrentes para esta ventana de ejecución recurrente.",
+      "monthEndCloseNotEligible": "El período {{servicePeriod}} solo se puede cerrar a fin de mes, el {{finalCalendarDay}}. Solo los períodos de servicio a mes vencido que abarcan un mes natural completo pueden cerrarse de forma anticipada en su último día calendario."
     },
     "recurringServicePeriod": {
       "scheduleKeyRequiredInspect": "Se requiere una clave de calendario para inspeccionar los períodos de servicio recurrentes.",

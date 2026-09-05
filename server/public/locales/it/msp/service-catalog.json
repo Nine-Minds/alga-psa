@@ -315,12 +315,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Soglia di utilizzo minimo",
-        "help": "Utilizzo minimo fatturabile per periodo (0 per nessun minimo)",
-        "errorNegative": "L'utilizzo minimo non può essere negativo"
+        "help": "Soglia minima applicata all'utilizzo registrato (0 per nessun minimo). Si applica solo quando il periodo ha un record di utilizzo — anche uno zero esplicito — e non crea mai un addebito da sola.",
+        "errorNegative": "L'utilizzo minimo non può essere negativo",
+        "labelAdditive": "Minimo per voce",
+        "labelPeriodTotal": "Minimo per comunicazione di periodo",
+        "helpAdditive": "Soglia minima applicata a ogni voce registrata (0 per nessun minimo). Si applica solo quando il periodo ha un record di consumo — anche uno zero esplicito — e non genera mai un addebito da sola.",
+        "helpPeriodTotal": "Soglia minima applicata una sola volta al conteggio comunicato del periodo (0 per nessun minimo). Si applica solo quando un conteggio è comunicato — anche uno zero esplicito — e non genera mai un addebito da sola."
       },
       "enableTieredPricing": "Abilita prezzi differenziati"
     },
     "title": "Configurazione basata sull'utilizzo",
+    "recordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questo servizio.",
     "tiers": {
       "title": "Livelli di prezzo",
       "addTier": "Aggiungi livello",
@@ -336,6 +341,18 @@
         "upperGreaterThanLower": "Il limite superiore del livello deve essere maggiore del limite inferiore",
         "rateNegative": "Le tariffe per livello non possono essere negative"
       }
+    },
+    "measurementMode": {
+      "label": "Come viene misurato il consumo?",
+      "additive": {
+        "label": "Registrare il consumo man mano che avviene",
+        "description": "Le voci datate si sommano: voci di 10 e 12 fatturano 22. Il minimo e le fasce si applicano a ogni voce. Il periodo successivo inizia senza voci."
+      },
+      "periodTotal": {
+        "label": "Comunicare un conteggio per ogni periodo",
+        "description": "Un conteggio per periodo di servizio sostituisce il precedente: correggere 10 in 12 fattura 12, mai 22. Il minimo e le fasce si applicano una sola volta a quel conteggio. Il periodo successivo inizia non comunicato — nessun conteggio viene riportato."
+      },
+      "transitionNote": "Il cambio di modalità ha effetto dal successivo periodo di servizio non fatturato. Le voci o i conteggi già registrati in un periodo aperto devono prima essere fatturati o rimossi."
     }
   },
   "rateTiers": {
@@ -396,12 +413,30 @@
         "label": "Allineamento del ciclo di fatturazione",
         "placeholder": "Seleziona l'allineamento",
         "help": "Controlla il modo in cui viene calcolata la copertura del periodo parziale quando la tariffa ricorrente deve essere ridotta a un periodo inferiore a quello del servizio completo."
+      },
+      "unitRate": {
+        "label": "Tariffa unitaria",
+        "placeholder": "0,00",
+        "help": "Tariffa fatturata per ogni postazione/unità in ogni periodo di servizio."
       }
     },
     "options": {
       "start": "Inizio del ciclo di fatturazione",
       "end": "Fine del ciclo di fatturazione",
       "prorated": "Copertura proporzionale"
+    },
+    "pricingBasis": {
+      "label": "Come viene prezzato questo servizio?",
+      "bundle": {
+        "label": "Prezzo del pacchetto",
+        "description": "Viene fatturato il totale fisso della riga di contratto. Le quantità su questo servizio ripartiscono solo una quota di quel totale a fini di reportistica — non sono postazioni fatturabili e modificarle non cambia l'importo fatturato.",
+        "allocationNote": "Quantità di ripartizione: {{quantity}} — serve a suddividere il totale del pacchetto per la reportistica, non è fatturata come postazioni."
+      },
+      "unit": {
+        "label": "Postazioni/unità ricorrenti",
+        "description": "Fattura quantità × tariffa unitaria in ogni periodo, senza che alcun totale di riga abbia la precedenza. La stessa quantità e tariffa vengono fatturate di nuovo il periodo successivo finché non programmi una modifica. Una quantità pari a zero fattura zero.",
+        "summary": "{{quantity}} × {{rate}} (postazioni ricorrenti) = {{total}} per periodo"
+      }
     }
   },
   "bucketConfig": {

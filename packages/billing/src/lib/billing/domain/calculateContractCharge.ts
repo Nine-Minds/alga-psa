@@ -147,6 +147,7 @@ export function normalizeResolvedContractCharge(input: {
           baseRate: service.service_base_rate,
           enableProration: service.enable_proration,
           quantity: service.quantity,
+          pricingBasis: service.pricing_basis,
         })),
         fallbackService: charge.inputs.fallbackService
           ? {
@@ -223,6 +224,8 @@ export function normalizeResolvedContractCharge(input: {
           quantity: record.quantity,
           taxRateId: record.tax_rate_id,
           currencyRate: record.currency_rate,
+          periodTotalId: record.period_total_id ?? null,
+          periodTotalRevision: record.period_total_revision ?? null,
         })),
       };
       break;
@@ -372,6 +375,7 @@ export function calculateNormalizedContractCharge(
             service_base_rate: service.baseRate,
             enable_proration: service.enableProration,
             quantity: service.quantity,
+            pricing_basis: service.pricingBasis,
           })),
           fallbackService: facts.fallbackService
             ? {
@@ -475,6 +479,12 @@ export function calculateNormalizedContractCharge(
             quantity: record.quantity,
             tax_rate_id: record.taxRateId,
             currency_rate: record.currencyRate,
+            ...(record.periodTotalId
+              ? {
+                  period_total_id: record.periodTotalId,
+                  period_total_revision: Number(record.periodTotalRevision ?? 1),
+                }
+              : {}),
           })),
           contractCurrency: facts.line.currencyCode,
           billingProfile: facts.billingProfile,
