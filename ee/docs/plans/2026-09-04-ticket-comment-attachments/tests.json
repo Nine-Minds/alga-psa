@@ -53,5 +53,10 @@
     "id": "T011",
     "description": "Opt-in isolated real PgBoss worker-count and committed publication recovery through real SMTP, exact PDF MIME, delivery deduplication and fixture cleanup",
     "implemented": true
+  },
+  {
+    "id": "T012",
+    "description": "Actual concurrent same-queue discovery, shared scheduler registration failure/retry and replacement handler execution without duplicate workers, and cache invalidation on stop",
+    "implemented": true
   }
 ]

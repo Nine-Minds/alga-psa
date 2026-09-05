@@ -53,5 +53,10 @@
     "id": "F011",
     "description": "Reuse successful and in-flight runner initialization; retry failed initialization without repeating completed worker registrations",
     "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Coordinate concurrent PgBoss registrations per queue, sharing failures and retry while preserving successful workers",
+    "implemented": true
   }
 ]

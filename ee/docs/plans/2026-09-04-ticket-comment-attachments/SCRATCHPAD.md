@@ -47,3 +47,12 @@
 - Jobs/shared/email builds, jobs/server/Temporal typechecks and the Temporal production build pass. Next production build uses isolated `.next-worker-review`; existing development environment and unrelated diffs are byte-identical.
 
 - Final production Next build passed (exit 0), with warnings in unchanged workflow imports and dynamic rendering and separate passing server typecheck. Removed only its generated `.next-worker-review` output. Port 3653 returned HTTP 200; environment and unrelated diffs remain unchanged.
+
+## Concurrent queue review follow-up
+
+- Awaited registration exposed a same-queue race between separate schedule installers. PgBoss now shares one pending/successful registration promise per queue, clears rejection once for all waiters, and retries without recreating successful workers. Existing consumers read the latest successfully registered handler.
+- Three new regressions failed before repair and pass afterward; all six initialization regressions remain. The independent reviewer reproducer and 47 focused tests including real PgBoss/SMTP recovery passed. A fourth new regression covers clearing cached worker registration on successful stop. No schema, attachment API or environment changes.
+
+- Final server typecheck passed after the stop-cache cleanup. Production builds use isolated `.next-queue-review` to preserve the active dev output. The exact reviewer reproducer remains at its supplied /tmp location; only the temporary checkout copy was removed.
+
+- Final production Next build passed after the stop-cache change; temporary output removed. Port 3653 is HTTP 200. Original environment and unrelated changes preserved and excluded from the local repair commit; no push or PR.

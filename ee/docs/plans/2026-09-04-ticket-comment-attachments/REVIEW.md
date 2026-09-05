@@ -4,6 +4,8 @@ The work order is the primary specification. No approved full-feature design pla
 
 ## Inspect first
 
+For the concurrent-queue follow-up, inspect `PgBossJobRunner.registerHandler` first: one promise per queue coordinates overlapping callers, rejects every waiter on failure, and retains successful workers. Then review the same-queue discovery and concurrent failure/retry cases added to `commentRecoveryWorkerRegistration.test.ts`.
+
 For this round-3 repair, review **initialization caching, concurrent callers and failed-initialization recovery** in `server/src/lib/jobs/initializeJobRunner.ts` first, then the worker-count regression in `server/src/test/unit/jobs/commentRecoveryWorkerRegistration.test.ts`. The PgBoss registration promise must resolve before a handler counts as installed; successful earlier registrations must survive a later failure. The feature-wide review pointers remain below.
 
 1. **Authorization:** `shared/lib/ticketCommentAttachments.ts`, `client-documents.ts`, `ticketCommentAttachmentEmail.ts`, and the signed download route. The portal global query applies lifecycle, public publication, client and board visibility before pagination, counts and folder discovery. An additional document association cannot bypass it. Email bytes use current canonical document authorization, including document visibility and existing account permissions. Guest recipients must remain eligible contacts for the same client/ticket; disabled or restricted accounts cannot fall through to guest access.
@@ -87,3 +89,19 @@ NODE_OPTIONS=--max-old-space-size=12288 NEXT_DIST_DIR=.next-worker-review npm ru
 ```
 
 Redis verification used `REAL_REDIS=1 TEST_REDIS_URL=redis://127.0.0.1:6380`, with the existing secret passed without printing it. Jobs, shared and email package builds, jobs/server/Temporal typechecks and the Temporal production build passed. The production Next build also passed (exit 0) with isolated `.next-worker-review`, which was removed afterward. It reported warnings in unchanged workflow imports and dynamic rendering; type validation is skipped by Next configuration, so the separately passing server typecheck is the type-safety evidence. Final HTTP health on port 3653 returned 200. No push or PR was created.
+
+
+## Concurrent tenant-queue registration follow-up
+
+- The prior application-initialization cache did not serialize independent recurring schedule installers. Two discovery instances could each see an absent tenant handler before either `boss.work` completed. The independent `/tmp/reviewerConcurrentQueue.test.ts` reproducer exercises actual initialization, discovery and `scheduleRecurringJob`.
+- PgBoss now keeps one worker registration promise per queue. Pending callers await the same attempt; successful calls reuse the worker. A single rejection handler removes the failed attempt before propagating the same error to every waiter, allowing subsequent calls to coalesce around a fresh retry. Handler readiness is still recorded only after success. A replacement handler is read by the existing worker instead of creating another consumer. Successful stop clears the registration cache so stopped workers cannot be reported as registered from stale promises.
+- Three new behavioral cases failed before this repair and pass afterward: overlapping discoveries install one tenant worker, concurrent scheduler calls share failure and a single successful retry, and replacing a handler reuses its worker while executing the replacement. The original six initialization regressions remain intact, and an additional regression checks that registration after stop cannot return cached success. The exact independent reviewer reproducer also passed; its temporary checkout copy was removed.
+- The final combined **47-test run passed**: ten registration/initialization tests, three workflow queue rehydration tests, two PostgreSQL discovery tests, 31 attachment/publication tests including the live PgBoss-to-SMTP recovery smoke, and Temporal recovery forwarding. The independent reviewer reproducer passed separately. Live smoke again confirmed one registration per intended handler across repeated discovery and one matching SMTP PDF delivery after recovery. No attachment, schema, provider or UI behavior was changed. Live Temporal and paid-provider verification remain outside this local run.
+
+Command from `server`:
+
+```sh
+COMMENT_RECOVERY_LIVE_SMOKE=1 TEST_DB_NAME=test_comment_attachments_draft DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run src/test/unit/jobs/commentRecoveryWorkerRegistration.test.ts src/test/integration/commentRecoveryScheduleDiscoveryIntegration.test.ts src/test/integration/ticketCommentAttachmentsIntegration.test.ts src/test/unit/jobs/commentRecoveryTemporalForwarding.test.ts src/test/unit/reconcileWorkflowSchedulePgBossHandlers.unit.test.ts
+```
+
+Final follow-up checks: server typecheck and production Next build both passed after the stop-cache change. The build used `NODE_OPTIONS=--max-old-space-size=12288 NEXT_DIST_DIR=.next-queue-review npm run build`; isolated output was removed after verification. It reported warnings in unchanged workflow imports and dynamic rendering. Port 3653 returned HTTP 200, the environment file and unrelated package-lock/migration CLI diffs stayed byte-identical, and live-smoke PostgreSQL fixtures/schema were cleaned. The scoped repair is committed locally without a push or PR.

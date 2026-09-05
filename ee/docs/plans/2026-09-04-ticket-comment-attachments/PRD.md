@@ -9,3 +9,5 @@ Publication must happen after commit. Uploads and edits alone never send email. 
 Acceptance: behavioral database tests for claim races, ownership, visibility, lifecycle, shared content, exact email selection, CID deduplication, limits/link expiry and recipient binding, plus focused UI/email smoke on the local stack and applicable typechecking. Report any incomplete coverage or behavior explicitly.
 
 Review repair acceptance: recurring discovery reuses successful runner initialization, coalesces concurrent initialization, and retries failures without recreating workers registered before a partial failure. Preserve the factory lifecycle and existing tenant schedule discovery; no schema or attachment API changes.
+
+Concurrent recurring schedule installers must share per-queue worker registration, observe the same failed attempt, and retry without duplicating successful workers.
