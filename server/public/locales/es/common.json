@@ -1598,5 +1598,16 @@
   },
   "callLink": {
     "teamsCall": "Llamar en Microsoft Teams"
+  },
+  "emailPreferences": {
+    "loading": "Cargando preferencias de correo…",
+    "saving": "Guardando preferencias de correo…",
+    "slow": "Esto está tardando más de lo habitual. Espere la confirmación antes de realizar más cambios.",
+    "loadError": "No se pudieron cargar las preferencias guardadas. Reintente para confirmar su configuración.",
+    "saveError": "No se pudo confirmar el guardado. Revise sus preferencias guardadas e inténtelo de nuevo.",
+    "retry": "Reintentar",
+    "disabledByAdmin": "Desactivado por el administrador",
+    "mixed": "Parcialmente activado",
+    "empty": "No hay categorías de notificaciones por correo disponibles."
   }
 }

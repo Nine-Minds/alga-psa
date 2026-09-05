@@ -1598,5 +1598,16 @@
   },
   "callLink": {
     "teamsCall": "In Microsoft Teams anrufen"
+  },
+  "emailPreferences": {
+    "loading": "E-Mail-Einstellungen werden geladen…",
+    "saving": "E-Mail-Einstellungen werden gespeichert…",
+    "slow": "Dies dauert länger als üblich. Weitere Änderungen sind nach der Bestätigung möglich.",
+    "loadError": "Gespeicherte E-Mail-Einstellungen konnten nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "saveError": "Speichern nicht bestätigt. Prüfen Sie Ihre gespeicherten Einstellungen und versuchen Sie es erneut.",
+    "retry": "Erneut versuchen",
+    "disabledByAdmin": "Vom Administrator deaktiviert",
+    "mixed": "Teilweise aktiviert",
+    "empty": "Keine E-Mail-Benachrichtigungskategorien verfügbar."
   }
 }

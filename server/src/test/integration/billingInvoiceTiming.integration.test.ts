@@ -1895,7 +1895,7 @@ it('T071: usage recurring charges bill usage records that fall inside a contract
   }
 }, HOOK_TIMEOUT);
 
-it('T072: usage recurring charges with no usage inside the service period produce no recurring invoice line while preserving due-window identity', async () => {
+it('T072: usage recurring charges with no usage inside the service period refuse generation with a coded USAGE_RECORDS_MISSING failure and write nothing', async () => {
   setupCommonMocks({ tenantId, userId: 'contract-usage-empty-user', permissionCheck: () => true });
 
   const { contextLike } = await createClientWithRecurringCycles({
@@ -1940,13 +1940,31 @@ it('T072: usage recurring charges with no usage inside the service period produc
     windowEnd: '2025-03-08T00:00:00Z',
   });
 
-  const invoice = await generateInvoiceForSelectionInput(selectorInput);
-  expect(invoice).toMatchObject({
-    billing_cycle_id: null,
-    subtotal: 0,
-    total: 0,
+  // Usage billing is record-driven: neither seeded record falls inside the
+  // 2025-02-08 → 2025-03-07 service period, and "no eligible record" means
+  // missing usage — not zero. Generation refuses with the coded failure that
+  // routes the operator to record usage (or a zero-usage entry) instead of
+  // silently finalizing the window with a zero-total invoice.
+  const result = await generateInvoiceForSelectionInput(selectorInput);
+  expect(result).toMatchObject({
+    messageKey: 'msp/invoicing:manualInvoices.errors.USAGE_RECORDS_MISSING',
+    messageParams: {
+      services: 'Contract Usage Empty Service',
+      serviceIds: usageLine.serviceId,
+      periodStart: '2025-02-08',
+      periodEnd: '2025-03-07',
+    },
   });
-  expect(invoice?.invoice_charges ?? []).toHaveLength(0);
+  expect((result as { actionError?: string }).actionError).toContain(
+    'No eligible usage records for Contract Usage Empty Service',
+  );
+
+  // The refusal commits nothing: no invoice row exists for the client, so a
+  // retry after recording usage starts from a clean window.
+  const persistedInvoices = await tenantTable(db, tenantId, 'invoices')
+    .where({ tenant: tenantId, client_id: contextLike.clientId })
+    .select(['invoice_id']);
+  expect(persistedInvoices).toHaveLength(0);
 }, HOOK_TIMEOUT);
 
 it('T073: mixed recurring invoice generation can combine fixed, hourly, and usage content under one service-driven execution window when the commercial model requires it', async () => {
