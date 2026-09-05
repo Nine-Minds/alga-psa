@@ -20,6 +20,8 @@ interface FixedServiceConfigPanelProps {
   quantity?: number | null;
   onConfigurationChange: (updates: Partial<IContractLineServiceFixedConfig>) => void;
   onPlanFixedConfigChange: (updates: Partial<IContractLineFixedConfig>) => void;
+  currencyCode?: string;
+  idPrefix?: string;
   className?: string;
   disabled?: boolean;
 }
@@ -31,6 +33,8 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
     quantity,
     onConfigurationChange,
     onPlanFixedConfigChange,
+    currencyCode,
+    idPrefix = '',
     className = '',
     disabled = false,
   } = props;
@@ -58,9 +62,14 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
 
   useEffect(() => {
     setPricingBasis(configuration.pricing_basis === 'unit' ? 'unit' : 'bundle');
-    setUnitRateInput(
-      configuration.base_rate == null ? '' : (Number(configuration.base_rate) / 100).toFixed(2)
-    );
+    setUnitRateInput(current => {
+      const cents = configuration.base_rate == null ? null : Number(configuration.base_rate);
+      if (cents === null) return current === '.' ? current : '';
+      // Keep the text being typed when it already represents the saved cents.
+      // Formatting every keystroke would turn "1" into "1.00" mid-entry.
+      return Math.round(Number.parseFloat(current) * 100) === cents
+        ? current : (cents / 100).toFixed(2);
+    });
   }, [configuration.pricing_basis, configuration.base_rate]);
 
   const handleEnableProrateChange = (checked: boolean) => {
@@ -128,8 +137,8 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
             {t('fixedConfig.pricingBasis.label', { defaultValue: 'How does this service price?' })}
           </Label>
           <RadioGroup
-            id="fixed-pricing-basis"
-            name="fixed-pricing-basis"
+            id={`${idPrefix}fixed-pricing-basis`}
+            name={`${idPrefix}fixed-pricing-basis`}
             value={pricingBasis}
             onChange={handlePricingBasisChange}
             disabled={disabled}
@@ -158,11 +167,11 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
 
         {pricingBasis === 'unit' && (
           <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))] space-y-2">
-            <Label htmlFor="fixed-service-unit-rate">
+            <Label htmlFor={`${idPrefix}fixed-service-unit-rate`}>
               {t('fixedConfig.fields.unitRate.label', { defaultValue: 'Unit rate' })}
             </Label>
             <Input
-              id="fixed-service-unit-rate"
+              id={`${idPrefix}fixed-service-unit-rate`}
               type="text"
               inputMode="decimal"
               value={unitRateInput}
@@ -178,8 +187,8 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
                 : t('fixedConfig.pricingBasis.unit.summary', {
                     defaultValue: '{{quantity}} × {{rate}} (recurring seats) = {{total}} per period',
                     quantity: seatQuantity,
-                    rate: money(unitRateCents),
-                    total: money(Math.ceil(seatQuantity * Math.ceil(unitRateCents))),
+                    rate: money(unitRateCents, currencyCode),
+                    total: money(Math.ceil(seatQuantity * Math.ceil(unitRateCents)), currencyCode),
                   })}
             </p>
           </div>
@@ -197,12 +206,12 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
 
         <div className="flex items-center space-x-2 pt-2">
           <Switch
-            id="fixed-service-enable-proration"
+            id={`${idPrefix}fixed-service-enable-proration`}
             checked={enableProration}
             onCheckedChange={handleEnableProrateChange}
             disabled={disabled}
           />
-          <Label htmlFor="fixed-service-enable-proration" className="cursor-pointer">
+          <Label htmlFor={`${idPrefix}fixed-service-enable-proration`} className="cursor-pointer">
             {t('fixedConfig.fields.adjustForPartialPeriods', {
               defaultValue: 'Adjust for Partial Periods',
             })}
@@ -211,13 +220,13 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
 
         {enableProration && (
           <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))]">
-            <Label htmlFor="fixed-service-billing-cycle-alignment">
+            <Label htmlFor={`${idPrefix}fixed-service-billing-cycle-alignment`}>
               {t('fixedConfig.fields.billingCycleAlignment.label', {
                 defaultValue: 'Billing Cycle Alignment',
               })}
             </Label>
             <CustomSelect
-              id="fixed-service-billing-cycle-alignment"
+              id={`${idPrefix}fixed-service-billing-cycle-alignment`}
               options={alignmentOptions}
               onValueChange={handleBillingCycleAlignmentChange}
               value={billingCycleAlignment}

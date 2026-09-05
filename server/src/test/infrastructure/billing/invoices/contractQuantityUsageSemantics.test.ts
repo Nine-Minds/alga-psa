@@ -1,3 +1,5 @@
+import { createCustomContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
+import { getConfigurationWithDetails, updateConfiguration } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
 import knexFactory from 'knex';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import * as invoiceService from '@alga-psa/billing/services/invoiceService';
@@ -279,6 +281,73 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     return { serviceId, contractLineId, configId, billingCycleId, ...assignment };
   }
+
+  describe('active custom-line UI persistence boundary', () => {
+    it.each(['additive', 'period_total'] as const)('persists %s measurement, minimum and tier rates through the custom-line creation action', async measurementMode => {
+      const setup = await setupUsageLine();
+      const lineId = await createCustomContractLine(setup.contractId, {
+        contract_line_name: 'Explicit usage intent', contract_line_type: 'Usage', billing_frequency: 'monthly',
+        services: [{ service_id: setup.serviceId, custom_rate: 8525, unit_of_measure: 'seat',
+          measurement_mode: measurementMode, minimum_usage: 5, enable_tiered_pricing: true,
+          rate_tiers: [{ min_quantity: 0, max_quantity: null, rate: 7500 }] }],
+      });
+      expect(typeof lineId).toBe('string');
+      const config = await context.db('contract_line_service_configuration').where({tenant: context.tenantId, contract_line_id: lineId}).first();
+      const usage = await context.db('contract_line_service_usage_config').where({tenant: context.tenantId, config_id: config.config_id}).first();
+      expect(config.quantity).toBeNull();
+      expect(usage).toMatchObject({measurement_mode: measurementMode, minimum_usage: 5, enable_tiered_pricing: true, unit_of_measure: 'seat'});
+      expect(Number(usage.base_rate)).toBe(8525);
+      const tiers = await context.db('contract_line_service_rate_tiers').where({tenant: context.tenantId, config_id: config.config_id});
+      expect(tiers).toHaveLength(1);
+      expect(Number(tiers[0].rate)).toBe(7500);
+      expect(tiers[0].max_quantity).toBeNull();
+      expect(await context.db('usage_tracking').where({tenant: context.tenantId})).toHaveLength(0);
+      expect(await context.db('usage_period_totals').where({tenant: context.tenantId})).toHaveLength(0);
+    });
+
+    it.each([10, 0])('persists recurring unit pricing and quantity %s without creating usage or invoices', async quantity => {
+      const setup = await setupUsageLine();
+      const lineId = await createCustomContractLine(setup.contractId, {
+        contract_line_name: 'Recurring seats', contract_line_type: 'Fixed', billing_frequency: 'monthly',
+        services: [{service_id: setup.serviceId, pricing_basis: 'unit', quantity, custom_rate: 10025}],
+        base_rate: null,
+      });
+      expect(typeof lineId).toBe('string');
+      const config = await context.db('contract_line_service_configuration').where({tenant: context.tenantId, contract_line_id: lineId}).first();
+      const fixed = await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: config.config_id}).first();
+      expect(Number(config.quantity)).toBe(quantity);
+      expect(fixed.pricing_basis).toBe('unit');
+      expect(Number(fixed.base_rate)).toBe(10025);
+      expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
+    });
+
+    it('rejects invalid recurring unit pricing before creating a line', async () => {
+      const setup = await setupUsageLine();
+      const before = await context.db('contract_lines').where({tenant: context.tenantId});
+      const result = await createCustomContractLine(setup.contractId, {
+        contract_line_name: 'Invalid seats', contract_line_type: 'Fixed', billing_frequency: 'monthly',
+        services: [{service_id: setup.serviceId, pricing_basis: 'unit', quantity: -1, custom_rate: 10000}],
+      });
+      expect(result).toHaveProperty('actionError');
+      expect(await context.db('contract_lines').where({tenant: context.tenantId})).toHaveLength(before.length);
+    });
+
+    it('the active editor action schedules mode and pricing together and keeps the previous period unchanged', async () => {
+      const setup = await setupUsageLine({measurementMode: 'additive', minimumUsage: 2});
+      await setupInvoiceCycle(2023, 3, 1);
+      expect(await updateConfiguration(setup.configId, {custom_rate: 2000}, {
+        measurement_mode: 'period_total', minimum_usage: 7, base_rate: 2000,
+        enable_tiered_pricing: true, unit_of_measure: 'seat', effective_period_start: '2023-02-01',
+      }, [{min_quantity: 0, max_quantity: undefined, rate: 1500}])).toBe(true);
+      const january: any = await getConfigurationWithDetails(setup.configId, '2023-01-01');
+      const february: any = await getConfigurationWithDetails(setup.configId, '2023-02-01');
+      expect(january.typeConfig).toMatchObject({measurement_mode: 'additive', minimum_usage: 2});
+      expect(Number(january.typeConfig.base_rate)).toBe(1000);
+      expect(february.typeConfig).toMatchObject({measurement_mode: 'period_total', minimum_usage: 7, base_rate: 2000, enable_tiered_pricing: true});
+      expect(Number(february.rateTiers[0].rate)).toBe(1500);
+      expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
+    });
+  });
 
   async function setupInvoiceCycle(year: number, month: number, day: number) {
     const endDate = new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10);

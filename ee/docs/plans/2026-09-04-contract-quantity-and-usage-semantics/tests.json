@@ -172,5 +172,31 @@
       "F023",
       "F025"
     ]
+  },
+  {
+    "id": "T016",
+    "description": "Rendered active custom-line dialog: save additive/period-total mode with minimum and tier prices; save recurring unit pricing with positive and zero quantity; isolate multiple service controls; require an explicit recurring rate.",
+    "implemented": true,
+    "featureIds": [
+      "F026"
+    ]
+  },
+  {
+    "id": "T017",
+    "description": "Rendered active editor and legacy overview: load effective usage prices, submit mode/minimum/rate at the displayed date, reload on boundary changes, block blank boundaries, surface transition rejection, and describe the manual seat handoff truthfully.",
+    "implemented": true,
+    "featureIds": [
+      "F027",
+      "F028"
+    ]
+  },
+  {
+    "id": "T018",
+    "description": "Migrated isolated PostgreSQL: create custom Usage and Fixed lines through production actions, assert persisted measurement/pricing basis and minor units, reject negative seats before mutation, and preserve earlier period pricing through the active editor action.",
+    "implemented": true,
+    "featureIds": [
+      "F026",
+      "F027"
+    ]
   }
 ]

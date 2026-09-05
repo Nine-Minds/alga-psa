@@ -148,6 +148,8 @@ describe('contract overview legacy usage transition', () => {
 
     const guidance = await screen.findByTestId('legacy-transition-recurring-seats');
     expect(guidance.textContent).toContain('Fixed contract line priced by recurring seats/units');
+    expect(guidance.textContent).toContain('does not convert or close this Usage service');
+    expect(guidance.textContent).not.toContain('until you remove it');
     // There is no confirm button here: creating a seat commitment is authored
     // on the Fixed line, not silently from this dialog.
     expect(document.getElementById('usage-legacy-transition-confirm')).toBeNull();

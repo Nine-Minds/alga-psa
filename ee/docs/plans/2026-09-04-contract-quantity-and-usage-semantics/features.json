@@ -198,5 +198,32 @@
     "prdRefs": [
       "Acceptance criteria"
     ]
+  },
+  {
+    "id": "F026",
+    "description": "The active Create Custom dialog exposes and persists per-service Usage measurement, minimums and tiers, and Fixed bundle versus recurring-unit quantity and rate.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics",
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "The active Contract Lines editor loads effective Usage pricing, displays the service-period boundary, and saves measurement and prices through the guarded transition, including after invoicing.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics",
+      "R8 — Deliberate transition and history preservation"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "The recurring-seat legacy handoff explains separate commitment creation without promising automatic source closure or a scheduled conversion.",
+    "implemented": true,
+    "prdRefs": [
+      "R1 — Explicit agreement semantics",
+      "R8 — Deliberate transition and history preservation"
+    ]
   }
 ]

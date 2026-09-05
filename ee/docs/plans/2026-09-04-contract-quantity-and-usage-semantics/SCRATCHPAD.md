@@ -150,3 +150,26 @@ All four independently reported failures were reproduced in permanent PostgreSQL
 Verification: four infrastructure suites passed **71/71** tests, including eight new behavioral cases, on PostgreSQL 5472 with isolated `TEST_DB_NAME=quantity_review_followup_final_20260905`. The full billing package passed **1194 tests, 38 skipped**; server run/page/report suites passed **24/24**. Billing/shared/server TypeScript checks passed, including the final server check with a 24576 MB heap. The final eight-case PostgreSQL rerun also passed; the final unchanged-source production build passed (exit 0), with nonfatal webpack dynamic-dependency/cache and static-render warnings. Next skips type validation, so all three independent TypeScript checks were run. No customer accounts or live invoices were changed in this follow-up. Wider-plan completion flags remain unchanged.
 
 Review `usageMeasurementTransitions.ts` and the configuration service's partial pricing payload first, then the transactional delete history and canonical additive date fixes. The permanent regressions are in `contractQuantityUsageSemantics.test.ts`.
+
+
+## Active UI recovery (2026-09-05)
+
+Starting HEAD: `dde3e81954fa8e2c32fc2e8792f288d61bb37636`. Work stays in the existing feature checkout. No production/customer data or workflow-board state was changed.
+
+- The normal route is Contracts → open contract → Contract Lines → Create Custom. That dialog now renders the shared Usage and Fixed semantic panels. Usage saves explicit additive/period-total measurement, minimum and tiers. Fixed saves bundle/unit basis, agreed quantity (including zero), unit rate and partial-period settings. Unit summaries use the contract currency; an all-unit line has no hidden bundle total. Each service has independent radio/input identifiers.
+- The creation action, configuration service and configuration models previously dropped semantic fields. They now persist those fields together; new Usage configurations have no configured quantity. Creation validates explicit recurring quantity/rate before creating any rows.
+- Contract Lines → Edit now loads Usage settings at the displayed effective boundary, including scheduled rates, minimums and tiers. Save uses `updateConfiguration`, whose existing transactional service delegates to `setUsageMeasurementModeInTransaction`. Previously invoiced lines permit prospective Usage edits while preserving line settings and membership. Changing the boundary reloads its effective prices; blank required boundaries block Save, and rejected transitions keep their actionable error.
+- Usage tiers follow boundary changes, including clearing a prior tier schedule. New service memberships carry selected tiers. Legacy recurring-seat guidance explains separate Fixed commitment creation without claiming an atomic source conversion or a next-period start.
+- Full wizard/preset/template parity and atomic Usage-to-Fixed conversion remain outside this recovery. Existing broader incomplete flags stay false. Added F026–F028 and T016–T018 describe this verified scope.
+
+Validation uses rendered components with action spies and the production actions against migrated, isolated PostgreSQL at `127.0.0.1:5472`. Databases: `usage_ui_recovery_20260905` and `usage_ui_recovery_final_20260905`; credentials were read from local secret files without printing them. No live product-browser smoke or production build was run in this recovery.
+
+Evidence:
+
+- `/tmp/usage-ui-tests.log`: seven focused billing UI/action suites, **33 passed**. Includes Create Custom, active Contract Lines editing, existing service editors, membership/preset compatibility, and the legacy overview handoff. Tests assert behavior and submitted values rather than source strings.
+- `/tmp/usage-ui-db-tests.log`: full quantity/usage infrastructure suite, **63 passed**, including six new production-action persistence/effective-boundary cases and the existing invoice, retry, concurrency and history regressions.
+- `/tmp/usage-ui-db-focused.log`: final six-case persistence rerun, **6 passed**, additionally asserts new Usage configuration quantity is NULL.
+- `/tmp/usage-ui-typecheck.log` and `/tmp/usage-ui-server-typecheck.log`: billing and server TypeScript checks passed. Server used `NODE_OPTIONS=--max-old-space-size=24576`; both used `--noEmit --incremental false`.
+- Plan validation and `git diff --check` passed.
+
+The filesystem filled during editing. The interrupted action file was reconstructed from the starting commit plus the intended patch. Generated Next dev cache was moved to `/tmp/usage-ui-recovery-next-cache-20260905`; source diff and tests were rechecked after recovery. Existing runtime/database fixes remain in place.

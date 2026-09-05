@@ -161,3 +161,9 @@ Keep the existing branch's date, authorization, routing, and deduplication fixes
 7. Legacy quantities remain visible as non-billing reference data; a deliberate prospective transition cannot orphan records or double-charge a period.
 8. Reports reconcile recurring unit/bundle calculations and cadence normalization, separate currencies, and label variable usage without implying zero contract value.
 9. Representative DB-backed and UI tests in `tests.json` pass using isolated data. No source-string tests substitute for behavior, and no customer-account changes occur during validation.
+
+## Active authoring surfaces
+
+Contract Lines → Create Custom must use the same semantic controls as the service configuration editor. Save the selected Usage measurement, minimum and tier prices, or Fixed pricing basis, quantity and unit rate through the custom-line creation action and configuration models. The active Contract Lines editor must load Usage prices for the displayed effective boundary and save them with measurement mode through the transactional transition action, including on previously invoiced contracts. Clearing a required boundary disables Save.
+
+The legacy recurring-seat link remains a manual handoff until the atomic transition in R8 is implemented. Its instructions must explain that a newly created Fixed commitment does not close the source Usage configuration or schedule a conversion.

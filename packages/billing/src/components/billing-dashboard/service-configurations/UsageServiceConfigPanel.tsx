@@ -19,6 +19,7 @@ interface UsageServiceConfigPanelProps {
   rateTiers?: IContractLineServiceRateTier[];
   onConfigurationChange: (updates: Partial<IContractLineServiceUsageConfig>) => void;
   onRateTiersChange?: (tiers: IContractLineServiceRateTier[]) => void;
+  idPrefix?: string;
   className?: string;
   disabled?: boolean;
 }
@@ -30,11 +31,14 @@ interface TierData {
   rate: number;
 }
 
+const EMPTY_RATE_TIERS: IContractLineServiceRateTier[] = [];
+
 export function UsageServiceConfigPanel({
   configuration,
-  rateTiers = [],
+  rateTiers = EMPTY_RATE_TIERS,
   onConfigurationChange,
   onRateTiersChange,
+  idPrefix = '',
   className = '',
   disabled = false
 }: UsageServiceConfigPanelProps) {
@@ -54,7 +58,7 @@ export function UsageServiceConfigPanel({
     rateTiers.map(tier => ({
       id: tier.tier_id || Date.now().toString(),
       min_quantity: tier.min_quantity,
-      max_quantity: tier.max_quantity || null,
+      max_quantity: tier.max_quantity ?? null,
       rate: tier.rate
     }))
   );
@@ -70,22 +74,17 @@ export function UsageServiceConfigPanel({
     setEnableTieredPricing(configuration.enable_tiered_pricing || false);
     setMinimumUsage(configuration.minimum_usage || 0);
     setMeasurementMode(configuration.measurement_mode === 'period_total' ? 'period_total' : 'additive');
+  }, [configuration.unit_of_measure, configuration.enable_tiered_pricing, configuration.minimum_usage, configuration.measurement_mode, defaultUnitOfMeasure]);
 
-    // The `rateTiers = []` default parameter is a fresh array identity every
-    // render; unconditionally mirroring it into state re-triggered this effect
-    // and looped the component whenever a parent passed non-memoized props.
-    // Only sync when there is actual tier data to mirror.
-    if (rateTiers.length > 0) {
-      setTiers(
-        rateTiers.map(tier => ({
-          id: tier.tier_id || Date.now().toString(),
-          min_quantity: tier.min_quantity,
-          max_quantity: tier.max_quantity || null,
-          rate: tier.rate
-        }))
-      );
-    }
-  }, [configuration, rateTiers, defaultUnitOfMeasure]);
+  useEffect(() => {
+    // A later effective boundary can have no tiers; clear the previous display.
+    setTiers(rateTiers.map(tier => ({
+      id: tier.tier_id || `${tier.min_quantity}`,
+      min_quantity: tier.min_quantity,
+      max_quantity: tier.max_quantity ?? null,
+      rate: tier.rate,
+    })));
+  }, [rateTiers]);
 
   // Validate inputs when they change
   useEffect(() => {
@@ -287,8 +286,8 @@ export function UsageServiceConfigPanel({
               })}
             </Label>
             <RadioGroup
-              id="usage-measurement-mode"
-              name="usage-measurement-mode"
+              id={`${idPrefix}usage-measurement-mode`}
+              name={`${idPrefix}usage-measurement-mode`}
               value={measurementMode}
               onChange={handleMeasurementModeChange}
               disabled={disabled}
@@ -324,11 +323,11 @@ export function UsageServiceConfigPanel({
           </div>
 
           <div>
-            <Label htmlFor="usage-unit-of-measure">
+            <Label htmlFor={`${idPrefix}usage-unit-of-measure`}>
               {t('usageConfig.fields.unitOfMeasure.label', { defaultValue: 'Unit of Measure' })}
             </Label>
             <Input
-              id="usage-unit-of-measure"
+              id={`${idPrefix}usage-unit-of-measure`}
               type="text"
               value={unitOfMeasure}
               onChange={handleUnitOfMeasureChange}
@@ -350,7 +349,7 @@ export function UsageServiceConfigPanel({
           </div>
 
           <div>
-            <Label htmlFor="minimum-usage">
+            <Label htmlFor={`${idPrefix}minimum-usage`}>
               {measurementMode === 'period_total'
                 ? t('usageConfig.fields.minimumUsage.labelPeriodTotal', {
                     defaultValue: 'Minimum per period report',
@@ -360,7 +359,7 @@ export function UsageServiceConfigPanel({
                   })}
             </Label>
             <Input
-              id="minimum-usage"
+              id={`${idPrefix}minimum-usage`}
               type="number"
               value={minimumUsage.toString()}
               onChange={handleMinimumUsageChange}
@@ -391,31 +390,31 @@ export function UsageServiceConfigPanel({
 
           <div className="flex items-center space-x-2 pt-2">
             <Switch
-              id="enable-tiered-pricing"
+              id={`${idPrefix}enable-tiered-pricing`}
               checked={enableTieredPricing}
               onCheckedChange={handleEnableTieredPricingChange}
               disabled={disabled}
             />
-            <Label htmlFor="enable-tiered-pricing" className="cursor-pointer">
+            <Label htmlFor={`${idPrefix}enable-tiered-pricing`} className="cursor-pointer">
               {t('usageConfig.fields.enableTieredPricing', {
                 defaultValue: 'Enable Tiered Pricing',
               })}
             </Label>
           </div>
 
-          {enableTieredPricing && onRateTiersChange && (
+          {enableTieredPricing && (
             <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))]">
               <div className="mb-2 flex justify-between items-center">
                 <h4 className="font-medium">
                   {t('usageConfig.tiers.title', { defaultValue: 'Pricing Tiers' })}
                 </h4>
                 <Button
-                  id="add-tier-button"
+                  id={`${idPrefix}add-tier-button`}
                   type="button"
                   size="sm"
                   variant="outline"
                   onClick={handleAddTier}
-                  disabled={disabled}
+                  disabled={disabled || !onRateTiersChange}
                   className="flex items-center gap-1"
                 >
                   <Plus className="h-4 w-4" /> {t('usageConfig.tiers.addTier', { defaultValue: 'Add Tier' })}
@@ -440,31 +439,31 @@ export function UsageServiceConfigPanel({
                   {tiers.map((tier, index) => (
                     <div key={tier.id} className="grid grid-cols-12 gap-2 items-end border p-2 rounded-md bg-muted">
                       <div className="col-span-3">
-                        <Label htmlFor={`tier-${tier.id}-from`} className="text-xs">
+                        <Label htmlFor={`${idPrefix}tier-${tier.id}-from`} className="text-xs">
                           {t('usageConfig.tiers.from', {
                             unit: unitOfMeasure,
                             defaultValue: 'From ({{unit}})',
                           })}
                         </Label>
                         <Input
-                          id={`tier-${tier.id}-from`}
+                          id={`${idPrefix}tier-${tier.id}-from`}
                           type="number"
                           value={tier.min_quantity}
                           onChange={(e) => handleTierChange(tier.id, 'min_quantity', Number(e.target.value))}
-                          disabled={disabled || index === 0} // First tier always starts at 0
+                          disabled={disabled || !onRateTiersChange || index === 0} // First tier always starts at 0
                           min={0}
                           step={1}
                         />
                       </div>
                       <div className="col-span-3">
-                        <Label htmlFor={`tier-${tier.id}-to`} className="text-xs">
+                        <Label htmlFor={`${idPrefix}tier-${tier.id}-to`} className="text-xs">
                           {t('usageConfig.tiers.to', {
                             unit: unitOfMeasure,
                             defaultValue: 'To ({{unit}})',
                           })}
                         </Label>
                         <Input
-                          id={`tier-${tier.id}-to`}
+                          id={`${idPrefix}tier-${tier.id}-to`}
                           type="number"
                           value={tier.max_quantity === null ? '' : tier.max_quantity}
                           onChange={(e) => handleTierChange(
@@ -475,36 +474,36 @@ export function UsageServiceConfigPanel({
                           placeholder={index === tiers.length - 1
                             ? t('usageConfig.tiers.unlimited', { defaultValue: 'Unlimited' })
                             : ''}
-                          disabled={disabled}
+                          disabled={disabled || !onRateTiersChange}
                           min={tier.min_quantity + 1}
                           step={1}
                         />
                       </div>
                       <div className="col-span-4">
-                        <Label htmlFor={`tier-${tier.id}-rate`} className="text-xs">
+                        <Label htmlFor={`${idPrefix}tier-${tier.id}-rate`} className="text-xs">
                           {t('usageConfig.tiers.ratePer', {
                             unit: unitOfMeasure,
                             defaultValue: 'Rate per {{unit}}',
                           })}
                         </Label>
                         <Input
-                          id={`tier-${tier.id}-rate`}
+                          id={`${idPrefix}tier-${tier.id}-rate`}
                           type="number"
                           value={(tier.rate / 100).toString()} // Display in dollars
                           onChange={(e) => handleTierChange(tier.id, 'rate', Number(e.target.value))} // handleTierChange will convert to cents
-                          disabled={disabled}
+                          disabled={disabled || !onRateTiersChange}
                           min={0}
                           step={0.01}
                         />
                       </div>
                       <div className="col-span-2 flex justify-end">
                         <Button
-                          id={`remove-tier-${tier.id}-button`}
+                          id={`${idPrefix}remove-tier-${tier.id}-button`}
                           type="button"
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveTier(tier.id)}
-                          disabled={disabled}
+                          disabled={disabled || !onRateTiersChange}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />

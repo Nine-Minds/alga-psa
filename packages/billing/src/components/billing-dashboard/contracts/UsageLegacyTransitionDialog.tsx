@@ -194,9 +194,9 @@ export const UsageLegacyTransitionDialog: React.FC<UsageLegacyTransitionDialogPr
               })}
             </p>
             <p>
-              {t('contractOverview.legacyTransition.recurringSeats.nextStep', {
+              {t('contractOverview.legacyTransition.recurringSeats.manualHandoff', {
                 defaultValue:
-                  'Go to Contract Lines, add (or open) a Fixed line, add this service, and choose “Recurring seats/units”, then confirm the quantity and unit rate. The change takes effect at the next unbilled service period; this Usage line and its history stay as they are until you remove it.',
+                  'Go to Contract Lines → Create Custom, choose Fixed, add this service, and select “Recurring seats/units”. Review the quantity, unit rate and billing schedule before saving. This creates a separate recurring commitment; it does not convert or close this Usage service. Coordinate its start with the end of usage billing and review outstanding usage before enabling both for the same period.',
               })}
             </p>
           </div>

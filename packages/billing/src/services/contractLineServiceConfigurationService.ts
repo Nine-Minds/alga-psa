@@ -162,6 +162,7 @@ export class ContractLineServiceConfigurationService {
           await fixedConfigModel.create({
             config_id: configId,
             base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
             // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
             // billing_cycle_alignment: (typeConfig as IContractLineServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in contract_line_fixed_config
             tenant: this.tenant
@@ -190,6 +191,7 @@ export class ContractLineServiceConfigurationService {
           await usageConfigModel.create({
             config_id: configId,
             unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
+            measurement_mode: (typeConfig as IContractLineServiceUsageConfig)?.measurement_mode ?? 'additive',
             enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
             minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0,
             base_rate: (typeConfig as IContractLineServiceUsageConfig)?.base_rate ?? null,
