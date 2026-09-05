@@ -123,7 +123,7 @@ function createQueryBuilder(rows: Row[]) {
           },
         };
 
-        columnOrCriteria(nestedBuilder);
+        columnOrCriteria.call(nestedBuilder, nestedBuilder);
         resultRows = resultRows.filter((row) => {
           if (clauses.length === 0) {
             return true;
