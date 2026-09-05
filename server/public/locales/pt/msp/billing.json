@@ -212,8 +212,12 @@
       "deleteSuccess": "Registro de uso excluído com sucesso",
       "deleteError": "Falha ao excluir registro de uso"
     },
-    "periodReport": "Period usage report",
-    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
+    "periodReport": "Informação de uso do período",
+    "periodAlreadyInvoiced": "Este período já foi faturado. Corrija-o pelo processo de ajuste de fatura.",
+    "periodFilter": {
+      "notice": "Exibindo o uso do período de serviço de {{start}} a {{end}}",
+      "clear": "Limpar"
+    }
   },
   "lineItem": {
     "collapsed": {

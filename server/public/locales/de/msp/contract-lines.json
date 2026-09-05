@@ -412,8 +412,8 @@
       },
       "loading": "Dienstkonfiguration wird geladen...",
       "title": "Bearbeiten Sie die Dienstkonfiguration",
-      "effectiveFrom": "Quantity or measurement change effective from",
-      "effectiveHelp": "Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement."
+      "effectiveFrom": "Mengen- oder Messänderung wirksam ab",
+      "effectiveHelp": "Änderungen werden an dieser Leistungszeitraumgrenze wirksam. Frühere Zeiträume behalten ihre Preise und Messweise."
     },
     "tierEditor": {
       "actions": {

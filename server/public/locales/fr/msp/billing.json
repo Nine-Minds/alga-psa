@@ -212,8 +212,12 @@
       "deleteSuccess": "Enregistrement d'utilisation supprimé avec succès",
       "deleteError": "Échec de la suppression de l'enregistrement d'utilisation"
     },
-    "periodReport": "Period usage report",
-    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
+    "periodReport": "Rapport d'utilisation de la période",
+    "periodAlreadyInvoiced": "Cette période est déjà facturée. Corrigez-la via le processus d'ajustement de facture.",
+    "periodFilter": {
+      "notice": "Affichage de l'utilisation pour la période de service du {{start}} au {{end}}",
+      "clear": "Effacer"
+    }
   },
   "lineItem": {
     "collapsed": {

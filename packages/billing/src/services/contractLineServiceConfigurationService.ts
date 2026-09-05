@@ -281,7 +281,9 @@ export class ContractLineServiceConfigurationService {
             rateTiers,
           },
         }});
-        if (!transition.ok) throw new Error(transition.error);
+        // `=== false` (not `!`): ee/server compiles with strictNullChecks off,
+        // where truthiness checks do not narrow discriminated unions.
+        if (transition.ok === false) throw new Error(transition.error);
         if (transition.effective_period_start) {
           // The dated revision owns the new price and mode; retain the baseline.
           return true;
@@ -300,7 +302,7 @@ export class ContractLineServiceConfigurationService {
               contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId,
               quantity: Number(baseConfig?.quantity ?? effective.quantity),
               unitRateCents: Number(incoming?.base_rate ?? baseConfig?.custom_rate ?? effective.unitRateCents), effectivePeriodStart: boundary });
-            if (!scheduled.ok) throw new Error(scheduled.error);
+            if (scheduled.ok === false) throw new Error(scheduled.error);
             const { quantity, custom_rate, ...restBase } = baseConfig ?? {};
             baseConfig = restBase;
             const { base_rate, effective_period_start, ...restFixed } = incoming ?? {};

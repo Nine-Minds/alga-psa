@@ -343,7 +343,8 @@
       "recurringSeats": {
         "title": "Configurar puestos recurrentes",
         "explanation": "Los puestos recurrentes facturan cantidad × tarifa unitaria en cada periodo sin registros de consumo, por lo que viven en una línea de contrato fija con precio por puestos/unidades recurrentes — no en esta línea de consumo.",
-        "nextStep": "Ve a Líneas de contrato, añade (o abre) una línea fija, añade este servicio y elige «Puestos/unidades recurrentes»; luego confirma la cantidad y la tarifa unitaria. El cambio se aplica en el siguiente periodo de servicio no facturado; esta línea de consumo y su historial se mantienen hasta que la elimines."
+        "nextStep": "Ve a Líneas de contrato, añade (o abre) una línea fija, añade este servicio y elige «Puestos/unidades recurrentes»; luego confirma la cantidad y la tarifa unitaria. El cambio se aplica en el siguiente periodo de servicio no facturado; esta línea de consumo y su historial se mantienen hasta que la elimines.",
+        "manualHandoff": "Vaya a Líneas de contrato → Crear personalizada, elija Tarifa fija, agregue este servicio y seleccione «Puestos/unidades recurrentes». Revise la cantidad, la tarifa unitaria y el calendario de facturación antes de guardar. Esto crea un compromiso recurrente separado; no convierte ni cierra este servicio de consumo. Coordine su inicio con el fin de la facturación por consumo y revise el consumo pendiente antes de habilitar ambos para el mismo periodo."
       },
       "periodCount": {
         "title": "Informar una cantidad del periodo",
@@ -353,7 +354,7 @@
       "referenceHeading": "Referencia sin confirmar de la configuración anterior",
       "referenceQuantity": "Cantidad configurada anteriormente: {{count}}",
       "referenceRate": "Tarifa guardada: {{rate}}",
-      "referenceCaveat": "Estos valores nunca se han facturado. Aquí no se guarda ni se cobra nada hasta que confirmes tú mismo los valores en el flujo siguiente.",
+      "referenceCaveat": "Estos valores nunca se han facturado. Aquí no se guarda ni se cobra nada hasta que usted mismo confirme los valores en el flujo siguiente.",
       "actions": {
         "close": "Cerrar",
         "cancel": "Cancelar",
@@ -364,7 +365,7 @@
         "missingConfiguration": "Este servicio no tiene una configuración guardada que convertir. Actualiza la página e inténtalo de nuevo.",
         "failed": "No se pudo cambiar la forma en que se mide este servicio."
       },
-      "effectiveFrom": "Measurement change effective from"
+      "effectiveFrom": "Cambio de medición en vigor desde"
     }
   },
   "contractDialog": {
@@ -594,9 +595,11 @@
       "unitOfMeasure": "Unidad de medida",
       "unitPlaceholder": "unidad",
       "unitRate": "Tarifa por unidad",
-      "effectiveFrom": "Recurring seat changes effective from",
-      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
-      "recurringUnits": "Recurring seats/units"
+      "effectiveFrom": "Cambios de puestos recurrentes en vigor desde",
+      "prospectiveSeatHelp": "Los puestos facturan cantidad × tarifa por unidad. Los cambios se aplican en este límite del período de servicio; las cantidades y los precios anteriores se conservan.",
+      "recurringUnits": "Puestos/unidades recurrentes",
+      "semanticsEffectiveFrom": "Cambios de precios y medición del servicio en vigor desde",
+      "prospectiveSemanticsHelp": "Los cambios se aplican en este límite del período de servicio; las cantidades, la medición y los precios anteriores se conservan. Al cambiar la fecha se vuelve a cargar la configuración aplicable para revisarla."
     },
     "title": "Líneas de contrato"
   },
@@ -729,7 +732,8 @@
       "hourlyDescription": "Facturar según las entradas de tiempo aprobadas.",
       "hourlyTitle": "Por hora",
       "usageDescription": "Facturar por unidades consumidas.",
-      "usageTitle": "Basado en uso"
+      "usageTitle": "Basado en uso",
+      "fixedSemantics": "Facture un precio de paquete o una cantidad recurrente × tarifa por unidad en cada período."
     },
     "billingTiming": {
       "advance": "Anticipado (facturar al inicio del período)",
@@ -795,8 +799,15 @@
       "unitOfMeasureRequired": "Servicio {{index}}: la unidad de medida es obligatoria",
       "unitRateRequired": "Servicio {{index}}: la tarifa por unidad es obligatoria",
       "usageServiceRequired": "Se requiere al menos un servicio basado en uso",
-      "usageServiceSelectRequired": "Servicio {{index}}: seleccione un servicio"
-    }
+      "usageServiceSelectRequired": "Servicio {{index}}: seleccione un servicio",
+      "invalidQuantity": "La cantidad debe ser cero o mayor.",
+      "recurringUnitRateRequired": "Ingrese una tarifa por unidad para cada servicio recurrente."
+    },
+    "fixedServicesPricingIntent": "Elija un precio de paquete o puestos/unidades recurrentes para cada servicio.",
+    "fixedServicesPricingExplanation": "Las asignaciones del paquete comparten la tarifa base de la línea. Los puestos recurrentes facturan la cantidad acordada × tarifa por unidad en cada período sin registros de uso.",
+    "recurringQuantity": "Cantidad recurrente",
+    "allocationQuantity": "Cantidad de asignación",
+    "bundleBaseRateHelp": "Tarifa recurrente para los servicios con precio de paquete. Los puestos recurrentes se facturan por separado a cantidad × tarifa por unidad."
   },
   "pricingSchedules": {
     "list": {

@@ -337,7 +337,7 @@
   },
   "usageConfig": {
     "title": "Configuração baseada no uso",
-    "recordDrivenNote": "Os serviços por utilização são faturados com base na utilização registada no acompanhamento de utilização para cada período de serviço. Um período sem registo de utilização não gera cobrança — registe a utilização (ou um zero explícito) em cada período para faturar este serviço.",
+    "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar este serviço.",
     "defaults": {
       "unitOfMeasure": "Unidade"
     },
@@ -351,11 +351,11 @@
       "minimumUsage": {
         "label": "Limite mínimo de uso",
         "placeholder": "0",
-        "help": "Mínimo aplicado à utilização registada (0 para sem mínimo). Aplica-se apenas quando o período tem um registo de utilização — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
+        "help": "Piso aplicado ao uso registrado (0 para nenhum mínimo). Só se aplica quando o período tem um registro de uso — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
         "errorNegative": "O uso mínimo não pode ser negativo",
         "labelAdditive": "Mínimo por lançamento",
         "labelPeriodTotal": "Mínimo por informação de período",
-        "helpAdditive": "Piso aplicado a cada lançamento registado (0 para nenhum mínimo). Só se aplica quando o período tem um registo de consumo — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
+        "helpAdditive": "Piso aplicado a cada lançamento registrado (0 para nenhum mínimo). Só se aplica quando o período tem um registro de uso — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
         "helpPeriodTotal": "Piso aplicado uma vez à contagem informada do período (0 para nenhum mínimo). Só se aplica quando uma contagem é informada — mesmo um zero explícito — e nunca cria uma cobrança por si só."
       },
       "enableTieredPricing": "Habilitar preços diferenciados"

@@ -434,7 +434,7 @@
       },
       "unit": {
         "label": "Wiederkehrende Plätze/Einheiten",
-        "description": "Rechnet in jedem Zeitraum Menge × Einzelpreis ab; kein Positionsbetrag hat Vorrang. Menge und Preis werden im nächsten Zeitraum erneut abgerechnet, bis du eine Änderung planst. Eine Menge von null ergibt null.",
+        "description": "Rechnet in jedem Zeitraum Menge × Einzelpreis ab; kein Positionsbetrag hat Vorrang. Menge und Preis werden im nächsten Zeitraum erneut abgerechnet, bis Sie eine Änderung planen. Eine Menge von null ergibt null.",
         "summary": "{{quantity}} × {{rate}} (wiederkehrende Plätze) = {{total}} pro Zeitraum"
       }
     }

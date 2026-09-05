@@ -177,8 +177,9 @@
         "missingUsageService": "{{service}}: keine Verbrauchsdatensätze für {{periodStart}} bis {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} ist ausgeschlossen, bis die Zuordnung zur Vertragsposition geklärt ist – kläre die Zuordnung, statt weiteren Verbrauch zu erfassen",
         "usageCalculationError": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} konnte nicht bepreist werden – korrigiere die Dienstpreise, statt weiteren Verbrauch zu erfassen",
-        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
-        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
+        "recordScopedUsage": "Verbrauch erfassen: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} bis {{periodEnd}} — der erfasste Verbrauch konnte nicht bepreist werden. Prüfen Sie die Preiskonfiguration dieses Dienstes.",
+        "reportedPeriodTotalsHeading": "Gemeldete Zeitraummengen"
       },
       "poOverage": {
         "title": "Überschreitungen des Bestelllimits",
@@ -2139,15 +2140,15 @@
     }
   },
   "periodTotal": {
-    "missingContext": "Missing client or service configuration for this report.",
-    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
-    "saveError": "Unable to save the period count.",
-    "retryError": "Unable to save the period count. Retry this submission.",
-    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "quantityLabel": "Period count for {{service}}",
-    "saving": "Saving…",
-    "saveCorrection": "Save correction",
-    "save": "Save"
+    "missingContext": "Für diese Meldung fehlt die Kunden- oder Dienstkonfiguration.",
+    "invalidQuantity": "Geben Sie für die Zeitraummenge eine ganze Zahl von 0 oder mehr ein.",
+    "saveError": "Die Zeitraummenge konnte nicht gespeichert werden.",
+    "retryError": "Die Zeitraummenge konnte nicht gespeichert werden. Wiederholen Sie die Übermittlung.",
+    "correct": "Gemeldete Menge von {{quantity}} für {{service}} korrigieren ({{periodStart}} bis {{periodEnd}})",
+    "report": "Zeitraummenge für {{service}} melden ({{periodStart}} bis {{periodEnd}})",
+    "quantityLabel": "Zeitraummenge für {{service}}",
+    "saving": "Wird gespeichert …",
+    "saveCorrection": "Korrektur speichern",
+    "save": "Speichern"
   }
 }

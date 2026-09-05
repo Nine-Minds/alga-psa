@@ -178,7 +178,8 @@
         "usageAttributionExcluded": "{{service}}: usage recorded for {{periodStart}} to {{periodEnd}} is excluded until its contract-line attribution is resolved — resolve the attribution instead of recording more usage",
         "usageCalculationError": "{{service}}: recorded usage for {{periodStart}} to {{periodEnd}} could not be priced — fix the service pricing instead of recording more usage",
         "recordScopedUsage": "Record usage: {{service}} — {{line}}",
-        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration.",
+        "reportedPeriodTotalsHeading": "Reported period counts"
       },
       "poOverage": {
         "title": "Purchase Order Limit Overages",

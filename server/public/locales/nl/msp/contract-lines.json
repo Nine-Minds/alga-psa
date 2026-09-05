@@ -412,8 +412,8 @@
       },
       "loading": "Serviceconfiguratie laden...",
       "title": "Serviceconfiguratie bewerken",
-      "effectiveFrom": "Quantity or measurement change effective from",
-      "effectiveHelp": "Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement."
+      "effectiveFrom": "Wijziging van hoeveelheid of meting geldt vanaf",
+      "effectiveHelp": "Wijzigingen gaan in op deze serviceperiodegrens. Eerdere perioden behouden hun prijzen en meting."
     },
     "tierEditor": {
       "actions": {

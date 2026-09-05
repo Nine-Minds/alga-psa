@@ -177,8 +177,9 @@
         "missingUsageService": "{{service}}: geen verbruiksrecords voor {{periodStart}} tot {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} is uitgesloten totdat de toewijzing aan een contractregel is opgelost — los de toewijzing op in plaats van meer verbruik te registreren",
         "usageCalculationError": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} kon niet worden geprijsd — corrigeer de serviceprijzen in plaats van meer verbruik te registreren",
-        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
-        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
+        "recordScopedUsage": "Verbruik registreren: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} tot {{periodEnd}} — geregistreerd verbruik kon niet worden geprijsd. Controleer de prijsconfiguratie van deze service.",
+        "reportedPeriodTotalsHeading": "Doorgegeven periodeaantallen"
       },
       "poOverage": {
         "title": "Overschrijdingen van inkooporderlimieten",
@@ -2139,15 +2140,15 @@
     }
   },
   "periodTotal": {
-    "missingContext": "Missing client or service configuration for this report.",
-    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
-    "saveError": "Unable to save the period count.",
-    "retryError": "Unable to save the period count. Retry this submission.",
-    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "quantityLabel": "Period count for {{service}}",
-    "saving": "Saving…",
-    "saveCorrection": "Save correction",
-    "save": "Save"
+    "missingContext": "Klant- of serviceconfiguratie ontbreekt voor dit rapport.",
+    "invalidQuantity": "Voer een geheel getal van 0 of hoger in voor het periodeaantal.",
+    "saveError": "Kan het periodeaantal niet opslaan.",
+    "retryError": "Kan het periodeaantal niet opslaan. Dien de opgave opnieuw in.",
+    "correct": "Corrigeer het doorgegeven aantal van {{quantity}} voor {{service}} ({{periodStart}} tot {{periodEnd}})",
+    "report": "Geef een periodeaantal door voor {{service}} ({{periodStart}} tot {{periodEnd}})",
+    "quantityLabel": "Periodeaantal voor {{service}}",
+    "saving": "Opslaan…",
+    "saveCorrection": "Correctie opslaan",
+    "save": "Opslaan"
   }
 }

@@ -343,7 +343,8 @@
       "recurringSeats": {
         "title": "Wiederkehrende Plätze einrichten",
         "explanation": "Wiederkehrende Plätze rechnen in jedem Zeitraum Menge × Einzelpreis ohne Verbrauchsdatensätze ab. Sie gehören daher auf eine feste Vertragsposition mit Preisbasis „Wiederkehrende Plätze/Einheiten“ — nicht auf diese nutzungsbasierte Position.",
-        "nextStep": "Öffne die Vertragspositionen, füge eine feste Position hinzu (oder öffne eine), nimm diesen Dienst auf, wähle „Wiederkehrende Plätze/Einheiten“ und bestätige Menge und Einzelpreis. Die Änderung gilt ab dem nächsten nicht abgerechneten Leistungszeitraum; diese nutzungsbasierte Position und ihre Historie bleiben unverändert, bis du sie entfernst."
+        "nextStep": "Öffnen Sie die Vertragspositionen, fügen Sie eine feste Position hinzu (oder öffnen Sie eine), nehmen Sie diesen Dienst auf, wählen Sie „Wiederkehrende Plätze/Einheiten“ und bestätigen Sie Menge und Einzelpreis. Die Änderung gilt ab dem nächsten nicht abgerechneten Leistungszeitraum; diese nutzungsbasierte Position und ihre Historie bleiben unverändert, bis Sie sie entfernen.",
+        "manualHandoff": "Öffnen Sie Vertragslinien → „Benutzerdefiniert erstellen“, wählen Sie „Festgebühr“, fügen Sie diesen Dienst hinzu und wählen Sie „Wiederkehrende Plätze/Einheiten“. Prüfen Sie Menge, Einzelpreis und Abrechnungszeitplan vor dem Speichern. Dadurch entsteht eine separate wiederkehrende Verpflichtung; dieser nutzungsbasierte Dienst wird weder umgestellt noch beendet. Stimmen Sie den Beginn auf das Ende der nutzungsbasierten Abrechnung ab und prüfen Sie den ausstehenden Verbrauch, bevor Sie beide für denselben Zeitraum aktivieren."
       },
       "periodCount": {
         "title": "Menge für den Zeitraum melden",
@@ -353,7 +354,7 @@
       "referenceHeading": "Unbestätigte Referenz aus der bisherigen Konfiguration",
       "referenceQuantity": "Zuvor konfigurierte Menge: {{count}}",
       "referenceRate": "Gespeicherter Preis: {{rate}}",
-      "referenceCaveat": "Diese Werte wurden nie abgerechnet. Hier wird nichts gespeichert oder berechnet, bis du die Werte im folgenden Ablauf selbst bestätigst.",
+      "referenceCaveat": "Diese Werte wurden nie abgerechnet. Hier wird nichts gespeichert oder berechnet, bis Sie die Werte im folgenden Ablauf selbst bestätigen.",
       "actions": {
         "close": "Schließen",
         "cancel": "Abbrechen",
@@ -364,7 +365,7 @@
         "missingConfiguration": "Für diesen Dienst gibt es keine gespeicherte Konfiguration zum Umstellen. Aktualisiere die Seite und versuche es erneut.",
         "failed": "Die Messweise dieses Dienstes konnte nicht geändert werden."
       },
-      "effectiveFrom": "Measurement change effective from"
+      "effectiveFrom": "Messänderung wirksam ab"
     }
   },
   "contractDialog": {
@@ -594,9 +595,11 @@
       "unitOfMeasure": "Maßeinheit",
       "unitPlaceholder": "Einheit",
       "unitRate": "Einheitstarif",
-      "effectiveFrom": "Recurring seat changes effective from",
-      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
-      "recurringUnits": "Recurring seats/units"
+      "effectiveFrom": "Änderungen wiederkehrender Plätze wirksam ab",
+      "prospectiveSeatHelp": "Plätze werden mit Menge × Einheitstarif abgerechnet. Änderungen gelten ab dieser Leistungszeitraumgrenze; frühere Mengen und Preise bleiben erhalten.",
+      "recurringUnits": "Wiederkehrende Plätze/Einheiten",
+      "semanticsEffectiveFrom": "Preis- und Messänderungen des Dienstes wirksam ab",
+      "prospectiveSemanticsHelp": "Änderungen gelten ab dieser Leistungszeitraumgrenze; frühere Mengen, Messweise und Preise bleiben erhalten. Bei Änderung des Datums werden die geltenden Einstellungen zur Prüfung neu geladen."
     },
     "title": "Vertragslinien"
   },
@@ -729,7 +732,8 @@
       "hourlyDescription": "Abrechnung basierend auf genehmigten Zeiteinträgen.",
       "hourlyTitle": "Stundenbasiert",
       "usageDescription": "Rechnung für verbrauchte Einheiten.",
-      "usageTitle": "Nutzungsbasiert"
+      "usageTitle": "Nutzungsbasiert",
+      "fixedSemantics": "In jeder Periode einen Paketpreis oder wiederkehrend Menge × Einheitstarif abrechnen."
     },
     "billingTiming": {
       "advance": "Voraus (Abrechnung zu Periodenbeginn)",
@@ -795,8 +799,15 @@
       "unitOfMeasureRequired": "Service {{index}}: Maßeinheit ist erforderlich",
       "unitRateRequired": "Service {{index}}: Einheitstarif ist erforderlich",
       "usageServiceRequired": "Mindestens ein nutzungsbasierter Service ist erforderlich",
-      "usageServiceSelectRequired": "Service {{index}}: Bitte wählen Sie einen Service aus"
-    }
+      "usageServiceSelectRequired": "Service {{index}}: Bitte wählen Sie einen Service aus",
+      "invalidQuantity": "Die Menge muss null oder größer sein.",
+      "recurringUnitRateRequired": "Geben Sie für jeden wiederkehrenden Service einen Einheitstarif ein."
+    },
+    "fixedServicesPricingIntent": "Wählen Sie für jeden Service Paketpreis oder wiederkehrende Plätze/Einheiten.",
+    "fixedServicesPricingExplanation": "Paketverteilungen teilen sich den Grundtarif der Vertragslinie. Wiederkehrende Plätze rechnen in jeder Periode die vereinbarte Menge × Einheitstarif ohne Verbrauchsdatensätze ab.",
+    "recurringQuantity": "Wiederkehrende Menge",
+    "allocationQuantity": "Verteilungsmenge",
+    "bundleBaseRateHelp": "Wiederkehrende Gebühr für Services mit Paketpreis. Wiederkehrende Plätze werden separat mit Menge × Einheitstarif abgerechnet."
   },
   "pricingSchedules": {
     "list": {

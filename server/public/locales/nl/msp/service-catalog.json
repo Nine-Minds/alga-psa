@@ -434,7 +434,7 @@
       },
       "unit": {
         "label": "Terugkerende plaatsen/eenheden",
-        "description": "Factureert aantal × eenheidstarief in elke periode, zonder dat een regeltotaal voorrang heeft. Hetzelfde aantal en tarief worden de volgende periode opnieuw gefactureerd totdat je een wijziging inplant. Een aantal van nul factureert nul.",
+        "description": "Factureert aantal × eenheidstarief in elke periode, zonder dat een regeltotaal voorrang heeft. Hetzelfde aantal en tarief worden de volgende periode opnieuw gefactureerd totdat u een wijziging inplant. Een aantal van nul factureert nul.",
         "summary": "{{quantity}} × {{rate}} (terugkerende plaatsen) = {{total}} per periode"
       }
     }

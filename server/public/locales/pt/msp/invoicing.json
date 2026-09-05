@@ -177,8 +177,9 @@
         "missingUsageService": "{{service}}: sem registos de utilização de {{periodStart}} a {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: a utilização registada de {{periodStart}} a {{periodEnd}} fica excluída até que a atribuição à linha de contrato seja resolvida — resolva a atribuição em vez de registar mais utilização",
         "usageCalculationError": "{{service}}: não foi possível calcular o preço da utilização registada de {{periodStart}} a {{periodEnd}} — corrija os preços do serviço em vez de registar mais utilização",
-        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
-        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
+        "recordScopedUsage": "Registrar uso: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} a {{periodEnd}} — não foi possível precificar o uso registrado. Revise a configuração de preços deste serviço.",
+        "reportedPeriodTotalsHeading": "Contagens de período informadas"
       },
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
@@ -196,7 +197,7 @@
       },
       "unreportedUsage": {
         "title": "Utilização não registada para este período",
-        "description": "Estes serviços de utilização não têm registo para a janela de faturação. Gerar agora deixa-os fora da fatura; continuam faturáveis assim que a utilização for registada.",
+        "description": "Esses serviços baseados em uso não têm informação de uso para a janela de faturamento. Gerar agora os deixa fora da fatura; eles continuam faturáveis assim que o uso for informado.",
         "omittedItem": "{{services}}: sem utilização registada de {{periodStart}} a {{periodEnd}}",
         "question": "Gerar sem estes serviços?",
         "confirm": "Gerar sem a utilização não registada"
@@ -2139,15 +2140,15 @@
     }
   },
   "periodTotal": {
-    "missingContext": "Missing client or service configuration for this report.",
-    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
-    "saveError": "Unable to save the period count.",
-    "retryError": "Unable to save the period count. Retry this submission.",
-    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "quantityLabel": "Period count for {{service}}",
-    "saving": "Saving…",
-    "saveCorrection": "Save correction",
-    "save": "Save"
+    "missingContext": "Configuração de cliente ou serviço ausente para esta informação.",
+    "invalidQuantity": "Insira um número inteiro igual ou maior que 0 para a contagem do período.",
+    "saveError": "Não foi possível salvar a contagem do período.",
+    "retryError": "Não foi possível salvar a contagem do período. Tente enviar novamente.",
+    "correct": "Corrigir a contagem informada de {{quantity}} para {{service}} ({{periodStart}} a {{periodEnd}})",
+    "report": "Informar uma contagem do período para {{service}} ({{periodStart}} a {{periodEnd}})",
+    "quantityLabel": "Contagem do período para {{service}}",
+    "saving": "Salvando…",
+    "saveCorrection": "Salvar correção",
+    "save": "Salvar"
   }
 }

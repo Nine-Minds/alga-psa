@@ -343,7 +343,8 @@
       "recurringSeats": {
         "title": "Terugkerende plaatsen instellen",
         "explanation": "Terugkerende plaatsen factureren aantal × eenheidstarief in elke periode zonder verbruiksregistraties; ze horen daarom op een vaste contractregel met prijsbasis terugkerende plaatsen/eenheden — niet op deze verbruiksregel.",
-        "nextStep": "Ga naar Contractregels, voeg een vaste regel toe (of open er een), voeg deze dienst toe en kies “Terugkerende plaatsen/eenheden”; bevestig daarna het aantal en het eenheidstarief. De wijziging geldt vanaf de volgende niet-gefactureerde serviceperiode; deze verbruiksregel en de historie blijven ongewijzigd tot je ze verwijdert."
+        "nextStep": "Ga naar Contractregels, voeg een vaste regel toe (of open er een), voeg deze dienst toe en kies “Terugkerende plaatsen/eenheden”; bevestig daarna het aantal en het eenheidstarief. De wijziging geldt vanaf de volgende niet-gefactureerde serviceperiode; deze verbruiksregel en de historie blijven ongewijzigd totdat u ze verwijdert.",
+        "manualHandoff": "Ga naar Contractregels → Aangepast aanmaken, kies Vaste vergoeding, voeg deze dienst toe en selecteer “Terugkerende plaatsen/eenheden”. Controleer het aantal, het eenheidstarief en het factureringsschema voordat u opslaat. Dit maakt een aparte terugkerende verplichting aan; deze verbruiksdienst wordt niet omgezet of afgesloten. Stem de start ervan af op het einde van de verbruiksfacturatie en controleer openstaand verbruik voordat u beide voor dezelfde periode inschakelt."
       },
       "periodCount": {
         "title": "Periodeaantal doorgeven",
@@ -353,7 +354,7 @@
       "referenceHeading": "Onbevestigde referentie uit de vorige configuratie",
       "referenceQuantity": "Eerder geconfigureerd aantal: {{count}}",
       "referenceRate": "Opgeslagen tarief: {{rate}}",
-      "referenceCaveat": "Deze waarden zijn nooit gefactureerd. Hier wordt niets opgeslagen of in rekening gebracht totdat je de waarden zelf bevestigt in de stroom hieronder.",
+      "referenceCaveat": "Deze waarden zijn nooit gefactureerd. Hier wordt niets opgeslagen of in rekening gebracht totdat u de waarden zelf bevestigt in de stroom hieronder.",
       "actions": {
         "close": "Sluiten",
         "cancel": "Annuleren",
@@ -364,7 +365,7 @@
         "missingConfiguration": "Deze dienst heeft geen opgeslagen configuratie om om te zetten. Vernieuw en probeer het opnieuw.",
         "failed": "Kon niet wijzigen hoe deze dienst wordt gemeten."
       },
-      "effectiveFrom": "Measurement change effective from"
+      "effectiveFrom": "Wijziging van de meting geldt vanaf"
     }
   },
   "contractDialog": {
@@ -594,9 +595,11 @@
       "unitOfMeasure": "Meeteenheid",
       "unitPlaceholder": "eenheid",
       "unitRate": "Tarief per eenheid",
-      "effectiveFrom": "Recurring seat changes effective from",
-      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
-      "recurringUnits": "Recurring seats/units"
+      "effectiveFrom": "Wijzigingen van terugkerende plaatsen gelden vanaf",
+      "prospectiveSeatHelp": "Plaatsen factureren aantal × tarief per eenheid. Wijzigingen gelden vanaf deze serviceperiodegrens; eerdere aantallen en prijzen blijven behouden.",
+      "recurringUnits": "Terugkerende plaatsen/eenheden",
+      "semanticsEffectiveFrom": "Wijzigingen in prijzen en meting van de service gelden vanaf",
+      "prospectiveSemanticsHelp": "Wijzigingen gelden vanaf deze serviceperiodegrens; eerdere aantallen, meting en prijzen blijven behouden. Als u de datum wijzigt, worden de geldende instellingen opnieuw geladen ter controle."
     },
     "title": "Contractregels"
   },
@@ -729,7 +732,8 @@
       "hourlyDescription": "Factureren op basis van goedgekeurde tijdregistraties.",
       "hourlyTitle": "Per uur",
       "usageDescription": "Factureer voor verbruikte eenheden.",
-      "usageTitle": "Op verbruik"
+      "usageTitle": "Op verbruik",
+      "fixedSemantics": "Factureer elke periode een bundelprijs of een terugkerend aantal × tarief per eenheid."
     },
     "billingTiming": {
       "advance": "Vooraf (factureren aan het begin van de periode)",
@@ -795,8 +799,15 @@
       "unitOfMeasureRequired": "Service {{index}}: meeteenheid is verplicht",
       "unitRateRequired": "Service {{index}}: tarief per eenheid is verplicht",
       "usageServiceRequired": "Minstens één verbruiksgebaseerde service is vereist",
-      "usageServiceSelectRequired": "Service {{index}}: selecteer een service"
-    }
+      "usageServiceSelectRequired": "Service {{index}}: selecteer een service",
+      "invalidQuantity": "Hoeveelheid moet nul of hoger zijn.",
+      "recurringUnitRateRequired": "Voer voor elke terugkerende service een tarief per eenheid in."
+    },
+    "fixedServicesPricingIntent": "Kies per service een bundelprijs of terugkerende plaatsen/eenheden.",
+    "fixedServicesPricingExplanation": "Bundelverdelingen delen het basistarief van de regel. Terugkerende plaatsen factureren elke periode het afgesproken aantal × tarief per eenheid, zonder verbruiksregistraties.",
+    "recurringQuantity": "Terugkerend aantal",
+    "allocationQuantity": "Verdeelaantal",
+    "bundleBaseRateHelp": "Terugkerende vergoeding voor services met bundelprijs. Terugkerende plaatsen worden apart gefactureerd tegen aantal × tarief per eenheid."
   },
   "pricingSchedules": {
     "list": {

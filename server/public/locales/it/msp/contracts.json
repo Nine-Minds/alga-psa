@@ -343,7 +343,8 @@
       "recurringSeats": {
         "title": "Configura postazioni ricorrenti",
         "explanation": "Le postazioni ricorrenti fatturano quantità × tariffa unitaria in ogni periodo senza record di consumo, quindi vivono su una riga di contratto fissa prezzata a postazioni/unità ricorrenti — non su questa riga a consumo.",
-        "nextStep": "Vai alle righe di contratto, aggiungi (o apri) una riga fissa, aggiungi questo servizio e scegli «Postazioni/unità ricorrenti», quindi conferma quantità e tariffa unitaria. La modifica ha effetto dal successivo periodo di servizio non fatturato; questa riga a consumo e la sua cronologia restano invariate finché non la rimuovi."
+        "nextStep": "Vai alle righe di contratto, aggiungi (o apri) una riga fissa, aggiungi questo servizio e scegli «Postazioni/unità ricorrenti», quindi conferma quantità e tariffa unitaria. La modifica ha effetto dal successivo periodo di servizio non fatturato; questa riga a consumo e la sua cronologia restano invariate finché non la rimuovi.",
+        "manualHandoff": "Vai a Linee contrattuali → Crea personalizzata, scegli Tariffa fissa, aggiungi questo servizio e seleziona «Postazioni/unità ricorrenti». Verifica quantità, tariffa unitaria e pianificazione di fatturazione prima di salvare. Questo crea un impegno ricorrente separato; non converte né chiude questo servizio a consumo. Coordina il suo avvio con la fine della fatturazione a consumo e verifica l'utilizzo ancora da fatturare prima di attivare entrambi per lo stesso periodo."
       },
       "periodCount": {
         "title": "Comunica un conteggio di periodo",
@@ -364,7 +365,7 @@
         "missingConfiguration": "Questo servizio non ha una configurazione salvata da convertire. Aggiorna e riprova.",
         "failed": "Non è stato possibile modificare il modo in cui questo servizio viene misurato."
       },
-      "effectiveFrom": "Measurement change effective from"
+      "effectiveFrom": "Modifica della misurazione con effetto dal"
     }
   },
   "contractDialog": {
@@ -594,9 +595,11 @@
       "unitOfMeasure": "Unità di misura",
       "unitPlaceholder": "unità",
       "unitRate": "Tariffa unitaria",
-      "effectiveFrom": "Recurring seat changes effective from",
-      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
-      "recurringUnits": "Recurring seats/units"
+      "effectiveFrom": "Modifiche alle postazioni ricorrenti con effetto dal",
+      "prospectiveSeatHelp": "Le postazioni fatturano quantità × tariffa unitaria. Le modifiche si applicano al confine del periodo di servizio; quantità e prezzi precedenti restano invariati.",
+      "recurringUnits": "Postazioni/unità ricorrenti",
+      "semanticsEffectiveFrom": "Modifiche a prezzi e misurazione del servizio con effetto dal",
+      "prospectiveSemanticsHelp": "Le modifiche si applicano al confine del periodo di servizio; quantità, misurazione e prezzi precedenti restano invariati. Cambiando la data si ricaricano le impostazioni applicabili da rivedere."
     },
     "title": "Linee contrattuali"
   },
@@ -729,7 +732,8 @@
       "hourlyDescription": "Fattura in base alle registrazioni di tempo approvate.",
       "hourlyTitle": "Orario",
       "usageDescription": "Fattura per unità consumate.",
-      "usageTitle": "Basato su utilizzo"
+      "usageTitle": "Basato su utilizzo",
+      "fixedSemantics": "Fattura un prezzo forfettario oppure quantità ricorrente × tariffa unitaria in ogni periodo."
     },
     "billingTiming": {
       "advance": "Anticipato (fatturazione all'inizio del periodo)",
@@ -795,8 +799,15 @@
       "unitOfMeasureRequired": "Servizio {{index}}: L'unità di misura è obbligatoria",
       "unitRateRequired": "Servizio {{index}}: La tariffa unitaria è obbligatoria",
       "usageServiceRequired": "È richiesto almeno un servizio basato su utilizzo",
-      "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio"
-    }
+      "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio",
+      "invalidQuantity": "La quantità deve essere maggiore o uguale a zero.",
+      "recurringUnitRateRequired": "Inserisci una tariffa unitaria per ogni servizio ricorrente."
+    },
+    "fixedServicesPricingIntent": "Scegli per ogni servizio un prezzo forfettario o postazioni/unità ricorrenti.",
+    "fixedServicesPricingExplanation": "Le allocazioni a prezzo forfettario condividono la tariffa base della linea. Le postazioni ricorrenti fatturano la quantità concordata × tariffa unitaria in ogni periodo senza record di utilizzo.",
+    "recurringQuantity": "Quantità ricorrente",
+    "allocationQuantity": "Quantità di allocazione",
+    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria."
   },
   "pricingSchedules": {
     "list": {

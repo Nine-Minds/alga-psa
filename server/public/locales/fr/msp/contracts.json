@@ -343,7 +343,8 @@
       "recurringSeats": {
         "title": "Configurer des postes récurrents",
         "explanation": "Les postes récurrents facturent quantité × tarif unitaire à chaque période sans enregistrement de consommation ; ils appartiennent donc à une ligne de contrat fixe tarifée en postes/unités récurrents — pas à cette ligne de consommation.",
-        "nextStep": "Ouvrez les lignes de contrat, ajoutez (ou ouvrez) une ligne fixe, ajoutez ce service et choisissez « Postes/unités récurrents », puis confirmez la quantité et le tarif unitaire. Le changement prend effet à la prochaine période de service non facturée ; cette ligne de consommation et son historique restent inchangés jusqu'à ce que vous la supprimiez."
+        "nextStep": "Ouvrez les lignes de contrat, ajoutez (ou ouvrez) une ligne fixe, ajoutez ce service et choisissez « Postes/unités récurrents », puis confirmez la quantité et le tarif unitaire. Le changement prend effet à la prochaine période de service non facturée ; cette ligne de consommation et son historique restent inchangés jusqu'à ce que vous la supprimiez.",
+        "manualHandoff": "Ouvrez Lignes de contrat → Créer une ligne de contrat personnalisée, choisissez Fixe, ajoutez ce service et sélectionnez « Postes/unités récurrents ». Vérifiez la quantité, le tarif unitaire et le calendrier de facturation avant d'enregistrer. Cela crée un engagement récurrent distinct ; ce service de consommation n'est ni converti ni clôturé. Coordonnez son démarrage avec la fin de la facturation de la consommation et vérifiez la consommation restant à facturer avant d'activer les deux pour la même période."
       },
       "periodCount": {
         "title": "Déclarer un décompte de période",
@@ -364,7 +365,7 @@
         "missingConfiguration": "Ce service n'a aucune configuration enregistrée à convertir. Actualisez et réessayez.",
         "failed": "Impossible de modifier la façon dont ce service est mesuré."
       },
-      "effectiveFrom": "Measurement change effective from"
+      "effectiveFrom": "Changement de mesure applicable à partir du"
     }
   },
   "contractDialog": {
@@ -594,9 +595,11 @@
       "unitOfMeasure": "Unité de mesure",
       "unitPlaceholder": "unité",
       "unitRate": "Tarif unitaire",
-      "effectiveFrom": "Recurring seat changes effective from",
-      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
-      "recurringUnits": "Recurring seats/units"
+      "effectiveFrom": "Modifications des postes récurrents applicables à partir du",
+      "prospectiveSeatHelp": "Les postes facturent quantité × tarif unitaire. Les modifications s'appliquent à cette limite de période de service ; les quantités et la tarification antérieures sont conservées.",
+      "recurringUnits": "Postes/unités récurrents",
+      "semanticsEffectiveFrom": "Modifications de tarification et de mesure du service applicables à partir du",
+      "prospectiveSemanticsHelp": "Les modifications s'appliquent à cette limite de période de service ; les quantités, la mesure et la tarification antérieures sont conservées. Changer la date recharge les paramètres applicables pour vérification."
     },
     "title": "Lignes de contrat"
   },
@@ -729,7 +732,8 @@
       "hourlyDescription": "Facturer sur la base des entrées de temps approuvées.",
       "hourlyTitle": "Horaire",
       "usageDescription": "Facturer pour les unités consommées.",
-      "usageTitle": "À l'usage"
+      "usageTitle": "À l'usage",
+      "fixedSemantics": "Facturer un prix forfaitaire ou une quantité récurrente × tarif unitaire à chaque période."
     },
     "billingTiming": {
       "advance": "Par avance (facturer en début de période)",
@@ -795,8 +799,15 @@
       "unitOfMeasureRequired": "Service {{index}} : l'unité de mesure est requise",
       "unitRateRequired": "Service {{index}} : le tarif unitaire est requis",
       "usageServiceRequired": "Au moins un service à l'usage est requis",
-      "usageServiceSelectRequired": "Service {{index}} : veuillez sélectionner un service"
-    }
+      "usageServiceSelectRequired": "Service {{index}} : veuillez sélectionner un service",
+      "invalidQuantity": "La quantité doit être supérieure ou égale à zéro.",
+      "recurringUnitRateRequired": "Saisissez un tarif unitaire pour chaque service récurrent."
+    },
+    "fixedServicesPricingIntent": "Choisissez un prix forfaitaire ou des postes/unités récurrents pour chaque service.",
+    "fixedServicesPricingExplanation": "Les allocations au forfait se partagent le tarif de base de la ligne. Les postes récurrents facturent la quantité convenue × tarif unitaire à chaque période, sans enregistrement de consommation.",
+    "recurringQuantity": "Quantité récurrente",
+    "allocationQuantity": "Quantité allouée",
+    "bundleBaseRateHelp": "Frais récurrents pour les services au forfait. Les postes récurrents sont facturés à part, en quantité × tarif unitaire."
   },
   "pricingSchedules": {
     "list": {

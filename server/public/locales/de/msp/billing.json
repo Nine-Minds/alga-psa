@@ -212,8 +212,12 @@
       "deleteSuccess": "Nutzungsdatensatz erfolgreich gelöscht",
       "deleteError": "Nutzungsdatensatz konnte nicht gelöscht werden"
     },
-    "periodReport": "Period usage report",
-    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
+    "periodReport": "Nutzungsmeldung für den Zeitraum",
+    "periodAlreadyInvoiced": "Dieser Zeitraum ist bereits in Rechnung gestellt. Korrigieren Sie ihn über den Rechnungsanpassungsprozess.",
+    "periodFilter": {
+      "notice": "Nutzung für den Leistungszeitraum {{start}} bis {{end}} wird angezeigt",
+      "clear": "Zurücksetzen"
+    }
   },
   "lineItem": {
     "collapsed": {

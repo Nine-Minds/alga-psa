@@ -1,3 +1,5 @@
+const { canCreateDistributedTable, isDistributed } = require('./utils/citusDistribution.cjs');
+
 const tables = [
   'billing_semantics_locks',
   'usage_period_totals', 'usage_period_total_requests', 'usage_tracking',
@@ -17,8 +19,18 @@ exports.up = async function(knex) {
       IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
       RETURN NEW;
     END $$`);
+  // Citus does not support triggers on distributed tables. There the
+  // per-tenant billing advisory lock is taken by the application
+  // (lockTenantBilling) on the coordinator — the only lock domain a
+  // distributed write shares; a worker-side trigger lock would not even
+  // conflict with it. The trigger is defense-in-depth for plain-Postgres
+  // deployments and any table Citus leaves local.
+  // (pg_dist_partition only exists under Citus, so gate the isDistributed
+  // probe on the extension being present.)
+  const hasCitus = await canCreateDistributedTable(knex);
   for (const table of tables) {
     if (await knex.schema.hasTable(table)) {
+      if (hasCitus && (await isDistributed(knex, table))) continue;
       await knex.raw('CREATE TRIGGER billing_semantics_mutation BEFORE INSERT OR UPDATE OR DELETE ON ?? FOR EACH ROW EXECUTE FUNCTION lock_billing_semantics_mutation()', [table]);
     }
   }

@@ -412,8 +412,8 @@
       },
       "loading": "Chargement de la configuration du service...",
       "title": "Modifier la configuration du service",
-      "effectiveFrom": "Quantity or measurement change effective from",
-      "effectiveHelp": "Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement."
+      "effectiveFrom": "Changement de quantité ou de mesure applicable à partir du",
+      "effectiveHelp": "Les modifications prennent effet à cette limite de période de service. Les périodes antérieures conservent leur tarification et leur mesure."
     },
     "tierEditor": {
       "actions": {

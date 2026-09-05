@@ -178,7 +178,8 @@
         "usageAttributionExcluded": "⟦{{service}}: ŭşȧɠḗ řḗƈȯřḓḗḓ ƒȯř {{periodStart}} ŧȯ {{periodEnd}} īş ḗẋƈŀŭḓḗḓ ŭƞŧīŀ īŧş ƈȯƞŧřȧƈŧ-ŀīƞḗ ȧŧŧřīƀŭŧīȯƞ īş řḗşȯŀṽḗḓ — řḗşȯŀṽḗ ŧħḗ ȧŧŧřīƀŭŧīȯƞ īƞşŧḗȧḓ ȯƒ řḗƈȯřḓīƞɠ ḿȯřḗ ŭşȧɠḗ⟧",
         "usageCalculationError": "⟦{{service}}: řḗƈȯřḓḗḓ ŭşȧɠḗ ƒȯř {{periodStart}} ŧȯ {{periodEnd}} ƈȯŭŀḓ ƞȯŧ ƀḗ ƥřīƈḗḓ — ƒīẋ ŧħḗ şḗřṽīƈḗ ƥřīƈīƞɠ īƞşŧḗȧḓ ȯƒ řḗƈȯřḓīƞɠ ḿȯřḗ ŭşȧɠḗ⟧",
         "recordScopedUsage": "⟦Řḗƈȯřḓ ŭşȧɠḗ: {{service}} — {{line}}⟧",
-        "calculationContext": "⟦{{service}}: {{periodStart}} ŧȯ {{periodEnd}} — řḗƈȯřḓḗḓ ŭşȧɠḗ ƈȯŭŀḓ ƞȯŧ ƀḗ ƥřīƈḗḓ. Řḗṽīḗẇ ŧħīş şḗřṽīƈḗ’ş ƥřīƈīƞɠ ƈȯƞƒīɠŭřȧŧīȯƞ.⟧"
+        "calculationContext": "⟦{{service}}: {{periodStart}} ŧȯ {{periodEnd}} — řḗƈȯřḓḗḓ ŭşȧɠḗ ƈȯŭŀḓ ƞȯŧ ƀḗ ƥřīƈḗḓ. Řḗṽīḗẇ ŧħīş şḗřṽīƈḗ’ş ƥřīƈīƞɠ ƈȯƞƒīɠŭřȧŧīȯƞ.⟧",
+        "reportedPeriodTotalsHeading": "⟦Řḗƥȯřŧḗḓ ƥḗřīȯḓ ƈȯŭƞŧş⟧"
       },
       "poOverage": {
         "title": "⟦Ƥŭřƈħȧşḗ Ȯřḓḗř Ŀīḿīŧ Ȯṽḗřȧɠḗş⟧",

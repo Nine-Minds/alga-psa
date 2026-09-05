@@ -212,8 +212,12 @@
       "deleteSuccess": "Gebruiksrecord is succesvol verwijderd",
       "deleteError": "Kan gebruiksrecord niet verwijderen"
     },
-    "periodReport": "Period usage report",
-    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
+    "periodReport": "Gebruiksrapport per periode",
+    "periodAlreadyInvoiced": "Deze periode is al gefactureerd. Corrigeer dit via het correctieproces voor facturen.",
+    "periodFilter": {
+      "notice": "Toont het gebruik voor de serviceperiode {{start}} tot {{end}}",
+      "clear": "Wissen"
+    }
   },
   "lineItem": {
     "collapsed": {

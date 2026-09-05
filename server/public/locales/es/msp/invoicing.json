@@ -177,8 +177,9 @@
         "missingUsageService": "{{service}}: sin registros de uso del {{periodStart}} al {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: el uso registrado del {{periodStart}} al {{periodEnd}} queda excluido hasta que se resuelva su atribución a una línea de contrato; resuelva la atribución en lugar de registrar más uso",
         "usageCalculationError": "{{service}}: el uso registrado del {{periodStart}} al {{periodEnd}} no se pudo tarificar; corrija los precios del servicio en lugar de registrar más uso",
-        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
-        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
+        "recordScopedUsage": "Registrar uso: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: del {{periodStart}} al {{periodEnd}} — el uso registrado no se pudo tarificar. Revise la configuración de precios de este servicio.",
+        "reportedPeriodTotalsHeading": "Cantidades del período informadas"
       },
       "poOverage": {
         "title": "Excedentes del límite de órdenes de compra",
@@ -2139,15 +2140,15 @@
     }
   },
   "periodTotal": {
-    "missingContext": "Missing client or service configuration for this report.",
-    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
-    "saveError": "Unable to save the period count.",
-    "retryError": "Unable to save the period count. Retry this submission.",
-    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "quantityLabel": "Period count for {{service}}",
-    "saving": "Saving…",
-    "saveCorrection": "Save correction",
-    "save": "Save"
+    "missingContext": "Falta la configuración del cliente o del servicio para este informe.",
+    "invalidQuantity": "Ingrese un número entero de 0 o más para la cantidad del período.",
+    "saveError": "No se pudo guardar la cantidad del período.",
+    "retryError": "No se pudo guardar la cantidad del período. Reintente el envío.",
+    "correct": "Corregir la cantidad informada de {{quantity}} para {{service}} (del {{periodStart}} al {{periodEnd}})",
+    "report": "Informar una cantidad del período para {{service}} (del {{periodStart}} al {{periodEnd}})",
+    "quantityLabel": "Cantidad del período para {{service}}",
+    "saving": "Guardando…",
+    "saveCorrection": "Guardar corrección",
+    "save": "Guardar"
   }
 }

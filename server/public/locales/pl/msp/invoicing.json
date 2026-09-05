@@ -195,8 +195,9 @@
         "missingUsageService": "{{service}}: brak rekordów użycia od {{periodStart}} do {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: zarejestrowane użycie od {{periodStart}} do {{periodEnd}} jest wykluczone, dopóki nie zostanie rozstrzygnięte przypisanie do pozycji umowy — rozstrzygnij przypisanie zamiast rejestrować kolejne użycie",
         "usageCalculationError": "{{service}}: zarejestrowanego użycia od {{periodStart}} do {{periodEnd}} nie udało się wycenić — popraw ceny usługi zamiast rejestrować kolejne użycie",
-        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
-        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
+        "recordScopedUsage": "Zarejestruj użycie: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: od {{periodStart}} do {{periodEnd}} — zarejestrowanego użycia nie udało się wycenić. Przejrzyj konfigurację cen tej usługi.",
+        "reportedPeriodTotalsHeading": "Zgłoszone liczby dla okresów"
       },
       "poOverage": {
         "title": "Przekroczenie limitu zamówienia zakupu",
@@ -2189,15 +2190,15 @@
     }
   },
   "periodTotal": {
-    "missingContext": "Missing client or service configuration for this report.",
-    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
-    "saveError": "Unable to save the period count.",
-    "retryError": "Unable to save the period count. Retry this submission.",
-    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
-    "quantityLabel": "Period count for {{service}}",
-    "saving": "Saving…",
-    "saveCorrection": "Save correction",
-    "save": "Save"
+    "missingContext": "Brak konfiguracji klienta lub usługi dla tego raportu.",
+    "invalidQuantity": "Podaj liczbę całkowitą 0 lub większą jako liczbę dla okresu.",
+    "saveError": "Nie udało się zapisać liczby dla okresu.",
+    "retryError": "Nie udało się zapisać liczby dla okresu. Ponów przesłanie.",
+    "correct": "Popraw zgłoszoną liczbę {{quantity}} dla usługi {{service}} (od {{periodStart}} do {{periodEnd}})",
+    "report": "Zgłoś liczbę dla okresu usługi {{service}} (od {{periodStart}} do {{periodEnd}})",
+    "quantityLabel": "Liczba dla okresu usługi {{service}}",
+    "saving": "Zapisywanie…",
+    "saveCorrection": "Zapisz korektę",
+    "save": "Zapisz"
   }
 }
