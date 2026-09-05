@@ -60,6 +60,8 @@ jobs:
             .dockerignore
             .env.example
             hocuspocus/**
+            redis/**
+            pgbouncer/**
             Dockerfile
             Dockerfile.build
             server/**
@@ -100,6 +102,15 @@ jobs:
             dockerfile: hocuspocus/Dockerfile
             image: alga-e2e-test-hocuspocus:latest
             cache: true
+          - service: redis
+            dockerfile: redis/Dockerfile
+            image: alga-e2e-test-redis:latest
+            cache: true
+          - service: pgbouncer
+            context: ./pgbouncer
+            dockerfile: pgbouncer/Dockerfile
+            image: alga-e2e-test-pgbouncer:latest
+            cache: true
     steps:
       - uses: actions/checkout@v4
 
@@ -116,7 +127,7 @@ jobs:
       - name: Build and export ${{ matrix.service }}
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ${{ matrix.context || '.' }}
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           tags: ${{ matrix.image }}
@@ -295,7 +306,7 @@ jobs:
         env:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
         run: |
-          for service in server setup email-service hocuspocus; do
+          for service in server setup email-service hocuspocus redis pgbouncer; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
             docker load --input "$archive"
             rm "$archive"
@@ -303,7 +314,7 @@ jobs:
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
           docker-compose -p alga-e2e-test config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
-          for service in server setup email-service hocuspocus; do
+          for service in server setup email-service hocuspocus redis pgbouncer; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
             docker image inspect "$image" > /dev/null
           done
