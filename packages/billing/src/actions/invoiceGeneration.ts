@@ -3037,7 +3037,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   options?: IInvoiceGenerationRequestOptions;
   bridgeMetadata?: RecurringBridgeMetadata;
 }): Promise<InvoiceViewModel | null> {
-  return params.knex.transaction(async (trx) => {
+  return withTransaction(params.knex, async (trx) => {
     await lockTenantBilling(trx, params.tenant);
     return generateInvoiceForLockedSelectionInputs({ ...params, knex: trx });
   });

@@ -33,6 +33,14 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => ({
   useTranslation: () => ({ t: stableT, i18n: { language: 'en' } }),
 }));
 
+// UsageTracking calls useRouter() for the return-to-preview redirect; the unit
+// render has no app router mounted, so stub the navigation hooks.
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  usePathname: () => '/msp/billing',
+  useSearchParams: () => new URLSearchParams(),
+}));
+
 vi.mock('@alga-psa/billing/actions/contractActions', () => ({
   getContractOverview: vi.fn(async () => ({
     contractLines: [
