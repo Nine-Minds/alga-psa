@@ -1,7 +1,12 @@
 name: E2E Fresh Install Tests
 
 on:
-  workflow_dispatch: # Allows manual triggering
+  workflow_dispatch:
+    inputs:
+      no_cache:
+        description: Build all images without layer caches
+        type: boolean
+        default: false
   pull_request:
     branches:
       - '**'
@@ -12,10 +17,20 @@ on:
       - main
     # paths filter removed to always trigger
 
+# Stop superseded PR runs from consuming build runners. Keep every main run.
+concurrency:
+  group: fresh-install-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
 jobs:
-  fresh-install-e2e:
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 60 # Set a timeout for the job
+    timeout-minutes: 5
+    outputs:
+      run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.changed_files_check.outputs.any_changed == 'true' }}
 
     steps:
       - name: Checkout repository
@@ -40,6 +55,13 @@ jobs:
             docker-compose.base.yaml
             docker-compose.ce.yaml
             docker-compose.prod.yaml
+            docker-compose.setup-ubuntu.override.yaml
+            docker-compose.imap-test.yaml
+            .dockerignore
+            .env.example
+            hocuspocus/**
+            redis/**
+            pgbouncer/**
             Dockerfile
             Dockerfile.build
             server/**
@@ -52,19 +74,115 @@ jobs:
             package.json
             package-lock.json
             tsconfig.base.json
+            tsconfig.json
+            types/**
 
-      # Short-circuit the job if no relevant files changed
-      - name: Skip job -- no application files changed
-        if: steps.changed_files_check.outputs.any_changed == 'false'
+  build-images:
+    needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: server
+            dockerfile: Dockerfile.build
+            image: alga-e2e-test_server_ce_local:latest
+            cache: false
+          - service: setup
+            dockerfile: setup/Dockerfile.ubuntu
+            image: alga-setup:ubuntu
+            cache: true
+          - service: email-service
+            dockerfile: services/email-service/Dockerfile
+            image: alga-e2e-test-email-service:latest
+            cache: false
+          - service: hocuspocus
+            dockerfile: hocuspocus/Dockerfile
+            image: alga-e2e-test-hocuspocus:latest
+            cache: true
+          - service: redis
+            dockerfile: redis/Dockerfile
+            image: alga-e2e-test-redis:latest
+            cache: true
+          - service: pgbouncer
+            context: ./pgbouncer
+            dockerfile: pgbouncer/Dockerfile
+            image: alga-e2e-test-pgbouncer:latest
+            cache: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure build disk headroom
         run: |
-          echo "No application files were modified – skipping E2E Fresh Install Tests."
-          echo "No further steps will be executed."
-          # Nothing else to do, the job will report success because the
-          # previous steps (including this one) have succeeded.
+          # Avoid minutes of unconditional cleanup on runners with enough space.
+          if [ "$(df -Pk / | awk 'NR == 2 {print $4}')" -lt 47185920 ]; then
+            sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
+          fi
+          df -h /
 
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build and export ${{ matrix.service }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context || '.' }}
+          file: ${{ matrix.dockerfile }}
+          platforms: linux/amd64
+          tags: ${{ matrix.image }}
+          build-args: |
+            NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
+          outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
+          no-cache: ${{ inputs.no_cache == true }}
+          # The server/email workspace layers are huge; exporting them to the
+          # shared Actions cache adds transfer time and evicts smaller caches.
+          # Setup's OS/npm layers are cheap to reuse and apt took 10m in run 33938095770.
+          cache-from: ${{ matrix.cache && format('type=gha,version=2,scope=fresh-install-{0}', matrix.service) || '' }}
+          cache-to: ${{ matrix.cache && format('type=gha,version=2,scope=fresh-install-{0},mode=max,ignore-error=true,timeout=3m', matrix.service) || '' }}
+
+      - name: Compress image for transfer
+        env:
+          IMAGE_ARCHIVE: ${{ runner.temp }}/${{ matrix.service }}.tar
+        run: gzip -1 "$IMAGE_ARCHIVE"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-image-${{ matrix.service }}
+          path: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+  # Keep the existing required check name. Failed/cancelled build dependencies
+  # must fail this check rather than silently skip the installation job.
+  fresh-install-e2e:
+    needs: [changes, build-images]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml
+    steps:
+      - name: Check build results
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
+          BUILD_RESULT: ${{ needs.build-images.result }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          if [ "$RUN_TESTS" = true ]; then
+            test "$BUILD_RESULT" = success
+          else
+            echo "No application files were modified; skipping fresh-install tests."
+          fi
+
+      - name: Checkout repository
+        if: needs.changes.outputs.run_tests == 'true'
+        uses: actions/checkout@v4
 
       - name: Set up test environment secrets and .env
-        if: steps.changed_files_check.outputs.any_changed == 'true'
+        if: needs.changes.outputs.run_tests == 'true'
         run: |
           # Create secrets directory
           mkdir -p secrets
@@ -137,8 +255,8 @@ jobs:
           fi
         shell: bash
 
-      - name: Install Docker Compose v1.29.2 via curl
-        if: steps.changed_files_check.outputs.any_changed == 'true'
+      - name: Install Docker Compose v2.36.0
+        if: needs.changes.outputs.run_tests == 'true'
         id: install_docker_compose # Add an ID for dependent steps
         run: |
           COMPOSE_VERSION="v2.36.0"
@@ -167,85 +285,45 @@ jobs:
           docker-compose --version # Verify installation
         shell: bash
 
-      - name: Free up disk space
+      - name: Ensure installation disk headroom
         if: steps.install_docker_compose.outcome == 'success'
         run: |
-          echo "Freeing up disk space before build..."
-          df -h
-          # Remove large pre-installed toolchains this job never uses. Each is
-          # guarded with `|| true` so a missing path can't fail the step (the
-          # shell runs with `set -e`). The previous run started with only ~19G
-          # free and the four --no-cache image builds exhausted it; this frees
-          # ~15-20G more on the root volume.
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /usr/local/lib/android || true
-          sudo rm -rf /opt/ghc /usr/local/.ghcup || true
-          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
-          sudo rm -rf /usr/local/share/boost || true
-          sudo rm -rf /usr/share/swift || true
-          # Drop apt caches.
-          sudo apt-get clean || true
-          # Reclaim all Docker space (images, build cache, volumes).
-          docker system prune -a -f --volumes || true
-          echo "Disk space after cleanup:"
-          df -h
-        shell: bash
-
-      - name: Build images with no cache
-        if: steps.install_docker_compose.outcome == 'success'
-        run: |
-          echo "Building all required images with --no-cache to ensure fresh build"
-          # Build all images needed for e2e tests upfront
-          # Excludes: workflow-worker (EE only, not needed for CE e2e)
-          # Excludes: hocuspocus (built separately below with repo-root context)
-          # Note: setup is built here using docker-compose.setup-ubuntu.override.yaml so
-          #       it produces the alga-setup:ubuntu image used by the later "Start setup
-          #       service (Ubuntu build override)" step. That step then starts the
-          #       container without --build to avoid a redundant rebuild.
-          docker-compose -p alga-e2e-test \
-            -f docker-compose.base.yaml \
-            -f docker-compose.ce.yaml \
-            -f docker-compose.prod.yaml \
-            -f docker-compose.setup-ubuntu.override.yaml \
-            build --no-cache \
-            server setup email-service
-        shell: bash
-
-      - name: Reclaim disk space before hocuspocus build
-        if: steps.install_docker_compose.outcome == 'success'
-        run: |
-          echo "Disk space before reclaim:"
+          if [ "$(df -Pk / | awk 'NR == 2 {print $4}')" -lt 31457280 ]; then
+            sudo rm -rf /usr/local/lib/android /usr/share/dotnet
+          fi
           df -h /
-          # The previous --no-cache build leaves dangling intermediate
-          # (multi-stage) layers and BuildKit cache behind. Reclaim them so the
-          # hocuspocus build has headroom -- the earlier run ran out of space
-          # mid-`apt-get` precisely here, on the last image of the job.
-          docker image prune -f || true
-          docker builder prune -af || true
-          echo "Disk space after reclaim:"
-          df -h /
-        shell: bash
 
-      - name: Build hocuspocus image with repo-root context
+      - name: Download images from this run
         if: steps.install_docker_compose.outcome == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-image-*
+          path: ${{ runner.temp }}/fresh-install-images
+          merge-multiple: true
+
+      - name: Load and verify images
+        if: steps.install_docker_compose.outcome == 'success'
+        env:
+          IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
         run: |
-          # hocuspocus/Dockerfile expects repo-root as build context (it does
-          # `COPY hocuspocus/package.json ...`), but docker-compose.ce.yaml sets
-          # `context: ./hocuspocus`, which breaks the build. Build it directly
-          # here with the correct context and tag it with the name compose v2
-          # auto-generates (`<project>-<service>:latest`) so subsequent
-          # `docker-compose up` calls reuse this image instead of rebuilding.
-          docker build --no-cache \
-            -f hocuspocus/Dockerfile \
-            -t alga-e2e-test-hocuspocus:latest \
-            .
-        shell: bash
+          for service in server setup email-service hocuspocus redis pgbouncer; do
+            archive="$IMAGE_DIRECTORY/$service.tar.gz"
+            docker load --input "$archive"
+            rm "$archive"
+          done
+          # Resolve explicit and Compose-generated tags so a configuration change cannot
+          # accidentally run an old/pulled image instead of this run's build.
+          docker-compose -p alga-e2e-test config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
+          for service in server setup email-service hocuspocus redis pgbouncer; do
+            image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
+            docker image inspect "$image" > /dev/null
+          done
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting foundational services: postgres and redis"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d postgres redis
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --no-build -d postgres redis
         shell: bash
 
       - name: Wait for postgres to be ready
@@ -274,7 +352,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting pgbouncer service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --build -d pgbouncer
+          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --no-build -d pgbouncer
         shell: bash
 
       - name: Wait for pgbouncer to be ready
@@ -307,10 +385,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting setup service"
-          # Image (alga-setup:ubuntu) was already built fresh in the earlier
-          # "Build images with no cache" step using the same override file, so
-          # we start without --build here to avoid a duplicate ~5–10 min rebuild
-          # that previously pushed the job past its 60-minute timeout.
+          # Use the setup image built for this run; never rebuild during installation.
           # Set DB_HOST_ADMIN and DB_PORT_ADMIN to connect directly to postgres for admin operations
           # while keeping DB_HOST and DB_PORT pointing to pgbouncer for migrations/seeds
           DB_HOST_ADMIN=postgres \
@@ -320,7 +395,7 @@ jobs:
             -f docker-compose.ce.yaml \
             -f docker-compose.prod.yaml \
             -f docker-compose.setup-ubuntu.override.yaml \
-            up -d setup
+            up --no-build -d setup
         shell: bash
 
       - name: Wait for Setup service to complete (Ubuntu build override)
@@ -420,7 +495,7 @@ jobs:
           # Use --no-recreate to avoid restarting setup which already completed
           # Use --no-deps to avoid waiting on setup dependency again
           docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.imap-test.yaml up -d \
-            --no-recreate --no-deps \
+            --no-build --no-recreate --no-deps \
             server email-service imap-test-server hocuspocus
         shell: bash
 
@@ -543,9 +618,9 @@ jobs:
 
       - name: Set up Node.js
         if: steps.wait_for_setup.outputs.status == 'success'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18' # Or your project's Node version
+          node-version: '22'
 
       - name: Create E2E test directory and package.json
         if: steps.wait_for_setup.outputs.status == 'success'
@@ -592,12 +667,12 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ steps.playwright_version.outputs.version }}
+          key: ${{ runner.os }}-playwright-chromium-${{ steps.playwright_version.outputs.version }}
 
       - name: Install Playwright browsers
         if: steps.wait_for_setup.outputs.status == 'success' && steps.playwright_cache.outputs.cache-hit != 'true'
         working-directory: ./e2e-tests
-        run: npx playwright install
+        run: npx playwright install chromium
         shell: bash
 
       - name: Install Playwright system dependencies
@@ -620,7 +695,7 @@ jobs:
           set -x
           attempt=1
           max_attempts=3
-          until timeout 240 npx playwright install-deps; do
+          until timeout 240 npx playwright install-deps chromium; do
             code=$?
             if [ "$attempt" -ge "$max_attempts" ]; then
               echo "playwright install-deps failed after $attempt attempts (last exit $code)."
@@ -827,6 +902,7 @@ jobs:
         env:
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        timeout-minutes: 8
         run: npx playwright test
         shell: bash
 
@@ -902,13 +978,15 @@ jobs:
           path: logs/
           retention-days: 7
 
-      # - name: Upload Playwright Test Report
-      #   if: always() && steps.changed_files_check.outputs.any_changed == 'true' && steps.wait_for_setup.outputs.status == 'success' && !env.ACT # Run even if tests fail, but setup was ok. Skip in ACT due to token issues.
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: playwright-report
-      #     path: e2e-tests/playwright-report/
-      #     retention-days: 7
+      - name: Upload Playwright diagnostics
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-playwright
+          path: |
+            e2e-tests/playwright-report/
+            e2e-tests/test-results/
+          retention-days: 7
 
       - name: Cleanup Docker Compose
         if: always() && steps.install_docker_compose.outcome == 'success' # Ensure docker-compose was attempted to be installed
