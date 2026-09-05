@@ -1,5 +1,7 @@
 'use server'
+import { persistCommentPublication } from '@alga-psa/shared/lib/ticketCommentAttachments';
 
+import { reconcileCommentAttachments } from '@shared/lib/ticketCommentAttachments';
 import type {
   ITicket,
   ITicketListItem,
@@ -86,6 +88,7 @@ import {
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
+import { authorizeAndRedactDocuments } from '@shared/lib/documentAuthorization';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -487,7 +490,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // Fetch all related data in parallel
     const [
       comments,
-      documents,
+      documentRows,
       clients,
       resources,
       users,
@@ -609,6 +612,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .orderBy('category_name', 'asc');
       })()
     ]);
+
+    // Use the same document policy as subsequent fetches before returning rows
+    // or deriving counts. This also annotates effective comment visibility.
+    const documents = await hasPermission(user, 'document', 'read', trx)
+      ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
+      : [];
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
     const clientsData = clients as (IClient & { document_id?: string })[];
@@ -3305,6 +3314,8 @@ export const addTicketCommentWithCache = withAuth(async (
       ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
 
+      await reconcileCommentAttachments(trx, tenant, newComment.comment_id!, user.user_id);
+
     // Update ticket response state based on comment visibility and author (F005-F008)
     if (!isScheduled) {
       await updateTicketResponseStateFromComment(
@@ -3401,8 +3412,7 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) registerAfterCommit(trx, () =>
-      publishEvent({
+    if (!isScheduled) await persistCommentPublication(trx, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -3420,9 +3430,7 @@ export const addTicketCommentWithCache = withAuth(async (
           suppressContactNotifications,
           suppressInternalNotifications,
         }
-      }),
-      `TICKET_COMMENT_ADDED ticket=${ticketId}`
-    );
+      }, publishEvent);
 
     // Publish workflow v2 ticket message events (additive).
     if (!isScheduled) try {

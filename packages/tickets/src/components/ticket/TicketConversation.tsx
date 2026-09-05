@@ -209,6 +209,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   }, [onNewCommentContentChange]);
 
   const composeUploadSession = useTicketRichTextUploadSession({
+    commentAttachments: true,
     componentLabel: 'TicketConversation',
     ticketId: ticket.ticket_id,
     userId: currentUser?.id,
@@ -222,12 +223,13 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   });
 
   const existingCommentUploadSession = useTicketRichTextUploadSession({
+    commentAttachments: true,
     componentLabel: 'TicketConversation',
     ticketId: ticket.ticket_id,
     userId: currentUser?.id,
-    trackDraftUploads: false,
+    trackDraftUploads: true,
     onDocumentsChanged: onClipboardImageUploaded,
-    onDiscard: onClose,
+    onDiscard: () => { setReplyingToCommentId(null); closeCommentThreadPanel(); onClose(); },
     uploadDocumentAction: uploadTicketAttachmentAction,
     deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
     resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
@@ -261,6 +263,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     setShowEditor(true);
   };
   const handleSubmitComment = async () => {
+    if (composeUploadSession.isUploading) return;
     let success = false;
     try {
       if (hideInternalTab) {
@@ -329,6 +332,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   };
   // Removed renderButtonBar function as it's no longer needed
   const handleAddNewComment = async () => {
+    if (composeUploadSession.isUploading) return;
     if (hideInternalTab) {
       await onAddNewComment(false, isResolutionToggle);
     } else {
@@ -497,8 +501,8 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           userMap={userMap}
           contactMap={contactMap}
           onContentChange={onContentChange}
-          onSave={onSave}
-          onClose={onClose}
+          onSave={updates => { if (!existingCommentUploadSession.isUploading) onSave(updates); }}
+          onClose={existingCommentUploadSession.requestDiscard}
           onEdit={() => onEdit(mergedConversation)}
           onDelete={onDelete}
           onReply={() => setReplyingToCommentId(mergedConversation.comment_id ?? null)}
@@ -519,12 +523,14 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
             uploadFile={existingCommentUploadSession.uploadFile}
             searchMentions={searchUsersForMentions}
             onSubmit={async ({ content, parentCommentId, isInternal }) => {
+              if (existingCommentUploadSession.isUploading) return;
               const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
               if (success) {
+                existingCommentUploadSession.resetDraftTracking();
                 setReplyingToCommentId(null);
               }
             }}
-            onCancel={() => setReplyingToCommentId(null)}
+            onCancel={existingCommentUploadSession.requestDiscard}
           />
         )}
       </>
@@ -800,6 +806,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         )}
         <Suspense fallback={<RichTextEditorSkeleton height="200px" title={t('conversation.commentEditor', 'Comment Editor')} />}>
           <TextEditor
+            allowFileAttachments
             {...withDataAutomationId({ id: `${compId}-editor` })}
             key={editorKey}
             roomName={`ticket-${ticket.ticket_id}`}
@@ -814,7 +821,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           <Button
             id={`${compId}-add-comment-btn`}
             onClick={handleSubmitComment}
-            disabled={isSubmitting || !scheduleIsValid}
+            disabled={isSubmitting || composeUploadSession.isUploading || !scheduleIsValid}
           >
             {isSubmitting ? tCore('common.loading', 'Loading...') : isScheduleToggle ? t('conversation.schedule', 'Schedule') : t('conversation.addComment', 'Add Comment')}
           </Button>
@@ -900,7 +907,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       <CommentThreadDrawer<IComment>
         id={`${compId}-comment-thread-drawer`}
         isOpen={Boolean(openPanelThreadGroup)}
-        onClose={closeCommentThreadPanel}
+        onClose={existingCommentUploadSession.requestDiscard}
         group={openPanelThreadGroup}
         getCommentId={(comment) => comment.comment_id}
         renderComment={(comment) => renderCommentItem(comment)}
@@ -908,9 +915,12 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
         replyRoomName={(parentCommentId) => `ticket-${ticket.ticket_id}-reply-${parentCommentId}`}
         initialInternal={Boolean(openPanelComment?.is_internal ?? openPanelThreadGroup?.root.is_internal)}
         showInternalToggle={false}
+        uploadFile={existingCommentUploadSession.uploadFile}
         onSubmitReply={async ({ content, parentCommentId, isInternal }) => {
+          if (existingCommentUploadSession.isUploading) return;
           const success = await onAddReplyComment?.(content, parentCommentId, isInternal);
           if (success) {
+            existingCommentUploadSession.resetDraftTracking();
             closeCommentThreadPanel();
           }
         }}

@@ -1632,5 +1632,10 @@
   },
   "callLink": {
     "teamsCall": "Zadzwoń w Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Załącz pliki",
+    "uploadingFiles": "Przesyłanie plików…",
+    "fileUploadFailed": "Nie udało się przesłać pliku."
   }
 }

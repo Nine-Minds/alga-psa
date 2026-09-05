@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
+import { createComment, updateComment, findCommentById } from '../../../actions/comment-actions/commentActions';
 
 const {
   routerPushMock,
@@ -13,13 +14,16 @@ const {
   getTicketByIdMock,
   toastSuccessMock,
   toastErrorMock,
+  getDocumentsMock,
 } = vi.hoisted(() => ({
   routerPushMock: vi.fn(),
   findBoardByIdMock: vi.fn(),
   getTicketByIdMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  getDocumentsMock: vi.fn().mockResolvedValue([]),
 }));
+let conversationProps: any;
 
 let ticketInfoDirtyFields: string[] = [];
 let ticketPropertiesDirtyFields: string[] = [];
@@ -37,11 +41,15 @@ let liveTicketContext = {
   reconnectVersion: 0,
 };
 
-vi.mock('next/navigation', () => ({
-  useRouter: () => ({ push: routerPushMock, refresh: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
-  usePathname: () => '/msp/tickets/ticket-1',
-}));
+vi.mock('next/navigation', () => {
+  // A fresh router on each render would reset the remote-update debounce.
+  const router = { push: routerPushMock, refresh: vi.fn() };
+  return {
+    useRouter: () => router,
+    useSearchParams: () => new URLSearchParams(),
+    usePathname: () => '/msp/tickets/ticket-1',
+  };
+});
 
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ data: { user: { id: 'user-1' } } }),
@@ -65,7 +73,7 @@ vi.mock(
   '@alga-psa/core/context/DocumentsCrossFeatureContext',
   () => ({
     useDocumentsCrossFeature: () => ({
-      getDocumentByTicketId: vi.fn().mockResolvedValue([]),
+      getDocumentByTicketId: getDocumentsMock,
       deleteDocument: vi.fn().mockResolvedValue(undefined),
     }),
   })
@@ -158,29 +166,34 @@ vi.mock('@alga-psa/ui/ui-reflection/ReflectionContainer', () => ({
   ReflectionContainer: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  // Components under test format dates through useFormatters; the real hook
-  // reads the locale off the provider this test does not mount.
-  useFormatters: () => ({
-    locale: 'en',
-    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
-      new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
-    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
-      new Intl.NumberFormat('en', options).format(value),
-    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
-      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
-    formatRelativeTime: (date: Date | string) => String(date),
-  }),
-  useTranslation: () => ({
-    t: (_key: string, fallback?: string | Record<string, unknown>) => {
-      // Mirror i18next's t(key, options) form where options carries defaultValue.
-      if (fallback && typeof fallback === 'object') {
-        fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
-      }
-      return typeof fallback === 'string' ? fallback : _key;
-    },
-  }),
-}));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => {
+  // Keep t stable like the provider; replacing it on every render requeues the
+  // remote-update debounce while asynchronous mount effects are settling.
+  const translate = (_key: string, fallback?: string | Record<string, unknown>) => {
+    // Mirror i18next's t(key, options) form where options carries defaultValue.
+    if (fallback && typeof fallback === 'object') {
+      fallback = typeof fallback.defaultValue === 'string' ? fallback.defaultValue : undefined;
+    }
+    return typeof fallback === 'string' ? fallback : _key;
+  };
+  return {
+    // Components under test format dates through useFormatters; the real hook
+    // reads the locale off the provider this test does not mount.
+    useFormatters: () => ({
+      locale: 'en',
+      formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) =>
+        new Intl.DateTimeFormat('en', options).format(typeof date === 'string' ? new Date(date) : date),
+      formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en', options).format(value),
+      formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+        new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+      formatRelativeTime: (date: Date | string) => String(date),
+    }),
+    useTranslation: () => ({
+      t: translate,
+    }),
+  };
+});
 
 vi.mock('@alga-psa/tags/context', () => ({
   useTags: () => ({ tags: [] }),
@@ -205,6 +218,14 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   removeTicketResource: vi.fn(),
   assignTeamToTicket: vi.fn().mockResolvedValue(undefined),
   removeTeamFromTicket: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../actions/comment-actions/commentActions', () => ({
+  findCommentsByTicketId: vi.fn().mockResolvedValue([]),
+  deleteComment: vi.fn(),
+  createComment: vi.fn(),
+  updateComment: vi.fn(),
+  findCommentById: vi.fn(),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -348,7 +369,7 @@ vi.mock('../TicketProperties', () => ({
 
 vi.mock('../TicketDocumentsSection', () => ({
   __esModule: true,
-  default: () => <div data-testid="ticket-documents" />,
+  default: ({ initialDocuments }: any) => <div data-testid="ticket-documents">{JSON.stringify(initialDocuments)}</div>,
 }));
 
 vi.mock('../TicketEmailNotifications', () => ({
@@ -358,7 +379,10 @@ vi.mock('../TicketEmailNotifications', () => ({
 
 vi.mock('../TicketConversation', () => ({
   __esModule: true,
-  default: () => <div data-testid="ticket-conversation" />,
+  default: (props: any) => {
+    conversationProps = props;
+    return <div data-testid="ticket-conversation" />;
+  },
 }));
 
 vi.mock('../AgentScheduleDrawer', () => ({
@@ -414,7 +438,7 @@ const enabledBoard = {
   enable_live_ticket_timer: true,
 };
 
-function renderTicketDetails() {
+function renderTicketDetails(extraProps: Partial<React.ComponentProps<typeof TicketDetails>> = {}) {
   return render(
     <TicketDetails
       bootstrap={entryLayoutBootstrap}
@@ -429,6 +453,7 @@ function renderTicketDetails() {
         { value: 'priority-2', label: 'High' },
       ]}
       boardOptions={[{ value: 'board-1', label: 'Support' }]}
+      {...extraProps}
     />
   );
 }
@@ -437,6 +462,7 @@ describe('TicketDetails remote live updates', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    getDocumentsMock.mockResolvedValue([]);
     ticketInfoDirtyFields = [];
     ticketPropertiesDirtyFields = [];
     ticketInfoLocalFieldValues = {};
@@ -456,6 +482,44 @@ describe('TicketDetails remote live updates', () => {
     cleanup();
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+  });
+
+  it('accepts refreshed document props with unchanged IDs and removed membership', async () => {
+    const internal = { document_id: 'same-id', document_name: 'original.pdf', comment_attachment_is_public: false };
+    const publicDocument = { ...internal, document_name: 'renamed.pdf', comment_attachment_is_public: true };
+    const props = { bootstrap: entryLayoutBootstrap, initialTicket: baseTicket, initialBoard: enabledBoard };
+    const view = render(<TicketDetails {...props} initialDocuments={[internal]} />);
+    await act(async () => {});
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([internal]));
+    await act(async () => { view.rerender(<TicketDetails {...props} initialDocuments={[publicDocument]} />); });
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([publicDocument]));
+    await act(async () => { view.rerender(<TicketDetails {...props} initialDocuments={[]} />); });
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent('[]');
+  });
+
+  it.each(['optimized create', 'create', 'reply', 'edit'])('refreshes same-ID document metadata after successful %s', async (operation) => {
+    const draft = { document_id: 'same-id', comment_attachment_is_public: false };
+    const claimed = { ...draft, comment_attachment_is_public: true };
+    const comment = { comment_id: 'comment-1', user_id: 'user-1', note: '[]' };
+    vi.mocked(createComment).mockResolvedValue(comment as any);
+    vi.mocked(updateComment).mockResolvedValue(comment as any);
+    vi.mocked(findCommentById).mockResolvedValue(comment as any);
+    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(undefined) : undefined;
+    await act(async () => { renderTicketDetails({ initialDocuments: [draft], onAddComment }); });
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([draft]));
+    getDocumentsMock.mockResolvedValue([claimed]);
+    const content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Attachment claim', styles: {} }] }];
+    if (operation === 'edit') {
+      await act(async () => { conversationProps.onEdit(comment); });
+      await act(async () => { await conversationProps.onSave({ note: JSON.stringify(content) }); });
+    } else if (operation === 'reply') {
+      await act(async () => { await conversationProps.onAddReplyComment(content, 'parent-1', false); });
+    } else {
+      await act(async () => { conversationProps.onNewCommentContentChange(content); });
+      await act(async () => { await conversationProps.onAddNewComment(false, false); });
+    }
+    expect(getDocumentsMock).toHaveBeenCalledWith('ticket-1');
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([claimed]));
   });
 
   it('T034: no-overlap remote updates refetch silently and highlight the changed field', async () => {

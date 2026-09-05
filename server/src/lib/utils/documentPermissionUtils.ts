@@ -1,3 +1,4 @@
+import { canReadCommentAttachment } from '@shared/lib/ticketCommentAttachments';
 import { IUser } from '@/interfaces/auth.interfaces';
 import { IDocument } from '@/interfaces/document.interface';
 import { IDocumentAssociation } from '@/interfaces/document-association.interface';
@@ -84,6 +85,8 @@ export async function canAccessDocument(
   if (!effectiveTenant) {
     throw new Error('Tenant context not found');
   }
+
+  if (!await canReadCommentAttachment(db, effectiveTenant, user.user_id, document.document_id)) return false;
 
   // 2. Client-portal contacts must satisfy the client-portal visibility
   // model; the entity-type permission checks below are for internal (MSP)

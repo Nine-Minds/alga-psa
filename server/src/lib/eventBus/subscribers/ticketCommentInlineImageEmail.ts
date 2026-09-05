@@ -183,8 +183,12 @@ export async function rewriteTicketCommentImagesToCid(params: {
     .andWhere('da.entity_id', params.ticketId)
     .select('d.document_id', 'd.document_name', 'd.file_id', 'd.mime_type', 'd.file_size');
 
+  const managedFiles = ticketImageDocuments.length ? await db.table('ticket_comment_attachments')
+    .whereIn('document_id', ticketImageDocuments.map((doc: any) => doc.document_id)).select('document_id') : [];
+  const managedIds = new Set(managedFiles.map(row => row.document_id));
   const documentByFileId = new Map(
     ticketImageDocuments
+      .filter((doc: any) => !managedIds.has(doc.document_id))
       .filter((doc: any) => typeof doc.file_id === 'string' && doc.file_id.length > 0)
       .map((doc: any) => [doc.file_id as string, doc])
   );

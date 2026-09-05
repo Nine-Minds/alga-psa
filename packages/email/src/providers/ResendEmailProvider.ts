@@ -76,6 +76,8 @@ export class ResendEmailProvider implements IEmailProvider {
     supportsTracking: true,
     supportsCustomDomains: true,
     maxAttachmentSize: 40 * 1024 * 1024,
+    // https://resend.com/docs/knowledge-base/what-attachment-types-are-not-supported
+    blockedAttachmentExtensions: ('adp app asp bas bat cer chm cmd com cpl crt csh der exe fxp gadget hlp hta inf ins isp its js jse ksh lib lnk mad maf mag mam maq mar mas mat mau mav maw mda mdb mde mdt mdw mdz msc msh msh1 msh2 mshxml msh1xml msh2xml msi msp mst ops pcd pif plg prf prg reg scf scr sct shb shs sys ps1 ps1xml ps2 ps2xml psc1 psc2 tmp url vb vbe vbs vps vsmacros vss vst vsw vxd ws wsc wsf wsh xnk').split(' '),
     maxRecipientsPerMessage: 50,
   };
 
@@ -388,7 +390,8 @@ export class ResendEmailProvider implements IEmailProvider {
   private shouldRetry(error: any): boolean {
     const status = error?.response?.status;
     if (!status) return false;
-    return status === 429 || status >= 500;
+    // Only an explicit rejection is safe to retry without provider idempotency.
+    return status === 429;
   }
 
   private calculateBackoffDelay(attempt: number, baseDelay: number): number {
@@ -408,7 +411,12 @@ export class ResendEmailProvider implements IEmailProvider {
       `${message}${status ? ` (status ${status})` : ''}${data?.message ? `: ${data.message}` : ''}`,
       this.providerId,
       this.providerType,
-      shouldRetry
+      shouldRetry,
+      status ? String(status) : String(error?.code || 'RESEND_OUTCOME_UNKNOWN'),
+      { definitelyNotSent: Boolean(status && status >= 400 && status < 500),
+        requiresReconciliation: !status || status >= 500,
+        ...(status === 429 ? { retryAfterMs: Math.max(1000, Number(error?.response?.headers?.['retry-after'] || 30) * 1000) } : {}),
+      }
     );
   }
 }

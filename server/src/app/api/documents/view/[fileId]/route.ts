@@ -59,7 +59,8 @@ export async function GET(
           })
           .first();
 
-        if (tenantLogoAssoc) {
+        const commentAttachment = await tenantScopedAdminDb.table('ticket_comment_attachments').where({ document_id: documentRecord.document_id }).first();
+        if (tenantLogoAssoc && !commentAttachment) {
           isTenantLogo = true;
           // Public access granted for tenant logo
         }
@@ -193,7 +194,7 @@ export async function GET(
       headers.set('Accept-Ranges', 'bytes');
       headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
       headers.set('Content-Length', contentLength.toString());
-      headers.set('Cache-Control', 'public, max-age=3600');
+      headers.set('Cache-Control', 'private, no-store');
 
       // Return partial content (206)
       return new NextResponse(stream as any, {
@@ -215,7 +216,7 @@ export async function GET(
       }
       
       // Cache for 1 hour (adjust as needed)
-      headers.set('Cache-Control', 'public, max-age=3600');
+      headers.set('Cache-Control', 'private, no-store');
 
       // Return the full stream response
       return new NextResponse(stream as any, {

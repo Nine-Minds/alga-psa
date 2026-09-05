@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import { createHash, randomUUID } from 'node:crypto';
 import {
   IEmailProvider,
+  EmailProviderError,
   EmailMessage as ProviderEmailMessage,
   EmailSendResult as ProviderEmailSendResult,
   EmailAddress as ProviderEmailAddress
@@ -60,6 +61,7 @@ export interface EmailTemplateContent {
 }
 
 export interface BaseEmailParams {
+  revalidateCommentOnRetry?: boolean;
   to: string | string[] | EmailAddress | EmailAddress[];
   from?: string | EmailAddress;
   fromName?: string;
@@ -492,13 +494,15 @@ export abstract class BaseEmailService {
         logger.warn(`[${this.getServiceName()}] Email provider failed to initialize: ${providerInitError}`);
         return {
           success: false,
-          error: `Email provider not ready: ${providerInitError}`
+          error: `Email provider not ready: ${providerInitError}`,
+          metadata: { definitelyNotSent: true, retryable: true, errorCode: 'PROVIDER_NOT_READY' }
         };
       }
       logger.warn(`[${this.getServiceName()}] Service disabled or not configured`);
       return {
         success: false,
-        error: 'Email service is disabled or not configured'
+        error: 'Email service is disabled or not configured',
+        metadata: { definitelyNotSent: true, retryable: false, errorCode: 'PROVIDER_DISABLED' }
       };
     }
 
@@ -781,7 +785,11 @@ export abstract class BaseEmailService {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
         providerId: emailProvider.providerId,
-        providerType: emailProvider.providerType
+        providerType: emailProvider.providerType,
+        metadata: error && typeof error === 'object' && (error as any).name === 'EmailProviderError' ? {
+          retryable: (error as any).isRetryable, errorCode: (error as any).errorCode,
+          ...((error as any).metadata || {}),
+        } : undefined,
       };
     }
   }

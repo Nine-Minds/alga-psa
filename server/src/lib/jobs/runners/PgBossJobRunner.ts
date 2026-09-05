@@ -29,6 +29,7 @@ export class PgBossJobRunner implements IJobRunner {
   private jobService: JobService;
   private storageService: StorageService;
   private handlers: Map<string, JobHandlerConfig<any>> = new Map();
+  private workerRegistrations = new Map<string, Promise<void>>();
   private isRunning: boolean = false;
 
   private constructor(
@@ -123,16 +124,31 @@ export class PgBossJobRunner implements IJobRunner {
     return 'pgboss';
   }
 
-  registerHandler<T extends BaseJobData>(config: JobHandlerConfig<T>): void {
+  async registerHandler<T extends BaseJobData>(config: JobHandlerConfig<T>): Promise<void> {
     if (this.handlers.has(config.name)) {
       logger.warn(`Job handler ${config.name} is already registered, replacing`);
     }
 
+    // Queue creation and discovery can overlap outside application initialization.
+    // Share both pending and successful workers; remove a failed attempt before
+    // rejecting its waiters so a subsequent call can retry it.
+    let registration = this.workerRegistrations.get(config.name);
+    if (!registration) {
+      registration = this.registerWorker(config).catch(error => {
+        this.workerRegistrations.delete(config.name);
+        throw error;
+      });
+      this.workerRegistrations.set(config.name, registration);
+    }
+    await registration;
     this.handlers.set(config.name, config);
+    logger.info(`Registered job handler: ${config.name}`);
+  }
 
+  private async registerWorker<T extends BaseJobData>(config: JobHandlerConfig<T>): Promise<void> {
     // Register with PG Boss
     // Note: expireInSeconds is set per job when sending, not in work options
-    void this.boss.work<T>(
+    await this.boss.work<T>(
       config.name,
       {},
       async (jobs: Job<T>[]) => {
@@ -168,7 +184,8 @@ export class PgBossJobRunner implements IJobRunner {
             ? parsedScheduledAt.toISOString()
             : undefined;
 
-          await config.handler(jobData.jobServiceId || job.id, {
+          // Replacing a handler updates execution without creating another worker.
+          await (this.handlers.get(config.name) ?? config).handler(jobData.jobServiceId || job.id, {
             ...jobData,
             jobExecutionId: job.id,
             jobScheduledAt
@@ -215,8 +232,6 @@ export class PgBossJobRunner implements IJobRunner {
       }
     }
     );
-
-    logger.info(`Registered job handler: ${config.name}`);
   }
 
   /**
@@ -354,7 +369,7 @@ export class PgBossJobRunner implements IJobRunner {
         if (!base) {
           throw new Error(`No handler registered for job type: ${jobName}. Register a handler before scheduling jobs.`);
         }
-        this.registerHandler({ ...base, name: queueName });
+        await this.registerHandler({ ...base, name: queueName });
       }
 
       // Use PG Boss schedule() for cron-based recurring jobs.
@@ -573,6 +588,7 @@ export class PgBossJobRunner implements IJobRunner {
 
     try {
       await this.boss.stop({ graceful: true });
+      this.workerRegistrations.clear();
       this.isRunning = false;
       logger.info('PgBossJobRunner stopped');
     } catch (error) {

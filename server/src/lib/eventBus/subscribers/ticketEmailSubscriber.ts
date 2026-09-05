@@ -2827,9 +2827,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
               },
               comment: commentContext
             },
+            commentSource: payload.comment?.id ? { ticketId: payload.ticketId, commentId: payload.comment.id } : undefined,
             replyContext: {
               ticketId: child.ticket_id,
-              commentId: payload.comment?.id,
               threadId: childMeta.threadId
             },
             attachments: inlineCommentImageAttachments,

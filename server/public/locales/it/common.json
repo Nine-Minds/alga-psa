@@ -1598,5 +1598,10 @@
   },
   "callLink": {
     "teamsCall": "Chiama in Microsoft Teams"
+  },
+  "editor": {
+    "attachFiles": "Allega file",
+    "uploadingFiles": "Caricamento dei file…",
+    "fileUploadFailed": "Caricamento del file non riuscito."
   }
 }

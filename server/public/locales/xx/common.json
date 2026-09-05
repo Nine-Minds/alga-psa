@@ -1598,5 +1598,10 @@
   },
   "callLink": {
     "teamsCall": "⟦Ƈȧŀŀ īƞ Ḿīƈřȯşȯƒŧ Ŧḗȧḿş⟧"
+  },
+  "editor": {
+    "attachFiles": "11111",
+    "uploadingFiles": "11111",
+    "fileUploadFailed": "11111"
   }
 }
