@@ -211,6 +211,12 @@
       "updateError": "No se pudo actualizar el registro de uso",
       "deleteSuccess": "Registro de uso eliminado correctamente",
       "deleteError": "No se pudo eliminar el registro de uso"
+    },
+    "periodReport": "Informe de uso del período",
+    "periodAlreadyInvoiced": "Este período ya está facturado. Corríjalo mediante el proceso de ajuste de facturas.",
+    "periodFilter": {
+      "notice": "Mostrando el uso del período de servicio del {{start}} al {{end}}",
+      "clear": "Limpiar"
     }
   },
   "lineItem": {

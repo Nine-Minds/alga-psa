@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Informations manquantes sur le plan ou le service"
       },
       "loading": "Chargement de la configuration du service...",
-      "title": "Modifier la configuration du service"
+      "title": "Modifier la configuration du service",
+      "effectiveFrom": "Changement de quantité ou de mesure applicable à partir du",
+      "effectiveHelp": "Les modifications prennent effet à cette limite de période de service. Les périodes antérieures conservent leur tarification et leur mesure."
     },
     "tierEditor": {
       "actions": {

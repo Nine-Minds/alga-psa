@@ -7,6 +7,7 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { getContractOverview } from '@alga-psa/billing/actions/contractActions';
 import type { IContractOverview, IContractLineOverview } from '@alga-psa/billing/actions/contractActions';
 import { Package, Clock, Activity, Coins, Layers3, ChevronDown, ChevronRight } from 'lucide-react';
+import { UsageLegacyTransitionDialog, type UsageLegacyTransitionMode } from './UsageLegacyTransitionDialog';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFormatBillingFrequency, useFormatContractLineType } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import {
@@ -50,23 +51,45 @@ const ContractLineCard: React.FC<{
   isExpanded: boolean;
   onToggle: () => void;
   currencyCode: string;
+  clientId: string | null;
   formatCurrencyCents: (cents: number | null, currencyCode?: string) => string;
   formatFrequencyLabel: (frequency: string) => string;
   formatServiceCountLabel: (count: number) => string;
   formatContractLineType: (value: string) => string;
   includedServicesLabel: string;
   noServicesConfiguredLabel: string;
+  billedOnRecordedUsageLabel: string;
+  billedOnPeriodCountLabel: string;
+  recurringSeatsLabel: (quantity: number, rate: string) => string;
+  bundleAllocationLabel: string;
+  previouslyConfiguredQuantityLabel: (quantity: number) => string;
+  setUpRecurringSeatsLabel: string;
+  reportPeriodCountLabel: string;
+  onStartLegacyTransition: (
+    mode: UsageLegacyTransitionMode,
+    service: IContractLineOverview['services'][number],
+    line: IContractLineOverview,
+  ) => void;
 }> = ({
   line,
   isExpanded,
   onToggle,
   currencyCode,
+  clientId,
   formatCurrencyCents,
   formatFrequencyLabel,
   formatServiceCountLabel,
   formatContractLineType,
   includedServicesLabel,
   noServicesConfiguredLabel,
+  billedOnRecordedUsageLabel,
+  billedOnPeriodCountLabel,
+  recurringSeatsLabel,
+  bundleAllocationLabel,
+  previouslyConfiguredQuantityLabel,
+  setUpRecurringSeatsLabel,
+  reportPeriodCountLabel,
+  onStartLegacyTransition,
 }) => {
   return (
     <div className="border border-[rgb(var(--color-border-200))] rounded-lg overflow-hidden">
@@ -118,11 +141,96 @@ const ContractLineCard: React.FC<{
                 className="flex items-center justify-between bg-card rounded border border-[rgb(var(--color-border-100))] px-3 py-2"
               >
                 <span className="text-sm text-[rgb(var(--color-text-700))]">{service.service_name}</span>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {service.quantity && service.quantity > 1 && (
-                    <span>x{service.quantity}</span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap justify-end">
+                  {/* The quantity source is named per billing intent: a
+                      unit-priced fixed member is a recurring seat count billed
+                      at a unit rate, a bundle member's quantity only allocates
+                      the line total, and Usage bills records only. */}
+                  {line.contract_line_type !== 'Usage' &&
+                    service.pricing_basis === 'unit' &&
+                    service.quantity != null && (
+                      <span data-testid={`fixed-recurring-seats-${service.service_id}`}>
+                        {recurringSeatsLabel(
+                          service.quantity,
+                          formatCurrencyCents(service.unit_rate ?? service.custom_rate, currencyCode),
+                        )}
+                      </span>
+                    )}
+                  {line.contract_line_type !== 'Usage' &&
+                    service.pricing_basis !== 'unit' &&
+                    service.quantity != null &&
+                    service.quantity > 1 && (
+                      <>
+                        <span>x{service.quantity}</span>
+                        <span
+                          className="italic"
+                          data-testid={`fixed-bundle-allocation-${service.service_id}`}
+                        >
+                          {bundleAllocationLabel}
+                        </span>
+                      </>
+                    )}
+                  {line.contract_line_type === 'Usage' && (
+                    // Deep link carries the owning client and the service so
+                    // Usage Tracking opens filtered to this exact obligation.
+                    <>
+                      <a
+                        href={`/msp/billing?tab=usage-tracking${clientId ? `&clientId=${clientId}` : ''}&serviceId=${service.service_id}`}
+                        className="italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                        data-testid={`usage-recorded-usage-hint-${service.service_id}`}
+                        onClick={(event) => event.stopPropagation()}
+                        title={
+                          service.measurement_mode === 'period_total'
+                            ? billedOnPeriodCountLabel
+                            : billedOnRecordedUsageLabel
+                        }
+                      >
+                        {service.measurement_mode === 'period_total'
+                          ? billedOnPeriodCountLabel
+                          : billedOnRecordedUsageLabel}
+                      </a>
+                      {service.previouslyConfiguredQuantity != null &&
+                        service.previouslyConfiguredQuantity > 0 && (
+                          <span
+                            className="flex items-center gap-2 italic text-muted-foreground"
+                            data-testid={`usage-previously-configured-${service.service_id}`}
+                          >
+                            <span title={previouslyConfiguredQuantityLabel(service.previouslyConfiguredQuantity)}>
+                              {previouslyConfiguredQuantityLabel(service.previouslyConfiguredQuantity)}
+                            </span>
+                            {/* Explicit, prospective transitions only: these
+                                open a review dialog and write nothing until the
+                                operator confirms there. */}
+                            <button
+                              type="button"
+                              id={`usage-set-up-recurring-seats-${service.service_id}`}
+                              className="not-italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onStartLegacyTransition('recurring_seats', service, line);
+                              }}
+                            >
+                              {setUpRecurringSeatsLabel}
+                            </button>
+                            <button
+                              type="button"
+                              id={`usage-report-period-count-${service.service_id}`}
+                              className="not-italic underline decoration-dotted underline-offset-2 hover:text-[rgb(var(--color-text-700))]"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                onStartLegacyTransition('period_count', service, line);
+                              }}
+                            >
+                              {reportPeriodCountLabel}
+                            </button>
+                          </span>
+                        )}
+                    </>
                   )}
-                  {service.custom_rate !== null && (
+                  {/* A unit-priced row already states its rate inside the
+                      seat calculation; repeating it here would read as a
+                      second, separate amount. */}
+                  {service.custom_rate !== null && service.pricing_basis !== 'unit' && (
                     <span className="font-medium text-[rgb(var(--color-text-700))]">
                       {formatCurrencyCents(service.custom_rate, currencyCode)}
                       {line.contract_line_type === 'Hourly' && '/hr'}
@@ -157,6 +265,15 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
+  const [legacyTransition, setLegacyTransition] = useState<{
+    mode: UsageLegacyTransitionMode;
+    serviceName: string;
+    legacyQuantity: number;
+    legacyRateCents: number | null;
+    configId: string | null;
+    contractLineId: string;
+    serviceId: string;
+  } | null>(null);
 
   useEffect(() => {
     loadOverview();
@@ -226,6 +343,50 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
   ), [t]);
   const includedServicesLabel = t('contractOverview.lines.includedServices', { defaultValue: 'Included Services' });
   const noServicesConfiguredLabel = t('contractOverview.lines.noServicesConfigured', { defaultValue: 'No services configured' });
+  const billedOnRecordedUsageLabel = t('contractOverview.lines.billedOnRecordedUsage', { defaultValue: 'Billed on recorded usage' });
+  const billedOnPeriodCountLabel = t('contractOverview.lines.billedOnPeriodCount', {
+    defaultValue: 'Billed on the count reported for each period',
+  });
+  const previouslyConfiguredQuantityLabel = useCallback((quantity: number): string => (
+    t('contractOverview.lines.previouslyConfiguredQuantity', {
+      count: quantity,
+      defaultValue: 'Previously configured quantity: {{count}} — not used for billing',
+    })
+  ), [t]);
+  const recurringSeatsLabel = useCallback((quantity: number, rate: string): string => (
+    t('contractOverview.lines.recurringSeats', {
+      count: quantity,
+      rate,
+      defaultValue: '{{count}} × {{rate}} (recurring seats)',
+    })
+  ), [t]);
+  const bundleAllocationLabel = t('contractOverview.lines.bundleAllocation', {
+    defaultValue: 'Allocation of the bundle price — not billable seats',
+  });
+  const setUpRecurringSeatsLabel = t('contractOverview.lines.setUpRecurringSeats', {
+    defaultValue: 'Set up recurring seats',
+  });
+  const reportPeriodCountLabel = t('contractOverview.lines.reportPeriodCount', {
+    defaultValue: 'Report a period count',
+  });
+
+  const handleStartLegacyTransition = useCallback((
+    mode: UsageLegacyTransitionMode,
+    service: IContractLineOverview['services'][number],
+    line: IContractLineOverview,
+  ) => {
+    // Opening the review dialog is a read-only step; nothing is written until
+    // the operator confirms inside it.
+    setLegacyTransition({
+      mode,
+      serviceName: service.service_name,
+      legacyQuantity: service.previouslyConfiguredQuantity ?? 0,
+      legacyRateCents: service.custom_rate,
+      configId: service.config_id,
+      contractLineId: line.contract_line_id,
+      serviceId: service.service_id,
+    });
+  }, []);
 
   if (isLoading) {
     return (
@@ -369,12 +530,21 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
                   isExpanded={expandedLines.has(line.contract_line_id)}
                   onToggle={() => toggleLine(line.contract_line_id)}
                   currencyCode={overview.currencyCode}
+                  clientId={overview.clientId ?? null}
                   formatCurrencyCents={formatCurrencyCents}
                   formatFrequencyLabel={formatFrequencyLabel}
                   formatServiceCountLabel={formatServiceCountLabel}
                   formatContractLineType={formatContractLineType}
                   includedServicesLabel={includedServicesLabel}
                   noServicesConfiguredLabel={noServicesConfiguredLabel}
+                  billedOnRecordedUsageLabel={billedOnRecordedUsageLabel}
+                  billedOnPeriodCountLabel={billedOnPeriodCountLabel}
+                  recurringSeatsLabel={recurringSeatsLabel}
+                  bundleAllocationLabel={bundleAllocationLabel}
+                  previouslyConfiguredQuantityLabel={previouslyConfiguredQuantityLabel}
+                  setUpRecurringSeatsLabel={setUpRecurringSeatsLabel}
+                  reportPeriodCountLabel={reportPeriodCountLabel}
+                  onStartLegacyTransition={handleStartLegacyTransition}
                 />
               ))}
             </div>
@@ -400,6 +570,24 @@ export const ContractOverview: React.FC<ContractOverviewProps> = ({
               </button>
             )}
           </div>
+        )}
+
+        {legacyTransition && (
+          <UsageLegacyTransitionDialog
+            isOpen
+            mode={legacyTransition.mode}
+            serviceName={legacyTransition.serviceName}
+            legacyQuantity={legacyTransition.legacyQuantity}
+            legacyRateCents={legacyTransition.legacyRateCents}
+            configId={legacyTransition.configId}
+            contractLineId={legacyTransition.contractLineId}
+            serviceId={legacyTransition.serviceId}
+            formatCurrencyCents={(cents) => formatCurrencyCents(cents, overview.currencyCode)}
+            onClose={() => setLegacyTransition(null)}
+            onTransitioned={() => {
+              void loadOverview();
+            }}
+          />
         )}
       </CardContent>
     </Card>

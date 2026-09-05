@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import type { DuePosition } from '@alga-psa/types';
 import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 
 /**
  * Canonical client-cadence window materialization.
@@ -141,13 +142,26 @@ export async function listUnmaterializedClientCadenceWindowLineIds(params: {
           this.where('cc.end_date', '>=', windowStart)
             .orWhereNull('cc.end_date');
         })
-        .select('cl.contract_line_id');
+        .select('cl.contract_line_id', 'cl.billing_timing', 'cc.start_date', 'cc.end_date');
     },
   );
 
   const activeRecurringLineIds = Array.from(
     new Set(
       activeRecurringLineRows
+        // Only lines whose assignment actually has a service period settling in
+        // this window are expected: an arrears line assigned at (or after) the
+        // window start bills its first period in a later window, and demanding
+        // materialization for it would falsely block every other line here.
+        .filter((row) =>
+          isRecurringLineExpectedInClientCadenceWindow({
+            duePosition: row.billing_timing === 'arrears' ? 'arrears' : 'advance',
+            assignmentStart: toDateOnly(row.start_date),
+            assignmentEnd: row.end_date ? toDateOnly(row.end_date) : null,
+            windowStart,
+            windowEnd,
+          }),
+        )
         .map((row) => row.contract_line_id)
         .filter((value): value is string => Boolean(value)),
     ),

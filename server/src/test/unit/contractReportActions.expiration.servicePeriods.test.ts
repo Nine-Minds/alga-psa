@@ -34,6 +34,7 @@ function buildThenableQuery(result: any) {
   builder.groupBy = vi.fn(() => builder);
   builder.orderBy = vi.fn(() => builder);
   builder.sum = vi.fn(() => builder);
+  builder.max = vi.fn(() => builder);
   builder.andWhere = vi.fn((arg: any) => {
     if (typeof arg === 'function') {
       const callbackBuilder = {
@@ -115,19 +116,45 @@ describe('contractReportActions expiration report service-period basis', () => {
         return buildThenableQuery(expirationRows);
       }
       if (table === 'client_contracts as cc') {
+        // Canonical valuation assignment scan (client_contract → contract → currency).
         return buildThenableQuery([
           {
             client_contract_id: 'cc-1',
+            contract_id: 'contract-1',
             currency_code: 'USD',
-            monthly_value_cents: 15000,
           },
           {
             client_contract_id: 'cc-expired',
+            contract_id: 'contract-expired',
             currency_code: 'USD',
-            monthly_value_cents: 9000,
           },
         ]);
       }
+      if (table === 'contract_lines as cln') {
+        return buildThenableQuery([
+          {
+            contract_line_id: 'line-1',
+            contract_id: 'contract-1',
+            contract_line_type: 'Fixed',
+            billing_frequency: 'monthly',
+            custom_rate: 15000,
+          },
+          {
+            contract_line_id: 'line-expired',
+            contract_id: 'contract-expired',
+            contract_line_type: 'Fixed',
+            billing_frequency: 'monthly',
+            custom_rate: 9000,
+          },
+        ]);
+      }
+      if (table === 'contract_line_service_configuration as clsc') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_unit_pricing_revisions as rev') {
+        return buildThenableQuery([]);
+      }
+      if (table === 'contract_line_service_configuration') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
     knex.raw = vi.fn((sql: string) => sql);
@@ -147,6 +174,8 @@ describe('contractReportActions expiration report service-period basis', () => {
         queue_status: 'open',
         days_until_expiration: 30,
         monthly_value: 15000,
+        has_variable_usage: false,
+        currency_code: 'USD',
         auto_renew: false,
       },
     ]);

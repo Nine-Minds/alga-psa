@@ -315,12 +315,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Seuil d'utilisation minimum",
-        "help": "Utilisation minimale facturable par période (0 pour aucun minimum)",
-        "errorNegative": "L'utilisation minimale ne peut pas être négative"
+        "help": "Plancher appliqué à l'utilisation enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement d'utilisation — même un zéro explicite — et ne crée jamais de frais à lui seul.",
+        "errorNegative": "L'utilisation minimale ne peut pas être négative",
+        "labelAdditive": "Minimum par saisie",
+        "labelPeriodTotal": "Minimum par déclaration de période",
+        "helpAdditive": "Plancher appliqué à chaque saisie enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement de consommation — même un zéro explicite — et ne crée jamais de facturation à lui seul.",
+        "helpPeriodTotal": "Plancher appliqué une seule fois au décompte déclaré de la période (0 pour aucun minimum). Il ne s'applique que si un décompte est déclaré — même un zéro explicite — et ne crée jamais de facturation à lui seul."
       },
       "enableTieredPricing": "Activer la tarification échelonnée"
     },
     "title": "Configuration basée sur l'utilisation",
+    "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ce service.",
     "tiers": {
       "title": "Niveaux de tarification",
       "addTier": "Ajouter un niveau",
@@ -336,6 +341,18 @@
         "upperGreaterThanLower": "La limite supérieure du niveau doit être supérieure à la limite inférieure",
         "rateNegative": "Les tarifs par niveau ne peuvent pas être négatifs"
       }
+    },
+    "measurementMode": {
+      "label": "Comment la consommation est-elle mesurée ?",
+      "additive": {
+        "label": "Enregistrer la consommation au fil de l'eau",
+        "description": "Les saisies datées s'additionnent : des saisies de 10 et 12 facturent 22. Le minimum et les paliers s'appliquent à chaque saisie. La période suivante démarre sans aucune saisie."
+      },
+      "periodTotal": {
+        "label": "Déclarer un décompte pour chaque période",
+        "description": "Un décompte par période de service remplace le précédent : corriger 10 en 12 facture 12, jamais 22. Le minimum et les paliers s'appliquent une seule fois à ce décompte. La période suivante démarre non déclarée — aucun décompte n'est reporté."
+      },
+      "transitionNote": "Le changement de mode prend effet à partir de la prochaine période de service non facturée. Les saisies ou décomptes déjà enregistrés dans une période ouverte doivent d'abord être facturés ou supprimés."
     }
   },
   "rateTiers": {
@@ -396,12 +413,30 @@
         "label": "Alignement du cycle de facturation",
         "placeholder": "Sélectionnez l'alignement",
         "help": "Contrôle la façon dont la couverture d’une période partielle est calculée lorsque les frais récurrents doivent être réduits à une période inférieure à une période de service complète."
+      },
+      "unitRate": {
+        "label": "Tarif unitaire",
+        "placeholder": "0,00",
+        "help": "Tarif facturé pour chaque poste/unité à chaque période de service."
       }
     },
     "options": {
       "start": "Début du cycle de facturation",
       "end": "Fin du cycle de facturation",
       "prorated": "Couverture proportionnelle"
+    },
+    "pricingBasis": {
+      "label": "Comment ce service est-il tarifé ?",
+      "bundle": {
+        "label": "Prix forfaitaire",
+        "description": "C'est le total fixe de la ligne de contrat qui est facturé. Les quantités de ce service ne font que répartir une part de ce total pour le reporting — ce ne sont pas des postes facturables et les modifier ne change pas le montant facturé.",
+        "allocationNote": "Quantité de répartition : {{quantity}} — sert à répartir le total forfaitaire pour le reporting, non facturée comme des postes."
+      },
+      "unit": {
+        "label": "Postes/unités récurrents",
+        "description": "Facture quantité × tarif unitaire à chaque période, sans qu'aucun total de ligne ne prime. La même quantité et le même tarif sont de nouveau facturés la période suivante jusqu'à ce que vous planifiiez un changement. Une quantité de zéro facture zéro.",
+        "summary": "{{quantity}} × {{rate}} (postes récurrents) = {{total}} par période"
+      }
     }
   },
   "bucketConfig": {

@@ -27,6 +27,7 @@ import {
   BucketUsage,
   ContractReportSummary
 } from '@alga-psa/billing/actions/contractReportActions';
+import type { CurrencyAmount } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
 import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
@@ -119,10 +120,21 @@ const ContractReports: React.FC = () => {
     loadReportData();
   }, [t]);
 
-  // Format currency
-  const formatCents = (cents: number): string => {
-    return formatCurrency(cents / 100, tenantCurrency);
+  // Format minor units in a specific contract currency; the tenant currency is
+  // only a fallback for rows that carry no currency of their own.
+  const formatCents = (cents: number, currencyCode?: string | null): string => {
+    return formatCurrency(cents / 100, currencyCode || tenantCurrency);
   };
+
+  // One label per currency — currencies are never summed into a single number.
+  const currencyAmountsLabel = (amounts: CurrencyAmount[] | undefined): string => {
+    if (!amounts || amounts.length === 0) {
+      return formatCents(0);
+    }
+    return amounts.map((amount) => formatCents(amount.totalCents, amount.currencyCode)).join(' · ');
+  };
+
+  const variableUsageOnlyLabel = t('contractReports.table.variableUsage', { defaultValue: 'Variable usage' });
 
   // Revenue Report Columns
   const revenueColumns: ColumnDefinition<ContractRevenue>[] = [
@@ -139,12 +151,28 @@ const ContractReports: React.FC = () => {
     {
       title: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }),
       dataIndex: 'monthly_recurring',
-      render: (value: number) => <span className="font-semibold text-green-600">{formatCents(value)}</span>
+      // Usage revenue is variable (billed from recorded usage), so it is
+      // labeled instead of misstated as part of a fixed recurring amount. A
+      // pure-usage contract shows "Variable usage", never a fixed zero.
+      render: (value: number, record) => (
+        record.has_variable_usage && value === 0 ? (
+          <span className="text-muted-foreground">{variableUsageOnlyLabel}</span>
+        ) : (
+          <span className="font-semibold text-green-600 dark:text-green-400">
+            {formatCents(value, record.currency_code)}
+            {record.has_variable_usage && (
+              <span className="ml-1 font-normal text-muted-foreground">
+                {t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}
+              </span>
+            )}
+          </span>
+        )
+      )
     },
     {
       title: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }),
       dataIndex: 'total_billed_ytd',
-      render: (value: number) => formatCents(value)
+      render: (value: number, record) => formatCents(value, record.currency_code)
     },
     {
       title: t('contractReports.table.status', { defaultValue: 'Status' }),
@@ -192,7 +220,20 @@ const ContractReports: React.FC = () => {
     {
       title: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }),
       dataIndex: 'monthly_value',
-      render: (value: number) => formatCents(value)
+      render: (value: number, record) => (
+        record.has_variable_usage && value === 0 ? (
+          <span className="text-muted-foreground">{variableUsageOnlyLabel}</span>
+        ) : (
+          <span>
+            {formatCents(value, record.currency_code)}
+            {record.has_variable_usage && (
+              <span className="ml-1 text-muted-foreground">
+                {t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}
+              </span>
+            )}
+          </span>
+        )
+      )
     },
     {
       title: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }),
@@ -271,8 +312,16 @@ const ContractReports: React.FC = () => {
   const revenuePrintColumns: PrintableTableColumn<ContractRevenue>[] = [
     { key: 'contract', header: t('contractReports.table.contract', { defaultValue: 'Contract' }), render: (row) => row.contract_name },
     { key: 'client', header: t('contractReports.table.client', { defaultValue: 'Client' }), render: (row) => row.client_name },
-    { key: 'mrr', header: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }), render: (row) => formatCents(row.monthly_recurring) },
-    { key: 'ytd', header: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }), render: (row) => formatCents(row.total_billed_ytd) },
+    {
+      key: 'mrr',
+      header: t('contractReports.table.monthlyRecurring', { defaultValue: 'Monthly Recurring' }),
+      render: (row) => (row.has_variable_usage
+        ? (row.monthly_recurring === 0
+          ? variableUsageOnlyLabel
+          : `${formatCents(row.monthly_recurring, row.currency_code)} ${t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}`)
+        : formatCents(row.monthly_recurring, row.currency_code)),
+    },
+    { key: 'ytd', header: t('contractReports.table.totalBilledYtd', { defaultValue: 'Total Billed (YTD)' }), render: (row) => formatCents(row.total_billed_ytd, row.currency_code) },
     { key: 'status', header: t('contractReports.table.status', { defaultValue: 'Status' }), render: (row) => statusLabel(row.status, t) },
   ];
 
@@ -285,7 +334,15 @@ const ContractReports: React.FC = () => {
       header: t('contractReports.table.daysUntilExpiration', { defaultValue: 'Days Until Expiration' }),
       render: (row) => `${row.days_until_expiration} ${t('units.days', { defaultValue: 'days' })}`,
     },
-    { key: 'monthlyValue', header: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }), render: (row) => formatCents(row.monthly_value) },
+    {
+      key: 'monthlyValue',
+      header: t('contractReports.table.monthlyValue', { defaultValue: 'Monthly Value' }),
+      render: (row) => (row.has_variable_usage
+        ? (row.monthly_value === 0
+          ? variableUsageOnlyLabel
+          : `${formatCents(row.monthly_value, row.currency_code)} ${t('contractReports.table.plusVariableUsage', { defaultValue: '+ variable usage' })}`)
+        : formatCents(row.monthly_value, row.currency_code)),
+    },
     { key: 'autoRenew', header: t('contractReports.table.autoRenew', { defaultValue: 'Auto-Renew' }), render: (row) => yesNoLabel(row.auto_renew, t) },
   ];
 
@@ -306,8 +363,8 @@ const ContractReports: React.FC = () => {
   ];
 
   const printSummaryMetrics = [
-    { label: t('contractReports.summary.totalMRR.title', { defaultValue: 'Total MRR' }), value: formatCents(summary?.totalMRR ?? 0) },
-    { label: t('contractReports.summary.ytdRevenue.title', { defaultValue: 'YTD Revenue' }), value: formatCents(summary?.totalYTD ?? 0) },
+    { label: t('contractReports.summary.totalMRR.title', { defaultValue: 'Fixed MRR' }), value: currencyAmountsLabel(summary?.fixedMrrByCurrency) },
+    { label: t('contractReports.summary.ytdRevenue.title', { defaultValue: 'YTD Revenue' }), value: currencyAmountsLabel(summary?.ytdRevenueByCurrency) },
     { label: t('contractReports.summary.activeContracts.title', { defaultValue: 'Active Contracts' }), value: summary?.activeContractCount ?? 0 },
     { label: t('contractReports.summary.renewalDecisions.title', { defaultValue: 'Renewal Decisions Due' }), value: summary?.atRiskDecisionCount ?? 0 },
   ];
@@ -420,13 +477,33 @@ const ContractReports: React.FC = () => {
           <div className="flex items-center gap-2 mb-2">
             <Coins className="h-5 w-5 text-green-600" />
             <h3 className="font-semibold">
-              {t('contractReports.summary.totalMRR.title', { defaultValue: 'Total MRR' })}
+              {t('contractReports.summary.totalMRR.title', { defaultValue: 'Fixed MRR' })}
             </h3>
           </div>
-          <p className="text-2xl font-bold text-green-600">{formatCents(summary?.totalMRR ?? 0)}</p>
+          {(summary?.fixedMrrByCurrency?.length ?? 0) > 1 ? (
+            <div data-testid="fixed-mrr-by-currency">
+              {summary!.fixedMrrByCurrency.map((amount) => (
+                <p key={amount.currencyCode} className="text-xl font-bold text-green-600">
+                  {formatCents(amount.totalCents, amount.currencyCode)}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-2xl font-bold text-green-600" data-testid="fixed-mrr-by-currency">
+              {currencyAmountsLabel(summary?.fixedMrrByCurrency)}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-1">
-            {t('contractReports.summary.totalMRR.subtitle', { defaultValue: 'Monthly Recurring Revenue' })}
+            {t('contractReports.summary.totalMRR.subtitle', { defaultValue: 'Fixed Monthly Recurring Revenue of active contracts' })}
           </p>
+          {(summary?.variableUsageContractCount ?? 0) > 0 && (
+            <p className="text-xs text-muted-foreground mt-1" data-testid="mrr-variable-usage-note">
+              {t('contractReports.summary.totalMRR.variableUsageNote', {
+                count: summary?.variableUsageContractCount ?? 0,
+                defaultValue: '{{count}} active contracts also bill variable usage (not included)',
+              })}
+            </p>
+          )}
         </Card>
 
         <Card className="p-4">
@@ -436,7 +513,19 @@ const ContractReports: React.FC = () => {
               {t('contractReports.summary.ytdRevenue.title', { defaultValue: 'YTD Revenue' })}
             </h3>
           </div>
-          <p className="text-2xl font-bold text-blue-600">{formatCents(summary?.totalYTD ?? 0)}</p>
+          {(summary?.ytdRevenueByCurrency?.length ?? 0) > 1 ? (
+            <div data-testid="ytd-revenue-by-currency">
+              {summary!.ytdRevenueByCurrency.map((amount) => (
+                <p key={amount.currencyCode} className="text-xl font-bold text-blue-600">
+                  {formatCents(amount.totalCents, amount.currencyCode)}
+                </p>
+              ))}
+            </div>
+          ) : (
+            <p className="text-2xl font-bold text-blue-600" data-testid="ytd-revenue-by-currency">
+              {currencyAmountsLabel(summary?.ytdRevenueByCurrency)}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground mt-1">
             {t('contractReports.summary.ytdRevenue.subtitle', { defaultValue: 'Year to Date by billed service period' })}
           </p>

@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Brak informacji o planie lub usłudze"
       },
       "loading": "Ładowanie konfiguracji usługi...",
-      "title": "Edytuj konfigurację usługi"
+      "title": "Edytuj konfigurację usługi",
+      "effectiveFrom": "Zmiana ilości lub sposobu pomiaru obowiązuje od",
+      "effectiveHelp": "Zmiany zaczynają obowiązywać od tej granicy okresu usługi. Wcześniejsze okresy zachowują swoje ceny i sposób pomiaru."
     },
     "tierEditor": {
       "actions": {

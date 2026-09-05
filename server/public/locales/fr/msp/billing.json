@@ -211,6 +211,12 @@
       "updateError": "Échec de la mise à jour de l'enregistrement d'utilisation",
       "deleteSuccess": "Enregistrement d'utilisation supprimé avec succès",
       "deleteError": "Échec de la suppression de l'enregistrement d'utilisation"
+    },
+    "periodReport": "Rapport d'utilisation de la période",
+    "periodAlreadyInvoiced": "Cette période est déjà facturée. Corrigez-la via le processus d'ajustement de facture.",
+    "periodFilter": {
+      "notice": "Affichage de l'utilisation pour la période de service du {{start}} au {{end}}",
+      "clear": "Effacer"
     }
   },
   "lineItem": {

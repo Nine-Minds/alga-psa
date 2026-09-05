@@ -18,7 +18,15 @@ import {
   generateInvoiceForSelectionInput,
   generateInvoiceForSelectionInputs,
 } from './invoiceGeneration';
-import { DUPLICATE_RECURRING_INVOICE_CODE, DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY, NO_BILLING_EMAIL_MESSAGE_KEY } from './invoiceGeneration.constants';
+import {
+  DUPLICATE_RECURRING_INVOICE_CODE,
+  DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
+  NO_BILLING_EMAIL_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_MESSAGE_KEY,
+  USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
+} from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
   listRecurringRunExecutionWindowKinds,
@@ -87,6 +95,39 @@ function handledRecurringFailureFromActionError(error: RecurringBillingRunAction
       params: error.messageParams as Record<string, string> | undefined,
     };
   }
+  // Incomplete-usage windows: whether the whole window is unreported
+  // (USAGE_RECORDS_MISSING) or billable charges would omit unreported usage
+  // services (…_ACK_REQUIRED), the automated run reports the coded,
+  // actionable incomplete-usage failure instead of silently finalizing a
+  // partial period. The acknowledgement variant keeps its
+  // `acknowledgeRequired` param so the UI can offer an explicit
+  // generate-anyway confirmation.
+  if (
+    error.messageKey != null &&
+    (error.messageKey === USAGE_RECORDS_MISSING_MESSAGE_KEY ||
+      error.messageKey === USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY)
+  ) {
+    return {
+      code: 'USAGE_RECORDS_MISSING',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
+  // A stale previewed period total refused finalization: the operator must
+  // re-preview, so the coded failure (not a generic string) reaches the UI.
+  if (error.messageKey === USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY) {
+    return {
+      code: 'USAGE_PERIOD_TOTAL_STALE',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
+  // Recorded usage the engine could not price keeps its structured
+  // per-service diagnostics across the run boundary.
+  if (error.messageKey === USAGE_CALCULATION_ERROR_MESSAGE_KEY) {
+    return {
+      code: 'USAGE_CALCULATION_ERROR',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
   return {};
 }
 
@@ -110,6 +151,8 @@ function normalizeRecurringBillingRunGroupedTargets(params: {
       selectorInputs: (group.selectorInputs ?? []).filter(
         (selectorInput) => Boolean(selectorInput?.executionWindow?.identityKey),
       ),
+      billingCycleId: group.billingCycleId,
+      expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
     }))
     .filter((group) => group.selectorInputs.length > 0);
 }
@@ -217,6 +260,13 @@ function logRecurringBillingRunInvoiceFailure(params: {
 export async function generateInvoicesAsRecurringBillingRun(params: {
   targets?: RecurringBillingRunTarget[];
   allowPoOverage?: boolean;
+  /**
+   * Explicit operator acknowledgement that unreported usage services may be
+   * omitted from the generated invoices (they stay billable later). Only the
+   * interactive retry passes this; scheduled/automated runs never acknowledge
+   * implicitly and instead report the coded incomplete-usage failure.
+   */
+  acknowledgeUnreportedUsage?: boolean;
 }): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
@@ -275,11 +325,17 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
         const invoice = target.billingCycleId
           ? await generateInvoiceForSelectionInput(
               selectorInput,
-              { allowPoOverage: params.allowPoOverage },
+              {
+                allowPoOverage: params.allowPoOverage,
+                acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+                expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
+              },
               { billingCycleId: target.billingCycleId },
             )
           : await generateInvoiceForSelectionInput(selectorInput, {
               allowPoOverage: params.allowPoOverage,
+              acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+              expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {
@@ -669,6 +725,13 @@ export async function generateCalendarMonthEndCloseInvoices(params: {
 export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
   groupedTargets?: RecurringBillingRunGroupedTarget[];
   allowPoOverage?: boolean;
+  /**
+   * Explicit operator acknowledgement that unreported usage services may be
+   * omitted from the generated invoices (they stay billable later). Only the
+   * interactive retry passes this; scheduled/automated runs never acknowledge
+   * implicitly and instead report the coded incomplete-usage failure.
+   */
+  acknowledgeUnreportedUsage?: boolean;
 }): Promise<RecurringBillingRunResult | RecurringBillingRunActionError> {
   const currentUser = await getCurrentUserAsync();
   if (!currentUser) {
@@ -730,11 +793,17 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
         const invoice = group.billingCycleId
           ? await generateInvoiceForSelectionInputs(
               group.selectorInputs,
-              { allowPoOverage: params.allowPoOverage },
+              {
+                allowPoOverage: params.allowPoOverage,
+                acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+                expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
+              },
               { billingCycleId: group.billingCycleId },
             )
           : await generateInvoiceForSelectionInputs(group.selectorInputs, {
               allowPoOverage: params.allowPoOverage,
+              acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+              expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {

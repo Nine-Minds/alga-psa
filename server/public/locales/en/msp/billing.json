@@ -211,6 +211,12 @@
       "updateError": "Failed to update usage record",
       "deleteSuccess": "Usage record deleted successfully",
       "deleteError": "Failed to delete usage record"
+    },
+    "periodReport": "Period usage report",
+    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process.",
+    "periodFilter": {
+      "notice": "Showing usage for the service period {{start}} to {{end}}",
+      "clear": "Clear"
     }
   },
   "lineItem": {

@@ -93,6 +93,7 @@ function createUsageDbStub(options?: { existing?: UsageRecord }) {
     throw new Error(`Unexpected table ${table}`);
   };
 
+  db.raw = async () => ({});
   db.transaction = async (callback: (trx: any) => Promise<any>) => callback(db);
 
   return { db, calls };

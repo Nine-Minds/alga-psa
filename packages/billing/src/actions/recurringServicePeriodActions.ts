@@ -42,6 +42,12 @@ import {
   type RepairAllClientCadenceServicePeriodsSummary,
 } from '@alga-psa/shared/billingClients';
 
+import {
+  loadClientBilledLedgerBoundary,
+  resolveClientCadenceObligationStart,
+} from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
+import { clipRecurringCandidatesToObligationBounds } from '@alga-psa/shared/billingClients/clipRecurringCandidatesToObligationBounds';
+
 const RECURRING_SERVICE_PERIOD_PERMISSION_RESOURCE = 'billing.recurring_service_periods';
 const recurringServicePeriodRecordIdFactory = () => uuidv4();
 type SupportedContractCadenceBillingCycle = 'monthly' | 'quarterly' | 'semi-annually' | 'annually';
@@ -679,32 +685,6 @@ async function loadScheduleRows(input: {
     .orderBy('revision', 'asc') as unknown as Promise<DbRecordRow[]>;
 }
 
-async function loadClientBilledLedgerBoundary(
-  trx: any,
-  params: { tenant: string; clientId: string },
-) {
-  const db = tenantDb(trx, params.tenant);
-  const query = db.table('recurring_service_periods as rsp');
-  db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_line_id', 'rsp.obligation_id');
-  db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cl.contract_id');
-
-  const lastBilled = await query
-    .where('rsp.obligation_type', CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE)
-    .where('rsp.cadence_owner', 'client')
-    .where('ct.owner_client_id', params.clientId)
-    .where((builder: any) => {
-      builder.where('rsp.lifecycle_state', 'billed')
-        .orWhereNotNull('rsp.invoice_charge_detail_id');
-    })
-    .orderBy('rsp.service_period_end', 'desc')
-    .first()
-    .select('rsp.service_period_end as service_period_end') as { service_period_end?: unknown } | undefined;
-
-  return lastBilled?.service_period_end
-    ? normalizeUtcMidnightDateValue(lastBilled.service_period_end)
-    : null;
-}
-
 async function persistRecurringServicePeriodRepair(
   trx: any,
   params: {
@@ -856,9 +836,12 @@ async function repairScheduleMaterialization(input: {
   const obligationStart =
     normalizeUtcMidnightDateValue(context.assignment_start_date)
     ?? ensureUtcMidnightIsoDate(repairedAt);
-  const regenerationStart = billedBoundaryEnd
-    ? maxIsoDateOnly(obligationStart, billedBoundaryEnd)
-    : obligationStart;
+  // Resolve from current tenant data even when the caller followed a stale gap.
+  const regenerationStart = resolveClientCadenceObligationStart({
+    assignmentStart: obligationStart,
+    billedBoundaryEnd,
+    fallbackStart: repairedAt,
+  });
   const obligationEnd = normalizeUtcMidnightDateValue(context.assignment_end_date);
 
   if (obligationEnd && compareIsoDateOnly(obligationEnd, regenerationStart) <= 0) {
@@ -894,7 +877,11 @@ async function repairScheduleMaterialization(input: {
     anchorSettings: billingSchedule.anchor,
     recordIdFactory: recurringServicePeriodRecordIdFactory,
   });
-  const candidateRecords = materialized.records;
+  const candidateRecords = clipRecurringCandidatesToObligationBounds(
+    materialized.records,
+    obligationStart,
+    obligationEnd,
+  );
   const repairPlan = backfillRecurringServicePeriods({
     candidateRecords,
     existingRecords,

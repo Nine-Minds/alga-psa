@@ -211,6 +211,12 @@
       "updateError": "Der Nutzungsdatensatz konnte nicht aktualisiert werden",
       "deleteSuccess": "Nutzungsdatensatz erfolgreich gelöscht",
       "deleteError": "Nutzungsdatensatz konnte nicht gelöscht werden"
+    },
+    "periodReport": "Nutzungsmeldung für den Zeitraum",
+    "periodAlreadyInvoiced": "Dieser Zeitraum ist bereits in Rechnung gestellt. Korrigieren Sie ihn über den Rechnungsanpassungsprozess.",
+    "periodFilter": {
+      "notice": "Nutzung für den Leistungszeitraum {{start}} bis {{end}} wird angezeigt",
+      "clear": "Zurücksetzen"
     }
   },
   "lineItem": {

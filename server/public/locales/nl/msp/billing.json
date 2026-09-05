@@ -211,6 +211,12 @@
       "updateError": "Kan het gebruiksrecord niet bijwerken",
       "deleteSuccess": "Gebruiksrecord is succesvol verwijderd",
       "deleteError": "Kan gebruiksrecord niet verwijderen"
+    },
+    "periodReport": "Gebruiksrapport per periode",
+    "periodAlreadyInvoiced": "Deze periode is al gefactureerd. Corrigeer dit via het correctieproces voor facturen.",
+    "periodFilter": {
+      "notice": "Toont het gebruik voor de serviceperiode {{start}} tot {{end}}",
+      "clear": "Wissen"
     }
   },
   "lineItem": {

@@ -5,10 +5,14 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
-import { getContractMonthlyValuesByAssignment } from '@alga-psa/shared/billingClients/contractMonthlyValue';
+import {
+  aggregateCentsByCurrency,
+  getContractMonthlyValuesByAssignment,
+  type CurrencyAmount,
+} from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
-import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { isActionPermissionError, permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 
 // Type definitions for reports
@@ -17,8 +21,19 @@ export interface ContractRevenue {
   client_id: string;
   client_name: string;
   logoUrl?: string | null;
+  /**
+   * Fixed recurring value in minor units, cadence-normalized to monthly by the
+   * canonical shared valuation ({@link getContractMonthlyValuesByAssignment}).
+   * Usage lines bill recorded usage — variable revenue that is excluded here
+   * and flagged via {@link ContractRevenue.has_variable_usage} so an active
+   * usage contract is never silently presented as zero recurring revenue.
+   */
   monthly_recurring: number;
   total_billed_ytd: number;
+  /** True when the contract has usage-billed lines with variable, record-driven revenue. */
+  has_variable_usage: boolean;
+  /** Contract currency for this row's minor-unit amounts; rows are never re-labeled in tenant currency. */
+  currency_code: string;
   status: 'active' | 'upcoming' | 'expired';
 }
 
@@ -33,7 +48,12 @@ export interface ContractExpiration {
   renewal_mode?: 'none' | 'manual' | 'auto' | null;
   queue_status?: RenewalWorkItemStatus | null;
   days_until_expiration: number;
+  /** Fixed recurring value in minor units; variable usage revenue is excluded. */
   monthly_value: number;
+  /** True when the contract has usage-billed lines with variable, record-driven revenue. */
+  has_variable_usage: boolean;
+  /** Contract currency for this row's minor-unit amounts. */
+  currency_code: string;
   auto_renew: boolean;
 }
 
@@ -50,10 +70,19 @@ export interface BucketUsage {
 }
 
 export interface ContractReportSummary {
-  totalMRR: number;
-  totalYTD: number;
+  /**
+   * Fixed monthly recurring revenue of active assignments, aggregated
+   * separately per contract currency. Variable usage revenue is excluded,
+   * never counted as zero; expired/upcoming assignments are excluded from the
+   * committed total. No cross-currency grand total exists by design.
+   */
+  fixedMrrByCurrency: CurrencyAmount[];
+  /** Actual billed revenue year-to-date, aggregated separately per contract currency. */
+  ytdRevenueByCurrency: CurrencyAmount[];
   activeContractCount: number;
   atRiskDecisionCount: number;
+  /** Active contracts whose revenue includes variable, record-driven usage billing. */
+  variableUsageContractCount: number;
 }
 
 type ContractRevenueFactRow = {
@@ -76,11 +105,6 @@ type ContractRevenueAssignmentRow = {
   contract_name: string;
   contract_status: string | null;
   client_name: string | null;
-};
-
-type ContractLineRateRow = {
-  contract_id: string;
-  custom_rate: string | number | null;
 };
 
 type ContractExpirationRow = {
@@ -279,24 +303,29 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
         client_name: row.client_name || 'Unknown Client',
         monthly_recurring: 0,
         total_billed_ytd: invoiceMap.get(row.client_contract_id) || 0,
+        has_variable_usage: false,
+        currency_code: 'USD',
         status,
       });
     }
 
-    const contractLines = (await db.table('contract_lines as cl')
-      .select(
-        'cl.contract_id',
-        'cl.custom_rate'
-      )) as unknown as ContractLineRateRow[];
-
-    for (const contractLine of contractLines) {
-      const rateInCents = Math.round(Number(contractLine.custom_rate) || 0);
-      for (const item of aggregatedMap.values()) {
-        if (item.contract_id !== contractLine.contract_id) {
-          continue;
-        }
-        item.monthly_recurring += rateInCents;
+    // Canonical shared valuation: unit-priced Fixed lines are quantity × unit
+    // rate (revision-aware), bundle lines keep their line rate, every line is
+    // cadence-normalized, and Usage lines are flagged as variable revenue —
+    // the same numbers the contract overview and summary report use.
+    const monthlyValues = await getContractMonthlyValuesByAssignment(
+      knex,
+      tenant,
+      Array.from(aggregatedMap.keys()),
+    );
+    for (const item of aggregatedMap.values()) {
+      const valuation = monthlyValues.get(item.client_contract_id);
+      if (!valuation) {
+        continue;
       }
+      item.monthly_recurring = valuation.monthlyValueCents;
+      item.has_variable_usage = valuation.hasVariableUsage;
+      item.currency_code = valuation.currencyCode;
     }
 
     const rows: ContractRevenue[] = Array.from(aggregatedMap.values()).map(
@@ -406,9 +435,13 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
 
       const key = row.client_contract_id;
       const monthlyValue = monthlyValues.get(key)?.monthlyValueCents ?? 0;
+      const hasVariableUsage = monthlyValues.get(key)?.hasVariableUsage ?? false;
+      const currencyCode = monthlyValues.get(key)?.currencyCode ?? 'USD';
       const existing = expirationMap.get(key);
       if (existing) {
         existing.monthly_value = monthlyValue;
+        existing.has_variable_usage = hasVariableUsage;
+        existing.currency_code = currencyCode;
         continue;
       }
 
@@ -423,6 +456,8 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         queue_status: row.queue_status ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
         monthly_value: monthlyValue,
+        has_variable_usage: hasVariableUsage,
+        currency_code: currencyCode,
         auto_renew: effectiveRenewalMode === 'auto'
       });
     }
@@ -557,23 +592,50 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     const db = tenantDb(knex, tenant);
 
     const revenueData = await getContractRevenueReport();
+    if (isActionPermissionError(revenueData)) {
+      return revenueData as ActionPermissionError;
+    }
 
-    const totalMRR = revenueData.reduce((sum, item) => sum + item.monthly_recurring, 0);
+    // Committed fixed MRR: active effective commitments only, and never a
+    // cross-currency sum — each contract currency aggregates separately.
+    const fixedMrrByCurrency = aggregateCentsByCurrency(
+      revenueData
+        .filter((item) => item.status === 'active')
+        .map((item) => ({ currencyCode: item.currency_code, amountCents: item.monthly_recurring })),
+    );
+
     const today = new Date();
     const yearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear(), 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
     const nextYearStartDateOnly = new Date(Date.UTC(today.getUTCFullYear() + 1, 0, 1, 0, 0, 0, 0)).toISOString().slice(0, 10);
-    const totalYTD = Array.from(
-      (
-        await getContractRevenueYtdByAssignment(
-          knex,
-          tenant,
-          yearStartDateOnly,
-          nextYearStartDateOnly
-        )
-      ).values()
-    ).reduce((sum, amount) => sum + amount, 0);
+    const ytdByAssignment = await getContractRevenueYtdByAssignment(
+      knex,
+      tenant,
+      yearStartDateOnly,
+      nextYearStartDateOnly
+    );
+
+    // YTD is actual billed revenue: include every assignment with billed
+    // charges this year (even terminated ones), still separated by currency.
+    let ytdRevenueByCurrency: CurrencyAmount[] = [];
+    if (ytdByAssignment.size > 0) {
+      const currencyQuery = db.table('client_contracts as cc')
+        .whereIn('cc.client_contract_id', Array.from(ytdByAssignment.keys()))
+        .select('cc.client_contract_id', 'c.currency_code');
+      db.tenantJoin(currencyQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');
+      const currencyRows = (await currencyQuery) as Array<{ client_contract_id: string; currency_code: string }>;
+      const currencyByAssignment = new Map(currencyRows.map((row) => [row.client_contract_id, row.currency_code]));
+      ytdRevenueByCurrency = aggregateCentsByCurrency(
+        Array.from(ytdByAssignment.entries()).map(([clientContractId, amountCents]) => ({
+          currencyCode: currencyByAssignment.get(clientContractId) ?? 'USD',
+          amountCents,
+        })),
+      );
+    }
 
     const activeContractCount = revenueData.filter((item) => item.status === 'active').length;
+    const variableUsageContractCount = revenueData.filter(
+      (item) => item.status === 'active' && item.has_variable_usage
+    ).length;
     const summaryTodayDateOnly = today.toISOString().slice(0, 10);
     const inNinetyDays = new Date(today);
     inNinetyDays.setUTCDate(inNinetyDays.getUTCDate() + 90);
@@ -600,10 +662,11 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     const atRiskDecisionCount = Number(atRiskDecisions?.count ?? 0);
 
     return {
-      totalMRR,
-      totalYTD,
+      fixedMrrByCurrency,
+      ytdRevenueByCurrency,
       activeContractCount,
-      atRiskDecisionCount
+      atRiskDecisionCount,
+      variableUsageContractCount
     };
   } catch (error) {
     console.error('Error fetching contract report summary:', error);
