@@ -1,0 +1,97 @@
+[
+  {
+    "id": "F001",
+    "description": "Load authenticated MSP user's saved email notification preferences on profile initialization",
+    "implemented": true
+  },
+  {
+    "id": "F002",
+    "description": "Resolve missing user preferences from tenant-effective category and subtype defaults",
+    "implemented": true
+  },
+  {
+    "id": "F003",
+    "description": "Represent category state as checked, unchecked, or mixed from eligible subtype states",
+    "implemented": true
+  },
+  {
+    "id": "F004",
+    "description": "Disable personal controls for tenant-disabled categories and subtypes",
+    "implemented": true
+  },
+  {
+    "id": "F005",
+    "description": "Read email preferences only for the authenticated user and tenant",
+    "implemented": true
+  },
+  {
+    "id": "F006",
+    "description": "Persist one subtype preference only for the authenticated user and tenant",
+    "implemented": true
+  },
+  {
+    "id": "F007",
+    "description": "Validate that subtype mutations target a subtype available in the authenticated tenant",
+    "implemented": true
+  },
+  {
+    "id": "F008",
+    "description": "Persist a category's eligible subtype preferences in one transaction",
+    "implemented": true
+  },
+  {
+    "id": "F009",
+    "description": "Rollback every category preference write when any write fails",
+    "implemented": true
+  },
+  {
+    "id": "F010",
+    "description": "Use one request and one database transaction for category toggles",
+    "implemented": true
+  },
+  {
+    "id": "F011",
+    "description": "Show pending state while an email preference mutation is unresolved",
+    "implemented": true
+  },
+  {
+    "id": "F012",
+    "description": "Restore or reload authoritative preference state after save failure",
+    "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Show a useful localized load or save error",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Serialize or version overlapping category and subtype mutations so the latest accepted intent wins",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Revalidate the MSP profile route after successful preference writes",
+    "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Preserve existing Internal notification preference behavior",
+    "implemented": true
+  },
+  {
+    "id": "F017",
+    "description": "Preserve existing client-portal email preference behavior",
+    "implemented": true
+  },
+  {
+    "id": "F018",
+    "description": "Keep saved user preferences subordinate to tenant-wide email notification settings during delivery",
+    "implemented": true
+  },
+  {
+    "id": "F019",
+    "description": "Use generic or synthetic wording in all repository artifacts",
+    "implemented": true
+  }
+]
