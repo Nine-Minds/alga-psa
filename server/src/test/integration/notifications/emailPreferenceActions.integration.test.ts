@@ -1,10 +1,13 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import knex, { type Knex } from 'knex';
+import type { Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createTestUser } from '../../helpers/notificationTestHelpers';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 
-// Use a pre-migrated, isolated database. Never bootstrap/reset the running UI database.
-// TEST_DB_NAME=email_preferences_test DB_HOST=... DB_PORT=... DB_USER_ADMIN=... DB_PASSWORD_ADMIN=...
+// Bootstraps the standard isolated test database (drop/recreate + migrate +
+// seed) exactly like every other integration suite, so the Tier-1 gate can run
+// this suite anywhere without a bespoke database. Per-worktree isolation is
+// handled by TEST_DB_NAME as usual; verifyTestDatabase() blocks production names.
 let testDb: Knex;
 const auth = vi.hoisted(() => ({ user: null as any }));
 vi.mock('../../../../../packages/auth/src/lib/getCurrentUser', () => ({
@@ -42,13 +45,8 @@ const state = async () => (await actions.getUserEmailPreferenceStateAction()).fi
 
 describe('authenticated personal email preferences with real database transactions', () => {
   beforeAll(async () => {
-    if (!process.env.TEST_DB_NAME?.includes('email_preferences') || !process.env.TEST_DB_NAME.includes('test')) {
-      throw new Error('Set TEST_DB_NAME to an isolated migrated email_preferences test database');
-    }
-    testDb = knex({ client: 'pg', connection: {
-      host: process.env.DB_HOST, port: Number(process.env.DB_PORT), database: process.env.TEST_DB_NAME,
-      user: process.env.DB_USER_ADMIN, password: process.env.DB_PASSWORD_ADMIN,
-    }, pool: { min: 0, max: 1 }, acquireConnectionTimeout: 2000 });
+    testDb = await createTestDbConnection();
+    await testDb.migrate.latest();
     await testDb('tenants').insert([tenant, otherTenant].map(tenant => ({ tenant, client_name: 'Synthetic Preferences', email: 'preferences@example.test' })));
     userId = (await createTestUser(testDb, tenant)).user_id;
     peerId = (await createTestUser(testDb, tenant)).user_id;
