@@ -1,3 +1,5 @@
+import { getAvailableRecurringDueWork } from '@alga-psa/billing/actions/billingAndTax';
+import { repairMissingRecurringServicePeriods, repairAllRecurringServicePeriodsForTenant } from '@alga-psa/billing/actions/recurringServicePeriodActions';
 import { createCustomContractLine } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { getConfigurationWithDetails, updateConfiguration } from '@alga-psa/billing/actions/contractLineServiceConfigurationActions';
 import knexFactory from 'knex';
@@ -281,6 +283,113 @@ describe('Contract quantity & usage semantics — period totals and recurring se
 
     return { serviceId, contractLineId, configId, billingCycleId, ...assignment };
   }
+
+  describe('pre-effective recurring gaps deploy mitigation', () => {
+    const dateOnly = (value: unknown) => new Date(value as string).toISOString().slice(0, 10);
+
+    async function setupSeptemberLedger(boundaryKind: 'billed' | 'draft') {
+      const setup = await setupUsageLine();
+      await context.db('recurring_service_periods').where({tenant: context.tenantId}).delete();
+      await context.db('client_billing_cycles').where({tenant: context.tenantId}).delete();
+      await context.db('client_contracts').where({tenant: context.tenantId, contract_id: setup.contractId})
+        .update({start_date: '2026-09-01', is_active: true});
+      await context.db('clients').where({tenant: context.tenantId, client_id: context.clientId}).update({billing_cycle: 'monthly'});
+      for (const month of [9, 10, 11, 12]) await setupInvoiceCycle(2026, month, 1);
+      const draftInvoiceId = boundaryKind === 'draft' ? uuidv4() : null;
+      if (draftInvoiceId) await context.db('invoices').insert({
+        tenant: context.tenantId, invoice_id: draftInvoiceId, client_id: context.clientId,
+        invoice_number: `SYNTHETIC-${uuidv4()}`, invoice_date: '2026-09-05', due_date: '2026-10-05',
+        total_amount: 0, status: 'draft', subtotal: 0, tax: 0, is_manual: false,
+        is_prepayment: false, currency_code: 'USD', tax_source: 'internal',
+      });
+      // A draft consumes the obligation: its ledger lifecycle is already billed.
+      await context.db('recurring_service_periods').insert({
+        tenant: context.tenantId, record_id: uuidv4(),
+        schedule_key: `schedule:${context.tenantId}:client_contract_line:${setup.contractLineId}:client:arrears`,
+        period_key: 'period:2026-09-01:2026-10-01', revision: 1,
+        obligation_id: setup.contractLineId, obligation_type: 'client_contract_line', charge_family: 'usage',
+        cadence_owner: 'client', due_position: 'arrears', lifecycle_state: 'billed',
+        service_period_start: '2026-09-01', service_period_end: '2026-10-01',
+        invoice_window_start: '2026-10-01', invoice_window_end: '2026-11-01',
+        invoice_charge_detail_id: boundaryKind === 'draft' ? uuidv4() : null,
+        invoice_id: draftInvoiceId,
+        invoice_charge_id: boundaryKind === 'draft' ? uuidv4() : null,
+        invoice_linked_at: boundaryKind === 'draft' ? new Date() : null,
+        provenance_kind: 'generated', source_rule_version: 'synthetic-september-ledger', reason_code: 'initial_materialization',
+        created_at: new Date(), updated_at: new Date(),
+      });
+      const lines: string[] = [];
+      for (const type of ['Fixed', 'Usage'] as const) {
+        const lineId = await createCustomContractLine(setup.contractId, {
+          contract_line_name: `September ${type}`, contract_line_type: type, billing_frequency: 'monthly',
+          cadence_owner: 'client', billing_timing: 'arrears',
+          services: [{service_id: setup.serviceId, custom_rate: 1000,
+            ...(type === 'Fixed' ? {pricing_basis: 'unit' as const, quantity: 10} : {measurement_mode: 'period_total' as const})}],
+          base_rate: null,
+        });
+        expect(typeof lineId).toBe('string');
+        lines.push(lineId as string);
+      }
+      return lines;
+    }
+
+    async function discover() {
+      const result = await getAvailableRecurringDueWork({pageSize: 100, dateRange: {from: '2026-09-01', to: '2026-12-31'}});
+      if ('permissionError' in result) throw new Error(JSON.stringify(result));
+      return result;
+    }
+    async function periods(lines: string[]) {
+      return context.db('recurring_service_periods').where({tenant: context.tenantId}).whereIn('obligation_id', lines)
+        .whereNotIn('lifecycle_state', ['superseded', 'archived']).orderBy('service_period_start');
+    }
+
+    it.each(['billed', 'draft'] as const)('does not discover September gaps for Fixed/unit and Usage/period-total with a %s boundary', async boundaryKind => {
+      const lines = await setupSeptemberLedger(boundaryKind);
+      for (const line of lines) expect(dateOnly((await periods([line]))[0].service_period_start)).toBe('2026-10-01');
+      const result = await discover();
+      expect(result.materializationGaps.filter(gap => lines.some(line => gap.scheduleKey.includes(line)))).toEqual([]);
+      const members = result.invoiceCandidates.flatMap(candidate => candidate.members)
+        .filter(member => lines.some(line => member.scheduleKey?.includes(line)));
+      for (const line of lines) {
+        expect(members.filter(member => member.scheduleKey?.includes(line) && dateOnly(member.servicePeriodStart) === '2026-10-01')).toHaveLength(1);
+      }
+      expect(await discover()).toEqual(result);
+      expect(await context.db('usage_period_totals').where({tenant: context.tenantId})).toHaveLength(0);
+      expect(await context.db('usage_tracking').where({tenant: context.tenantId})).toHaveLength(0);
+    });
+
+    it.each(['individual', 'bulk'] as const)('%s repair rejects pre-effective September implicitly and heals eligible October exactly once', async repairKind => {
+      const lines = await setupSeptemberLedger('draft');
+      const before = await periods(lines);
+      const invoicesBefore = await context.db('invoices').where({tenant: context.tenantId});
+      const repair = async () => {
+        if (repairKind === 'bulk') return repairAllRecurringServicePeriodsForTenant();
+        for (const line of lines) {
+          // A stale September warning submits this same schedule key; the action
+          // must resolve its current eligibility rather than trusting that warning.
+          await repairMissingRecurringServicePeriods(`schedule:${context.tenantId}:client_contract_line:${line}:client:arrears`);
+        }
+      };
+      await repair();
+      expect(await periods(lines)).toEqual(before);
+      await context.db('recurring_service_periods').where({tenant: context.tenantId, service_period_start: '2026-10-01'})
+        .whereIn('obligation_id', lines).delete();
+      const missing = (await discover()).materializationGaps.filter(gap => lines.some(line => gap.scheduleKey.includes(line)));
+      expect(missing).toHaveLength(2);
+      expect(missing.every(gap => dateOnly(gap.servicePeriodStart) === '2026-10-01')).toBe(true);
+      await repair();
+      const repaired = await periods(lines);
+      expect(repaired.filter(row => dateOnly(row.service_period_start) === '2026-09-01')).toHaveLength(0);
+      expect(repaired.filter(row => dateOnly(row.service_period_start) === '2026-10-01')).toHaveLength(2);
+      expect(new Set(repaired.map(row => `${row.schedule_key}:${row.period_key}`)).size).toBe(repaired.length);
+      const ready = await discover();
+      expect(ready.materializationGaps.filter(gap => lines.some(line => gap.scheduleKey.includes(line)))).toEqual([]);
+      await repair();
+      expect(await periods(lines)).toEqual(repaired);
+      expect(await discover()).toEqual(ready);
+      expect(await context.db('invoices').where({tenant: context.tenantId})).toEqual(invoicesBefore);
+    });
+  });
 
   describe('active custom-line UI persistence boundary', () => {
     it.each(['additive', 'period_total'] as const)('persists %s measurement, minimum and tier rates through the custom-line creation action', async measurementMode => {

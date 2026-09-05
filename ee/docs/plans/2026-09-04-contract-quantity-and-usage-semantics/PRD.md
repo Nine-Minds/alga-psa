@@ -167,3 +167,7 @@ Keep the existing branch's date, authorization, routing, and deduplication fixes
 Contract Lines → Create Custom must use the same semantic controls as the service configuration editor. Save the selected Usage measurement, minimum and tier prices, or Fixed pricing basis, quantity and unit rate through the custom-line creation action and configuration models. The active Contract Lines editor must load Usage prices for the displayed effective boundary and save them with measurement mode through the transactional transition action, including on previously invoiced contracts. Clearing a required boundary disables Save.
 
 The legacy recurring-seat link remains a manual handoff until the atomic transition in R8 is implemented. Its instructions must explain that a newly created Fixed commitment does not close the source Usage configuration or schedule a conversion.
+
+## Narrow recurring-gap mitigation
+
+Automatic Invoices gap discovery and both operator repair entry points must use the same first eligible obligation start as canonical client-cadence materialization. A monthly assignment beginning September 1 with a September billed or draft-linked ledger boundary starts newly added arrears Fixed/unit and Usage/period-total obligations on October 1. September is not a repairable gap, including through stale direct schedule requests; genuinely missing October periods remain discoverable and repairable without duplicates. No historical obligations, usage, or invoices are backfilled.

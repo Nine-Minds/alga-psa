@@ -225,5 +225,13 @@
       "R1 — Explicit agreement semantics",
       "R8 — Deliberate transition and history preservation"
     ]
+  },
+  {
+    "id": "F029",
+    "description": "Automatic Invoices discovery and individual/bulk repair share canonical client-cadence obligation eligibility, excluding pre-effective periods while preserving genuine missing eligible periods.",
+    "implemented": true,
+    "prdRefs": [
+      "Narrow recurring-gap mitigation"
+    ]
   }
 ]

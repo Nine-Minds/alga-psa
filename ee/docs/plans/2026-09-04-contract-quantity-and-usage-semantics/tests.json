@@ -198,5 +198,21 @@
       "F026",
       "F027"
     ]
+  },
+  {
+    "id": "T019",
+    "description": "Isolated PostgreSQL production creation/discovery/repair actions: September assignment plus billed or draft-linked ledger; new arrears Fixed/unit and Usage/period-total lines start October 1, never return or repair September, detect and repair deliberately removed October periods, and preserve periods/candidates on repeated calls.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
+  },
+  {
+    "id": "T020",
+    "description": "Rendered Automatic Invoices interactions and synthetic live wider-date-filter smoke through December 31: no pre-effective September warnings, eligible October repair refreshes the candidate list, individual and bulk repair preserve the October start, and fixtures are removed.",
+    "implemented": true,
+    "featureIds": [
+      "F029"
+    ]
   }
 ]

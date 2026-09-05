@@ -30,7 +30,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import {
     buildRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
-import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
+import { groupDueServicePeriodsForInvoiceCandidates, isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 import {
     buildClientCadenceDueSelectionInput,
     buildContractCadenceDueSelectionInput,
@@ -43,6 +43,10 @@ import {
     buildClientCadencePostDropObligationRef,
     CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import {
+    loadClientBilledLedgerBoundary,
+    resolveClientCadenceObligationStart,
+} from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
 import {
     detectRecurringApprovalBlockers,
@@ -570,6 +574,14 @@ async function fetchClientCadenceMaterializationGaps(
         recurringClientsById.set(row.client_id, clientRows);
     }
 
+    // Load once per client, not once per line/window. A new schedule has no
+    // billed rows of its own; its first obligation still respects sibling history.
+    const billedBoundaryByClient = new Map(await Promise.all(clientIds.map(async (clientId) => [
+        clientId,
+        await loadClientBilledLedgerBoundary(trx, { tenant, clientId }),
+    ] as const)));
+    const fallbackStart = new Date().toISOString();
+
     const materializationGaps: RecurringDueWorkMaterializationGap[] = [];
     const sortedPeriodsByClient = new Map<string, BillingPeriodWithMeta[]>();
 
@@ -606,6 +618,21 @@ async function fetchClientCadenceMaterializationGaps(
                 rangeEnd: row.end_date ?? null,
                 windowStart: servicePeriodForGap.period_start_date,
                 windowEnd: servicePeriodForGap.period_end_date,
+            })) {
+                continue;
+            }
+
+            const obligationStart = resolveClientCadenceObligationStart({
+                assignmentStart: row.start_date,
+                billedBoundaryEnd: billedBoundaryByClient.get(period.client_id) ?? null,
+                fallbackStart,
+            });
+            if (!isRecurringLineExpectedInClientCadenceWindow({
+                duePosition,
+                assignmentStart: obligationStart,
+                assignmentEnd: row.end_date ? normalizeDateOnly(row.end_date) : null,
+                windowStart: invoiceWindowForGap.period_start_date,
+                windowEnd: invoiceWindowForGap.period_end_date,
             })) {
                 continue;
             }

@@ -963,6 +963,50 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     expect(screen.queryByText('Delete Cycle')).toBeNull();
   });
 
+  it.each(['fixed', 'usage'] as const)('keeps September absent while an eligible October %s obligation is repaired and refreshed', async chargeFamily => {
+    const row = buildServicePeriodRecurringDueWorkRow({
+      clientId: 'synthetic-client', clientName: `Synthetic ${chargeFamily}`, billingCycleId: 'november-cycle',
+      record: buildRecurringServicePeriodRecord({
+        cadenceOwner: 'client', duePosition: 'arrears',
+        sourceObligation: {tenant: 'tenant-1', obligationId: `new-${chargeFamily}`, obligationType: 'client_contract_line', chargeFamily},
+        scheduleKey: `schedule:tenant-1:client_contract_line:new-${chargeFamily}:client:arrears`,
+        periodKey: 'period:2026-10-01:2026-11-01',
+        servicePeriod: {start: '2026-10-01', end: '2026-11-01', semantics: 'half_open'},
+        invoiceWindow: {start: '2026-11-01', end: '2026-12-01', semantics: 'half_open'},
+      }),
+    });
+    const ready = {invoiceCandidates: [buildInvoiceCandidate([row])], materializationGaps: [], total: 1, page: 1, pageSize: 10, totalPages: 1};
+    getAvailableRecurringDueWorkMock.mockResolvedValue({
+      ...ready, invoiceCandidates: [], total: 0,
+      materializationGaps: [{
+        executionIdentityKey: row.executionIdentityKey, selectionKey: row.selectionKey,
+        clientId: row.clientId, clientName: row.clientName, scheduleKey: row.scheduleKey!, periodKey: row.periodKey!,
+        billingCycleId: row.billingCycleId, invoiceWindowStart: row.invoiceWindowStart, invoiceWindowEnd: row.invoiceWindowEnd,
+        servicePeriodStart: row.servicePeriodStart, servicePeriodEnd: row.servicePeriodEnd,
+        reason: 'missing_service_period_materialization', detail: 'Eligible October obligation is missing.',
+      }],
+    });
+    repairAllRecurringServicePeriodsForTenantMock.mockImplementationOnce(async () => {
+      getAvailableRecurringDueWorkMock.mockResolvedValue(ready);
+      return {clientsScanned: 1, clientsRepaired: 1, schedulesRepaired: 1, rowsBackfilled: 1, rowsRealigned: 0, rowsSuperseded: 0};
+    });
+    const refreshed = vi.fn();
+    const { rerender } = render(<AutomaticInvoices onGenerateSuccess={vi.fn()} onRefreshNeeded={refreshed} />);
+    const panel = await screen.findByTestId('recurring-materialization-gap-panel');
+    expect(within(panel).getAllByRole('link', {name: 'Review Service Periods'})).toHaveLength(1);
+    expect(panel.textContent).not.toMatch(/Sep|2026-09/);
+    fireEvent.click(within(panel).getByRole('button', {name: 'Fix all'}));
+    await waitFor(() => expect(refreshed).toHaveBeenCalledOnce());
+    rerender(<AutomaticInvoices onGenerateSuccess={vi.fn()} refreshTrigger={1} />);
+    await waitFor(() => expect(screen.queryByTestId('recurring-materialization-gap-panel')).not.toBeInTheDocument());
+    expect(within(screen.getByTestId('automatic-invoices-table')).getAllByText(`Synthetic ${chargeFamily}`)).toHaveLength(1);
+    rerender(<AutomaticInvoices onGenerateSuccess={vi.fn()} refreshTrigger={2} />);
+    await waitFor(() => expect(getAvailableRecurringDueWorkMock).toHaveBeenCalledTimes(3));
+    expect(screen.queryByTestId('recurring-materialization-gap-panel')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('automatic-invoices-table')).getAllByText(`Synthetic ${chargeFamily}`)).toHaveLength(1);
+    expect(repairAllRecurringServicePeriodsForTenantMock).toHaveBeenCalledTimes(1);
+  });
+
   it('T066: missing recurring materialization is presented as an explicit repair action instead of a fallback-ready invoice row', async () => {
     getAvailableRecurringDueWorkMock.mockResolvedValueOnce({
       invoiceCandidates: [],
@@ -1188,7 +1232,7 @@ describe('AutomaticInvoices recurring due-work UI', () => {
     );
   });
 
-  it('T097: AutomaticInvoices disables preview for grouped candidates and shows explicit grouped-preview copy', async () => {
+  it('T097: AutomaticInvoices previews grouped candidates with every member selector', async () => {
     const contractRow = createContractRow();
     const groupedMember = {
       ...createContractRow(),
@@ -1234,9 +1278,6 @@ describe('AutomaticInvoices recurring due-work UI', () => {
 
     const previewButton = screen.getByRole('button', { name: /Preview Selected/i });
     expect(previewButton).not.toBeDisabled();
-    expect(screen.getByTestId('grouped-preview-unavailable-copy')).toHaveTextContent(
-      'Preview supports grouped selections; direct "Generate from preview" remains single-selection only.',
-    );
 
     fireEvent.click(previewButton);
     await waitFor(() => {
