@@ -263,21 +263,20 @@ export class ContractLineServiceConfigurationService {
       await lockTenantBilling(trx, this.tenant);
       const currentConfig = await new ContractLineServiceConfiguration(trx, this.tenant).getById(configId);
       if (!currentConfig) throw new Error(`Configuration with ID ${configId} not found`);
-      if (currentConfig.configuration_type === 'Usage' && (typeConfig as IContractLineServiceUsageConfig | undefined)?.measurement_mode) {
-        const incoming = typeConfig as IContractLineServiceUsageConfig;
-        const original = await tenantDb(trx, this.tenant).table('contract_line_service_usage_config').where('config_id', configId).first();
+      if (currentConfig.configuration_type === 'Usage' && (typeConfig !== undefined || baseConfig?.custom_rate !== undefined || rateTiers !== undefined)) {
+        const incoming = (typeConfig ?? {}) as Partial<IContractLineServiceUsageConfig>;
         const transition = await setUsageMeasurementModeInTransaction({ trx, tenant: this.tenant, input: {
           config_id: configId, contract_line_id: currentConfig.contract_line_id, service_id: currentConfig.service_id,
-          measurement_mode: incoming.measurement_mode!, effective_period_start: incoming.effective_period_start,
+          measurement_mode: incoming.measurement_mode ?? undefined, effective_period_start: incoming.effective_period_start,
           pricing: {
             typeConfig: {
-              unit_of_measure: incoming.unit_of_measure ?? original?.unit_of_measure,
-              minimum_usage: incoming.minimum_usage ?? original?.minimum_usage,
-              enable_tiered_pricing: incoming.enable_tiered_pricing ?? original?.enable_tiered_pricing,
-              base_rate: incoming.base_rate === undefined ? original?.base_rate : incoming.base_rate,
+              unit_of_measure: incoming.unit_of_measure,
+              minimum_usage: incoming.minimum_usage,
+              enable_tiered_pricing: incoming.enable_tiered_pricing,
+              base_rate: incoming.base_rate,
             },
-            baseConfig: {custom_rate: baseConfig?.custom_rate === undefined ? currentConfig.custom_rate : baseConfig.custom_rate},
-            rateTiers: rateTiers ?? await tenantDb(trx, this.tenant).table('contract_line_service_rate_tiers').where('config_id', configId).select('*'),
+            baseConfig: {custom_rate: baseConfig?.custom_rate},
+            rateTiers,
           },
         }});
         if (!transition.ok) throw new Error(transition.error);

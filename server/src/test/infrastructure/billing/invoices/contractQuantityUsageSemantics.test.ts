@@ -23,7 +23,7 @@ import {
   deleteUsagePeriodTotal,
   getUsagePeriodTotals,
 } from '@alga-psa/billing/actions/usagePeriodTotalActions';
-import { createUsageRecord } from '@alga-psa/billing/actions/usageActions';
+import { createUsageRecord, updateUsageRecord } from '@alga-psa/billing/actions/usageActions';
 import { scheduleUnitPricingRevision } from '@alga-psa/billing/actions/contractLineUnitPricingActions';
 import { setUsageMeasurementMode } from '@alga-psa/billing/actions/contractLineSemanticsActions';
 import { v4 as uuidv4 } from 'uuid';
@@ -307,6 +307,129 @@ describe('Contract quantity & usage semantics — period totals and recurring se
       expect(preview.expectedUsagePeriodTotals?.[0]).toMatchObject({periodTotalId: expect.any(String), billingInputsHash: expect.any(String)});
       return preview.expectedUsagePeriodTotals!;
     };
+    it('quantity-only additive correction preserves canonical stored date', async () => {
+      const setup = await setupUsageLine({measurementMode: 'additive'});
+      const created: any = await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
+        contract_line_id: setup.contractLineId, usage_date: '2023-01-10', quantity: 4, request_id: uuidv4()});
+      expect(created).toHaveProperty('usage_id');
+      const stored = await context.db('usage_tracking').where({tenant: context.tenantId, usage_id: created.usage_id}).first();
+      expect(stored.usage_date).toBeInstanceOf(Date);
+      const updated = await updateUsageRecord({usage_id: created.usage_id, quantity: 5});
+      expect(updated).not.toHaveProperty('actionError');
+      if ('actionError' in updated) throw new Error(JSON.stringify(updated));
+      expect(Number(updated.quantity)).toBe(5);
+      expect(unwrapInvoiceResult(await generateInvoice(setup.billingCycleId)).subtotal).toBe(5000);
+    });
+    it.each([false, true])('later mode-only transition preserves prior effective rate (legacy null snapshot: %s)', async (legacyNull) => {
+      const setup = await setupUsageLine({measurementMode: 'additive'});
+      await setupInvoiceCycle(2023, 3, 1);
+      const aprilCycle = await setupInvoiceCycle(2023, 4, 1);
+      expect(await updateContractLineService(setup.contractLineId, setup.serviceId, { customRate: 2000, typeConfig: {
+        measurement_mode: 'period_total', effective_period_start: '2023-02-01', base_rate: 2000,
+      }})).toBe(true);
+      expect(await setUsageMeasurementMode({config_id: setup.configId, contract_line_id: setup.contractLineId,
+        service_id: setup.serviceId, measurement_mode: 'additive', effective_period_start: '2023-03-01'}))
+        .toMatchObject({measurement_mode: 'additive'});
+      if (legacyNull) {
+        // Existing mode-only revisions from before this repair have no price snapshot.
+        await context.db('usage_measurement_revisions').where({tenant: context.tenantId,
+          config_id: setup.configId, effective_period_start: '2023-03-01'}).update({pricing: null});
+      }
+      expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
+        contract_line_id: setup.contractLineId, usage_date: '2023-03-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
+      expect(unwrapInvoiceResult(await generateInvoice(aprilCycle)).subtotal).toBe(8000);
+    });
+    it('same-mode dated pricing edit retains earlier period price', async () => {
+      const setup = await setupUsageLine({measurementMode: 'additive'});
+      const marchCycle = await setupInvoiceCycle(2023, 3, 1);
+      expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
+        contract_line_id: setup.contractLineId, usage_date: '2023-01-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
+      expect(await updateContractLineService(setup.contractLineId, setup.serviceId, { customRate: 2000, typeConfig: {
+        measurement_mode: 'additive', effective_period_start: '2023-02-01', base_rate: 2000,
+      }})).toBe(true);
+      expect(unwrapInvoiceResult(await generateInvoice(setup.billingCycleId)).subtotal).toBe(4000);
+      expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
+        contract_line_id: setup.contractLineId, usage_date: '2023-02-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
+      expect(unwrapInvoiceResult(await generateInvoice(marchCycle)).subtotal).toBe(8000);
+      const baseline = await context.db('contract_line_service_usage_config').where({tenant: context.tenantId, config_id: setup.configId}).first();
+      expect(Number(baseline.base_rate)).toBe(1000);
+    });
+
+
+    it.each(['mode-only', 'partial-edit'] as const)('%s transition inherits effective minimums, prices and tiers at its boundary', async (edit) => {
+      const setup = await setupUsageLine({measurementMode: 'additive'});
+      await setupInvoiceCycle(2023, 3, 1);
+      const aprilCycle = await setupInvoiceCycle(2023, 4, 1);
+      const tiers = [{tenant: context.tenantId, config_id: setup.configId, tier_id: uuidv4(),
+        min_quantity: 1, rate: 3000, created_at: new Date(), updated_at: new Date()}];
+      expect(await updateContractLineService(setup.contractLineId, setup.serviceId, {customRate: 2000, typeConfig: {
+        measurement_mode: 'period_total', effective_period_start: '2023-02-01', base_rate: 2000,
+        minimum_usage: 6, enable_tiered_pricing: true, unit_of_measure: 'seat',
+      }}, tiers)).toBe(true);
+      // A later scheduled price must not leak backwards into the March change.
+      expect(await updateContractLineService(setup.contractLineId, setup.serviceId, {customRate: 9000, typeConfig: {
+        effective_period_start: '2023-04-01', minimum_usage: 20,
+      }})).toBe(true);
+      if (edit === 'mode-only') {
+        expect(await setUsageMeasurementMode({config_id: setup.configId, contract_line_id: setup.contractLineId,
+          service_id: setup.serviceId, measurement_mode: 'additive', effective_period_start: '2023-03-01'}))
+          .toMatchObject({measurement_mode: 'additive'});
+      } else {
+        expect(await updateContractLineService(setup.contractLineId, setup.serviceId, {typeConfig: {
+          measurement_mode: 'additive', effective_period_start: '2023-03-01', unit_of_measure: 'item',
+        }})).toBe(true);
+      }
+      const revision = await context.db('usage_measurement_revisions').where({tenant: context.tenantId,
+        config_id: setup.configId, effective_period_start: '2023-03-01'}).first();
+      expect(revision.pricing).toMatchObject({baseConfig: {custom_rate: 2000}, typeConfig: {
+        base_rate: 2000, minimum_usage: 6, enable_tiered_pricing: true,
+        unit_of_measure: edit === 'mode-only' ? 'seat' : 'item',
+      }, rateTiers: [{min_quantity: 1, rate: 3000}]});
+      expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
+        contract_line_id: setup.contractLineId, usage_date: '2023-03-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
+      expect(unwrapInvoiceResult(await generateInvoice(aprilCycle)).subtotal).toBe(18000);
+    });
+
+    it('partial dated pricing permits explicit zero, false, null and empty tiers', async () => {
+      const setup = await setupUsageLine({measurementMode: 'additive'});
+      await setupInvoiceCycle(2023, 3, 1);
+      const aprilCycle = await setupInvoiceCycle(2023, 4, 1);
+      expect(await updateContractLineService(setup.contractLineId, setup.serviceId, {customRate: 2000, typeConfig: {
+        measurement_mode: 'period_total', effective_period_start: '2023-02-01', base_rate: 2000,
+        minimum_usage: 6, enable_tiered_pricing: true,
+      }}, [{tenant: context.tenantId, config_id: setup.configId, tier_id: uuidv4(), min_quantity: 1, rate: 3000, created_at: new Date(), updated_at: new Date()}])).toBe(true);
+      expect(await updateContractLineService(setup.contractLineId, setup.serviceId, {customRate: null, typeConfig: {
+        measurement_mode: 'additive', effective_period_start: '2023-03-01', minimum_usage: 0,
+        enable_tiered_pricing: false, base_rate: null,
+      }}, [])).toBe(true);
+      const revision = await context.db('usage_measurement_revisions').where({tenant: context.tenantId,
+        config_id: setup.configId, effective_period_start: '2023-03-01'}).first();
+      expect(revision.pricing).toMatchObject({baseConfig: {custom_rate: null}, typeConfig: {
+        base_rate: null, minimum_usage: 0, enable_tiered_pricing: false,
+      }, rateTiers: []});
+      expect(await createUsageRecord({client_id: context.clientId, service_id: setup.serviceId,
+        contract_line_id: setup.contractLineId, usage_date: '2023-03-10', quantity: 4, request_id: uuidv4()})).toHaveProperty('usage_id');
+      // Cleared prices fall back to the 1000-cent catalog rate, with no minimum.
+      expect(unwrapInvoiceResult(await generateInvoice(aprilCycle)).subtotal).toBe(4000);
+    });
+
+    it('deleting a pre-history report must retain its consumed request id', async () => {
+      const setup = await setupUsageLine({measurementMode: 'period_total'});
+      const input = reportInput(setup);
+      const first: any = await upsertUsagePeriodTotal(input);
+      expect(first).toHaveProperty('total');
+      // Simulate an existing report created before the request-history migration.
+      await context.db('usage_period_total_requests').where({tenant: context.tenantId, request_id: input.request_id}).delete();
+      expect(await deleteUsagePeriodTotal({period_total_id: first.total.period_total_id, expected_revision: 1})).toBeUndefined();
+      expect(await upsertUsagePeriodTotal(input)).toHaveProperty('actionError');
+      expect(await totalsTable().where({tenant: context.tenantId})).toHaveLength(0);
+      expect(await upsertUsagePeriodTotal({...input, quantity: input.quantity + 1})).toHaveProperty('actionError');
+      const preview = await previewInvoice(setup.billingCycleId);
+      expect(preview).toMatchObject({success: false, code: 'USAGE_RECORDS_MISSING'});
+      expect(await generateInvoice(setup.billingCycleId)).toHaveProperty('actionError');
+      expect(await context.db('invoices').where({tenant: context.tenantId})).toHaveLength(0);
+    });
+
     it('historical replay A after B, changed request reuse and stale deletion never restore or remove B', async () => {
       const setup = await setupUsageLine({measurementMode: 'period_total'});
       const a = reportInput(setup);

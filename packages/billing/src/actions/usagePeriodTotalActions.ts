@@ -570,6 +570,20 @@ export const deleteUsagePeriodTotal = withAuth(
             `This period total was changed by someone else (revision ${existing.revision}). Reload and retry.`,
           );
         }
+        // Live reports predating request history still own their last request ID.
+        // Preserve that known identity in the same transaction as deletion.
+        if (existing.request_id) {
+          await recordConsumedRequest({
+            requestHistory: () => tenantScopedTable(trx, tenant, 'usage_period_total_requests'),
+            tenant,
+            data: {
+              ...existing,
+              period_start: normalizeBoundaryForComparison(existing.period_start),
+              period_end: normalizeBoundaryForComparison(existing.period_end),
+            },
+            quantity: Number(existing.quantity),
+          });
+        }
         const deletedCount = await tenantScopedTable(trx, tenant, 'usage_period_totals')
           .where({ period_total_id: params.period_total_id, tenant })
           .where('lifecycle_state', 'recorded')

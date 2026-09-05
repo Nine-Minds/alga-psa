@@ -413,7 +413,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         clientId: targetClientForGuard,
         serviceId: targetServiceForGuard,
         contractLineId: finalContractLineId,
-        usageDate: String(data.usage_date ?? originalRecord.usage_date),
+        usageDate: data.usage_date ? toCanonicalUsageDateISO(data.usage_date) : originalUsageDateISO,
       });
       if (modeGuard) {
         return actionError(modeGuard);

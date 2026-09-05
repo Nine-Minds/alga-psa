@@ -2,7 +2,7 @@ import { lockTenantBilling } from './billingMutationLock';
 import { resolveNextUnbilledSeatBoundary, validateProspectivePricingBoundary } from './seatRevisions';
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { UsageMeasurementMode } from '@alga-psa/types';
+import type { UsageMeasurementMode, IContractLineServiceConfiguration, IContractLineServiceUsageConfig, IContractLineServiceRateTier } from '@alga-psa/types';
 
 /**
  * Transactional core of usage measurement-mode transitions.
@@ -36,13 +36,24 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+interface UsagePricingSnapshot {
+  baseConfig?: Pick<Partial<IContractLineServiceConfiguration>, 'custom_rate'>;
+  typeConfig?: Pick<Partial<IContractLineServiceUsageConfig>, 'unit_of_measure' | 'minimum_usage' | 'enable_tiered_pricing' | 'base_rate'>;
+  rateTiers?: IContractLineServiceRateTier[];
+}
+
+/** Omitted fields inherit; explicit null, zero, false and empty tiers are edits. */
+function definedFields<T extends object>(value: T): Partial<T> {
+  return Object.fromEntries(Object.entries(value).filter(([, field]) => field !== undefined)) as Partial<T>;
+}
+
 export interface ISetUsageMeasurementModeInput {
   config_id: string;
   contract_line_id: string;
   service_id: string;
-  measurement_mode: UsageMeasurementMode;
+  measurement_mode?: UsageMeasurementMode;
   effective_period_start?: string;
-  pricing?: Record<string, unknown>;
+  pricing?: UsagePricingSnapshot;
 }
 
 export type SetUsageMeasurementModeResult =
@@ -57,7 +68,7 @@ export async function setUsageMeasurementModeInTransaction(params: {
   const { trx, tenant, input } = params;
   await lockTenantBilling(trx, tenant);
 
-  if (input.measurement_mode !== 'additive' && input.measurement_mode !== 'period_total') {
+  if (input.measurement_mode !== undefined && input.measurement_mode !== 'additive' && input.measurement_mode !== 'period_total') {
     return { ok: false, error: 'Measurement mode must be additive or period_total.' };
   }
 
@@ -69,7 +80,7 @@ export async function setUsageMeasurementModeInTransaction(params: {
       service_id: input.service_id,
       configuration_type: 'Usage',
     })
-    .first('config_id');
+    .first<IContractLineServiceConfiguration>();
   if (!config) {
     return {
       ok: false,
@@ -79,23 +90,38 @@ export async function setUsageMeasurementModeInTransaction(params: {
 
   const usageConfig = await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config')
     .where({ tenant, config_id: input.config_id })
-    .first<{ measurement_mode: string | null }>('measurement_mode');
+    .first<IContractLineServiceUsageConfig>();
   const boundary = input.effective_period_start ?? await resolveNextUnbilledSeatBoundary({trx, tenant, contractLineId: input.contract_line_id});
   const current = boundary ? await resolveUsageMeasurementRevision(trx, tenant, input.config_id, boundary) : null;
-  const currentMode = current?.measurement_mode ?? usageConfig?.measurement_mode ?? 'additive';
+  const currentMode: UsageMeasurementMode = current?.measurement_mode ?? usageConfig?.measurement_mode ?? 'additive';
+  const targetMode = input.measurement_mode ?? currentMode;
   if (boundary) {
     const conflict = await validateProspectivePricingBoundary(trx, tenant, input.contract_line_id, boundary);
     if (conflict) return {ok: false, error: conflict};
   }
-  if (currentMode === input.measurement_mode) {
-    if (current && input.pricing && boundary) {
-      await tenantScopedTable(trx, tenant, 'usage_measurement_revisions').insert({tenant, config_id: input.config_id, effective_period_start: boundary, measurement_mode: input.measurement_mode, pricing: input.pricing})
-        .onConflict(['tenant', 'config_id', 'effective_period_start']).merge(['pricing']);
-    }
-    return { ok: true, measurement_mode: input.measurement_mode, ...(current && boundary ? {effective_period_start: boundary} : {}) };
-  }
+  // Store a complete snapshot, including mode-only and first same-mode edits.
+  // The caller supplies only changed fields; inheritance comes from the price
+  // effective at this boundary, never from a stale authoring baseline.
+  const previousPricing: UsagePricingSnapshot = current?.pricing ?? {};
+  const pricing: UsagePricingSnapshot = {
+    baseConfig: {
+      custom_rate: config.custom_rate,
+      ...previousPricing.baseConfig,
+      ...definedFields(input.pricing?.baseConfig ?? {}),
+    },
+    typeConfig: {
+      unit_of_measure: usageConfig?.unit_of_measure,
+      minimum_usage: usageConfig?.minimum_usage,
+      enable_tiered_pricing: usageConfig?.enable_tiered_pricing,
+      base_rate: usageConfig?.base_rate,
+      ...previousPricing.typeConfig,
+      ...definedFields(input.pricing?.typeConfig ?? {}),
+    },
+    rateTiers: input.pricing?.rateTiers ?? previousPricing.rateTiers ??
+      await tenantScopedTable(trx, tenant, 'contract_line_service_rate_tiers').where('config_id', input.config_id).orderBy('min_quantity').select('*'),
+  };
 
-  if (input.measurement_mode === 'period_total') {
+  if (currentMode !== targetMode && targetMode === 'period_total') {
     // Explicitly attributed unbilled entries on this line.
     const orphanedEntries = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .where({ tenant, service_id: input.service_id, contract_line_id: input.contract_line_id })
@@ -136,7 +162,7 @@ export async function setUsageMeasurementModeInTransaction(params: {
     }
   }
 
-  if (input.measurement_mode === 'additive') {
+  if (currentMode !== targetMode && targetMode === 'additive') {
     // Any unbilled recorded total for the (line, service) — regardless of
     // which configuration row reported it — would be stranded.
     const recordedTotal = await tenantScopedTable(trx, tenant, 'usage_period_totals')
@@ -159,17 +185,25 @@ export async function setUsageMeasurementModeInTransaction(params: {
   if (boundary) {
     await tenantScopedTable(trx, tenant, 'usage_measurement_revisions').insert({
       tenant, config_id: input.config_id, effective_period_start: boundary,
-      measurement_mode: input.measurement_mode, pricing: input.pricing ?? null,
+      measurement_mode: targetMode, pricing,
     }).onConflict(['tenant', 'config_id', 'effective_period_start']).merge(['measurement_mode', 'pricing']);
   } else {
     await tenantScopedTable(trx, tenant, 'contract_line_service_usage_config')
-      .where({ tenant, config_id: input.config_id }).update({ measurement_mode: input.measurement_mode });
+      .where({ tenant, config_id: input.config_id }).update({ measurement_mode: targetMode });
   }
-  return { ok: true, measurement_mode: input.measurement_mode, ...(boundary ? {effective_period_start: boundary} : {}) };
+  return { ok: true, measurement_mode: targetMode, ...(boundary ? {effective_period_start: boundary} : {}) };
 }
 
 export async function resolveUsageMeasurementRevision(knex: Knex, tenant: string, configId: string, periodStart: string) {
-  return tenantScopedTable(knex, tenant, 'usage_measurement_revisions')
-    .where({ config_id: configId }).where('effective_period_start', '<=', periodStart.slice(0,10))
-    .orderBy('effective_period_start', 'desc').first();
+  const revisions = () => tenantScopedTable(knex, tenant, 'usage_measurement_revisions')
+    .where({ config_id: configId }).where('effective_period_start', '<=', periodStart.slice(0, 10))
+    .orderBy('effective_period_start', 'desc');
+  const revision = await revisions().first();
+  if (revision && revision.pricing == null) {
+    // Older mode-only rows did not snapshot prices. Their mode still applies,
+    // while pricing continues from the latest explicit snapshot at/before it.
+    const pricedRevision = await revisions().whereNotNull('pricing').first();
+    return { ...revision, pricing: pricedRevision?.pricing ?? null };
+  }
+  return revision;
 }
