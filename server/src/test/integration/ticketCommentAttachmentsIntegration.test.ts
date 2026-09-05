@@ -6,11 +6,14 @@ import * as dbModule from '@alga-psa/db';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { NextRequest } from 'next/server';
 
-const routeSession = vi.hoisted(() => ({ user: null as any, permitted: true }));
+const routeSession = vi.hoisted(() => ({ user: null as any, permitted: true, documentsPermitted: true }));
 vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: async () => routeSession.user }));
 vi.mock('@alga-psa/auth', async importOriginal => ({ ...await importOriginal<typeof import('@alga-psa/auth')>(),
   withAuth: (fn: any) => (...args: any[]) => fn(routeSession.user, { tenant: routeSession.user?.tenant }, ...args),
-  hasPermission: async () => routeSession.permitted,
+  hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async (_user: unknown, resource: string) => routeSession.permitted && (resource !== 'document' || routeSession.documentsPermitted),
 }));
 vi.mock('@/lib/auth/rbac', () => ({ hasPermission: async () => routeSession.permitted }));
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
@@ -78,6 +81,76 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     await table('comments').where({comment_id:id}).update({note:note(file)});
     await reconcileCommentAttachments(trx, tenant, id, user);
   }
+  it('loads authorized attachment metadata and membership through the actual optimized ticket path', async () => {
+    const { getConsolidatedTicketData } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    const { getDocumentByTicketId, getDocumentsByEntity, getDocumentCountsForEntities } = await import('@alga-psa/documents/actions/documentActions');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    routeSession.user = { ...await table('users').where({ user_id: actor }).first(), tenant };
+    try {
+      const publicFile = await upload('public.pdf');
+      await attach(publicFile.file);
+      const internalFile = await upload('internal.pdf');
+      await attach(internalFile.file, await makeComment({ is_internal: true }));
+      const removed = await upload('00-removed.pdf');
+      await table('ticket_comment_attachments').where({ document_id: removed.document }).update({ state: 'removed' });
+      const standalone = await upload('standalone.pdf');
+      await table('ticket_comment_attachments').where({ document_id: standalone.document }).delete();
+      const draft = await upload('active-draft.pdf');
+      await upload('other-user-draft.pdf', 'application/pdf', 12, clientUser);
+      const expired = await upload('expired-draft.pdf');
+      await table('ticket_comment_attachments').where({ document_id: expired.document }).update({ expires_at: new Date(0) });
+
+      const initial = await getConsolidatedTicketData(ticket);
+      const expectedIds = [publicFile.document, internalFile.document, standalone.document, draft.document];
+      expect(initial.documents).toHaveLength(4);
+      expect(initial.documents.map((d: any) => d.document_id).sort()).toEqual(expectedIds.sort());
+      expect(initial.documents.find((d: any) => d.document_id === internalFile.document)).toMatchObject({ is_client_visible: true, comment_attachment_is_public: false });
+      expect(initial.documents.find((d: any) => d.document_id === publicFile.document)).toMatchObject({ comment_attachment_is_public: true });
+      expect(initial.documents.find((d: any) => d.document_id === draft.document)).toMatchObject({ comment_attachment_is_public: false });
+      expect(initial.documents.find((d: any) => d.document_id === standalone.document)).not.toHaveProperty('comment_attachment_is_public');
+      expect((await getDocumentCountsForEntities([ticket], 'ticket')).get(ticket)).toBe(initial.documents.length);
+      const subsequent = await getDocumentByTicketId(ticket) as any[];
+      expect(subsequent.map(d => d.document_id).sort()).toEqual(expectedIds);
+      // Removed rows sort first, but must never consume a page slot or inflate totals.
+      const pages = await Promise.all([1, 2].map(page => getDocumentsByEntity(ticket, 'ticket', { sortBy: 'document_name', sortOrder: 'asc' }, page, 2))) as any[];
+      expect(pages.map(p => p.totalCount)).toEqual([4, 4]);
+      expect(pages.map(p => p.totalPages)).toEqual([2, 2]);
+      expect(pages.flatMap(p => p.documents.map((d: any) => d.document_id)).sort()).toEqual(expectedIds);
+
+      // The same document ID transitions from owned draft to public, then internal.
+      await attach(draft.file, await makeComment());
+      expect((await getConsolidatedTicketData(ticket)).documents.find((d: any) => d.document_id === draft.document)).toMatchObject({ comment_attachment_is_public: true });
+      const claimed = await table('ticket_comment_attachments').where({ document_id: draft.document }).first();
+      await Comment.update(trx, tenant, claimed.comment_id, { is_internal: true }, actor);
+      expect((await getConsolidatedTicketData(ticket)).documents.find((d: any) => d.document_id === draft.document)).toMatchObject({ comment_attachment_is_public: false });
+
+      routeSession.documentsPermitted = false;
+      expect((await getConsolidatedTicketData(ticket)).documents).toEqual([]);
+      expect((await getDocumentCountsForEntities([ticket], 'ticket')).get(ticket)).toBe(0);
+    } finally { routeSession.documentsPermitted = true; connection.mockRestore(); }
+  });
+
+  it('excludes unauthorized client and tenant documents from the optimized initial load and totals', async () => {
+    const { getConsolidatedTicketData } = await import('@alga-psa/tickets/actions/optimizedTicketActions');
+    const { getDocumentsByEntity, getDocumentCountsForEntities } = await import('@alga-psa/documents/actions/documentActions');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    const pdf = await upload();
+    await attach(pdf.file);
+    const standalone = await upload('standalone.pdf');
+    await table('ticket_comment_attachments').where({ document_id: standalone.document }).delete();
+    try {
+      for (const user of [
+        { ...await table('users').where({ user_id: otherUser }).first(), clientId: (await table('contacts').where({ email: 'other@example.test' }).first()).client_id },
+        { ...await table('users').where({ user_id: actor }).first(), tenant: randomUUID() },
+      ]) {
+        routeSession.user = user;
+        const initial = await getConsolidatedTicketData(ticket);
+        expect(initial.documents ?? []).toEqual([]);
+        expect((await getDocumentsByEntity(ticket, 'ticket', undefined, 1, 1) as any)).toMatchObject({ documents: [], totalCount: 0 });
+        expect((await getDocumentCountsForEntities([ticket], 'ticket')).get(ticket)).toBe(0);
+      }
+    } finally { connection.mockRestore(); }
+  });
   it('withdraws only authorized actor-owned drafts and preserves published/shared documents', async () => {
     const { discardCommentAttachmentDrafts } = await import('@alga-psa/tickets/actions/comment-actions/commentAttachmentDraftActions');
     const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);

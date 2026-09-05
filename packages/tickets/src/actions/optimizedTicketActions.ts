@@ -88,6 +88,7 @@ import {
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
 import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
+import { authorizeAndRedactDocuments } from '@alga-psa/documents/actions/documentActions';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
 type ScheduledCommentPublication = { publishAt: string; timeZone: string };
@@ -489,7 +490,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     // Fetch all related data in parallel
     const [
       comments,
-      documents,
+      documentRows,
       clients,
       resources,
       users,
@@ -611,6 +612,12 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
           .orderBy('category_name', 'asc');
       })()
     ]);
+
+    // Use the same document policy as subsequent fetches before returning rows
+    // or deriving counts. This also annotates effective comment visibility.
+    const documents = await hasPermission(user, 'document', 'read', trx)
+      ? await authorizeAndRedactDocuments(trx, tenant, user, documentRows as IDocument[])
+      : [];
 
     // --- Add Logo URL Processing for the fetched 'clients' list ---
     const clientsData = clients as (IClient & { document_id?: string })[];

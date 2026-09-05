@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
 import { entryLayoutBootstrap } from './entryLayoutBootstrap';
+import { createComment, updateComment, findCommentById } from '../../../actions/comment-actions/commentActions';
 
 const {
   routerPushMock,
@@ -13,13 +14,16 @@ const {
   getTicketByIdMock,
   toastSuccessMock,
   toastErrorMock,
+  getDocumentsMock,
 } = vi.hoisted(() => ({
   routerPushMock: vi.fn(),
   findBoardByIdMock: vi.fn(),
   getTicketByIdMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  getDocumentsMock: vi.fn().mockResolvedValue([]),
 }));
+let conversationProps: any;
 
 let ticketInfoDirtyFields: string[] = [];
 let ticketPropertiesDirtyFields: string[] = [];
@@ -65,7 +69,7 @@ vi.mock(
   '@alga-psa/core/context/DocumentsCrossFeatureContext',
   () => ({
     useDocumentsCrossFeature: () => ({
-      getDocumentByTicketId: vi.fn().mockResolvedValue([]),
+      getDocumentByTicketId: getDocumentsMock,
       deleteDocument: vi.fn().mockResolvedValue(undefined),
     }),
   })
@@ -205,6 +209,14 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   removeTicketResource: vi.fn(),
   assignTeamToTicket: vi.fn().mockResolvedValue(undefined),
   removeTeamFromTicket: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../../actions/comment-actions/commentActions', () => ({
+  findCommentsByTicketId: vi.fn().mockResolvedValue([]),
+  deleteComment: vi.fn(),
+  createComment: vi.fn(),
+  updateComment: vi.fn(),
+  findCommentById: vi.fn(),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
@@ -348,7 +360,7 @@ vi.mock('../TicketProperties', () => ({
 
 vi.mock('../TicketDocumentsSection', () => ({
   __esModule: true,
-  default: () => <div data-testid="ticket-documents" />,
+  default: ({ initialDocuments }: any) => <div data-testid="ticket-documents">{JSON.stringify(initialDocuments)}</div>,
 }));
 
 vi.mock('../TicketEmailNotifications', () => ({
@@ -358,7 +370,10 @@ vi.mock('../TicketEmailNotifications', () => ({
 
 vi.mock('../TicketConversation', () => ({
   __esModule: true,
-  default: () => <div data-testid="ticket-conversation" />,
+  default: (props: any) => {
+    conversationProps = props;
+    return <div data-testid="ticket-conversation" />;
+  },
 }));
 
 vi.mock('../AgentScheduleDrawer', () => ({
@@ -414,7 +429,7 @@ const enabledBoard = {
   enable_live_ticket_timer: true,
 };
 
-function renderTicketDetails() {
+function renderTicketDetails(extraProps: Partial<React.ComponentProps<typeof TicketDetails>> = {}) {
   return render(
     <TicketDetails
       bootstrap={entryLayoutBootstrap}
@@ -429,6 +444,7 @@ function renderTicketDetails() {
         { value: 'priority-2', label: 'High' },
       ]}
       boardOptions={[{ value: 'board-1', label: 'Support' }]}
+      {...extraProps}
     />
   );
 }
@@ -437,6 +453,7 @@ describe('TicketDetails remote live updates', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.clearAllMocks();
+    getDocumentsMock.mockResolvedValue([]);
     ticketInfoDirtyFields = [];
     ticketPropertiesDirtyFields = [];
     ticketInfoLocalFieldValues = {};
@@ -456,6 +473,31 @@ describe('TicketDetails remote live updates', () => {
     cleanup();
     vi.runOnlyPendingTimers();
     vi.useRealTimers();
+  });
+
+  it.each(['optimized create', 'create', 'reply', 'edit'])('refreshes same-ID document metadata after successful %s', async (operation) => {
+    const draft = { document_id: 'same-id', comment_attachment_is_public: false };
+    const claimed = { ...draft, comment_attachment_is_public: true };
+    const comment = { comment_id: 'comment-1', user_id: 'user-1', note: '[]' };
+    vi.mocked(createComment).mockResolvedValue(comment as any);
+    vi.mocked(updateComment).mockResolvedValue(comment as any);
+    vi.mocked(findCommentById).mockResolvedValue(comment as any);
+    const onAddComment = operation === 'optimized create' ? vi.fn().mockResolvedValue(undefined) : undefined;
+    await act(async () => { renderTicketDetails({ initialDocuments: [draft], onAddComment }); });
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([draft]));
+    getDocumentsMock.mockResolvedValue([claimed]);
+    const content = [{ type: 'paragraph', content: [{ type: 'text', text: 'Attachment claim', styles: {} }] }];
+    if (operation === 'edit') {
+      await act(async () => { conversationProps.onEdit(comment); });
+      await act(async () => { await conversationProps.onSave({ note: JSON.stringify(content) }); });
+    } else if (operation === 'reply') {
+      await act(async () => { await conversationProps.onAddReplyComment(content, 'parent-1', false); });
+    } else {
+      await act(async () => { conversationProps.onNewCommentContentChange(content); });
+      await act(async () => { await conversationProps.onAddNewComment(false, false); });
+    }
+    expect(getDocumentsMock).toHaveBeenCalledWith('ticket-1');
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([claimed]));
   });
 
   it('T034: no-overlap remote updates refetch silently and highlight the changed field', async () => {

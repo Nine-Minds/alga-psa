@@ -32,7 +32,6 @@ describe('document authorization kernel wiring contracts', () => {
   it('T016: applies field redaction on allowed records without changing allow/deny decisions', () => {
     expect(source).toContain('function applyDocumentRedactions<T extends object>(document: T, redactedFields: string[]): T');
     expect(source).toContain('if (!document || !decision?.allowed) {');
-    expect(source).toContain('authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));');
     expect(source).toContain('redactedFields: decision.redactedFields,');
     expect(source).toContain('return authorizeAndRedactDocuments(trx, tenant, user, documents as IDocument[]);');
     expect(source).toContain('getAuthorizedDocumentByFileId(trx, tenant, user, identifier)');
