@@ -100,6 +100,7 @@ import {
   hasUnitPricedFixedMembers,
   filterApplicableDiscounts,
   buildChargeComputeTaxContext,
+  buildTimeEntryWorkItemSnapshot,
   type ChargeComputeClient,
   type ChargeComputeTaxContext,
   type LoadedChargeTaxRate,
@@ -2610,6 +2611,14 @@ export class BillingEngine {
       "service_catalog.service_name",
       "service_catalog.default_rate",
       "service_catalog.tax_rate_id",
+      // Same customer-visible work-item fields as the contract-line loader,
+      // so unresolved/catalog-priced time carries an identical snapshot.
+      "tickets.ticket_number as ticket_number",
+      "tickets.title as ticket_title",
+      this.knex.raw(
+        "tickets.attributes->>'description' as ticket_description",
+      ),
+      "project_tasks.task_name as project_task_name",
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
       this.knex.raw(
@@ -2797,6 +2806,13 @@ export class BillingEngine {
         quantity: duration,
         rate,
         total,
+        workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
+          billedMinutes: billableMinutes,
+          rate,
+          netAmount: total,
+          serviceId: effectiveServiceId ?? null,
+          serviceName: effectiveServiceName ?? null,
+        }),
         tax_amount: taxAmount,
         tax_rate: taxRate,
         tax_region: effectiveTaxRegion,
@@ -5148,6 +5164,15 @@ export class BillingEngine {
       this.knex.raw(
         "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
       ),
+      // Work-item identity + customer-visible fields for the immutable
+      // invoice snapshot. Same joins as work_item_name; internal comments and
+      // time-entry notes are deliberately excluded.
+      "tickets.ticket_number as ticket_number",
+      "tickets.title as ticket_title",
+      this.knex.raw(
+        "tickets.attributes->>'description' as ticket_description",
+      ),
+      "project_tasks.task_name as project_task_name",
       "project_phases.phase_id as project_phase_id",
       "projects.project_id as project_id",
       // Step 4 of the billing-profile resolution chain. The ticket and project

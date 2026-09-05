@@ -1282,11 +1282,11 @@
         "canonicalHostFallback": "canonical host"
       },
       "appliance": {
-        "helpText": "Point this hostname at your appliance and have your reverse proxy forward the original Host header before saving.",
+        "helpText": "Point this hostname at your server and have your reverse proxy forward the original Host header before saving.",
         "checklistTitle": "Reverse proxy setup",
         "step1Prefix": "Point ",
-        "step1Suffix": " at this appliance (an A record to its address, or a CNAME to your appliance host).",
-        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this appliance on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
+        "step1Suffix": " at this server (an A record to its address, or a CNAME to your server's hostname).",
+        "step2": "On your reverse proxy, terminate TLS for the domain and forward to this server on port 3000, preserving the original Host header (e.g. proxy_set_header Host $host) and sending X-Forwarded-Proto: https.",
         "step3": "Obtain and maintain the TLS certificate for the domain on your proxy.",
         "step4": "Save the domain here — it activates immediately. Wire DNS and your proxy first, since portal links switch to this domain right away.",
         "docLinkText": "Reverse proxy setup & troubleshooting guide",
@@ -3226,7 +3226,7 @@
       "needsDot": "Domain must include at least one dot.",
       "notCanonicalHost": "Please choose a domain other than the canonical host.",
       "noLeadingTrailingDot": "Domain cannot start or end with a dot.",
-      "notApplianceHost": "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
+      "notApplianceHost": "Choose a domain other than this server's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here.",
       "nothingToRetry": "No failed custom domain registration to retry.",
       "retryOnlyAfterFailure": "Retry is only available after a failed registration."
     }

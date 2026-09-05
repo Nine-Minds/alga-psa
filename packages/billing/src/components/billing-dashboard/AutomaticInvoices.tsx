@@ -25,6 +25,7 @@ import {
   type RecurringGroupedPreviewResponse,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
+  generateCalendarMonthEndCloseInvoices,
   generateGroupedInvoicesAsRecurringBillingRun,
   generateInvoicesAsRecurringBillingRun,
   type RecurringBillingRunInvoiceFailure,
@@ -883,6 +884,11 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
     servicePeriodLabel: string;
     cadenceSource: string | null | undefined;
   } | null>(null);
+
+  // Calendar month-end early close: offered per not-yet-due group when the
+  // server flagged it month-end eligible; re-validated server-side on generate.
+  const [monthEndCloseGroup, setMonthEndCloseGroup] = useState<RecurringInvoiceParentGroup | null>(null);
+  const [isMonthEndClosing, setIsMonthEndClosing] = useState(false);
 
   // Server-side pagination state for "Ready to Invoice"
   const [periods, setPeriods] = useState<ReadyPeriod[]>([]);
@@ -1800,6 +1806,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
       onGenerateSuccess();
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleCalendarMonthEndClose = async () => {
+    const group = monthEndCloseGroup;
+    if (!group) {
+      return;
+    }
+    setIsMonthEndClosing(true);
+    setErrorOperation('finalize');
+    setErrors({});
+
+    try {
+      const runResult = await generateCalendarMonthEndCloseInvoices({
+        groupedTargets: [
+          {
+            groupKey: group.parentSummary.candidateKey,
+            selectorInputs: group.childExecutionRows.map((member) => member.selectorInput),
+            billingCycleId: resolveSelectionGroupBillingCycleId(group.childExecutionRows),
+          },
+        ],
+      });
+      if (isReturnedActionError(runResult)) {
+        setErrors({ [group.parentSummary.clientName ?? 'generation']: getErrorMessage(runResult) });
+        return;
+      }
+      setMonthEndCloseGroup(null);
+      // Let onGenerateSuccess trigger refresh via refreshTrigger.
+      onGenerateSuccess();
+    } catch (error) {
+      console.error('Error generating calendar month-end close invoice:', error);
+      setErrors({
+        [group.parentSummary.clientName ?? 'generation']:
+          t('automaticInvoices.monthEndClose.generationFailed', {
+            defaultValue: 'Could not generate the month-end invoice. Please try again.',
+          }),
+      });
+    } finally {
+      setIsMonthEndClosing(false);
     }
   };
 
@@ -2948,6 +2993,8 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                     return null;
                   }
                   const summary = record.group.parentSummary;
+                  const monthEndCloseEligible =
+                    record.group.candidate.monthEndCloseEligible === true;
                   return (
                     <div className="space-y-0.5">
                       {renderStatusPill(summary, countSeparateInvoices(record.group.childExecutionRows))}
@@ -2958,6 +3005,22 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                             defaultValue: `Opens ${formatDate(summary.availableOnDate, { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' })}`,
                           })}
                         </div>
+                      ) : null}
+                      {summary.notYetDue && monthEndCloseEligible ? (
+                        <Button
+                          id={`month-end-close-${record.group.parentSummary.parentGroupKey}`}
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 h-7 text-xs font-medium"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setMonthEndCloseGroup(record.group);
+                          }}
+                        >
+                          {t('automaticInvoices.monthEndClose.action', {
+                            defaultValue: 'Generate month-end invoice',
+                          })}
+                        </Button>
                       ) : null}
                     </div>
                   );
@@ -3855,6 +3918,45 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         confirmLabel={t('automaticInvoices.dialogs.poOverage.proceedConfirm', { defaultValue: 'Proceed Anyway' })}
         cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
         onConfirm={handlePoOverageSingleConfirm}
+      />
+
+      <ConfirmationDialog
+        id="calendar-month-end-close-confirmation"
+        isOpen={monthEndCloseGroup !== null}
+        onClose={() => {
+          if (!isMonthEndClosing) {
+            setMonthEndCloseGroup(null);
+          }
+        }}
+        onConfirm={handleCalendarMonthEndClose}
+        title={t('automaticInvoices.monthEndClose.title', {
+          servicePeriod: monthEndCloseGroup?.parentSummary.servicePeriodLabel ?? '',
+          defaultValue: 'Close this period at month end?',
+        })}
+        message={
+          <div className="space-y-2" data-testid="calendar-month-end-close-warning">
+            <p>
+              {t('automaticInvoices.monthEndClose.warning', {
+                servicePeriod: monthEndCloseGroup?.parentSummary.servicePeriodLabel ?? '',
+                defaultValue:
+                  `This generates the arrears invoice for ${monthEndCloseGroup?.parentSummary.servicePeriodLabel ?? 'the period'} `
+                  + 'now, on its final calendar day, instead of waiting for the invoice window to open tomorrow.',
+              })}
+            </p>
+            <p className="font-medium text-warning">
+              {t('automaticInvoices.monthEndClose.omissionWarning', {
+                defaultValue: 'Time or usage entries recorded after this close will NOT be included on the invoice.',
+              })}
+            </p>
+          </div>
+        }
+        confirmLabel={isMonthEndClosing
+          ? t('manualInvoices.actions.processing', { defaultValue: 'Processing...' })
+          : t('automaticInvoices.monthEndClose.confirm', {
+            defaultValue: 'Generate at month end',
+          })}
+        cancelLabel={t('common.actions.cancel', { defaultValue: 'Cancel' })}
+        isConfirming={isMonthEndClosing}
       />
       </>
   // Removed TooltipProvider closing tag

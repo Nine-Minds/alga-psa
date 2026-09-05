@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { mapDbInvoiceToWasmViewModel } from './invoiceAdapters';
+import {
+  buildInvoiceTimeCollections,
+  mapDbInvoiceToWasmViewModel,
+  type InvoiceTimeCollectionSource,
+} from './invoiceAdapters';
 
 describe('mapDbInvoiceToWasmViewModel', () => {
   it('maps db invoice payload numeric and string fields into wasm preview model', () => {
@@ -418,5 +422,190 @@ describe('mapDbInvoiceToWasmViewModel', () => {
         },
       ],
     });
+  });
+});
+
+const snapshotSource = (
+  overrides: Partial<InvoiceTimeCollectionSource> = {},
+): InvoiceTimeCollectionSource => ({
+  version: 1,
+  entryId: 'entry-1',
+  itemId: 'item-1',
+  workItemType: 'ticket',
+  workItemId: 'ticket-1',
+  ticketNumber: 'T-001',
+  title: 'Email outage',
+  description: 'Mail flow failed.',
+  entryDate: '2026-08-05',
+  billedMinutes: 90,
+  rate: 15000,
+  netAmount: 22500,
+  serviceId: 'svc-h',
+  serviceName: 'Remote Support',
+  ...overrides,
+});
+
+describe('buildInvoiceTimeCollections', () => {
+  it('aggregates multiple entries on one ticket with integer minute/minor-unit sums', () => {
+    const { ticketGroups, timeEntries } = buildInvoiceTimeCollections(
+      [
+        snapshotSource({ entryId: 'e2', entryDate: '2026-08-07', billedMinutes: 45, netAmount: 11250 }),
+        snapshotSource({ entryId: 'e1' }),
+      ],
+    );
+
+    expect(timeEntries.map((entry) => entry.id)).toEqual(['e1', 'e2']); // date-ordered
+    expect(ticketGroups).toHaveLength(1);
+    expect(ticketGroups[0]).toMatchObject({
+      key: 'ticket:ticket-1',
+      ticketNumber: 'T-001',
+      title: 'Email outage',
+      description: 'Mail flow failed.',
+      label: 'T-001 — Email outage',
+      dateStart: '2026-08-05',
+      dateEnd: '2026-08-07',
+      totalMinutes: 135,
+      totalHours: 2.25,
+      totalAmount: 33750,
+      hasMixedRates: false,
+      rate: 15000,
+      rateDisplay: 15000,
+      entryCount: 2,
+    });
+  });
+
+  it('reports an explicit mixed-rate state instead of a blended rate', () => {
+    const { ticketGroups } = buildInvoiceTimeCollections(
+      [
+        snapshotSource({ entryId: 'e1', rate: 12500, netAmount: 25000, billedMinutes: 120 }),
+        snapshotSource({ entryId: 'e2', rate: 15000, netAmount: 7500, billedMinutes: 30 }),
+      ],
+    );
+
+    expect(ticketGroups[0]).toMatchObject({
+      hasMixedRates: true,
+      rate: null,
+      rateDisplay: 'Mixed rates',
+      totalMinutes: 150,
+      totalAmount: 32500,
+    });
+  });
+
+  it('groups project-task time by task and ticketless time under the ad-hoc fallback', () => {
+    const { ticketGroups } = buildInvoiceTimeCollections(
+      [
+        snapshotSource({
+          entryId: 'e-task',
+          workItemType: 'project_task',
+          workItemId: 'task-1',
+          ticketNumber: null,
+          title: 'Data sync validation',
+          description: null,
+        }),
+        snapshotSource({
+          entryId: 'e-adhoc',
+          workItemType: 'ad_hoc',
+          workItemId: null,
+          ticketNumber: null,
+          title: null,
+          description: null,
+        }),
+        snapshotSource({ entryId: 'e-ticket' }),
+      ],
+    );
+
+    // Deterministic order: tickets, then tasks, then the ad-hoc group.
+    expect(ticketGroups.map((group) => group.key)).toEqual([
+      'ticket:ticket-1',
+      'task:task-1',
+      'ad_hoc',
+    ]);
+    expect(ticketGroups[1].label).toBe('Data sync validation');
+    expect(ticketGroups[2].label).toBe('Other billed time');
+  });
+
+  it('orders tickets deterministically by ticket number', () => {
+    const { ticketGroups } = buildInvoiceTimeCollections(
+      [
+        snapshotSource({ entryId: 'e2', workItemId: 'ticket-b', ticketNumber: 'T-900' }),
+        snapshotSource({ entryId: 'e1', workItemId: 'ticket-a', ticketNumber: 'T-100' }),
+      ],
+    );
+
+    expect(ticketGroups.map((group) => group.ticketNumber)).toEqual(['T-100', 'T-900']);
+  });
+});
+
+describe('mapDbInvoiceToWasmViewModel billed-time collections', () => {
+  const baseInvoice = {
+    invoice_number: 'INV-900',
+    invoice_date: '2026-09-01',
+    due_date: '2026-09-15',
+    currency_code: 'USD',
+    tax_source: 'internal',
+    client: { name: 'EQUIT', address: '1 Foundry Rd' },
+    subtotal: '37500',
+    tax: '0',
+    total: '37500',
+  };
+
+  it('builds timeEntries and ticketGroups from charge snapshots', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      ...baseInvoice,
+      invoice_charges: [
+        {
+          item_id: 'item-1',
+          description: 'Remote Support',
+          quantity: '1.5',
+          unit_price: '15000',
+          net_amount: '22500',
+          total_price: '22500',
+          time_entry_snapshots: [snapshotSource({ itemId: undefined })],
+        },
+        {
+          item_id: 'item-2',
+          description: 'Remote Support',
+          quantity: '1',
+          unit_price: '15000',
+          net_amount: '15000',
+          total_price: '15000',
+          time_entry_snapshots: [
+            snapshotSource({ itemId: undefined, entryId: 'entry-2', entryDate: '2026-08-06', billedMinutes: 60, netAmount: 15000 }),
+          ],
+        },
+      ],
+    });
+
+    expect(mapped?.timeEntries).toHaveLength(2);
+    expect(mapped?.timeEntries?.[0]).toMatchObject({ id: 'entry-1', itemId: 'item-1' });
+    expect(mapped?.ticketGroups).toHaveLength(1);
+    expect(mapped?.ticketGroups?.[0]).toMatchObject({
+      totalMinutes: 150,
+      totalAmount: 37500,
+    });
+    // Canonical charge descriptions are untouched by the snapshot pipeline.
+    expect(mapped?.items.map((item) => item.description)).toEqual([
+      'Remote Support',
+      'Remote Support',
+    ]);
+  });
+
+  it('leaves the collections absent on legacy invoices without snapshots', () => {
+    const mapped = mapDbInvoiceToWasmViewModel({
+      ...baseInvoice,
+      invoice_charges: [
+        {
+          item_id: 'item-1',
+          description: 'Remote Support',
+          quantity: '1.5',
+          unit_price: '15000',
+          total_price: '22500',
+        },
+      ],
+    });
+
+    expect(mapped).not.toBeNull();
+    expect(mapped?.timeEntries).toBeUndefined();
+    expect(mapped?.ticketGroups).toBeUndefined();
   });
 });

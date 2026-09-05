@@ -8,7 +8,9 @@ import { exportWorkspaceToTemplateAst } from '../../ast/workspaceAst';
 import type { DesignerNode } from '../../state/designerStore';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../../state/designerStore';
 import { hasDesignerTransforms } from '../../transforms/transformWorkspace';
+import { resolveDesignerDocumentKind } from '../../utils/documentKind';
 import { getNodeMetadata } from '../../utils/nodeProps';
+import { buildInvoiceTemplateBindings } from '../../../../lib/invoice-template-ast/standardTemplates';
 import { generateUUID } from '@alga-psa/core';
 
 const createLocalId = () => generateUUID();
@@ -34,6 +36,8 @@ const buildCollectionBindingLabels = (t: TFunction): Record<string, string> => (
   serviceItems: t('invoiceDesigner.tableEditor.bindings.serviceItems', { defaultValue: 'Service Items' }),
   productItems: t('invoiceDesigner.tableEditor.bindings.productItems', { defaultValue: 'Product Items' }),
   items: t('invoiceDesigner.tableEditor.bindings.items', { defaultValue: 'Items' }),
+  ticketGroups: t('invoiceDesigner.tableEditor.bindings.ticketGroups', { defaultValue: 'Billed Time by Ticket' }),
+  timeEntries: t('invoiceDesigner.tableEditor.bindings.timeEntries', { defaultValue: 'Billed Time Entries' }),
 });
 
 const humanizeCollectionBindingLabel = (bindingId: string, _path: string, t: TFunction): string => {
@@ -50,6 +54,152 @@ type ColumnPreset = {
   type: string;
   width: number;
   description: string;
+};
+
+/**
+ * Quick-add columns for tables bound to the `ticketGroups` collection —
+ * the rolled-up "Ticket | Description | Hours | Rate | Amount" presentation
+ * (one row per ticket). Rate uses `item.rateDisplay`: the uniform hourly rate
+ * (currency-formatted with the render locale) or "Mixed rates" when a ticket
+ * bills at more than one rate — never a blended figure.
+ */
+export const buildTicketGroupColumnPresets = (t: TFunction): ColumnPreset[] => [
+  {
+    id: 'ticket',
+    label: t('invoiceDesigner.tableEditor.presets.ticket.label', { defaultValue: 'Ticket' }),
+    header: t('invoiceDesigner.tableEditor.presets.ticket.label', { defaultValue: 'Ticket' }),
+    key: 'item.label',
+    type: 'text',
+    width: 200,
+    description: t('invoiceDesigner.tableEditor.presets.ticket.hint', { defaultValue: 'Ticket number and title' }),
+  },
+  {
+    id: 'ticket-description',
+    label: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
+    header: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
+    key: 'item.description',
+    type: 'text',
+    width: 240,
+    description: t('invoiceDesigner.tableEditor.presets.ticketDescription.hint', { defaultValue: 'Customer-visible ticket description' }),
+  },
+  {
+    id: 'ticket-hours',
+    label: t('invoiceDesigner.tableEditor.presets.hours.label', { defaultValue: 'Hours' }),
+    header: t('invoiceDesigner.tableEditor.presets.hours.label', { defaultValue: 'Hours' }),
+    key: 'item.totalHours',
+    type: 'number',
+    width: 90,
+    description: t('invoiceDesigner.tableEditor.presets.ticketHours.hint', { defaultValue: 'Total billed hours for the ticket' }),
+  },
+  {
+    id: 'ticket-rate',
+    label: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
+    header: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
+    key: 'item.rateDisplay',
+    type: 'currency',
+    width: 110,
+    description: t('invoiceDesigner.tableEditor.presets.ticketRate.hint', { defaultValue: 'Hourly rate ("Mixed rates" when entries differ)' }),
+  },
+  {
+    id: 'ticket-amount',
+    label: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
+    header: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
+    key: 'item.totalAmount',
+    type: 'currency',
+    width: 140,
+    description: t('invoiceDesigner.tableEditor.presets.ticketAmount.hint', { defaultValue: 'Total billed amount for the ticket' }),
+  },
+];
+
+/** Quick-add columns for tables bound to the flat `timeEntries` collection. */
+export const buildTimeEntryColumnPresets = (t: TFunction): ColumnPreset[] => [
+  {
+    id: 'entry-date',
+    label: t('invoiceDesigner.tableEditor.presets.date.label', { defaultValue: 'Date' }),
+    header: t('invoiceDesigner.tableEditor.presets.date.label', { defaultValue: 'Date' }),
+    key: 'item.date',
+    type: 'date',
+    width: 110,
+    description: t('invoiceDesigner.tableEditor.presets.entryDate.hint', { defaultValue: 'Date the work was performed' }),
+  },
+  {
+    id: 'entry-ticket',
+    label: t('invoiceDesigner.tableEditor.presets.ticket.label', { defaultValue: 'Ticket' }),
+    header: t('invoiceDesigner.tableEditor.presets.ticket.label', { defaultValue: 'Ticket' }),
+    key: 'item.ticketNumber',
+    type: 'text',
+    width: 120,
+    description: t('invoiceDesigner.tableEditor.presets.entryTicket.hint', { defaultValue: 'Source ticket number' }),
+  },
+  {
+    id: 'entry-title',
+    label: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
+    header: t('invoiceDesigner.tableEditor.presets.description.label', { defaultValue: 'Description' }),
+    key: 'item.title',
+    type: 'text',
+    width: 220,
+    description: t('invoiceDesigner.tableEditor.presets.entryTitle.hint', { defaultValue: 'Ticket title or task name' }),
+  },
+  {
+    id: 'entry-hours',
+    label: t('invoiceDesigner.tableEditor.presets.hours.label', { defaultValue: 'Hours' }),
+    header: t('invoiceDesigner.tableEditor.presets.hours.label', { defaultValue: 'Hours' }),
+    key: 'item.hours',
+    type: 'number',
+    width: 90,
+    description: t('invoiceDesigner.tableEditor.presets.entryHours.hint', { defaultValue: 'Billed hours for the entry' }),
+  },
+  {
+    id: 'entry-rate',
+    label: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
+    header: t('invoiceDesigner.tableEditor.presets.unitPrice.label', { defaultValue: 'Rate' }),
+    key: 'item.rate',
+    type: 'currency',
+    width: 110,
+    description: t('invoiceDesigner.tableEditor.presets.entryRate.hint', { defaultValue: 'Hourly rate for the entry' }),
+  },
+  {
+    id: 'entry-amount',
+    label: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
+    header: t('invoiceDesigner.tableEditor.presets.amount.label', { defaultValue: 'Amount' }),
+    key: 'item.amount',
+    type: 'currency',
+    width: 140,
+    description: t('invoiceDesigner.tableEditor.presets.entryAmount.hint', { defaultValue: 'Billed amount for the entry' }),
+  },
+];
+
+/** Column presets appropriate for the table's bound collection. */
+export const resolveColumnPresetsForBinding = (
+  t: TFunction,
+  sourceBindingId: string
+): ColumnPreset[] => {
+  if (sourceBindingId === 'ticketGroups') {
+    return buildTicketGroupColumnPresets(t);
+  }
+  if (sourceBindingId === 'timeEntries') {
+    return buildTimeEntryColumnPresets(t);
+  }
+  return buildColumnPresets(t);
+};
+
+/** Extra binding-key suggestions per collection, beyond the preset keys. */
+export const resolveExtraBindingKeySuggestions = (sourceBindingId: string): string[] => {
+  if (sourceBindingId === 'ticketGroups') {
+    return [
+      'item.ticketNumber',
+      'item.title',
+      'item.dateStart',
+      'item.dateEnd',
+      'item.entryCount',
+      'item.rate',
+      'item.hasMixedRates',
+    ];
+  }
+  if (sourceBindingId === 'timeEntries') {
+    return ['item.description', 'item.serviceName', 'item.billedMinutes'];
+  }
+  return ['item.servicePeriodStart', 'item.servicePeriodEnd', 'item.billingTiming'];
 };
 
 // Preset ids, binding keys, types and widths are the data contract; only labels are translated.
@@ -140,7 +290,6 @@ const getUniqueStrings = (values: Array<string | undefined | null>): string[] =>
 
 export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const { t } = useTranslation('msp/invoicing');
-  const columnPresets = useMemo(() => buildColumnPresets(t), [t]);
   const setNodeProp = useInvoiceDesignerStore((state) => state.setNodeProp);
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
@@ -153,6 +302,12 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
 
   const metadata = useMemo(() => getNodeMetadata(node), [node]);
   const sourceBindingId = useMemo(() => resolveTableSourceBindingId(metadata), [metadata]);
+  // Presets follow the bound collection so ticket/time tables offer their own
+  // columns (Ticket | Description | Hours | Rate | Amount) via quick-add.
+  const columnPresets = useMemo(
+    () => resolveColumnPresetsForBinding(t, sourceBindingId),
+    [t, sourceBindingId]
+  );
   const isGroupedTransformsOutput = useMemo(() => {
     if (sourceBindingId !== transforms.outputBindingId || !hasDesignerTransforms(transforms)) {
       return false;
@@ -215,6 +370,20 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       }))
     );
 
+    // The exported workspace only registers collections that are already in
+    // use, which would make new data sources undiscoverable. For invoice
+    // documents, always offer the canonical catalog (line items, recurring /
+    // one-time splits, location groups, and the billed-time ticketGroups /
+    // timeEntries snapshot collections).
+    if (resolveDesignerDocumentKind(nodes) === 'invoice') {
+      options.push(
+        ...Object.entries(buildInvoiceTemplateBindings().collections ?? {}).map(([bindingId, binding]) => ({
+          value: bindingId,
+          label: humanizeCollectionBindingLabel(bindingId, binding.path, t),
+        }))
+      );
+    }
+
     if (!options.some((option) => option.value === sourceBindingId)) {
       options.unshift({
         value: sourceBindingId,
@@ -241,9 +410,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
   const bindingKeySuggestions = useMemo(() => {
     const rawSuggestions = getUniqueStrings([
       ...columnPresets.map((preset) => preset.key),
-      'item.servicePeriodStart',
-      'item.servicePeriodEnd',
-      'item.billingTiming',
+      ...resolveExtraBindingKeySuggestions(sourceBindingId),
       ...columns.map((column) => asTrimmedString(column.key)),
     ]);
 
@@ -260,7 +427,7 @@ export const TableEditorWidget: React.FC<Props> = ({ node }) => {
       'item.items',
       ...aggregateSuggestions,
     ]);
-  }, [columnPresets, columns, isGroupedTransformsOutput, transforms]);
+  }, [columnPresets, columns, isGroupedTransformsOutput, sourceBindingId, transforms]);
 
   const resolvedBorderPreset: BorderPreset = useMemo(() => {
     const preset = (metadata as { tableBorderPreset?: unknown }).tableBorderPreset;

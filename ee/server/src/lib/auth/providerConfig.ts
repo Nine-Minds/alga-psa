@@ -7,48 +7,69 @@ export interface SsoProviderOption {
   configured: boolean;
 }
 
-async function loadSecret(name: string): Promise<string | undefined> {
+type SsoProviderId = SsoProviderOption["id"];
+
+type SsoResolution = typeof import("@alga-psa/auth/lib/sso/mspSsoResolution");
+
+async function loadSsoResolution(): Promise<SsoResolution | null> {
   try {
-    const { getSecretProviderInstance } = await import("@alga-psa/core/secrets");
-    const secretProvider = await getSecretProviderInstance();
-    return await secretProvider.getAppSecret(name);
+    return await import("@alga-psa/auth/lib/sso/mspSsoResolution");
   } catch (error) {
-    logger.warn("[provider-config] Failed to load secret", { name, error });
-    return undefined;
+    logger.warn("[provider-config] Failed to load SSO credential resolution", { error });
+    return null;
   }
 }
 
-export async function getSsoProviderOptions(): Promise<SsoProviderOption[]> {
-  const [
-    googleClientIdFromSecret,
-    googleClientSecretFromSecret,
-    microsoftClientIdFromSecret,
-    microsoftClientSecretFromSecret,
-  ] = await Promise.all([
-    loadSecret("GOOGLE_OAUTH_CLIENT_ID"),
-    loadSecret("GOOGLE_OAUTH_CLIENT_SECRET"),
-    loadSecret("MICROSOFT_OAUTH_CLIENT_ID"),
-    loadSecret("MICROSOFT_OAUTH_CLIENT_SECRET"),
-  ]);
+// Mirrors the sign-in resolver so the settings surfaces report exactly what
+// `resolveMspSsoCredentialSource` would accept: the tenant provider profile
+// first, app-level secrets/env as the fallback.
+async function isProviderConfigured(
+  resolution: SsoResolution | null,
+  provider: SsoProviderId,
+  tenantId?: string
+): Promise<boolean> {
+  if (!resolution) return false;
 
-  const googleClientId = googleClientIdFromSecret || process.env.GOOGLE_OAUTH_CLIENT_ID;
-  const googleClientSecret = googleClientSecretFromSecret || process.env.GOOGLE_OAUTH_CLIENT_SECRET;
-  const microsoftClientId = microsoftClientIdFromSecret || process.env.MICROSOFT_OAUTH_CLIENT_ID;
-  const microsoftClientSecret =
-    microsoftClientSecretFromSecret || process.env.MICROSOFT_OAUTH_CLIENT_SECRET;
+  if (tenantId) {
+    try {
+      if (await resolution.hasTenantProviderCredentials(tenantId, provider)) {
+        return true;
+      }
+    } catch (error) {
+      logger.warn("[provider-config] Failed to check tenant provider credentials", {
+        provider,
+        error,
+      });
+    }
+  }
+
+  try {
+    return await resolution.hasAppFallbackProviderCredentials(provider);
+  } catch (error) {
+    logger.warn("[provider-config] Failed to check app provider credentials", { provider, error });
+    return false;
+  }
+}
+
+export async function getSsoProviderOptions(tenantId?: string): Promise<SsoProviderOption[]> {
+  const resolution = await loadSsoResolution();
+  const [googleConfigured, microsoftConfigured] = await Promise.all([
+    isProviderConfigured(resolution, "google", tenantId),
+    isProviderConfigured(resolution, "azure-ad", tenantId),
+  ]);
 
   return [
     {
       id: "google",
       name: "Google Workspace",
       description: "Let users sign in with their Google-managed identity.",
-      configured: Boolean(googleClientId && googleClientSecret),
+      configured: googleConfigured,
     },
     {
       id: "azure-ad",
       name: "Microsoft 365 (Azure AD)",
       description: "Allow Azure Active Directory accounts to access AlgaPSA.",
-      configured: Boolean(microsoftClientId && microsoftClientSecret),
+      configured: microsoftConfigured,
     },
   ];
 }

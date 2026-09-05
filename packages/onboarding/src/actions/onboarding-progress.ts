@@ -121,7 +121,7 @@ export const getOnboardingProgressAction = withAuth(async (
 async function resolveIdentityStep(tenantId: string): Promise<OnboardingStepServerState> {
   try {
     const { getSsoProviderOptions } = await import('@enterprise/lib/auth/providerConfig');
-    const providerOptions = await getSsoProviderOptions();
+    const providerOptions = await getSsoProviderOptions(tenantId);
     const configuredProviders = providerOptions.filter((option) => option.configured);
 
     let linkedCount = 0;

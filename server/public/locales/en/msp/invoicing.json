@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Generate month-end invoice",
+      "title": "Close {{servicePeriod}} at month end?",
+      "warning": "This invoices {{servicePeriod}} on its final calendar day. Time or usage entries recorded after this close will not be included, so only close the period once its work is fully recorded.",
+      "confirm": "Generate at month end",
+      "omissionWarning": "Time or usage entries recorded after this close will NOT be included on the invoice.",
+      "generationFailed": "Could not generate the month-end invoice. Please try again."
+    },
     "ready": {
       "title": "Ready to Invoice",
       "description": "Review recurring due work and generate draft invoices for the selected periods.",
@@ -1856,7 +1864,9 @@
         "productItems": "Product Items",
         "items": "Items",
         "transformsSource": "{{binding}} (Transforms source)",
-        "transformsOutput": "{{binding}} (Transforms output)"
+        "transformsOutput": "{{binding}} (Transforms output)",
+        "ticketGroups": "Billed Time by Ticket",
+        "timeEntries": "Billed Time Entries"
       },
       "presets": {
         "description": {
@@ -1874,6 +1884,46 @@
         "amount": {
           "label": "Amount",
           "hint": "Line total"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Ticket number and title"
+        },
+        "ticketDescription": {
+          "hint": "Customer-visible ticket description"
+        },
+        "hours": {
+          "label": "Hours"
+        },
+        "ticketHours": {
+          "hint": "Total billed hours for the ticket"
+        },
+        "ticketRate": {
+          "hint": "Hourly rate (\"Mixed rates\" when entries differ)"
+        },
+        "ticketAmount": {
+          "hint": "Total billed amount for the ticket"
+        },
+        "date": {
+          "label": "Date"
+        },
+        "entryDate": {
+          "hint": "Date the work was performed"
+        },
+        "entryTicket": {
+          "hint": "Source ticket number"
+        },
+        "entryTitle": {
+          "hint": "Ticket title or task name"
+        },
+        "entryHours": {
+          "hint": "Billed hours for the entry"
+        },
+        "entryRate": {
+          "hint": "Hourly rate for the entry"
+        },
+        "entryAmount": {
+          "hint": "Billed amount for the entry"
         }
       },
       "sourceBinding": {

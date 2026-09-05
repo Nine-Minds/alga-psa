@@ -28,10 +28,10 @@ interface StripePriceRow {
 }
 
 interface StripePriceConfig {
-  algadeskMonthly: string;
-  algadeskAnnual: string;
-  algapsaMonthly: string;
-  algapsaAnnual: string;
+  algadeskMonthly?: string;
+  algadeskAnnual?: string;
+  algapsaMonthly?: string;
+  algapsaAnnual?: string;
 }
 
 export interface ProductUpgradeStripeClient {
@@ -78,12 +78,22 @@ function requiredEnv(env: NodeJS.ProcessEnv, key: string): string {
   return value;
 }
 
+function optionalEnv(env: NodeJS.ProcessEnv, ...keys: string[]): string | undefined {
+  for (const key of keys) {
+    const value = env[key]?.trim();
+    if (value) return value;
+  }
+  return undefined;
+}
+
+// Only the pair for the subscription's own interval is required, at the point of use.
+// The AlgaPSA per-seat price is the Pro price; STRIPE_ALGAPSA_USER_* only overrides it.
 function readStripePriceConfig(env: NodeJS.ProcessEnv): StripePriceConfig {
   return {
-    algadeskMonthly: requiredEnv(env, 'STRIPE_ALGADESK_USER_PRICE_ID'),
-    algadeskAnnual: requiredEnv(env, 'STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID'),
-    algapsaMonthly: requiredEnv(env, 'STRIPE_ALGAPSA_USER_PRICE_ID'),
-    algapsaAnnual: requiredEnv(env, 'STRIPE_ALGAPSA_USER_ANNUAL_PRICE_ID'),
+    algadeskMonthly: optionalEnv(env, 'STRIPE_ALGADESK_USER_PRICE_ID'),
+    algadeskAnnual: optionalEnv(env, 'STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID'),
+    algapsaMonthly: optionalEnv(env, 'STRIPE_ALGAPSA_USER_PRICE_ID', 'STRIPE_PRO_PRICE_ID'),
+    algapsaAnnual: optionalEnv(env, 'STRIPE_ALGAPSA_USER_ANNUAL_PRICE_ID', 'STRIPE_PRO_ANNUAL_PRICE_ID'),
   };
 }
 
@@ -161,7 +171,7 @@ export async function product_upgrade_stripe_swap(
   const env = dependencies.env ?? process.env;
   const log = dependencies.log ?? activityLog();
   const prices = readStripePriceConfig(env);
-  const knownPriceIds = Object.values(prices);
+  const knownPriceIds = Object.values(prices).filter((id): id is string => Boolean(id));
   const loadSubscription = dependencies.loadCanonicalSubscription
     ?? loadCanonicalActiveLicenseSubscription;
   const subscriptionRow = await loadSubscription(tenantId, knownPriceIds);
@@ -209,8 +219,21 @@ export async function product_upgrade_stripe_swap(
     );
   }
 
-  const sourcePrice = interval === 'year' ? prices.algadeskAnnual : prices.algadeskMonthly;
-  const targetPrice = interval === 'year' ? prices.algapsaAnnual : prices.algapsaMonthly;
+  const annual = interval === 'year';
+  const sourcePrice = annual ? prices.algadeskAnnual : prices.algadeskMonthly;
+  const targetPrice = annual ? prices.algapsaAnnual : prices.algapsaMonthly;
+  if (!sourcePrice) {
+    refuse(
+      `STRIPE_ALGADESK_USER_${annual ? 'ANNUAL_' : ''}PRICE_ID is not configured in the temporal worker`,
+      'missing-configuration',
+    );
+  }
+  if (!targetPrice) {
+    refuse(
+      `STRIPE_PRO_${annual ? 'ANNUAL_' : ''}PRICE_ID is not configured in the temporal worker`,
+      'missing-configuration',
+    );
+  }
   if (userItem.price.id === targetPrice) {
     log.info('Stripe subscription is already on the AlgaPSA price', {
       tenantId,

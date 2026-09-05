@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Générer la facture de fin de mois",
+      "title": "Clôturer la période {{servicePeriod}} en fin de mois ?",
+      "warning": "Cela facture {{servicePeriod}} le dernier jour calendaire de la période. Les saisies de temps ou d'utilisation enregistrées après cette clôture ne seront pas incluses. Ne clôturez la période qu'une fois tout le travail entièrement saisi.",
+      "confirm": "Générer en fin de mois",
+      "omissionWarning": "Les saisies de temps ou d'utilisation enregistrées après cette clôture ne seront PAS incluses sur la facture.",
+      "generationFailed": "Impossible de générer la facture de fin de mois. Veuillez réessayer."
+    },
     "ready": {
       "title": "Prêt à facturer",
       "description": "Examinez les travaux récurrents dus et générez des projets de factures pour les périodes sélectionnées.",
@@ -1856,7 +1864,9 @@
         "productItems": "Postes de produit",
         "items": "Éléments",
         "transformsSource": "{{binding}} (source des transformations)",
-        "transformsOutput": "{{binding}} (sortie des transformations)"
+        "transformsOutput": "{{binding}} (sortie des transformations)",
+        "ticketGroups": "Temps facturé par ticket",
+        "timeEntries": "Entrées de temps facturées"
       },
       "presets": {
         "description": {
@@ -1874,6 +1884,46 @@
         "amount": {
           "label": "Montant",
           "hint": "Total de la ligne"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Numéro et titre du ticket"
+        },
+        "ticketDescription": {
+          "hint": "Description du ticket visible par le client"
+        },
+        "hours": {
+          "label": "Heures"
+        },
+        "ticketHours": {
+          "hint": "Total des heures facturées pour le ticket"
+        },
+        "ticketRate": {
+          "hint": "Taux horaire (« Tarifs mixtes » lorsque les entrées diffèrent)"
+        },
+        "ticketAmount": {
+          "hint": "Montant total facturé pour le ticket"
+        },
+        "date": {
+          "label": "Date"
+        },
+        "entryDate": {
+          "hint": "Date à laquelle le travail a été effectué"
+        },
+        "entryTicket": {
+          "hint": "Numéro du ticket d'origine"
+        },
+        "entryTitle": {
+          "hint": "Titre du ticket ou nom de la tâche"
+        },
+        "entryHours": {
+          "hint": "Heures facturées pour l'entrée"
+        },
+        "entryRate": {
+          "hint": "Taux horaire de l'entrée"
+        },
+        "entryAmount": {
+          "hint": "Montant facturé pour l'entrée"
         }
       },
       "sourceBinding": {

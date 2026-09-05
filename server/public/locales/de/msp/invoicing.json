@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Rechnung zum Monatsende generieren",
+      "title": "Serviceperiode {{servicePeriod}} zum Monatsende abschließen?",
+      "warning": "Dadurch wird {{servicePeriod}} an seinem letzten Kalendertag abgerechnet. Zeit- oder Nutzungseinträge, die nach diesem Abschluss erfasst werden, werden nicht berücksichtigt. Schließen Sie die Periode daher erst ab, wenn die gesamte Arbeit vollständig erfasst ist.",
+      "confirm": "Zum Monatsende generieren",
+      "omissionWarning": "Zeit- oder Nutzungseinträge, die nach diesem Abschluss erfasst werden, werden NICHT auf der Rechnung berücksichtigt.",
+      "generationFailed": "Die Rechnung zum Monatsende konnte nicht generiert werden. Bitte versuchen Sie es erneut."
+    },
     "ready": {
       "title": "Bereit zur Rechnungsstellung",
       "description": "Überprüfen Sie wiederkehrende fällige Arbeiten und erstellen Sie Rechnungsentwürfe für die ausgewählten Zeiträume.",
@@ -1856,7 +1864,9 @@
         "productItems": "Produktpositionen",
         "items": "Positionen",
         "transformsSource": "{{binding}} (Transformationsquelle)",
-        "transformsOutput": "{{binding}} (Transformationsausgabe)"
+        "transformsOutput": "{{binding}} (Transformationsausgabe)",
+        "ticketGroups": "Abgerechnete Zeit nach Ticket",
+        "timeEntries": "Abgerechnete Zeiteinträge"
       },
       "presets": {
         "description": {
@@ -1874,6 +1884,46 @@
         "amount": {
           "label": "Betrag",
           "hint": "Zeilensumme"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Ticketnummer und Titel"
+        },
+        "ticketDescription": {
+          "hint": "Für den Kunden sichtbare Ticketbeschreibung"
+        },
+        "hours": {
+          "label": "Stunden"
+        },
+        "ticketHours": {
+          "hint": "Insgesamt abgerechnete Stunden für das Ticket"
+        },
+        "ticketRate": {
+          "hint": "Stundensatz („Gemischte Sätze“, wenn Einträge abweichen)"
+        },
+        "ticketAmount": {
+          "hint": "Insgesamt abgerechneter Betrag für das Ticket"
+        },
+        "date": {
+          "label": "Datum"
+        },
+        "entryDate": {
+          "hint": "Datum, an dem die Arbeit ausgeführt wurde"
+        },
+        "entryTicket": {
+          "hint": "Nummer des Quelltickets"
+        },
+        "entryTitle": {
+          "hint": "Tickettitel oder Aufgabenname"
+        },
+        "entryHours": {
+          "hint": "Abgerechnete Stunden für den Eintrag"
+        },
+        "entryRate": {
+          "hint": "Stundensatz für den Eintrag"
+        },
+        "entryAmount": {
+          "hint": "Abgerechneter Betrag für den Eintrag"
         }
       },
       "sourceBinding": {

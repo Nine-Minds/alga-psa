@@ -249,7 +249,7 @@ export default function ClientDocumentsPage() {
         return;
       }
       // Use the standard download utility
-      await downloadDocument(await getDocumentDownloadUrl(doc.file_id || ''), doc.document_name);
+      await downloadDocument(await getDocumentDownloadUrl(doc.document_id), doc.document_name);
     } catch (error) {
       console.error('Failed to download document:', error);
     } finally {

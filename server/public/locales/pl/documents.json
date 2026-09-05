@@ -4,6 +4,7 @@
     "amount": "Kwota",
     "authorizedBy": "Zatwierdzone przez",
     "billTo": "Nabywca",
+    "billedTimeByTicket": "Rozliczony czas według zgłoszeń",
     "date": "Data",
     "description": "Opis",
     "discounts": "Rabaty",
@@ -12,6 +13,7 @@
     "from": "Sprzedawca",
     "fulfilled": "Zrealizowano",
     "fulfillment": "Realizacja",
+    "hours": "Godziny",
     "invoice": "Faktura",
     "invoiceNumber": "Faktura nr",
     "invoiceTitle": "FAKTURA",
@@ -44,6 +46,7 @@
     "quoteTitle": "OFERTA",
     "rate": "Stawka",
     "recurring": "Cykliczne",
+    "service": "Usługa",
     "shipDate": "Data wysyłki",
     "shipTo": "Adres dostawy",
     "shipped": "Wysłano",
@@ -53,6 +56,7 @@
     "subtotal": "Suma częściowa",
     "tax": "Podatek",
     "termsAndConditions": "Warunki i postanowienia",
+    "ticket": "Zgłoszenie",
     "total": "Razem",
     "unitPrice": "Cena jednostkowa",
     "validUntil": "Ważne do",
@@ -60,6 +64,7 @@
     "yourPoNumber": "Państwa zamówienie zakupu",
     "emptyState": {
       "noBillableLineItems": "Brak pozycji do rozliczenia",
+      "noBilledTimeDetail": "Dla tej faktury nie są dostępne szczegóły rozliczonego czasu.",
       "noItemsOnOrder": "Brak pozycji w tym zamówieniu",
       "noItemsToPick": "Brak pozycji do pobrania",
       "noLineItems": "Brak pozycji",
@@ -68,6 +73,7 @@
       "noPhasesDefined": "Nie zdefiniowano faz"
     },
     "note": {
+      "billedTimePortalDetail": "Szczegółowe zestawienie wpisów czasu dla każdego zgłoszenia jest dostępne w portalu klienta.",
       "pickedBy": "Pobrał: ____________________     Data: ____________",
       "preTaxTotals": "Podane sumy nie zawierają podatku. Należny podatek jest naliczany na fakturze.",
       "thankYouForOrder": "Dziękujemy za zamówienie."

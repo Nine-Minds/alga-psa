@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Factuur aan het einde van de maand genereren",
+      "title": "Periode {{servicePeriod}} aan het einde van de maand afsluiten?",
+      "warning": "Hiermee factureert u {{servicePeriod}} op de laatste kalenderdag. Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden niet meegenomen. Sluit de periode daarom pas af als al het werk volledig is vastgelegd.",
+      "confirm": "Genereren aan het einde van de maand",
+      "omissionWarning": "Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden NIET opgenomen in de factuur.",
+      "generationFailed": "Kan de factuur aan het einde van de maand niet genereren. Probeer het opnieuw."
+    },
     "ready": {
       "title": "Klaar om te factureren",
       "description": "Beoordeel terugkerende werkzaamheden en genereer conceptfacturen voor de geselecteerde perioden.",
@@ -1856,7 +1864,9 @@
         "productItems": "Productregels",
         "items": "Elementen",
         "transformsSource": "{{binding}} (transformatiebron)",
-        "transformsOutput": "{{binding}} (transformatie-uitvoer)"
+        "transformsOutput": "{{binding}} (transformatie-uitvoer)",
+        "ticketGroups": "Gefactureerde tijd per ticket",
+        "timeEntries": "Gefactureerde tijdregistraties"
       },
       "presets": {
         "description": {
@@ -1874,6 +1884,46 @@
         "amount": {
           "label": "Bedrag",
           "hint": "Regeltotaal"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Ticketnummer en titel"
+        },
+        "ticketDescription": {
+          "hint": "Voor de klant zichtbare ticketomschrijving"
+        },
+        "hours": {
+          "label": "Uren"
+        },
+        "ticketHours": {
+          "hint": "Totaal gefactureerde uren voor het ticket"
+        },
+        "ticketRate": {
+          "hint": "Uurtarief ('Gemengde tarieven' wanneer registraties verschillen)"
+        },
+        "ticketAmount": {
+          "hint": "Totaal gefactureerd bedrag voor het ticket"
+        },
+        "date": {
+          "label": "Datum"
+        },
+        "entryDate": {
+          "hint": "Datum waarop het werk is uitgevoerd"
+        },
+        "entryTicket": {
+          "hint": "Nummer van het bronticket"
+        },
+        "entryTitle": {
+          "hint": "Tickettitel of taaknaam"
+        },
+        "entryHours": {
+          "hint": "Gefactureerde uren voor de registratie"
+        },
+        "entryRate": {
+          "hint": "Uurtarief voor de registratie"
+        },
+        "entryAmount": {
+          "hint": "Gefactureerd bedrag voor de registratie"
         }
       },
       "sourceBinding": {

@@ -11,6 +11,7 @@ import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine, UnresolvedCatalogPricingError } from '../lib/billing/billingEngine';
 import { reconcileWindowAttribution } from '../lib/billing/contractLineAttributionWriter';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
+import { listUnmaterializedClientCadenceWindowLineIds } from '../lib/billing/clientCadenceWindowMaterialization';
 import {
   getCycleBillingProfileId,
   resolveInvoiceProfileScope,
@@ -40,6 +41,7 @@ import { WasmInvoiceViewModel } from '@alga-psa/types';
 import { IBillingResult, IBillingCharge, IBucketCharge, IUsageBasedCharge, ITimeBasedCharge, IFixedPriceCharge, IProductCharge, ILicenseCharge, IUsageServicePeriodStatus, BillingCycleType } from '@alga-psa/types';
 import { IClient, IClientWithLocation } from '@alga-psa/types';
 import Invoice from '@alga-psa/billing/models/invoice';
+import { attachInvoiceTimeCollections } from '../lib/adapters/invoiceAdapters';
 import { createTenantKnex } from '@alga-psa/db';
 import { Temporal } from '@js-temporal/polyfill';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
@@ -51,7 +53,7 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { auditLog } from '@alga-psa/db';
 import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
-import { calculateAndDistributeTax, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
+import { calculateAndDistributeTax, claimRecurringServicePeriodsForSelectionInputs, getClientDetails, persistInvoiceCharges, updateInvoiceTotalsAndRecordTransaction, validateClientBillingEmail } from '../services/invoiceService';
 
 
 
@@ -77,7 +79,6 @@ import {
   CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
   POST_DROP_RECURRING_OBLIGATION_TYPES,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
-import { isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
 import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
@@ -302,6 +303,24 @@ function resolvePreviewRecurringSummary(
     servicePeriodEnd,
     billingTiming,
   };
+}
+
+/**
+ * Preview items carry the same immutable work-item snapshot the persisted
+ * path writes to invoice_time_entries, so the preview's ticket-level
+ * collections are built by the exact adapter the PDF path uses.
+ */
+function previewTimeEntrySnapshots(
+  charge: IBillingCharge,
+): IInvoiceCharge['time_entry_snapshots'] {
+  if (charge.type !== 'time') {
+    return undefined;
+  }
+  const timeCharge = charge as ITimeBasedCharge;
+  if (!timeCharge.workItemSnapshot) {
+    return undefined;
+  }
+  return [{ ...timeCharge.workItemSnapshot, entryId: timeCharge.entryId }];
 }
 
 function buildPreviewViewModelItem(item: IInvoiceCharge) {
@@ -746,6 +765,11 @@ export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalI
  */
 export interface IInvoiceGenerationRequestOptions {
   allowPoOverage?: boolean;
+  /**
+   * Tenant-local invoice date to stamp instead of "today". Passed by the
+   * calendar month-end close so the invoice is dated to the closed month.
+   */
+  invoiceDate?: string;
   /**
    * Explicit operator acknowledgement that usage services without a report may
    * be omitted from this invoice. The omitted obligations are not consumed and
@@ -1299,78 +1323,7 @@ async function assertClientCadenceWindowFullyMaterialized(params: {
   windowStart: ISO8601String;
   windowEnd: ISO8601String;
 }): Promise<void> {
-  const activeRecurringLineRows = await withTransaction(
-    params.knex,
-    async (trx: Knex.Transaction) => {
-      const db = tenantDb(trx, params.tenant);
-      const query = db.table('client_contracts as cc');
-      db.tenantJoin(query, 'contracts as ct', 'ct.contract_id', 'cc.contract_id');
-      db.tenantJoin(query, 'contract_lines as cl', 'cl.contract_id', 'ct.contract_id');
-
-      return query
-        .where({
-          'cc.client_id': params.clientId,
-          'cc.is_active': true,
-          'cl.cadence_owner': 'client',
-        })
-        .whereNotNull('cl.billing_frequency')
-        .whereNotNull('cl.billing_timing')
-        .where('cc.start_date', '<', params.windowEnd)
-        .where(function () {
-          this.where('cc.end_date', '>=', params.windowStart)
-            .orWhereNull('cc.end_date');
-        })
-        .select('cl.contract_line_id', 'cl.billing_timing', 'cc.start_date', 'cc.end_date');
-    },
-  );
-
-  const activeRecurringLineIds = Array.from(
-    new Set(
-      activeRecurringLineRows
-        // Only lines whose assignment actually has a service period settling in
-        // this window are expected: an arrears line assigned at (or after) the
-        // window start bills its first period in a later window, and demanding
-        // materialization for it would falsely block every other line here.
-        .filter((row) =>
-          isRecurringLineExpectedInClientCadenceWindow({
-            duePosition: row.billing_timing === 'arrears' ? 'arrears' : 'advance',
-            assignmentStart: toISODate(toPlainDate(row.start_date)),
-            assignmentEnd: row.end_date ? toISODate(toPlainDate(row.end_date)) : null,
-            windowStart: params.windowStart,
-            windowEnd: params.windowEnd,
-          }),
-        )
-        .map((row) => row.contract_line_id)
-        .filter((value): value is string => Boolean(value)),
-    ),
-  );
-  if (activeRecurringLineIds.length === 0) {
-    return;
-  }
-
-  const materializedRows = await withTransaction(
-    params.knex,
-    async (trx: Knex.Transaction) =>
-      tenantDb(trx, params.tenant).table('recurring_service_periods')
-        .where({
-          cadence_owner: 'client',
-          invoice_window_start: params.windowStart,
-          invoice_window_end: params.windowEnd,
-        })
-        .whereIn('obligation_type', [...POST_DROP_RECURRING_OBLIGATION_TYPES])
-        .whereIn('obligation_id', activeRecurringLineIds)
-        .whereNotIn('lifecycle_state', ['archived', 'superseded'])
-        .select('obligation_id'),
-  );
-
-  const materializedLineIds = new Set(
-    materializedRows
-      .map((row) => row.obligation_id)
-      .filter((value): value is string => Boolean(value)),
-  );
-  const missingLineIds = activeRecurringLineIds.filter(
-    (lineId) => !materializedLineIds.has(lineId),
-  );
+  const missingLineIds = await listUnmaterializedClientCadenceWindowLineIds(params);
 
   if (missingLineIds.length > 0) {
     throw new Error(
@@ -2118,7 +2071,7 @@ async function adaptToWasmViewModel(
 
   const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
-  return {
+  const previewViewModel: WasmInvoiceViewModel = {
     invoiceNumber: 'PREVIEW',
     issueDate: toISODate(Temporal.Now.plainDateISO()),
     dueDate: dueDate,
@@ -2135,6 +2088,12 @@ async function adaptToWasmViewModel(
     total: billingResult.totalAmount + previewTax,
     // notes: undefined, // Add if needed
   };
+
+  // Same collection builder as the persisted-invoice read path, so the
+  // preview's ticket-level detail matches the generated PDF by construction.
+  attachInvoiceTimeCollections(previewViewModel, invoiceItems);
+
+  return previewViewModel;
 }
 
 interface BuiltPreviewInvoice {
@@ -2285,6 +2244,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         service_period_end: period.servicePeriodEnd ?? null,
         billing_timing: period.billingTiming ?? null,
       })),
+      time_entry_snapshots: previewTimeEntrySnapshots(charge),
     });
   });
 
@@ -2359,6 +2319,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
   }
@@ -2408,6 +2369,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
   }
@@ -3274,7 +3236,11 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
       cycleEnd,
       billing_cycle_id,
       user.user_id,
-    { knex },
+      {
+        knex,
+        invoiceDate: params.options?.invoiceDate,
+        recurringSelectorInputs: params.normalizedSelectorInputs,
+      },
     );
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
@@ -3303,7 +3269,11 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
     cycleEnd,
     billing_cycle_id,
     user.user_id,
-    { knex },
+    {
+      knex,
+      invoiceDate: params.options?.invoiceDate,
+      recurringSelectorInputs: params.normalizedSelectorInputs,
+    },
   );
 
   return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
@@ -3473,7 +3443,19 @@ export async function createInvoiceFromBillingResultImpl(
   cycleEnd: ISO8601String,
   billing_cycle_id: string | null,
   userId: string,
-  options: { projectId?: string; knex?: Knex } = {},
+  options: {
+    projectId?: string;
+    knex?: Knex;
+    invoiceDate?: string;
+    /**
+     * The recurring execution windows this invoice was generated for. When
+     * present, every recurring service period those windows represent is
+     * claimed for the invoice atomically with charge persistence — including
+     * periods whose lines produced no charges (zero-dollar usage/bucket) and
+     * would otherwise stay unclaimed, blind to the duplicate detector.
+     */
+    recurringSelectorInputs?: IRecurringDueSelectionInput[];
+  } = {},
 ): Promise<IInvoice> {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
@@ -3500,7 +3482,12 @@ export async function createInvoiceFromBillingResultImpl(
     console.error(`[createInvoiceFromBillingResult] Cannot create invoice for client ${clientId} (${client.client_name}) because it lacks a default tax region (region_code) even after auto-configuration attempt.`);
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
-  const currentDate = Temporal.Now.plainDateISO().toString();
+  // `invoice_date` (and the `getDueDate` input it feeds) is the invoice's "today".
+  // The calendar month-end close passes `options.invoiceDate` — the tenant-local
+  // final calendar day its eligibility gate approved — so the draft is stamped on
+  // the billing calendar. Every other caller omits it and this stays exactly the
+  // server-host calendar date it has always been.
+  const currentDate = options.invoiceDate ?? Temporal.Now.plainDateISO().toString();
   const due_date = unwrapBillingHelperResult(await getDueDate(clientId, currentDate));
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
@@ -3661,6 +3648,21 @@ export async function createInvoiceFromBillingResultImpl(
       userId,
     );
     const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
+
+    // Recurring windows must end this transaction fully claimed: every
+    // recurring service period the selection represents is linked to this
+    // invoice (charge-backed rows already are; zero-dollar leftovers are swept
+    // here) or the whole generation aborts. This is what arms the duplicate
+    // guard for grouped zero-dollar windows.
+    if (options.recurringSelectorInputs?.length && !options.projectId) {
+      await claimRecurringServicePeriodsForSelectionInputs({
+        tx: trx,
+        tenant,
+        invoiceId: newInvoice!.invoice_id,
+        selectorInputs: options.recurringSelectorInputs,
+        linkedAt: Temporal.Now.instant().toString(),
+      });
+    }
 
     // Mark ticket/project materials in this billing window as billed by this invoice.
     // These materials were included by BillingEngine as non-contract charges (like usage/time).

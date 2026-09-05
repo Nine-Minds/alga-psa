@@ -10,7 +10,7 @@ import type {
   TemplateValueExpression,
   TemplateValueFormat,
 } from '@alga-psa/types';
-import { formatTemplateFieldValue } from './fieldFormatting';
+import { formatTemplateDateValue, formatTemplateFieldValue } from './fieldFormatting';
 import { templateI18nTextToString } from './i18nLabels';
 
 // Last-resort currency when template metadata carries an invalid code.
@@ -223,11 +223,10 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
   const normalizedFormat: TemplateValueFormat = format ?? 'text';
 
   if (normalizedFormat === 'date') {
-    const parsed = new Date(String(value));
-    if (Number.isNaN(parsed.getTime())) {
-      return String(value);
-    }
-    return parsed.toLocaleDateString(ctx.locale);
+    // Shared UTC-pinned formatter: date-only values must not shift with the
+    // server process timezone (e.g. YYYY-MM-DD snapshot dates in negative
+    // UTC offsets), and preview/PDF must agree with field formatting.
+    return formatTemplateDateValue(String(value), ctx.locale);
   }
 
   if (normalizedFormat === 'currency') {

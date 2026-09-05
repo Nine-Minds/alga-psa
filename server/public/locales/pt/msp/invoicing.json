@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Gerar fatura de fim de mês",
+      "title": "Fechar o período {{servicePeriod}} no fim do mês?",
+      "warning": "Isso fatura {{servicePeriod}} em seu último dia de calendário. As entradas de tempo ou uso registradas após este fechamento não serão incluídas. Feche o período somente quando todo o trabalho estiver totalmente registrado.",
+      "confirm": "Gerar no fim do mês",
+      "omissionWarning": "As entradas de tempo ou uso registradas após este fechamento NÃO serão incluídas na fatura.",
+      "generationFailed": "Não foi possível gerar a fatura de fim de mês. Tente novamente."
+    },
     "ready": {
       "title": "Pronto para faturar",
       "description": "Revise o trabalho devido recorrente e gere projetos de faturas para os períodos selecionados.",
@@ -1856,7 +1864,9 @@
         "productItems": "Itens de produto",
         "items": "Itens",
         "transformsSource": "{{binding}} (origem das transformações)",
-        "transformsOutput": "{{binding}} (saída das transformações)"
+        "transformsOutput": "{{binding}} (saída das transformações)",
+        "ticketGroups": "Tempo faturado por ticket",
+        "timeEntries": "Lançamentos de horas faturados"
       },
       "presets": {
         "description": {
@@ -1874,6 +1884,46 @@
         "amount": {
           "label": "Valor",
           "hint": "Total da linha"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Número e título do ticket"
+        },
+        "ticketDescription": {
+          "hint": "Descrição do ticket visível para o cliente"
+        },
+        "hours": {
+          "label": "Horas"
+        },
+        "ticketHours": {
+          "hint": "Total de horas faturadas do ticket"
+        },
+        "ticketRate": {
+          "hint": "Taxa horária (\"Tarifas mistas\" quando os lançamentos diferem)"
+        },
+        "ticketAmount": {
+          "hint": "Valor total faturado do ticket"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data em que o trabalho foi realizado"
+        },
+        "entryTicket": {
+          "hint": "Número do ticket de origem"
+        },
+        "entryTitle": {
+          "hint": "Título do ticket ou nome da tarefa"
+        },
+        "entryHours": {
+          "hint": "Horas faturadas do lançamento"
+        },
+        "entryRate": {
+          "hint": "Taxa horária do lançamento"
+        },
+        "entryAmount": {
+          "hint": "Valor faturado do lançamento"
         }
       },
       "sourceBinding": {

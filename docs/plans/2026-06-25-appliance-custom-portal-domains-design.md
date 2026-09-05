@@ -61,8 +61,8 @@ The single external requirement for all of this to work is that the operator's p
 
 ## What does not fit the appliance
 
-- All five EE server actions in
-  `ee/server/src/lib/actions/tenant-actions/portalDomainActions.ts` funnel through
+- All five server actions in
+  `server/src/lib/actions/tenant-actions/portalDomainActions.ts` (EE-only at the time) funnel through
   `enqueuePortalDomainWorkflow` and bake in `pending_dns` / `pending_certificate` statuses
   that have no meaning without the cloud workflow.
 - `computeCanonicalHost()` returns `<prefix>.portal.<appHost>` and the Settings UI tells the
@@ -90,10 +90,13 @@ semantic and independently testable, avoids the "conditional magnet" failure mod
 `if (appliance)` boolean (which mis-names what it controls and accretes unrelated branches),
 and still gives the DRY-ness of a single mode: one place to set, one place to map, no
 impossible flag combinations. Individual capabilities remain overridable for the rare
-deployment that needs a non-default mix.
+deployment that needs a non-default mix: `TRUST_FORWARDED_HOST=true` switches on
+forwarded-host trust alone, so a Community Edition install behind a `Host`-rewriting proxy
+never adopts the appliance profile.
 
-The resolver lives in a shared module (e.g. `shared/core/deployment-profile.ts`) so both
-`alga-core` server actions and the edge middleware read the same capabilities. There is no
+The resolver lives in a dependency-free shared module (`shared/core/deploymentProfile.ts`,
+re-exported at `server/src/lib/deployment/deploymentProfile.ts`) so server actions, the edge
+middleware, and the workflow worker read the same capabilities. There is no
 existing deployment-mode signal to reuse: `EDITION` is orthogonal (the appliance and the cloud
 are both EE), and the Helm `hostedEnv` flag is chart-scoped tooling, not a runtime profile.
 
@@ -116,12 +119,14 @@ interface PortalDomainProvisioner {
 // ctx = { knex, tenant, domain?, existing, canonicalHost }
 ```
 
-Two implementations under `ee/server/src/lib/portal-domains/provisioner/`:
+Two implementations behind the seam in `server/src/lib/portal-domains/provisioner/`:
 
 - **`temporalProvisioner`** (cloud, default) — today's behavior lifted verbatim out of the
   actions: `upsert(pending_dns)` + `enqueuePortalDomainWorkflow`, the DNS/cert status
-  strings, and disable that enqueues the K8s-cleanup workflow.
-- **`directProvisioner`** (appliance) — `register` upserts the row directly to `active` with
+  strings, and disable that enqueues the K8s-cleanup workflow. Lives in
+  `ee/server/src/lib/portal-domains/provisioner/` and reaches the factory through the
+  `@ee/lib/portal-domains/provisioner/hosted` edition seam (the CE stub exports `null`).
+- **`directProvisioner`** (Community Edition, and EE in appliance mode) — `register` upserts the row directly to `active` with
   a proxy-contract status message and `verificationDetails` describing the proxy target;
   `disable` **deletes the row**; `refresh` and `retry` are idempotent "ensure active"
   no-ops (there are no transient or failed states to recover from). No workflow, no
@@ -134,6 +139,8 @@ selects the driver from `caps.portalDomain.provisioner`:
 
 - **Cloud (`hosted` profile):** `temporal`. Zero behavior change.
 - **Appliance (`appliance` profile):** `direct`.
+- **Community Edition:** `direct` under every profile, because the CE edition seam ships no
+  hosted driver.
 
 The capabilities resolver **defaults to the `hosted` profile** (→ `temporal`) on an unset or
 unknown `DEPLOYMENT_PROFILE` — the safe default for the common case. A misconfigured appliance
@@ -150,26 +157,30 @@ the middleware never redirects (host equals canonical), a confusing no-op.
 
 ### New
 
-- `shared/core/deployment-profile.ts` (or equivalent shared module) — `DEPLOYMENT_PROFILE`
-  parsing + `resolveDeploymentCapabilities()` returning the typed capabilities object. Read by
-  both the server actions and the middleware.
-- `ee/server/src/lib/portal-domains/provisioner/types.ts` — interface + `ProvisionContext`.
+- `shared/core/deploymentProfile.ts` (re-exported from
+  `server/src/lib/deployment/deploymentProfile.ts`) — `DEPLOYMENT_PROFILE` parsing +
+  `resolveDeploymentCapabilities()` returning the typed capabilities object. Read by the
+  server actions, the middleware, and the workflow worker.
+- `server/src/lib/portal-domains/provisioner/types.ts` — interface + `ProvisionContext`.
 - `ee/server/src/lib/portal-domains/provisioner/temporalProvisioner.ts` — extracted cloud
   behavior.
-- `ee/server/src/lib/portal-domains/provisioner/directProvisioner.ts` — appliance
-  trust-on-submit.
-- `ee/server/src/lib/portal-domains/provisioner/index.ts` — factory selecting the driver from
-  `caps.portalDomain.provisioner`.
+- `server/src/lib/portal-domains/provisioner/directProvisioner.ts` — trust-on-submit
+  (CE, and EE in appliance mode).
+- `server/src/lib/portal-domains/provisioner/index.ts` — factory selecting the driver from
+  `caps.portalDomain.provisioner` and the edition seam.
+- `ee/server/src/lib/portal-domains/provisioner/hosted.ts` /
+  `packages/ee/src/lib/portal-domains/provisioner/hosted.ts` — the edition seam: EE exports the
+  Temporal driver, CE exports `null`.
 
 ### Modified
 
-- `ee/server/src/lib/actions/tenant-actions/portalDomainActions.ts` — the five actions
+- `server/src/lib/actions/tenant-actions/portalDomainActions.ts` — the five actions
   delegate side effects to the provisioner (selected from `caps.portalDomain.provisioner`);
   status-message literals move into the temporal driver; the status response gains a
   `mode: 'temporal' | 'direct'` field.
 - `packages/tenancy/src/actions/tenant-actions/portalDomain.types.ts` — add `mode` to
   `PortalDomainStatusResponse` and surface the proxy fields in `verificationDetails`.
-- `ee/server/src/components/settings/general/ClientPortalDomainSettings.tsx` — make the help
+- `server/src/components/settings/general/ClientPortalDomainSettings.tsx` — make the help
   text and checklist mode-aware: for `direct`, render the BYO-proxy contract instead of CNAME
   instructions. The refresh button stays (harmless re-fetch); retry never renders (no failure
   states); the `active` / `disabled` badges work unchanged. Add the "never seen on vanity
