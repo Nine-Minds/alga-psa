@@ -196,7 +196,9 @@ export function MicrosoftCalendarProviderForm({
 
     } catch (error: any) {
       setOAuthStatus('error');
-      setOAuthError(t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
+      // Surface the server's reason (e.g. "Microsoft profile binding is not
+      // configured") instead of a generic message the user can't act on.
+      setOAuthError(error?.message || t('calendar.providers.common.oauth.initiateFailed', { defaultValue: 'Failed to initiate OAuth' }));
     }
   };
 
@@ -352,7 +354,7 @@ export function MicrosoftCalendarProviderForm({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={() => window.location.assign('/msp/settings?category=providers')}
+                      onClick={() => window.location.assign('/msp/settings?tab=integrations&category=providers')}
                     >
                       {t('calendar.providers.microsoft.configAlert.openSettings', { defaultValue: 'Open Providers Settings' })}
                     </Button>

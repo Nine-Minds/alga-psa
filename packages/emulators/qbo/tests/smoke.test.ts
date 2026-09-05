@@ -154,6 +154,132 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(((await missing.json()) as any).Fault.Error[0].code).toBe('610');
   });
 
+  // The customer bug: an Automated Sales Tax company carries a large,
+  // auto-generated tax-code table, so the mapping catalog was truncated at
+  // QBO's 100-row default and any code past it printed its bare backend Id.
+  // This drives the whole readable-label + paging + AST path over the wire.
+  it('serves a large AST tax-code catalog with readable labels, pages past 100, and computes AST tax', async () => {
+    // Self-contained: own client + freshly minted token, so this test does not
+    // depend on the OAuth test's ordering or the clock advances later tests make.
+    await controlPost('/control/qbo/seed/client', { clientId: 'tax-app', clientSecret: 'tax-secret' });
+    const minted = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'tax-app' })).result;
+    const taxAuthed = { authorization: `Bearer ${minted.access_token}`, 'content-type': 'application/json' };
+
+    // A real California jurisdiction group: three rate components summing to 9%.
+    await controlPost('/control/qbo/seed/tax-rate', { id: 'r-state', name: 'CA State', ratePercent: 6.25 });
+    await controlPost('/control/qbo/seed/tax-rate', { id: 'r-county', name: 'Santa Clara County', ratePercent: 1 });
+    await controlPost('/control/qbo/seed/tax-rate', { id: 'r-district', name: 'SC District', ratePercent: 1.75 });
+    await controlPost('/control/qbo/seed/tax-code', {
+      id: 'CA-GROUP',
+      name: 'California Sales Tax',
+      description: 'CA state + Santa Clara county + district',
+      taxRateIds: ['r-state', 'r-county', 'r-district'],
+    });
+
+    // The auto-generated bulk an AST file carries: 120 codes push the catalog
+    // well past the 100-row page the old single-shot query stopped at.
+    for (let index = 1; index <= 120; index += 1) {
+      await controlPost('/control/qbo/seed/tax-code', {
+        id: `AUTO-${index}`,
+        name: `Auto-generated Tax ${index}`,
+        taxRateIds: ['r-state'],
+      });
+    }
+    // The pseudo codes that only exist under AST, returned with no Active field.
+    await controlPost('/control/qbo/seed/tax-code', { id: 'TAX', name: 'TAX', pseudo: true });
+    await controlPost('/control/qbo/seed/tax-code', { id: 'NON', name: 'NON', pseudo: true });
+
+    // --- Fix (a): paging + readable labels, exactly as the mapping UI reads them.
+    const pageQuery = (start: number, max: number) =>
+      encodeURIComponent(`SELECT * FROM TaxCode STARTPOSITION ${start} MAXRESULTS ${max}`);
+    const firstPage = (await (await fetch(api(`/query?query=${pageQuery(1, 100)}`), { headers: taxAuthed })).json()) as any;
+    const secondPage = (await (await fetch(api(`/query?query=${pageQuery(101, 100)}`), { headers: taxAuthed })).json()) as any;
+    const page1 = firstPage.QueryResponse.TaxCode as any[];
+    const page2 = secondPage.QueryResponse.TaxCode as any[];
+    // The 100-row default would have hidden 23 codes; paging recovers every one.
+    expect(page1).toHaveLength(100);
+    expect(page2).toHaveLength(23);
+
+    const all = [...page1, ...page2];
+    // No row is a bare Id — every code carries a human-readable Name.
+    for (const code of all) {
+      expect(typeof code.Name).toBe('string');
+      expect(code.Name.length).toBeGreaterThan(0);
+    }
+    const group = all.find((code) => code.Id === 'CA-GROUP');
+    expect(group.Name).toBe('California Sales Tax');
+    expect(group.Description).toContain('Santa Clara');
+    // The rate components (what enrichment turns into "9%") ride under the group.
+    expect(group.SalesTaxRateList.TaxRateDetail).toHaveLength(3);
+    // TAX/NON pseudo codes land on the far page; Intuit omits Active on them.
+    const pseudo = all.find((code) => code.Id === 'TAX');
+    expect(pseudo.Name).toBe('TAX');
+    expect(pseudo.Active).toBeUndefined();
+
+    // --- Fix (b): under AST, a TAX-marked line is taxed at the resolved rate.
+    await controlPost('/control/qbo/actions/configure', { automatedSalesTaxDefaultTaxCodeId: 'CA-GROUP' });
+    const astCustomer = (await controlPost('/control/qbo/seed/customer', { name: 'AST Buyer' })).result;
+
+    const taxedResp = await fetch(api('/invoice'), {
+      method: 'POST',
+      headers: taxAuthed,
+      body: JSON.stringify({
+        CustomerRef: { value: astCustomer.Id },
+        Line: [
+          {
+            DetailType: 'SalesItemLineDetail',
+            Amount: 200,
+            SalesItemLineDetail: { ItemRef: { value: 'svc' }, TaxCodeRef: { value: 'TAX' } },
+          },
+        ],
+      }),
+    });
+    const taxed = ((await taxedResp.json()) as any).Invoice;
+    // 200 * (6.25 + 1 + 1.75)% = 18, split across the three jurisdiction lines.
+    expect(taxed.TxnTaxDetail.TotalTax).toBe(18);
+    expect(taxed.TxnTaxDetail.TaxLine.map((line: any) => line.Amount)).toEqual([12.5, 2, 3.5]);
+    expect(taxed.TotalAmt).toBe(218);
+
+    // A NON-marked line is exempt even while AST is on.
+    const exemptResp = await fetch(api('/invoice'), {
+      method: 'POST',
+      headers: taxAuthed,
+      body: JSON.stringify({
+        CustomerRef: { value: astCustomer.Id },
+        Line: [
+          {
+            DetailType: 'SalesItemLineDetail',
+            Amount: 200,
+            SalesItemLineDetail: { ItemRef: { value: 'svc' }, TaxCodeRef: { value: 'NON' } },
+          },
+        ],
+      }),
+    });
+    expect(((await exemptResp.json()) as any).Invoice.TxnTaxDetail.TotalTax).toBe(0);
+
+    // --- Turning AST off returns to a plain file: invoices carry no tax detail.
+    await controlPost('/control/qbo/actions/configure', { automatedSalesTaxDefaultTaxCodeId: null });
+    const plainResp = await fetch(api('/invoice'), {
+      method: 'POST',
+      headers: taxAuthed,
+      body: JSON.stringify({
+        CustomerRef: { value: astCustomer.Id },
+        Line: [{ DetailType: 'SalesItemLineDetail', Amount: 200, SalesItemLineDetail: { ItemRef: { value: 'svc' } } }],
+      }),
+    });
+    const plain = ((await plainResp.json()) as any).Invoice;
+    expect(plain.TxnTaxDetail).toBeUndefined();
+    expect(plain.TotalAmt).toBe(200);
+
+    // The augmentation's state views expose the seeded catalog to the harness.
+    const stateCodes = (await (await fetch(`${control}/control/qbo/state/tax-codes`)).json()) as any;
+    expect(stateCodes.result.length).toBe(123);
+    const stateRates = (await (await fetch(`${control}/control/qbo/state/tax-rates`)).json()) as any;
+    expect(stateRates.result.map((rate: any) => rate.Id)).toContain('r-district');
+
+    // Leave AST off so later tests see a clean company file.
+  });
+
   it('serves preferences, companyinfo, and the CDC envelope', async () => {
     const prefs = (await (
       await fetch(api(`/query?query=${encodeURIComponent('SELECT * FROM Preferences')}`), { headers: authed })
@@ -184,6 +310,81 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(grouped.CreditMemo.map((row: any) => row.Id)).toContain(seededCm.result.Id);
   });
 
+  // The catalog projections the hardened mapping/onboarding screens read:
+  // allowlisted field lists only, paginated where the integration paginates.
+  it('serves the allowlisted catalog projections the mapping screens issue', async () => {
+    await controlPost('/control/qbo/seed/account', { id: 'acct-income', name: 'Service Income', accountType: 'Income' });
+    await controlPost('/control/qbo/seed/class', { id: 'class-east', name: 'East Region' });
+    await controlPost('/control/qbo/seed/department', { id: 'dept-sea', name: 'Seattle' });
+    await controlPost('/control/qbo/seed/term', { id: 'term-net30', name: 'Net 30' });
+    await controlPost('/control/qbo/seed/item', { name: 'Managed Desktop', type: 'Service' });
+    await controlPost('/control/qbo/seed/customer', { name: 'Projection Co' });
+    await controlPost('/control/qbo/seed/customer', { name: 'Retired Co', active: false });
+
+    const run = async (q: string) =>
+      (await (await fetch(api(`/query?query=${encodeURIComponent(q)}`), { headers: authed })).json()) as any;
+
+    const accounts = await run('SELECT Id, Name, AccountType FROM Account');
+    const income = accounts.QueryResponse.Account.find((row: any) => row.Id === 'acct-income');
+    expect(income).toEqual({ Id: 'acct-income', Name: 'Service Income', AccountType: 'Income' });
+
+    const classes = await run('SELECT Id, Name FROM Class');
+    expect(classes.QueryResponse.Class).toContainEqual({ Id: 'class-east', Name: 'East Region' });
+
+    const departments = await run('SELECT Id, Name FROM Department');
+    expect(departments.QueryResponse.Department).toContainEqual({ Id: 'dept-sea', Name: 'Seattle' });
+
+    const terms = await run('SELECT Id, Name FROM Term');
+    expect(terms.QueryResponse.Term).toContainEqual({ Id: 'term-net30', Name: 'Net 30' });
+
+    const items = await run('SELECT Id, Name FROM Item');
+    const itemNames = items.QueryResponse.Item.map((row: any) => row.Name);
+    expect(itemNames).toContain('Managed Desktop');
+    // Projection rows carry only the allowlisted fields — no pricing or SKUs.
+    for (const row of items.QueryResponse.Item) {
+      expect(Object.keys(row).sort()).toEqual(['Id', 'Name']);
+    }
+
+    const company = await run('SELECT CompanyName FROM CompanyInfo');
+    expect(company.QueryResponse.CompanyInfo).toEqual([{ CompanyName: 'Alga Emulated Co' }]);
+
+    // Customer projection is paginated the way queryAllPages walks it, and
+    // (like QBO) omits inactive customers by default.
+    const pageOne = await run('SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 1 MAXRESULTS 2');
+    expect(pageOne.QueryResponse.Customer).toHaveLength(2);
+    const pageRest = await run('SELECT Id, DisplayName, Active FROM Customer STARTPOSITION 3 MAXRESULTS 100');
+    const allCustomers = [...pageOne.QueryResponse.Customer, ...(pageRest.QueryResponse.Customer ?? [])];
+    const names = allCustomers.map((row: any) => row.DisplayName);
+    expect(names).toContain('Projection Co');
+    expect(names).not.toContain('Retired Co');
+    for (const row of allCustomers) {
+      expect(Object.keys(row).sort()).toEqual(['Active', 'DisplayName', 'Id']);
+    }
+
+    // Historical-onboarding invoice sweep: projected fields, TxnDate window.
+    const buyer = (await controlPost('/control/qbo/seed/customer', { name: 'History Co' })).result;
+    await controlPost('/control/qbo/seed/invoice', { customerId: buyer.Id, amountCents: 10_000, docNumber: 'H-1' });
+    const invoices = await run(
+      'SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice STARTPOSITION 1 MAXRESULTS 1000',
+    );
+    const hist = invoices.QueryResponse.Invoice.find((row: any) => row.DocNumber === 'H-1');
+    expect(hist.TotalAmt).toBe(100);
+    expect(hist.CustomerRef.value).toBe(buyer.Id);
+    expect(Object.keys(hist).sort()).toEqual(['CustomerRef', 'DocNumber', 'Id', 'SyncToken', 'TotalAmt']);
+    const windowed = await run(
+      "SELECT Id, DocNumber, TotalAmt, SyncToken, CustomerRef FROM Invoice WHERE TxnDate >= '2099-01-01' STARTPOSITION 1 MAXRESULTS 1000",
+    );
+    expect(windowed.QueryResponse.Invoice).toBeUndefined();
+
+    // An unmodeled projection still fails loud instead of leaking extra data.
+    const unmodeled = await fetch(
+      api(`/query?query=${encodeURIComponent('SELECT * FROM Customer')}`),
+      { headers: authed },
+    );
+    expect(unmodeled.status).toBe(400);
+    expect(((await unmodeled.json()) as any).Fault.Error[0].code).toBe('SIM_UNSUPPORTED');
+  });
+
   it('rejects wrong realms and expired tokens (and refresh recovers)', async () => {
     const wrongRealm = await fetch(`${base}/v3/company/other-realm/customer/1`, { headers: authed });
     expect(wrongRealm.status).toBe(403);
@@ -204,6 +405,53 @@ describe('qbo emulator', { shuffle: false }, () => {
       headers: { authorization: `Bearer ${tokens.access_token}` },
     });
     expect(recovered.status).toBe(200);
+  });
+
+  it('hosts multiple company files whose colliding ids stay isolated per realm', async () => {
+    const minted = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'alga-app' })).result;
+    const twoRealmAuthed = { authorization: `Bearer ${minted.access_token}`, 'content-type': 'application/json' };
+    const realmApi = (realm: string, path: string) => `${base}/v3/company/${realm}${path}`;
+
+    // Two fresh company files seeded in the same order → colliding entity ids.
+    await controlPost('/control/qbo/seed/realm', { realmId: 'realm-one' });
+    await controlPost('/control/qbo/seed/realm', { realmId: 'realm-two' });
+
+    const customerA = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-one' })).result;
+    const customerB = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-two' })).result;
+    expect(customerA.Id).toBe(customerB.Id);
+    const invoiceA = (await controlPost('/control/qbo/seed/invoice', {
+      customerId: customerA.Id,
+      amountCents: 10_000,
+      realmId: 'realm-one',
+    })).result;
+    const invoiceB = (await controlPost('/control/qbo/seed/invoice', {
+      customerId: customerB.Id,
+      amountCents: 25_000,
+      realmId: 'realm-two',
+    })).result;
+    expect(invoiceA.Id).toBe(invoiceB.Id);
+
+    // A payment received in realm-two only changes realm-two's books.
+    await controlPost('/control/qbo/actions/receive-payment', {
+      invoiceId: invoiceB.Id,
+      amountCents: 25_000,
+      realmId: 'realm-two',
+    });
+    const readA = (await (await fetch(realmApi('realm-one', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    const readB = (await (await fetch(realmApi('realm-two', `/invoice/${invoiceB.Id}`), { headers: twoRealmAuthed })).json()) as any;
+    expect(readA.Invoice.Balance).toBe(100);
+    expect(readB.Invoice.Balance).toBe(0);
+
+    // Per-realm state assertion through the control API.
+    const paymentsA = (await controlPost('/control/qbo/actions/entities', { entityType: 'Payment', realmId: 'realm-one' })).result;
+    const paymentsB = (await controlPost('/control/qbo/actions/entities', { entityType: 'Payment', realmId: 'realm-two' })).result;
+    expect(paymentsA).toHaveLength(0);
+    expect(paymentsB).toHaveLength(1);
+
+    // A realm with no company file still fails like Intuit does.
+    const unknown = await fetch(realmApi('realm-nope', `/invoice/${invoiceA.Id}`), { headers: twoRealmAuthed });
+    expect(unknown.status).toBe(403);
+    expect(((await unknown.json()) as any).Fault.Error[0].code).toBe('3202');
   });
 
   it('mints tokens directly for harness wiring', async () => {

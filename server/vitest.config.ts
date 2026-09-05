@@ -181,6 +181,8 @@ export default defineConfig({
       // db's ./workDate export maps to src/lib/workDate (names don't mirror the
       // src layout), so a prefix alias can't reach it — alias it explicitly.
       { find: /^@alga-psa\/db\/workDate$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/workDate.ts') },
+      // Same as workDate: ./reassignTicketResources maps to src/lib, not a mirror path.
+      { find: /^@alga-psa\/db\/reassignTicketResources$/, replacement: path.resolve(__dirname, '../packages/db/src/lib/reassignTicketResources.ts') },
 
       { find: /^@alga-psa\/portal-shared$/, replacement: path.resolve(__dirname, '../packages/portal-shared/src/index.ts') },
       { find: /^@alga-psa\/portal-shared\/(.*)$/, replacement: path.resolve(__dirname, '../packages/portal-shared/src/$1') },
@@ -250,6 +252,8 @@ export default defineConfig({
       { find: /^@alga-psa\/jobs\/(.*)$/, replacement: path.resolve(__dirname, '../packages/jobs/src/$1') },
       { find: /^@alga-psa\/teams$/, replacement: path.resolve(__dirname, '../packages/teams/src/index.ts') },
       { find: /^@alga-psa\/teams\/(.*)$/, replacement: path.resolve(__dirname, '../packages/teams/src/$1') },
+      { find: /^@alga-psa\/telephony$/, replacement: path.resolve(__dirname, '../packages/telephony/src/index.ts') },
+      { find: /^@alga-psa\/telephony\/(.*)$/, replacement: path.resolve(__dirname, '../packages/telephony/src/$1') },
       { find: /^@alga-psa\/product-extension-actions$/, replacement: path.resolve(__dirname, '../packages/product-extension-actions/oss/entry.ts') },
       { find: /^@alga-psa\/tags$/, replacement: path.resolve(__dirname, '../packages/tags/src/index.ts') },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: path.resolve(__dirname, '../packages/tags/src/$1') },
@@ -300,6 +304,7 @@ export default defineConfig({
       { find: /^@alga-psa\/emulator-smtp-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/smtp-sink/src/index.ts') },
       { find: /^@alga-psa\/emulator-stripe$/, replacement: path.resolve(__dirname, '../packages/emulators/stripe/src/index.ts') },
       { find: /^@alga-psa\/emulator-webhook-sink$/, replacement: path.resolve(__dirname, '../packages/emulators/webhook-sink/src/index.ts') },
+      { find: /^@alga-psa\/emulator-xero$/, replacement: path.resolve(__dirname, '../packages/emulators/xero/src/index.ts') },
 
       { find: /^@alga-psa\/media$/, replacement: path.resolve(__dirname, '../packages/media/src/index.ts') },
       { find: /^@alga-psa\/storage$/, replacement: path.resolve(__dirname, '../packages/storage/src/index.ts') },
@@ -307,6 +312,7 @@ export default defineConfig({
 
       { find: /^@alga-psa\/users$/, replacement: path.resolve(__dirname, '../packages/users/src/index.ts') },
       { find: /^@alga-psa\/users\/actions$/, replacement: path.resolve(__dirname, '../packages/users/src/actions/index.ts') },
+      { find: /^@alga-psa\/users\/(.*)$/, replacement: path.resolve(__dirname, '../packages/users/src/$1') },
       { find: /^@alga-psa\/user-composition$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/index.ts') },
       { find: /^@alga-psa\/user-composition\/actions$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/actions/index.ts') },
       { find: /^@alga-psa\/user-composition\/(.*)$/, replacement: path.resolve(__dirname, '../packages/user-composition/src/$1') },

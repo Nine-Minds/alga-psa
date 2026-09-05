@@ -27,7 +27,10 @@ export class BrowserPoolService {
       return browser;
     }
 
-    return new Promise((resolve) => {
+    // LEVERAGE: friction browser-pool-duplication — server/src/services/browser-pool.service.ts
+    // is a near-identical second copy of this class, so every fix here has to be
+    // made twice. One pool behind one import would retire the divergence.
+    return new Promise((resolve, reject) => {
       const interval = setInterval(async () => {
         if (this.browserPool.length > 0) {
           const browser = this.browserPool.pop();
@@ -37,14 +40,23 @@ export class BrowserPoolService {
             resolve(browser!);
           }
         } else if (this.activeBrowsers < this.maxBrowsers) {
+          // Stop the interval before awaiting: otherwise a slow launch lets the
+          // next tick start a second one and blow past maxBrowsers.
+          clearInterval(interval);
+          try {
             const browser = await puppeteer.launch({
               headless: true,
               executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
               args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
             });
             this.activeBrowsers++;
-            clearInterval(interval);
             resolve(browser);
+          } catch (error) {
+            // Without this the launch failure became an unhandled rejection and
+            // the caller waited forever — which is how a missing chromium binary
+            // presented as a hung PDF download rather than an error.
+            reject(error);
+          }
         }
       }, 100);
     });

@@ -4,23 +4,16 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-let flagEnabled = true;
-let flagLoading = false;
-const flagMock = vi.fn((_flagKey: string, _opts?: { defaultValue?: boolean }) => ({
-  enabled: flagEnabled,
-  loading: flagLoading,
-}));
-
-vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: (flagKey: string, opts?: { defaultValue?: boolean }) => flagMock(flagKey, opts),
-}));
-
 const getSettingsMock = vi.fn();
 const updateSettingsMock = vi.fn();
+const getContractOverridesMock = vi.fn();
+const updateContractOverrideMock = vi.fn();
 
 vi.mock('../../lib/billingHelpers', () => ({
   getPrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => getSettingsMock(...args),
   updatePrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => updateSettingsMock(...args),
+  getPrepaidReplenishmentContractOverridesAsync: (...args: unknown[]) => getContractOverridesMock(...args),
+  updatePrepaidReplenishmentContractOverrideAsync: (...args: unknown[]) => updateContractOverrideMock(...args),
 }));
 
 vi.mock('next-auth/react', () => ({
@@ -54,34 +47,22 @@ import ClientPrepaidBalanceAlertSettings from './ClientPrepaidBalanceAlertSettin
 
 describe('ClientPrepaidBalanceAlertSettings', () => {
   beforeEach(() => {
-    flagEnabled = true;
-    flagLoading = false;
     getSettingsMock.mockReset();
     updateSettingsMock.mockReset();
+    getContractOverridesMock.mockReset();
+    updateContractOverrideMock.mockReset();
     toastMock.mockReset();
     getSettingsMock.mockResolvedValue({
       prepaidCreditAlertThreshold: null,
       prepaidCreditAlertCurrencyCode: null,
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'EUR',
     });
     updateSettingsMock.mockResolvedValue({ success: true });
-  });
-
-  it('renders nothing while the feature flag is loading', async () => {
-    flagLoading = true;
-    const { container } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
-    expect(container.innerHTML).toBe('');
-    expect(screen.queryByText('Prepaid Balance Alerts')).toBeNull();
-  });
-
-  it('renders nothing (structurally absent) when the flag is disabled', async () => {
-    flagEnabled = false;
-    flagLoading = false;
-    const { container } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
-    expect(container.innerHTML).toBe('');
-    expect(screen.queryByText('Prepaid Balance Alerts')).toBeNull();
+    getContractOverridesMock.mockResolvedValue([]);
+    updateContractOverrideMock.mockResolvedValue({ success: true });
   });
 
   it('initializes the credit currency from the client default when no policy exists', async () => {
@@ -111,8 +92,35 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: 'EUR',
         bucketUsageAlertPercent: null,
         notifyClientOnPrepaidAlert: false,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
+  });
+
+  it('displays and saves credit replenishment in currency units, not raw minor units', async () => {
+    getSettingsMock.mockResolvedValueOnce({
+      prepaidCreditAlertThreshold: 5000,
+      prepaidCreditAlertCurrencyCode: 'EUR',
+      bucketUsageAlertPercent: null,
+      notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'draft',
+      prepaidCreditReplenishmentAmount: 50000,
+      prepaidBucketReplenishmentMinutes: null,
+      prepaidReplenishmentHorizonDays: 30,
+      defaultCurrencyCode: 'EUR',
+    });
+    render(<ClientPrepaidBalanceAlertSettings clientId="c1" defaultCurrencyCode="EUR" />);
+    const topUp = await screen.findByDisplayValue('500.00');
+    expect(topUp).toBeDefined();
+    await userEvent.clear(topUp);
+    await userEvent.type(topUp, '750');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await waitFor(() => expect(updateSettingsMock).toHaveBeenCalledWith(expect.objectContaining({
+      prepaidCreditReplenishmentAmount: 75000,
+    })));
   });
 
   it('validates whole-percent bucket input and does not submit invalid values', async () => {
@@ -144,6 +152,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: null,
         bucketUsageAlertPercent: 80,
         notifyClientOnPrepaidAlert: true,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -209,6 +221,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
         prepaidCreditAlertCurrencyCode: null,
         bucketUsageAlertPercent: null,
         notifyClientOnPrepaidAlert: false,
+        prepaidReplenishmentTier: 'notify',
+        prepaidCreditReplenishmentAmount: null,
+        prepaidBucketReplenishmentMinutes: null,
+        prepaidReplenishmentHorizonDays: 30,
       })
     );
   });
@@ -219,6 +235,7 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
       prepaidCreditAlertCurrencyCode: 'JPY',
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'USD',
     });
     render(<ClientPrepaidBalanceAlertSettings clientId="c1" defaultCurrencyCode="USD" />);
@@ -236,20 +253,10 @@ describe('ClientPrepaidBalanceAlertSettings', () => {
     );
   });
 
-  it('keeps the card busy while the flag is still resolving and while the read is in flight', async () => {
-    // While the flag loads the read action must not fire.
-    flagLoading = true;
-    flagEnabled = false;
-    const { rerender } = render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    expect(getSettingsMock).not.toHaveBeenCalled();
-
-    // Flag resolves enabled; the read fires and Save stays disabled until done.
-    flagLoading = false;
-    flagEnabled = true;
+  it('keeps the card busy while the read is in flight', async () => {
     let resolveRead: (value: unknown) => void = () => undefined;
     getSettingsMock.mockReturnValue(new Promise((res) => { resolveRead = res; }));
-    rerender(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
+    render(<ClientPrepaidBalanceAlertSettings clientId="c1" />);
     await waitFor(() => expect(getSettingsMock).toHaveBeenCalled());
     expect(screen.getByRole('button', { name: /^save$/i })).toBeDisabled();
 

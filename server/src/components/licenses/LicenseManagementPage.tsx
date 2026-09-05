@@ -238,8 +238,8 @@ function toneClasses(tone: Tone) {
     default:
       return {
         badge:
-          "border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-700))] dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-300))]",
-        icon: "bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400)/0.18)] dark:text-[rgb(var(--color-primary-300))]",
+          "border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-700))] dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-600))]",
+        icon: "chip-primary",
       };
   }
 }
@@ -400,9 +400,9 @@ export default function LicenseManagementPage() {
       <div className="mx-auto w-full max-w-5xl p-6 text-[rgb(var(--color-text-700))]">
         <Card className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
           <CardContent className="space-y-4 pt-6">
-            <div className="h-4 w-32 animate-pulse rounded bg-[rgb(var(--color-border-200))]" />
-            <div className="h-8 w-72 animate-pulse rounded bg-[rgb(var(--color-border-200))]" />
-            <div className="h-4 w-full max-w-xl animate-pulse rounded bg-[rgb(var(--color-border-200))]" />
+            <div className="h-4 w-32 animate-pulse rounded skeleton-fill" />
+            <div className="h-8 w-72 animate-pulse rounded skeleton-fill" />
+            <div className="h-4 w-full max-w-xl animate-pulse rounded skeleton-fill" />
           </CardContent>
         </Card>
       </div>
@@ -524,7 +524,7 @@ export default function LicenseManagementPage() {
               />
               <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="flex gap-4">
-                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[rgb(var(--color-primary-600))] shadow-sm dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-primary-300))]">
+                  <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[rgb(var(--color-primary-600))] shadow-sm dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-primary-700))]">
                     <Crown className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
@@ -723,7 +723,7 @@ export default function LicenseManagementPage() {
       {isEnterpriseEdition() ? <ApplianceAiSection /> : null}
 
       <details
-        className="group rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm"
+        className="group rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated"
         open={needsLicenseAttention}
       >
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-medium text-[rgb(var(--color-text-800))] marker:hidden">
@@ -765,7 +765,7 @@ export default function LicenseManagementPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400)/0.18)] dark:text-[rgb(var(--color-primary-300))]">
+                <div className="chip-primary flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg">
                   <TicketCheck className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div>
@@ -812,7 +812,7 @@ export default function LicenseManagementPage() {
 
             <section className="rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
               <div className="flex items-start gap-3">
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-600))] dark:bg-[rgb(var(--color-border-200))] dark:text-[rgb(var(--color-text-300))]">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-600))]">
                   <KeyRound className="h-4 w-4" aria-hidden="true" />
                 </div>
                 <div>

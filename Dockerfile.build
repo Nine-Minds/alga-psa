@@ -71,6 +71,7 @@ RUN mkdir -p /app/secrets && \
     echo "secure-32char-crypto-key-placeholder-xxxx" > /app/secrets/crypto_key && \
     echo "secure-32char-token-key-placeholder-xxxx" > /app/secrets/token_secret_key && \
     echo "secure-32char-nextauth-key-placeholder-xx" > /app/secrets/nextauth_secret && \
+    echo "secure-32char-credential-encryption-key" > /app/secrets/credential_encryption_key && \
     echo "secure-email-password-placeholder" > /app/secrets/email_password && \
     echo "secure-oauth-client-id-placeholder" > /app/secrets/google_oauth_client_id && \
     echo "secure-oauth-client-secret-placeholder" > /app/secrets/google_oauth_client_secret && \
@@ -93,7 +94,14 @@ RUN apk add --no-cache bash \
     ghostscript \
     curl \
     nano \
-    bash
+    bash \
+    chromium \
+    nss \
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont
 
 WORKDIR /app
 COPY tsconfig.base.json ./
@@ -131,6 +139,10 @@ EXPOSE 3000
 
 # Environment configuration
 ENV NODE_ENV=production
+
+# Puppeteer chromium configuration
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 # Secret provider configuration
 # Default configuration for composite secret system

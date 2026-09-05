@@ -10,7 +10,10 @@ export {
   getQboConnectionStatus,
   saveQboCredentials,
   disconnectQbo,
+  forceFinalizeQboDisconnect,
   getQboTaxCodes,
+  getQboAutomatedSalesTaxMode,
+  setQboAutomatedSalesTaxMode,
   getQboTerms,
   getQboCustomers,
   resetQboCatalogCacheForTenant,
@@ -63,7 +66,8 @@ export {
   resyncImapProvider,
   testEmailProviderConnection,
   retryMicrosoftSubscriptionRenewal,
-  runMicrosoft365Diagnostics
+  runMicrosoft365Diagnostics,
+  runGmailDiagnostics
 } from './email-actions/emailProviderActions';
 export {
   pauseEmailProvider,
@@ -165,7 +169,6 @@ export {
   validateTeamsBotConnector,
   listTeamsDeliveries,
   listTeamsAuditEvents,
-  getTeamsAddonPurchaseAccess,
   type TeamsDiagnosticsReport,
   type TeamsTestMessageResult,
   type TeamsGraphCredentialValidationResult,
@@ -181,6 +184,12 @@ export {
 export {
   getTeamsAppPackageStatus,
 } from './integrations/teamsPackageActions';
+export {
+  createTelephonyCallIntent,
+  getTelephonyCallLinkState,
+  type CreateTelephonyCallIntentResult,
+  type TelephonyCallLinkState,
+} from './integrations/telephonyActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
@@ -271,6 +280,7 @@ export {
   getXeroIntegrationStatus,
   saveXeroCredentials,
   disconnectXero,
+  forceFinalizeXeroDisconnect,
   getXeroAccounts,
   getXeroItems,
   getXeroTaxRates,

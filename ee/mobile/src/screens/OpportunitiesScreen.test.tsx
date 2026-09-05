@@ -1,6 +1,7 @@
 import React from "react";
 import { act, create, type ReactTestRenderer, type ReactTestInstance } from "react-test-renderer";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { opportunityWorkQueueFixture } from "../../../../packages/types/src/testFixtures/opportunityWorkQueue";
 
 // Shared UI primitives rely on the automatic JSX runtime and don't import React;
 // the vitest transform uses the classic runtime, so expose React globally.
@@ -10,7 +11,9 @@ const { getWorkQueueMock, listOpportunitiesMock, translate } = vi.hoisted(() => 
   getWorkQueueMock: vi.fn(),
   listOpportunitiesMock: vi.fn(),
   // Stable identity across renders (matches production react-i18next).
-  translate: (_key: string, def?: string, opts?: Record<string, unknown>) => {
+  translate: (_key: string, defOrOpts?: string | Record<string, unknown>, optsArg?: Record<string, unknown>) => {
+    const def = typeof defOrOpts === "string" ? defOrOpts : undefined;
+    const opts = typeof defOrOpts === "object" ? defOrOpts : optsArg;
     let out = def ?? _key;
     if (opts) {
       for (const [key, value] of Object.entries(opts)) {
@@ -65,6 +68,14 @@ vi.mock("../auth/AuthContext", () => ({
   }),
 }));
 
+vi.mock("../capabilities/CapabilitiesContext", () => ({
+  useCapabilities: () => ({
+    features: { inventory: true, opportunities: true, opportunitiesCreate: true },
+    loaded: true,
+    refresh: vi.fn(),
+  }),
+}));
+
 vi.mock("../config/appConfig", () => ({
   getAppConfig: () => ({ ok: true, env: "dev", baseUrl: "https://algapsa.com" }),
 }));
@@ -80,6 +91,10 @@ vi.mock("../api/opportunities", () => ({
 
 vi.mock("../logging/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
+}));
+
+vi.mock("../ui/toast/ToastProvider", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
 }));
 
 import { OpportunitiesScreen } from "./OpportunitiesScreen";
@@ -129,27 +144,7 @@ const QUEUE_FIXTURE = {
   status: 200,
   data: {
     data: {
-      sections: [
-        {
-          key: "due_today",
-          title: "Do these today",
-          items: [
-            {
-              opportunity_id: "opp-1",
-              title: "Acme renewal",
-              client_name: "Acme",
-              next_action: "Call the CTO",
-              next_action_due: "2026-07-20T09:00:00Z",
-              overdue: true,
-              why: { text: "Stalled 12 days after the demo", emphasis: "Stalled 12 days" },
-            },
-          ],
-        },
-        {
-          key: "going_quiet",
-          items: [{ opportunity_id: "opp-2", title: "Globex upgrade", client_name: "Globex", why: "No touch in a week" }],
-        },
-      ],
+      ...opportunityWorkQueueFixture,
     },
   },
 };
@@ -200,18 +195,36 @@ describe("OpportunitiesScreen queue", () => {
     expect(hasText(renderer, "Call the CTO")).toBe(true);
 
     // Why sentence rendered, with the emphasis substring in its own (bold) node.
-    expect(byTestId(renderer, "opportunity-why-opp-1")).toBeDefined();
-    expect(hasText(renderer, "Stalled 12 days")).toBe(true);
+    expect(byTestId(renderer, "opportunity-why-11111111-1111-4111-8111-111111111111")).toBeDefined();
+    expect(hasText(renderer, "why.actionDue.pastDue")).toBe(true);
 
-    press(renderer, "opportunity-row-opp-1");
+    expect(byTestId(renderer, "opportunities-found-total-USD")).toBeDefined();
+    expect(byTestId(renderer, "opportunities-found-total-GBP")).toBeDefined();
+    expect(byTestId(renderer, "opportunity-suggestion-33333333-3333-4333-8333-333333333333")).toBeDefined();
+
+    press(renderer, "opportunity-row-11111111-1111-4111-8111-111111111111");
     expect(mockNavigate).toHaveBeenCalledWith("OpportunityDetail", {
-      opportunityId: "opp-1",
+      opportunityId: "11111111-1111-4111-8111-111111111111",
       title: "Acme renewal",
     });
   });
 
   it("shows the finished empty state when nothing is due", async () => {
-    getWorkQueueMock.mockResolvedValue({ ok: true, status: 200, data: { data: { sections: [] } } });
+    getWorkQueueMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: {
+        data: {
+          user_first_name: "Avery",
+          date: "2026-08-20T14:00:00.000Z",
+          found_totals: [],
+          do_today: [],
+          going_quiet: [],
+          money_found: [],
+          lesson: null,
+        },
+      },
+    });
     const renderer = await renderScreen();
 
     expect(hasText(renderer, "That's everything. Nothing needs you today.")).toBe(true);
@@ -221,7 +234,21 @@ describe("OpportunitiesScreen queue", () => {
 describe("OpportunitiesScreen pipeline", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getWorkQueueMock.mockResolvedValue({ ok: true, status: 200, data: { data: { sections: [] } } });
+    getWorkQueueMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: {
+        data: {
+          user_first_name: "Avery",
+          date: "2026-08-20T14:00:00.000Z",
+          found_totals: [],
+          do_today: [],
+          going_quiet: [],
+          money_found: [],
+          lesson: null,
+        },
+      },
+    });
     listOpportunitiesMock.mockResolvedValue(PIPELINE_FIXTURE);
   });
 

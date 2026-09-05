@@ -1,0 +1,31 @@
+{
+  "name": "@alga-psa/migration-connectors",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./csv": {
+      "types": "./src/csv/index.ts",
+      "import": "./src/csv/index.ts"
+    }
+  },
+  "scripts": {
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@alga-psa/migration-sdk": "*",
+    "@alga-psa/migration-spec": "*",
+    "exceljs": "^4.4.0",
+    "papaparse": "^5.5.3"
+  },
+  "devDependencies": {
+    "@types/papaparse": "^5.3.16",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.9"
+  }
+}

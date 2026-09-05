@@ -1,7 +1,7 @@
 {
   "catalog": {
     "title": "Serviceverzoeken",
-    "description": "Dien een gestructureerd verzoek in en wij maken automatisch een ticket aan.",
+    "description": "Dien een gestructureerd verzoek in en wij regelen de rest.",
     "myRequests": "Mijn aanvragen",
     "empty": "Er zijn momenteel geen aanvraagservices beschikbaar.",
     "fallbackCategory": "Service",
@@ -56,7 +56,16 @@
     "attachmentsTitle": "Bijlagen",
     "noAttachments": "Geen bijlagen toegevoegd.",
     "fileIdLabel": "Bestand-ID: {{id}}",
-    "fileTypeLabel": "Type: {{mime}}"
+    "fileTypeLabel": "Type: {{mime}}",
+    "versionLabel": "Versie {{version}}",
+    "historyTitle": "Geschiedenis",
+    "historyEmpty": "Nog geen geschiedenis vastgelegd.",
+    "historyActor": "door {{actor}}",
+    "historyOperations": {
+      "service_request_submission_created": "Verzoek ingediend",
+      "service_request_submission_execution_succeeded": "Verwerking voltooid",
+      "service_request_submission_execution_failed": "Verwerking mislukt"
+    }
   },
   "recent": {
     "title": "Uw recente verzoeken",

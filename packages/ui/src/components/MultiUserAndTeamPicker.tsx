@@ -444,7 +444,7 @@ const MultiUserAndTeamPicker = ({
     return (
       <div className="flex items-center gap-2 flex-wrap flex-1">
         {includeUnassigned && (
-          <div className="flex items-center gap-1 bg-gray-100 rounded-full pl-2 pr-2 py-1">
+          <div className="flex items-center gap-1 bg-[rgb(var(--color-border-200))] rounded-full pl-2 pr-2 py-1">
             <UserMinus className="w-3 h-3 text-gray-500" />
             <span className="text-sm">{t('pickers.unassigned', { defaultValue: 'Unassigned' })}</span>
             <div
@@ -461,7 +461,7 @@ const MultiUserAndTeamPicker = ({
                   onUnassignedChange?.(false);
                 }
               }}
-              className="ml-1 p-0.5 hover:bg-gray-200 rounded-full cursor-pointer"
+              className="ml-1 p-0.5 hover:bg-[rgb(var(--color-border-300))] rounded-full cursor-pointer"
             >
               <X className="w-3 h-3" />
             </div>
@@ -470,7 +470,7 @@ const MultiUserAndTeamPicker = ({
         {selectedUsers.map((user): React.JSX.Element => (
           <div
             key={user.user_id}
-            className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
+            className="flex items-center gap-1 bg-[rgb(var(--color-border-200))] rounded-full pl-1 pr-2 py-1"
           >
             <div
               className={`flex items-center gap-1 ${onUserClick ? 'cursor-pointer hover:opacity-80' : ''}`}
@@ -500,7 +500,7 @@ const MultiUserAndTeamPicker = ({
                   removeUser(user.user_id);
                 }
               }}
-              className="ml-1 p-1 hover:bg-gray-200 rounded-full cursor-pointer"
+              className="ml-1 p-1 hover:bg-[rgb(var(--color-border-300))] rounded-full cursor-pointer"
             >
               <X className="w-3 h-3" />
             </div>
@@ -509,7 +509,7 @@ const MultiUserAndTeamPicker = ({
         {selectedTeams.map((team): React.JSX.Element => (
           <div
             key={team.team_id}
-            className="flex items-center gap-1 bg-gray-100 rounded-full pl-1 pr-2 py-1"
+            className="flex items-center gap-1 bg-[rgb(var(--color-border-200))] rounded-full pl-1 pr-2 py-1"
           >
             <div className="flex items-center gap-1">
               <TeamAvatar
@@ -534,7 +534,7 @@ const MultiUserAndTeamPicker = ({
                   onTeamValuesChange?.(teamValues.filter(id => id !== team.team_id));
                 }
               }}
-              className="ml-1 p-1 hover:bg-gray-200 rounded-full cursor-pointer"
+              className="ml-1 p-1 hover:bg-[rgb(var(--color-border-300))] rounded-full cursor-pointer"
             >
               <X className="w-3 h-3" />
             </div>
@@ -557,10 +557,10 @@ const MultiUserAndTeamPicker = ({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden w-full">
+      <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         {/* Search Input */}
         {showSearch && (
-          <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+          <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
             <div className="relative">
               <Input
                 ref={searchInputRef}
@@ -568,7 +568,7 @@ const MultiUserAndTeamPicker = ({
                 placeholder={t('pickers.searchUsers', { defaultValue: 'Search users...' })}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+                className="w-full px-3 py-2 pl-9 text-sm border border-[rgb(var(--color-border-200))] rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                 autoComplete="off"
               />
               <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -579,7 +579,7 @@ const MultiUserAndTeamPicker = ({
         {/* Unassigned option (filter mode only) */}
         {filterMode && (
           <div
-            className="px-3 py-1.5 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))] flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-[rgb(var(--color-border-100))]"
+            className="px-3 py-1.5 border-b border-[rgb(var(--color-border-200))] flex items-center gap-2 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)]"
             onClick={handleUnassignedToggle}
           >
             <Checkbox
@@ -645,7 +645,7 @@ const MultiUserAndTeamPicker = ({
                         key={user.user_id}
                         className={`
                           relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
-                          hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
+                          hover:bg-[rgb(var(--color-primary-500)/0.08)] ${isSelected ? 'bg-[rgb(var(--color-table-selected))]' : ''}
                         `}
                         onClick={() => handleUserToggle(user.user_id)}
                       >
@@ -681,7 +681,7 @@ const MultiUserAndTeamPicker = ({
                         key={team.team_id}
                         className={`
                           relative flex items-center px-3 py-1.5 text-sm rounded cursor-pointer
-                          hover:bg-gray-100 dark:hover:bg-[rgb(var(--color-border-100))] ${isSelected ? 'bg-gray-50 dark:bg-[rgb(var(--color-border-50))]' : ''}
+                          hover:bg-[rgb(var(--color-primary-500)/0.08)] ${isSelected ? 'bg-[rgb(var(--color-table-selected))]' : ''}
                         `}
                         onClick={() => onTeamValuesChange?.(isSelected ? teamValues.filter(id => id !== team.team_id) : [...teamValues, team.team_id])}
                       >
@@ -714,7 +714,7 @@ const MultiUserAndTeamPicker = ({
 
         {/* Clear all button */}
         {(values.length > 0 || includeUnassigned || teamValues.length > 0) && (
-          <div className="border-t border-gray-200 dark:border-[rgb(var(--color-border-200))] p-2">
+          <div className="border-t border-[rgb(var(--color-border-200))] p-2">
             <Button
               id={`${id || 'multi-user-picker'}-clear-all`}
               variant="ghost"

@@ -54,7 +54,7 @@ function renderModal(overrides?: Partial<Parameters<typeof TagPickerModal>[0]>):
     updating: false,
     updateError: null,
     appliedTagTexts: [] as string[],
-    onSelect: vi.fn(),
+    onApply: vi.fn(),
     onClose: vi.fn(),
     client: { request: vi.fn() } as never,
     apiKey: "api-key",
@@ -174,9 +174,30 @@ describe("TagPickerModal", () => {
     expect(createRow(renderer, "urgent")).toBeUndefined();
   });
 
-  it("selects the trimmed search text from the create row", async () => {
-    const onSelect = vi.fn();
-    const renderer = renderModal({ onSelect });
+  it("keeps a staged new tag visible as a selected row", async () => {
+    const renderer = renderModal();
+    await flush();
+
+    typeSearch(renderer, "fresh");
+    await flush();
+
+    const row = createRow(renderer, "fresh");
+    expect(row).toBeDefined();
+    act(() => row!.props.onPress());
+
+    // The create row collapses once staged, but the tag must not vanish —
+    // it stays in the list, marked "New" to distinguish it from tags that
+    // already exist on the ticket.
+    expect(createRow(renderer, "fresh")).toBeUndefined();
+    const texts = getTextContent(renderer);
+    expect(texts).toContain("fresh");
+    expect(texts).toContain("tags.newLabel");
+    expect(texts).not.toContain("tags.selected");
+  });
+
+  it("stages the trimmed search text and applies it explicitly", async () => {
+    const onApply = vi.fn();
+    const renderer = renderModal({ onApply });
     await flush();
 
     typeSearch(renderer, "  fresh  ");
@@ -185,6 +206,13 @@ describe("TagPickerModal", () => {
     const row = createRow(renderer, "fresh");
     expect(row).toBeDefined();
     act(() => row!.props.onPress());
-    expect(onSelect).toHaveBeenCalledWith("fresh");
+    expect(onApply).not.toHaveBeenCalled();
+
+    const apply = renderer.root.findAllByType(Pressable).find(
+      (button) => button.props.accessibilityLabel === "common:apply",
+    );
+    expect(apply).toBeDefined();
+    act(() => apply!.props.onPress());
+    expect(onApply).toHaveBeenCalledWith(["fresh"]);
   });
 });

@@ -309,6 +309,17 @@ describe('ManagedEmailSettings removal actions', () => {
     });
   });
 
+  it('does not expose a thrown English domain-loading error', async () => {
+    getManagedEmailDomainsMock.mockRejectedValue(new Error('Secret backend trace'));
+
+    render(<ManagedEmailSettings />);
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith('Failed to load managed domains');
+    });
+    expect(toastErrorMock).not.toHaveBeenCalledWith('Secret backend trace');
+  });
+
   it('clears the saved ticketing from address via the explicit clear action', async () => {
     updateEmailSettingsMock.mockResolvedValue({
       ...baseSettings,

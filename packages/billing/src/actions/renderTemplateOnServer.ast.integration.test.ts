@@ -131,6 +131,7 @@ describe('renderTemplateOnServer AST integration', () => {
       )
     ).resolves.toEqual({
       actionError: 'Invoice template is missing its design payload. Please choose another template.',
+      messageKey: 'msp/invoicing:errors.template.missingDesign',
     });
   });
 });

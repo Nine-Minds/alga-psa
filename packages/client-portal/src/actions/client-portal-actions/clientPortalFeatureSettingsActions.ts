@@ -29,7 +29,7 @@ export const updateClientPortalFeatureSettings = withAuth(async (
   const { knex } = await createTenantKnex();
 
   if (!(await hasPermission(user, 'settings', 'update', knex))) {
-    return permissionError('Permission denied: settings:update required');
+    return permissionError('Permission denied: settings:update required', 'client-portal:errors.access.settingsUpdate');
   }
 
   const scopedDb = tenantDb(knex, tenant);

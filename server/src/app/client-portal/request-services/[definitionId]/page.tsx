@@ -49,6 +49,10 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
   const submitError =
     typeof resolvedSearchParams?.error === 'string' ? resolvedSearchParams.error : null;
   const submitAction = submitRequestServiceDefinitionAction.bind(null, definitionId);
+  // One opaque key per rendered form attempt: retries of this rendered form
+  // resubmit the same key, letting the server deduplicate them into a single
+  // submission. Reloading the page starts a fresh attempt with a fresh key.
+  const clientSubmissionKey = crypto.randomUUID();
   const fields = Array.isArray((detail.formSchema as any)?.fields)
     ? ((detail.formSchema as any).fields as any[])
     : [];
@@ -103,7 +107,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         </Alert>
       )}
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
         <h2 className="text-base font-semibold mb-2">{t('detail.formTitle')}</h2>
         {visibleFields.length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">{t('detail.noFields')}</p>
@@ -128,6 +132,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
                 : undefined,
             }))}
             initialValues={detail.initialValues}
+            clientSubmissionKey={clientSubmissionKey}
             labels={{
               selectPlaceholder: t('detail.selectOption'),
               datePlaceholder: t('detail.datePlaceholder'),
@@ -137,7 +142,7 @@ export default async function RequestServiceDetailPage(props: RequestServiceDeta
         )}
       </section>
 
-      <section className="rounded border p-4 bg-[rgb(var(--color-background-100))]">
+      <section className="rounded border p-4 bg-[rgb(var(--color-border-100))]">
         <h2 className="text-base font-semibold mb-2">{t('detail.initialValuesTitle')}</h2>
         {Object.keys(detail.initialValues).length === 0 ? (
           <p className="text-sm text-[rgb(var(--color-text-600))]">

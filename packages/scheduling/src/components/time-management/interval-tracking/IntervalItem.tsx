@@ -44,8 +44,14 @@ export function IntervalItem({
   return (
     <div
       className={`${
-        isBento ? 'rounded-md border border-[rgb(var(--color-border-200))] p-2' : 'border rounded p-2'
-      } flex items-center ${isSelected ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700' : ''}`}
+        isBento ? 'rounded-md border p-2' : 'border rounded p-2'
+      } flex items-center ${
+        isSelected
+          ? 'bg-[rgb(var(--color-table-selected))] border-[rgb(var(--color-primary-500)/0.55)]'
+          : isBento
+            ? 'border-[rgb(var(--color-border-200))]'
+            : ''
+      }`}
       id={`interval-item-${interval.id}`}
     >
       <Checkbox

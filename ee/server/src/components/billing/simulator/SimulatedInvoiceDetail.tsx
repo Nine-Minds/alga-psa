@@ -83,22 +83,22 @@ const SimulatedInvoiceDetail: React.FC<SimulatedInvoiceDetailProps> = ({
       <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-400))]">
+            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-left text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-500))]">
               {t("contractSimulator.invoiceDetail.columns.line", {
                 defaultValue: "Line",
               })}
             </th>
-            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-400))]">
+            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-500))]">
               {t("contractSimulator.invoiceDetail.columns.qty", {
                 defaultValue: "Quantity",
               })}
             </th>
-            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-400))]">
+            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-500))]">
               {t("contractSimulator.invoiceDetail.columns.rate", {
                 defaultValue: "Rate",
               })}
             </th>
-            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-400))]">
+            <th className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] px-4 py-2 text-right text-[10px] font-semibold uppercase tracking-widest text-[rgb(var(--color-text-500))]">
               {t("contractSimulator.invoiceDetail.columns.amount", {
                 defaultValue: "Amount",
               })}

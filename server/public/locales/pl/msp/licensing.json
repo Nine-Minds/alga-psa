@@ -357,5 +357,9 @@
       "startTrial": "Nie udało się uruchomić okresu próbnego.",
       "refreshLicense": "Nie udało się odświeżyć licencji."
     }
+  },
+  "errors": {
+    "notSignedIn": "Brak autoryzacji. Zaloguj się, aby zarządzać licencjami.",
+    "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
   }
 }

@@ -83,7 +83,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
 };
 
 const FeatureCard = ({ icon: Icon, title, description }: { icon: any, title: string, description: string }) => (
-  <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-card hover:shadow-lg transition-shadow p-4">
+  <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-card card-elevated card-elevated-hover transition-shadow p-4">
     <div className="flex items-start space-x-4">
       <div className="p-2 rounded-lg" style={{ background: 'rgb(var(--color-primary-50))' }}>
         <Icon className="h-6 w-6" style={{ color: 'rgb(var(--color-primary-500))' }} />

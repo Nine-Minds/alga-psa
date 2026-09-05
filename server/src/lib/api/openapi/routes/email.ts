@@ -450,7 +450,7 @@ export function registerEmailRoutes(registry: ApiOpenApiRegistry) {
     path: '/api/email/webhooks/microsoft',
     summary: 'Receive Microsoft Graph email webhook',
     description:
-      'Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, validates clientState against the stored webhook_verification_token when configured, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.',
+      'Receives Microsoft Graph change notifications for monitored mailboxes. Standard session and API-key middleware are bypassed. The handler supports validation token echo, parses Microsoft notification batches, resolves provider and tenant by matching notification subscriptionId to microsoft_email_provider_config.webhook_subscription_id, requires a timing-safe clientState match against the stored webhook_verification_token, extracts message IDs, and enqueues pointer-only jobs into the unified inbound email queue. The tenantId in the Microsoft payload is informational and is not trusted for tenant resolution.',
     tags: [tag],
     security: [],
     request: {

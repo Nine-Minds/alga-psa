@@ -231,30 +231,26 @@ export function MarketingCalendar({
         </div>
         <div className="ml-auto flex flex-shrink-0 items-center gap-2">
           <div className="flex overflow-hidden rounded-md border border-[rgb(var(--color-border-200))] text-xs font-medium">
-            <button
+            <Button
               id="marketing-calendar-view-month"
               type="button"
-              className={`px-3 py-1.5 ${
-                view === 'month'
-                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]'
-                  : 'text-[rgb(var(--color-text-500))]'
-              }`}
+              size="xs"
+              variant={view === 'month' ? 'soft' : 'ghost'}
+              className="rounded-none"
               onClick={() => setView('month')}
             >
               {t('marketing.calendar.viewMonth', 'Month')}
-            </button>
-            <button
+            </Button>
+            <Button
               id="marketing-calendar-view-agenda"
               type="button"
-              className={`border-l border-[rgb(var(--color-border-200))] px-3 py-1.5 ${
-                view === 'agenda'
-                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]'
-                  : 'text-[rgb(var(--color-text-500))]'
-              }`}
+              size="xs"
+              variant={view === 'agenda' ? 'soft' : 'ghost'}
+              className="rounded-none border-l border-[rgb(var(--color-border-200))]"
               onClick={() => setView('agenda')}
             >
               {t('marketing.calendar.viewAgenda', 'Agenda')}
-            </button>
+            </Button>
           </div>
           <Button
             id="marketing-calendar-new-post"
@@ -297,7 +293,7 @@ export function MarketingCalendar({
                 {[0, 1, 2, 3, 4, 5, 6].map((weekday) => (
                   <div
                     key={weekday}
-                    className="bg-[rgb(var(--color-border-50))] px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]"
+                    className="bg-[rgb(var(--color-border-50))] px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-500))]"
                   >
                     {new Date(2024, 0, 7 + weekday).toLocaleDateString(undefined, { weekday: 'short' })}
                   </div>
@@ -327,7 +323,7 @@ export function MarketingCalendar({
                               ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
                               : item.status === 'awaiting-manual-publish'
                                 ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
-                                : 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]'
+                                : 'chip-primary'
                           }`}
                           title={`${item.content_title} · ${item.channel_name}`}
                         >

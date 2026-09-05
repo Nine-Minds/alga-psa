@@ -21,6 +21,9 @@ const TEN_PERCENT_PORTS: ChargeComputeTaxPorts = {
   }),
   getLocationTaxRegionCode: () => null,
   getClientDefaultTaxRegionCode: () => "US-TEST",
+  // No profile dimension in these fixtures: the client-level answer applies,
+  // which is exactly what a single-profile client gets in production.
+  isTaxExemptForProfile: () => false,
   calculateTax: (_clientId, netAmountInCents) => ({
     taxRate: 10,
     taxAmount: Math.round(netAmountInCents * 0.1),
@@ -417,6 +420,98 @@ describe("computeTimeBasedCharges", () => {
       ),
     ).toThrow(/Missing pricing for time entry/);
   });
+
+  it("freezes a ticket work-item snapshot with billed (rounded) minutes and integer money", async () => {
+    const config = {
+      config: {
+        ...HOURLY_CONFIG.config,
+        minimum_billable_time: 30,
+        round_up_to_nearest: 15,
+      },
+      userTypeRates: new Map<string, number>(),
+    };
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        serviceConfigMap: new Map([["svc-h", config]]),
+        timeEntries: [
+          entry({
+            billable_duration: 70, // rounds up to 75
+            work_item_id: "ticket-1",
+            work_item_type: "ticket",
+            ticket_number: "T-20260818-002",
+            ticket_title: "Email outage",
+            ticket_description: "Mail flow failed for all users.",
+            notes: "internal-only troubleshooting notes",
+          }),
+        ],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    const snapshot = result.charges[0].workItemSnapshot;
+    expect(snapshot).toMatchObject({
+      version: 1,
+      workItemType: "ticket",
+      workItemId: "ticket-1",
+      ticketNumber: "T-20260818-002",
+      title: "Email outage",
+      description: "Mail flow failed for all users.",
+      entryDate: "2026-08-05",
+      billedMinutes: 75,
+      rate: 15000,
+      netAmount: Math.round(1.25 * 15000),
+      serviceId: "svc-h",
+      serviceName: "Remote support",
+    });
+    // Customer-visibility rule: internal time-entry notes never enter the snapshot.
+    expect(JSON.stringify(snapshot)).not.toContain("internal-only");
+    // Snapshot is renderer metadata only — the canonical description input is untouched.
+    expect(result.charges[0].serviceName).toBe("Remote support");
+  });
+
+  it("snapshots project-task time under the task name with no ticket fields", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({
+        timeEntries: [
+          entry({
+            work_item_id: "task-9",
+            work_item_type: "project_task",
+            project_task_name: "Data sync validation",
+            // Loader joins can leave stale ticket columns null for tasks.
+            ticket_number: null,
+            ticket_title: null,
+            ticket_description: null,
+          }),
+        ],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].workItemSnapshot).toMatchObject({
+      workItemType: "project_task",
+      workItemId: "task-9",
+      ticketNumber: null,
+      title: "Data sync validation",
+      description: null,
+    });
+  });
+
+  it("snapshots entries without a known work item as ad_hoc", async () => {
+    const result = await computeTimeBasedCharges(
+      timeInputs({ timeEntries: [entry()] }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].workItemSnapshot).toMatchObject({
+      workItemType: "ad_hoc",
+      workItemId: null,
+      ticketNumber: null,
+      title: null,
+      description: null,
+      billedMinutes: 120,
+      netAmount: 30000,
+    });
+  });
 });
 
 describe("computeUsageBasedCharges", () => {
@@ -550,6 +645,63 @@ describe("computeUsageBasedCharges", () => {
         TEN_PERCENT_PORTS,
       ),
     ).toThrow(/Missing pricing for usage/);
+  });
+
+  // Usage billing is record-driven: only explicit usage records create
+  // charges. A period with no record produces nothing here (the engine
+  // reports it as missing usage); an explicit zero record is a valid charge.
+  it("produces no charges when the period has no usage records", async () => {
+    const result = await computeUsageBasedCharges(
+      usageInputs({ usageRecords: [] }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(0);
+    expect(result.explanations).toHaveLength(0);
+  });
+
+  it("bills an explicit zero-usage record as a valid zero-total charge", async () => {
+    const result = await computeUsageBasedCharges(
+      usageInputs({ usageRecords: [usageRecord({ quantity: 0 })] }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(1);
+    expect(result.charges[0]).toMatchObject({ quantity: 0, total: 0 });
+    expect(result.explanations[0].markers).not.toContain("minimum_applied");
+  });
+
+  it("floors an explicit zero-usage record to the configured minimum", async () => {
+    const config = {
+      ...USAGE_CONFIG,
+      config: { ...USAGE_CONFIG.config, minimum_usage: 5 },
+    };
+    const result = await computeUsageBasedCharges(
+      usageInputs({
+        serviceConfigMap: new Map([["svc-u", config]]),
+        usageRecords: [usageRecord({ quantity: 0 })],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0]).toMatchObject({ quantity: 5, total: 1250 });
+    expect(result.explanations[0].markers).toContain("minimum_applied");
+  });
+
+  it("cannot create a minimum charge without a usage record", async () => {
+    const config = {
+      ...USAGE_CONFIG,
+      config: { ...USAGE_CONFIG.config, minimum_usage: 25 },
+    };
+    const result = await computeUsageBasedCharges(
+      usageInputs({
+        serviceConfigMap: new Map([["svc-u", config]]),
+        usageRecords: [],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(0);
   });
 });
 
@@ -713,6 +865,7 @@ describe("computeBucketCharges", () => {
             : { taxRegion: null, isTaxable: false },
       getLocationTaxRegionCode: () => null,
       getClientDefaultTaxRegionCode: () => null,
+      isTaxExemptForProfile: () => false,
       calculateTax: (_clientId, netAmountInCents, _date, regionCode) => ({
         taxRate: regionCode === "US-TESTA" ? 8.25 : 5,
         taxAmount:

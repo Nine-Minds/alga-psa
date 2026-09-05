@@ -11,10 +11,13 @@
     "clients": "Klanten",
     "opportunities": "Verkoopkansen",
     "contacts": "Contacten",
+    "interactions": "Interacties",
     "documents": "Documenten",
     "documentsAll": "Alle documenten",
     "knowledgeBase": "Kennisbank",
     "assets": "Assets",
+    "assetsAll": "Alle assets",
+    "assetsMaintenance": "Onderhoud",
     "inventory": {
       "label": "Inventaris",
       "sections": {
@@ -127,11 +130,13 @@
       "users": "Gebruikers",
       "teams": "Teams",
       "language": "Taal",
+      "appearance": "Weergave",
       "clientPortal": "Klantenportaal",
       "license": "Licentie",
       "ticketing": "Ticketbeheer",
       "sla": "SLA",
       "projects": "Projecten",
+      "assets": "Assets",
       "interactions": "Interacties",
       "opportunities": "Verkoopkansen",
       "notifications": "Meldingen",
@@ -194,6 +199,12 @@
           "description": "Voeg een nieuw product toe aan uw catalogus"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Bronnen en hulp",
+      "title": "Bronnen",
+      "documentation": "Documentatie",
+      "support": "Contact opnemen met support"
     },
     "jobs": {
       "ariaLabel": "Activiteit van achtergrondtaken bekijken",

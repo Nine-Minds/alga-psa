@@ -12,6 +12,7 @@ import {
   validateSubmissionAgainstPublishedSchema,
   type ServiceRequestPortalDefinitionDetail,
 } from '../../../../lib/service-requests';
+import { CLIENT_SUBMISSION_KEY_FIELD_NAME } from './clientSubmissionKey';
 
 function buildRequestServiceDefinitionRedirectUrl(
   definitionId: string,
@@ -109,6 +110,12 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
   if (currentUser.user_type !== 'client') {
     redirect(buildRequestServiceDefinitionRedirectUrl(definitionId, { error: 'forbidden' }));
   }
+
+  const rawClientSubmissionKey = formData.get(CLIENT_SUBMISSION_KEY_FIELD_NAME);
+  const clientSubmissionKey =
+    typeof rawClientSubmissionKey === 'string' && rawClientSubmissionKey.trim().length > 0
+      ? rawClientSubmissionKey.trim()
+      : null;
 
   const { knex } = await createTenantKnex();
   const outcome = await withTransaction(knex, async (trx) => {
@@ -221,7 +228,18 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
         contactId: currentUser.contact_id ?? null,
         payload,
         attachments,
+        clientSubmissionKey,
       });
+
+      // A replayed retry returns the original submission; the files uploaded
+      // for this duplicate request were never attached, so remove them.
+      if (result.replayed && uploadedFileIds.length > 0) {
+        await Promise.allSettled(
+          uploadedFileIds.map((fileId) =>
+            StorageService.deleteFile(fileId, currentUser.user_id)
+          )
+        );
+      }
 
       return {
         status: 'success' as const,

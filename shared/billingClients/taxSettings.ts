@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { v4 as uuid4 } from 'uuid';
 import type { IClientTaxSettings, ITaxRateDetails as ITaxRate, ITaxComponent, TaxSource } from '@alga-psa/types';
+import { ensureClientDefaultBillingProfile } from './billingProfiles';
 
 export async function getClientTaxSettings(
   knexOrTrx: Knex | Knex.Transaction,
@@ -41,6 +42,11 @@ export async function createDefaultTaxSettings(
   clientId: string
 ): Promise<IClientTaxSettings> {
   const db = tenantDb(knexOrTrx, tenant);
+  // `client_tax_settings` is keyed per billing profile since S7: the client's
+  // default profile is the legal entity a freshly created client bills as,
+  // and the NOT NULL profile column is part of the row's identity.
+  const billingProfileId = await ensureClientDefaultBillingProfile(knexOrTrx, tenant, clientId);
+
   // Get the first active tax rate to use as the default
   const defaultTaxRate = await db.table<ITaxRate>('tax_rates')
     .where('is_active', true)
@@ -54,6 +60,7 @@ export async function createDefaultTaxSettings(
   const [taxSettings] = await db.table<IClientTaxSettings>('client_tax_settings')
     .insert({
       client_id: clientId,
+      billing_profile_id: billingProfileId,
       is_reverse_charge_applicable: false,
       tenant
     })

@@ -16,6 +16,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
 import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
 import { getAccountingSyncHealth } from '@alga-psa/billing/actions/accountingSyncActions';
+import { useAccountingCapabilities } from '@alga-psa/auth/hooks/useAccountingCapabilities';
 
 type AccountingExportStatus =
   | 'pending'
@@ -120,8 +121,29 @@ function getAccountingExportStatusKey(status: AccountingExportStatus): string {
   }
 }
 
+export function AccountingExportsAccessDenied(): React.JSX.Element {
+  const { t } = useTranslation('msp/billing');
+
+  return (
+    <Card id="accounting-exports-access-denied" role="alert">
+      <CardHeader>
+        <CardTitle>
+          {t('accountingExports.states.accessDeniedTitle', { defaultValue: 'Access denied' })}
+        </CardTitle>
+        <CardDescription>
+          {t('accountingExports.states.accessDeniedDescription', {
+            defaultValue: 'You do not have permission to access accounting exports.',
+          })}
+        </CardDescription>
+      </CardHeader>
+    </Card>
+  );
+}
+
 export default function AccountingExportsTab(): React.JSX.Element {
   const { t } = useTranslation('msp/billing');
+  const accountingCapabilities = useAccountingCapabilities();
+  const [accessDenied, setAccessDenied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [batches, setBatches] = useState<AccountingExportBatch[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
@@ -139,13 +161,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const [targetRealm, setTargetRealm] = useState<string>('');
   const [availableRealms, setAvailableRealms] = useState<Array<{ realmId: string; isDefault: boolean }>>([]);
 
+  const denyAccess = useCallback(() => {
+    setAccessDenied(true);
+    setBatches([]);
+    setSelectedBatchId(null);
+    setSelectedDetail(null);
+    setCreateOpen(false);
+    setAvailableRealms([]);
+    setTargetRealm('');
+  }, []);
+
   const loadBatches = useCallback(async () => {
+    if (!accountingCapabilities.exportsExecute || accessDenied) return;
     setLoading(true);
     try {
       const data = await listAccountingExportBatches();
       if (isActionPermissionError(data)) {
-        handleError(data.permissionError);
-        setBatches([]);
+        denyAccess();
         return;
       }
       const typedData = data as unknown as AccountingExportBatch[];
@@ -158,15 +190,14 @@ export default function AccountingExportsTab(): React.JSX.Element {
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [accessDenied, accountingCapabilities.exportsExecute, denyAccess, t]);
 
   const loadBatchDetail = useCallback(async (batchId: string) => {
     setDetailLoading(true);
     try {
       const detail = await getAccountingExportBatch(batchId);
       if (isActionPermissionError(detail)) {
-        handleError(detail.permissionError);
-        setSelectedDetail(null);
+        denyAccess();
         return;
       }
       setSelectedDetail(detail as unknown as BatchDetail);
@@ -178,12 +209,15 @@ export default function AccountingExportsTab(): React.JSX.Element {
     } finally {
       setDetailLoading(false);
     }
-  }, [t]);
+  }, [denyAccess, t]);
 
   // Load available realms once on mount for multi-realm picker in the create dialog
   useEffect(() => {
+    if (!accountingCapabilities.loaded || !accountingCapabilities.exportsExecute || accessDenied) return;
+    let cancelled = false;
     getAccountingSyncHealth()
       .then((health) => {
+        if (cancelled) return;
         if (health.realms.length > 1) {
           setAvailableRealms(health.realms);
           const defaultRealm = health.realms.find((r) => r.isDefault);
@@ -195,16 +229,23 @@ export default function AccountingExportsTab(): React.JSX.Element {
       .catch(() => {
         // Not EE or no permission — realm picker stays hidden
       });
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [accessDenied, accountingCapabilities.exportsExecute, accountingCapabilities.loaded]);
 
   useEffect(() => {
+    if (!accountingCapabilities.loaded || !accountingCapabilities.exportsExecute || accessDenied) {
+      if (accountingCapabilities.loaded) setLoading(false);
+      return;
+    }
     void loadBatches();
-  }, [loadBatches]);
+  }, [accessDenied, accountingCapabilities.exportsExecute, accountingCapabilities.loaded, loadBatches]);
 
   useEffect(() => {
-    if (!selectedBatchId) return;
+    if (!selectedBatchId || accessDenied || !accountingCapabilities.exportsExecute) return;
     void loadBatchDetail(selectedBatchId);
-  }, [selectedBatchId, loadBatchDetail]);
+  }, [accessDenied, accountingCapabilities.exportsExecute, selectedBatchId, loadBatchDetail]);
 
   const selectedBatch = useMemo(
     () => (selectedDetail?.batch?.batch_id ? selectedDetail.batch : batches.find((b) => b.batch_id === selectedBatchId) ?? null),
@@ -237,7 +278,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
         ...(targetRealm ? { target_realm: targetRealm } : {})
       });
       if (isActionPermissionError(batchResult)) {
-        handleError(batchResult.permissionError);
+        denyAccess();
         return;
       }
       if (isAccountingExportActionError(batchResult)) {
@@ -264,7 +305,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
     try {
       const result = await executeAccountingExportBatch(batchId);
       if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+        denyAccess();
         return;
       }
       if (isAccountingExportActionError(result)) {
@@ -289,7 +330,7 @@ export default function AccountingExportsTab(): React.JSX.Element {
     try {
       const result = await cancelAccountingExportBatch(batchId);
       if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+        denyAccess();
         return;
       }
       if (isAccountingExportActionError(result)) {
@@ -311,6 +352,18 @@ export default function AccountingExportsTab(): React.JSX.Element {
   const isCancellable = (status: AccountingExportStatus): boolean =>
     status === 'pending' || status === 'validating' || status === 'ready' ||
     status === 'needs_attention' || status === 'failed';
+
+  if (!accountingCapabilities.loaded) {
+    return (
+      <div className="text-sm text-muted-foreground" role="status">
+        {t('accountingExports.states.checkingAccess', { defaultValue: 'Checking access...' })}
+      </div>
+    );
+  }
+
+  if (!accountingCapabilities.exportsExecute || accessDenied) {
+    return <AccountingExportsAccessDenied />;
+  }
 
   return (
     <div className="space-y-6" id="billing-accounting-exports">

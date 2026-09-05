@@ -7,6 +7,74 @@ export interface IBillingPeriod extends TenantEntity {
   endDate: ISO8601String;
 }
 
+/**
+ * Which step of the billing-profile resolution chain produced a charge's
+ * profile. Ordered most- to least-specific; the chain always terminates at
+ * `client_default`. Mirrors the CHECK constraint on
+ * `invoice_charges.billing_profile_source`.
+ */
+export type BillingProfileSource =
+  | 'explicit'
+  | 'contract_line'
+  | 'contract'
+  | 'work_item'
+  | 'client_default';
+
+export const BILLING_PROFILE_SOURCES: readonly BillingProfileSource[] = [
+  'explicit',
+  'contract_line',
+  'contract',
+  'work_item',
+  'client_default',
+] as const;
+
+/**
+ * How a time entry's contract line was chosen. Mirrors the CHECK constraint on
+ * `time_entries.contract_line_source`.
+ */
+export type ContractLineSource =
+  | 'explicit'
+  | 'auto_unique_service'
+  | 'auto_bucket_overlay'
+  | 'auto_billing_profile'
+  | 'unresolved'
+  | 'reconciled_at_generation';
+
+export const CONTRACT_LINE_SOURCES: readonly ContractLineSource[] = [
+  'explicit',
+  'auto_unique_service',
+  'auto_bucket_overlay',
+  'auto_billing_profile',
+  'unresolved',
+  'reconciled_at_generation',
+] as const;
+
+/**
+ * Why the contract-line resolver reached its answer. Distinct from
+ * `ContractLineSource`, which records the answer's provenance on the entry:
+ * several reasons collapse to `unresolved`, and the reason is what tells a
+ * biller whether catalog pricing is honest (`no_match`) or wrong (`ambiguous`).
+ */
+export type ContractLineSelectionReason =
+  | 'single_candidate'
+  | 'bucket_overlay'
+  | 'billing_profile'
+  | 'ambiguous'
+  | 'no_match'
+  | 'error';
+
+export const CONTRACT_LINE_SOURCE_BY_SELECTION_REASON: Record<
+  ContractLineSelectionReason,
+  ContractLineSource
+> = {
+  single_candidate: 'auto_unique_service',
+  bucket_overlay: 'auto_bucket_overlay',
+  billing_profile: 'auto_billing_profile',
+  ambiguous: 'unresolved',
+  no_match: 'unresolved',
+  error: 'unresolved',
+};
+
 export interface IUserCostRate extends TenantEntity {
   rate_id: string;
   user_id: string | null;
@@ -36,6 +104,43 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
   // taxAllocationDetails?: any[]; // Removed in favor of direct fields and new tables
 }
 
+/**
+ * Immutable, renderer-safe snapshot of the source work item behind one billed
+ * time entry, captured at invoice generation and persisted on the
+ * `invoice_time_entries` link row (`work_item_snapshot`, nullable jsonb).
+ *
+ * Finalized invoices and their PDFs render from this snapshot only — never
+ * from the live ticket or time entry — so later edits to the source records
+ * cannot change an issued invoice. Invoices generated before the snapshot
+ * existed have NULL here and simply render without ticket-level detail
+ * (no backfill from mutable data, by design).
+ *
+ * Customer-visibility rule: only the ticket's own title and description are
+ * captured. Internal comments and time-entry notes are never included.
+ */
+export interface InvoiceTimeEntrySnapshot {
+  version: 1;
+  /** 'ticket' | 'project_task' | 'ad_hoc' provenance of the billed time. */
+  workItemType: 'ticket' | 'project_task' | 'ad_hoc' | null;
+  /** Ticket id or project-task id, preserved for traceability. */
+  workItemId: string | null;
+  ticketNumber: string | null;
+  /** Ticket title or project-task name. */
+  title: string | null;
+  /** Customer-visible ticket description (never internal notes/comments). */
+  description: string | null;
+  /** ISO date the billed work started. */
+  entryDate: string | null;
+  /** Billed duration in whole minutes, after minimum/rounding rules. */
+  billedMinutes: number;
+  /** Effective hourly rate in minor currency units. */
+  rate: number;
+  /** Net (pre-tax) amount in minor currency units. */
+  netAmount: number;
+  serviceId: string | null;
+  serviceName: string | null;
+}
+
 export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   serviceId: string;
   serviceName: string;
@@ -45,6 +150,12 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'time';
   entryId: string; // Added field for source time entry ID
+  /**
+   * Work-item snapshot persisted to `invoice_time_entries.work_item_snapshot`
+   * when this charge is invoiced. Renderer-only metadata: it must never feed
+   * the canonical charge description or accounting exports.
+   */
+  workItemSnapshot?: InvoiceTimeEntrySnapshot | null;
   write_down_amount?: number;
   write_down_reason?: 'project_cap';
 }
@@ -57,6 +168,14 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'usage';
   usageId: string; // Added field for source usage record ID
+  /**
+   * Set when the charge was produced from a period-total report rather than a
+   * dated additive usage entry. The value is the usage_period_totals row id
+   * and its revision at compute time; invoice persistence consumes exactly
+   * that revision and never the usage_tracking table.
+   */
+  usagePeriodTotalId?: string;
+  usagePeriodTotalRevision?: number;
 }
 
 type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit' | 'hour_block';
@@ -83,6 +202,20 @@ export interface IBillingCharge extends TenantEntity {
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   location_id?: string | null;
+  /**
+   * Billing profile this charge is attributed to, resolved through the
+   * five-step chain. Null only in contexts that never persist charges (the
+   * contract simulator); production generation always resolves one.
+   */
+  billing_profile_id?: string | null;
+  billing_profile_source?: BillingProfileSource | null;
+  /**
+   * Set only on charges the engine could not attach to a contract line.
+   * `no_match` means no contract covers the service, so catalog pricing is
+   * honest; anything else means one does and the line could not be picked, so
+   * catalog pricing is wrong and needs an explicit decision.
+   */
+  unresolved_reason?: ContractLineSelectionReason | null;
   servicePeriodStart?: ISO8601String;
   servicePeriodEnd?: ISO8601String;
   servicePeriodRecordId?: string | null;
@@ -103,13 +236,78 @@ export interface IAdjustment extends TenantEntity {
   amount: number;
 }
 
+/**
+ * Usage billing is record-driven: only explicit period-dated usage_tracking
+ * records (additive mode) or an explicit usage_period_totals report
+ * (period-total mode) create charges. When a usage-billed service has no
+ * eligible report in a due service period, the engine reports it here instead
+ * of silently producing nothing — absence of a report means "unreported",
+ * never an implicit zero and never an automatic recurring baseline.
+ */
+export type UsageServicePeriodDiagnosis =
+  | 'missing_usage'
+  | 'unreported'
+  | 'explicit_zero'
+  | 'billable'
+  | 'already_invoiced'
+  | 'minimum_raised_zero'
+  | 'attribution_excluded'
+  | 'calculation_error';
+
+export interface IUsageServicePeriodStatus {
+  client_contract_line_id: string;
+  contract_line_name?: string;
+  service_id: string;
+  service_name: string | null;
+  config_id?: string | null;
+  service_period_start: ISO8601String;
+  service_period_end: ISO8601String;
+  status: UsageServicePeriodDiagnosis;
+  /**
+   * Configured minimum for the service. In additive mode a positive minimum is
+   * a floor applied only when an explicit usage record exists for the period;
+   * it never creates a charge on its own. In period-total mode the same floor
+   * is applied once to the reported total.
+   */
+  minimum_usage: number;
+  /**
+   * Measurement mode of the service configuration for the reported period.
+   * Lets callers phrase the next action correctly ("Report a period total"
+   * versus "Add consumption").
+   */
+  measurement_mode?: 'additive' | 'period_total' | null;
+  /**
+   * Reported quantity when the period carries an explicit report (including an
+   * explicit zero). Absent when the period is simply unreported.
+   */
+  quantity?: number | null;
+  /**
+   * Billable quantity after pricing rules (per-entry/per-total minimum) when a
+   * report exists. Differs from quantity when a minimum raised an explicit
+   * zero; a minimum alone never turns an absent report into a charge.
+   */
+  billable_quantity?: number | null;
+  /** Period-total row revision, when the report is a period total. */
+  revision?: number | null;
+  /** The reported amount would raise a minimum: billable exceeds reported. */
+  minimum_applied?: boolean;
+}
+
 export interface IBillingResult extends TenantEntity {
+  expectedUsagePeriodTotals?: import('./invoice.interfaces').IExpectedUsagePeriodTotal[];
   charges: IBillingCharge[];
   totalAmount: number;
   discounts: IDiscount[];
   adjustments: IAdjustment[];
   finalAmount: number;
   currency_code: string;
+  /**
+   * Usage-billed services in the calculated window whose due service period
+   * has no eligible usage record. Lets invoice preview distinguish
+   * "no eligible usage records for this period" from a valid zero-usage
+   * record and from calculation errors.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 }
 
 export interface IClientContractLine extends TenantEntity {
@@ -142,6 +340,10 @@ export interface IClientContractLine extends TenantEntity {
   contract_name?: string; // Contract name (added dynamically for contract-associated contract lines)
   location_id?: string | null;
   is_system_managed_default?: boolean;
+  /** contract_lines.billing_profile_id — step 2 of the resolution chain. */
+  billing_profile_id?: string | null;
+  /** client_contracts.billing_profile_id — step 3 of the resolution chain. */
+  contract_billing_profile_id?: string | null;
 }
 
 export interface IClientContractLineCycle extends TenantEntity {

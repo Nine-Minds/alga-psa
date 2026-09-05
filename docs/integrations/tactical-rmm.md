@@ -73,6 +73,32 @@ last-seen time and cached vitals such as current user, uptime, and LAN/WAN IP wh
 Tactical reports them. When an agent disappears from Tactical, AlgaPSA leaves its
 asset in place rather than deactivating it.
 
+## Scheduled device sync
+
+In addition to the manual **Sync Devices** button, AlgaPSA can keep device records
+current on a recurring schedule. Configure this in the **Device sync** section of
+the Tactical RMM integration panel:
+
+- **Enable scheduled sync** — toggle the recurring job on or off. The toggle
+  defaults to off; turn it on to start automatic sync.
+- **Interval** — how often (in minutes) AlgaPSA polls Tactical for device changes.
+  Set a value between 15 and 1440 minutes (one day). The default is 60 minutes;
+  use a lower interval for estates where endpoint churn is frequent and a higher
+  one for stable fleets where nightly sync is sufficient.
+
+Once enabled, AlgaPSA creates a recurring job keyed to this integration. The job
+runs at the configured cadence and updates asset records to match the current state
+in Tactical. The **Last synced** line under the toggle shows when the most recent
+scheduled run completed. If the last run encountered an error, the error message
+appears alongside it so you can investigate. A failed run does not disable the
+schedule — the job retries at the next interval.
+
+Disabling the toggle or deactivating the integration cancels the recurring job
+within a few minutes. Changing the interval recreates the job at the new cadence.
+
+The manual **Sync Devices** button continues to work independently of the schedule
+and always performs a full sync immediately.
+
 ## Receive alerts
 
 Tactical pushes alerts to AlgaPSA over a webhook. In the **Webhooks** section, copy

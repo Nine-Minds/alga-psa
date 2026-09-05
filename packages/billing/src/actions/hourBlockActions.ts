@@ -50,52 +50,52 @@ function hourBlockActionErrorFrom(error: unknown): HourBlockActionError | null {
       return permissionError(error.message);
     }
     if (error.message === 'Client ID is required') {
-      return actionError('Client ID is required.');
+      return actionError('Client ID is required.', 'msp/billing:errors.client.idRequired');
     }
     if (error.message === 'Client not found') {
-      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.client.notFoundRefresh');
     }
     if (/^Hour block with ID .+ not found$/.test(error.message)) {
-      return actionError('Hour block not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Hour block not found. It may have been updated or deleted. Please refresh and try again.', 'msp/hour-blocks:errors.block.notFoundRefresh');
     }
     if (/^Service .+ not found$/.test(error.message)) {
-      return actionError('Service not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Service not found. It may have been updated or deleted. Please refresh and try again.', 'msp/hour-blocks:errors.block.serviceNotFound');
     }
     if (error.message === 'Block hours must be greater than zero') {
-      return actionError('Block hours must be greater than zero.');
+      return actionError('Block hours must be greater than zero.', 'msp/hour-blocks:errors.block.hoursPositive');
     }
     if (error.message === 'Hourly rate must be zero or greater') {
-      return actionError('Hourly rate must be zero or greater.');
+      return actionError('Hourly rate must be zero or greater.', 'msp/hour-blocks:errors.block.ratePositive');
     }
     if (error.message === 'Reason is required for this operation') {
-      return actionError('A reason is required for this operation.');
+      return actionError('A reason is required for this operation.', 'msp/hour-blocks:errors.block.reasonRequired');
     }
     if (error.message === 'Cannot adjust an expired or voided hour block') {
-      return actionError('Cannot adjust an expired or voided hour block.');
+      return actionError('Cannot adjust an expired or voided hour block.', 'msp/hour-blocks:errors.block.adjustExpiredOrVoided');
     }
     if (error.message === 'Cannot void an hour block that has been used') {
-      return actionError('This hour block has been used and cannot be voided. Expire it instead.');
+      return actionError('This hour block has been used and cannot be voided. Expire it instead.', 'msp/hour-blocks:errors.block.usedCannotVoid');
     }
     if (error.message === 'Only pending or active hour blocks can be voided') {
-      return actionError('Only pending or active hour blocks can be voided.');
+      return actionError('Only pending or active hour blocks can be voided.', 'msp/hour-blocks:errors.block.onlyPendingOrActiveVoid');
     }
     if (error.message === 'Cannot expire a voided hour block') {
-      return actionError('Cannot expire a voided hour block.');
+      return actionError('Cannot expire a voided hour block.', 'msp/hour-blocks:errors.block.expireVoided');
     }
     if (error.message === 'Cannot update expiration of a voided hour block') {
-      return actionError('Cannot update the expiration of a voided hour block.');
+      return actionError('Cannot update the expiration of a voided hour block.', 'msp/hour-blocks:errors.block.updateExpirationVoided');
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected hour block values is invalid. Please refresh and try again.');
+    return actionError('One of the selected hour block values is invalid. Please refresh and try again.', 'msp/hour-blocks:errors.block.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError('A required hour block field is missing. Please review the form and try again.');
+    return actionError('A required hour block field is missing. Please review the form and try again.', 'msp/hour-blocks:errors.block.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, service, or invoice no longer exists. Please refresh and try again.');
+    return actionError('The selected client, service, or invoice no longer exists. Please refresh and try again.', 'msp/hour-blocks:errors.block.referenceMissing');
   }
 
   return null;
@@ -163,6 +163,125 @@ function assertReason(reason: string | undefined, message: string): void {
   }
 }
 
+export interface CreateHourBlockPurchaseInvoiceInternalInput {
+  trx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  hours: number;
+  hourlyRate: number;
+  expirationDate?: string | Date | null;
+  scopeServiceIds?: string[];
+  notes?: string | null;
+  client: DbRow;
+  service: DbRow;
+  currencyCode: string;
+  dueDate: string;
+  taxSource: unknown;
+  invoiceNumber: string;
+  createdBy: string | null;
+  replenishmentBucketUsageId?: string | null;
+}
+
+/**
+ * Shared invoice-backed hour-block core. Authenticated purchase actions and
+ * system replenishment both use this so the pending-block lifecycle, tax,
+ * source-line linkage, and audit inputs cannot drift apart.
+ */
+export async function createHourBlockPurchaseInvoiceInternal(
+  input: CreateHourBlockPurchaseInvoiceInternalInput,
+): Promise<{ invoiceId: string; blockId: string; invoiceNumber: string }> {
+  const {
+    trx,
+    tenant,
+    clientId,
+    serviceId,
+    hours,
+    hourlyRate,
+    expirationDate,
+    scopeServiceIds,
+    notes,
+    client,
+    service,
+    currencyCode,
+    dueDate,
+    taxSource,
+    invoiceNumber,
+    createdBy,
+    replenishmentBucketUsageId,
+  } = input;
+  const sessionLike = { user: { id: createdBy } };
+  const invoiceId = uuidv4();
+  const blockId = uuidv4();
+  const totalMinutes = Math.round(hours * 60);
+  const purchaseAmount = Math.round(hours * hourlyRate);
+  const invoice = {
+    invoice_id: invoiceId,
+    tenant,
+    client_id: clientId,
+    invoice_date: Temporal.Now.plainDateISO().toString(),
+    due_date: dueDate,
+    invoice_number: invoiceNumber,
+    status: 'draft',
+    currency_code: currencyCode,
+    subtotal: 0,
+    tax: 0,
+    total_amount: 0,
+    credit_applied: 0,
+    is_manual: true,
+    is_prepayment: false,
+    credit_expiration_date: null,
+    tax_source: taxSource,
+  };
+  await tenantScopedTable(trx, tenant, 'invoices').insert(invoice);
+
+  await invoiceService.persistManualInvoiceCharges(
+    trx,
+    invoiceId,
+    [{
+      service_id: serviceId,
+      quantity: hours,
+      rate: hourlyRate,
+      description: `Prepaid hour block — ${service.service_name}`,
+      is_discount: false,
+    }],
+    client,
+    sessionLike as any,
+    tenant,
+  );
+
+  await invoiceService.calculateAndDistributeTax(trx, invoiceId, client, new TaxService(), tenant);
+  await invoiceService.updateInvoiceTotalsAndRecordTransaction(trx, invoiceId, client, tenant, invoiceNumber);
+
+  const purchaseLine = await tenantScopedTable(trx, tenant, 'invoice_charges')
+    .where({ invoice_id: invoiceId, tenant, service_id: serviceId })
+    .first();
+  if (!purchaseLine) throw new Error('Purchase invoice line not found after creation');
+
+  await tenantScopedTable(trx, tenant, 'hour_blocks').insert({
+    block_id: blockId,
+    tenant,
+    client_id: clientId,
+    service_id: serviceId,
+    total_minutes: totalMinutes,
+    remaining_minutes: totalMinutes,
+    hourly_rate: Math.round(hourlyRate),
+    purchase_amount: purchaseAmount,
+    currency_code: currencyCode,
+    status: 'pending',
+    purchased_at: null,
+    expiration_date: toCalendarDateString(expirationDate),
+    source_invoice_id: invoiceId,
+    source_invoice_charge_id: purchaseLine.item_id,
+    replenishment_bucket_usage_id: replenishmentBucketUsageId ?? null,
+    source_type: 'purchase',
+    created_by: createdBy,
+    notes: notes?.trim() || null,
+  });
+  await resolveScopeServiceIds(trx, tenant, blockId, scopeServiceIds);
+  return { invoiceId, blockId, invoiceNumber };
+}
+
 /**
  * Creates a draft purchase invoice for an hour block plus the linked `pending`
  * hour_blocks row. Finalizing the invoice flips the block to `active` and mints
@@ -186,8 +305,6 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
     if (!serviceId) throw new Error('Service not found');
 
     const { knex } = await createTenantKnex();
-    const sessionLike = { user: { id: user.user_id } };
-
     const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const client = await tenantScopedTable(trx, tenant, 'clients')
         .where({ client_id: clientId, tenant })
@@ -198,6 +315,9 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
         .where({ service_id: serviceId, tenant })
         .first();
       if (!service) throw new Error(`Service ${serviceId} not found`);
+      if (service.billing_method !== 'hourly') {
+        throw new Error('Hour blocks can only be sold for hourly services');
+      }
 
       const currencyCode = client.default_currency_code || 'USD';
       const currentDate = Temporal.Now.plainDateISO().toString();
@@ -206,80 +326,24 @@ export const createHourBlockPurchaseInvoice = withAuth(async (
       const taxSource = await getInitialInvoiceTaxSource(clientId);
       if (isActionError(taxSource)) throw new Error(getErrorMessage(taxSource));
 
-      const invoiceId = uuidv4();
-      const blockId = uuidv4();
-      const totalMinutes = Math.round(hours * 60);
-      const purchaseAmount = Math.round(hours * hourlyRate);
-
-      const invoice = {
-        invoice_id: invoiceId,
-        tenant,
-        client_id: clientId,
-        invoice_date: currentDate,
-        due_date: dueDate,
-        invoice_number: await generateInvoiceNumber(),
-        status: 'draft',
-        currency_code: currencyCode,
-        subtotal: 0,
-        tax: 0,
-        total_amount: 0,
-        credit_applied: 0,
-        is_manual: true,
-        is_prepayment: false,
-        credit_expiration_date: null,
-        tax_source: taxSource,
-      };
-      await tenantScopedTable(trx, tenant, 'invoices').insert(invoice);
-
-      await invoiceService.persistManualInvoiceCharges(
+      return createHourBlockPurchaseInvoiceInternal({
         trx,
-        invoiceId,
-        [{
-          service_id: serviceId,
-          quantity: hours,
-          rate: hourlyRate,
-          description: `Prepaid hour block — ${service.service_name}`,
-          is_discount: false,
-        }],
+        tenant,
+        clientId,
+        serviceId,
+        hours,
+        hourlyRate,
+        expirationDate,
+        scopeServiceIds,
+        notes,
         client,
-        sessionLike as any,
-        tenant,
-      );
-
-      const taxService = new TaxService();
-      await invoiceService.calculateAndDistributeTax(trx, invoiceId, client, taxService, tenant);
-      await invoiceService.updateInvoiceTotalsAndRecordTransaction(trx, invoiceId, client, tenant, invoice.invoice_number);
-
-      // The block is minted against this exact line: finalization syncs the
-      // block from the line (qty/rate/service) via source_invoice_charge_id.
-      const purchaseLine = await tenantScopedTable(trx, tenant, 'invoice_charges')
-        .where({ invoice_id: invoiceId, tenant, service_id: serviceId })
-        .first();
-      if (!purchaseLine) throw new Error('Purchase invoice line not found after creation');
-
-      await tenantScopedTable(trx, tenant, 'hour_blocks').insert({
-        block_id: blockId,
-        tenant,
-        client_id: clientId,
-        service_id: serviceId,
-        total_minutes: totalMinutes,
-        remaining_minutes: totalMinutes,
-        hourly_rate: Math.round(hourlyRate),
-        purchase_amount: purchaseAmount,
-        currency_code: currencyCode,
-        status: 'pending',
-        purchased_at: null,
-        expiration_date: toCalendarDateString(expirationDate),
-        source_invoice_id: invoiceId,
-        source_invoice_charge_id: purchaseLine.item_id,
-        source_type: 'purchase',
-        created_by: user.user_id,
-        notes: notes?.trim() || null,
+        service,
+        currencyCode,
+        dueDate,
+        taxSource,
+        invoiceNumber: await generateInvoiceNumber(),
+        createdBy: user.user_id,
       });
-
-      await resolveScopeServiceIds(trx, tenant, blockId, scopeServiceIds);
-
-      return { invoiceId, blockId, invoiceNumber: invoice.invoice_number };
     });
 
     return result;

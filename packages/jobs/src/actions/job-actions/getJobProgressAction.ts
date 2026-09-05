@@ -54,7 +54,7 @@ export const getJobProgressAction = withAuth(async (_user, { tenant }, jobId: st
   });
 
   if (!header) {
-    return actionError('Job not found. It may have expired or been deleted.');
+    return actionError('Job not found. It may have expired or been deleted.', 'msp/jobs:errors.job.notFound');
   }
 
   // Convert dates to proper format

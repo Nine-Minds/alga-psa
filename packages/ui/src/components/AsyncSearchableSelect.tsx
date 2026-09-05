@@ -309,7 +309,7 @@ export function AsyncSearchableSelect({
                     {option.badge && (
                       <span className={cn(
                         'inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium',
-                        option.badge.variant === 'primary' && 'bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-700))]',
+                        option.badge.variant === 'primary' && 'chip-primary',
                         option.badge.variant === 'secondary' && 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-600))]',
                         option.badge.variant === 'success' && 'bg-[rgb(var(--badge-success-bg))] text-[rgb(var(--badge-success-text))]',
                         option.badge.variant === 'warning' && 'bg-[rgb(var(--badge-warning-bg))] text-[rgb(var(--badge-warning-text))]',

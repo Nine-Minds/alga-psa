@@ -29,22 +29,22 @@ function projectTaskCommentActionErrorFrom(error: unknown): ProjectTaskCommentAc
       return permissionError(message);
     }
     if (message === 'Only internal users can comment on tasks') {
-      return actionError('Only internal users can comment on tasks.');
+      return actionError('Only internal users can comment on tasks.', 'projects:errors.comment.internalOnly');
     }
     if (message === 'Task not found') {
-      return actionError('Task not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Task not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.taskNotFound');
     }
     if (message === 'Parent task comment not found') {
-      return actionError('The comment you are replying to was not found. Please refresh and try again.');
+      return actionError('The comment you are replying to was not found. Please refresh and try again.', 'projects:errors.comment.parentNotFound');
     }
     if (message === 'Parent task comment must belong to the same task') {
-      return actionError('Replies must stay on the same task thread. Please refresh and try again.');
+      return actionError('Replies must stay on the same task thread. Please refresh and try again.', 'projects:errors.comment.sameThreadRequired');
     }
     if (message === 'Cannot reply to a deleted task comment') {
-      return actionError('You cannot reply to a deleted comment.');
+      return actionError('You cannot reply to a deleted comment.', 'projects:errors.comment.parentDeleted');
     }
     if (message === 'Comment not found') {
-      return actionError('Comment not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Comment not found. It may have been deleted. Please refresh and try again.', 'projects:errors.comment.notFound');
     }
     if (message.startsWith('You can only edit') || message.startsWith('You can only delete')) {
       return actionError(message);
@@ -53,10 +53,16 @@ function projectTaskCommentActionErrorFrom(error: unknown): ProjectTaskCommentAc
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '23502') {
-    return actionError(`Missing required comment field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required comment field: ${dbError.column}.`,
+          'projects:errors.comment.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required comment field.', 'projects:errors.comment.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected task or comment no longer exists. Please refresh and try again.');
+    return actionError('The selected task or comment no longer exists. Please refresh and try again.', 'projects:errors.comment.referenceMissing');
   }
 
   return null;

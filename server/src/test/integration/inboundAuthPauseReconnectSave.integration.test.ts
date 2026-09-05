@@ -125,9 +125,11 @@ vi.mock('@alga-psa/integrations/services/email/GmailWebhookService', () => ({
       gmailWatchMock.instances.push(this);
     }
     async registerWatch() {
+      // Mirrors the real service, which reports failure by return value.
       if (gmailWatchMock.registerShouldFail) {
-        throw new Error('Watch registration failed: invalid grant');
+        return { success: false, error: 'Gmail watch registration failed: invalid grant' };
       }
+      return { success: true, historyId: '5001', expiration: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() };
     }
   },
 }));
@@ -339,6 +341,10 @@ function formGooglePayload(providerId: string, withFreshTokens = true) {
 describeDb('auth-pause reconnect save path (updateEmailProvider, DB-backed)', () => {
   beforeAll(async () => {
     wireLocalTestDbEnv();
+    // Gmail setup refuses to provision against an address Google cannot push
+    // to, so the suite has to look like a publicly reachable instance.
+    delete process.env.NGROK_URL;
+    process.env.NEXT_PUBLIC_BASE_URL = 'https://reconnect-save.example.com';
     // Scratch database instead of the shared test_database: every
     // DB-backed suite bootstrap DROPs its database, and parallel worktree
     // agents sharing the local test Postgres repeatedly dropped
@@ -614,5 +620,86 @@ describeDb('auth-pause reconnect save path (updateEmailProvider, DB-backed)', ()
     expect(result.provider.inboundPauseReason).toBeNull();
     expect(Number(result.provider.inboundAuthFailureCount)).toBe(0);
     expect(result.provider.status).toBe('connected');
+  });
+
+  it('Google: a watch failure on a healthy provider is a failed save, not a warning under a green status', async () => {
+    // The pause machinery is not involved here — this is the plain case of an
+    // administrator saving a Gmail provider whose watch cannot be registered.
+    // Pub/Sub provisioning succeeding on its own delivers no mail, so the save
+    // must not report the provider connected.
+    const providerId = await seedGoogleProvider(null);
+    gmailWatchMock.registerShouldFail = true;
+
+    const result = await updateEmailProvider(providerId, formGooglePayload(providerId), false);
+
+    expect((result as any).actionError).toBeUndefined();
+    expect((result as any).setupError).toBeTruthy();
+    // The underlying Google failure reaches the administrator verbatim.
+    expect((result as any).setupError).toContain('invalid grant');
+    expect(result.provider.status).toBe('error');
+
+    const row = await getProviderRow(providerId);
+    expect(row.status).not.toBe('connected');
+  });
+
+  it('Google: a save without OAuth tokens on a healthy provider reports failure rather than partial success', async () => {
+    const providerId = await seedGoogleProvider(null, { tokens: false });
+
+    const result = await updateEmailProvider(providerId, formGooglePayload(providerId, false), false);
+
+    expect((result as any).actionError).toBeUndefined();
+    expect((result as any).setupError).toBeTruthy();
+    expect(result.provider.status).toBe('error');
+    // The watch guard fired before any registration attempt.
+    expect(gmailWatchMock.instances).toHaveLength(0);
+  });
+
+  it('Google: a second save re-verifies instead of trusting a recent pubsub_initialised_at', async () => {
+    const providerId = await seedGoogleProvider(null);
+
+    const first = await updateEmailProvider(providerId, formGooglePayload(providerId), false);
+    expect((first as any).setupError).toBeUndefined();
+    expect(pubsubMock.calls).toHaveLength(1);
+    expect(gmailWatchMock.instances).toHaveLength(1);
+
+    // The old 24-hour cool-down returned pubsubConfigured/watchRegistered=true
+    // here without calling anything; a broken provider stayed green until the
+    // window lapsed.
+    gmailWatchMock.registerShouldFail = true;
+    const second = await updateEmailProvider(providerId, formGooglePayload(providerId), false);
+
+    expect(pubsubMock.calls).toHaveLength(2);
+    expect(gmailWatchMock.instances).toHaveLength(2);
+    expect((second as any).setupError).toBeTruthy();
+    expect(second.provider.status).toBe('error');
+  });
+
+  it('Google: the push endpoint and OIDC audience come from the configured public base URL', async () => {
+    const providerId = await seedGoogleProvider(null);
+
+    await updateEmailProvider(providerId, formGooglePayload(providerId), false);
+
+    expect(pubsubMock.calls).toHaveLength(1);
+    expect(pubsubMock.calls[0]).toMatchObject({
+      topicName: `gmail-notifications-${testTenant}`,
+      subscriptionName: `gmail-webhook-${testTenant}`,
+      webhookUrl: 'https://reconnect-save.example.com/api/email/webhooks/google',
+    });
+  });
+
+  it('Google: setup refuses to provision against an address Google cannot push to', async () => {
+    const providerId = await seedGoogleProvider(null);
+    const saved = process.env.NEXT_PUBLIC_BASE_URL;
+    process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000';
+
+    try {
+      const result = await updateEmailProvider(providerId, formGooglePayload(providerId), false);
+
+      expect((result as any).setupError).toMatch(/publicly reachable HTTPS endpoint/);
+      expect(result.provider.status).toBe('error');
+      expect(pubsubMock.calls).toHaveLength(0);
+    } finally {
+      process.env.NEXT_PUBLIC_BASE_URL = saved;
+    }
   });
 });

@@ -8,7 +8,9 @@ import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 export interface RecurringQuantityServiceRow {
   service_id: string;
@@ -31,6 +33,11 @@ export interface RecurringQuantityChargeComputeInputs {
   chargeType: "product" | "license";
   services: RecurringQuantityServiceRow[];
   contractCurrency: string;
+  /**
+   * Recurring product/license charges have no per-occurrence source record, so
+   * they stop at the contract step of the resolution chain (F028).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
 }
 
 export interface RecurringQuantityChargeComputeResult {
@@ -60,7 +67,9 @@ export function computeRecurringQuantityCharges(
     chargeType,
     services,
     contractCurrency,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
   const explanations: ChargeExplanation[] = [];
 
   const charges = services.map((service): IProductCharge | ILicenseCharge => {
@@ -100,7 +109,13 @@ export function computeRecurringQuantityCharges(
 
     let originalTaxAmount = 0;
     let taxRate = 0;
-    if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+    // Exemption is per billing profile (F131): one invoice can carry both
+    // exempt and non-exempt lines when a client holds several legal entities.
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      isTaxable &&
+      effectiveTaxRegion
+    ) {
       try {
         const taxResult = taxPorts.calculateTax(
           client.client_id,
@@ -109,6 +124,7 @@ export function computeRecurringQuantityCharges(
           effectiveTaxRegion,
           true,
           clientContractLine.currency_code || "USD",
+          resolvedProfile?.billingProfileId ?? null,
         );
         taxRate = taxResult.taxRate;
         originalTaxAmount = taxResult.taxAmount;
@@ -153,6 +169,8 @@ export function computeRecurringQuantityCharges(
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
       location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+      billing_profile_source: resolvedProfile?.source ?? null,
       ...(chargeType === "license"
         ? {
             period_start: timing.servicePeriodStart,

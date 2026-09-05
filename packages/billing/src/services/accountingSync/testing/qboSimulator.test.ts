@@ -131,4 +131,127 @@ describe('QboSimulator — QBO semantics the sync engine depends on', () => {
     expect((await on.client.getPreferences()).SalesFormsPrefs.AutoApplyCredit).toBe(true);
     expect((await off.client.getPreferences()).SalesFormsPrefs.AutoApplyCredit).toBe(false);
   });
+  // ── Automated Sales Tax ─────────────────────────────────────────────────
+
+  /** A US AST company: one jurisdiction built from three rate components. */
+  function astSimulator() {
+    const sim = new QboSimulator({ automatedSalesTax: { defaultTaxCodeId: 'tc-ca-sc' } });
+    const state = sim.seedTaxRate({ id: 'r-state', name: 'California State', ratePercent: 6.25 });
+    const county = sim.seedTaxRate({ id: 'r-county', name: 'Santa Clara County', ratePercent: 1 });
+    const district = sim.seedTaxRate({ id: 'r-district', name: 'Santa Clara District', ratePercent: 1.75 });
+    sim.seedTaxCode({
+      id: 'tc-ca-sc',
+      name: 'CA-Santa Clara-Santa Clara',
+      taxRateIds: [state.Id, county.Id, district.Id]
+    });
+    sim.seedTaxCode({ id: 'TAX', name: 'TAX', pseudo: true });
+    sim.seedTaxCode({ id: 'NON', name: 'NON', pseudo: true });
+    return sim;
+  }
+
+  function invoiceWith(taxCodeValue: string | undefined, amount: number) {
+    return {
+      CustomerRef: { value: 'customer-1' },
+      Line: [
+        {
+          Amount: amount,
+          DetailType: 'SalesItemLineDetail',
+          SalesItemLineDetail: {
+            ItemRef: { value: 'item-1' },
+            ...(taxCodeValue ? { TaxCodeRef: { value: taxCodeValue } } : {})
+          }
+        }
+      ]
+    };
+  }
+
+  it('the TAX pseudo code makes AST tax the line at the resolved jurisdiction rate', async () => {
+    const sim = astSimulator();
+
+    const invoice: any = await sim.client.create('Invoice', invoiceWith('TAX', 200));
+
+    // 200 * (6.25 + 1 + 1.75)% = 18.00
+    expect(invoice.TxnTaxDetail.TotalTax).toBe(18);
+    expect(invoice.TotalAmt).toBe(218);
+    expect(invoice.TxnTaxDetail.TaxLine.map((line: any) => line.Amount)).toEqual([12.5, 2, 3.5]);
+  });
+
+  it('a mapped tax code is taxed at that code, not the AST default', async () => {
+    const sim = astSimulator();
+    sim.seedTaxRate({ id: 'r-flat', name: 'Flat', ratePercent: 10 });
+    sim.seedTaxCode({ id: 'tc-flat', name: 'Flat 10', taxRateIds: ['r-flat'] });
+
+    const invoice: any = await sim.client.create('Invoice', invoiceWith('tc-flat', 200));
+
+    expect(invoice.TxnTaxDetail.TotalTax).toBe(20);
+  });
+
+  it('the NON pseudo code exempts the line', async () => {
+    const sim = astSimulator();
+
+    const invoice: any = await sim.client.create('Invoice', invoiceWith('NON', 200));
+
+    expect(invoice.TxnTaxDetail.TotalTax).toBe(0);
+    expect(invoice.TotalAmt).toBe(200);
+  });
+
+  it('an omitted tax code is taxed, not exempted — the 2018 AST behavior change', async () => {
+    const sim = astSimulator();
+
+    const invoice: any = await sim.client.create('Invoice', invoiceWith(undefined, 200));
+
+    // This is why the exporter must send NON explicitly for non-taxable lines.
+    expect(invoice.TxnTaxDetail.TotalTax).toBe(18);
+  });
+
+  it('AST overwrites the transaction-level tax code with its own', async () => {
+    const sim = astSimulator();
+
+    const invoice: any = await sim.client.create('Invoice', {
+      ...invoiceWith('TAX', 100),
+      TxnTaxDetail: { TxnTaxCodeRef: { value: 'whatever-the-app-sent' } }
+    });
+
+    expect(invoice.TxnTaxDetail.TxnTaxCodeRef).toEqual({ value: 'tc-ca-sc' });
+  });
+
+  it('without the AST option, invoices carry no TxnTaxDetail at all', async () => {
+    const sim = new QboSimulator();
+
+    const invoice: any = await sim.client.create('Invoice', invoiceWith('TAX', 200));
+
+    expect(invoice.TxnTaxDetail).toBeUndefined();
+    expect(invoice.TotalAmt).toBe(200);
+  });
+
+  it('serves the tax-code catalog queries the mapping UI issues', async () => {
+    const sim = astSimulator();
+
+    const taxCodes = await sim.client.query<any>('SELECT * FROM TaxCode STARTPOSITION 1 MAXRESULTS 1000');
+    const taxRates = await sim.client.query<any>('SELECT Id, RateValue FROM TaxRate STARTPOSITION 1 MAXRESULTS 1000');
+
+    expect(taxCodes.map((code) => code.Id)).toEqual(['tc-ca-sc', 'TAX', 'NON']);
+    expect(taxCodes[0].SalesTaxRateList.TaxRateDetail).toHaveLength(3);
+    // Intuit returns the pseudo codes with no Active field — a server-side
+    // Active filter would drop exactly these two.
+    expect(taxCodes[1]).not.toHaveProperty('Active');
+    expect(taxRates).toEqual([
+      { Id: 'r-state', RateValue: 6.25 },
+      { Id: 'r-county', RateValue: 1 },
+      { Id: 'r-district', RateValue: 1.75 }
+    ]);
+  });
+
+  it('pages the tax-code catalog like QBO does', async () => {
+    const sim = new QboSimulator();
+    for (let index = 0; index < 5; index += 1) {
+      sim.seedTaxCode({ id: `tc-${index}`, name: `Region ${index}` });
+    }
+
+    const firstPage = await sim.client.query<any>('SELECT * FROM TaxCode STARTPOSITION 1 MAXRESULTS 2');
+    const secondPage = await sim.client.query<any>('SELECT * FROM TaxCode STARTPOSITION 3 MAXRESULTS 2');
+
+    expect(firstPage.map((code) => code.Id)).toEqual(['tc-0', 'tc-1']);
+    expect(secondPage.map((code) => code.Id)).toEqual(['tc-2', 'tc-3']);
+  });
 });

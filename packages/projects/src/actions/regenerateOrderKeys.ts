@@ -42,13 +42,19 @@ function projectOrderKeyActionErrorFrom(error: unknown): ProjectOrderKeyActionEr
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected project, phase, task, or status values is invalid. Please refresh and try again.');
+    return actionError('One of the selected project, phase, task, or status values is invalid. Please refresh and try again.', 'projects:errors.ordering.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required project ordering field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required project ordering field: ${dbError.column}.`,
+          'projects:errors.ordering.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required project ordering field.', 'projects:errors.ordering.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected project ordering records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected project ordering records no longer exists. Please refresh and try again.', 'projects:errors.ordering.referenceMissing');
   }
 
   return null;

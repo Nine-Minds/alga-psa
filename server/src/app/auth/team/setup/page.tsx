@@ -26,6 +26,7 @@ interface InviteeInfo {
 }
 
 function TeamSetupContent() {
+  // Password messages carry their own `common:` namespace, so this page's translator resolves them.
   const { t } = useTranslation('msp/onboarding');
 
   const router = useRouter();
@@ -111,7 +112,7 @@ function TeamSetupContent() {
     e.preventDefault();
 
     if (!isPasswordValid()) {
-      const policyError = validatePasswordPolicy(formData.password);
+      const policyError = validatePasswordPolicy(formData.password, t);
       toast.error(policyError ?? t('teamSetup.errors.requirementsNotMet', { defaultValue: 'Please ensure all password requirements are met' }));
       return;
     }
@@ -139,7 +140,8 @@ function TeamSetupContent() {
           router.push('/auth/msp/signin');
         }
       } else {
-        toast.error(result.error || t('teamSetup.errors.createFailed', { defaultValue: 'Failed to create account' }));
+        const serverMessage = result.messageKey ? t(result.messageKey) : result.error;
+        toast.error(serverMessage || t('teamSetup.errors.createFailed', { defaultValue: 'Failed to create account' }));
       }
     } catch (err) {
       console.error('Team setup completion error:', err);
@@ -151,7 +153,7 @@ function TeamSetupContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))]">
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))]">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">
@@ -167,7 +169,7 @@ function TeamSetupContent() {
 
   if (error || !invitee) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))]">
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))]">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-destructive">
@@ -193,7 +195,7 @@ function TeamSetupContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))] p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -206,7 +208,7 @@ function TeamSetupContent() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="space-y-4 p-4 bg-[rgb(var(--color-background-50))] rounded-lg">
+          <div className="space-y-4 p-4 bg-[rgb(var(--color-border-50))] rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium">
               <User className="h-4 w-4" />
               {t('teamSetup.accountInformation', { defaultValue: 'Account Information' })}

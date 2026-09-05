@@ -6,9 +6,12 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
+  BookOpen,
   ChevronRight,
   ExternalLink,
+  HelpCircle,
   Home,
+  LifeBuoy,
   PlusCircle,
   Settings,
   Sparkles,
@@ -150,7 +153,7 @@ const quickCreateOptions: QuickCreateOption[] = [
 
 type HeaderTranslator = (key: string, options?: Record<string, unknown>) => string;
 
-const getMenuItemNameByPath = (
+export const getMenuItemNameByPath = (
   path: string | null | undefined,
   t: HeaderTranslator,
 ): string => {
@@ -163,22 +166,21 @@ const getMenuItemNameByPath = (
   const segments = path.split('/');
   const topLevelPath = segments.length > 1 ? '/' + segments[1] : '/';
 
-  const findMenuItem = (items: MenuItem[]): string | null => {
-    for (const item of items) {
-      if (item.href === topLevelPath || (item.href && path.startsWith(item.href))) {
-        return item.translationKey
-          ? t(item.translationKey, { defaultValue: item.name })
-          : item.name;
-      }
-      if (item.subItems) {
-        const subItemName = findMenuItem(item.subItems);
-        if (subItemName) return subItemName;
-      }
-    }
-    return null;
-  };
+  const matchingItems = (items: MenuItem[]): MenuItem[] => items.flatMap((item) => {
+    const matchesPath = item.href === path
+      || (item.href !== undefined && (item.href === topLevelPath || path.startsWith(item.href)));
+    return [
+      ...(matchesPath ? [item] : []),
+      ...(item.subItems ? matchingItems(item.subItems) : []),
+    ];
+  });
 
-  return findMenuItem(allMenuItems) || t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
+  const item = matchingItems(allMenuItems)
+    .sort((left, right) => (right.href?.length ?? 0) - (left.href?.length ?? 0))[0];
+
+  return item
+    ? (item.translationKey ? t(item.translationKey, { defaultValue: item.name }) : item.name)
+    : t('header.breadcrumb.dashboard', { defaultValue: 'Dashboard' });
 };
 
 const TenantBadge: React.FC<{
@@ -191,7 +193,7 @@ const TenantBadge: React.FC<{
 
   return (
     <span
-      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-400))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
+      className="inline-flex items-center rounded-full bg-slate-100 dark:bg-[rgb(var(--color-border-100))] px-3 py-1 text-xs font-medium text-slate-700 dark:text-[rgb(var(--color-text-600))] border border-slate-200 dark:border-[rgb(var(--color-border-200))]"
       aria-label={ariaLabel}
     >
       {tenant}
@@ -284,6 +286,62 @@ const QuickCreateMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   );
 };
 
+const RESOURCE_LINKS = [
+  {
+    id: 'resources-documentation',
+    href: 'https://www.nineminds.com/documentation',
+    icon: BookOpen,
+    labelKey: 'header.resources.documentation',
+    labelDefault: 'Documentation',
+  },
+  {
+    id: 'resources-support',
+    href: 'https://www.nineminds.com/support',
+    icon: LifeBuoy,
+    labelKey: 'header.resources.support',
+    labelDefault: 'Contact Support',
+  },
+] as const;
+
+const ResourcesMenu: React.FC<{ t: HeaderTranslator }> = ({ t }) => (
+  <DropdownMenu>
+    <DropdownMenuTrigger asChild>
+      <Button
+        id="header-resources-menu-trigger"
+        variant="ghost"
+        size="icon"
+        aria-label={t('header.resources.ariaLabel', { defaultValue: 'Resources and help' })}
+        className="h-9 w-9"
+      >
+        <HelpCircle className="h-5 w-5" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" className="min-w-[220px]">
+      <div className="px-3 py-2">
+        <p className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+          {t('header.resources.title', { defaultValue: 'Resources' })}
+        </p>
+      </div>
+      <DropdownMenuSeparator />
+      {RESOURCE_LINKS.map((link) => (
+        <DropdownMenuItem key={link.id} asChild>
+          <a
+            id={`${link.id}-menu-item`}
+            href={link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => analytics.capture('ui.resources_menu.select', { target: link.id })}
+          >
+            <link.icon className="mr-2 h-4 w-4" />
+            {t(link.labelKey, { defaultValue: link.labelDefault })}
+            <ExternalLink className="ml-2 h-3 w-3 opacity-60" />
+          </a>
+        </DropdownMenuItem>
+      ))}
+    </DropdownMenuContent>
+  </DropdownMenu>
+);
+
 // NotificationMenu component removed - replaced with NotificationBell
 
 const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
@@ -304,7 +362,9 @@ const JobActivityIndicator: React.FC<{ t: HeaderTranslator }> = ({ t }) => {
   useActionPolling(fetchMetrics, { intervalMs: 15000 });
 
   const activeJobs = metrics?.active ?? 0;
-  const failedJobs = metrics?.failed ?? 0;
+  // The dot is labelled "Failed last 24h", so it must use the time-bounded
+  // count — the all-time `failed` would keep it amber forever.
+  const failedJobs = metrics?.failedLast24h ?? 0;
   const hasAttention = failedJobs > 0;
 
   return (
@@ -502,7 +562,7 @@ export default function Header({
           <button
             id="workflow-designer-ask-ai"
             type="button"
-            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-50 hover:text-purple-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:text-purple-300 dark:hover:bg-purple-950/30 dark:hover:text-purple-200"
+            className="inline-flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium text-[rgb(var(--color-primary-600))] transition-colors hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:ring-offset-2"
             aria-label={t('header.quickAsk.ariaLabel', { defaultValue: 'Ask AI about this workflow' })}
             title={t('header.quickAsk.shortcutHint', { defaultValue: 'Open Quick Ask for workflow guidance' })}
             onClick={handleWorkflowQuickAskOpen}
@@ -512,6 +572,7 @@ export default function Header({
           </button>
         ) : null}
         <QuickCreateMenu t={t} />
+        <ResourcesMenu t={t} />
         <ThemeToggle
           labels={{
             ariaLabel: t('header.themeToggle.ariaLabel', { defaultValue: 'Theme toggle' }),

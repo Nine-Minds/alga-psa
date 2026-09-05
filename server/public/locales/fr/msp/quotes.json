@@ -114,7 +114,9 @@
       "delete": "Échec de la suppression du devis.",
       "duplicate": "Échec de la duplication du devis.",
       "load": "Échec du chargement des devis",
-      "send": "Échec de l'envoi du devis."
+      "send": "Échec de l'envoi du devis.",
+      "resend": "Échec de la relance du devis.",
+      "sendReminder": "Échec de l'envoi du rappel du devis."
     },
     "loading": "Chargement des devis...",
     "rowActions": {
@@ -733,7 +735,9 @@
       "notFound": "Modèle de document de devis introuvable.",
       "previewPipeline": "Échec du pipeline de prévisualisation.",
       "saveFailed": "Échec de l'enregistrement du modèle de devis",
-      "unknownAstExport": "Erreur d'exportation AST inconnue"
+      "unknownAstExport": "Erreur d'exportation AST inconnue",
+      "quoteNotFound": "Impossible de charger les détails du devis pour l'aperçu.",
+      "quoteDetailLoad": "Échec du chargement des détails du devis."
     },
     "fields": {
       "layoutDetails": "Détails de mise en page",
@@ -757,7 +761,17 @@
       "sampleScenario": "Exemple de scénario",
       "selectScenario": "Sélectionnez le scénario...",
       "selectScenarioPrompt": "Sélectionnez un exemple de scénario pour générer un aperçu faisant autorité.",
-      "templateGenerationFailed": "Le modèle d'aperçu n'a pas pu être généré à partir de l'espace de travail actuel."
+      "templateGenerationFailed": "Le modèle d'aperçu n'a pas pu être généré à partir de l'espace de travail actuel.",
+      "source": {
+        "sample": "Exemple",
+        "existing": "Existant"
+      },
+      "searchQuotes": "Rechercher des devis…",
+      "searchQuotesHint": "Rechercher par numéro ou client…",
+      "noQuotesFound": "Aucun devis trouvé.",
+      "selectQuote": "Sélectionner un devis",
+      "selectQuoteHint": "Sélectionnez un devis pour prévisualiser la sortie liée aux données.",
+      "loadingQuoteDetails": "Chargement des détails du devis…"
     },
     "pipeline": {
       "render": "Rendu",
@@ -795,6 +809,33 @@
     },
     "labels": {
       "custom": "Coutume"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Autorisation refusée : impossible de créer des devis",
+      "update": "Autorisation refusée : impossible de mettre à jour des devis",
+      "read": "Autorisation refusée : impossible de lire des devis",
+      "delete": "Autorisation refusée : impossible de supprimer des devis",
+      "readOne": "Autorisation refusée : impossible de lire le devis",
+      "approve": "Autorisation refusée : impossible d’approuver des devis",
+      "updateApprovalSettings": "Autorisation refusée : impossible de mettre à jour les paramètres d’approbation des devis",
+      "readDocumentTemplates": "Autorisation refusée : impossible de lire les modèles de document de devis",
+      "modifyDocumentTemplates": "Autorisation refusée : impossible de modifier les modèles de document de devis",
+      "setDefaultDocumentTemplate": "Autorisation refusée : impossible de définir le modèle de document de devis par défaut",
+      "deleteDocumentTemplates": "Autorisation refusée : impossible de supprimer les modèles de document de devis"
+    },
+    "quote": {
+      "formInvalid": "Le formulaire de devis contient des valeurs non valides. Veuillez le vérifier et réessayer.",
+      "notFoundRefresh": "Devis introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "itemNotFoundRefresh": "Ligne de devis introuvable. Elle a peut-être été mise à jour ou supprimée. Veuillez actualiser la page et réessayer.",
+      "templateNotFoundRefresh": "Modèle de devis introuvable. Il a peut-être été mis à jour ou supprimé. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs de devis sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le devis, le client, le contact ou le service sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "conflict": "Cette modification du devis entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs du devis n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du devis est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du devis est manquant : {{field}}."
     }
   }
 }

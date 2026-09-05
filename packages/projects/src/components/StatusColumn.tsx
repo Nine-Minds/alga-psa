@@ -355,7 +355,7 @@ export const StatusColumn: React.FC<StatusColumnProps> = ({
   return (
     <div
       className={`${styles.kanbanColumn} ${isRevealedHidden ? styles.revealedHiddenColumn : ''} ${configuredColor ? '' : backgroundColor} rounded-lg border-2 border-solid ${
-        isDraggedOver ? 'border-purple-500 ' + styles.dragOver : (configuredColor ? '' : borderColor)
+        isDraggedOver ? 'border-[rgb(var(--color-primary-500))] ' + styles.dragOver : (configuredColor ? '' : borderColor)
       }`}
       style={columnStyle}
       onDrop={handleDrop}

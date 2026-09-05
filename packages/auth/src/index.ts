@@ -85,6 +85,9 @@ export {
 } from './lib/withAuth';
 export type { AuthContext, WithAuthOptions } from './lib/withAuth';
 
+// Localization boundary for action errors — for actions that return outside withAuth.
+export { localizeActionError } from './lib/localizeActionError';
+
 // UI components (used by Next.js route shims)
 export { AppSessionProvider } from './components/AppSessionProvider';
 export { default as Alert } from './components/Alert';

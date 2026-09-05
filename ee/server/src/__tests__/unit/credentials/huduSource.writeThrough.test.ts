@@ -224,6 +224,14 @@ describe('huduCredentialSource — update', () => {
     expect(summary.name).toBe('Renamed');
     expect(JSON.stringify(summary)).not.toContain('new-password');
     expect(clearCachedHuduListMock).toHaveBeenCalledWith(TENANT, COMPANY_ID, 'asset_passwords');
+
+    // The update audit carries the changed FIELD NAMES only — never values.
+    const updateCall = writeCredentialAuditMock.mock.calls.find((call) => call[2] === 'credential_updated');
+    expect(updateCall).toBeDefined();
+    const updateDetails = updateCall?.[4] as Record<string, unknown>;
+    expect(updateDetails?.changed_fields).toEqual(['name', 'password']);
+    expect(JSON.stringify(updateDetails)).not.toContain('new-password');
+    expect(JSON.stringify(updateDetails)).not.toContain('S3cr3t-Hudu-Value');
   });
 
   it('rejects an update when the caller claims a clientId that is not the row owner', async () => {

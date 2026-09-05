@@ -6,7 +6,8 @@
     "invoices": "Facturen",
     "overview": "Overzicht",
     "quotes": "Offertes",
-    "usageMetrics": "Gebruiksstatistieken"
+    "usageMetrics": "Gebruiksstatistieken",
+    "segments": "Per segment"
   },
   "currentContractLine": "Huidig abonnement",
   "nextInvoice": "Volgende factuur",

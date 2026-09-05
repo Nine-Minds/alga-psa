@@ -46,7 +46,7 @@ export type TicketListItem = {
 };
 
 export type TicketRichAttributes = {
-  description?: string | null;
+  description?: string | object | null;
   due_date?: string | null;
   watcher_user_ids?: string[] | null;
   [key: string]: unknown;
@@ -247,9 +247,20 @@ export function getTicketPriorities(
   });
 }
 
+export type TicketNotificationSuppressionOptions = {
+  suppressContactNotifications: boolean;
+  suppressInternalNotifications: boolean;
+};
+
 export function updateTicketStatus(
   client: ApiClient,
-  params: { apiKey: string; ticketId: string; status_id: string; auditHeaders?: Record<string, string | undefined> },
+  params: {
+    apiKey: string;
+    ticketId: string;
+    status_id: string;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
+    auditHeaders?: Record<string, string | undefined>;
+  },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
   return client.request<SuccessResponse<TicketDetail>>({
     method: "PUT",
@@ -260,6 +271,7 @@ export function updateTicketStatus(
     },
     body: {
       status_id: params.status_id,
+      ...params.notificationSuppression,
     },
   });
 }
@@ -270,6 +282,7 @@ export function updateTicketAssignment(
     apiKey: string;
     ticketId: string;
     assigned_to: string | null;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
@@ -282,6 +295,7 @@ export function updateTicketAssignment(
     },
     body: {
       assigned_to: params.assigned_to,
+      ...params.notificationSuppression,
     },
   });
 }
@@ -292,6 +306,7 @@ export function updateTicketPriority(
     apiKey: string;
     ticketId: string;
     priority_id: string;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
@@ -304,6 +319,7 @@ export function updateTicketPriority(
     },
     body: {
       priority_id: params.priority_id,
+      ...params.notificationSuppression,
     },
   });
 }
@@ -337,6 +353,7 @@ export function updateTicketTitle(
     apiKey: string;
     ticketId: string;
     title: string;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
@@ -349,6 +366,7 @@ export function updateTicketTitle(
     },
     body: {
       title: params.title,
+      ...params.notificationSuppression,
     },
   });
 }
@@ -359,6 +377,7 @@ export function updateTicketAttributes(
     apiKey: string;
     ticketId: string;
     attributes: Record<string, unknown> | null;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
@@ -371,6 +390,7 @@ export function updateTicketAttributes(
     },
     body: {
       attributes: params.attributes,
+      ...params.notificationSuppression,
     },
   });
 }
@@ -381,6 +401,7 @@ export function updateTicketContact(
     apiKey: string;
     ticketId: string;
     contact_name_id: string | null;
+    notificationSuppression?: TicketNotificationSuppressionOptions;
     auditHeaders?: Record<string, string | undefined>;
   },
 ): Promise<ApiResult<SuccessResponse<TicketDetail>>> {
@@ -393,6 +414,7 @@ export function updateTicketContact(
     },
     body: {
       contact_name_id: params.contact_name_id,
+      ...params.notificationSuppression,
     },
   });
 }

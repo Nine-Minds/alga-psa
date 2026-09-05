@@ -123,7 +123,7 @@ export default function ScimProvisioningSettings(): React.JSX.Element {
     <div className="space-y-5">
       <div className="flex flex-col gap-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-5 md:flex-row md:items-center md:justify-between">
         <div className="flex items-start gap-3">
-          <div className="rounded-md bg-[rgb(var(--color-primary-100))] p-2 text-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400)/0.22)]">
+          <div className="chip-primary rounded-md p-2">
             <ShieldCheck className="h-5 w-5" aria-hidden="true" />
           </div>
           <div>

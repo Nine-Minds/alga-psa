@@ -4,6 +4,17 @@ export {
   type ActionInputField
 } from './InputMappingEditor';
 
+// Update-action patch UX (Option C summary-first change dialog)
+export {
+  UpdatePatchSection,
+  isWorkflowUpdatePatchField,
+  isEditableWorkflowPatchValue,
+  humanizeWorkflowPatchFieldLabel,
+  summarizeWorkflowPatchChanges,
+  formatWorkflowPatchChangeSummary,
+  buildWorkflowUpdateTargetPhrase
+} from './UpdatePatchSection';
+
 export {
   SourceDataTree,
   type SourceDataTreeProps,

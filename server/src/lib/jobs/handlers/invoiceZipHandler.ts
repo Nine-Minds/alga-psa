@@ -3,6 +3,7 @@
 // headers). Everything here talks to the database and storage directly, acting
 // as the requester recorded in the job data.
 import { JobService, JobStepResult } from 'server/src/services/job.service';
+import { runAsJobActingUser } from './jobActingUser';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { Document as DocumentModel, DocumentAssociation } from '@alga-psa/documents/models';
 import type { IDocument } from '@alga-psa/types';
@@ -32,6 +33,20 @@ export interface InvoiceZipJobData extends Record<string, unknown> {
     invoice_count: number;
     tenantId: string;
   };
+}
+
+/**
+ * The client an exported bundle belongs to, or null when it does not belong to
+ * one. A bundle of a single client's invoices files naturally under that client;
+ * a mixed bundle has no defensible owner, so it is filed with no client
+ * association rather than against an unrelated one. The per-invoice PDFs inside
+ * are already associated to their own invoice and client by the PDF service.
+ */
+export function selectBundleClientId(clientIds: readonly (string | null | undefined)[]): string | null {
+  const distinct = new Set(
+    clientIds.filter((id): id is string => typeof id === 'string' && id.length > 0)
+  );
+  return distinct.size === 1 ? [...distinct][0] : null;
 }
 
 export class InvoiceZipJobHandler {
@@ -103,11 +118,25 @@ export class InvoiceZipJobHandler {
     return null;
   }
 
-  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> { 
+  public async handleInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
     if (!data.jobServiceId) {
       throw new Error('jobServiceId is required in job data');
     }
 
+    // Background execution has no session; install the enqueuing user and
+    // tenant context so the db/storage layers resolve an identity from
+    // AsyncLocalStorage.
+    return runAsJobActingUser(
+      {
+        jobName: 'invoice_zip',
+        tenantId: data.tenantId,
+        userId: data.requesterId ?? data.metadata?.user_id,
+      },
+      () => this.executeInvoiceZipJob(pgBossJobId, data)
+    );
+  }
+
+  private async executeInvoiceZipJob(pgBossJobId: string, data: InvoiceZipJobData): Promise<void> {
     const { jobServiceId, invoiceIds, tenantId, steps } = data;
     let zipDetailId: string | undefined;
     
@@ -204,16 +233,19 @@ export class InvoiceZipJobHandler {
 
       const knex = await getConnection(tenantId);
 
-      // Tenant's default client, straight from the database.
+      // The bundle belongs to the invoices in it, not to whichever client the
+      // tenant happens to have flagged default — a fresh tenant has none at all,
+      // and hard-failing here would throw away a ZIP that is already stored.
       const scopedDb = tenantDb(knex, tenantId);
-      const defaultClientQuery = scopedDb.table('tenant_companies as tc')
-        .where('tc.is_default', true)
-        .whereNull('tc.deleted_at')
-        .select('tc.client_id')
-        .first<{ client_id: string } | undefined>();
-      const defaultClient = await defaultClientQuery;
-      if (!defaultClient) {
-        throw new Error('No default client found for tenant');
+      const invoiceClientIds = await scopedDb.table('invoices')
+        .whereIn('invoice_id', invoiceIds)
+        .pluck<Array<string | null>>('client_id');
+      const bundleClientId = selectBundleClientId(invoiceClientIds);
+      if (!bundleClientId) {
+        console.log(
+          `Invoice bundle for tenant ${tenantId} spans ${new Set(invoiceClientIds).size} client(s); ` +
+            'filing the archive without a client association.'
+        );
       }
 
       // Read zip file contents and store the archive as a document owned by
@@ -245,12 +277,14 @@ export class InvoiceZipJobHandler {
           is_client_visible: false,
         } as IDocument);
 
-        await DocumentAssociation.create(trx, {
-          document_id: documentId,
-          entity_id: defaultClient.client_id,
-          entity_type: 'client',
-          tenant: tenantId,
-        });
+        if (bundleClientId) {
+          await DocumentAssociation.create(trx, {
+            document_id: documentId,
+            entity_id: bundleClientId,
+            entity_type: 'client',
+            tenant: tenantId,
+          });
+        }
       });
 
       // Complete ZIP creation

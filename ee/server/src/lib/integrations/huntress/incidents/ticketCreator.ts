@@ -9,6 +9,7 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { resolveRmmTicketContactId } from '@alga-psa/shared/rmm/alerts';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 
 export interface CreateHuntressTicketParams {
   clientId: string;
@@ -49,17 +50,10 @@ export async function createHuntressTicket(
     throw new Error('No default ticket status configured for tenant');
   }
 
-  // Delegate to the same DB function the UI/API create path uses so Huntress
-  // tickets share the tenant's configured numbering (prefix + single sequence),
-  // rather than a private max()+default-prefix scheme.
-  const numberResult = await trx.raw(
-    'SELECT generate_next_number(?::uuid, ?::text) as number',
-    [tenantId, 'TICKET']
-  );
-  const ticketNumber = numberResult?.rows?.[0]?.number;
-  if (!ticketNumber) {
-    throw new Error('Failed to generate ticket number');
-  }
+  // Delegate to the same service the UI/API create path uses so Huntress
+  // tickets share the tenant's configured numbering (prefix + optional date
+  // format + single sequence), rather than a private max()+default-prefix scheme.
+  const ticketNumber = await SharedNumberingService.getNextNumber('TICKET', { knex: trx, tenant: tenantId });
   const contactId = await resolveRmmTicketContactId(trx, tenantId, {
     clientId: params.clientId,
     mappingDefaultContactId: params.defaultContactId,

@@ -9,6 +9,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface SignInPagePreviewProps {
   branding: {
     logoUrl: string;
+    logoDarkUrl?: string;
     primaryColor: string;
     secondaryColor: string;
     clientName: string;
@@ -17,7 +18,7 @@ interface SignInPagePreviewProps {
 
 export default function SignInPagePreview({ branding }: SignInPagePreviewProps) {
   const { t } = useTranslation('msp/settings');
-  const { logoUrl, primaryColor, secondaryColor, clientName } = branding;
+  const { logoUrl, logoDarkUrl, primaryColor, secondaryColor, clientName } = branding;
 
   // Convert hex to RGB
   const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
@@ -53,7 +54,24 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
         {/* Header */}
         <div className="p-6 flex items-center">
           <div className="flex items-center">
-            {logoUrl ? (
+            {logoUrl && logoDarkUrl ? (
+              <>
+                <img
+                  src={logoUrl}
+                  alt={clientName || 'Client Logo'}
+                  width={40}
+                  height={40}
+                  className="rounded-full mr-3 object-contain dark:hidden"
+                />
+                <img
+                  src={logoDarkUrl}
+                  alt={clientName || 'Client Logo'}
+                  width={40}
+                  height={40}
+                  className="rounded-full mr-3 object-contain hidden dark:block"
+                />
+              </>
+            ) : logoUrl ? (
               <img
                 src={logoUrl}
                 alt={clientName || 'Client Logo'}
@@ -80,7 +98,20 @@ export default function SignInPagePreview({ branding }: SignInPagePreviewProps) 
           {/* Left side - features */}
           <div className="w-1/2 pr-6">
             <div className="bg-white rounded-full p-6 mb-4 mx-auto w-32 h-32 flex items-center justify-center shadow-lg">
-              {logoUrl ? (
+              {logoUrl && logoDarkUrl ? (
+                <>
+                  <img
+                    src={logoUrl}
+                    alt={clientName || 'Client Logo'}
+                    className="w-20 h-20 object-contain dark:hidden"
+                  />
+                  <img
+                    src={logoDarkUrl}
+                    alt={clientName || 'Client Logo'}
+                    className="w-20 h-20 object-contain hidden dark:block"
+                  />
+                </>
+              ) : logoUrl ? (
                 <img
                   src={logoUrl}
                   alt={clientName || 'Client Logo'}

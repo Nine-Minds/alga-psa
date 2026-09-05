@@ -146,6 +146,7 @@ vi.mock('@product/chat/context', () => ({
 
 vi.mock('@/context/TierContext', () => ({
   TierProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  useTier: () => ({ hasAddOn: () => false, hasFeature: () => true }),
 }));
 
 // MspLayoutClient now wraps the tree in ProductProvider, which calls

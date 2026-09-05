@@ -45,6 +45,18 @@ describe('internalNotificationSubscriber ticket suppression policy', () => {
     expect(section).toContain('shouldCreateContactPortalTicketNotification(suppression)');
   });
 
+  it('additional-agent assignment skips its staff notification when fully suppressed', () => {
+    const source = readFileSync(resolve(__dirname, '../internalNotificationSubscriber.ts'), 'utf8');
+    const section = source.slice(
+      source.indexOf('async function handleTicketAdditionalAgentAssigned'),
+      source.indexOf('async function handleTicketUpdated'),
+    );
+
+    expect(section).toContain('resolveTicketNotificationSuppression(event.payload)');
+    expect(section).toContain('shouldCreateStaffTicketNotification(suppression)');
+    expect(section).toContain('Skipped additional agent assignment notification due to suppression');
+  });
+
   it('T031: update notifications use the same contact and internal gating policy', () => {
     const contactOnly = resolveTicketNotificationSuppression({
       suppressContactNotifications: true,

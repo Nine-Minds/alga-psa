@@ -2,6 +2,11 @@
 
 import { google } from 'googleapis';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import {
+  GMAIL_PUBLISHER_ROLE,
+  GMAIL_PUSH_SERVICE_ACCOUNT,
+  GmailPubSubSetupError,
+} from '../../utils/email/gmailPubSub';
 
 export interface SetupPubSubRequest {
   tenantId: string;
@@ -11,7 +16,18 @@ export interface SetupPubSubRequest {
   webhookUrl: string;
 }
 
-export async function setupPubSub(request: SetupPubSubRequest) {
+export interface SetupPubSubResult {
+  success: true;
+  topicPath: string;
+  subscriptionPath: string;
+  webhookUrl: string;
+  /** Push endpoint read back from Google after provisioning. */
+  pushEndpoint: string;
+  /** OIDC audience read back from Google after provisioning. */
+  audience: string;
+}
+
+export async function setupPubSub(request: SetupPubSubRequest): Promise<SetupPubSubResult> {
   console.log(`🔧 Starting Pub/Sub setup for project ${request.projectId}:`, {
     topicName: request.topicName,
     subscriptionName: request.subscriptionName,
@@ -79,7 +95,9 @@ export async function setupPubSub(request: SetupPubSubRequest) {
       }
     }
 
-    // Ensure Gmail can publish test messages to the topic
+    // Ensure Gmail can publish to the topic. Without this binding Gmail's
+    // watch() call is rejected and no notification is ever published, so a
+    // failure here is a failure of the whole setup — not a warning.
     try {
       console.log('🔐 Ensuring Gmail push service has publisher role on topic');
       const getPolicyResp = await pubsub.projects.topics.getIamPolicy({
@@ -88,8 +106,8 @@ export async function setupPubSub(request: SetupPubSubRequest) {
 
       const policy = getPolicyResp.data || ({} as any);
       const bindings = Array.isArray(policy.bindings) ? policy.bindings : [];
-      const member = 'serviceAccount:gmail-api-push@system.gserviceaccount.com';
-      const role = 'roles/pubsub.publisher';
+      const member = `serviceAccount:${GMAIL_PUSH_SERVICE_ACCOUNT}`;
+      const role = GMAIL_PUBLISHER_ROLE;
 
       const existing = bindings.find((b: any) => b.role === role);
       if (existing) {
@@ -111,8 +129,14 @@ export async function setupPubSub(request: SetupPubSubRequest) {
         }
       } as any);
       console.log('✅ Gmail publisher role ensured on topic');
-    } catch (iamErr) {
-      console.warn('⚠️ Failed to ensure Gmail publisher role on topic. Gmail watch may fail.', iamErr);
+    } catch (iamErr: any) {
+      const detail = iamErr?.message ? String(iamErr.message) : String(iamErr);
+      throw new GmailPubSubSetupError(
+        `Could not grant ${GMAIL_PUBLISHER_ROLE} to ${GMAIL_PUSH_SERVICE_ACCOUNT} on ${topicPath}. ` +
+          'Without that binding Gmail cannot publish notifications and no inbound mail will arrive. ' +
+          'The service account Alga authenticates with needs pubsub.topics.getIamPolicy and ' +
+          `pubsub.topics.setIamPolicy on this topic (roles/pubsub.admin covers both). Google reported: ${detail}`
+      );
     }
 
     // Create subscription if it doesn't exist
@@ -187,14 +211,35 @@ export async function setupPubSub(request: SetupPubSubRequest) {
       }
     }
 
+    // Read the subscription back rather than trusting the write. A push
+    // endpoint or audience that does not match what the webhook route verifies
+    // against produces a 401 on every delivery, which is exactly the silent
+    // failure this setup path exists to prevent.
+    const verified = await pubsub.projects.subscriptions.get({
+      subscription: subscriptionPath
+    });
+    const pushEndpoint = verified.data.pushConfig?.pushEndpoint || '';
+    const audience = verified.data.pushConfig?.oidcToken?.audience || '';
+
+    if (pushEndpoint !== request.webhookUrl || audience !== request.webhookUrl) {
+      throw new GmailPubSubSetupError(
+        `Pub/Sub subscription ${subscriptionPath} is not delivering to this Alga instance. ` +
+          `Expected push endpoint and OIDC audience ${request.webhookUrl}, but Google reports ` +
+          `push endpoint ${pushEndpoint || '(none)'} and audience ${audience || '(none)'}. ` +
+          'Delete the subscription in Google Cloud and run setup again, or correct the base URL Alga is configured with.'
+      );
+    }
+
     console.log(`✅ Pub/Sub setup completed successfully for project ${request.projectId}`);
-    const result = {
+    const result: SetupPubSubResult = {
       success: true,
       topicPath,
       subscriptionPath,
-      webhookUrl: request.webhookUrl
+      webhookUrl: request.webhookUrl,
+      pushEndpoint,
+      audience
     };
-    
+
     console.log('📋 Final configuration:', result);
     return result;
 
@@ -209,15 +254,26 @@ export async function setupPubSub(request: SetupPubSubRequest) {
         webhookUrl: request.webhookUrl
       }
     });
+    // Messages built above are already written for the administrator; passing
+    // them through is the whole point of raising them.
+    if (error instanceof GmailPubSubSetupError) {
+      throw error;
+    }
+
     if (error instanceof Error) {
       if (error.message === 'GOOGLE_SERVICE_ACCOUNT_MISSING') {
-        throw new Error('Google service account credentials are not configured for this tenant.');
+        throw new GmailPubSubSetupError('Google service account credentials are not configured for this tenant.');
       }
       if (error.message === 'GOOGLE_SERVICE_ACCOUNT_INVALID_JSON') {
-        throw new Error('Google service account credentials are not valid JSON.');
+        throw new GmailPubSubSetupError('Google service account credentials are not valid JSON.');
       }
     }
 
-    throw new Error('Unable to configure Google Pub/Sub. Check the Google Cloud project, service account permissions, and webhook settings.');
+    const detail = error?.message ? String(error.message) : String(error);
+    throw new GmailPubSubSetupError(
+      `Unable to configure Google Pub/Sub topic ${request.topicName} in project ${request.projectId}. ` +
+        'Check the Google Cloud project, the service account permissions, and the webhook base URL. ' +
+        `Google reported: ${detail}`
+    );
   }
 }

@@ -28,8 +28,8 @@ export default function JobStepHistory({ steps }: JobStepHistoryProps) {
                 {step.stepName}
               </div>
               <div className={`text-sm font-medium px-2 py-1 rounded ${
-                step.status === 'completed' ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]' :
-                step.status === 'failed' ? 'bg-[rgb(var(--color-accent-50))] text-[rgb(var(--color-accent-600))]' : 
+                step.status === 'completed' ? 'chip-primary' :
+                step.status === 'failed' ? 'chip-accent' : 
                 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-700))]'
               }`}>
                 {t(`shared.statusLabels.${step.status}`, {

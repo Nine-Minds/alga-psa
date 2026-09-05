@@ -9,6 +9,7 @@ import { createTestDateISO } from '../../../../../test-utils/dateUtils';
 import {
   createTestService,
   createFixedPlanAssignment,
+  materializeRecurringServicePeriods,
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
@@ -258,7 +259,12 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       const contractId = await context.createEntity('contracts', {
         contract_name: 'Client Contract',
         billing_frequency: 'monthly',
-        is_active: true
+        is_active: true,
+        // Recurring service periods resolve through
+        // contract_lines -> contracts -> clients on owner_client_id, so an
+        // ownerless contract yields no periods for the invoice window.
+        owner_client_id: context.clientId,
+        status: 'active'
       }, 'contract_id');
 
       // Link the contract to the client
@@ -276,6 +282,10 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         contractLineId,
         clientContractLineId
       });
+
+      // The fixture only materializes on request, and the schedule has to be
+      // anchored on the contract the invoice will be read through.
+      await materializeRecurringServicePeriods(context, contractLineId);
 
       // Add pricing schedule with higher rate
       const scheduleId = uuidv4();
@@ -337,7 +347,9 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       const contractId = await context.createEntity('contracts', {
         contract_name: 'Default Contract',
         billing_frequency: 'monthly',
-        is_active: true
+        is_active: true,
+        owner_client_id: context.clientId,
+        status: 'active'
       }, 'contract_id');
 
       const clientContractId = await context.createEntity('client_contracts', {
@@ -354,6 +366,10 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         contractLineId,
         clientContractLineId
       });
+
+      // The fixture only materializes on request, and the schedule has to be
+      // anchored on the contract the invoice will be read through.
+      await materializeRecurringServicePeriods(context, contractLineId);
 
       // Create billing cycle (without pricing schedule)
       const billingCycleId = await context.createEntity('client_billing_cycles', {
@@ -402,7 +418,9 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       const contractId = await context.createEntity('contracts', {
         contract_name: 'Multi-Rate Contract',
         billing_frequency: 'monthly',
-        is_active: true
+        is_active: true,
+        owner_client_id: context.clientId,
+        status: 'active'
       }, 'contract_id');
 
       const clientContractId = await context.createEntity('client_contracts', {
@@ -419,6 +437,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         clientContractLineId,
         contractLineId
       });
+
+      await materializeRecurringServicePeriods(context, contractLineId);
 
       // Schedule 1: Jan-Feb @ $100/hour
       await context.db('contract_pricing_schedules').insert({
@@ -509,7 +529,9 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       const contractId = await context.createEntity('contracts', {
         contract_name: 'Null Rate Contract',
         billing_frequency: 'monthly',
-        is_active: true
+        is_active: true,
+        owner_client_id: context.clientId,
+        status: 'active'
       }, 'contract_id');
 
       const clientContractId = await context.createEntity('client_contracts', {
@@ -526,6 +548,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         clientContractLineId,
         contractLineId
       });
+
+      await materializeRecurringServicePeriods(context, contractLineId);
 
       // Add pricing schedule with null rate
       await context.db('contract_pricing_schedules').insert({
@@ -585,7 +609,9 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
       const contractId = await context.createEntity('contracts', {
         contract_name: 'Expired Schedule Contract',
         billing_frequency: 'monthly',
-        is_active: true
+        is_active: true,
+        owner_client_id: context.clientId,
+        status: 'active'
       }, 'contract_id');
 
       const clientContractId = await context.createEntity('client_contracts', {
@@ -602,6 +628,8 @@ describe('Billing Invoice Generation – Pricing Schedule Rate Overrides', () =>
         clientContractLineId,
         contractLineId
       });
+
+      await materializeRecurringServicePeriods(context, contractLineId);
 
       // Add pricing schedule that expired before billing period
       await context.db('contract_pricing_schedules').insert({

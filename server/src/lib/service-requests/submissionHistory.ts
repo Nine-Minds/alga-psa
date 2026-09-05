@@ -34,6 +34,8 @@ export interface ServiceRequestClientSubmissionDetail {
   submission_id: string;
   definition_id: string;
   definition_version_id: string;
+  /** Immutable version number captured when the submission was created. */
+  definition_version_number: number;
   request_name: string;
   submitted_payload: Record<string, unknown>;
   execution_status: 'pending' | 'succeeded' | 'failed';
@@ -43,6 +45,17 @@ export interface ServiceRequestClientSubmissionDetail {
   submitted_at: Date;
   form_schema_snapshot: Record<string, unknown>;
   attachments: ServiceRequestSubmissionAttachmentDetail[];
+  audit_events: ServiceRequestSubmissionAuditEvent[];
+}
+
+export interface ServiceRequestSubmissionAuditEvent {
+  audit_id: string;
+  operation: string;
+  user_id: string | null;
+  /** Display name resolved from the acting user, when one is recorded. */
+  actor_name: string | null;
+  timestamp: Date;
+  details: Record<string, unknown>;
 }
 
 export interface ServiceRequestSubmissionAttachmentDetail {
@@ -71,12 +84,77 @@ export interface ServiceRequestAdminDefinitionSubmissionDetail
   extends ServiceRequestAdminDefinitionSubmissionRow {
   definition_id: string;
   definition_version_id: string;
+  /** Immutable version number captured when the submission was created. */
+  definition_version_number: number;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
   requester_user_name: string | null;
   client_name: string | null;
   contact_name: string | null;
   created_ticket_display: string | null;
+  audit_events: ServiceRequestSubmissionAuditEvent[];
+}
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Loads the tenant-scoped audit trail for one submission, oldest first, with
+ * actor names resolved from the users table. Callers must have already
+ * authorized access to the submission (client- or definition-scoped detail
+ * lookup) before fetching its events.
+ */
+export async function listServiceRequestSubmissionAuditEvents(
+  knex: Knex,
+  tenant: string,
+  submissionId: string
+): Promise<ServiceRequestSubmissionAuditEvent[]> {
+  const db = tenantDb(knex, tenant);
+  const rows = await db.table('audit_logs')
+    .where({
+      table_name: 'service_request_submissions',
+      record_id: submissionId,
+    })
+    .orderBy('timestamp', 'asc')
+    .select('audit_id', 'operation', 'user_id', 'timestamp', 'details');
+
+  const events = rows as unknown as Array<Omit<ServiceRequestSubmissionAuditEvent, 'actor_name'>>;
+  if (events.length === 0) {
+    return [];
+  }
+
+  // audit_logs.user_id is free-form text; resolve names only for values that
+  // are actually user ids so legacy or system rows render without an actor.
+  const actorIds = [...new Set(
+    events
+      .map((event) => event.user_id)
+      .filter((userId): userId is string => typeof userId === 'string' && UUID_PATTERN.test(userId))
+  )];
+
+  const actorNames = new Map<string, string>();
+  if (actorIds.length > 0) {
+    const userRows = await db.table('users')
+      .whereIn('user_id', actorIds)
+      .select(
+        'user_id',
+        knex.raw(`
+          COALESCE(
+            NULLIF(TRIM(CONCAT(COALESCE(first_name, ''), ' ', COALESCE(last_name, ''))), ''),
+            username,
+            email,
+            user_id::text
+          ) as actor_name
+        `)
+      );
+    for (const userRow of userRows as Array<{ user_id: string; actor_name: string }>) {
+      actorNames.set(userRow.user_id, userRow.actor_name);
+    }
+  }
+
+  return events.map((event) => ({
+    ...event,
+    actor_name: event.user_id ? actorNames.get(event.user_id) ?? null : null,
+  }));
 }
 
 export async function listServiceRequestSubmissionsForDefinition(
@@ -128,6 +206,9 @@ export async function getServiceRequestSubmissionDetailForDefinition(
     type: 'left',
     rootTenantColumn: 'submission.tenant',
   });
+  db.tenantJoin(query, 'service_request_definition_versions as version', 'version.version_id', 'submission.definition_version_id', {
+    rootTenantColumn: 'submission.tenant',
+  });
   const row = await query
     .where({
       'submission.definition_id': definitionId,
@@ -141,6 +222,7 @@ export async function getServiceRequestSubmissionDetailForDefinition(
       'submission.contact_id',
       'submission.definition_id',
       'submission.definition_version_id',
+      'version.version_number as definition_version_number',
       'submission.submitted_payload',
       'submission.execution_status',
       'submission.execution_error_summary',
@@ -170,7 +252,16 @@ export async function getServiceRequestSubmissionDetailForDefinition(
       `)
     );
 
-  return (row as unknown as ServiceRequestAdminDefinitionSubmissionDetail | undefined) ?? null;
+  if (!row) {
+    return null;
+  }
+
+  const auditEvents = await listServiceRequestSubmissionAuditEvents(knex, tenant, submissionId);
+
+  return {
+    ...(row as unknown as Omit<ServiceRequestAdminDefinitionSubmissionDetail, 'audit_events'>),
+    audit_events: auditEvents,
+  };
 }
 
 export async function getServiceRequestSubmissionHistoryDetail(
@@ -256,6 +347,7 @@ export async function getClientServiceRequestSubmissionDetail(
       'submission.submission_id',
       'submission.definition_id',
       'submission.definition_version_id',
+      'version.version_number as definition_version_number',
       'submission.request_name',
       'submission.submitted_payload',
       'submission.execution_status',
@@ -283,8 +375,11 @@ export async function getClientServiceRequestSubmissionDetail(
       'created_at'
     );
 
+  const auditEvents = await listServiceRequestSubmissionAuditEvents(knex, tenant, submissionId);
+
   return {
-    ...(row as unknown as Omit<ServiceRequestClientSubmissionDetail, 'attachments'>),
+    ...(row as unknown as Omit<ServiceRequestClientSubmissionDetail, 'attachments' | 'audit_events'>),
     attachments: attachments as ServiceRequestSubmissionAttachmentDetail[],
+    audit_events: auditEvents,
   };
 }

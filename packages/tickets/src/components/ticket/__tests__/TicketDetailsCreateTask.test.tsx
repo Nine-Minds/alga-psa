@@ -5,6 +5,7 @@ import React from 'react';
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
+import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 let lastTicketInfoProps: any = null;
 
@@ -300,6 +301,7 @@ describe('TicketDetails toolbar actions', () => {
 
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket as any}
         renderCreateProjectTask={renderCreateProjectTask}
       />
@@ -309,7 +311,7 @@ describe('TicketDetails toolbar actions', () => {
   });
 
   it('does not render create task button when renderCreateProjectTask is missing', () => {
-    render(<TicketDetails initialTicket={baseTicket as any} />);
+    render(<TicketDetails bootstrap={entryLayoutBootstrap} initialTicket={baseTicket as any} />);
 
     expect(lastTicketInfoProps.renderProjectTaskActions).toBeUndefined();
   });
@@ -317,6 +319,7 @@ describe('TicketDetails toolbar actions', () => {
   it('exposes the resolve-and-close action for an open ticket with a closed board status', () => {
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={baseTicket as any}
         statusOptions={[
           { value: 'status-1', label: 'Open', board_id: 'board-1', is_closed: false },
@@ -332,6 +335,7 @@ describe('TicketDetails toolbar actions', () => {
   it('hides the resolve-and-close action after the ticket is closed', () => {
     render(
       <TicketDetails
+        bootstrap={entryLayoutBootstrap}
         initialTicket={{ ...baseTicket, status_id: 'status-closed' } as any}
         statusOptions={[
           { value: 'status-closed', label: 'Resolved', board_id: 'board-1', is_closed: true },

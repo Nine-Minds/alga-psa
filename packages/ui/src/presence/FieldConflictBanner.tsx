@@ -46,7 +46,7 @@ export function FieldConflictBanner({
   return (
     <Alert
       variant="warning"
-      className={`mt-2 space-y-3 border border-[rgb(var(--color-warning-300))] ${className}`.trim()}
+      className={`mt-2 space-y-3 border border-[rgb(var(--badge-warning-border))] ${className}`.trim()}
     >
       <AlertDescription className="space-y-3">
         <div className="space-y-1">

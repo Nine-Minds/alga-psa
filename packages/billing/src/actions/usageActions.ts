@@ -1,9 +1,28 @@
 'use server';
 
+import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLineDisambiguation';
-import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
+import {
+  getEligibleContractLines,
+  getEligibleContractLinesForUI as loadEligibleContractLinesForUI,
+  type EligibleContractLineForUI,
+} from '@alga-psa/billing/lib/contractLineDisambiguation';
+import {
+  buildContractLineAttributionDecision,
+  resolveDeterministicContractLineSelection,
+} from '../lib/contractLineDisambiguation.shared';
+import {
+  ICreateUsageRecord,
+  IUpdateUsageRecord,
+  IUsageFilter,
+  IUsageRecord,
+  CONTRACT_LINE_SOURCE_BY_SELECTION_REASON,
+  type ContractLineSelectionReason,
+  type ContractLineSource,
+} from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { adjustQuantityDraw } from '@alga-psa/shared/billingClients/drawAdjustments';
 import {
@@ -23,6 +42,27 @@ import {
 
 type UsageActionError = ActionMessageError | ActionPermissionError;
 
+/**
+ * usage_tracking.usage_date is a timestamptz column; the pg driver materializes
+ * it as a JS Date. Resolve any input (ISO string or Date) to a canonical ISO
+ * instant BEFORE it crosses the contract-line attribution or bucket-draw
+ * boundary. Those boundaries call `String(...)`/`toPlainDate(...)` and a raw
+ * JS Date would otherwise arrive as `"Thu Sep 03 2026 …"`, which
+ * `toPlainDate` rejects and rolls the whole insert back.
+ *
+ * Date-only strings (YYYY-MM-DD) pass through unchanged; a JS Date is
+ * serialized deterministically via `.toISOString()`.
+ */
+function toCanonicalUsageDateISO(value: string | Date): string {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      throw new Error(`Invalid usage_date value: ${String(value)}`);
+    }
+    return value.toISOString();
+  }
+  return value;
+}
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   tenant: string,
@@ -31,8 +71,103 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-function usageActionErrorFrom(error: unknown): UsageActionError | null {
-  // Typed bucket failures name their cause; prefer them over the string match.
+async function resolveUsageAttribution(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  usageDate: string | Date;
+}) {
+  const eligibleLines = await getEligibleContractLines(
+    params.trx,
+    params.tenant,
+    params.clientId,
+    params.serviceId,
+    params.usageDate,
+  );
+  const selection = resolveDeterministicContractLineSelection(eligibleLines);
+  return {
+    selection,
+    decision: buildContractLineAttributionDecision({
+      kind: 'usage_record',
+      recordId: 'usage-write',
+      selection,
+      allowBucketOverlay: true,
+    }),
+  };
+}
+
+async function rejectAdditiveWriteToPeriodTotalConfig(params: {
+  trx: Knex.Transaction;
+  tenant: string;
+  clientId: string;
+  serviceId: string;
+  contractLineId: string | null | undefined;
+  usageDate: string;
+}): Promise<string | null> {
+  const { trx, tenant, serviceId, contractLineId } = params;
+  if (!contractLineId) {
+    return null;
+  }
+  // A usage record whose (line, service) resolves to a Usage configuration in
+  // period-total measurement mode is an additive write into a period-total
+  // configuration. Such writes are rejected: mixing dated entries and one
+  // replaceable period count in the same period would double-charge the
+  // service. (clientId is part of the signature so the caller states the full
+  // scope; the mode lives on the config, not the client.)
+  const config = await tenantScopedTable(
+    trx,
+    tenant,
+    'contract_line_service_configuration',
+  )
+    .where({
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: 'Usage',
+    })
+    .first<{ config_id: string }>('config_id');
+  if (!config) {
+    return null;
+  }
+  const usageConfig = await tenantScopedTable(
+    trx,
+    tenant,
+    'contract_line_service_usage_config',
+  )
+    .where({ tenant, config_id: config.config_id })
+    .first<{ measurement_mode: string | null }>('measurement_mode');
+  const revision = await resolveUsageMeasurementRevision(trx, tenant, config.config_id, params.usageDate);
+  if ((revision?.measurement_mode ?? usageConfig?.measurement_mode ?? 'additive') === 'period_total') {
+    return 'This service uses period-total reporting for this contract line: report one count for the whole service period instead of adding dated consumption entries.';
+  }
+  return null;
+}
+
+function normalizeUsageDayForComparison(value: string | Date): string {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  const text = String(value ?? '');
+  return text.length >= 10 ? text.slice(0, 10) : text;
+}
+
+async function replayMatchesExistingUsage(
+  existing: IUsageRecord,
+  data: ICreateUsageRecord,
+  contractLineId: string | null | undefined,
+): Promise<boolean> {
+  return (
+    existing.client_id === data.client_id &&
+    existing.service_id === data.service_id &&
+    Number(existing.quantity) === Number(data.quantity) &&
+    normalizeUsageDayForComparison(existing.usage_date) ===
+      normalizeUsageDayForComparison(toCanonicalUsageDateISO(data.usage_date)) &&
+    (existing.contract_line_id ?? null) === (contractLineId ?? null)
+  );
+}
+
+function usageActionErrorFrom(error: unknown): UsageActionError | null {  // Typed bucket failures name their cause; prefer them over the string match.
   const bucketError = findBucketUsageError(error);
   if (bucketError) {
     return actionError(bucketUsageErrorMessage(bucketError));
@@ -44,25 +179,31 @@ function usageActionErrorFrom(error: unknown): UsageActionError | null {
       return permissionError(message);
     }
     if (message.includes('Usage record') && message.includes('not found')) {
-      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.');
+      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.', 'msp/billing:errors.usage.notFoundRefresh');
     }
     if (message.includes('Failed to update bucket usage') || message.includes('Bucket usage update failed')) {
-      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.');
+      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.', 'msp/billing:errors.usage.bucketUpdateFailed');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.');
+    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.', 'msp/billing:errors.usage.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required usage field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required usage field: ${dbError.column}.`,
+          'msp/billing:errors.usage.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required usage field.', 'msp/billing:errors.usage.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.');
+    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.', 'msp/billing:errors.usage.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting usage record already exists. Please refresh and try again.');
+    return actionError('A conflicting usage record already exists. Please refresh and try again.', 'msp/billing:errors.usage.duplicate');
   }
 
   return null;
@@ -70,30 +211,71 @@ function usageActionErrorFrom(error: unknown): UsageActionError | null {
 
 export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
   try {
     const { knex } = await createTenantKnex();
+    const usageDateISO = toCanonicalUsageDateISO(data.usage_date);
 
     return await knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, tenant);
     // If no contract line ID is provided, try to determine the default one
     let contractLineId = data.contract_line_id;
+    let contractLineSource: ContractLineSource | null = data.contract_line_id
+      ? 'explicit'
+      : null;
+    let contractLineUnresolvedReason: ContractLineSelectionReason | null = null;
     if (!contractLineId && data.service_id && data.client_id) {
       try {
-        // Use trx for consistency if determineDefaultContractLine needs DB access within transaction
-        const defaultPlanId = await determineDefaultContractLine(
-          data.client_id,
-          data.service_id,
-          data.usage_date
-          // trx // Removed transaction argument
-        );
-
-        if (defaultPlanId) {
-          contractLineId = defaultPlanId;
+        const { selection, decision } = await resolveUsageAttribution({
+          trx,
+          tenant,
+          clientId: data.client_id,
+          serviceId: data.service_id,
+          usageDate: usageDateISO,
+        });
+        if (decision.action === 'assign') {
+          contractLineId = decision.contractLineId;
+          contractLineSource = CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
+        } else {
+          contractLineSource = 'unresolved';
+          contractLineUnresolvedReason = decision.reason;
         }
       } catch (error) {
         console.error('Error determining default contract line:', error);
-        // Potentially rethrow or handle if this is critical
+        contractLineSource = 'unresolved';
+        contractLineUnresolvedReason = 'error';
+      }
+    }
+
+    // Additive entries may not be written into a period-total configuration.
+    const modeGuard = await rejectAdditiveWriteToPeriodTotalConfig({
+      trx,
+      tenant,
+      clientId: data.client_id,
+      serviceId: data.service_id,
+      contractLineId,
+      usageDate: usageDateISO,
+    });
+    if (modeGuard) {
+      return actionError(modeGuard);
+    }
+
+    // Request-id replay: an identical retry of the same additive event returns
+    // the original record instead of creating a second consumption event;
+    // reusing the id with different content is rejected. Distinct request ids
+    // legitimately remain separate events even when their content matches.
+    if (data.request_id) {
+      const existingByRequest = await tenantScopedTable(trx, tenant, 'usage_tracking')
+        .where({ tenant, request_id: data.request_id })
+        .first<IUsageRecord | undefined>();
+      if (existingByRequest) {
+        if (await replayMatchesExistingUsage(existingByRequest, data, contractLineId)) {
+          return existingByRequest;
+        }
+        return actionError(
+          'This request id was already used for a different usage entry. Retrying an earlier request with changed content is not allowed; issue a new request.',
+        );
       }
     }
 
@@ -104,8 +286,11 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
         client_id: data.client_id,
         service_id: data.service_id,
         quantity: data.quantity,
-        usage_date: data.usage_date,
+        usage_date: usageDateISO,
         contract_line_id: contractLineId, // Use determined or provided plan ID
+        contract_line_source: contractLineSource,
+        contract_line_unresolved_reason: contractLineUnresolvedReason,
+        request_id: data.request_id ?? null,
       })
       .returning('*');
 
@@ -126,7 +311,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
           {
             service_id: record.service_id,
             quantity: record.quantity || 0,
-            usage_date: record.usage_date,
+            usage_date: toCanonicalUsageDateISO(record.usage_date),
             contract_line_id: record.contract_line_id ?? null,
           },
           1,
@@ -157,12 +342,13 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
 
 export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
   try {
     const { knex } = await createTenantKnex();
 
     return await knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, tenant);
     // 1. Fetch the original record BEFORE update
     const originalRecord = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .where({ usage_id: data.usage_id })
@@ -172,28 +358,65 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
       throw new Error(`Usage record with ID ${data.usage_id} not found.`);
     }
     const oldQuantity = originalRecord.quantity || 0;
+    const originalUsageDateISO = toCanonicalUsageDateISO(originalRecord.usage_date);
 
     // 2. Determine the final contract line ID
-    let finalContractLineId = data.contract_line_id;
+    let finalContractLineId: string | null | undefined = data.contract_line_id;
+    let finalContractLineSource: ContractLineSource | null = data.contract_line_id
+      ? 'explicit'
+      : (originalRecord.contract_line_source ?? null);
+    let finalContractLineUnresolvedReason: ContractLineSelectionReason | null =
+      originalRecord.contract_line_unresolved_reason ?? null;
     // If plan ID is explicitly set to null/undefined OR not provided in update payload, try determining default
     if (finalContractLineId === null || finalContractLineId === undefined) {
       const clientIdForPlan = data.client_id || originalRecord.client_id;
       const serviceIdForPlan = data.service_id || originalRecord.service_id;
       if (clientIdForPlan && serviceIdForPlan) {
         try {
-          const defaultPlanId = await determineDefaultContractLine(
-            clientIdForPlan,
-            serviceIdForPlan,
-            data.usage_date || originalRecord.usage_date
-            // trx // Removed transaction argument
-          );
-          finalContractLineId = defaultPlanId || undefined; // Use default or undefined if none found
+          const { selection, decision } = await resolveUsageAttribution({
+            trx,
+            tenant,
+            clientId: clientIdForPlan,
+            serviceId: serviceIdForPlan,
+            usageDate: data.usage_date ? toCanonicalUsageDateISO(data.usage_date) : originalUsageDateISO,
+          });
+          if (decision.action === 'assign') {
+            finalContractLineId = decision.contractLineId;
+            finalContractLineSource = CONTRACT_LINE_SOURCE_BY_SELECTION_REASON[selection.reason];
+            finalContractLineUnresolvedReason = null;
+          } else {
+            finalContractLineId = null;
+            finalContractLineSource = 'unresolved';
+            finalContractLineUnresolvedReason = decision.reason;
+          }
         } catch (error) {
           console.error('Error determining default contract line during update:', error);
-          finalContractLineId = originalRecord.contract_line_id; // Fallback to original if determination fails? Or keep as null? Keeping null for now.
+          // Resolver failure must not create a mixed attribution tuple. Keep
+          // the original line/source/reason together until a later explicit
+          // edit or reconciliation can replace the tuple atomically.
+          finalContractLineId = originalRecord.contract_line_id ?? null;
+          finalContractLineSource = originalRecord.contract_line_source ?? null;
+          finalContractLineUnresolvedReason = originalRecord.contract_line_unresolved_reason ?? null;
         }
       } else {
-         finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
+        finalContractLineId = originalRecord.contract_line_id; // Fallback if client/service IDs are missing
+      }
+    }
+
+    // Additive entries may not be written into a period-total configuration.
+    const targetServiceForGuard = data.service_id || originalRecord.service_id;
+    const targetClientForGuard = data.client_id || originalRecord.client_id;
+    if (targetServiceForGuard && targetClientForGuard) {
+      const modeGuard = await rejectAdditiveWriteToPeriodTotalConfig({
+        trx,
+        tenant,
+        clientId: targetClientForGuard,
+        serviceId: targetServiceForGuard,
+        contractLineId: finalContractLineId,
+        usageDate: data.usage_date ? toCanonicalUsageDateISO(data.usage_date) : originalUsageDateISO,
+      });
+      if (modeGuard) {
+        return actionError(modeGuard);
       }
     }
 
@@ -203,9 +426,10 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         ...(data.client_id !== undefined && { client_id: data.client_id }),
         ...(data.service_id !== undefined && { service_id: data.service_id }),
         ...(data.quantity !== undefined && { quantity: data.quantity }),
-        ...(data.usage_date !== undefined && { usage_date: data.usage_date }),
+        ...(data.usage_date !== undefined && { usage_date: toCanonicalUsageDateISO(data.usage_date) }),
         contract_line_id: finalContractLineId, // Always update the plan ID based on determination logic
-        // updated_at is likely handled by DB trigger/default, removed from payload
+        contract_line_source: finalContractLineSource,
+        contract_line_unresolved_reason: finalContractLineUnresolvedReason,
     };
 
 
@@ -217,6 +441,8 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     if (!updatedRecord) {
       throw new Error(`Usage record with ID ${data.usage_id} not found.`);
     }
+
+    const updatedUsageDateISO = toCanonicalUsageDateISO(updatedRecord.usage_date);
 
     // --- Bucket Usage Update Logic ---
     // Two independent draws, each resolved from ITS OWN record side: reverse
@@ -233,7 +459,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         {
           service_id: originalRecord.service_id,
           quantity: oldQuantity,
-          usage_date: originalRecord.usage_date,
+          usage_date: originalUsageDateISO,
           contract_line_id: originalRecord.contract_line_id ?? null,
         },
         -1,
@@ -256,7 +482,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
           {
             service_id: updatedRecord.service_id,
             quantity: updatedRecord.quantity || 0,
-            usage_date: updatedRecord.usage_date,
+            usage_date: updatedUsageDateISO,
             contract_line_id: updatedRecord.contract_line_id ?? null,
           },
           1,
@@ -284,7 +510,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
 
 export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: string): Promise<void | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    return permissionError('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -297,7 +523,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
     if (!recordToDelete) {
       console.warn(`Usage record ${usageId} not found for deletion.`);
-      return actionError('Usage record not found. It may have already been deleted.');
+      return actionError('Usage record not found. It may have already been deleted.', 'msp/billing:errors.usage.alreadyDeleted');
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
@@ -312,7 +538,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
           {
             service_id: recordToDelete.service_id,
             quantity: recordToDelete.quantity || 0,
-            usage_date: recordToDelete.usage_date,
+            usage_date: toCanonicalUsageDateISO(recordToDelete.usage_date),
             contract_line_id: recordToDelete.contract_line_id ?? null,
           },
           -1,
@@ -356,7 +582,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
 export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[] | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -394,6 +620,36 @@ export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsage
     throw error;
   }
 });
+
+export type EligibleContractLinesForUIResult = EligibleContractLineForUI[] | UsageActionError;
+
+/**
+ * Loads the eligible contract lines the Usage Tracking "Add Usage" dialog offers
+ * for a (client, service). Authenticated + tenant-bound: the lib resolver never
+ * reads tenant context itself, so without this wrapper a direct server-action
+ * call 500s on "Tenant context not found".
+ */
+export const getEligibleContractLinesForUI = withAuth(
+  async (
+    user,
+    { tenant },
+    clientId: string,
+    serviceId: string,
+    effectiveDate?: string | Date,
+  ): Promise<EligibleContractLinesForUIResult> => {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
+    }
+    try {
+      const { knex } = await createTenantKnex();
+      return await loadEligibleContractLinesForUI(knex, tenant, clientId, serviceId, effectiveDate);
+    } catch (error) {
+      const expected = usageActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
+  },
+);
 
 interface Client {
   client_id: string;

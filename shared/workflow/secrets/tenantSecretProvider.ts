@@ -65,9 +65,10 @@ export class TenantSecretProvider {
   private tenantId: string;
   private secretProvider: ISecretProvider | undefined;
 
-  constructor(knex: Knex, tenantId: string) {
+  constructor(knex: Knex, tenantId: string, secretProvider?: ISecretProvider) {
     this.knex = knex;
     this.tenantId = tenantId;
+    this.secretProvider = secretProvider;
   }
 
   /**
@@ -151,36 +152,25 @@ export class TenantSecretProvider {
     // Validate input
     const validated = createSecretInputSchema.parse(input);
 
-    // Check for existing secret with same name
-    const existing = await this.exists(validated.name);
-    if (existing) {
-      throw new Error(`Secret with name "${validated.name}" already exists`);
-    }
-
     const secretProviderKey = generateSecretProviderKey(this.tenantId, validated.name);
 
-    return this.knex.transaction(async (trx) => {
-      // Store the actual secret value via ISecretProvider
-      const provider = await this.getSecretProvider();
-      await provider.setTenantSecret(this.tenantId, validated.name, validated.value);
-
-      // Store metadata in database
-      const [row] = await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
-        .insert({
-          tenant: this.tenantId,
-          name: validated.name,
-          description: validated.description ?? null,
-          secret_provider_key: secretProviderKey,
-          created_by: userId,
-          updated_by: userId
-        })
-        .returning<TenantSecretModel[]>('*');
-
-      // Log audit event
-      await this.logAuditEvent(trx, row.id, validated.name, 'created', userId);
-
-      return modelToMetadata(row);
-    });
+    try {
+      const metadata = await this.knex.transaction(async (trx) => {
+        // The database unique constraint arbitrates concurrent creates. Commit the
+        // metadata and audit first: a provider failure may leave an inert orphaned
+        // row, but cannot make a rolled-back transaction point at a changed value.
+        const [row] = await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
+          .insert({ tenant: this.tenantId, name: validated.name, description: validated.description ?? null, secret_provider_key: secretProviderKey, created_by: userId, updated_by: userId })
+          .returning<TenantSecretModel[]>('*');
+        await this.logAuditEvent(trx, row.id, validated.name, 'created', userId);
+        return modelToMetadata(row);
+      });
+      await (await this.getSecretProvider()).setTenantSecret(this.tenantId, validated.name, validated.value);
+      return metadata;
+    } catch (error) {
+      if ((error as { code?: string }).code === '23505') throw new Error(`Secret with name "${validated.name}" already exists`);
+      throw error;
+    }
   }
 
   /**
@@ -196,23 +186,7 @@ export class TenantSecretProvider {
     // Validate input
     const validated = updateSecretInputSchema.parse(input);
 
-    // Find existing secret
-    const existing = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
-      .where({ name })
-      .first<TenantSecretModel>();
-
-    if (!existing) {
-      throw new Error(`Secret with name "${name}" not found`);
-    }
-
-    return this.knex.transaction(async (trx) => {
-      // Update the actual secret value if provided
-      if (validated.value !== undefined) {
-        const provider = await this.getSecretProvider();
-        await provider.setTenantSecret(this.tenantId, name, validated.value);
-      }
-
-      // Update metadata in database
+    const metadata = await this.knex.transaction(async (trx) => {
       const updates: Partial<TenantSecretModel> = {
         updated_by: userId,
         updated_at: new Date().toISOString()
@@ -226,6 +200,7 @@ export class TenantSecretProvider {
         .where({ name })
         .update(updates)
         .returning<TenantSecretModel[]>('*');
+      if (!row) throw new Error(`Secret with name "${name}" not found`);
 
       // Log audit event
       await this.logAuditEvent(trx, row.id, name, 'updated', userId, undefined, {
@@ -235,6 +210,11 @@ export class TenantSecretProvider {
 
       return modelToMetadata(row);
     });
+    // Only overwrite an external value after the metadata and audit commit. A
+    // provider failure leaves committed metadata with the old value, which is
+    // recoverable; it never destroys the old value during a SQL rollback.
+    if (validated.value !== undefined) await (await this.getSecretProvider()).setTenantSecret(this.tenantId, name, validated.value);
+    return metadata;
   }
 
   /**
@@ -245,28 +225,17 @@ export class TenantSecretProvider {
    * @throws Error if secret doesn't exist
    */
   async delete(name: string, userId: string): Promise<void> {
-    // Find existing secret
-    const existing = await tenantTable<TenantSecretModel>(this.knex, this.tenantId, 'tenant_secrets')
-      .where({ name })
-      .first<TenantSecretModel>();
-
-    if (!existing) {
-      throw new Error(`Secret with name "${name}" not found`);
-    }
-
     await this.knex.transaction(async (trx) => {
-      // Delete from ISecretProvider
-      const provider = await this.getSecretProvider();
-      await provider.deleteTenantSecret(this.tenantId, name);
-
-      // Log audit event (before deleting metadata)
-      await this.logAuditEvent(trx, existing.id, name, 'deleted', userId);
-
-      // Delete metadata from database
-      await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
+      const [row] = await tenantTable<TenantSecretModel>(trx, this.tenantId, 'tenant_secrets')
         .where({ name })
-        .delete();
+        .delete()
+        .returning<TenantSecretModel[]>('*');
+      if (!row) throw new Error(`Secret with name "${name}" not found`);
+      await this.logAuditEvent(trx, row.id, name, 'deleted', userId);
     });
+    // The committed row is gone before external deletion. A failure here leaves an
+    // inert, recoverable orphan which a future create of the same name overwrites.
+    await (await this.getSecretProvider()).deleteTenantSecret(this.tenantId, name);
   }
 
   /**
@@ -355,6 +324,10 @@ export class TenantSecretProvider {
 /**
  * Factory function to create a TenantSecretProvider for a given tenant.
  */
-export function createTenantSecretProvider(knex: Knex, tenantId: string): TenantSecretProvider {
-  return new TenantSecretProvider(knex, tenantId);
+export function createTenantSecretProvider(
+  knex: Knex,
+  tenantId: string,
+  secretProvider?: ISecretProvider,
+): TenantSecretProvider {
+  return new TenantSecretProvider(knex, tenantId, secretProvider);
 }

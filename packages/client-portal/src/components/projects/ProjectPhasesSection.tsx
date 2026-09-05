@@ -91,7 +91,7 @@ export default function ProjectPhasesSection({ projectId, showCompletion }: Proj
               </div>
               {showCompletion && phase.completion_percentage !== undefined && (
                 <div className="ml-4 text-right">
-                  <div className="text-lg font-semibold text-purple-600">
+                  <div className="text-lg font-semibold text-[rgb(var(--color-primary-600))]">
                     {phase.completion_percentage}%
                   </div>
                   <div className="text-xs text-[rgb(var(--color-text-500))]">
@@ -118,7 +118,7 @@ export default function ProjectPhasesSection({ projectId, showCompletion }: Proj
               <div className="mt-3">
                 <div className="w-full bg-[rgb(var(--color-border-200))] rounded-full h-2">
                   <div
-                    className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                    className="bg-[rgb(var(--color-primary-600))] h-2 rounded-full transition-all duration-300"
                     style={{ width: `${phase.completion_percentage}%` }}
                   ></div>
                 </div>

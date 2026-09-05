@@ -8,7 +8,9 @@ import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 export interface UsageRecordComputeRow {
   usage_id: string;
@@ -17,6 +19,13 @@ export interface UsageRecordComputeRow {
   quantity: number | string;
   tax_rate_id?: string | null;
   currency_rate?: number | string | null;
+  /**
+   * Present when this row is a period-total report (usage_period_totals)
+   * rather than a dated additive usage_tracking entry. Carries the total's row
+   * id and revision so persistence consumes exactly that total+revision.
+   */
+  period_total_id?: string | null;
+  period_total_revision?: number | string | null;
 }
 
 export interface UsageRateTier {
@@ -43,6 +52,11 @@ export interface UsageBasedChargeComputeInputs {
   serviceConfigMap: Map<string, UsageServiceConfigEntry>;
   usageRecords: UsageRecordComputeRow[];
   contractCurrency: string;
+  /**
+   * usage_tracking carries no segment-bearing field, so usage charges stop at
+   * the contract step of the resolution chain (F025, documented via F070).
+   */
+  billingProfile?: ChargeProfileAssignments | null;
 }
 
 export interface UsageBasedChargeComputeResult {
@@ -73,7 +87,9 @@ export function computeUsageBasedCharges(
     serviceConfigMap,
     usageRecords,
     contractCurrency,
+    billingProfile,
   } = inputs;
+  const resolvedProfile = resolveChargeProfileFor(billingProfile);
   const explanations: ChargeExplanation[] = [];
   const isSystemManagedDefault =
     clientContractLine.is_system_managed_default === true;
@@ -153,7 +169,13 @@ export function computeUsageBasedCharges(
 
     let taxAmount = 0;
     let taxRate = 0;
-    if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+    // Exemption is per billing profile (F131): one invoice can carry both
+    // exempt and non-exempt lines when a client holds several legal entities.
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      isTaxable &&
+      effectiveTaxRegion
+    ) {
       try {
         const taxResult = taxPorts.calculateTax(
           client.client_id,
@@ -162,6 +184,7 @@ export function computeUsageBasedCharges(
           effectiveTaxRegion,
           true,
           clientContractLine.currency_code || "USD",
+          resolvedProfile?.billingProfileId ?? null,
         );
         taxRate = taxResult.taxRate;
         taxAmount = taxResult.taxAmount;
@@ -219,6 +242,12 @@ export function computeUsageBasedCharges(
       tax_amount: taxAmount,
       tax_rate: taxRate,
       usageId: record.usage_id,
+      ...(record.period_total_id
+        ? {
+            usagePeriodTotalId: record.period_total_id,
+            usagePeriodTotalRevision: Number(record.period_total_revision ?? 1),
+          }
+        : {}),
       is_taxable: isTaxable,
       servicePeriodStart: timing.servicePeriodStart,
       servicePeriodEnd: timing.servicePeriodEnd,
@@ -227,6 +256,8 @@ export function computeUsageBasedCharges(
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
       location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+      billing_profile_source: resolvedProfile?.source ?? null,
     };
   });
 

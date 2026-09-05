@@ -114,7 +114,9 @@
       "delete": "Failed to delete quote.",
       "duplicate": "Failed to duplicate quote.",
       "load": "Failed to load quotes",
-      "send": "Failed to send quote."
+      "send": "Failed to send quote.",
+      "resend": "Failed to resend quote.",
+      "sendReminder": "Failed to send quote reminder."
     },
     "loading": "Loading quotes...",
     "rowActions": {
@@ -733,7 +735,9 @@
       "notFound": "Quote document template not found.",
       "previewPipeline": "Preview pipeline failed.",
       "saveFailed": "Failed to save quote template",
-      "unknownAstExport": "Unknown AST export error"
+      "unknownAstExport": "Unknown AST export error",
+      "quoteNotFound": "Could not load quote details for preview.",
+      "quoteDetailLoad": "Failed to load quote details."
     },
     "fields": {
       "layoutDetails": "Layout Details",
@@ -757,7 +761,17 @@
       "sampleScenario": "Sample Scenario",
       "selectScenario": "Select scenario...",
       "selectScenarioPrompt": "Select a sample scenario to generate an authoritative preview.",
-      "templateGenerationFailed": "Preview template could not be generated from the current workspace."
+      "templateGenerationFailed": "Preview template could not be generated from the current workspace.",
+      "source": {
+        "sample": "Sample",
+        "existing": "Existing"
+      },
+      "searchQuotes": "Search quotes...",
+      "searchQuotesHint": "Search by number or client...",
+      "noQuotesFound": "No quotes found.",
+      "selectQuote": "Select Quote",
+      "selectQuoteHint": "Select a quote to preview data-bound output.",
+      "loadingQuoteDetails": "Loading quote details..."
     },
     "pipeline": {
       "render": "Render",
@@ -795,6 +809,33 @@
     },
     "labels": {
       "custom": "Custom"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Permission denied: Cannot create quotes",
+      "update": "Permission denied: Cannot update quotes",
+      "read": "Permission denied: Cannot read quotes",
+      "delete": "Permission denied: Cannot delete quotes",
+      "readOne": "Permission denied: Cannot read quote",
+      "approve": "Permission denied: Cannot approve quotes",
+      "updateApprovalSettings": "Permission denied: Cannot update quote approval settings",
+      "readDocumentTemplates": "Permission denied: Cannot read quote document templates",
+      "modifyDocumentTemplates": "Permission denied: Cannot modify quote document templates",
+      "setDefaultDocumentTemplate": "Permission denied: Cannot set default quote document template",
+      "deleteDocumentTemplates": "Permission denied: Cannot delete quote document templates"
+    },
+    "quote": {
+      "formInvalid": "Quote form contains invalid values. Please review and try again.",
+      "notFoundRefresh": "Quote not found. It may have been updated or deleted. Please refresh and try again.",
+      "itemNotFoundRefresh": "Quote item not found. It may have been updated or deleted. Please refresh and try again.",
+      "templateNotFoundRefresh": "Quote template not found. It may have been updated or deleted. Please refresh and try again.",
+      "invalidValue": "One of the selected quote values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected quote, client, contact, or service no longer exists. Please refresh and try again.",
+      "conflict": "This quote change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the quote values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required quote field.",
+      "missingFieldNamed": "Missing required quote field: {{field}}."
     }
   }
 }

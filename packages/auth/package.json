@@ -26,6 +26,10 @@
       "import": "./src/lib/withAuth.ts",
       "types": "./src/lib/withAuth.ts"
     },
+    "./localizeActionError": {
+      "import": "./src/lib/localizeActionError.ts",
+      "types": "./src/lib/localizeActionError.ts"
+    },
     "./apiAuth": {
       "import": "./src/lib/apiAuth.ts",
       "types": "./src/lib/apiAuth.ts"
@@ -94,9 +98,17 @@
       "import": "./src/lib/preCheckDeletion.ts",
       "types": "./src/lib/preCheckDeletion.ts"
     },
+    "./lib/PortalDomainModel": {
+      "import": "./src/lib/PortalDomainModel.ts",
+      "types": "./src/lib/PortalDomainModel.ts"
+    },
     "./hooks/useDeletionValidation": {
       "import": "./src/hooks/useDeletionValidation.ts",
       "types": "./src/hooks/useDeletionValidation.ts"
+    },
+    "./hooks/useAccountingCapabilities": {
+      "import": "./src/hooks/useAccountingCapabilities.ts",
+      "types": "./src/hooks/useAccountingCapabilities.ts"
     }
   },
   "scripts": {
@@ -110,6 +122,7 @@
     "@auth/core": "^0.41.3",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",
+    "@alga-psa/ui": "*",
     "knex": "^3.1.0",
     "next-auth": "^5.0.0-beta.32",
     "ua-parser-js": "^1.0.37"

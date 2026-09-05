@@ -83,7 +83,6 @@ const hoisted = vi.hoisted(() => {
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
-    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     emailProviders: [] as EmailProviderRecord[],
     microsoftEmailProviderConfigs: [] as MicrosoftEmailProviderConfigRecord[],
     calendarProviders: [] as CalendarProviderRecord[],
@@ -120,10 +119,6 @@ const hoisted = vi.hoisted(() => {
       if (table === 'msp_sso_tenant_login_domains') {
         return state.mspSsoLoginDomains;
       }
-      if (table === 'tenant_addons') {
-        return state.tenantAddOns;
-      }
-
       return [] as Array<Record<string, unknown>>;
     };
 
@@ -271,7 +266,6 @@ const {
   resetUpdates,
   microsoftConsumerBindings,
   teamsIntegrations,
-  tenantAddOns,
   emailProviders,
   microsoftEmailProviderConfigs,
   calendarProviders,
@@ -340,8 +334,6 @@ describe('Microsoft integration actions', () => {
     microsoftProfiles.length = 0;
     microsoftConsumerBindings.length = 0;
     teamsIntegrations.length = 0;
-    tenantAddOns.length = 0;
-    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     emailProviders.length = 0;
     microsoftEmailProviderConfigs.length = 0;
     calendarProviders.length = 0;

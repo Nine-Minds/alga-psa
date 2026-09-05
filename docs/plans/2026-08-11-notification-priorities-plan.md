@@ -41,7 +41,7 @@ Mobile push carries the priority as **payload metadata only**: the Expo push
 accordingly. Which templates push, and how loudly the OS delivers them, does
 not change in this card.
 
-All user-visible changes are gated behind the `release-v1.5-feature` feature
+All user-visible changes are gated behind the `release-v1-5-feature` feature
 flag. With the flag off, the badge, panel, settings screen, and activities
 list look and behave exactly as today. Schema changes, priority stamping, and
 push metadata are flag-independent because they are invisible to users.
@@ -106,7 +106,7 @@ push metadata are flag-independent because they are invisible to users.
 | High-tier visual language | Muted "attention red" (desaturated, no tinted row background) for rails, pills, section header, and badge — attention-worthy, not emergency |
 | Mobile push | Priority included as payload metadata; no delivery gating, no OS-priority mapping |
 | Email notifications | Out of scope (separate `notification_*` system untouched) |
-| Feature flag | `release-v1.5-feature` gates every user-visible change |
+| Feature flag | `release-v1-5-feature` gates every user-visible change |
 
 ### Rejected alternatives
 
@@ -210,7 +210,7 @@ the tenant-settings migration style and avoid enum-alteration friction later.
   `data` payload. The `TICKET_PUSH_TEMPLATES` allowlist and Expo delivery
   options are unchanged.
 
-## UI changes (all gated on `release-v1.5-feature`)
+## UI changes (all gated on `release-v1-5-feature`)
 
 Use the client-side feature-flag hook per
 `server/src/lib/feature-flags/README.md`; with the flag off every component
@@ -294,7 +294,7 @@ renders exactly the current markup.
   preference, and "View All" no longer persists the view mode when the
   flag is on (still does when off).
 - Full click-through happens in the card's later Smoke Test step (dev
-  server on port 3729; `NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1.5-feature:true`
+  server on port 3729; `NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-5-feature:true`
   to force the flag on).
 
 ## Out of scope

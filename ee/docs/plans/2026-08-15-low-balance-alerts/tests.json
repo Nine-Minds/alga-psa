@@ -1,7 +1,7 @@
 [
   {
     "id": "T001",
-    "description": "Component: while release-v1.5-feature is loading, unavailable, or false, BillingConfiguration has no prepaid-alert card, spacer, heading, or changed surrounding order; when true, the card is between credit-expiration and external-credit settings.",
+    "description": "Component: while release-v1-5-feature is loading, unavailable, or false, BillingConfiguration has no prepaid-alert card, spacer, heading, or changed surrounding order; when true, the card is between credit-expiration and external-credit settings.",
     "implemented": true,
     "featureIds": [
       "F001",
@@ -188,7 +188,7 @@
   },
   {
     "id": "T021",
-    "description": "DB-backed feature-flag guard: with release-v1.5-feature false, throwing, or unregistered, a scan against configured low credit and bucket data creates zero alerts, deliveries, internal notifications, and email-provider calls.",
+    "description": "DB-backed feature-flag guard: with release-v1-5-feature false, throwing, or unregistered, a scan against configured low credit and bucket data creates zero alerts, deliveries, internal notifications, and email-provider calls.",
     "implemented": true,
     "featureIds": [
       "F003",

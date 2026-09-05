@@ -1,0 +1,44 @@
+{
+  "name": "@alga-psa/telephony",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "import": "./src/types/index.ts"
+    },
+    "./lib/*": {
+      "types": "./src/lib/*.ts",
+      "import": "./src/lib/*.ts"
+    },
+    "./services/*": {
+      "types": "./src/services/*.ts",
+      "import": "./src/services/*.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@alga-psa/core": "*",
+    "@alga-psa/db": "*",
+    "@alga-psa/types": "*",
+    "libphonenumber-js": "^1.13.11",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^4.1.9"
+  }
+}

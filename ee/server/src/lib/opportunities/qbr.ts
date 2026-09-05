@@ -6,6 +6,7 @@ import type {
   IOpportunityQbrTriggerPack,
   IOpportunityQbrYieldRow,
 } from '@alga-psa/types';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { OpportunityModel } from '@alga-psa/opportunities/models/opportunityModel';
 import { getOpportunitySettings } from '@alga-psa/opportunities/models/opportunitySettingsModel';
 import { buildAssetAgingSuggestions } from '@alga-psa/opportunities/lib/generators/assetAgingGenerator';
@@ -214,13 +215,7 @@ export async function getQbrTriggerPackData(
 }
 
 async function nextOpportunityNumber(trx: Knex.Transaction, tenant: string): Promise<string> {
-  const result = await trx.raw(
-    'SELECT generate_next_number(:tenant::uuid, :type::text) as number',
-    { tenant, type: 'OPPORTUNITY' },
-  );
-  const number = result.rows?.[0]?.number;
-  if (!number) throw new Error('Failed to generate opportunity number');
-  return number;
+  return SharedNumberingService.getNextNumber('OPPORTUNITY', { knex: trx, tenant });
 }
 
 export async function createOpportunitiesFromQbrTriggersData(

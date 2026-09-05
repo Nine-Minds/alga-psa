@@ -117,7 +117,7 @@ describe('ContactPhoneNumbersEditor', () => {
 
     await user.click(screen.getAllByRole('button', { name: /add phone/i })[0]!);
 
-    const phoneInputs = screen.getAllByLabelText('Phone Number');
+    const phoneInputs = screen.getAllByLabelText('Phone');
     await user.clear(phoneInputs[1]!);
     await user.type(phoneInputs[1]!, '+1 555 333 4444');
 
@@ -179,7 +179,7 @@ describe('ContactPhoneNumbersEditor', () => {
 
     expect(screen.queryByText('Phone 1: Enter a complete phone number.')).not.toBeInTheDocument();
 
-    fireEvent.blur(screen.getByLabelText('Phone Number'));
+    fireEvent.blur(screen.getByLabelText('Phone'));
 
     expect(await screen.findByText('Phone 1: Enter a complete phone number.')).toBeInTheDocument();
   });

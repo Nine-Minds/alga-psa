@@ -315,12 +315,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Seuil d'utilisation minimum",
-        "help": "Utilisation minimale facturable par période (0 pour aucun minimum)",
-        "errorNegative": "L'utilisation minimale ne peut pas être négative"
+        "help": "Plancher appliqué à l'utilisation enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement d'utilisation — même un zéro explicite — et ne crée jamais de frais à lui seul.",
+        "errorNegative": "L'utilisation minimale ne peut pas être négative",
+        "labelAdditive": "Minimum par saisie",
+        "labelPeriodTotal": "Minimum par déclaration de période",
+        "helpAdditive": "Plancher appliqué à chaque saisie enregistrée (0 pour aucun minimum). Il ne s'applique que si la période comporte un enregistrement de consommation — même un zéro explicite — et ne crée jamais de facturation à lui seul.",
+        "helpPeriodTotal": "Plancher appliqué une seule fois au décompte déclaré de la période (0 pour aucun minimum). Il ne s'applique que si un décompte est déclaré — même un zéro explicite — et ne crée jamais de facturation à lui seul."
       },
       "enableTieredPricing": "Activer la tarification échelonnée"
     },
     "title": "Configuration basée sur l'utilisation",
+    "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ce service.",
     "tiers": {
       "title": "Niveaux de tarification",
       "addTier": "Ajouter un niveau",
@@ -336,6 +341,18 @@
         "upperGreaterThanLower": "La limite supérieure du niveau doit être supérieure à la limite inférieure",
         "rateNegative": "Les tarifs par niveau ne peuvent pas être négatifs"
       }
+    },
+    "measurementMode": {
+      "label": "Comment la consommation est-elle mesurée ?",
+      "additive": {
+        "label": "Enregistrer la consommation au fil de l'eau",
+        "description": "Les saisies datées s'additionnent : des saisies de 10 et 12 facturent 22. Le minimum et les paliers s'appliquent à chaque saisie. La période suivante démarre sans aucune saisie."
+      },
+      "periodTotal": {
+        "label": "Déclarer un décompte pour chaque période",
+        "description": "Un décompte par période de service remplace le précédent : corriger 10 en 12 facture 12, jamais 22. Le minimum et les paliers s'appliquent une seule fois à ce décompte. La période suivante démarre non déclarée — aucun décompte n'est reporté."
+      },
+      "transitionNote": "Le changement de mode prend effet à partir de la prochaine période de service non facturée. Les saisies ou décomptes déjà enregistrés dans une période ouverte doivent d'abord être facturés ou supprimés."
     }
   },
   "rateTiers": {
@@ -396,12 +413,30 @@
         "label": "Alignement du cycle de facturation",
         "placeholder": "Sélectionnez l'alignement",
         "help": "Contrôle la façon dont la couverture d’une période partielle est calculée lorsque les frais récurrents doivent être réduits à une période inférieure à une période de service complète."
+      },
+      "unitRate": {
+        "label": "Tarif unitaire",
+        "placeholder": "0,00",
+        "help": "Tarif facturé pour chaque poste/unité à chaque période de service."
       }
     },
     "options": {
       "start": "Début du cycle de facturation",
       "end": "Fin du cycle de facturation",
       "prorated": "Couverture proportionnelle"
+    },
+    "pricingBasis": {
+      "label": "Comment ce service est-il tarifé ?",
+      "bundle": {
+        "label": "Prix forfaitaire",
+        "description": "C'est le total fixe de la ligne de contrat qui est facturé. Les quantités de ce service ne font que répartir une part de ce total pour le reporting — ce ne sont pas des postes facturables et les modifier ne change pas le montant facturé.",
+        "allocationNote": "Quantité de répartition : {{quantity}} — sert à répartir le total forfaitaire pour le reporting, non facturée comme des postes."
+      },
+      "unit": {
+        "label": "Postes/unités récurrents",
+        "description": "Facture quantité × tarif unitaire à chaque période, sans qu'aucun total de ligne ne prime. La même quantité et le même tarif sont de nouveau facturés la période suivante jusqu'à ce que vous planifiiez un changement. Une quantité de zéro facture zéro.",
+        "summary": "{{quantity}} × {{rate}} (postes récurrents) = {{total}} par période"
+      }
     }
   },
   "bucketConfig": {
@@ -444,6 +479,66 @@
     "baseRate": {
       "summary": "{{rate}} par {{unit}}",
       "help": "Le tarif de base peut être remplacé par les niveaux basés sur la quantité ci-dessous."
+    }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Autorisation refusée : impossible de créer des services/produits",
+      "updateServices": "Autorisation refusée : impossible de mettre à jour des services/produits",
+      "deleteServices": "Autorisation refusée : impossible de supprimer des services",
+      "deleteServicesProducts": "Autorisation refusée : impossible de supprimer des services/produits",
+      "createServiceTypes": "Autorisation refusée : impossible de créer des types de service",
+      "updateServiceTypes": "Autorisation refusée : impossible de mettre à jour des types de service",
+      "deleteServiceTypes": "Autorisation refusée : impossible de supprimer des types de service",
+      "updatePricing": "Autorisation refusée : impossible de mettre à jour la tarification des services"
+    },
+    "category": {
+      "duplicateName": "Une catégorie de service portant ce nom existe déjà",
+      "notFound": "Catégorie de service introuvable",
+      "invalid": "La catégorie de service sélectionnée n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "inUse": "Impossible de supprimer la catégorie car elle est encore utilisée.",
+      "inUseByServices": "Impossible de supprimer la catégorie : des services l’utilisent",
+      "inUseByTickets": "Impossible de supprimer une catégorie utilisée par des tickets",
+      "nameRequired": "Le nom de la catégorie est obligatoire",
+      "nameEmpty": "Le nom de la catégorie ne peut pas être vide",
+      "idRequired": "L’identifiant de la catégorie est obligatoire",
+      "missingField": "Un champ obligatoire de la catégorie de service est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la catégorie de service est manquant : {{field}}."
+    },
+    "service": {
+      "selectType": "Sélectionnez un type de service avant d’enregistrer.",
+      "typeNotFound": "Le type de service sélectionné est introuvable. Veuillez actualiser la page et choisir un autre type de service.",
+      "selectBillingMethod": "Sélectionnez une méthode de facturation avant d’enregistrer.",
+      "notFoundRefresh": "Service introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "invalidValue": "L’une des valeurs de service sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "Le service, la catégorie, le taux de taxes ou le type de service sélectionné n’est plus disponible. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un service ou un produit avec ces valeurs existe déjà.",
+      "missingField": "Un champ obligatoire du service est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du service est manquant : {{field}}."
+    },
+    "product": {
+      "notFound": "Produit introuvable",
+      "alreadyDeleted": "Produit introuvable. Il a peut-être déjà été supprimé.",
+      "barcodeExists": "Un produit avec ce code-barres existe déjà. Utilisez un autre code-barres ou modifiez le produit existant.",
+      "barcodeExistsNamed": "Un produit avec le code-barres « {{barcode}} » existe déjà. Utilisez un autre code-barres ou modifiez le produit existant.",
+      "skuExists": "Un produit avec cette référence SKU existe déjà. Utilisez une autre référence SKU ou modifiez le produit existant.",
+      "skuExistsNamed": "Un produit avec la référence SKU « {{sku}} » existe déjà. Utilisez une autre référence SKU ou modifiez le produit existant.",
+      "cannotDelete": "Impossible de supprimer le produit : {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "Un type de service portant ce nom existe déjà.",
+      "notFoundRefresh": "Type de service introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "notFound": "Type de service introuvable.",
+      "inUse": "Impossible de supprimer le type de service car il est actuellement utilisé par un ou plusieurs services.",
+      "inUseByCount": "Impossible de supprimer le type de service car il est actuellement utilisé par {{serviceCount}} service(s)."
+    },
+    "rateTier": {
+      "overlap": "Les plages de paliers ne peuvent pas se chevaucher.",
+      "notFound": "Palier tarifaire introuvable. Actualisez le service et réessayez.",
+      "invalid": "Le palier tarifaire sélectionné n’est pas valide. Actualisez le service et réessayez.",
+      "serviceInvalid": "Le service sélectionné pour ce palier tarifaire n’est plus valide. Actualisez le service et réessayez.",
+      "missingField": "Un champ obligatoire du palier tarifaire est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du palier tarifaire est manquant : {{field}}."
     }
   }
 }

@@ -29,7 +29,7 @@ function interactionTypeActionErrorFrom(error: unknown): InteractionTypeActionEr
       return permissionError(message);
     }
     if (message === 'Interaction type not found or not authorized') {
-      return actionError('Interaction type not found or you do not have access to it.');
+      return actionError('Interaction type not found or you do not have access to it.', 'msp/clients:errors.interactionType.notFound');
     }
     if (message === 'Interaction type name is required') {
       return actionError(message);
@@ -38,16 +38,22 @@ function interactionTypeActionErrorFrom(error: unknown): InteractionTypeActionEr
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '23502') {
-    return actionError(`Missing required interaction type field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required interaction type field: ${dbError.column}.`,
+          'msp/clients:errors.interactionType.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required interaction type field.', 'msp/clients:errors.interactionType.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('Referenced interaction type data is no longer valid. Please refresh and try again.');
+    return actionError('Referenced interaction type data is no longer valid. Please refresh and try again.', 'msp/clients:errors.interactionType.referenceInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('An interaction type with these details already exists.');
+    return actionError('An interaction type with these details already exists.', 'msp/clients:errors.interactionType.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('Invalid interaction type data provided. Please check the name, icon, and display order.');
+    return actionError('Invalid interaction type data provided. Please check the name, icon, and display order.', 'msp/clients:errors.interactionType.invalidData');
   }
 
   return null;

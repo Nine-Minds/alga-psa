@@ -116,17 +116,17 @@ describe('contact CSV hybrid email import/export integration', () => {
       {
         full_name: 'CSV Import Contact',
         email: `csv-import-${tenantId}@acme.com`,
-        phone_number: '(555) 444-3333',
+        phone_number: '+12125550109',
         client_id: clientId,
       } as any,
     ], false);
 
     expect(results).toHaveLength(1);
     expect(results[0]?.success).toBe(true);
-    expect(results[0]?.contact?.default_phone_number).toBe('(555) 444-3333');
+    expect(results[0]?.contact?.default_phone_number).toBe('+12125550109');
     expect(results[0]?.contact?.phone_numbers).toHaveLength(1);
     expect(results[0]?.contact?.phone_numbers[0]).toMatchObject({
-      phone_number: '(555) 444-3333',
+      phone_number: '+12125550109',
       canonical_type: 'work',
       is_default: true,
       display_order: 0,
@@ -141,7 +141,7 @@ describe('contact CSV hybrid email import/export integration', () => {
 
     expect(storedPhoneRows).toHaveLength(1);
     expect(storedPhoneRows[0]).toMatchObject({
-      phone_number: '(555) 444-3333',
+      phone_number: '+12125550109',
       canonical_type: 'work',
       is_default: true,
       display_order: 0,
@@ -205,7 +205,7 @@ describe('contact CSV hybrid email import/export integration', () => {
             display_order: 1,
           },
         ],
-        phone_number: '(555) 444-3333',
+        phone_number: '+12125550109',
         client_id: clientId,
       } as any,
     ], false);

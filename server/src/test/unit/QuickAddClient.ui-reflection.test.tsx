@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { render, screen, cleanup } from '@testing-library/react';
+import { act, render, cleanup } from '@testing-library/react';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 // The shared test setup mocks useAutomationIdAndRegister with a stub that
 // returns *empty* automationIdProps, which strips the id/data-automation-id from
@@ -32,16 +32,55 @@ vi.mock('next/navigation', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/users/actions', () => ({
-  getAllUsersBasic: vi.fn().mockResolvedValue([]),
+// QuickAddClient imports each server action from its own module, not from the
+// `@alga-psa/clients/actions` barrel, so barrel-level mocks never intercepted
+// them: opening the dialog fired real Postgres-backed actions that outlived the
+// test file and blew up post-teardown ("window is not defined" from React's
+// setState) as unhandled rejections attributed to whatever ran next. Mock the
+// modules the component actually imports and let every render settle.
+vi.mock('@alga-psa/clients/lib/usersHelpers', () => ({
+  getCurrentUserAsync: vi.fn().mockResolvedValue(null),
+  getAllUsersBasicAsync: vi.fn().mockResolvedValue([]),
+  findUserByIdAsync: vi.fn().mockResolvedValue(null),
+  getContactAvatarUrlActionAsync: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('@alga-psa/clients/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
+  getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/clients/actions/clientActions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   createClient: vi.fn().mockResolvedValue({ client_id: 'test-id', client_name: 'Test Client' }),
+}));
+
+vi.mock('@alga-psa/clients/actions/clientLocationActions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   createClientLocation: vi.fn().mockResolvedValue({}),
-  createClientContact: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('@alga-psa/clients/actions/countryActions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getAllCountries: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/clients/actions/contact-actions/contactActions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  createClientContact: vi.fn().mockResolvedValue({}),
   listContactPhoneTypeSuggestions: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/tags/actions/tagActions', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  getAllTags: vi.fn().mockResolvedValue([]),
+  checkTagPermissions: vi.fn().mockResolvedValue({
+    canAddExisting: true,
+    canCreateNew: true,
+    canEditColors: true,
+    canEditText: true,
+    canDeleteAll: true,
+  }),
+  createTagsForEntity: vi.fn().mockResolvedValue([]),
 }));
 
 // errorHandling.ts imports a *named* `toast` from react-hot-toast and uses
@@ -79,6 +118,19 @@ describe('QuickAddClient UI Reflection', () => {
     onClientAdded: vi.fn()
   };
 
+  // Opening the dialog kicks off users/countries/phone-type/tag lookups. Wrap
+  // the render in act() so those settle inside the test instead of leaving
+  // promises that resolve once jsdom is gone.
+  const renderDialog = async (props: Record<string, unknown> = {}) => {
+    await act(async () => {
+      render(
+        <TestWrapper>
+          <QuickAddClient {...defaultProps} {...props} />
+        </TestWrapper>
+      );
+    });
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -87,12 +139,8 @@ describe('QuickAddClient UI Reflection', () => {
     cleanup();
   });
 
-  it('should render with automation ID attributes', () => {
-    render(
-      <TestWrapper>
-        <QuickAddClient {...defaultProps} />
-      </TestWrapper>
-    );
+  it('should render with automation ID attributes', async () => {
+    await renderDialog();
 
     // Check for dialog automation ID. The Dialog component registers the
     // provided id with a `-dialog` suffix on the rendered content element.
@@ -100,12 +148,8 @@ describe('QuickAddClient UI Reflection', () => {
     expect(dialogElement).toBeTruthy();
   });
 
-  it('should have form elements with proper IDs', () => {
-    render(
-      <TestWrapper>
-        <QuickAddClient {...defaultProps} />
-      </TestWrapper>
-    );
+  it('should have form elements with proper IDs', async () => {
+    await renderDialog();
 
     // Check for key form elements. The email/phone fields now live inside the
     // collapsible Location/Contact sections, so the stable always-rendered
@@ -116,12 +160,8 @@ describe('QuickAddClient UI Reflection', () => {
     expect(document.getElementById('cancel-dialog-btn')).toBeTruthy();
   });
 
-  it('should render ReflectionContainer', () => {
-    render(
-      <TestWrapper>
-        <QuickAddClient {...defaultProps} />
-      </TestWrapper>
-    );
+  it('should render ReflectionContainer', async () => {
+    await renderDialog();
 
     // The ReflectionContainer should register components in the UI state
     // We can test this by looking for the container structure
@@ -130,12 +170,8 @@ describe('QuickAddClient UI Reflection', () => {
     expect(formContainer).toBeTruthy();
   });
 
-  it('should not render when closed', () => {
-    render(
-      <TestWrapper>
-        <QuickAddClient {...defaultProps} open={false} />
-      </TestWrapper>
-    );
+  it('should not render when closed', async () => {
+    await renderDialog({ open: false });
 
     // Dialog should not be visible when closed
     const dialogElement = document.querySelector('[data-automation-id="quick-add-client-dialog"]');

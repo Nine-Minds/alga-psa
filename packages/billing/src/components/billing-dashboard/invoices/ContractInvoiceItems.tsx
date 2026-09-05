@@ -16,6 +16,8 @@ import {
   getInvoiceLineCogs,
   type InvoiceLineCogsRow,
 } from '../../../actions/invoiceCogsActions';
+import { getClientBillingProfilesForBilling } from '../../../actions/billingProfileActions';
+import { BillingAttributionInspector } from '@alga-psa/ui/components/BillingAttributionInspector';
 import LocationAddress from '../locations/LocationAddress';
 import {
   buildLocationGroups,
@@ -54,6 +56,9 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
   const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
   const [cogsByItem, setCogsByItem] = useState<Map<string, InvoiceLineCogsRow>>(new Map());
+  // Profile names for the attribution sentence, and the D6 gate: a client with
+  // one profile gets no attribution copy at all.
+  const [profiles, setProfiles] = useState<Array<{ billing_profile_id: string; name: string }>>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +84,30 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
       cancelled = true;
     };
   }, [clientId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!clientId) {
+      setProfiles([]);
+      return;
+    }
+    getClientBillingProfilesForBilling(clientId)
+      .then((rows) => {
+        if (!cancelled && Array.isArray(rows)) setProfiles(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setProfiles([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId]);
+
+  const profileNamesById = useMemo(
+    () => new Map(profiles.map((profile) => [profile.billing_profile_id, profile.name])),
+    [profiles],
+  );
+  const isSegmented = profiles.length > 1;
 
   // Per-line COGS/margin + SO backlinks for the internal view (F040/F041). Absent
   // (empty map) when no invoiceId is supplied or the read fails — the line table
@@ -181,6 +210,16 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
             <span className="text-xs text-muted-foreground">{item.service_sku}</span>
           ) : null}
         </div>
+        {/* Why this charge landed on the profile it did (F065). Renders nothing
+            for a single-profile client — there is no attribution to explain when
+            there is only one thing to attribute to. */}
+        <BillingAttributionInspector
+          billingProfileSource={item.billing_profile_source ?? null}
+          profileName={profileNamesById.get(item.billing_profile_id ?? '') ?? null}
+          contractName={item.contract_name ?? null}
+          isSegmented={isSegmented}
+          className="mt-1"
+        />
       </td>
       <td className="text-right">{item.quantity}</td>
       <td className="text-right">{formatCurrency(item.unit_price / 100, tenantCurrency)}</td>

@@ -20,6 +20,10 @@ import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db'
 import { withTransaction } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { hasPermission } from '../../auth/rbac';
+import {
+  clearDefaultPaymentMethod,
+  resolvePaymentBillingProfileId,
+} from '@alga-psa/shared/billingClients/billingProfilePayments';
 import { auditLog } from '../../logging/auditLog';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
@@ -624,13 +628,24 @@ export class FinancialService extends BaseService<ITransaction> {
       throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(
-      context.tenant,
-      context.userId,
-      request.client_id,
-      request.invoice_id,
-      request.requested_amount
-    );
+    let appliedAmount: number;
+    try {
+      ({ appliedAmount } = await applyCreditToInvoiceInternal(
+        context.tenant,
+        context.user,
+        request.client_id,
+        request.invoice_id,
+        request.requested_amount
+      ));
+    } catch (error) {
+      // The remote-affecting branch of credit application is gated by
+      // accounting_integrations:remote_mutate inside the apply engine; surface
+      // that denial as a 403 rather than an unhandled 500.
+      if (error instanceof Error && error.message.startsWith('Permission denied')) {
+        throw new ForbiddenError('Permission denied: Cannot apply credits to invoices');
+      }
+      throw error;
+    }
 
     return {
       data: { success: true, appliedAmount },
@@ -972,18 +987,28 @@ export class FinancialService extends BaseService<ITransaction> {
     const { knex } = await this.getKnex();
     
     return withTransaction(knex, async (trx) => {
+      // A card belongs to one paying entity (F102). Unsegmented clients resolve
+      // to their single default profile, so this is invisible to them.
+      const billingProfileId = await resolvePaymentBillingProfileId(
+        trx,
+        context.tenant,
+        data.client_id,
+        (data as { billing_profile_id?: string }).billing_profile_id ?? null
+      );
+
       const paymentMethodData = {
         ...data,
+        billing_profile_id: billingProfileId,
         payment_method_id: uuidv4(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
 
-      // If this is set as default, unset other defaults for the client
+      // If this is set as default, unset the other defaults *for this profile*.
+      // Clearing the whole client would strip a sibling entity of its default
+      // card as a side effect of someone else setting theirs (F104).
       if (data.is_default) {
-        await tenantDb(trx, context.tenant).table('payment_methods')
-          .where('client_id', data.client_id)
-          .update({ is_default: false });
+        await clearDefaultPaymentMethod(trx, context.tenant, data.client_id, billingProfileId);
       }
 
       const [paymentMethod] = await tenantDb(trx, context.tenant).table('payment_methods')

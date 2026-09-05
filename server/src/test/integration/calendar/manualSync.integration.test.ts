@@ -145,6 +145,13 @@ vi.mock('@alga-psa/ee-calendar/lib/services/calendar/CalendarProviderService', (
         status: row.status,
         last_sync_at: row.last_sync_at,
         error_message: row.error_message,
+        // syncCalendarProviderImpl refuses providers whose OAuth flow never
+        // completed (errorCode 'not_authorized'); the real service reads these
+        // from the vendor config table.
+        provider_config: {
+          accessToken: 'test-access-token',
+          refreshToken: 'test-refresh-token',
+        },
       };
     }
 

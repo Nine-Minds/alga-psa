@@ -9,7 +9,6 @@ import {
   type TeamsNotificationChannelMode,
 } from '../../notifications/teamsNotificationDelivery';
 import { isBotConnectorConfigured } from '../../teams/bot/teamsBotConnector';
-import { getTeamsAddOnState, type TeamsAddOnState } from '../../teams/teamsAddOnGate';
 import { getTeamsAvailability } from '../../teams/teamsAvailability';
 import {
   TEAMS_ALLOWED_ACTIONS,
@@ -66,7 +65,6 @@ type TeamsNotificationChannels = Partial<Record<TeamsNotificationCategory, Teams
 type TeamsIntegrationPayload = NonNullable<TeamsIntegrationStatusResponse['integration']> & {
   notificationChannels: TeamsNotificationChannels;
   botConnectorConfigured: boolean;
-  addOnState: TeamsAddOnState;
 };
 
 type TeamsIntegrationStatusResponseWithChannels = Omit<TeamsIntegrationStatusResponse, 'integration'> & {
@@ -161,8 +159,10 @@ function normalizeNullableString(value: unknown): string | null {
 // Capabilities that default to disabled for new tenants. `group_chat_bot`
 // is opt-in because bot responses in group chats are visible to every
 // member of the chat regardless of their PSA permissions — admins must
-// consciously enable it.
-const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot'];
+// consciously enable it. `guest_ticket_submission` opens the bot to
+// non-MSP senders (client contacts submitting tickets), so it too requires
+// a conscious admin decision.
+const TEAMS_CAPABILITIES_OPT_IN: readonly TeamsCapability[] = ['group_chat_bot', 'channel_bot', 'guest_ticket_submission'];
 
 function defaultTeamsIntegrationState() {
   return {
@@ -184,9 +184,6 @@ function defaultTeamsIntegrationState() {
     downloadRecordings: false,
     exposeRecordingsInPortal: false,
     botConnectorConfigured: isBotConnectorConfigured(),
-    // Overridden with the live add-on state in the status path; a configured row
-    // implies the add-on was active at save time.
-    addOnState: 'active' as TeamsAddOnState,
   };
 }
 
@@ -214,7 +211,6 @@ function mapTeamsIntegrationRow(row?: TeamsIntegrationRow | null): TeamsIntegrat
     downloadRecordings: Boolean(row.download_recordings),
     exposeRecordingsInPortal: Boolean(row.expose_recordings_in_portal),
     botConnectorConfigured: isBotConnectorConfigured(),
-    addOnState: 'active',
   };
 }
 
@@ -316,19 +312,15 @@ export async function getTeamsIntegrationStatusImpl(
       userId: (user as any)?.user_id,
     });
 
-    const { knex } = await createTenantKnex();
-    const addOnState = await getTeamsAddOnState(knex, tenant);
-
-    // Soft-disable: an expired add-on keeps its preserved configuration visible so
-    // the admin banner can explain the lapse. A truly absent add-on stays gated.
-    if (availability.enabled === false && addOnState !== 'expired') {
+    if (availability.enabled === false) {
       return { success: false, error: availability.message };
     }
 
+    const { knex } = await createTenantKnex();
     const row = await getTeamsIntegrationRow(knex, tenant);
     return {
       success: true,
-      integration: { ...mapTeamsIntegrationRow(row), addOnState },
+      integration: mapTeamsIntegrationRow(row),
     };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to load Teams integration settings' };
@@ -482,7 +474,12 @@ export async function saveTeamsIntegrationSettingsImpl(
       ? next.defaultMeetingOrganizerObjectId
       : null;
 
-    if (input.defaultMeetingOrganizerUpn !== undefined && defaultMeetingOrganizerUpn) {
+    // Only a changed UPN warrants a live Graph lookup; see the shared copy in
+    // packages/integrations for why re-resolving on every save broke unrelated
+    // toggles. Kept aligned so the two copies cannot drift apart again.
+    const organizerUpnChanged = defaultMeetingOrganizerUpn !== next.defaultMeetingOrganizerUpn;
+
+    if (organizerUpnChanged && defaultMeetingOrganizerUpn) {
       if (!profileValidation.profile) {
         return { success: false, error: 'A Microsoft profile must be selected before saving a Teams meeting organizer' };
       }

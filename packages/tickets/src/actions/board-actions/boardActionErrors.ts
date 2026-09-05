@@ -27,6 +27,10 @@ const EXPECTED_BOARD_MESSAGES = [
   'Target status must be a closed status',
   'An auto-close rule for this status already exists on this board',
   'Auto-close rule not found',
+  // Matched by prefix (see below), so the Zod detail after the em dash reaches
+  // the caller. Strict-on-write exists precisely to produce a readable reason;
+  // letting it rethrow would replace that reason with a generic failure toast.
+  'Invalid board view settings',
 ];
 
 export function boardActionErrorFrom(error: unknown): BoardActionError | null {
@@ -41,22 +45,28 @@ export function boardActionErrorFrom(error: unknown): BoardActionError | null {
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected board, status, or rule is invalid. Please refresh and try again.');
+    return actionError('The selected board, status, or rule is invalid. Please refresh and try again.', 'features/tickets:errors.board.invalidReference');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required board field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required board field: ${dbError.column}.`,
+          'features/tickets:errors.board.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required board field.', 'features/tickets:errors.board.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.');
+    return actionError('The selected board, status, priority, assignee, team, or SLA policy is no longer valid. Please refresh and try again.', 'features/tickets:errors.board.referenceInvalid');
   }
   if (dbError?.code === '23505') {
     if (dbError.constraint?.includes('board') && dbError.constraint?.includes('name')) {
-      return actionError('A board with this name already exists.');
+      return actionError('A board with this name already exists.', 'features/tickets:errors.board.duplicateName');
     }
-    return actionError('A board or status with the same settings already exists.');
+    return actionError('A board or status with the same settings already exists.', 'features/tickets:errors.board.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the board or status values is invalid. Please refresh and try again.');
+    return actionError('One of the board or status values is invalid. Please refresh and try again.', 'features/tickets:errors.board.invalidValue');
   }
 
   return null;

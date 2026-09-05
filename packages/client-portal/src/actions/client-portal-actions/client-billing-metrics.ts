@@ -87,7 +87,7 @@ export const getClientHoursByService = withAuth(async (
 
       const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       console.log(`Fetching hours by service for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
@@ -237,7 +237,7 @@ export const getClientUsageMetrics = withAuth(async (
 
       const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       console.log(`Fetching usage metrics for client client ${clientId} in tenant ${tenant} from ${startDate} to ${endDate}`);
@@ -338,7 +338,7 @@ export const getClientBucketUsageHistory = withAuth(async (
 
       const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       let query: any = scopedDb.table('bucket_usage as bu')
@@ -470,7 +470,7 @@ export const getClientBucketUsage = withAuth(async (user, { tenant }): Promise<C
 
       const hasAccess = await hasClientBillingReadPermission(trx, user, tenant);
       if (!hasAccess) {
-        return permissionError('Unauthorized to access billing data');
+        return permissionError('Unauthorized to access billing data', 'client-portal:errors.access.billingData');
       }
 
       const currentDate = new Date().toISOString().split('T')[0]; // Format as YYYY-MM-DD

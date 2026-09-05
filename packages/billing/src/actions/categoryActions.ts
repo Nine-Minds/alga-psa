@@ -5,6 +5,12 @@ import { ITicketCategory } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  getActionErrorMessageKey,
+  getActionErrorMessageParams,
+  permissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -18,21 +24,18 @@ export type ServiceCategoryActionError =
   | { readonly actionError: string }
   | { readonly permissionError: string };
 
-function actionError(message: string): ServiceCategoryActionError {
-  return { actionError: message };
-}
-
-function permissionError(message: string): ServiceCategoryActionError {
-  return { permissionError: message };
-}
 
 function serviceCategoryActionErrorFrom(error: unknown): ServiceCategoryActionError | null {
   const candidate = error as { actionError?: unknown; permissionError?: unknown };
+  // Carry the key across the re-wrap; dropping it here would leave the boundary
+  // with nothing to translate.
+  const messageKey = getActionErrorMessageKey(error);
+  const messageParams = getActionErrorMessageParams(error);
   if (typeof candidate?.actionError === 'string') {
-    return actionError(candidate.actionError);
+    return actionError(candidate.actionError, messageKey, messageParams);
   }
   if (typeof candidate?.permissionError === 'string') {
-    return permissionError(candidate.permissionError);
+    return permissionError(candidate.permissionError, messageKey, messageParams);
   }
 
   if (error instanceof Error) {
@@ -45,25 +48,31 @@ function serviceCategoryActionErrorFrom(error: unknown): ServiceCategoryActionEr
       return permissionError(message);
     }
     if (message.includes('duplicate key value') || message.includes('already exists')) {
-      return actionError('A service category with this name already exists');
+      return actionError('A service category with this name already exists', 'msp/service-catalog:errors.category.duplicateName');
     }
     if (message.includes('not found')) {
-      return actionError('Service category not found');
+      return actionError('Service category not found', 'msp/service-catalog:errors.category.notFound');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected service category is invalid. Please refresh and try again.');
+    return actionError('The selected service category is invalid. Please refresh and try again.', 'msp/service-catalog:errors.category.invalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required service category field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required service category field: ${dbError.column}.`,
+          'msp/service-catalog:errors.category.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required service category field.', 'msp/service-catalog:errors.category.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('Cannot delete category because it is still in use.');
+    return actionError('Cannot delete category because it is still in use.', 'msp/service-catalog:errors.category.inUse');
   }
   if (dbError?.code === '23505') {
-    return actionError('A service category with this name already exists');
+    return actionError('A service category with this name already exists', 'msp/service-catalog:errors.category.duplicateName');
   }
 
   return null;
@@ -71,7 +80,7 @@ function serviceCategoryActionErrorFrom(error: unknown): ServiceCategoryActionEr
 
 export const getServiceCategories = withAuth(async (user, { tenant }): Promise<IServiceCategory[] | ServiceCategoryActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   try {
     const {knex: db} = await createTenantKnex();
@@ -97,11 +106,11 @@ export const createServiceCategory = withAuth(async (user, { tenant }, data: {
   display_order?: number;
 }): Promise<IServiceCategory | ServiceCategoryActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
 
   if (!data.category_name?.trim()) {
-    return actionError('Category name is required');
+    return actionError('Category name is required', 'msp/service-catalog:errors.category.nameRequired');
   }
 
   try {
@@ -113,7 +122,7 @@ export const createServiceCategory = withAuth(async (user, { tenant }, data: {
         .first();
 
       if (existingCategory) {
-        return actionError('A service category with this name already exists');
+        return actionError('A service category with this name already exists', 'msp/service-catalog:errors.category.duplicateName');
       }
 
       // If no display_order provided, get the next available order
@@ -157,15 +166,15 @@ export const updateServiceCategory = withAuth(async (
   }
 ): Promise<IServiceCategory | ServiceCategoryActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    return permissionError('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required', 'msp/billing:errors.permissions.billingUpdate');
   }
 
   if (!categoryId) {
-    return actionError('Category ID is required');
+    return actionError('Category ID is required', 'msp/service-catalog:errors.category.idRequired');
   }
 
   if (data.category_name !== undefined && data.category_name.trim() === '') {
-    return actionError('Category name cannot be empty');
+    return actionError('Category name cannot be empty', 'msp/service-catalog:errors.category.nameEmpty');
   }
 
   try {
@@ -179,7 +188,7 @@ export const updateServiceCategory = withAuth(async (
           .first();
 
         if (existingCategory) {
-          return actionError('A service category with this name already exists');
+          return actionError('A service category with this name already exists', 'msp/service-catalog:errors.category.duplicateName');
         }
       }
 
@@ -193,7 +202,7 @@ export const updateServiceCategory = withAuth(async (
         .returning(['category_id', 'category_name', 'description', 'display_order']);
 
       if (!updatedCategory) {
-        return actionError('Service category not found');
+        return actionError('Service category not found', 'msp/service-catalog:errors.category.notFound');
       }
 
       return updatedCategory;
@@ -210,11 +219,11 @@ export const updateServiceCategory = withAuth(async (
 
 export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryId: string): Promise<void | ServiceCategoryActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    return permissionError('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required', 'msp/billing:errors.permissions.billingDelete');
   }
 
   if (!categoryId) {
-    return actionError('Category ID is required');
+    return actionError('Category ID is required', 'msp/service-catalog:errors.category.idRequired');
   }
 
   try {
@@ -228,7 +237,7 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
         .first();
 
       if (servicesCount && Number(servicesCount.count) > 0) {
-        return actionError('Cannot delete category: services are using this category');
+        return actionError('Cannot delete category: services are using this category', 'msp/service-catalog:errors.category.inUseByServices');
       }
 
       const deletedCount = await tenantScopedTable(trx, tenant, 'service_categories')
@@ -236,7 +245,7 @@ export const deleteServiceCategory = withAuth(async (user, { tenant }, categoryI
         .delete();
 
       if (deletedCount === 0) {
-        return actionError('Service category not found');
+        return actionError('Service category not found', 'msp/service-catalog:errors.category.notFound');
       }
     });
   } catch (error) {

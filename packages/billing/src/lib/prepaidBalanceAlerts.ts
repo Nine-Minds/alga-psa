@@ -38,11 +38,13 @@ export interface BucketObservationInput {
   totalMinutes: number;
   rolledOverMinutes: number;
   configuredPercent: number;
+  /** Settled additive hour-block minutes applicable to this bucket/service. */
+  additionalMinutes?: number;
 }
 
 /** Capacity is base allowance plus rollover. */
 export function bucketCapacity(input: BucketObservationInput): number {
-  return input.totalMinutes + input.rolledOverMinutes;
+  return input.totalMinutes + input.rolledOverMinutes + (input.additionalMinutes ?? 0);
 }
 
 /**
@@ -99,12 +101,14 @@ export function creditDedupeKey(clientId: string, currencyCode: string, episode:
 }
 
 /**
- * Stable identity for one bucket_usage period + configured percentage. Unlike
- * credit, bucket alerts do not rearm within the same usage period: returning
- * to a percentage that already alerted reuses the same logical alert row.
+ * Stable identity for one bucket_usage period + configured percentage.
+ * Ordinary threshold oscillation reuses episode 1. A settled replenishment
+ * may explicitly rearm the subject; later episodes then receive a suffix so
+ * manager delivery dedupe remains scoped to the top-up that was created.
  */
-export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number): string {
-  return `bucket:${bucketUsageId}:${configuredPercent}pct`;
+export function bucketDedupeKey(bucketUsageId: string, configuredPercent: number, episode = 1): string {
+  const base = `bucket:${bucketUsageId}:${configuredPercent}pct`;
+  return episode === 1 ? base : `${base}:ep${episode}`;
 }
 
 /** A threshold or currency change resolves the prior episode as policy_changed. */

@@ -1,0 +1,16 @@
+[
+  { "id": "T001", "description": "Patch detection: tickets.update_fields renders the new patch UX; tickets.create (no patch object) renders the legacy form unchanged", "implemented": false, "featureIds": ["F001", "F018"] },
+  { "id": "T002", "description": "Target framing shows the reference source ('the ticket from <step name>') when ticket_id is mapped by reference, and updates when switched to fixed/expression", "implemented": false, "featureIds": ["F002", "F003"] },
+  { "id": "T003", "description": "Adding a Status change from the dialog's field catalog and picking a status emits patch: { status_id } only; other keys absent; catalog marks Status as added", "implemented": false, "featureIds": ["F004", "F005", "F006"] },
+  { "id": "T014", "description": "Collapsed step shows summary-first presentation with 'Edit changes…' opening the dialog; dialog reuses mapping-field components (dependent picker works inside it)", "implemented": false, "featureIds": ["F021", "F022"] },
+  { "id": "T004", "description": "Removing a change row removes the key from the emitted definition JSON", "implemented": false, "featureIds": ["F007"] },
+  { "id": "T005", "description": "Round-trip: a definition with patch {status_id, priority_id, due_date: null} loads showing exactly those three changes (due date as 'Clear value') and re-saves byte-identical", "implemented": false, "featureIds": ["F008", "F010"] },
+  { "id": "T006", "description": "patch.assignment renders as one change entry; dependent pickers (assignment primary type → user picker) still resolve", "implemented": false, "featureIds": ["F009"] },
+  { "id": "T007", "description": "Change summary in panel and on step card reflects configured changes with display labels and '+N more' capping", "implemented": false, "featureIds": ["F011", "F012"] },
+  { "id": "T008", "description": "Advanced section: expected_updated_at, idempotency_key, custom_fields, attributes, Raw JSON are collapsed by default and functional when expanded", "implemented": false, "featureIds": ["F013", "F014"] },
+  { "id": "T009", "description": "Raw JSON round-trip: entering valid JSON in Advanced then switching to structured shows the fields as change rows; invalid JSON shows translated inline error", "implemented": false, "featureIds": ["F014", "F016"] },
+  { "id": "T010", "description": "Empty patch shows 'Add at least one field to change' guidance and blocks publish via existing validation, with the friendly message on the badge", "implemented": false, "featureIds": ["F015", "F020"] },
+  { "id": "T011", "description": "Playwright: author a tickets.update_fields step end-to-end via the new UX, publish, run against seeded data; only the configured fields change on the ticket (DB-verified)", "implemented": false, "featureIds": ["F004", "F006", "F010", "F018"] },
+  { "id": "T012", "description": "Contacts/clients/projects/opportunities update actions each render the new UX from schema alone (snapshot/smoke, no per-action code)", "implemented": false, "featureIds": ["F001", "F018"] },
+  { "id": "T013", "description": "New interactive elements expose stable ids consumed by ui-reflection (spot-check via existing reflection test helpers)", "implemented": false, "featureIds": ["F017"] }
+]

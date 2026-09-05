@@ -15,6 +15,7 @@ import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { formatDateTime } from "../../../ui/formatters/dateTime";
 import { useTheme } from "../../../ui/ThemeContext";
+import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 function formatBytes(value: number | null | undefined): string {
   if (!value || value <= 0) return "—";
@@ -35,11 +36,13 @@ export function DocumentsSection({
   apiKey,
   ticketId,
   baseUrl,
+  initiallyCollapsed = false,
 }: {
   client: ApiClient | null;
   apiKey: string;
   ticketId: string;
   baseUrl: string | null;
+  initiallyCollapsed?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -50,6 +53,7 @@ export function DocumentsSection({
   const [attachOptionsOpen, setAttachOptionsOpen] = useState(false);
   const [previewImage, setPreviewImage] = useState<{ uri: string; name: string } | null>(null);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   const downloadBaseUrl = useMemo(() => baseUrl?.replace(/\/+$/, "") ?? null, [baseUrl]);
 
@@ -252,13 +256,21 @@ export function DocumentsSection({
         action={(
           <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
             <Badge label={String(documents.length)} tone="neutral" />
-            <PrimaryButton onPress={() => setAttachOptionsOpen((value) => !value)} accessibilityLabel={t("documents.attach")}>
-              {t("documents.attach")}
-            </PrimaryButton>
+            {!collapsed ? (
+              <PrimaryButton onPress={() => setAttachOptionsOpen((value) => !value)} accessibilityLabel={t("documents.attach")}>
+                {t("documents.attach")}
+              </PrimaryButton>
+            ) : null}
+            <SectionCollapseToggle
+              collapsed={collapsed}
+              onToggle={() => setCollapsed((value) => !value)}
+              sectionLabel={t("documents.title")}
+            />
           </View>
         )}
       />
 
+      {collapsed ? null : <>
       {attachOptionsOpen ? (
         <View style={{ flexDirection: "row", gap: spacing.sm, marginTop: spacing.md }}>
           <Pressable
@@ -373,6 +385,7 @@ export function DocumentsSection({
           ))}
         </View>
       )}
+      </>}
       {previewImage ? (
         <Modal
           visible

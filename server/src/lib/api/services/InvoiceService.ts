@@ -35,6 +35,8 @@ import {
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
+import { clearPrepaidReplenishmentForInvoice } from '@alga-psa/billing/lib/prepaidAutoReplenishment';
+import { settlePrepaidReplenishmentInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
@@ -85,6 +87,7 @@ import {
   updateInvoiceTotalsAndRecordTransaction
 } from '@alga-psa/billing/services/invoiceService';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
+import { getClientDefaultBillingProfileId } from '@alga-psa/billing/lib/billing/billingProfileLookup';
 
 type DeferredEvent = () => Promise<void>;
 
@@ -684,6 +687,10 @@ export class InvoiceService extends BaseService<IInvoice> {
       const previousStatus = String(existing.status);
       const newStatus = updateData.status ? String(updateData.status) : previousStatus;
 
+      if (newStatus === 'paid') {
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, id);
+      }
+
       const previousDueDate = toIsoDateString(existing.due_date);
       const nextDueDate = updateData.due_date ? toIsoDateString(updateData.due_date) : previousDueDate;
 
@@ -835,6 +842,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         invoice.status === 'paid' ||
         hasCanonicalRecurringDetailPeriods
       );
+
+      await clearPrepaidReplenishmentForInvoice(trx, context.tenant, id);
 
       if (softCancelled) {
         // Soft delete - mark as cancelled
@@ -1239,6 +1248,10 @@ export class InvoiceService extends BaseService<IInvoice> {
           updated_at: new Date()
         });
 
+      if (newStatus === 'paid') {
+        await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
+      }
+
         const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, data.invoice_id);
 
 	      // Audit log
@@ -1346,13 +1359,24 @@ export class InvoiceService extends BaseService<IInvoice> {
       throw new BadRequestError('Credit amount cannot exceed invoice balance due');
     }
 
-    const { appliedAmount } = await applyCreditToInvoiceInternal(
-      context.tenant,
-      context.userId,
-      invoice.client_id,
-      data.invoice_id,
-      data.credit_amount
-    );
+    let appliedAmount: number;
+    try {
+      ({ appliedAmount } = await applyCreditToInvoiceInternal(
+        context.tenant,
+        context.user,
+        invoice.client_id,
+        data.invoice_id,
+        data.credit_amount
+      ));
+    } catch (error) {
+      // The remote-affecting branch of credit application is gated by
+      // accounting_integrations:remote_mutate inside the apply engine; surface
+      // that denial as a 403 rather than an unhandled 500.
+      if (error instanceof Error && error.message.startsWith('Permission denied')) {
+        throw new ForbiddenError('Permission denied: Cannot apply credits to invoices');
+      }
+      throw error;
+    }
 
     if (appliedAmount > 0) {
       await withTransaction(knex, async (trx) => {
@@ -1390,6 +1414,10 @@ export class InvoiceService extends BaseService<IInvoice> {
             updated_by: context.userId,
             updated_at: new Date()
           });
+
+        if (newStatus === 'paid') {
+          await settlePrepaidReplenishmentInvoice(trx, context.tenant, data.invoice_id);
+        }
 
         // Calculate remaining balance after credit application
         const remainingBalance = invoice.total_amount - totalPaid;
@@ -2416,6 +2444,17 @@ export class InvoiceService extends BaseService<IInvoice> {
     // server-side from `unit_price`/`quantity` when the caller omits them.
     // Fallbacks use nullish checks only: `quantity` (and the derived amounts)
     // may legitimately be zero, and `||` would silently rewrite a valid 0.
+    // Every persisted charge carries an attribution. An API-supplied line item
+    // can name a profile explicitly; otherwise the chain terminates at the
+    // client default (F033).
+    const invoice = await tenantDb(trx, context.tenant).table('invoices')
+      .where({ invoice_id: invoiceId })
+      .select('client_id')
+      .first();
+    const defaultBillingProfileId = invoice?.client_id
+      ? await getClientDefaultBillingProfileId(trx, context.tenant, invoice.client_id)
+      : null;
+
     const lineItemsData = lineItems.map((item) => {
       const quantity = item.quantity ?? 1;
       const unitPrice = item.unit_price ?? 0;
@@ -2441,6 +2480,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         applies_to_service_id: item.applies_to_service_id,
         client_contract_id: item.client_contract_id,
         location_id: item.location_id,
+        billing_profile_id: item.billing_profile_id ?? defaultBillingProfileId,
+        billing_profile_source: item.billing_profile_id ? 'explicit' : 'client_default',
         created_by: context.userId,
         tenant: context.tenant,
         created_at: new Date()

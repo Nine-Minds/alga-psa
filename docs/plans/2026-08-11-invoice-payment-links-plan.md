@@ -26,7 +26,7 @@ These gaps leave a finalized, unpaid invoice harder to pay depending on how it w
 
 - Replacing Stripe, introducing a second production payment provider, or refactoring `PaymentService` onto `PaymentProviderRegistry`.
 - Changing invoice finalization, payment accounting, refunds, credit application, reconciliation, or the existing webhook ledger design.
-- Redesigning the MSP send dialog or payment settings. The only new product UI is the portal payment-error state, behind `release-v1.5-feature`.
+- Redesigning the MSP send dialog or payment settings. The only new product UI is the portal payment-error state, behind `release-v1-5-feature`.
 - Retrofitting the inactive `server/src/utils/email/emailService.tsx` copy or the stub `InvoiceService.sendInvoiceEmail` in `server/src/lib/api/services/InvoiceService.ts`.
 - Solving concurrent first-writer races when two requests create a link at exactly the same time. Sequential active-link reuse remains required and covered.
 - Adding production deployment, operational controls, dashboards, metrics, alerts, or logging beyond preserving the existing server error cause.
@@ -71,7 +71,7 @@ These gaps leave a finalized, unpaid invoice harder to pay depending on how it w
 - `PayInvoicePage` in `server/src/app/client-portal/billing/invoices/[invoiceId]/pay/page.tsx` wraps both work and Next.js `redirect()` calls in one `try/catch`. Because `redirect()` throws, intended redirects can also be caught and rewritten as `payment_error`.
 - Link-creation failures redirect to `/client-portal/billing?tab=invoices&message=...`, but `BillingOverview` in `packages/client-portal/src/components/billing/BillingOverview.tsx` reads only `tab`; neither it nor `InvoicesTab` renders `message`. This is the silent failure.
 - On success, `PaymentRedirect` in `packages/client-portal/src/components/billing/PaymentRedirect.tsx` assigns `window.location.href` and can open the hosted Checkout URL. `verifyClientPortalPayment` validates the returned session ID against the tenant-scoped invoice payment-link record before asking the provider for status.
-- `useFeatureFlag` in `packages/ui/src/hooks/useFeatureFlag.tsx` supports the existing `NEXT_PUBLIC_FORCE_FEATURE_FLAGS` test override. No portal payment component currently uses `release-v1.5-feature`.
+- `useFeatureFlag` in `packages/ui/src/hooks/useFeatureFlag.tsx` supports the existing `NEXT_PUBLIC_FORCE_FEATURE_FLAGS` test override. No portal payment component currently uses `release-v1-5-feature`.
 
 ### Emulator and tests
 
@@ -137,7 +137,7 @@ Change `PaymentActionResult` in `clientPaymentActions.ts` to return a typed, non
 
 Refactor `PayInvoicePage` so `redirect()` is not inside a broad catch. Successful link creation still renders `PaymentRedirect`; already-paid invoices can redirect to Billing outside the work catch; link configuration/creation failures render a new `PaymentUnavailable` component.
 
-`PaymentUnavailable` belongs in `packages/client-portal/src/components/billing`, is exported by that package, and calls `useFeatureFlag('release-v1.5-feature')`:
+`PaymentUnavailable` belongs in `packages/client-portal/src/components/billing`, is exported by that package, and calls `useFeatureFlag('release-v1-5-feature')`:
 
 - while the flag resolves, show the existing loading treatment;
 - when enabled, show a localized heading, safe reason-specific explanation, **Try again** action for retryable creation failures, and **Back to billing** link retaining the invoices tab/invoice ID;
@@ -188,7 +188,7 @@ The notifier signs each event with the configured `whsec_*` secret using Stripeâ
 1. Add the Stripe package to the workspace/lockfile, `packages/emulators/suite` dependencies and `SUITE_EMULATORS`, CLI port mapping, `compose.yml`, `build-image.sh`, `Dockerfile` copy/build stages and `EXPOSE`, suite tests, and the emulator README/port table.
 2. Standard local/test values are `STRIPE_SECRET_KEY=sk_test_algasim`, `STRIPE_PAYMENT_WEBHOOK_SECRET=whsec_algasim`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_algasim`, and `STRIPE_API_BASE_URL=http://127.0.0.1:4050`. They are fixtures, not usable credentials.
 3. Integration tests start an `EmulatorHost` in-process on an ephemeral API port, configure the base URL before importing/constructing `StripePaymentProvider`, and reset emulator state between cases.
-4. The portal Playwright setup starts the Stripe emulator on 4050 (control may use an ephemeral port), passes the four Stripe variables into the Next.js `webServer.env`, and sets `NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1.5-feature:true` for the changed error UI.
+4. The portal Playwright setup starts the Stripe emulator on 4050 (control may use an ephemeral port), passes the four Stripe variables into the Next.js `webServer.env`, and sets `NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-5-feature:true` for the changed error UI.
 5. Configure the emulator notifier target to the test appâ€™s existing `/api/webhooks/stripe/payments` route and use the same signing secret in both processes. The browser success test must therefore traverse the simulated hosted page, the real webhook handler, `PaymentService.processWebhookEvent`, the existing payment/event ledgers, and the success page.
 6. Keep the broad mocked-SDK integration suite for fast provider edge coverage. The emulator-backed cases are the smaller behavioral layer that proves wire compatibility and user flow.
 
@@ -198,7 +198,7 @@ The notifier signs each event with the configured `whsec_*` secret using Stripeâ
 2. **Align eligibility and URLs.** Add the shared invoice-email link-context helper, tenant vanity-domain-aware portal URL builder, finalized/payable checks, and corrected Checkout cancel URL. Make direct and scheduled send use the helper and log retained link errors while continuing with the portal fallback.
 3. **Extend email rendering.** Add payment/portal variables to the direct context, localized migration template, registry seed, hardcoded fallbacks, scheduled `EmailService`, and compatibility renderer for tenant-authored templates. Add the forward system-template migration.
 4. **Make payment failures typed.** Preserve EE initialization/provider/creation causes in `paymentActions.ts`; return stable safe codes from `clientPaymentActions.ts`; retain all current portal tenant, ownership, invoice, and session-ID checks.
-5. **Add the flagged portal failure state.** Refactor `PayInvoicePage` redirect control flow, implement/export/localize `PaymentUnavailable`, and gate the new UI with `release-v1.5-feature`. Keep successful `PaymentRedirect` behavior unchanged.
+5. **Add the flagged portal failure state.** Refactor `PayInvoicePage` redirect control flow, implement/export/localize `PaymentUnavailable`, and gate the new UI with `release-v1-5-feature`. Keep successful `PaymentRedirect` behavior unchanged.
 6. **Implement the emulator.** Add the pure core, Stripe wire endpoints, hosted Checkout, signed notifier, standard controls/state, tests/smoke script, and suite/container/documentation registration. Add only the opt-in API-base override to the production Stripe adapter.
 7. **Add DB-backed behavior tests.** Cover direct delivery, shared recipient precedence, link fallback/reuse, portal link creation, hosted success/webhook settlement, creation failure UI/retry, and tenant/access boundaries. Update the journey README to remove the direct-email behavioral gap.
 8. **Run focused validation, then broader affected suites.** Run formatter/type checks for changed packages, template/locale validation, migration tests, emulator tests/smoke, payment integration tests, invoice-email journey, job unit tests, and the focused Playwright spec before the normal affected CI lanes.
@@ -213,7 +213,7 @@ The notifier signs each event with the configured `whsec_*` secret using Stripeâ
 | Invoice paid meanwhile | No payment CTA; portal CTA may remain | Redirect to Billing/invoice state | Stable `already_paid` result |
 | Draft, cancelled, credit note, or no positive balance | No payment CTA; portal link only where viewing is valid | Server rejects payment before provider call | Stable non-retryable code |
 | Cross-client/cross-tenant invoice or mismatched returned session | No externally generated link | No disclosure; existing access-denied/not-found behavior | Scoped diagnostic only on server |
-| `release-v1.5-feature` disabled | Email behavior unchanged because it is not UI | Preserve current Billing redirect instead of rendering new failure UI | Cause still preserved server-side |
+| `release-v1-5-feature` disabled | Email behavior unchanged because it is not UI | Preserve current Billing redirect instead of rendering new failure UI | Cause still preserved server-side |
 
 ## Security, tenancy, and idempotency
 
@@ -231,7 +231,7 @@ The notifier signs each event with the configured `whsec_*` secret using Stripeâ
 1. Land the resolver, email behavior, payment cause preservation, emulator, and tests together so direct/scheduled parity is protected from the first release.
 2. Apply the forward template migration through the normal application migration path; it updates system invoice-email templates without rewriting tenant custom templates.
 3. Deploy with `STRIPE_API_BASE_URL` unset. Existing Stripe configuration and webhook paths remain unchanged.
-4. Release backend/email behavior normally. Keep the new portal failure component disabled until `release-v1.5-feature` is enabled for the intended cohort; successful Checkout redirection remains the existing behavior.
+4. Release backend/email behavior normally. Keep the new portal failure component disabled until `release-v1-5-feature` is enabled for the intended cohort; successful Checkout redirection remains the existing behavior.
 5. After the flag is enabled, failures show the new retry/back state. Rollback consists of disabling the flag for UI and reverting application code/template migration through the normal release process; no new business-data table is introduced.
 
 ## Risks and open questions
@@ -271,11 +271,11 @@ The starred cases are the smallest high-value set that must be DB-backed and exe
 - [ ] If payments are disabled, unconfigured, or fail to create a link, invoice delivery still succeeds with a working portal fallback when a public portal base is available.
 - [ ] System HTML/text templates in every supported locale render the new CTAs; existing tenant custom templates receive missing CTAs without being overwritten or duplicating URLs.
 - [ ] Portal **Pay Now** opens Stripe Checkout for an eligible owned invoice, and successful hosted payment completes through the signed webhook/status path.
-- [ ] Checkout creation failures show a localized retry/back state when `release-v1.5-feature` is enabled; the legacy redirect remains when it is disabled.
+- [ ] Checkout creation failures show a localized retry/back state when `release-v1-5-feature` is enabled; the legacy redirect remains when it is disabled.
 - [ ] The browser receives only stable safe error codes/messages, while server logging/tests retain the original provider or initialization exception through `cause`.
 - [ ] Billing contact, `clients.billing_email`, billing location, and default location precedence is identical for email preview, email delivery, scheduled delivery, and Stripe customer creation.
 - [ ] All invoice/payment/session lookups remain tenant-scoped and client ownership is checked before any external provider request.
 - [ ] Repeated direct sends reuse the active payment link; duplicate webhook delivery applies one payment.
 - [ ] `@alga-psa/emulator-stripe` runs in the existing emulator suite, supports the required Stripe wire surface and hosted success/failure/cancel interface, and is selected only through explicit test configuration.
 - [ ] DB-backed journey and Playwright coverage protects direct email happy/fallback behavior and portal creation-success, payment-success, and creation-failure flows.
-- [ ] No new production operations or observability surface is introduced, and all changed portal UI is behind `release-v1.5-feature`.
+- [ ] No new production operations or observability surface is introduced, and all changed portal UI is behind `release-v1-5-feature`.

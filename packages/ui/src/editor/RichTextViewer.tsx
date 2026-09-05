@@ -12,6 +12,7 @@ import {
   type PartialBlock,
 } from '@blocknote/core';
 import { Mention } from './Mention';
+import { splitEmbeddedNewlineBlocks } from './normalizeBlocks';
 import styles from './TicketDetails.module.css';
 import dynamic from 'next/dynamic';
 
@@ -342,7 +343,7 @@ function pmInlineToMarkdown(nodes: any[] | undefined): string {
  * Convert a ProseMirror JSON document to markdown text.
  * Preserves headings, lists, code blocks, blockquotes, inline formatting, etc.
  */
-function prosemirrorToMarkdown(doc: any): string {
+export function prosemirrorToMarkdown(doc: any): string {
   if (!doc || !Array.isArray(doc.content)) return '';
 
   const renderNode = (node: any): string => {
@@ -399,6 +400,13 @@ function prosemirrorToMarkdown(doc: any): string {
       case 'horizontalRule':
       case 'horizontal_rule':
         return '---';
+
+      case 'image': {
+        const src = node.attrs?.src || node.props?.url || '';
+        if (!src) return '';
+        const alt = node.attrs?.alt || node.attrs?.title || node.props?.caption || '';
+        return `![${alt}](${src})`;
+      }
 
       default:
         if (node.content) {
@@ -457,7 +465,7 @@ function RichTextViewerInternal({
       if (mdText) {
         return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: mdText };
       }
-      return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(content))), rawMarkdown: null };
+      return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(splitEmbeddedNewlineBlocks(content)))), rawMarkdown: null };
     }
 
     // Try JSON parse
@@ -469,7 +477,7 @@ function RichTextViewerInternal({
         if (mdText) {
           return { syncBlocks: DEFAULT_EMPTY_BLOCK, rawMarkdown: mdText };
         }
-        return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(parsed))), rawMarkdown: null };
+        return { syncBlocks: sanitizeBlocks(autolinkBlocks(trimTrailingEmpty(splitEmbeddedNewlineBlocks(parsed)))), rawMarkdown: null };
       }
       // Handle ProseMirror/Tiptap JSON format: { type: "doc", content: [...] }
       if (parsed && typeof parsed === 'object' && parsed.type === 'doc' && Array.isArray(parsed.content)) {
@@ -581,15 +589,21 @@ function RichTextViewerInternal({
     return () => { cancelled = true; };
   }, [rawMarkdown, editor]);
 
-  // Update editor when display blocks change
+  // Update editor when display blocks change. Keyed on contentKey (a JSON
+  // string) and never on displayBlocks: callers rebuild that array on every
+  // render, and replaceBlocks rewrites the whole ProseMirror doc — which wipes
+  // the reader's text selection mid-highlight. initialContent already seeded
+  // the editor, so the first run is a no-op we skip.
+  const appliedContentKey = useRef(contentKey);
   useEffect(() => {
-    if (editor && displayBlocks) {
-      editor.replaceBlocks(
-        editor.document.map((b) => b.id),
-        displayBlocks as any
-      );
-    }
-  }, [editor, contentKey, displayBlocks]);
+    if (!editor || appliedContentKey.current === contentKey) return;
+    appliedContentKey.current = contentKey;
+    editor.replaceBlocks(
+      editor.document.map((b) => b.id),
+      displayBlocks as any
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- displayBlocks is read fresh; contentKey is its stable identity
+  }, [editor, contentKey]);
 
   return (
     <div className={`w-full min-w-0 ${className} ${styles.forceTextBreak}`}>

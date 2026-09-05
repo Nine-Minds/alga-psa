@@ -71,4 +71,12 @@ describe('TicketService.addComment threading contract', () => {
     const elseOnly = body.slice(elseStart, elseEnd);
     expect(elseOnly).not.toContain('reply_count + 1');
   });
+
+  it('publishes REST comment suppression flags on TICKET_COMMENT_ADDED', () => {
+    const body = addCommentBody(readTicketServiceSource());
+
+    expect(body).toContain('resolveTicketNotificationSuppression(data)');
+    expect(body).toContain('...notificationSuppression,');
+    expect(body).toContain("safePublishEvent('TICKET_COMMENT_ADDED'");
+  });
 });

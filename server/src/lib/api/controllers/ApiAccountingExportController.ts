@@ -67,8 +67,11 @@ const noopService: BaseService = {
 export class ApiAccountingExportController extends ApiBaseController {
   constructor() {
     super(noopService, {
-      // Align with accounting mappings + CSV export permissions; treat exports as billing settings management for now.
-      resource: 'billing_settings'
+      // The whole export-batch surface (browse, author, modify, execute) is the
+      // accounting export/sync surface and is gated by the accounting-integrations
+      // `exports_execute` capability — the same gate the underlying billing
+      // actions enforce.
+      resource: 'accounting_integrations'
     });
   }
 
@@ -106,7 +109,10 @@ export class ApiAccountingExportController extends ApiBaseController {
     if (user && user.user_type === 'client') {
       throw new ForbiddenError('Client portal users are not permitted to manage accounting exports');
     }
-    await this.checkPermission(apiRequest, action === 'read' ? 'read' : 'update');
+    // Read operations are gated by the same capability as mutations: export
+    // batches are Alga's own operational records, and the billing export
+    // actions enforce `exports_execute` for every action.
+    await this.checkPermission(apiRequest, 'exports_execute');
   }
 
   async createBatch(req: NextRequest): Promise<NextResponse> {

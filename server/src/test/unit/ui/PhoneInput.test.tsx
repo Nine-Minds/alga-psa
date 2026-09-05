@@ -2,87 +2,207 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 
-const countries = [
-  { code: 'US', name: 'United States', phone_code: '+1' },
-  { code: 'GB', name: 'United Kingdom', phone_code: '+44' },
-];
-
 describe('PhoneInput', () => {
-  // RTL auto-cleanup only registers for the first test file in the shared fork,
-  // so clean up explicitly to avoid duplicate renders leaking between tests.
-  afterEach(() => {
-    cleanup();
-  });
+  afterEach(cleanup);
 
-  it('keeps the local number clean when country metadata catches up after reload', () => {
-    const onChange = vi.fn();
-    const { container, rerender } = render(
+  it('renders one ordinary full-number input without a country-prefix control', () => {
+    render(
       <PhoneInput
         id="phone"
-        label="Phone Number"
+        label="Phone"
         value="+44 20 7123 4567"
-        onChange={onChange}
+        onChange={vi.fn()}
         countryCode="US"
-        phoneCode="+1"
-        countries={countries}
       />
     );
+
+    expect(screen.getByLabelText('Phone')).toHaveValue('+44 20 7123 4567');
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('formats national input and emits its E.164 value', () => {
+    const onChange = vi.fn();
+
+    const { rerender } = render(
+      <PhoneInput
+        id="direct-phone"
+        label="Phone"
+        value=""
+        onChange={onChange}
+        countryCode="US"
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText('Phone'), { target: { value: '4155550123' } });
+
+    expect(onChange).toHaveBeenLastCalledWith('+14155550123');
 
     rerender(
       <PhoneInput
-        id="phone"
-        label="Phone Number"
-        value="+44 20 7123 4567"
+        id="direct-phone"
+        label="Phone"
+        value="+14155550123"
         onChange={onChange}
-        countryCode="GB"
-        phoneCode="+44"
-        countries={countries}
+        countryCode="US"
+      />
+    );
+    expect(screen.getByLabelText('Phone')).toHaveValue('(415) 555-0123');
+  });
+
+  it('renders extension as a separate digit-only input', () => {
+    const onExtensionChange = vi.fn();
+
+    render(
+      <PhoneInput
+        id="phone-with-extension"
+        label="Phone"
+        value="+1 212 555 0100"
+        onChange={vi.fn()}
+        extension=""
+        onExtensionChange={onExtensionChange}
+        allowExtensions
       />
     );
 
-    expect((container.querySelector('input[type="tel"]') as HTMLInputElement).value).toBe('20 7123 4567');
-    expect(onChange).not.toHaveBeenCalled();
+    const phone = screen.getByLabelText('Phone');
+    const extension = screen.getByLabelText('Extension');
+    expect(phone).not.toBe(extension);
+    expect(extension).toHaveAttribute('inputmode', 'numeric');
+    expect(extension).toHaveAttribute('maxlength', '10');
+
+    fireEvent.change(extension, { target: { value: 'desk 600' } });
+    expect(onExtensionChange).toHaveBeenLastCalledWith('600');
   });
 
-  it('shows a visible country code on a blank create form row', () => {
-    render(
+  it('keeps the phone and compact extension fields on the same row', () => {
+    const { container } = render(
       <PhoneInput
-        id="blank-phone"
-        label="Phone Number"
+        id="responsive-phone"
+        label="Phone"
         value=""
         onChange={vi.fn()}
-        countryCode="US"
-        countries={countries}
+        extension="300"
+        onExtensionChange={vi.fn()}
+        allowExtensions
       />
     );
 
-    expect(screen.getByRole('button', { name: /\+1/i })).toBeTruthy();
+    const fields = container.querySelector('[data-automation-type="phone-input-fields"]');
+    expect(fields).toHaveClass('grid');
+    expect(fields).toHaveClass('grid-cols-[minmax(0,1fr)_5.5rem]');
+    expect(fields).not.toHaveClass('flex-wrap');
   });
 
-  it('rewrites the stored full number only when the user picks a different country', async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
+  it('uses the same label spacing as adjacent form controls', () => {
+    const { container } = render(
+      <PhoneInput id="aligned-phone" label="Phone" value="" onChange={vi.fn()} />
+    );
 
+    expect(container.firstElementChild).toHaveClass('space-y-1');
+    expect(screen.getByText('Phone')).toHaveClass('block');
+  });
+
+  it('keeps focus in the phone field while entering a variable-length international number', () => {
     render(
       <PhoneInput
-        id="editable-phone"
-        label="Phone Number"
-        value="+1 555 123 4567"
-        onChange={onChange}
-        countryCode="US"
-        phoneCode="+1"
-        countries={countries}
+        id="variable-length-phone"
+        label="Phone"
+        value=""
+        onChange={vi.fn()}
+        countryCode="BY"
+        extension=""
+        onExtensionChange={vi.fn()}
+        allowExtensions
       />
     );
 
-    await user.click(screen.getByRole('button', { name: /\+1/i }));
-    await user.click(screen.getByRole('button', { name: /United Kingdom/i }));
+    const phone = screen.getByLabelText('Phone');
+    phone.focus();
+    fireEvent.change(phone, { target: { value: '+375293825' } });
 
-    expect(onChange).toHaveBeenLastCalledWith('+44 555 123 4567');
+    expect(phone).toHaveFocus();
+    expect(screen.getByLabelText('Extension')).not.toHaveFocus();
+  });
+
+  it('moves focus to the extension when Enter is pressed', () => {
+    render(
+      <PhoneInput
+        id="keyboard-advance-phone"
+        label="Phone"
+        value="+375293825886"
+        onChange={vi.fn()}
+        countryCode="BY"
+        extension=""
+        onExtensionChange={vi.fn()}
+        allowExtensions
+      />
+    );
+
+    const phone = screen.getByLabelText('Phone');
+    phone.focus();
+    fireEvent.keyDown(phone, { key: 'Enter' });
+
+    expect(screen.getByLabelText('Extension')).toHaveFocus();
+  });
+
+  it('does not crash when typing beyond the maximum phone number length', async () => {
+    const user = userEvent.setup();
+
+    function ControlledPhoneInput() {
+      const [value, setValue] = React.useState('');
+      return (
+        <PhoneInput
+          id="long-phone"
+          label="Phone"
+          value={value}
+          onChange={setValue}
+          countryCode="BY"
+        />
+      );
+    }
+
+    render(<ControlledPhoneInput />);
+    await user.type(screen.getByLabelText('Phone'), '29382588612345678901');
+
+    const phone = screen.getByLabelText('Phone');
+    expect(phone).toBeInTheDocument();
+    // E.164 allows 15 digits total. Belarus's +375 prefix leaves 12 national digits.
+    expect((phone as HTMLInputElement).value.replace(/\D/g, '')).toHaveLength(12);
+  });
+
+  it('preserves an existing overlong value without sending it through the formatter', () => {
+    render(
+      <PhoneInput
+        id="existing-long-phone"
+        label="Phone"
+        value="+37529382588612345678"
+        onChange={vi.fn()}
+        countryCode="BY"
+      />
+    );
+
+    expect(screen.getByLabelText('Phone')).toHaveValue('+37529382588612345678');
+  });
+
+  it('preserves an unparseable legacy value as editable text', () => {
+    const onChange = vi.fn();
+    render(
+      <PhoneInput
+        id="legacy-phone"
+        label="Phone"
+        value="desk line 12"
+        onChange={onChange}
+        countryCode="US"
+      />
+    );
+
+    expect(screen.getByLabelText('Phone')).toHaveValue('desk line 12');
+    fireEvent.change(screen.getByLabelText('Phone'), { target: { value: 'desk line 123' } });
+    expect(onChange).toHaveBeenLastCalledWith('desk line 123');
   });
 });

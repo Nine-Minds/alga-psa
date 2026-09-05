@@ -251,7 +251,7 @@ export default function ExtensionDetails() {
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
             {/* Left column - Extension details */}
             <div className="lg:col-span-3">
-              <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200">
+              <div className="bg-[rgb(var(--color-card))] card-elevated rounded-lg overflow-hidden border border-gray-200">
                 {/* Header */}
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
@@ -351,7 +351,7 @@ export default function ExtensionDetails() {
               </div>
               
               {/* Permissions section */}
-              <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">
+              <div className="bg-[rgb(var(--color-card))] card-elevated rounded-lg overflow-hidden border border-gray-200 mt-6">
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
                     <ShieldIcon className="h-5 w-5 text-gray-500 mr-2" />
@@ -368,7 +368,7 @@ export default function ExtensionDetails() {
               </div>
 
               {/* Versions section */}
-              <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">
+              <div className="bg-[rgb(var(--color-card))] card-elevated rounded-lg overflow-hidden border border-gray-200 mt-6">
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
                     <h2 className="text-lg font-medium text-gray-900">{t('details.sectionVersions')}</h2>
@@ -419,7 +419,7 @@ export default function ExtensionDetails() {
               </div>
               
               {/* Components section */}
-              <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">
+              <div className="bg-[rgb(var(--color-card))] card-elevated rounded-lg overflow-hidden border border-gray-200 mt-6">
                 <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                   <div className="flex items-center">
                     <div className="flex items-center">
@@ -498,7 +498,7 @@ export default function ExtensionDetails() {
               </Alert>
               
               {extension.manifest.settings && extension.manifest.settings.length > 0 && (
-                <div className="bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 mt-6">
+                <div className="bg-[rgb(var(--color-card))] card-elevated rounded-lg overflow-hidden border border-gray-200 mt-6">
                   <div className="border-b border-gray-200 bg-gray-50 px-6 py-4">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center">

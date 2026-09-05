@@ -52,19 +52,25 @@ function projectTaskStatusActionErrorFrom(error: unknown): ProjectTaskStatusActi
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected status values is invalid. Please refresh and try again.');
+    return actionError('One of the selected status values is invalid. Please refresh and try again.', 'projects:errors.status.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required status field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required status field: ${dbError.column}.`,
+          'projects:errors.status.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required status field.', 'projects:errors.status.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected project statuses no longer exists. Please refresh and try again.');
+    return actionError('One of the selected project statuses no longer exists. Please refresh and try again.', 'projects:errors.status.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A project task status with these settings already exists.');
+    return actionError('A project task status with these settings already exists.', 'projects:errors.status.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the status values is not allowed. Please review the form and try again.');
+    return actionError('One of the status values is not allowed. Please review the form and try again.', 'projects:errors.status.notAllowed');
   }
 
   return null;

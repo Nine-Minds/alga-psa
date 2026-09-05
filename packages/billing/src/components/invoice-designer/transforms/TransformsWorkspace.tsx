@@ -25,6 +25,10 @@ import {
   DEFAULT_PREVIEW_SAMPLE_ID,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
 } from '../preview/sampleScenarios';
+import {
+  DEFAULT_QUOTE_PREVIEW_SAMPLE_ID,
+  QUOTE_PREVIEW_SAMPLE_SCENARIOS,
+} from '../preview/quoteSampleScenarios';
 import type { PreviewSessionState, PreviewSourceKind } from '../preview/previewSessionState';
 import { createEmptyDesignerTransformWorkspace, useInvoiceDesignerStore } from '../state/designerStore';
 import { evaluateTemplateAst, TemplateEvaluationError } from '../../../lib/invoice-template-ast/evaluator';
@@ -52,7 +56,8 @@ type PreviewIssue = {
 };
 
 type Props = {
-  previewState: PreviewSessionState;
+  // The workspace only reads the session, so it accepts any designer's detail payload shape.
+  previewState: PreviewSessionState<unknown>;
   previewData: object | null;
   activeSample: { id: string; label: string; description: string } | null;
   onSourceKindChange: (source: PreviewSourceKind) => void;
@@ -275,6 +280,38 @@ const TransformsWorkspace: React.FC<Props> = ({
   const setTransforms = useInvoiceDesignerStore((state) => state.setTransforms);
   const [selectedOperationId, setSelectedOperationId] = useState<string | null>(null);
   const [outputBindingDraft, setOutputBindingDraft] = useState('');
+
+  // The workspace serves every designer, so the source panel names the documents this template is
+  // actually bound to (quotes, sales orders) instead of always saying "invoice".
+  const previewDocumentKind = useMemo(() => resolveDesignerDocumentKind(nodes), [nodes]);
+  const sampleScenarios = previewDocumentKind === 'quote'
+    ? QUOTE_PREVIEW_SAMPLE_SCENARIOS
+    : previewDocumentKind === 'sales-order'
+      ? []
+      : INVOICE_PREVIEW_SAMPLE_SCENARIOS;
+  const defaultSampleId = previewDocumentKind === 'quote'
+    ? DEFAULT_QUOTE_PREVIEW_SAMPLE_ID
+    : DEFAULT_PREVIEW_SAMPLE_ID;
+  const existingSourceLabels = previewDocumentKind === 'quote'
+    ? {
+      search: t('designer.workspace.preview.searchQuotes', { defaultValue: 'Search quotes...' }),
+      empty: t('designer.workspace.preview.noQuotesFound', { defaultValue: 'No quotes found.' }),
+      select: t('designer.workspace.preview.selectQuote', { defaultValue: 'Select quote' }),
+      loading: t('designer.workspace.preview.loadingQuoteDetails', { defaultValue: 'Loading quote details...' }),
+    }
+    : previewDocumentKind === 'sales-order'
+      ? {
+        search: t('documentTemplates.editor.preview.searchDocuments', { defaultValue: 'Search sales orders...' }),
+        empty: t('documentTemplates.editor.preview.noDocumentsFound', { defaultValue: 'No sales orders found.' }),
+        select: t('documentTemplates.editor.preview.selectDocument', { defaultValue: 'Select Sales Order' }),
+        loading: t('designer.workspace.preview.loadingDocumentDetails', { defaultValue: 'Loading document details...' }),
+      }
+      : {
+        search: t('designer.workspace.preview.searchInvoices', { defaultValue: 'Search invoices...' }),
+        empty: t('designer.workspace.preview.noInvoicesFound', { defaultValue: 'No invoices found.' }),
+        select: t('invoiceDesigner.transforms.source.selectInvoice', { defaultValue: 'Select invoice' }),
+        loading: t('designer.workspace.preview.loadingDetails', { defaultValue: 'Loading invoice details...' }),
+      };
 
   const workspaceSnapshot = useMemo(
     () => ({
@@ -1047,19 +1084,23 @@ const TransformsWorkspace: React.FC<Props> = ({
 
           {previewState.sourceKind === 'sample' ? (
             <div className="space-y-1">
-              <label htmlFor="invoice-designer-transforms-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                {t('invoiceDesigner.transforms.source.sampleScenario', { defaultValue: 'Sample scenario' })}
-              </label>
-              <CustomSelect
-                id="invoice-designer-transforms-sample-select"
-                options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
-                  value: scenario.id,
-                  label: scenario.label,
-                }))}
-                value={activeSample?.id ?? DEFAULT_PREVIEW_SAMPLE_ID ?? ''}
-                onValueChange={onSampleChange}
-                size="sm"
-              />
+              {sampleScenarios.length > 0 && (
+                <>
+                  <label htmlFor="invoice-designer-transforms-sample-select" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t('invoiceDesigner.transforms.source.sampleScenario', { defaultValue: 'Sample scenario' })}
+                  </label>
+                  <CustomSelect
+                    id="invoice-designer-transforms-sample-select"
+                    options={sampleScenarios.map((scenario) => ({
+                      value: scenario.id,
+                      label: scenario.label,
+                    }))}
+                    value={activeSample?.id ?? defaultSampleId ?? ''}
+                    onValueChange={onSampleChange}
+                    size="sm"
+                  />
+                </>
+              )}
               {activeSample && <p className="text-xs text-slate-500 dark:text-slate-400">{activeSample.description}</p>}
             </div>
           ) : (
@@ -1075,17 +1116,17 @@ const TransformsWorkspace: React.FC<Props> = ({
                   onExistingInvoiceChange(value);
                 }}
                 loadOptions={loadExistingInvoiceOptions}
-                placeholder={t('designer.workspace.preview.searchInvoices', { defaultValue: 'Search invoices...' })}
+                placeholder={existingSourceLabels.search}
                 searchPlaceholder={t('designer.workspace.preview.searchInvoicesHint', {
                   defaultValue: 'Search by number or client...',
                 })}
-                emptyMessage={t('designer.workspace.preview.noInvoicesFound', { defaultValue: 'No invoices found.' })}
+                emptyMessage={existingSourceLabels.empty}
                 dropdownMode="overlay"
-                label={t('invoiceDesigner.transforms.source.selectInvoice', { defaultValue: 'Select invoice' })}
+                label={existingSourceLabels.select}
               />
               {previewState.isInvoiceDetailLoading && (
                 <p className="rounded border border-slate-200 dark:border-[rgb(var(--color-border-200))] bg-slate-50 dark:bg-[rgb(var(--color-background))] px-2 py-1 text-xs text-slate-500 dark:text-slate-400">
-                  {t('designer.workspace.preview.loadingDetails', { defaultValue: 'Loading invoice details...' })}
+                  {existingSourceLabels.loading}
                 </p>
               )}
               {previewState.invoiceDetailError && (

@@ -46,22 +46,28 @@ function billingClientsActionErrorFrom(error: unknown): BillingClientsActionErro
       return actionError(error.message);
     }
     if (/client contract.*not found/i.test(error.message) || /assignment.*not found/i.test(error.message)) {
-      return actionError('Client contract assignment not found. It may have been updated or deleted. Please refresh and try again.');
+      return actionError('Client contract assignment not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing:errors.clientContract.notFound');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected client contract values is invalid. Please refresh and try again.');
+    return actionError('One of the selected client contract values is invalid. Please refresh and try again.', 'msp/billing:errors.clientContract.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required client contract field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required client contract field: ${dbError.column}.`,
+          'msp/billing:errors.clientContract.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required client contract field.', 'msp/billing:errors.clientContract.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client, contract, or billing record no longer exists. Please refresh and try again.');
+    return actionError('The selected client, contract, or billing record no longer exists. Please refresh and try again.', 'msp/billing:errors.clientContract.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This client contract assignment already exists.');
+    return actionError('This client contract assignment already exists.', 'msp/billing:errors.clientContract.duplicate');
   }
 
   return null;

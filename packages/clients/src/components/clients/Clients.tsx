@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import type { DeletionValidationResult, IClient } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { usePrintAction } from '@alga-psa/ui/components/PrintButton';
 import {
@@ -18,7 +19,7 @@ import {
   DropdownMenuSeparator as StyledDropdownMenuSeparator,
 } from '@alga-psa/ui/components/DropdownMenu';
 import QuickAddClient from './QuickAddClient';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllClients, getClientOpenTicketCounts } from '@alga-psa/clients/actions';
 import {
   getAllClientsPaginated,
   deleteClient,
@@ -93,12 +94,12 @@ const SearchInput = memo(({
         data-automation-id="search-clients"
         type="text"
         placeholder={placeholder}
-        className="border-2 border-gray-200 focus:border-purple-500 rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-white"
+        className="border-2 border-[rgb(var(--color-border-200))] focus:border-[rgb(var(--color-primary-500))] rounded-md pl-10 pr-4 py-2 w-64 outline-none bg-[rgb(var(--color-card))]"
         value={value}
         onChange={onChange}
         preserveCursor={true}
       />
-      <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+      <Search size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[rgb(var(--color-text-400))]" />
     </div>
   );
 });
@@ -166,6 +167,7 @@ const ClientResults = memo(({
   const [isLoading, setIsLoading] = useState(true);
   const [localClientTags, setLocalClientTags] = useState<Record<string, ITag[]>>({});
   const [allUniqueTags, setAllUniqueTags] = useState<ITag[]>([]);
+  const [openTicketCounts, setOpenTicketCounts] = useState<Record<string, number>>({});
   
   // Use parent's tag state if available, otherwise use local state
   const effectiveClientTags = parentClientTags || localClientTags;
@@ -255,6 +257,30 @@ const ClientResults = memo(({
     fetchTags();
   }, [clients]);
 
+  // Open-ticket counts are decoration, so they load out of band and the cards
+  // render without them (same shape as the board tab strip's counts). A failure
+  // is not worth a toast — the grid stays fully usable with no count at all.
+  useEffect(() => {
+    if (clients.length === 0) {
+      setOpenTicketCounts({});
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const counts = await getClientOpenTicketCounts();
+        if (!cancelled) {
+          setOpenTicketCounts(counts);
+        }
+      } catch (error) {
+        console.error('Failed to load client open ticket counts:', error);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [clients]);
+
   // No need for client-side filtering anymore since it's done server-side
   const filteredClients = clients;
 
@@ -288,6 +314,7 @@ const ClientResults = memo(({
           clientTags={effectiveClientTags}
           allUniqueTags={effectiveAllUniqueTags}
           onTagsChange={onTagsChange}
+          openTicketCounts={openTicketCounts}
         />
       ) : (
         <ClientsList
@@ -1357,9 +1384,9 @@ const Clients: React.FC = () => {
       <div className="w-full">
         <div className="flex justify-end mb-4 flex-wrap gap-6">
           {/* Show loading skeleton for controls */}
-          <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" />
-          <div className="w-64 h-10 bg-gray-200 rounded animate-pulse" />
-          <div className="w-32 h-10 bg-gray-200 rounded animate-pulse" />
+          <div className="w-64 h-10 bg-[rgb(var(--color-skeleton))] rounded animate-pulse" />
+          <div className="w-64 h-10 bg-[rgb(var(--color-skeleton))] rounded animate-pulse" />
+          <div className="w-32 h-10 bg-[rgb(var(--color-skeleton))] rounded animate-pulse" />
         </div>
       </div>
     );
@@ -1436,23 +1463,6 @@ const Clients: React.FC = () => {
                   <CloudDownload className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
                   <span className="flex-1">{t('common.actions.downloadCsv', { defaultValue: 'Download CSV' })}</span>
                 </StyledDropdownMenuItem>
-                <StyledDropdownMenuSeparator />
-                <StyledDropdownMenuItem
-                  onSelect={() => selectedClients.length > 0 && void handleBulkMarkInactive()}
-                  disabled={selectedClients.length === 0}
-                  className="gap-2"
-                >
-                  <Power className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
-                  <span className="flex-1">{t('clientsPage.markAsInactive', { defaultValue: 'Mark as Inactive' })}</span>
-                </StyledDropdownMenuItem>
-                <StyledDropdownMenuItem
-                  onSelect={() => selectedClients.length > 0 && void handleBulkReactivate()}
-                  disabled={selectedClients.length === 0}
-                  className="gap-2"
-                >
-                  <RotateCcw className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
-                  <span className="flex-1">{t('common.actions.reactivate', { defaultValue: 'Reactivate' })}</span>
-                </StyledDropdownMenuItem>
               </StyledDropdownMenuContent>
             </DropdownMenu.Root>
           </div>
@@ -1464,8 +1474,12 @@ const Clients: React.FC = () => {
           />
         </div>
 
+        {/* Grid view drops the card panel: the cards ARE card-surfaced, so a
+            card-surfaced container behind them left nothing to see. The table
+            keeps it — a table needs a surface to sit on. */}
+        <div className={`flex flex-col rounded-lg p-4 ${viewMode === 'grid' ? '' : 'bg-card shadow-sm'}`}>
         {/* Filter row */}
-        <div className="flex items-center mb-4 gap-4">
+        <div className="flex items-center mb-3 gap-4">
             <SearchInput
               value={searchInput}
               onChange={handleSearchInputChange}
@@ -1545,7 +1559,7 @@ const Clients: React.FC = () => {
               id="reset-filters-button"
               variant="ghost"
               size="sm"
-              className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-gray-500 hover:text-gray-700' : 'invisible'}`}
+              className={`shrink-0 flex items-center gap-1 ${isFiltered ? 'text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-700))]' : 'invisible'}`}
               onClick={handleResetFilters}
               disabled={!isFiltered}
             >
@@ -1554,8 +1568,8 @@ const Clients: React.FC = () => {
             </Button>
         </div>
 
-      {/* Delete */}
-      <div className="flex items-center gap-8 mb-6 ms-4">
+      {/* Selection */}
+      <div className="flex items-center gap-8 mb-2 ms-4">
         <div className="[&>div]:flex [&>div]:items-center">
           <Checkbox
             id="select-all-clients"
@@ -1564,7 +1578,7 @@ const Clients: React.FC = () => {
           />
         </div>
         {selectedClients.length > 0 && (
-          <span className="text-sm font-medium text-gray-500">
+          <span className="text-sm font-medium text-[rgb(var(--color-text-500))]">
             {isSelectAllMode
               ? t('clientsPage.allSelected', {
                   defaultValue: 'All {{count}} clients selected',
@@ -1573,18 +1587,6 @@ const Clients: React.FC = () => {
               : formatSelectedSummary(selectedClients.length)}
           </span>
         )}
-
-        <Button
-          id="delete-selected-clients"
-          variant="ghost"
-          size="sm"
-          className="flex gap-1 text-gray-500"
-          disabled={selectedClients.length === 0}
-          onClick={handleMultiDelete}
-        >
-          {t('common.actions.delete', { defaultValue: 'Delete' })}
-          <TrashIcon className="h-5 w-5" />
-        </Button>
       </div>
 
       <div className="app-print-root app-print-only">
@@ -1668,6 +1670,7 @@ const Clients: React.FC = () => {
         sortDirection={sortDirection}
         onSortChange={handleSortChange}
       />
+        </div>
 
       {/* Multi-delete confirmation dialog */}
       <Dialog
@@ -1721,21 +1724,21 @@ const Clients: React.FC = () => {
 
                     <div className="max-h-48 overflow-y-auto border rounded-md">
                       <table className="w-full text-sm">
-                        <thead className="bg-gray-50 sticky top-0">
+                        <thead className="bg-[rgb(var(--color-border-50))] sticky top-0">
                           <tr>
-                            <th className="text-left p-2 font-medium text-gray-700">
+                            <th className="text-left p-2 font-medium text-[rgb(var(--color-text-700))]">
                               {t('clientsPage.table.client', { defaultValue: 'Client' })}
                             </th>
-                            <th className="text-left p-2 font-medium text-gray-700">
+                            <th className="text-left p-2 font-medium text-[rgb(var(--color-text-700))]">
                               {t('clientsPage.associatedRecords', { defaultValue: 'Associated Records' })}
                             </th>
                           </tr>
                         </thead>
                         <tbody className="divide-y">
                           {multiDeleteResults.failedClients.map((client) => (
-                            <tr key={client.clientId} className="hover:bg-gray-50">
-                              <td className="p-2 font-medium text-gray-900">{client.clientName}</td>
-                              <td className="p-2 text-gray-600">{client.reason}</td>
+                            <tr key={client.clientId} className="hover:bg-[rgb(var(--color-border-50))]">
+                              <td className="p-2 font-medium text-[rgb(var(--color-text-900))]">{client.clientName}</td>
+                              <td className="p-2 text-[rgb(var(--color-text-600))]">{client.reason}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -1753,7 +1756,7 @@ const Clients: React.FC = () => {
                 )}
               </>
             ) : (
-              <p className="text-gray-600">
+              <p className="text-[rgb(var(--color-text-600))]">
                 {t('clientsPage.deleteSelectedPrompt', {
                   defaultValue: 'Are you sure you want to delete {{count}} selected clients? This action cannot be undone.',
                   count: selectedClients.length,
@@ -1825,6 +1828,51 @@ const Clients: React.FC = () => {
         onImportComplete={() => void handleImportComplete()}
       />
       
+      <BulkActionBar
+        idPrefix="clients-bulk-action-bar"
+        count={selectedClients.length}
+        selectedLabel={t('clientsPage.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedClients.length,
+        })}
+        actions={[
+          {
+            id: 'mark-inactive',
+            label: t('clientsPage.bulk.actionBar.markInactive', { defaultValue: 'Mark Inactive' }),
+            icon: <Power className="h-4 w-4" />,
+            onClick: () => void handleBulkMarkInactive(),
+          },
+          {
+            id: 'reactivate',
+            label: t('clientsPage.bulk.actionBar.reactivate', { defaultValue: 'Reactivate' }),
+            icon: <RotateCcw className="h-4 w-4" />,
+            onClick: () => void handleBulkReactivate(),
+          },
+          {
+            id: 'delete',
+            label: t('clientsPage.bulk.actionBar.delete', { defaultValue: 'Delete' }),
+            icon: <TrashIcon className="h-4 w-4" />,
+            onClick: handleMultiDelete,
+            destructive: true,
+          },
+        ]}
+        overflowActions={[
+          {
+            id: 'print',
+            label: t('clientsPage.bulk.actionBar.print', { defaultValue: 'Print selected' }),
+            icon: <Printer className="h-4 w-4" />,
+            onClick: () => { void triggerPrintClients(); },
+            disabled: isPreparingClientPrint,
+          },
+        ]}
+        overflowLabel={t('clientsPage.bulk.actionBar.more', { defaultValue: 'More' })}
+        onClear={() => {
+          setSelectedClients([]);
+          setIsSelectAllMode(false);
+        }}
+        clearLabel={t('clientsPage.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+      />
+
       {/* Quick View Drawer */}
       <Drawer
         id="client-quick-view-drawer"

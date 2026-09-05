@@ -24,6 +24,7 @@ import {
 
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { AppError } from '@alga-psa/core';
@@ -36,6 +37,15 @@ const ACTION_DESCRIPTIONS: Record<AccountingExportPermission, string> = {
   read: 'access accounting export batches',
   update: 'modify accounting export batches',
   execute: 'execute accounting export batches'
+};
+
+// A prefix plus an English fragment does not survive translation, so each action
+// carries its own whole-sentence key.
+const ACTION_PERMISSION_KEYS: Record<AccountingExportPermission, string> = {
+  create: 'msp/billing:errors.accountingExport.permissions.create',
+  read: 'msp/billing:errors.accountingExport.permissions.read',
+  update: 'msp/billing:errors.accountingExport.permissions.update',
+  execute: 'msp/billing:errors.accountingExport.permissions.execute'
 };
 
 const PREVIEW_LINE_LIMIT = 50;
@@ -133,15 +143,16 @@ async function checkAccountingExportPermission(
   action: AccountingExportPermission
 ): Promise<ActionPermissionError | null> {
   if (user.user_type === 'client') {
-    return permissionError('Client portal users are not permitted to manage accounting exports');
+    return permissionError('Client portal users are not permitted to manage accounting exports', 'msp/billing:errors.accountingExport.clientPortalForbidden');
   }
 
-  // Accounting exports are currently managed from billing/integrations surfaces; gate with billing settings permissions.
-  // Map export actions to billing_settings read/update to align with mapping + CSV export permissions.
-  const billingAction = action === 'read' ? 'read' : 'update';
-  const allowed = await hasPermission(user, 'billing_settings', billingAction);
+  // The whole accounting-export surface (browse, author, modify, execute) is
+  // gated by the single `exports_execute` capability. The daily-work role
+  // (Finance) holds it by default; read-only catalog viewers do not, because
+  // export batches are Alga's own operational records, not provider catalogs.
+  const allowed = await hasPermission(user, 'accounting_integrations', 'exports_execute');
   if (!allowed) {
-    return permissionError(`Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`);
+    return permissionError(`Permission denied: Cannot ${ACTION_DESCRIPTIONS[action]}`, ACTION_PERMISSION_KEYS[action]);
   }
   return null;
 }
@@ -262,7 +273,23 @@ export const executeAccountingExportBatch = withAuth(async (
   if (denied) return denied;
   try {
     const service = await AccountingExportService.create();
-    return await service.executeBatch(batchId);
+    const result = await service.executeBatch(batchId);
+
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_export_executed', {
+      userId: user.user_id,
+      provider: 'quickbooks_online',
+      recordId: batchId,
+      details: {
+        deliveredLines: result?.deliveredLines?.length ?? 0,
+        failedDocuments: result?.failedDocuments?.length ?? 0,
+        source: 'manual_batch',
+      },
+    }).catch((error) => {
+      logger.warn('Failed to write accounting export audit entry', { tenantId: tenant, error });
+    });
+
+    return result;
   } catch (error) {
     return toAccountingExportActionError(error, 'execute');
   }

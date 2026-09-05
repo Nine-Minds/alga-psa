@@ -646,7 +646,7 @@ export function OnboardingWizard({
               })}
             </p>
           </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-[rgb(var(--color-card))] rounded-lg card-elevated border border-gray-200 p-6">
             {wizardBody}
             <div className="mt-8 pt-6 border-t">{wizardNavigation}</div>
           </div>

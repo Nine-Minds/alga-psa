@@ -330,7 +330,15 @@
       "orderedList": "Ordered List",
       "quote": "Quote",
       "link": "Link",
-      "linkPrompt": "URL"
+      "image": "Insert image",
+      "linkPrompt": "URL",
+      "imagePrompt": "Image URL"
+    },
+    "imageUpload": {
+      "failed": "Image upload failed",
+      "tooLarge": "Image is larger than the 10 MB upload limit",
+      "notAnImage": "Only image files can be inserted into the editor",
+      "noSession": "Sign in again to upload images"
     }
   },
   "form": {

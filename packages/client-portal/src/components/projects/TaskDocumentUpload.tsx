@@ -194,7 +194,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     }
 
     // For other files, trigger download using the existing utility
-    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.document_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -208,7 +208,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
     e.stopPropagation();
     if (!doc.file_id) return;
 
-    const downloadUrl = await getDocumentDownloadUrl(doc.file_id);
+    const downloadUrl = await getDocumentDownloadUrl(doc.document_id);
     try {
       await downloadDocument(downloadUrl, doc.document_name, true);
     } catch (err) {
@@ -234,7 +234,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           {isImage && doc.file_id ? (
             <div className="w-10 h-10 bg-gray-100 rounded-lg overflow-hidden">
               <img
-                src={`/api/documents/view/${doc.file_id}`}
+                src={`/api/documents/view/${doc.document_id}`}
                 alt=""
                 className="w-full h-full object-cover"
                 onError={(e) => {
@@ -248,7 +248,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               <FileIcon className="w-5 h-5 text-gray-500" />
             </div>
           )}
-          <span className="absolute -bottom-1 -right-1 text-[9px] font-bold bg-purple-100 text-purple-700 px-1 rounded">
+          <span className="chip-primary absolute -bottom-1 -right-1 text-[9px] font-bold px-1 rounded">
             {fileExt}
           </span>
         </div>
@@ -279,7 +279,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                 e.stopPropagation();
                 handleDocumentClick(doc);
               }}
-              className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+              className="chip-primary p-2 text-gray-400 hover: hover: rounded-lg transition-colors"
               title={t('view', 'View')}
             >
               <Eye className="w-4 h-4" />
@@ -290,7 +290,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
           <button
             type="button"
             onClick={(e) => handleDownload(doc, e)}
-            className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            className="chip-primary p-2 text-gray-400 hover: hover: rounded-lg transition-colors"
             title={t('download', 'Download')}
           >
             <Download className="w-4 h-4" />
@@ -304,7 +304,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
   const PreviewModal = () => {
     if (!showPreviewModal || !previewDocument || !previewDocument.file_id) return null;
 
-    const viewUrl = `/api/documents/view/${previewDocument.file_id}`;
+    const viewUrl = `/api/documents/view/${previewDocument.document_id}`;
 
     return (
       <div
@@ -399,7 +399,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
-              className="text-purple-600 hover:text-purple-700 p-1 rounded hover:bg-purple-50 transition-colors"
+              className="chip-primary hover: p-1 rounded hover: transition-colors"
               title={uploading ? tCommon('common.uploading', 'Uploading...') : t('upload', 'Upload')}
             >
               {uploading ? (
@@ -435,7 +435,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                       {isImage && doc.file_id ? (
                         <div className="w-8 h-8 bg-gray-100 rounded overflow-hidden">
                           <img
-                            src={`/api/documents/view/${doc.file_id}`}
+                            src={`/api/documents/view/${doc.document_id}`}
                             alt=""
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -448,7 +448,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                           <FileIcon className="w-4 h-4 text-gray-500" />
                         </div>
                       )}
-                      <span className="absolute -bottom-0.5 -right-0.5 text-[7px] font-bold bg-purple-100 text-purple-700 px-0.5 rounded">
+                      <span className="chip-primary absolute -bottom-0.5 -right-0.5 text-[7px] font-bold px-0.5 rounded">
                         {fileExt}
                       </span>
                     </div>
@@ -467,7 +467,7 @@ export default function TaskDocumentUpload({ taskId, compact = false }: TaskDocu
                     <button
                       type="button"
                       onClick={(e) => handleDownload(doc, e)}
-                      className="p-1 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors flex-shrink-0"
+                      className="chip-primary p-1 text-gray-400 hover: hover: rounded transition-colors flex-shrink-0"
                       title={t('download', 'Download')}
                     >
                       <Download className="w-3.5 h-3.5" />

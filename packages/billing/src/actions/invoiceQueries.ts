@@ -67,14 +67,14 @@ async function assertClientPortalInvoiceAccess(
   }
   const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
   if (!portalClientId) {
-    return permissionError('Permission denied: invoice access denied');
+    return permissionError('Permission denied: invoice access denied', 'msp/invoicing:errors.permissions.invoiceAccess');
   }
   const invoice = await tenantDb(knex, tenant).table('invoices')
     .where({ invoice_id: invoiceId })
     .whereNot('status', 'draft')
     .first('client_id');
   if (!invoice || invoice.client_id !== portalClientId) {
-    return permissionError('Permission denied: invoice access denied');
+    return permissionError('Permission denied: invoice access denied', 'msp/invoicing:errors.permissions.invoiceAccess');
   }
   return null;
 }
@@ -303,11 +303,11 @@ export const fetchInvoicesPaginated = withAuth(async (
   options: FetchInvoicesOptions = {}
 ): Promise<PaginatedInvoicesResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   // This listing spans all clients; the portal uses fetchInvoicesByClient instead.
   if (user.user_type === 'client') {
-    return permissionError('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal', 'msp/billing:errors.permissions.clientPortalUnavailable');
   }
 
   const {
@@ -557,7 +557,7 @@ export const fetchInvoicesByClient = withAuth(async (
   clientId: string
 ): Promise<InvoiceViewModel[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   try {
@@ -570,7 +570,7 @@ export const fetchInvoicesByClient = withAuth(async (
     if (user.user_type === 'client') {
       const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
       if (!portalClientId || portalClientId !== clientId) {
-        return permissionError('Permission denied: cannot access invoices for another client');
+        return permissionError('Permission denied: cannot access invoices for another client', 'msp/invoicing:errors.permissions.otherClientInvoices');
       }
     }
 
@@ -689,7 +689,7 @@ export const fetchInvoicesByContract = withAuth(async (
   contractId: string
 ): Promise<InvoiceViewModel[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   try {
@@ -704,7 +704,7 @@ export const fetchInvoicesByContract = withAuth(async (
             .first('client_id')
         : null;
       if (!portalClientId || !contract || contract.client_id !== portalClientId) {
-        return permissionError('Permission denied: cannot access invoices for another client');
+        return permissionError('Permission denied: cannot access invoices for another client', 'msp/invoicing:errors.permissions.otherClientInvoices');
       }
     }
 
@@ -769,7 +769,7 @@ export const getInvoiceForRendering = withAuth(async (
   invoiceId: string
 ): Promise<InvoiceViewModel | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   try {
@@ -805,7 +805,7 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
   invoiceId: string
 ): Promise<import('@alga-psa/types').WasmInvoiceViewModel | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   const { knex } = await createTenantKnex();
@@ -921,7 +921,7 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
   invoiceId: string
 ): Promise<InvoicePurchaseOrderSummary | null | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   const { knex } = await createTenantKnex();
@@ -978,7 +978,7 @@ export const getInvoiceLineItems = withAuth(async (
   invoiceId: string
 ): Promise<IInvoiceCharge[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
 
   try {

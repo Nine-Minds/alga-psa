@@ -3,15 +3,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fromZonedTime } from 'date-fns-tz';
 import { getScheduledHoursForTicket, getTicketAppointmentRequests } from '../../actions/ticketActions';
+import { getClientBillingProfiles } from '../../actions/clientLookupActions';
 import { ITicket, ITimeSheet, ITimePeriod, ITimePeriodView, ITimeEntry, IAgentSchedule, IClient, IClientLocation, IContact } from '@alga-psa/types'; // Added IClient and IClientLocation
 import { IUserWithRoles, ITeam } from '@alga-psa/types';
 import { ITicketResource } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { TagManager } from '@alga-psa/tags/components';
 import { Button } from '@alga-psa/ui/components/Button';
+import { CallLink } from '@alga-psa/ui/components/CallLink';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { BillingProfilePicker } from '@alga-psa/ui/components/BillingProfilePicker';
 import { Clock, Edit2, Play, Pause, StopCircle, UserPlus, X, Calendar as CalendarIcon, Building, Users, CalendarCheck } from 'lucide-react';
 import { ContentCard } from '@alga-psa/ui/components';
 import { formatMinutesAsHoursAndMinutes } from '@alga-psa/core';
@@ -87,6 +90,11 @@ interface TicketPropertiesProps {
   onChangeContact: (contactId: string | null) => void;
   onChangeClient: (clientId: string) => void;
   onChangeLocation?: (locationId: string | null) => void;
+  /**
+   * Saves the ticket's billing profile. Rendered only when the client holds
+   * more than one profile (decision D6) and never required (decision D3).
+   */
+  onChangeBillingProfile?: (billingProfileId: string | null) => void;
   onClientFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
   onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
   tags?: ITag[];
@@ -117,6 +125,11 @@ interface TicketPropertiesProps {
   onLiveEditingFieldChange?: (field: string | null) => void;
   disableAgentSchedule?: boolean;
 }
+
+// The picker takes its loader as a prop so the invisibility rule has one
+// implementation shared across ticket, project, contract, and location
+// surfaces that live in packages which must not depend on one another.
+const loadClientBillingProfiles = (clientId: string) => getClientBillingProfiles(clientId);
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation, unnamedLocationLabel: string): string => {
@@ -183,6 +196,7 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
   onChangeContact,
   onChangeClient,
   onChangeLocation,
+  onChangeBillingProfile,
   onClientFilterStateChange,
   onClientTypeFilterChange,
   tags = [],
@@ -1030,6 +1044,29 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
               ) : null}
             </div>
           )}
+          {/*
+            Billing profile (F047). Renders nothing while the client has a
+            single profile — the picker itself owns that rule — and is never
+            required: a technician who leaves it alone still gets a correctly
+            attributed charge from the contract or the client default.
+          */}
+          {client && onChangeBillingProfile && (
+            <BillingProfilePicker
+              id={`${id}-billing-profile-picker`}
+              clientId={ticket.client_id}
+              loadProfiles={loadClientBillingProfiles}
+              value={ticket.billing_profile_id ?? null}
+              onChange={onChangeBillingProfile}
+              label={t('properties.billingProfile', 'Billing profile')}
+              unassignedLabel={t('properties.billingProfileUnassigned', 'Use the default profile')}
+              hint={t(
+                'properties.billingProfileHint',
+                "Only used when no contract assigns this work to a profile.",
+              )}
+              disabled={isFieldFrozen('billing_profile_id')}
+              className="mt-2"
+            />
+          )}
           <div>
             <h5 className="font-bold">
               {contactInfo
@@ -1037,10 +1074,21 @@ const TicketProperties: React.FC<TicketPropertiesProps> = ({
                 : t('properties.clientPhone', 'Client Phone')}
             </h5>
             <p className="text-sm">
-              {contactInfo?.default_phone_number
-                || contactInfo?.phone_numbers?.find((phoneNumber: { is_default?: boolean; phone_number?: string }) => phoneNumber.is_default)?.phone_number
-                || client?.phone_no
-                || t('properties.notAvailable', 'N/A')}
+              {(() => {
+                const ticketPhone = contactInfo?.default_phone_number
+                  || contactInfo?.phone_numbers?.find((phoneNumber: { is_default?: boolean; phone_number?: string }) => phoneNumber.is_default)?.phone_number
+                  || client?.phone_no
+                  || null;
+                return ticketPhone
+                  ? (
+                      <CallLink
+                        id="ticket-contact-phone-call"
+                        phoneNumber={ticketPhone}
+                        callIntent={ticket.ticket_id ? { ticketId: ticket.ticket_id } : undefined}
+                      />
+                    )
+                  : t('properties.notAvailable', 'N/A');
+              })()}
             </p>
           </div>
           <div>

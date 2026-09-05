@@ -1,7 +1,7 @@
 export type TeamsAvailabilityDisabledReason =
   | 'ce_unavailable'
   | 'tenant_not_configured'
-  | 'addon_required';
+  | 'feature_disabled';
 
 export type TeamsAvailability =
   | {
@@ -28,7 +28,7 @@ export interface GetTeamsAvailabilityInput extends ResolveTeamsAvailabilityInput
 export const TEAMS_AVAILABILITY_MESSAGES: Record<TeamsAvailabilityDisabledReason, string> = {
   ce_unavailable: 'Microsoft Teams integration is only available in Enterprise Edition.',
   tenant_not_configured: 'Microsoft Teams integration requires tenant context.',
-  addon_required: 'Microsoft Teams integration requires the Teams add-on.',
+  feature_disabled: 'Microsoft Teams integration is not enabled for this tenant.',
 };
 
 type TeamsEditionEnv = {

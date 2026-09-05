@@ -33,6 +33,7 @@ type MappableClientField =
   | 'client_name'
   | 'email'
   | 'phone_number'
+  | 'phone_extension'
   | 'website'
   | 'client_type'
   | 'is_inactive'
@@ -76,6 +77,7 @@ const COMPANY_FIELDS: Record<MappableClientField, string> = {
   client_name: 'Client Name *',
   email: 'Email',
   phone_number: 'Phone Number',
+  phone_extension: 'Extension',
   website: 'Website',
   client_type: 'Client Type',
   is_inactive: 'Is Inactive',
@@ -521,7 +523,7 @@ const ClientsImportDialog: React.FC<ClientsImportDialogProps> = ({
               <p className="mt-1 text-xs text-gray-500">
                 <strong>Required:</strong> client_name<br />
                 <strong>Client fields:</strong> website, client_type, is_inactive, notes, tags<br />
-                <strong>Location fields:</strong> location_name, email, phone_number, address_line1, address_line2, city, state_province, postal_code, country<br />
+                <strong>Location fields:</strong> location_name, email, phone_number, phone_extension, address_line1, address_line2, city, state_province, postal_code, country<br />
                 <strong>Note:</strong> is_inactive should be 'true' or 'false' (case-insensitive)
               </p>
               <div className="mt-4 space-y-3">

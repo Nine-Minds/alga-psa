@@ -20,6 +20,7 @@ import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { PilotSyncControl } from './PilotSyncControl';
 import { PreConsentDisclosure } from './PreConsentDisclosure';
+import { MicrosoftAppRegistrationPicker } from './MicrosoftAppRegistrationPicker';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import {
   ENTRA_SETUP_STEP_SHORT_LABEL_KEYS,
@@ -67,6 +68,7 @@ export function EntraSetupWizard({
   onStatusChanged,
 }: EntraSetupWizardProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
+  const [directProfile, setDirectProfile] = React.useState<{ id: string; name: string } | null>(null);
 
   const [method, setMethod] = React.useState<EntraConnectionMethod | null>(null);
   const [directConsentOpen, setDirectConsentOpen] = React.useState(false);
@@ -99,7 +101,10 @@ export function EntraSetupWizard({
   const mappedCount = status?.mappedTenantCount ?? 0;
   const approvedMappingCount = mappedCount + (status?.pendingCreateTenantCount ?? 0);
 
-  const isConnected = status?.status === 'connected';
+  const isConnected = status?.status === 'connected' && !status?.connectionDetails?.directProfileMissing;
+  React.useEffect(() => {
+    if (status?.connectionDetails?.directProfileMissing) setMethod('direct');
+  }, [status?.connectionDetails?.directProfileMissing]);
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
     isConnected,
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
@@ -202,12 +207,19 @@ export function EntraSetupWizard({
       return (
         <div className="space-y-4">
           <PreConsentDisclosure />
+          {status?.connectionDetails?.directProfileMissing ? (
+            <p className="text-sm text-destructive" id="entra-direct-profile-missing">
+              {t('integrations.entra.setup.appRegistration.reconnectRequired', { defaultValue: 'Select a Microsoft app registration and reconnect.' })}
+            </p>
+          ) : null}
           <ConnectionMethodChooser
             cippAvailable={cippAvailable}
             value={method}
             onChange={setMethod}
             onContinue={handleContinueConnect}
             busy={connectBusy || statusLoading}
+            directProfileBound={Boolean(directProfile)}
+            directProfilePicker={<MicrosoftAppRegistrationPicker onBound={setDirectProfile} />}
           />
           {connectError ? (
             <p className="text-sm text-destructive" id="entra-setup-connect-error">
@@ -349,6 +361,7 @@ export function EntraSetupWizard({
         onOpenChange={setDirectConsentOpen}
         onConfirm={() => void handleDirectRedirect()}
         busy={connectBusy}
+        appRegistrationName={directProfile?.name || status?.connectionDetails?.directProfileName || null}
       />
 
       <EntraCippConnectDialog

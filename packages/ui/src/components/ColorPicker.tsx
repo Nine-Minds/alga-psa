@@ -11,6 +11,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Label } from './Label';
 import { adaptColorsForDarkMode } from '../lib/colorUtils';
+import { useTranslation } from '../lib/i18n/client';
 
 interface ColorPickerProps {
   currentBackgroundColor?: string | null;
@@ -88,6 +89,7 @@ const ColorPicker = ({
   previewType = 'tag',
   colorMode = 'tag',
 }: ColorPickerProps) => {
+  const { t } = useTranslation('common');
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -119,7 +121,7 @@ const ColorPicker = ({
   const handleBackgroundChange = (value: string) => {
     setBackgroundColor(value);
     if (value && !validateColor(value)) {
-      setBackgroundError('Invalid hex color (e.g., #FF0000)');
+      setBackgroundError(t('colorPicker.invalidHexBackground', 'Invalid hex color (e.g., #FF0000)'));
     } else {
       setBackgroundError('');
     }
@@ -128,7 +130,7 @@ const ColorPicker = ({
   const handleTextChange = (value: string) => {
     setTextColor(value);
     if (value && !validateColor(value)) {
-      setTextError('Invalid hex color (e.g., #FFFFFF)');
+      setTextError(t('colorPicker.invalidHexText', 'Invalid hex color (e.g., #FFFFFF)'));
     } else {
       setTextError('');
     }
@@ -178,12 +180,14 @@ const ColorPicker = ({
       >
         <div className="space-y-4">
           <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
-            {showTextColor ? 'Customize Tag Colors' : 'Choose Color'}
+            {showTextColor
+              ? t('colorPicker.customizeTagColors', 'Customize Tag Colors')
+              : t('colorPicker.chooseColor', 'Choose Color')}
           </h3>
           
           {/* Preset colors */}
           <div>
-            <Label className="text-xs text-[rgb(var(--color-text-700))] mb-2 block">Quick Select</Label>
+            <Label className="text-xs text-[rgb(var(--color-text-700))] mb-2 block">{t('colorPicker.quickSelect', 'Quick Select')}</Label>
             <div className="grid grid-cols-6 gap-2">
               {BASE_PRESET_COLORS.map((basePreset, index) => {
                 const displayPreset = PRESET_COLORS[index];
@@ -203,8 +207,15 @@ const ColorPicker = ({
                       e.stopPropagation();
                       handlePresetClick(basePreset);
                     }}
-                    aria-label={`Select preset color ${index + 1}`}
-                    title={showTextColor ? `Background: ${basePreset.background}, Text: ${basePreset.text}` : basePreset.background}
+                    aria-label={t('colorPicker.presetAriaLabel', 'Select preset color {{number}}', { number: index + 1 })}
+                    title={
+                      showTextColor
+                        ? t('tags.presetSwatch', 'Background: {{background}}, Text: {{text}}', {
+                            background: basePreset.background,
+                            text: basePreset.text,
+                          })
+                        : basePreset.background
+                    }
                   >
                     {showTextColor && (
                       <span
@@ -224,7 +235,7 @@ const ColorPicker = ({
           <div className="space-y-3">
             <div>
               <Label htmlFor="background-color" className="text-xs text-[rgb(var(--color-text-700))]">
-                Background Color
+                {t('colorPicker.backgroundColor', 'Background Color')}
               </Label>
               <div className="flex gap-2 mt-1">
                 <Input
@@ -239,7 +250,7 @@ const ColorPicker = ({
                   value={backgroundColor || '#FF0000'}
                   onChange={(e) => handleBackgroundChange(e.target.value)}
                   className="w-10 h-10 rounded border border-[rgb(var(--color-border-200))] cursor-pointer"
-                  title="Pick background color"
+                  title={t('tags.pickBackgroundColor', 'Pick background color')}
                 />
               </div>
               {backgroundError && (
@@ -250,7 +261,7 @@ const ColorPicker = ({
             {showTextColor && (
               <div>
                 <Label htmlFor="text-color" className="text-xs text-[rgb(var(--color-text-700))]">
-                  Text Color
+                  {t('colorPicker.textColor', 'Text Color')}
                 </Label>
                 <div className="flex gap-2 mt-1">
                   <Input
@@ -265,7 +276,7 @@ const ColorPicker = ({
                     value={textColor || '#000000'}
                     onChange={(e) => handleTextChange(e.target.value)}
                     className="w-10 h-10 rounded border border-[rgb(var(--color-border-200))] cursor-pointer"
-                    title="Pick text color"
+                    title={t('tags.pickTextColor', 'Pick text color')}
                   />
                 </div>
                 {textError && (
@@ -284,7 +295,7 @@ const ColorPicker = ({
               : { background: backgroundColor, text: textColor };
             return (
             <div>
-              <Label className="text-xs text-[rgb(var(--color-text-700))] mb-2 block">Preview</Label>
+              <Label className="text-xs text-[rgb(var(--color-text-700))] mb-2 block">{t('colorPicker.preview', 'Preview')}</Label>
               {previewType === 'circle' ? (
                 <div className="flex justify-center">
                   <div
@@ -300,7 +311,7 @@ const ColorPicker = ({
                     color: previewColors.text || '#374151',
                   }}
                 >
-                  <span className="text-sm">Sample Tag</span>
+                  <span className="text-sm">{t('colorPicker.sampleTag', 'Sample Tag')}</span>
                 </div>
               )}
             </div>
@@ -315,7 +326,7 @@ const ColorPicker = ({
               size="sm"
               onClick={handleReset}
             >
-              Reset to default
+              {t('colorPicker.resetToDefault', 'Reset to default')}
             </Button>
             <div className="space-x-2">
               <Button
@@ -324,7 +335,7 @@ const ColorPicker = ({
                 size="sm"
                 onClick={() => setIsOpen(false)}
               >
-                Cancel
+                {t('actions.cancel', 'Cancel')}
               </Button>
               <Button
                 id="color-picker-save"
@@ -332,7 +343,7 @@ const ColorPicker = ({
                 onClick={handleSave}
                 disabled={!!backgroundError || !!textError}
               >
-                Save
+                {t('actions.save', 'Save')}
               </Button>
             </div>
           </div>

@@ -91,6 +91,11 @@ describe('client inbound webhook actions', () => {
     insert: ReturnType<typeof vi.fn>;
     returning: ReturnType<typeof vi.fn>;
   };
+  let billingProfilesQuery: {
+    where: ReturnType<typeof vi.fn>;
+    select: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -106,9 +111,20 @@ describe('client inbound webhook actions', () => {
         },
       ]),
     };
+    // Client creation provisions the client's default billing profile (F143).
+    // The mock returns one that already exists, so the provisioning read is
+    // satisfied without this suite having to model the write.
+    billingProfilesQuery = {
+      where: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue({ billing_profile_id: 'billing-profile-1' }),
+    };
     trx = vi.fn((table: string) => {
       if (table === 'clients') {
         return clientsQuery;
+      }
+      if (table === 'client_billing_profiles') {
+        return billingProfilesQuery;
       }
       throw new Error(`Unexpected table ${table}`);
     });

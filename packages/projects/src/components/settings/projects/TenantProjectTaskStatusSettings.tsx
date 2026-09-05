@@ -204,7 +204,7 @@ export function TenantProjectTaskStatusSettings() {
         code: 'VALIDATION_FAILED',
         message: error instanceof Error
           ? error.message
-          : t('settings.statuses.delete_failed', 'Failed to delete status.'),
+          : t('settings.statuses.delete_error', 'Failed to delete status'),
         dependencies: [],
         alternatives: []
       });

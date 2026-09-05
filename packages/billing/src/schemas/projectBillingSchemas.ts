@@ -24,7 +24,12 @@ const dateOnlySchema = z.string().regex(
   return parsed.getUTCFullYear() === year
     && parsed.getUTCMonth() === month - 1
     && parsed.getUTCDate() === day;
-}, 'trigger_date must be a valid calendar date');
+}, {
+  message: 'trigger_date must be a valid calendar date',
+  params: {
+    messageKey: 'msp/billing:errors.projectBilling.validation.triggerDateInvalid',
+  },
+});
 
 const currencySchema = z.string().trim().regex(/^[A-Za-z]{3}$/, 'currency must be a 3-letter code');
 
@@ -36,7 +41,10 @@ const capNotifyThresholdsSchema = z.array(
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'cap_notify_thresholds must be in strictly ascending order',
-        path: [index]
+        path: [index],
+        params: {
+          messageKey: 'msp/billing:errors.projectBilling.validation.thresholdsAscending',
+        },
       });
     }
   }
@@ -86,12 +94,18 @@ function validateAmountXorPercentage(
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'exactly one of amount or percentage is required',
-      path: ['amount']
+      path: ['amount'],
+      params: {
+        messageKey: 'msp/billing:errors.projectBilling.validation.amountOrPercentage',
+      },
     });
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       message: 'exactly one of amount or percentage is required',
-      path: ['percentage']
+      path: ['percentage'],
+      params: {
+        messageKey: 'msp/billing:errors.projectBilling.validation.amountOrPercentage',
+      },
     });
   }
 }
@@ -103,7 +117,10 @@ export const createProjectBillingScheduleEntrySchema = projectBillingScheduleEnt
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'increase_total is only valid for amount-based entries',
-        path: ['increase_total']
+        path: ['increase_total'],
+        params: {
+          messageKey: 'msp/billing:errors.projectBilling.validation.increaseTotalAmountOnly',
+        },
       });
     }
   }
@@ -120,7 +137,10 @@ export const updateProjectBillingScheduleEntrySchema = projectBillingScheduleEnt
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'amount and percentage must be updated together, with exactly one set to null',
-        path: includesAmount ? ['percentage'] : ['amount']
+        path: includesAmount ? ['percentage'] : ['amount'],
+        params: {
+          messageKey: 'msp/billing:errors.projectBilling.validation.amountAndPercentageTogether',
+        },
       });
       return;
     }

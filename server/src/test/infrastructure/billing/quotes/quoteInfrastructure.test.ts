@@ -38,7 +38,6 @@ import { resolveQuoteTemplateAst } from '../../../../../../packages/billing/src/
 import { evaluateTemplateAst } from '../../../../../../packages/billing/src/lib/invoice-template-ast/evaluator';
 import { createPDFGenerationService } from '../../../../../../packages/billing/src/services/pdfGenerationService';
 import { browserPoolService } from '../../../../../../packages/billing/src/services/browserPoolService';
-import { TaxService } from '../../../../../../packages/billing/src/services/taxService';
 
 process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 
@@ -342,9 +341,7 @@ describe('Quote infrastructure', () => {
       created_by: context.userId,
     });
 
-    const calculateTaxSpy = vi.spyOn(TaxService.prototype, 'calculateTax').mockResolvedValue({ taxAmount: 270, taxRate: 9 });
-
-    await QuoteItem.create(context.db, context.tenantId, {
+    const item = await QuoteItem.create(context.db, context.tenantId, {
       quote_id: quote.quote_id,
       service_id: serviceId,
       description: 'Managed Endpoint',
@@ -354,16 +351,17 @@ describe('Quote infrastructure', () => {
       created_by: context.userId,
     });
 
-    expect(calculateTaxSpy).toHaveBeenCalledWith(
-      context.clientId,
-      3000,
-      expect.any(String),
-      'US-NY',
-      true,
-      'USD'
-    );
+    // Quote tax is computed inside quoteCalculationService, not through
+    // TaxService.calculateTax, so there is no spy seam to assert on any more.
+    // The observable contract is the same: the taxable item is taxed on its own
+    // net amount at its region's combined rate, rounded up to the cent.
+    const stored = await context.db('quote_items')
+      .where({ tenant: context.tenantId, quote_item_id: item.quote_item_id })
+      .first();
 
-    calculateTaxSpy.mockRestore();
+    expect(Number(stored.net_amount)).toBe(3000);
+    expect(stored.tax_region).toBe('US-NY');
+    expect(Number(stored.tax_amount)).toBe(Math.ceil((3000 * 8.875) / 100));
   });
 
   it('T052: Tax: is_taxable=false items get zero tax_amount', async () => {
@@ -1126,15 +1124,19 @@ describe('Quote infrastructure', () => {
     expect(columns.templateAst.type).toBe('jsonb');
   });
 
+  // Later migrations add further standard templates (by-location, grouped), so
+  // this asserts the two this migration owns are seeded rather than pinning the
+  // full list and breaking every time one is added.
+  const MIGRATION_OWNED_TEMPLATE_CODES = ['standard-quote-default', 'standard-quote-detailed'];
+
   it('T076: Template migration: standard_quote_templates seeded with default and detailed templates', async () => {
     const rows = await context.db('standard_quote_document_templates')
       .select('standard_quote_document_template_code')
       .orderBy('standard_quote_document_template_code', 'asc');
 
-    expect(rows.map((row) => row.standard_quote_document_template_code)).toEqual([
-      'standard-quote-default',
-      'standard-quote-detailed',
-    ]);
+    const codes = rows.map((row) => row.standard_quote_document_template_code);
+    expect(codes).toEqual(expect.arrayContaining(MIGRATION_OWNED_TEMPLATE_CODES));
+    expect(new Set(codes).size).toBe(codes.length);
   });
 
   it('T076a: Template migration: standard quote template seed upsert succeeds on repeated runs', async () => {
@@ -1151,17 +1153,22 @@ describe('Quote infrastructure', () => {
 
     const migration = await import(path.join(migrationsDir, migrationFile!));
 
+    const codesNow = async () =>
+      (await context.db('standard_quote_document_templates')
+        .select('standard_quote_document_template_code')
+        .orderBy('standard_quote_document_template_code', 'asc'))
+        .map((row) => row.standard_quote_document_template_code);
+
+    const before = await codesNow();
+
     await migration.up(context.db);
     await migration.up(context.db);
 
-    const rows = await context.db('standard_quote_document_templates')
-      .select('standard_quote_document_template_code')
-      .orderBy('standard_quote_document_template_code', 'asc');
-
-    expect(rows.map((row) => row.standard_quote_document_template_code)).toEqual([
-      'standard-quote-default',
-      'standard-quote-detailed',
-    ]);
+    // Idempotent: repeated runs upsert rather than duplicate, and never remove
+    // the templates later migrations added.
+    const after = await codesNow();
+    expect(after).toEqual(before);
+    expect(after).toEqual(expect.arrayContaining(MIGRATION_OWNED_TEMPLATE_CODES));
   });
 
   it('T077: QuoteViewModel: correctly maps all quote fields including items with optional/recurring metadata', async () => {
@@ -1210,9 +1217,12 @@ describe('Quote infrastructure', () => {
     expect(ast).toBeTruthy();
 
     const evaluation = evaluateTemplateAst(ast!, viewModel as unknown as Record<string, unknown>);
+    // The bindings render dates as YYYY-MM-DD; the quote row holds Date
+    // objects. Compare the days (vitest pins TZ=UTC), not the two renderings.
+    const asDay = (value: unknown) => new Date(String(value)).toISOString().slice(0, 10);
     expect(evaluation.bindings.quoteNumber).toBe(quote.quote_number);
-    expect(String(evaluation.bindings.quoteDate)).toBe(String(quote.quote_date));
-    expect(String(evaluation.bindings.validUntil)).toBe(String(quote.valid_until));
+    expect(asDay(evaluation.bindings.quoteDate)).toBe(asDay(quote.quote_date));
+    expect(asDay(evaluation.bindings.validUntil)).toBe(asDay(quote.valid_until));
   });
 
   it('T079: AST bindings: lineItems collection includes is_optional and is_recurring flags per item', async () => {
@@ -1256,10 +1266,16 @@ describe('Quote infrastructure', () => {
       templateCode: 'standard-quote-default',
     });
 
-    expect(preview.html).toContain('Quote');
-    expect(preview.html).toContain('Scope of Work');
-    expect(preview.html).toContain('Validity');
+    // The redesigned template renders the scope and validity as bindings in
+    // the header/overview stacks rather than under "Scope of Work" and
+    // "Validity" headings, so assert the content those sections carry.
+    expect(preview.html).toContain('QUOTE');
+    expect(preview.html).toContain('Quote #');
+    expect(preview.html).toContain('Valid Until');
+    expect(preview.html).toContain('Prepared For');
+    expect(preview.html).toContain('Scope copy');
     expect(preview.html).toContain('Terms &amp; Conditions');
+    expect(preview.html).toContain('Standard terms');
     expect(preview.html).toContain('Rendered line');
   });
 
@@ -1284,7 +1300,10 @@ describe('Quote infrastructure', () => {
       templateCode: 'standard-quote-detailed',
     });
 
-    expect(preview.html).toContain('Overview');
+    // Same redesign: the overview is an unlabeled stack now, so assert the
+    // scope copy it renders instead of an "Overview" heading.
+    expect(preview.html).toContain('Detailed scope');
+    expect(preview.html).toContain('Project Phase');
     expect(preview.html).toContain('Phase');
     expect(preview.html).toContain('Optional');
     expect(preview.html).toContain('Recurring');
@@ -1317,19 +1336,25 @@ describe('Quote infrastructure', () => {
     await context.db('clients')
       .where({ tenant: context.tenantId, client_id: context.clientId })
       .update({ billing_email: 'client-billing@example.com' });
-    await createClientLocation(context.db, context.clientId, context.tenantId, {
+    const clientLocationId = await createClientLocation(context.db, context.clientId, context.tenantId, {
       address_line1: '100 Client Way',
       city: 'Albany',
       state_province: 'NY',
       postal_code: '12207',
       country_name: 'United States',
     });
+    // ux_client_locations_default_per_client allows exactly one default, and
+    // the context client is provisioned with one already — flag only the new
+    // row, after clearing the flag everywhere else for this client.
     await context.db('client_locations')
       .where({ tenant: context.tenantId, client_id: context.clientId })
+      .update({ is_default: false, is_billing_address: false });
+    await context.db('client_locations')
+      .where({ tenant: context.tenantId, location_id: clientLocationId })
       .update({ is_default: true, is_billing_address: true });
 
     const tenantClientId = await createClient(context.db, context.tenantId, 'Tenant HQ', { billing_email: 'hq@example.com' });
-    await createClientLocation(context.db, tenantClientId, context.tenantId, {
+    const tenantLocationId = await createClientLocation(context.db, tenantClientId, context.tenantId, {
       address_line1: '1 MSP Plaza',
       city: 'Buffalo',
       state_province: 'NY',
@@ -1338,6 +1363,9 @@ describe('Quote infrastructure', () => {
     });
     await context.db('client_locations')
       .where({ tenant: context.tenantId, client_id: tenantClientId })
+      .update({ is_default: false, is_billing_address: false });
+    await context.db('client_locations')
+      .where({ tenant: context.tenantId, location_id: tenantLocationId })
       .update({ is_default: true, is_billing_address: true });
     await context.db('tenant_companies').insert({
       tenant: context.tenantId,

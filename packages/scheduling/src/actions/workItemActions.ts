@@ -78,15 +78,15 @@ function workItemActionErrorFrom(error: unknown): WorkItemActionError | null {
     }
 
     if (message === 'Start time and end time are required for ad-hoc entries') {
-      return actionError('Start time and end time are required for ad-hoc entries.');
+      return actionError('Start time and end time are required for ad-hoc entries.', 'msp/schedule:errors.workItem.adHocTimesRequired');
     }
 
     if (message.startsWith('Unsupported work item type:')) {
-      return actionError('That work item type is not supported for scheduling.');
+      return actionError('That work item type is not supported for scheduling.', 'msp/schedule:errors.workItem.typeUnsupported');
     }
 
     if (message.includes('not found in tenant')) {
-      return actionError('The selected schedule entry or user is no longer available. Please refresh and try again.');
+      return actionError('The selected schedule entry or user is no longer available. Please refresh and try again.', 'msp/schedule:errors.workItem.entryOrUserUnavailable');
     }
 
     if (message.includes('Validation failed')) {
@@ -96,16 +96,22 @@ function workItemActionErrorFrom(error: unknown): WorkItemActionError | null {
 
   const dbError = error as { code?: string; column?: string; constraint?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected work item is invalid. Please refresh and try again.');
+    return actionError('The selected work item is invalid. Please refresh and try again.', 'msp/schedule:errors.workItem.invalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required schedule field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required schedule field: ${dbError.column}.`,
+          'msp/schedule:errors.workItem.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required schedule field.', 'msp/schedule:errors.workItem.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected work item, schedule entry, or assignee is no longer valid. Please refresh and try again.');
+    return actionError('The selected work item, schedule entry, or assignee is no longer valid. Please refresh and try again.', 'msp/schedule:errors.workItem.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('That schedule entry already exists. Please refresh and try again.');
+    return actionError('That schedule entry already exists. Please refresh and try again.', 'msp/schedule:errors.workItem.duplicateEntry');
   }
 
   return null;

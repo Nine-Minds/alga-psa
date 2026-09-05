@@ -279,14 +279,15 @@ describe('ExperimentalFeaturesSettings', () => {
       </UIStateProvider>
     );
 
-    await waitFor(() => {
+    const toggle = await waitFor(() => {
       expect(getExperimentalFeatures).toHaveBeenCalledTimes(1);
+      const el = document.querySelector(
+        '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
+      );
+      expect(el).toBeTruthy();
+      return el;
     });
 
-    const toggle = document.querySelector(
-      '[data-automation-id="experimental-feature-toggle-aiAssistant"]'
-    );
-    expect(toggle).toBeTruthy();
     expect(screen.queryByText('Workflow Automation')).not.toBeInTheDocument();
     expect(screen.getAllByRole('switch')).toHaveLength(1);
   });

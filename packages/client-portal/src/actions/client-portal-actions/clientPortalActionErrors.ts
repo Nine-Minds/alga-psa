@@ -43,10 +43,10 @@ export function clientPortalActionErrorFrom(error: unknown): ClientPortalActionE
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected records is invalid. Please refresh and try again.');
+    return actionError('One of the selected records is invalid. Please refresh and try again.', 'client-portal:errors.records.invalid');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected records no longer exists. Please refresh and try again.', 'client-portal:errors.records.missing');
   }
 
   return null;

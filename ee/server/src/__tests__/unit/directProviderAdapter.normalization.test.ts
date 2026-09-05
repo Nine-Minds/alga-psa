@@ -79,7 +79,7 @@ describe('DirectProviderAdapter normalization', () => {
       sourceUserCount: 42,
     });
     expect(axiosGetMock).toHaveBeenCalledWith(
-      'https://graph.microsoft.com/v1.0/tenantRelationships/managedTenants/tenants?$top=999',
+      'https://graph.microsoft.com/beta/tenantRelationships/managedTenants/tenants?$top=999',
       expect.objectContaining({
         headers: { Authorization: 'Bearer access-token-direct' },
       })
@@ -131,6 +131,19 @@ describe('DirectProviderAdapter normalization', () => {
       mobilePhone: '+1 555 0000',
       businessPhones: ['+1 555 0001'],
     });
+    // The managed tenant's directory, read with a customer-authority token —
+    // never the invented /tenantRelationships/managedTenants/users endpoint
+    // (real Graph answers 400 for it; it shipped once and broke every sync).
+    expect(axiosGetMock).toHaveBeenCalledWith(
+      expect.stringMatching(/^https:\/\/graph\.microsoft\.com\/v1\.0\/users\?\$select=/),
+      expect.objectContaining({
+        headers: { Authorization: 'Bearer access-token-customer' },
+      })
+    );
+    expect(refreshEntraDirectAccessTokenForTenantMock).toHaveBeenCalledWith(
+      'tenant-49',
+      'managed-tenant-49'
+    );
     expect(refreshEntraDirectTokenMock).not.toHaveBeenCalled();
   });
 

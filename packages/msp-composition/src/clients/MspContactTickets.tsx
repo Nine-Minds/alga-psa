@@ -495,7 +495,7 @@ const MspContactTickets: React.FC<ContactTicketsProps> = ({
           {isLoading && tickets.length === 0 ? (
             <div className="space-y-4">
               {[...Array(5)].map((_, i) => (
-                <div key={i} className="h-16 bg-gray-200 rounded w-full animate-pulse"></div>
+                <div key={i} className="h-16 skeleton-fill rounded w-full animate-pulse"></div>
               ))}
             </div>
           ) : tickets.length === 0 ? (

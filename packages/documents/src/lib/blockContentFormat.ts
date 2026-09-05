@@ -504,6 +504,28 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
     }
     case 'horizontalRule':
       return { type: 'horizontalRule' };
+    case 'image': {
+      const props = (block.props ?? {}) as Record<string, unknown>;
+      const src = typeof props.url === 'string' && props.url
+        ? props.url
+        : typeof props.src === 'string' ? props.src : '';
+      const caption = typeof props.caption === 'string' ? props.caption : '';
+      if (!src) {
+        return caption
+          ? { type: 'paragraph', content: [{ type: 'text', text: caption }] }
+          : { type: 'paragraph' };
+      }
+      const attrs: Record<string, unknown> = { src };
+      if (caption) {
+        attrs.alt = caption;
+        attrs.title = caption;
+      }
+      const width = props.previewWidth ?? props.width;
+      if (typeof width === 'number' && width > 0) {
+        attrs.width = width;
+      }
+      return { type: 'image', attrs };
+    }
     case 'table': {
       // BlockNote shape: { type: 'table', content: { type: 'tableContent', rows: [{ cells: [[inline]] }] } }
       // Tiptap shape: table > tableRow > (tableHeader|tableCell) > paragraph
@@ -540,8 +562,14 @@ const convertBlockNoteBlock = (block: BlockNoteBlock): ProseMirrorNode | null =>
       });
       return { type: 'table', content: tableRows };
     }
-    default:
-      return null;
+    default: {
+      // Never drop a block we don't recognise: degrade it to a paragraph
+      // carrying whatever text it held, so opening a document is not lossy.
+      const text = extractInlineText(block.content) || extractTextFromUnknown(block.content);
+      return text
+        ? { type: 'paragraph', content: [{ type: 'text', text }] }
+        : { type: 'paragraph' };
+    }
   }
 };
 

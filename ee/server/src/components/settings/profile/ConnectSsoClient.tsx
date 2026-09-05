@@ -3,7 +3,10 @@
 import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { authorizeSsoLinkingAction } from "@ee/lib/actions/auth/connectSso";
+import {
+  authorizeSsoLinkingAction,
+  prepareSsoLinkResolutionAction,
+} from "@ee/lib/actions/auth/connectSso";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@alga-psa/ui/components/Card";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Label } from "@alga-psa/ui/components/Label";
@@ -98,6 +101,7 @@ export default function ConnectSsoClient({
   linkStatus,
 }: ConnectSsoClientProps) {
   const { t } = useTranslation("msp/profile");
+  const { t: tCommon } = useTranslation("common");
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
@@ -161,6 +165,24 @@ export default function ConnectSsoClient({
   const handleProviderClick = async (providerId: string) => {
     if (!reauthComplete || !reauthNonce || !reauthNonceIssuedAt || !reauthNonceSignature) {
       setFormError(t("connectSso.verify.verifyBeforeProvider"));
+      return;
+    }
+
+    const genericStartFailureMessage = tCommon("auth.sso.startFailed", {
+      defaultValue: "We couldn't start SSO sign-in. Please verify provider setup and try again.",
+    });
+
+    // Issues the MSP SSO resolution cookie for the session tenant so NextAuth registers
+    // the provider from the tenant profile when no app-level OAuth secrets exist.
+    let resolution: { success: boolean; error?: string };
+    try {
+      resolution = await prepareSsoLinkResolutionAction(providerId);
+    } catch {
+      resolution = { success: false };
+    }
+
+    if (!resolution.success) {
+      setFormError(resolution.error ?? genericStartFailureMessage);
       return;
     }
 
@@ -329,11 +351,11 @@ export default function ConnectSsoClient({
                     borderColor:
                       provider.id === "google" ? "#4285F4" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "#6264A7" :
-                      "var(--color-primary)",
+                      "rgb(var(--color-primary-500))",
                     backgroundColor:
                       provider.id === "google" ? "rgba(66, 133, 244, 0.05)" :
                       provider.id === "azure-ad" || provider.id === "microsoft" ? "rgba(98, 100, 167, 0.05)" :
-                      "rgba(var(--color-primary-rgb), 0.05)"
+                      "rgb(var(--color-primary-500) / 0.05)"
                   }}
                 >
                   <div className="flex flex-col items-center text-center space-y-4">

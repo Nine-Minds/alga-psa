@@ -189,6 +189,13 @@
     "wholeWord": "Parola intera",
     "wholeWordShort": "Parola",
     "clearSearch": "Cancella ricerca",
+    "spacing": {
+      "compact": "Compatto",
+      "spacious": "Ampio",
+      "decrease": "Riduci spaziatura elenco",
+      "increase": "Aumenta spaziatura elenco",
+      "reset": "Reimposta spaziatura elenco"
+    },
     "taskList": "Elenco attività",
     "kanbanBoard": "Bacheca Kanban",
     "kanbanBoardWithPhase": "Bacheca Kanban: {{phaseName}}",
@@ -761,7 +768,8 @@
       "phasePlaceholder": "Seleziona una fase",
       "statusLabel": "Stato",
       "statusPlaceholder": "Seleziona uno stato",
-      "linkTicketLabel": "Collega il ticket all’attività creata"
+      "linkTicketLabel": "Collega il ticket all’attività creata",
+      "createdSuccess": "L’attività è stata creata correttamente"
     },
     "linkTicketToTask": {
       "title": "Collega ticket ad attività",
@@ -1167,6 +1175,8 @@
       "doneEditing": "Fine modifica",
       "editChecklist": "Modifica checklist",
       "addChecklistItem": "Aggiungi un elemento",
+      "editChecklistItem": "Modifica elemento checklist",
+      "removeChecklistItem": "Rimuovi elemento checklist",
       "checklistItemPlaceholder": "Elemento checklist",
       "emptyChecklistItem": "Elemento vuoto",
       "reorderChecklistItem": "Trascina per riordinare",
@@ -1310,6 +1320,12 @@
       },
       "skip": "Salta",
       "creating": "Creazione..."
+    },
+    "discardConfirmation": {
+      "title": "Scartare il modello non salvato?",
+      "message": "Il tuo modello contiene modifiche non salvate. Se esci ora, queste modifiche andranno perse.",
+      "keepEditing": "Continua a modificare",
+      "discard": "Scarta modello"
     }
   },
   "documents": {
@@ -1428,6 +1444,8 @@
     "newestFirst": "Più recenti",
     "oldestFirst": "Più vecchi",
     "addComment": "Aggiungi commento",
+    "reply": "Rispondi",
+    "addFailed": "Impossibile aggiungere il commento",
     "submitting": "Invio...",
     "loading": "Caricamento...",
     "empty": "Nessun commento ancora. Sii il primo a commentare!"
@@ -1440,6 +1458,8 @@
     "showPhasesDescription": "I clienti vedranno schede di fase con nomi, descrizioni e intervalli di date. Possono selezionare le fasi per visualizzare le attività associate.",
     "showCompletion": "Mostra % completamento",
     "showCompletionDescription": "Visualizza una barra di avanzamento e percentuale che mostra quante attività sono completate in ogni fase.",
+    "showBilling": "Mostra fatturazione",
+    "showBillingDescription": "I clienti vedranno un riepilogo di fatturazione in sola lettura con il piano di pagamento, gli importi e il fatturato a oggi. Si applica solo ai progetti con la fatturazione abilitata.",
     "showTasks": "Mostra attività",
     "showTasksDescription": "I clienti possono visualizzare le singole attività all'interno di ogni fase. Le attività vengono visualizzate in una bacheca Kanban o vista elenco raggruppata per stato.",
     "visibleTaskFields": "Campi attività visibili",
@@ -1448,6 +1468,7 @@
     "summary": {
       "projectInfo": "Nome del progetto, descrizione, date e avanzamento complessivo",
       "budgetHours": "Ore di budget: totali utilizzati vs. di budget e % utilizzato",
+      "billing": "Riepilogo di fatturazione: piano di pagamento, importi e fatturato a oggi",
       "phaseInfo": "Nomi delle fasi, descrizioni e intervalli di date",
       "phaseCompletion": "Percentuale di completamento per ogni fase",
       "taskDetails": "Dettagli attività: {{fields}}",
@@ -1607,6 +1628,8 @@
     },
     "terms": {
       "fixed": "Prezzo fisso di {{total}} · fatturazione {{mode}}",
+      "lockedSummary_one": "{{count}} voce per un totale di {{amount}} è bloccata e non cambierà.",
+      "lockedSummary_other": "{{count}} voci per un totale di {{amount}} sono bloccate e non cambieranno.",
       "edit": "Modifica condizioni",
       "saved": "Condizioni di fatturazione aggiornate",
       "dialogTitle": "Modifica condizioni di fatturazione"
@@ -1640,6 +1663,7 @@
       "milestone": "Traguardo",
       "trigger": "Attivazione",
       "amount": "Importo",
+      "amountLocked": "Importo bloccato all'approvazione",
       "status": "Stato",
       "invoice": "Fattura",
       "empty": "Nessun traguardo o anticipo.",
@@ -1653,6 +1677,7 @@
       "phaseTrigger": "Completamento fase",
       "phaseOverdue": "La data di fine della fase è trascorsa — contrassegna la fase come completata per rendere pronta questa voce",
       "approve": "Approva",
+      "unapprove": "Revoca approvazione",
       "approveInvoice": "Approva e fattura",
       "hold": "Sospendi",
       "markReady": "Contrassegna come pronto",
@@ -1662,6 +1687,7 @@
       "allocatedOver": "Sovraassegnato di {{amount}}",
       "held": "Voce sospesa",
       "approved": "Voce approvata",
+      "unapproved": "Approvazione revocata",
       "invoiced": "Fattura generata",
       "markedReady": "Contrassegnata come pronta",
       "canceled": "Voce annullata",
@@ -1696,6 +1722,8 @@
       "valuePercentage": "Percentuale del totale",
       "amount": "Importo ({{currency}})",
       "percentage": "Percentuale",
+      "increaseTotal": "Aumenta il totale del progetto di questo importo",
+      "increaseTotalHint": "Per lavori aggiuntivi o modifiche dell'ambito. Il totale del progetto aumenta e le allocazioni percentuali esistenti vengono ricalcolate sul nuovo totale.",
       "trigger": "Attivazione",
       "triggerPhase": "Completamento fase",
       "triggerDate": "In una data",
@@ -1723,6 +1751,7 @@
       "behavior": "Al raggiungimento",
       "notify": "Solo notifica",
       "hard": "Limite rigido (storno)",
+      "hardHint": "Manodopera e materiali oltre il limite vengono stornati automaticamente.",
       "thresholds": "Notifica al (%)",
       "thresholdsHint": "Percentuali del limite separate da virgole.",
       "noCap": "Nessun limite",
@@ -1798,6 +1827,12 @@
       "approved": "Approvato: {{amount}}",
       "ready": "Pronto: {{amount}}",
       "total": "Totale: {{amount}}"
+    },
+    "billingProfile": {
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo predefinito del cliente",
+      "hint": "Gli addebiti di tempo e di piano di questo progetto vengono fatturati a questo profilo, salvo che un contratto li rivendichi.",
+      "updated": "Profilo di fatturazione aggiornato"
     }
   },
   "taskTypes": {
@@ -1807,5 +1842,34 @@
     "improvement": "Miglioramento",
     "epic": "Epica",
     "story": "Storia"
+  },
+  "statusUpdate": {
+    "button": "Invia aggiornamento di stato",
+    "title": "Invia aggiornamento di stato",
+    "loading": "Caricamento delle informazioni del destinatario...",
+    "sending": "Invio dell’aggiornamento di stato...",
+    "sent": "Aggiornamento di stato inviato a {{email}}",
+    "send": "Invia aggiornamento",
+    "noRecipient": "Nessun indirizzo email configurato per il contatto cliente di questo progetto.",
+    "whatTheySee": "Il tuo cliente vedrà:",
+    "additionalMessage": "Messaggio aggiuntivo",
+    "additionalMessagePlaceholder": "Aggiungi una nota personale da includere nell’aggiornamento...",
+    "preview": "L’aggiornamento sarà inviato da {{fromEmail}} per conto di {{companyName}}.",
+    "recipientSource": {
+      "projectContact": "Contatto del progetto",
+      "clientEmail": "Email del cliente",
+      "none": "Nessuna email trovata"
+    },
+    "summary": {
+      "progress": "Avanzamento complessivo: {{percent}}% ({{closed}} di {{total}} attività completate)",
+      "budgetHours": "Ore a budget: {{spent}} di {{budgeted}} ore utilizzate",
+      "budgetHoursHidden": "Le ore a budget sono nascoste dalle impostazioni del portale clienti di questo progetto",
+      "recentlyCompleted": "Completato di recente: {{items}}",
+      "portalLink": "Un collegamento al progetto nel portale clienti"
+    },
+    "errors": {
+      "loadRecipient": "Impossibile caricare le informazioni del destinatario",
+      "sendFailed": "Impossibile inviare l’aggiornamento di stato"
+    }
   }
 }

@@ -18,6 +18,7 @@ import {
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Temporal } from '@js-temporal/polyfill';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Helper to get the last inclusive day from an exclusive end_date
 // end_date is the day AFTER the period ends (exclusive boundary)
@@ -28,6 +29,7 @@ function getLastInclusiveDay(exclusiveEndDate: string): string {
 }
 
 const TimePeriodList: React.FC = () => {
+  const { t } = useTranslation(['msp/settings', 'common']);
   const [isFormOpen, setIsFormOpen] = useState<boolean>(false);
   const [timePeriods, setTimePeriods] = useState<ITimePeriodView[]>([]);
   const [settings, setSettings] = useState<ITimePeriodSettings[] | null>(null);
@@ -104,7 +106,7 @@ const TimePeriodList: React.FC = () => {
         setLoadError(null);
       } catch (error) {
         console.error('Error fetching time period data:', error);
-        setLoadError('Failed to load time periods.');
+        setLoadError(t('timeEntry.periods.errors.load'));
       } finally {
         setIsLoading(false);
       }
@@ -115,18 +117,18 @@ const TimePeriodList: React.FC = () => {
   // Define column definitions for the DataTable
   const columns: ColumnDefinition<ITimePeriodView>[] = [
     {
-      title: 'Start Date',
+      title: t('timeEntry.periods.columns.startDate'),
       dataIndex: 'start_date',
       render: (value) => value.slice(0, 10)
     },
     {
-      title: 'End Date',
+      title: t('timeEntry.periods.columns.endDate'),
       dataIndex: 'end_date',
       // Show the last inclusive day (end_date is exclusive - the day AFTER the period)
       render: (value) => getLastInclusiveDay(value)
     },
     {
-      title: 'Actions',
+      title: t('timeEntry.periods.columns.actions'),
       dataIndex: 'period_id',
       render: (_, record) => (
         <DropdownMenu>
@@ -137,7 +139,7 @@ const TimePeriodList: React.FC = () => {
               className="h-8 w-8 p-0"
               onClick={(e) => e.stopPropagation()}
             >
-              <span className="sr-only">Open menu</span>
+              <span className="sr-only">{t('timeEntry.periods.openMenu')}</span>
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -149,7 +151,7 @@ const TimePeriodList: React.FC = () => {
                 handleEdit(record);
               }}
             >
-              Edit
+              {t('common:actions.edit')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -162,7 +164,7 @@ const TimePeriodList: React.FC = () => {
       <div className="flex items-center justify-center py-8">
         <LoadingIndicator 
           layout="stacked" 
-          text="Loading time periods..."
+          text={t('timeEntry.periods.loading')}
           spinnerProps={{ size: 'md' }}
         />
       </div>
@@ -172,8 +174,8 @@ const TimePeriodList: React.FC = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Time Periods</CardTitle>
-        <CardDescription>View and manage time entry periods for time tracking</CardDescription>
+        <CardTitle>{t('timeEntry.periods.title')}</CardTitle>
+        <CardDescription>{t('timeEntry.periods.description')}</CardDescription>
       </CardHeader>
       <CardContent>
         {loadError && (
@@ -190,7 +192,7 @@ const TimePeriodList: React.FC = () => {
             setIsFormOpen(true);
           }}
         >
-          Create New Time Period
+          {t('timeEntry.periods.create')}
         </Button>
         <TimePeriodForm
           isOpen={isFormOpen}

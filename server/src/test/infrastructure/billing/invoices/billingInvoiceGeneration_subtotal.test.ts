@@ -12,6 +12,7 @@ import {
   assignServiceTaxRate,
   ensureDefaultBillingSettings,
   ensureClientPlanBundlesTable,
+  materializeRecurringServicePeriods,
   unwrapManualInvoice
 } from '../../../../../test-utils/billingTestHelpers';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -258,6 +259,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
     await addServiceToFixedPlan(context, planId, serviceB, { detailBaseRateCents: 7500 });
     await addServiceToFixedPlan(context, planId, serviceC, { detailBaseRateCents: 10000 });
 
+    // generateInvoice refuses a window with no recurring service period, and
+    // the fixture only materializes on request. Run it after the extra services
+    // so the line is complete.
+    await materializeRecurringServicePeriods(context, planId);
+
     const billingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: context.clientId,
       billing_cycle: 'monthly',
@@ -278,7 +284,11 @@ describe('Billing Invoice Subtotal Calculations', () => {
     expect(invoice!.subtotal).toBe(22500);
   });
 
-  it('returns zero subtotal when manual invoice line items have zero quantity', async () => {
+  // A zero-quantity line no longer reaches the invoice: buildManualInvoiceItem
+  // rejects it with ManualInvoiceError('INVALID_QUANTITY'). The old expectation
+  // — three zero-value lines and a zero subtotal — describes behaviour the
+  // product deliberately dropped.
+  it('rejects manual invoice line items with zero quantity', async () => {
     const serviceA = await createTestService(context, {
       service_name: 'Consulting',
       default_rate: 5000,
@@ -297,40 +307,37 @@ describe('Billing Invoice Subtotal Calculations', () => {
       tax_region: 'US-NY'
     });
 
-    const invoice = await generateManualInvoice({
-      clientId: context.clientId,
-      items: [
-        {
-          service_id: serviceA,
-          description: 'Consulting services',
-          unit_price: 5000,
-          quantity: 0,
-          rate: 5000
-        },
-        {
-          service_id: serviceB,
-          description: 'Development services',
-          unit_price: 7500,
-          quantity: 0,
-          rate: 7500
-        },
-        {
-          service_id: serviceC,
-          description: 'Training services',
-          unit_price: 10000,
-          quantity: 0,
-          rate: 10000
-        }
-      ]
-    });
+    await expect(
+      generateManualInvoice({
+        clientId: context.clientId,
+        items: [
+          {
+            service_id: serviceA,
+            description: 'Consulting services',
+            unit_price: 5000,
+            quantity: 0,
+            rate: 5000
+          },
+          {
+            service_id: serviceB,
+            description: 'Development services',
+            unit_price: 7500,
+            quantity: 0,
+            rate: 7500
+          },
+          {
+            service_id: serviceC,
+            description: 'Training services',
+            unit_price: 10000,
+            quantity: 0,
+            rate: 10000
+          }
+        ]
+      })
+    ).rejects.toThrow('Quantity must be greater than 0');
 
-    expect(invoice.subtotal).toBe(0);
-
-    const items = await getInvoiceItems(invoice.invoice_id);
-    expect(items).toHaveLength(3);
-    items.forEach(item => {
-      expect(Number(item.net_amount)).toBe(0);
-    });
+    const invoices = await context.db('invoices').where({ tenant: context.tenantId });
+    expect(invoices).toHaveLength(0);
   });
 
   it('calculates subtotal when contract line charges net to zero', async () => {
@@ -350,10 +357,15 @@ describe('Billing Invoice Subtotal Calculations', () => {
       planName: 'Zero Credit Plan',
       baseRateCents: 0,
       detailBaseRateCents: 5000,
-      startDate: '2025-02-01'
+      // Default billing timing is arrears, and an arrears cycle invoices the
+      // service period *before* its own window, so the line has to start a
+      // cycle earlier than the cycle below.
+      startDate: '2025-01-01'
     });
 
     await addServiceToFixedPlan(context, planId, creditServiceB, { detailBaseRateCents: -5000 });
+
+    await materializeRecurringServicePeriods(context, planId);
 
     const billingCycleId = await context.createEntity('client_billing_cycles', {
       client_id: context.clientId,
@@ -381,12 +393,13 @@ describe('Billing Invoice Subtotal Calculations', () => {
       tax_region: 'US-NY'
     });
 
-    const { planId } = await createFixedPlanAssignment(context, creditService, {
+    await createFixedPlanAssignment(context, creditService, {
       planName: 'Credit Plan',
       baseRateCents: -12500,
       detailBaseRateCents: -12500,
       startDate: '2025-02-01',
-      billingTiming: 'advance'
+      billingTiming: 'advance',
+      materializeServicePeriods: true
     });
 
     const billingCycleId = await context.createEntity('client_billing_cycles', {

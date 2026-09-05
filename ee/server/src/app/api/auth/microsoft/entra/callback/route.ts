@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
 
   const credentials = await resolveMicrosoftCredentialsForTenant(state.tenant);
   if (!credentials) {
-    return failureRedirect('missing_credentials', 'Microsoft OAuth credentials are not configured.');
+    return failureRedirect('missing_profile_binding', 'Select the Microsoft app registration to use for Entra, then reconnect.');
   }
 
   try {
@@ -152,6 +152,7 @@ export async function GET(request: NextRequest) {
       console.error('[Entra OAuth] Direct connection rejected before persisting', {
         code: probe.code,
         status: probe.status,
+        detail: probe.detail,
       });
       return failureRedirect(probe.code, probe.error);
     }

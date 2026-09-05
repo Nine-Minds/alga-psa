@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController, AuthenticatedApiRequest } from './ApiBaseController';
 import { TicketService } from '../services/TicketService';
 import { 
-  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema
+  createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema, createTicketChecklistItemSchema, updateTicketChecklistCompletionSchema
 } from '../schemas/ticket';
 import { uuidSchema } from '../schemas/common';
 import { 
@@ -40,6 +40,8 @@ import {
   NotFoundError,
   createSuccessResponse,
   createPaginatedResponse,
+  createServerActionErrorResponse,
+  isServerActionErrorResult,
   handleApiError
 } from '../middleware/apiMiddleware';
 import {
@@ -49,6 +51,11 @@ import {
   updateBundleSettingsSchema
 } from '../schemas/ticketBundle';
 import { ZodError } from 'zod';
+import {
+  addChecklistItem,
+  getTicketChecklistItems,
+  setChecklistItemCompleted,
+} from '@alga-psa/tickets/actions/checklists/ticketChecklistActions';
 
 // Resolve a read-authorization predicate that mirrors the global authorization
 // kernel for ticket:read. The built-in rules come from the same subject-aware
@@ -217,6 +224,18 @@ export class ApiTicketController extends ApiBaseController {
     }
 
     return authorizedTickets;
+  }
+
+  private extractChecklistItemId(req: NextRequest): string {
+    const segments = new URL(req.url).pathname.split('/');
+    const checklistIndex = segments.indexOf('checklist');
+    const itemId = checklistIndex >= 0 ? segments[checklistIndex + 1] : undefined;
+    if (!itemId || !uuidSchema.safeParse(itemId).success) {
+      throw new ValidationError('Validation failed', [
+        { path: ['itemId'], message: 'A valid checklist item ID is required' },
+      ]);
+    }
+    return itemId;
   }
 
   private buildTicketStatsFromAuthorizedRows(tickets: Record<string, any>[]) {
@@ -658,6 +677,109 @@ export class ApiTicketController extends ApiBaseController {
           );
 
           return createSuccessResponse(comments, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * List checklist items for a ticket.
+   */
+  getChecklist() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.read || 'read');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+
+          const checklist = await getTicketChecklistItems(ticketId);
+          return createSuccessResponse(checklist, 200, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Add a manual checklist item to a ticket.
+   */
+  createChecklistItem() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const data = await this.validateData(apiRequest, createTicketChecklistItemSchema);
+
+          const result = await addChecklistItem(ticketId, data);
+          if (isServerActionErrorResult(result)) {
+            return createServerActionErrorResponse(result);
+          }
+
+          // Re-read through the canonical projection so every REST response
+          // consistently includes the optional completion display name.
+          const checklist = await getTicketChecklistItems(ticketId);
+          const created = checklist.find((item) => item.checklist_item_id === result.checklist_item_id);
+          if (!created) {
+            throw new NotFoundError('Checklist item not found');
+          }
+          return createSuccessResponse(created, 201, undefined, apiRequest);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * Complete or uncomplete a ticket checklist item.
+   */
+  updateChecklistItemCompletion() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await this.runWithApiKeyContext(apiRequest, async () => {
+          await this.checkPermission(apiRequest, this.options.permissions?.update || 'update');
+
+          const ticketId = await this.extractIdFromPath(apiRequest);
+          const itemId = this.extractChecklistItemId(apiRequest);
+          const knex = await getConnection(apiRequest.context.tenant);
+          await this.assertTicketReadAllowed(apiRequest, ticketId, knex);
+          const data = await this.validateData(apiRequest, updateTicketChecklistCompletionSchema);
+
+          // Bind the item to the authorized ticket before calling the existing
+          // item-ID mutation. This prevents an authorized ticket URL from being
+          // paired with a checklist item on another, unauthorized ticket.
+          const before = await getTicketChecklistItems(ticketId);
+          if (!before.some((item) => item.checklist_item_id === itemId)) {
+            throw new NotFoundError('Checklist item not found');
+          }
+
+          const result = await setChecklistItemCompleted(itemId, data.completed);
+          if (isServerActionErrorResult(result)) {
+            return createServerActionErrorResponse(result);
+          }
+
+          const checklist = await getTicketChecklistItems(ticketId);
+          const updated = checklist.find((item) => item.checklist_item_id === itemId);
+          if (!updated) {
+            throw new NotFoundError('Checklist item not found');
+          }
+          return createSuccessResponse(updated, 200, undefined, apiRequest);
         });
       } catch (error) {
         return handleApiError(error);

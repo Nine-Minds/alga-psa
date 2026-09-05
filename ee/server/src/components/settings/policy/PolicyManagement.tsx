@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   Archive,
   ArrowLeft,
@@ -1088,13 +1089,13 @@ export default function PolicyManagement() {
       ) : null}
 
       {error ? (
-        <div className="rounded-xl border border-[rgb(var(--color-destructive)/0.25)] bg-[rgb(var(--color-destructive)/0.08)] px-4 py-3.5 text-sm text-[rgb(var(--color-destructive))] shadow-sm">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       ) : null}
 
       {!selectedBundleId ? (
-        <Card className="overflow-hidden rounded-2xl border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm">
+        <Card className="overflow-hidden rounded-2xl border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] card-elevated">
         <CardHeader className="gap-5 bg-[rgb(var(--color-card))] pb-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
@@ -1371,7 +1372,7 @@ export default function PolicyManagement() {
                                             <div className="text-xs font-medium text-[rgb(var(--color-text-500))]">{t('policyManagement.editor.rule.redactedFields')}</div>
                                             <div className="flex flex-wrap gap-2">
                                               {rule.redactedFields.map((field) => (
-                                                <span key={field} className="rounded-full border border-[rgb(var(--color-accent-200))] bg-[rgb(var(--color-accent-50))] px-3 py-1 text-xs text-[rgb(var(--color-accent-700))]">
+                                                <span key={field} className="rounded-full border border-[rgb(var(--color-accent-200))] bg-[rgb(var(--color-accent-50))] px-3 py-1 text-xs text-[rgb(var(--color-accent-900))] dark:text-[rgb(var(--color-accent-700))]">
                                                   {field}
                                                 </span>
                                               ))}

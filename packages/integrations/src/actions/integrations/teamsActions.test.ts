@@ -51,7 +51,6 @@ const hoisted = vi.hoisted(() => {
     tenantSecrets: new Map<string, string>(),
     microsoftProfiles: [] as MicrosoftProfileRecord[],
     teamsIntegrations: [] as TeamsIntegrationRecord[],
-    tenantAddOns: [] as Array<{ tenant: string; addon_key: string; expires_at: string | null }>,
     microsoftConsumerBindings: [] as MicrosoftConsumerBindingRecord[],
   };
 
@@ -71,9 +70,6 @@ const hoisted = vi.hoisted(() => {
       }
       if (table === 'microsoft_profile_consumer_bindings') {
         return state.microsoftConsumerBindings;
-      }
-      if (table === 'tenant_addons') {
-        return state.tenantAddOns;
       }
       return [] as Array<Record<string, unknown>>;
     };
@@ -124,14 +120,13 @@ const hoisted = vi.hoisted(() => {
 	  return {
 	    state,
 	    hasPermissionMock: vi.fn(async (..._args: unknown[]) => true),
-	    isFeatureFlagEnabledMock: vi.fn(async (..._args: unknown[]) => true),
 	    fetchMock: vi.fn(),
 	    knexMock,
 	  };
 	});
 
-const { microsoftProfiles, teamsIntegrations, tenantAddOns, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
-const { hasPermissionMock, isFeatureFlagEnabledMock, fetchMock, knexMock } = hoisted;
+const { microsoftProfiles, teamsIntegrations, microsoftConsumerBindings, tenantSecrets } = hoisted.state;
+const { hasPermissionMock, fetchMock, knexMock } = hoisted;
 
 const DEFAULT_MEETING_SETTINGS = {
   defaultMeetingOrganizerUpn: null,
@@ -160,14 +155,6 @@ vi.mock('@alga-psa/db', () => ({
     unscoped: (table: string) => conn(table),
   }),
 }));
-
-vi.mock('@alga-psa/core', async () => {
-  const actual = await vi.importActual<object>('@alga-psa/core');
-  return {
-    ...actual,
-    isFeatureFlagEnabled: hoisted.isFeatureFlagEnabledMock,
-  };
-});
 
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecretProviderInstance: async () => ({
@@ -235,14 +222,10 @@ describe('Teams integration actions', () => {
     delete process.env.TEAMS_BOT_APP_PASSWORD;
     microsoftProfiles.length = 0;
     teamsIntegrations.length = 0;
-    tenantAddOns.length = 0;
-    tenantAddOns.push({ tenant: 'tenant-1', addon_key: 'teams', expires_at: null });
     microsoftConsumerBindings.length = 0;
     tenantSecrets.clear();
     hasPermissionMock.mockClear();
     hasPermissionMock.mockResolvedValue(true);
-    isFeatureFlagEnabledMock.mockClear();
-    isFeatureFlagEnabledMock.mockResolvedValue(true);
     fetchMock.mockReset();
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ access_token: 'graph-token' }), {
       status: 200,
@@ -272,7 +255,6 @@ describe('Teams integration actions', () => {
       success: false,
       error: 'Microsoft Teams integration is only available in Enterprise Edition.',
     });
-    expect(isFeatureFlagEnabledMock).not.toHaveBeenCalled();
     expect(hasPermissionMock).not.toHaveBeenCalled();
   });
 
@@ -285,30 +267,18 @@ describe('Teams integration actions', () => {
     expect(diagnostics.overallStatus).toBe('fail');
     expect(diagnostics.steps).toEqual([
       expect.objectContaining({
-        id: 'addon_entitlement',
+        id: 'availability',
         status: 'fail',
         detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       }),
     ]);
     expect(testMessage).toEqual({
       status: 'skipped',
-      reason: 'addon_inactive',
+      reason: 'ee_unavailable',
       detail: 'Microsoft Teams integration is only available in Enterprise Edition.',
       deliveryId: null,
     });
     expect(hasPermissionMock).not.toHaveBeenCalled();
-  });
-
-  it('returns an add-on required result when the tenant lacks the Teams add-on', async () => {
-    tenantAddOns.length = 0;
-
-    const result = await getTeamsIntegrationStatus();
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Teams integration requires the Teams add-on.',
-      addOnState: 'absent',
-    });
   });
 
   it('T083/T084: keeps the Teams integration record tenant-scoped and returns defaults when missing', async () => {
@@ -320,7 +290,6 @@ describe('Teams integration actions', () => {
       secretRef: 'tenant-two-secret-ref',
     });
     tenantSecrets.set('tenant-2:tenant-two-secret-ref', 'tenant-two-secret');
-    tenantAddOns.push({ tenant: 'tenant-2', addon_key: 'teams', expires_at: null });
 
     hoisted.state.mockCtx = { tenant: 'tenant-2' };
     await saveTeamsIntegrationSettings({
@@ -344,7 +313,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
 
@@ -384,7 +352,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
 
@@ -445,6 +412,61 @@ describe('Teams integration actions', () => {
       send_meeting_invites: false,
       download_recordings: true,
       expose_recordings_in_portal: true,
+    });
+  });
+
+  it('saves unrelated settings without re-resolving an unchanged meeting organizer', async () => {
+    addMicrosoftProfile({
+      tenant: 'tenant-1',
+      profileId: 'profile-1',
+      clientId: 'tenant-one-client',
+      tenantId: 'tenant-one-guid',
+      secretRef: 'tenant-one-secret-ref',
+    });
+    tenantSecrets.set('tenant-1:tenant-one-secret-ref', 'tenant-one-secret');
+    fetchMock
+      .mockResolvedValueOnce(new Response(JSON.stringify({ access_token: 'graph-token' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: 'organizer-object-1' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+
+    await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      enabledCapabilities: ['personal_tab', 'channel_bot'],
+      defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    // Graph is now unreachable (expired secret, revoked consent, outage). The
+    // settings form still posts every field, so an unchanged organizer must not
+    // drag a live Microsoft round-trip into an unrelated capability edit.
+    fetchMock.mockRejectedValue(new Error('graph is unreachable'));
+
+    const saved = await saveTeamsIntegrationSettings({
+      selectedProfileId: 'profile-1',
+      installStatus: 'install_pending',
+      enabledCapabilities: ['personal_tab'],
+      defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+    });
+
+    expect(saved).toEqual({
+      success: true,
+      integration: expect.objectContaining({
+        enabledCapabilities: ['personal_tab'],
+        defaultMeetingOrganizerUpn: 'scheduler@acme.com',
+        defaultMeetingOrganizerObjectId: 'organizer-object-1',
+      }),
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(teamsIntegrations[0]).toMatchObject({
+      enabled_capabilities: JSON.stringify(['personal_tab']),
+      default_meeting_organizer_upn: 'scheduler@acme.com',
+      default_meeting_organizer_object_id: 'organizer-object-1',
     });
   });
 
@@ -605,7 +627,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
   });
@@ -756,7 +777,6 @@ describe('Teams integration actions', () => {
 	        lastError: null,
 	        ...DEFAULT_MEETING_SETTINGS,
 	        botConnectorConfigured: false,
-	        addOnState: 'active',
 	      },
 	    });
     expect(microsoftConsumerBindings).toEqual([

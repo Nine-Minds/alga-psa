@@ -17,6 +17,7 @@ export interface BillingTabDefinition {
   labelKey: string;
   href: string;
   icon: React.ElementType;
+  requiredPermission?: string;
 }
 
 export type BillingTabValue =
@@ -72,7 +73,8 @@ export const billingTabDefinitions: BillingTabDefinition[] = [
     label: 'Accounting Exports',
     labelKey: 'dashboard.tabs.accountingExports',
     href: '/msp/billing?tab=accounting-exports',
-    icon: FileOutput
+    icon: FileOutput,
+    requiredPermission: 'accounting_integrations:exports_execute'
   },
   {
     value: 'contract-templates',

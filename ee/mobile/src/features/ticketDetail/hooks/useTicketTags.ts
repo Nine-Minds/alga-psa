@@ -116,6 +116,79 @@ export function useTicketTags(deps: TicketDetailDeps) {
     }
   };
 
+  const applyTags = async (desiredTagTexts: string[]): Promise<boolean> => {
+    if (!client || !session || tagUpdating) return false;
+
+    const desired = Array.from(
+      new Map(
+        desiredTagTexts
+          .map((text) => text.trim())
+          .filter(Boolean)
+          .map((text) => [text.toLowerCase(), text]),
+      ).values(),
+    );
+    const desiredLower = new Set(desired.map((text) => text.toLowerCase()));
+    const currentLower = new Set(tags.map((tag) => tag.tag_text.toLowerCase()));
+    const toRemove = tags.filter((tag) => !desiredLower.has(tag.tag_text.toLowerCase()));
+    const toAdd = desired.filter((text) => !currentLower.has(text.toLowerCase()));
+
+    if (toRemove.length === 0 && toAdd.length === 0) {
+      setTagPickerOpen(false);
+      return true;
+    }
+
+    setTagActionError(null);
+    setTagUpdating(true);
+    let succeeded = true;
+    try {
+      const auditHeaders = await getClientMetadataHeaders();
+      for (const tag of toRemove) {
+        const res = await removeTicketTag(client, {
+          apiKey: session.accessToken,
+          ticketId,
+          tagId: tag.tag_id,
+          auditHeaders,
+        });
+        if (!res.ok) {
+          succeeded = false;
+          setTagActionError(
+            res.error.kind === "permission"
+              ? t("tags.errors.removePermission", { defaultValue: "You don't have permission to remove tags." })
+              : t("tags.errors.removeGeneric", { defaultValue: "Unable to update tags. Please try again." }),
+          );
+          break;
+        }
+      }
+
+      if (succeeded) {
+        for (const tagText of toAdd) {
+          const res = await addTicketTag(client, {
+            apiKey: session.accessToken,
+            ticketId,
+            tagText,
+            auditHeaders,
+          });
+          if (!res.ok) {
+            succeeded = false;
+            const validationMessage = res.error.kind === "validation" ? getApiErrorMessage(res.error.body) : null;
+            setTagActionError(
+              res.error.kind === "permission"
+                ? t("tags.errors.addPermission", { defaultValue: "You don't have permission to add tags." })
+                : validationMessage ?? t("tags.errors.addGeneric", { defaultValue: "Unable to update tags. Please try again." }),
+            );
+            break;
+          }
+        }
+      }
+    } finally {
+      setTagUpdating(false);
+      await fetchTags();
+    }
+
+    if (succeeded) setTagPickerOpen(false);
+    return succeeded;
+  };
+
   const openTagPicker = () => {
     setTagActionError(null);
     setTagPickerOpen(true);
@@ -137,6 +210,7 @@ export function useTicketTags(deps: TicketDetailDeps) {
     addTag,
     removeTag,
     selectTag,
+    applyTags,
     openTagPicker,
     closeTagPicker,
   };

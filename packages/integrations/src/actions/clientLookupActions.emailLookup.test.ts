@@ -167,6 +167,8 @@ describe('integration contact email lookup helpers', () => {
 
     expect(result).toEqual({
       actionError: 'This email is already associated with Acme Corp',
+      messageKey: 'msp/integrations:errors.clientLookup.emailOnAnotherClientNamed',
+      messageParams: { clientName: 'Acme Corp' },
     });
     expect(createContactMock).not.toHaveBeenCalled();
   });

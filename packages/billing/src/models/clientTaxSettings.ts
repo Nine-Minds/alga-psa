@@ -1,5 +1,6 @@
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 import type {
   IClientTaxSettings,
   ITaxComponent,
@@ -43,7 +44,16 @@ async function assertTenantTaxComponents(
 }
 
 const ClientTaxSettings = {
-  async get(clientId: string): Promise<IClientTaxSettings | null> {
+  /**
+   * Tax settings for a client's billing profile.
+   *
+   * Since S7 the table is keyed per profile, so a caller that names no profile
+   * gets the client's **default** profile's row — the pre-S7 answer for a
+   * single-profile client, which is every client until someone adds a second.
+   * Reading "any row for this client" would silently return whichever entity's
+   * reverse-charge setting the planner happened to reach.
+   */
+  async get(clientId: string, billingProfileId?: string): Promise<IClientTaxSettings | null> {
     try {
       const { knex: db, tenant } = await createTenantKnex();
       
@@ -51,9 +61,13 @@ const ClientTaxSettings = {
         throw new Error('Tenant context is required for tax settings operations');
       }
 
+      const resolvedProfileId = billingProfileId
+        ?? await ensureClientDefaultBillingProfile(db, tenant, clientId);
+
       const taxSettings = await tenantScopedTable<IClientTaxSettings>(db, tenant, 'client_tax_settings')
         .where({
-          client_id: clientId
+          client_id: clientId,
+          billing_profile_id: resolvedProfileId
         })
         .first();
 
@@ -82,7 +96,11 @@ const ClientTaxSettings = {
     }
   },
 
-  async update(clientId: string, taxSettings: Partial<IClientTaxSettings>): Promise<IClientTaxSettings> {
+  async update(
+    clientId: string,
+    taxSettings: Partial<IClientTaxSettings>,
+    billingProfileId?: string,
+  ): Promise<IClientTaxSettings> {
     try {
       const { knex: db, tenant } = await createTenantKnex();
       
@@ -90,9 +108,13 @@ const ClientTaxSettings = {
         throw new Error('Tenant context is required for tax settings operations');
       }
 
+      const resolvedProfileId = billingProfileId
+        ?? await ensureClientDefaultBillingProfile(db, tenant, clientId);
+
       const [updatedSettings] = await tenantScopedTable<IClientTaxSettings>(db, tenant, 'client_tax_settings')
         .where({
-          client_id: clientId
+          client_id: clientId,
+          billing_profile_id: resolvedProfileId
         })
         .update(taxSettings)
         .returning('*');

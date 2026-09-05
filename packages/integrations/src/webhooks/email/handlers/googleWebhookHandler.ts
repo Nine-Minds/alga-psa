@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { enqueueUnifiedInboundEmailQueueJob } from '@alga-psa/shared/services/email/unifiedInboundEmailQueue';
 import { persistIngressPointer } from '@alga-psa/shared/services/email/inboundEmailProducer';
+import { buildGmailWebhookUrl, resolveGmailWebhookBaseUrl } from '../../../utils/email/gmailPubSub';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -179,11 +180,44 @@ export async function handleGoogleWebhook(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'No google config found' });
     }
 
-    // Verify JWT token (audience + issuer), now that we know which tenant/provider this webhook maps to
-    // Use NEXTAUTH_URL or NEXT_PUBLIC_BASE_URL for the expected audience since request.nextUrl.origin
-    // returns the container's internal URL (e.g., https://localhost:3000) instead of the public URL
-    const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/$/, '');
-    const webhookUrl = baseUrl ? `${baseUrl}${request.nextUrl.pathname}` : `${request.nextUrl.origin}${request.nextUrl.pathname}`;
+    // Verify JWT token (audience + issuer), now that we know which tenant/provider this webhook maps to.
+    // The expected audience comes from the same derivation the Pub/Sub push
+    // subscription was provisioned with — request.nextUrl.origin is the
+    // container's internal address, and any drift between the two strings
+    // turns every delivery into a 401.
+    let resolvedBase: Awaited<ReturnType<typeof resolveGmailWebhookBaseUrl>> = null;
+    try {
+      resolvedBase = await resolveGmailWebhookBaseUrl();
+    } catch (baseUrlError) {
+      // A base URL that is set but unusable is a configuration fault, not a
+      // missing value. Falling back to request.nextUrl.origin here would verify
+      // against the container-internal address, which cannot match what
+      // provisioning signed — every push would 401 with "invalid audience" and
+      // nothing would say why. Reject with the actual reason instead.
+      console.error('❌ Rejecting Gmail push: the configured webhook base URL is unusable, so the expected audience cannot be derived.', {
+        providerId: provider.id,
+        tenant: provider.tenant,
+        error: baseUrlError instanceof Error ? baseUrlError.message : String(baseUrlError),
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!resolvedBase) {
+      // Nothing configured at all — the historical behavior. The request origin
+      // is the container's own address, so it only matches when Alga is reached
+      // directly (local development). Say so rather than letting a mismatch
+      // surface as a bare 401.
+      console.warn(
+        '⚠️ No Gmail webhook base URL is configured; verifying against the request origin. ' +
+          'This only matches when Pub/Sub was provisioned against that same origin — set NEXT_PUBLIC_BASE_URL ' +
+          '(or NGROK_URL for local development) to the public address of this instance.',
+        { origin: request.nextUrl.origin, providerId: provider.id, tenant: provider.tenant }
+      );
+    }
+
+    const webhookUrl = resolvedBase
+      ? buildGmailWebhookUrl(resolvedBase.baseUrl, request.nextUrl.pathname)
+      : `${request.nextUrl.origin}${request.nextUrl.pathname}`;
     console.log('🔐 Verifying JWT token from Pub/Sub', {
       webhookUrl,
       providerId: provider.id,
@@ -213,8 +247,28 @@ export async function handleGoogleWebhook(request: NextRequest) {
       });
       console.log('✅ JWT token verified successfully');
     } catch (error) {
-      console.error('❌ JWT verification failed:', error);
+      // The expected audience is the single most useful fact when this fails,
+      // and it is the one thing the rejected request cannot tell you.
+      console.error('❌ JWT verification failed:', {
+        expectedAudience: webhookUrl,
+        baseUrlSource: resolvedBase?.source ?? 'request origin',
+        providerId: provider.id,
+        tenant: provider.tenant,
+        error,
+      });
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // An accepted push is the only direct evidence that delivery works end to
+    // end. Diagnostics reads this back; without it "is mail arriving?" has no
+    // answer short of waiting for a ticket to appear.
+    try {
+      await tenantDb(knex, provider.tenant)
+        .table('google_email_provider_config')
+        .where('email_provider_id', provider.id)
+        .update({ last_push_received_at: new Date().toISOString() });
+    } catch (error) {
+      console.warn('Failed to record Gmail push receipt timestamp', error);
     }
 
     try {

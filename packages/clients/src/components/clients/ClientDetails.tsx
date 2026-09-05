@@ -10,7 +10,7 @@ import { getAllUsersBasicAsync, getCurrentUserAsync } from '../../lib/usersHelpe
 import type { ISlaPolicy } from '@alga-psa/types';
 import { BillingCycleType } from '@alga-psa/types';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { validateClientName } from '@alga-psa/validation';
+import { translateFieldValidation, validateClientNameField } from '@alga-psa/validation';
 import ClientContactsList from '../contacts/ClientContactsList';
 import QuickAddContact from '../contacts/QuickAddContact';
 import { Flex, Text, Heading } from '@radix-ui/themes';
@@ -204,7 +204,7 @@ const TextDetailItem: React.FC<{
         className={`w-full px-3 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 transition-all duration-200 ${
           error
             ? 'border-red-500 focus:ring-red-500 focus:border-red-500'
-            : 'border-gray-200 focus:ring-purple-500 focus:border-transparent'
+            : 'border-gray-200 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent'
         }`}
       />
       {error && (
@@ -236,6 +236,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderHourBlocksSection, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
@@ -281,6 +283,8 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const [tags, setTags] = useState<ITag[]>([]);
   const [defaultContactOptions, setDefaultContactOptions] = useState<IContact[]>(contacts);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  // Plausibility warnings. Surfaced beneath the field; never gate the save.
+  const [fieldWarnings, setFieldWarnings] = useState<Record<string, string[]>>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [slaPolicies, setSlaPolicies] = useState<ISlaPolicy[]>([]);
   const [isLoadingSlaPolicies, setIsLoadingSlaPolicies] = useState(false);
@@ -295,9 +299,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const entraClientSyncFlag = useFeatureFlag('entra-integration-client-sync-action', {
     defaultValue: false,
   });
-  const hourBlocksFlag = useFeatureFlag('release-v1.5-feature', {
-    defaultValue: false,
-  });
   const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
@@ -308,9 +309,9 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   const shouldRenderPsaOnlyClientSurfaces = !isAlgaDeskMode;
   // F070: EE + Hudu connected + this client mapped.
   const huduClientTab = useHuduClientTab(client.client_id);
-  // Credentials vault: EE + release-v1.5-feature + tier. When visible the
-  // unified Passwords tab replaces the Hudu-only one; when off, the legacy tab
-  // registration above is preserved exactly.
+  // Credentials vault: EE + tier. When visible the unified Passwords tab
+  // replaces the Hudu-only one; otherwise the legacy tab registration above
+  // is preserved exactly.
   const credentialsVaultTab = useCredentialsVaultTab();
   // F023: shown only when the current user has inventory:read.
   const clientEquipmentTab = useClientEquipmentTab();
@@ -965,9 +966,14 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
 
     Object.entries(requiredFields).forEach(([field, value]) => {
       if (field === 'client_name') {
-        const error = validateClientName(value);
-        if (error) {
-          newErrors[field] = error;
+        const result = translateFieldValidation(validateClientNameField(value), tValidation);
+        // Warnings are informational only and must never gate the save.
+        setFieldWarnings(prev => ({ ...prev, client_name: result.warnings }));
+        // A name the user never touched is grandfathered: a legacy record that
+        // predates the schema stays editable on the fields they did change.
+        const nameChanged = value !== (client.client_name?.trim() || '');
+        if (result.error && nameChanged) {
+          newErrors[field] = result.error;
           hasValidationErrors = true;
         }
       }
@@ -1013,7 +1019,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [client.client_id]);
+  }, [client.client_id, client.client_name]);
 
   usePageSaveShortcut(handleSave, { enabled: hasUnsavedChanges && !isSaving });
 
@@ -1350,6 +1356,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           clientActiveContacts={clientActiveContacts}
           setDefaultContactOptions={setDefaultContactOptions}
           fieldErrors={fieldErrors}
+          fieldWarnings={fieldWarnings}
           hasAttemptedSubmit={hasAttemptedSubmit}
           slaPolicies={slaPolicies}
           isLoadingSlaPolicies={isLoadingSlaPolicies}
@@ -1369,7 +1376,6 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           setAliasDraft={setAliasDraft}
           isAliasBusy={isAliasBusy}
           isSaving={isSaving}
-          t={t}
           onFieldChange={handleFieldChange}
           onDefaultContactChange={handleDefaultContactChange}
           onAddInboundDomain={handleAddInboundDomain}
@@ -1448,7 +1454,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="bg-white p-6 rounded-lg shadow-sm space-y-6">
           <ClientContractLineDashboard clientId={client.client_id} />
-          {hourBlocksFlag.enabled && renderHourBlocksSection?.({
+          {renderHourBlocksSection?.({
             clientId: client.client_id,
             currencyCode: client.default_currency_code ?? 'USD',
           })}
@@ -1703,6 +1709,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
     surveySummary,
     hasAttemptedSubmit,
     fieldErrors,
+    fieldWarnings,
     handleSave,
     isSaving,
     setIsQuickAddTicketOpen,

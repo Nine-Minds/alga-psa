@@ -1,10 +1,10 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
-import { getEntityImageUrl, type EntityType } from '@alga-psa/formatting/avatarUtils';
+import { getEntityImageUrl, type EntityLogoVariant, type EntityType } from '@alga-psa/formatting/avatarUtils';
 import { StorageService } from './StorageService';
 
-export type { EntityType };
+export type { EntityLogoVariant, EntityType };
 
 interface UploadResult {
   success: boolean;
@@ -188,6 +188,7 @@ export async function uploadEntityImage(
   tenant: string,
   contextName?: string,
   isLogoUpload?: boolean,
+  logoVariant: EntityLogoVariant = 'default',
 ): Promise<UploadResult> {
   const { knex } = await createTenantKnex(tenant);
 
@@ -252,11 +253,14 @@ export async function uploadEntityImage(
       }
 
       if (isLogoUpload) {
+        // Scoped to the same variant so uploading a dark logo never unmarks the
+        // light one (and vice versa).
         await tenantScopedTable(trx, 'document_associations', tenant)
           .where({
             entity_id: entityId,
             entity_type: entityType,
             is_entity_logo: true,
+            entity_logo_variant: logoVariant,
           })
           .update({ is_entity_logo: false });
       }
@@ -267,6 +271,7 @@ export async function uploadEntityImage(
         entity_type: entityType,
         tenant,
         is_entity_logo: isLogoUpload || false,
+        entity_logo_variant: logoVariant,
       });
 
       return document;
@@ -288,7 +293,7 @@ export async function uploadEntityImage(
       throw new Error('Failed to create document record');
     }
 
-    const imageUrl = await getEntityImageUrl(entityType, entityId, tenant);
+    const imageUrl = await getEntityImageUrl(entityType, entityId, tenant, logoVariant);
 
     return { success: true, imageUrl };
   } catch (error) {
@@ -314,6 +319,7 @@ export async function deleteEntityImage(
   userId: string,
   tenant: string,
   documentIdToDelete?: string,
+  logoVariant: EntityLogoVariant = 'default',
 ): Promise<{ success: boolean; message?: string }> {
   const { knex } = await createTenantKnex(tenant);
 
@@ -333,6 +339,7 @@ export async function deleteEntityImage(
             entity_id: entityId,
             entity_type: entityType,
             is_entity_logo: true,
+            entity_logo_variant: logoVariant,
           })
           .first();
 

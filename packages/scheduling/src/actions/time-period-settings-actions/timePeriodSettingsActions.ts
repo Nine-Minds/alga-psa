@@ -62,16 +62,22 @@ function timePeriodSettingsActionErrorFrom(error: unknown, fallback: string): Ti
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the time period setting values is invalid. Please refresh and try again.');
+    return actionError('One of the time period setting values is invalid. Please refresh and try again.', 'msp/time-entry:errors.timePeriodSettings.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required time period setting field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required time period setting field: ${dbError.column}.`,
+          'msp/time-entry:errors.timePeriodSettings.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required time period setting field.', 'msp/time-entry:errors.timePeriodSettings.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected time period setting is no longer valid. Please refresh and try again.');
+    return actionError('The selected time period setting is no longer valid. Please refresh and try again.', 'msp/time-entry:errors.timePeriodSettings.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A conflicting time period setting already exists.');
+    return actionError('A conflicting time period setting already exists.', 'msp/time-entry:errors.timePeriodSettings.duplicate');
   }
 
   return actionError(fallback);

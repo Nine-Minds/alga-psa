@@ -150,7 +150,12 @@ describe('setupSchedules marketing fan-out cutover', () => {
     ]) {
       expect(events.indexOf(`upsert:${scheduleId}`)).toBeLessThan(firstDelete);
     }
-    expect(scheduleDeleteMock.mock.calls.map(([scheduleId]) => scheduleId)).toEqual([
+    // Scoped to marketing: setupSchedules also sweeps unrelated retired
+    // schedules (premium-trial-expiry), which this cutover test does not own.
+    const deletedMarketingScheduleIds = scheduleDeleteMock.mock.calls
+      .map(([scheduleId]) => scheduleId)
+      .filter((scheduleId: string) => scheduleId.startsWith('marketing'));
+    expect(deletedMarketingScheduleIds).toEqual([
       `${MARKETING_FLIP_DUE_POSTS_JOB}:tenant-1`,
       `${MARKETING_EXPIRE_STALE_TARGETS_JOB}:tenant-2`,
       `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:tenant-missing`,

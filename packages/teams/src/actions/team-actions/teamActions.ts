@@ -59,7 +59,7 @@ export const createTeam = withAuth(async (user, { tenant }, teamData: Omit<ITeam
   const { knex: db } = await createTenantKnex();
   const canCreate = await hasPermission(user, 'user_settings', 'create', db);
   if (!canCreate) {
-    return permissionError('Permission denied: cannot create team.');
+    return permissionError('Permission denied: cannot create team.', 'msp/settings:errors.teams.permissions.create');
   }
 
   try {
@@ -128,7 +128,7 @@ export const updateTeam = withAuth(async (user, { tenant }, teamId: string, team
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    return permissionError('Permission denied: cannot update team.');
+    return permissionError('Permission denied: cannot update team.', 'msp/settings:errors.teams.permissions.update');
   }
 
   try {
@@ -188,7 +188,7 @@ export const addUserToTeam = withAuth(async (user, { tenant }, teamId: string, u
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    return permissionError('Permission denied: cannot modify team members.');
+    return permissionError('Permission denied: cannot modify team members.', 'msp/settings:errors.teams.permissions.modifyMembers');
   }
 
   try {
@@ -206,7 +206,7 @@ export const removeUserFromTeam = withAuth(async (user, { tenant }, teamId: stri
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    return permissionError('Permission denied: cannot modify team members.');
+    return permissionError('Permission denied: cannot modify team members.', 'msp/settings:errors.teams.permissions.modifyMembers');
   }
 
   try {
@@ -230,7 +230,7 @@ export const getTeamById = withAuth(async (user, { tenant }, teamId: string): Pr
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
   if (!canRead) {
-    return permissionError('Permission denied: cannot view team.');
+    return permissionError('Permission denied: cannot view team.', 'msp/settings:errors.teams.permissions.view');
   }
 
   try {
@@ -251,7 +251,7 @@ export const getTeamsBasic = withAuth(async (user, { tenant }): Promise<TeamsBas
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
   if (!canRead) {
-    return permissionError('Permission denied: cannot view teams.');
+    return permissionError('Permission denied: cannot view teams.', 'msp/settings:errors.teams.permissions.viewAll');
   }
 
   try {
@@ -268,7 +268,7 @@ export const getTeams = withAuth(async (user, { tenant }): Promise<TeamsReadResu
   const { knex } = await createTenantKnex();
   const canRead = await hasPermission(user, 'user_settings', 'read', knex);
   if (!canRead) {
-    return permissionError('Permission denied: cannot view teams.');
+    return permissionError('Permission denied: cannot view teams.', 'msp/settings:errors.teams.permissions.viewAll');
   }
 
   try {
@@ -297,7 +297,7 @@ export const saveTeamChanges = withAuth(async (user, { tenant }, teamId: string,
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    return permissionError('Permission denied: cannot modify team.');
+    return permissionError('Permission denied: cannot modify team.', 'msp/settings:errors.teams.permissions.modify');
   }
 
   try {
@@ -382,7 +382,7 @@ export const assignManagerToTeam = withAuth(async (user, { tenant }, teamId: str
   const { knex } = await createTenantKnex();
   const canUpdate = await hasPermission(user, 'user_settings', 'update', knex);
   if (!canUpdate) {
-    return permissionError('Permission denied: cannot assign team manager.');
+    return permissionError('Permission denied: cannot assign team manager.', 'msp/settings:errors.teams.permissions.assignManager');
   }
 
   try {

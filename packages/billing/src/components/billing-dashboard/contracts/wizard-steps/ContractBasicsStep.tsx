@@ -185,7 +185,7 @@ export function ContractBasicsStep({
 
       <div className="space-y-2">
         <Label htmlFor="contract-template" className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-purple-500" />
+          <Sparkles className="h-4 w-4 text-[rgb(var(--color-primary-500))]" />
           {t('wizardBasics.template.startFromTemplate', { defaultValue: 'Start From Template' })}
         </Label>
         <CustomSelect
@@ -213,7 +213,7 @@ export function ContractBasicsStep({
           <p className="text-xs text-red-600">{templateError}</p>
         )}
         {selectedTemplate && (
-          <div className="text-xs text-[rgb(var(--color-text-500))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
+          <div className="text-xs text-[rgb(var(--color-text-700))] border border-[rgb(var(--color-primary-100))] bg-[rgb(var(--color-primary-50))] rounded-md p-3 mt-2 space-y-1">
             <p>
               <span className="font-semibold text-[rgb(var(--color-primary-700))]">
                 {t('wizardBasics.template.preview.templateLabel', { defaultValue: 'Template:' })}
@@ -316,7 +316,7 @@ export function ContractBasicsStep({
         </p>
       </div>
 
-      <div className="space-y-3 border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-surface-50))]">
+      <div className="space-y-3 border border-[rgb(var(--color-border-200))] rounded-md p-4 bg-[rgb(var(--color-border-50))]">
         <div>
           <Label className="text-sm font-medium">
             {t('wizardBasics.cadenceOwner.label', { defaultValue: 'Recurring Cadence Default' })}
@@ -416,7 +416,7 @@ export function ContractBasicsStep({
 
       {data.end_date && (
         <div
-          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-surface-50))]"
+          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-border-50))]"
           data-automation-id="renewal-settings-fixed-term-card"
         >
           <div className="flex items-center gap-2">
@@ -526,7 +526,7 @@ export function ContractBasicsStep({
 
       {!data.end_date && (
         <div
-          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-surface-50))]"
+          className="border border-[rgb(var(--color-border-200))] rounded-md p-4 space-y-2 bg-[rgb(var(--color-border-50))]"
           data-automation-id="renewal-settings-evergreen-card"
         >
           <div className="flex items-center gap-2">

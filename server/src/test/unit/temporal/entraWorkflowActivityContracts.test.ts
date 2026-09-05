@@ -155,7 +155,10 @@ describe('Entra Temporal workflow/activity contracts', () => {
 
     expect(allTenantsWorkflow).toContain('catch (error: unknown)');
     expect(allTenantsWorkflow).toContain("status: 'failed'");
-    expect(allTenantsWorkflow).toContain("errorMessage: error instanceof Error ? error.message : 'Tenant sync failed.'");
+    // The activity error's cause chain carries the operator-facing message;
+    // storing the ActivityFailure wrapper's message put the literal string
+    // "Activity task failed" into run history.
+    expect(allTenantsWorkflow).toContain("errorMessage: activityFailureMessage(error, 'Tenant sync failed.')");
     expect(allTenantsWorkflow).toContain("summary.succeededTenants > 0");
     expect(allTenantsWorkflow).toContain("? 'partial'");
     expect(allTenantsWorkflow).toContain(": 'failed'");

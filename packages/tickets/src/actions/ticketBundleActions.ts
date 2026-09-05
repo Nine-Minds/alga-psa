@@ -64,10 +64,19 @@ async function buildBundleMasterError(
     .map((r: any) => r.ticket_number)
     .filter((n: any): n is string => typeof n === 'string' && n.length > 0);
   const listText = labels.length > 0 ? labels.join(', ') : masterIds.join(', ');
-  const prefix = masterIds.length === 1
-    ? `Ticket ${listText} is already a bundle master`
-    : `Tickets ${listText} are already bundle masters`;
-  return actionError(`${prefix} and cannot be added as children. Unbundle them first, or use one of them as the master.`);
+  // Concatenating a prefix onto a shared tail cannot be translated — the halves
+  // do not agree in every language. Two whole sentences, one per number.
+  return masterIds.length === 1
+    ? actionError(
+        `Ticket ${listText} is already a bundle master and cannot be added as children. Unbundle them first, or use one of them as the master.`,
+        'features/tickets:errors.bundle.masterAlreadyBundleMaster',
+        { tickets: listText },
+      )
+    : actionError(
+        `Tickets ${listText} are already bundle masters and cannot be added as children. Unbundle them first, or use one of them as the master.`,
+        'features/tickets:errors.bundle.masterAlreadyBundleMasters',
+        { tickets: listText },
+      );
 }
 
 const bundleTicketsSchema = z.object({
@@ -119,7 +128,7 @@ export const bundleTicketsAction = withAuth(async (
   const data = bundleTicketsSchema.parse(input);
   const uniqueChildIds = Array.from(new Set(data.childTicketIds)).filter((id) => id !== data.masterTicketId);
   if (uniqueChildIds.length === 0) {
-    return actionError('Select at least one child ticket different from the master.');
+    return actionError('Select at least one child ticket different from the master.', 'features/tickets:errors.bundle.selectChild');
   }
 
   const { knex: db } = await createTenantKnex();
@@ -138,17 +147,17 @@ export const bundleTicketsAction = withAuth(async (
 
     const byId = new Map<string, BundleTicketRow>(tickets.map((t) => [t.ticket_id, t]));
     if (!byId.has(data.masterTicketId)) {
-      return { ok: false, error: actionError('Master ticket not found.') };
+      return { ok: false, error: actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound') };
     }
     for (const childId of uniqueChildIds) {
       if (!byId.has(childId)) {
-        return { ok: false, error: actionError(`Child ticket not found: ${childId}`) };
+        return { ok: false, error: actionError(`Child ticket not found: ${childId}`, 'features/tickets:errors.bundle.childNotFound', { ticket: childId }) };
       }
     }
 
     const master = byId.get(data.masterTicketId)!;
     if (master.master_ticket_id) {
-      return { ok: false, error: actionError('Cannot select a child ticket as the master.') };
+      return { ok: false, error: actionError('Cannot select a child ticket as the master.', 'features/tickets:errors.bundle.childAsMaster') };
     }
 
     // Prevent nesting bundles: children cannot themselves be masters
@@ -161,10 +170,10 @@ export const bundleTicketsAction = withAuth(async (
     for (const childId of uniqueChildIds) {
       const child = byId.get(childId)!;
       if (child.master_ticket_id) {
-        return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`) };
+        return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`, 'features/tickets:errors.bundle.alreadyBundled', { ticket: child.ticket_number || childId }) };
       }
       if (childId === data.masterTicketId) {
-        return { ok: false, error: actionError('Master ticket cannot also be a child ticket.') };
+        return { ok: false, error: actionError('Master ticket cannot also be a child ticket.', 'features/tickets:errors.bundle.masterAsChild') };
       }
     }
 
@@ -248,7 +257,7 @@ export const addChildrenToBundleAction = withAuth(async (
   const data = addChildrenSchema.parse(input);
   const childIds = Array.from(new Set(data.childTicketIds)).filter((id) => id !== data.masterTicketId);
   if (childIds.length === 0) {
-    return actionError('No child tickets provided.');
+    return actionError('No child tickets provided.', 'features/tickets:errors.bundle.noChildren');
   }
 
   const { knex: db } = await createTenantKnex();
@@ -264,8 +273,8 @@ export const addChildrenToBundleAction = withAuth(async (
       .select('ticket_id', 'master_ticket_id')
       .where({ ticket_id: data.masterTicketId })
       .first() as BundleTicketRow | undefined;
-    if (!master) return { ok: false, error: actionError('Master ticket not found.') };
-    if (master.master_ticket_id) return { ok: false, error: actionError('Cannot add children to a bundled child ticket.') };
+    if (!master) return { ok: false, error: actionError('Master ticket not found.', 'features/tickets:errors.bundle.masterNotFound') };
+    if (master.master_ticket_id) return { ok: false, error: actionError('Cannot add children to a bundled child ticket.', 'features/tickets:errors.bundle.childrenOnBundledChild') };
 
     const children = await tenantScopedTable(trx, 'tickets', tenant)
       .select('ticket_id', 'ticket_number', 'master_ticket_id')
@@ -273,8 +282,8 @@ export const addChildrenToBundleAction = withAuth(async (
     const byId = new Map<string, BundleTicketRow>(children.map((t) => [t.ticket_id, t]));
     for (const childId of childIds) {
       const child = byId.get(childId);
-      if (!child) return { ok: false, error: actionError(`Child ticket not found: ${childId}`) };
-      if (child.master_ticket_id) return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`) };
+      if (!child) return { ok: false, error: actionError(`Child ticket not found: ${childId}`, 'features/tickets:errors.bundle.childNotFound', { ticket: childId }) };
+      if (child.master_ticket_id) return { ok: false, error: actionError(`Ticket is already bundled: ${child.ticket_number || childId}`, 'features/tickets:errors.bundle.alreadyBundled', { ticket: child.ticket_number || childId }) };
     }
 
     // Prevent nesting bundles: children cannot themselves be masters

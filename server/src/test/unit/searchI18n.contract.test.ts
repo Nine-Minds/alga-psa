@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { SEARCH_OBJECT_TYPES } from '@alga-psa/types';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function readCoreLocale(locale: string): Record<string, unknown> {
   return JSON.parse(
@@ -132,7 +133,7 @@ describe('app-wide search i18n contracts', () => {
 
     for (const [key, pseudoValue] of pseudoValues) {
       expect(pseudoValue, key).not.toBe(englishValues.get(key));
-      expect(pseudoValue, key).toContain('11111');
+      expect(pseudoValue, key).toMatch(pseudoPattern('xx'));
     }
   });
 
@@ -146,8 +147,16 @@ describe('app-wide search i18n contracts', () => {
     expect(pseudoValues.length).toBeGreaterThan(60);
 
     for (const [key, value] of pseudoValues) {
-      expect(value, key).toContain('11111');
+      expect(value, key).toMatch(pseudoPattern('xx'));
       expect(value.replace(/\{\{[^}]+\}\}/g, ''), key).not.toMatch(/[A-Za-z]{3,}/);
     }
+
+    // Distinct English strings must stay distinct once pseudo-localized, or
+    // components keyed on a translated label collide in the DOM.
+    const distinctEnglish = new Set(
+      collectLeafValues(getPath(readCoreLocale('en'), 'search')).map(([, value]) => value),
+    );
+    const distinctPseudo = new Set(pseudoValues.map(([, value]) => value));
+    expect(distinctPseudo.size).toBe(distinctEnglish.size);
   });
 });

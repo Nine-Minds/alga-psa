@@ -1,0 +1,9 @@
+[
+  {"id":"F001","description":"Preserve usable Link-header pagination for organization devices.","implemented":true},
+  {"id":"F002","description":"Derive the next after cursor from the final device id when a full page has no usable Link cursor.","implemented":true},
+  {"id":"F003","description":"Stop normally on a short or empty organization-device page.","implemented":true},
+  {"id":"F004","description":"Reject missing or empty fallback ids on full pages instead of returning a truncated result.","implemented":true},
+  {"id":"F005","description":"Reject duplicate or non-advancing cursors before another request can loop.","implemented":true},
+  {"id":"F006","description":"Return all pages in provider order without mutating device records.","implemented":true},
+  {"id":"F007","description":"Emit safe diagnostic context for pagination failure and truthful completion logging.","implemented":true}
+]

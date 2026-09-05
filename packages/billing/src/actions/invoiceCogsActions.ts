@@ -210,7 +210,7 @@ export const getInvoiceLineCogs = withAuth(async (
   invoiceId: string
 ): Promise<InvoiceLineCogsRow[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'billing', 'read'))) {
-    return permissionError('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
   }
   const { knex } = await createTenantKnex();
   return withTransaction(knex, (trx: Knex.Transaction) =>

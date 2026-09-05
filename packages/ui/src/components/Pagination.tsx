@@ -91,7 +91,7 @@ const Pagination = ({
 
     const pageButtonBaseClassName = 'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-[13px] font-medium transition-colors';
     const pageButtonIdleClassName = 'border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-600))] hover:border-[rgb(var(--color-border-300))] hover:bg-[rgb(var(--color-border-50))] hover:text-[rgb(var(--color-text-800))]';
-    const pageButtonActiveClassName = 'border-[rgb(var(--color-primary-400))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]';
+    const pageButtonActiveClassName = 'chip-primary border-[rgb(var(--color-primary-400))]';
     const pageEllipsisClassName = 'inline-flex h-8 min-w-8 items-center justify-center rounded-lg px-2 text-[13px] font-medium text-[rgb(var(--color-text-400))]';
 
     // Generate page number buttons with ellipsis for many pages

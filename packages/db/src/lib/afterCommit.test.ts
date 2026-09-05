@@ -133,4 +133,35 @@ describe('registerAfterCommit', () => {
 
     expect(hook).toHaveBeenCalledTimes(1);
   });
+
+  it('flushes hooks owned by withAdminTransaction after commit', async () => {
+    const { withAdminTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const order: string[] = [];
+
+    await withAdminTransaction(async (t) => {
+      registerAfterCommit(t, () => {
+        order.push('hook');
+      });
+      order.push('callback');
+    }, knex);
+
+    expect(order).toEqual(['callback', 'hook']);
+    expect(trx.commit).toHaveBeenCalledTimes(1);
+  });
+
+  it('flushes hooks owned by withKnexTransaction after commit', async () => {
+    const { withKnexTransaction, registerAfterCommit } = await import('@alga-psa/db');
+    const trx = createOwnedTrx();
+    const knex = createKnex(trx);
+    const hook = vi.fn();
+
+    await withKnexTransaction(knex, async (t) => {
+      registerAfterCommit(t, hook);
+    });
+
+    expect(hook).toHaveBeenCalledTimes(1);
+    expect(trx.commit).toHaveBeenCalledTimes(1);
+  });
 });

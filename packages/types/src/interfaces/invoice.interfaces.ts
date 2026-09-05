@@ -2,6 +2,7 @@ import type { DateValue, ISO8601String } from '../lib/temporal';
 import { TenantEntity } from './index';
 import { WasmInvoiceViewModel as RendererInvoiceViewModel, WasmInvoiceViewModel } from '../lib/invoice-renderer/types'; // Import the correct ViewModel
 import type { TemplateAst } from '../lib/invoice-template-ast';
+import type { BillingProfileSource, InvoiceTimeEntrySnapshot, IUsageServicePeriodStatus } from './billing.interfaces';
 
 // Tax source types for external tax delegation
 export type TaxSource = 'internal' | 'external' | 'pending_external';
@@ -26,6 +27,8 @@ export function getTaxImportState(taxSource?: TaxSource | null): TaxImportState 
 export interface IInvoice extends TenantEntity {
   invoice_id: string;
   client_id: string;
+  /** Optional text shown on the credit issuance created by a prepayment invoice. */
+  prepayment_description?: string | null;
   /** Snapshot of the purchase order number for this invoice (nullable). */
   po_number?: string | null;
   /** Client contract assignment that generated this invoice (nullable). */
@@ -71,6 +74,11 @@ export interface IInvoiceChargeRecurringDetailPeriod {
   billing_timing?: 'arrears' | 'advance' | null;
 }
 
+/** Snapshot row attached to a rendered invoice charge, keyed by source entry. */
+export interface IInvoiceChargeTimeEntrySnapshot extends InvoiceTimeEntrySnapshot {
+  entryId: string;
+}
+
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   item_id: string;
   invoice_id: string;
@@ -85,6 +93,12 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    * Historical flat invoices and non-recurring charges omit this field.
    */
   recurring_detail_periods?: IInvoiceChargeRecurringDetailPeriod[];
+  /**
+   * Immutable billed-time snapshots linked to this charge at generation.
+   * Present only on time-backed charges generated after snapshot support;
+   * renderer-only metadata — accounting exports must keep ignoring it.
+   */
+  time_entry_snapshots?: IInvoiceChargeTimeEntrySnapshot[];
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;
@@ -105,6 +119,12 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
   applies_to_item_id?: string;
   applies_to_service_id?: string; // Reference a service instead of an item
   location_id?: string | null;
+  /**
+   * Billing profile this charge is attributed to, and which step of the
+   * resolution chain produced it. Written for every generated charge.
+   */
+  billing_profile_id?: string | null;
+  billing_profile_source?: BillingProfileSource | null;
   client_contract_id?: string; // Reference to the client contract assignment
   contract_name?: string; // Contract name
   is_bundle_header?: boolean; // Whether this item is a contract group header
@@ -315,13 +335,72 @@ export interface IConditionalRule {
   format?: any;
 }
 
+/**
+ * Known, safe recurring-invoice failure codes that may cross the action boundary
+ * for localized, actionable UI remediation. Absent for unknown/internal failures,
+ * which keep the generic error string. Only allowlisted codes belong here.
+ */
+export type RecurringInvoiceFailureCode =
+  | 'NO_BILLING_EMAIL'
+  | 'USAGE_RECORDS_MISSING'
+  | 'USAGE_CALCULATION_ERROR'
+  | 'USAGE_PERIOD_TOTAL_STALE';
+
+/**
+ * The previewed period-total identity a caller passes back to generation so
+ * finalization consumes exactly the report — and the price — the preview
+ * showed. Revision alone cannot see a delete + re-report (revisions restart on
+ * the new row) or a pricing/configuration change that reprices the same
+ * revision; the content fields (row id, quantity, priced amount) close both
+ * gaps.
+ */
+export interface IExpectedUsagePeriodTotal {
+  billingInputsHash?: string;
+  clientContractLineId: string;
+  serviceId: string;
+  periodStart: ISO8601String;
+  periodEnd: ISO8601String;
+  revision: number;
+  /** Row identity of the previewed total; detects delete + re-report. */
+  periodTotalId?: string;
+  /** Service configuration the total reports against (for correction UIs). */
+  configId?: string;
+  /** Billable quantity the preview priced (after minimums). */
+  quantity?: number;
+  /** Net amount in minor units the preview priced; detects repricing. */
+  totalCents?: number;
+}
+
 export type PreviewInvoiceResponse = {
   success: true;
   data: WasmInvoiceViewModel; // Use the imported ViewModel alias
+  /**
+   * Usage-billed services in the previewed window whose due service period has
+   * no eligible usage record. Present when the preview still has other charges;
+   * a preview with no charges at all fails with USAGE_RECORDS_MISSING instead.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Full previewed identity of every period-total-backed usage charge, for the
+   * caller to hand back to generation (expectedUsagePeriodTotals) so
+   * finalization refuses when a report or its pricing changed after preview.
+   */
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
 } | {
   success: false;
   error: string;
   executionIdentityKey?: string;
+  /** Safe, known failure code so the UI can render localized guidance. */
+  code?: RecurringInvoiceFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
+  /**
+   * Structured per-service diagnoses for coded usage failures
+   * (USAGE_RECORDS_MISSING / USAGE_CALCULATION_ERROR), so an all-unreported
+   * or all-error window still offers inline remediation (report a period
+   * count, record usage for the exact period) instead of a flat sentence.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 };
 
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled' | 'pending' | 'prepayment' | 'partially_applied';

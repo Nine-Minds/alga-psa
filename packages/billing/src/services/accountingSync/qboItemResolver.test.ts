@@ -161,15 +161,24 @@ describe('qboItemResolver', () => {
     expect(resolution.flags).toContain('inactive');
   });
 
-  it('resolves mapped tax codes and flags unmapped ones (NON is not a gap)', () => {
+  it('resolves mapped tax codes and flags unmapped ones (the pseudo codes are not a gap)', () => {
     const taxMap = new Map([['tc-1', 'rate-1']]);
     const items = [
       qboItem({ Id: 'q1', Name: 'Taxed', SalesTaxCodeRef: { value: 'tc-1' } }),
       qboItem({ Id: 'q2', Name: 'Unknown Tax', SalesTaxCodeRef: { value: 'tc-2' } }),
-      qboItem({ Id: 'q3', Name: 'Non Taxable', SalesTaxCodeRef: { value: 'NON' } })
+      qboItem({ Id: 'q3', Name: 'Non Taxable', SalesTaxCodeRef: { value: 'NON' } }),
+      // TAX means "the tax engine decides" — under Automated Sales Tax there is
+      // no Alga rate it could map to, so it must not be reported as a gap.
+      qboItem({ Id: 'q4', Name: 'AST Taxable', SalesTaxCodeRef: { value: 'TAX' } }),
+      qboItem({ Id: 'q5', Name: 'AST Taxable Lowercase', SalesTaxCodeRef: { value: 'tax' } })
     ];
 
-    const [taxed, unknown, nonTaxable] = resolveQboItems(items, [], noMappings, taxMap);
+    const [taxed, unknown, nonTaxable, astTaxable, astTaxableLower] = resolveQboItems(
+      items,
+      [],
+      noMappings,
+      taxMap
+    );
 
     expect(taxed.fields?.tax_rate_id).toBe('rate-1');
     expect(taxed.flags).not.toContain('unmapped_tax');
@@ -177,6 +186,9 @@ describe('qboItemResolver', () => {
     expect(unknown.flags).toContain('unmapped_tax');
     expect(nonTaxable.fields?.tax_rate_id).toBeNull();
     expect(nonTaxable.flags).not.toContain('unmapped_tax');
+    expect(astTaxable.fields?.tax_rate_id).toBeNull();
+    expect(astTaxable.flags).not.toContain('unmapped_tax');
+    expect(astTaxableLower.flags).not.toContain('unmapped_tax');
   });
 
   it('recreates when a mapping points at a deleted catalog row', () => {

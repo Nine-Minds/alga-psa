@@ -22,12 +22,18 @@ import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './ha
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
 import { handleReconcileHourBlockAllocations, ReconcileHourBlockAllocationsJobData } from '@alga-psa/jobs/handlers/reconcileHourBlockAllocationsHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
 import { emailWebhookMaintenanceHandler, EmailWebhookMaintenanceJobData } from './handlers/emailWebhookMaintenanceHandler';
 import {
   inboundEmailRecoveryHandler,
   InboundEmailRecoveryJobData,
   INBOUND_EMAIL_RECOVERY_JOB,
 } from './handlers/inboundEmailRecoveryHandler';
+import {
+  providerDisconnectRetryJobHandler,
+  ProviderDisconnectRetryJobData,
+  PROVIDER_DISCONNECT_RETRY_JOB,
+} from './handlers/providerDisconnectRetryHandler';
 import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } from '@alga-psa/jobs/handlers/googleGmailWatchRenewalHandler';
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
@@ -52,6 +58,17 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
@@ -148,6 +165,9 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await generateInvoiceHandler(job.data);
     });
     jobScheduler.registerJobHandler<AssetImportJobData>('asset_import', handleAssetImportJob);
+
+    // Register the AMP migration application handler
+    jobScheduler.registerJobHandler<MigrationApplyJobData>('migration_apply', handleMigrationApplyJob);
     
     // Register expired credits handler
     jobScheduler.registerJobHandler<ExpiredCreditsJobData>('expired-credits', async (job: Job<ExpiredCreditsJobData>) => {
@@ -242,6 +262,12 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await inboundEmailRecoveryHandler(job);
     });
 
+    // Register provider disconnect retry handler (per-tenant, resumes pending
+    // QBO/Xero disconnect provider cleanup when its retry window has arrived)
+    jobScheduler.registerJobHandler<ProviderDisconnectRetryJobData>(PROVIDER_DISCONNECT_RETRY_JOB, async (job: Job<ProviderDisconnectRetryJobData>) => {
+      await providerDisconnectRetryJobHandler(job);
+    });
+
     // Register renewal queue processing handler
     jobScheduler.registerJobHandler<RenewalQueueProcessorJobData>(
       'process-renewal-queue',
@@ -295,6 +321,27 @@ export const initializeScheduler = async (storageService?: StorageService) => {
         'process-teams-meeting-artifact-notification',
         async (job: Job<TeamsMeetingArtifactNotificationJobData>) => {
           await processTeamsMeetingArtifactNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallSubscriptionRenewalJobData>(
+        'renew-telephony-call-subscriptions',
+        async (job: Job<TelephonyCallSubscriptionRenewalJobData>) => {
+          await renewTelephonyCallSubscriptions(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallNotificationJobData>(
+        'process-telephony-call-notification',
+        async (job: Job<TelephonyCallNotificationJobData>) => {
+          await processTelephonyCallNotification(job.data);
+        }
+      );
+
+      jobScheduler.registerJobHandler<TelephonyCallArtifactSweepJobData>(
+        TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        async (job: Job<TelephonyCallArtifactSweepJobData>) => {
+          await telephonyCallArtifactSweepHandler(job.data);
         }
       );
 
@@ -903,6 +950,21 @@ export const scheduleInboundEmailRecoveryJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<InboundEmailRecoveryJobData>(
     INBOUND_EMAIL_RECOVERY_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleProviderDisconnectRetryJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/5 * * * *' // Every 5 minutes
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<ProviderDisconnectRetryJobData>(
+    PROVIDER_DISCONNECT_RETRY_JOB,
     cronExpression,
     { tenantId }
   );

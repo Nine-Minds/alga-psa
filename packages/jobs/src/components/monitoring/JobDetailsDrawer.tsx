@@ -34,12 +34,12 @@ const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ jobId, onClose }) =
             </div>
             
             <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="bg-[rgb(var(--color-card))] rounded-lg card-elevated border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('drawer.sections.progress', { defaultValue: 'Job Progress' })}</h3>
                 <JobProgress jobId={jobId} />
               </div>
               
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="bg-[rgb(var(--color-card))] rounded-lg card-elevated border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('drawer.sections.metrics', { defaultValue: 'Job Metrics' })}</h3>
                 <JobMetricsDisplay metrics={job?.metrics || {
                   total: 0,
@@ -55,7 +55,7 @@ const JobDetailsDrawer: React.FC<JobDetailsDrawerProps> = ({ jobId, onClose }) =
                 }} />
               </div>
               
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+              <div className="bg-[rgb(var(--color-card))] rounded-lg card-elevated border border-gray-200 p-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('drawer.sections.history', { defaultValue: 'Job History' })}</h3>
                 <JobStepHistory steps={job?.details || []} />
               </div>

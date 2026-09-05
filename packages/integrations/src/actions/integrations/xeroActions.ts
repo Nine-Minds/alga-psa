@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { revalidatePath } from 'next/cache';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { createTenantKnex, writeAccountingAudit } from '@alga-psa/db';
 import {
   actionError,
   permissionError,
@@ -15,33 +16,46 @@ import {
   XeroClientService,
   getXeroConnectionSummaries,
   type XeroConnectionSummary,
-  XERO_CREDENTIALS_SECRET_NAME,
   XERO_CLIENT_ID_SECRET_NAME,
   XERO_CLIENT_SECRET_SECRET_NAME,
   getXeroRedirectUri,
-  getXeroOAuthScopes,
+  getXeroOAuthScopeConfig,
   resolveXeroOAuthCredentials
 } from '../../lib/xero/xeroClientService';
+import {
+  PROVIDER_XERO,
+  disconnectProvider,
+  forceFinalizeProviderDisconnect,
+  getProviderDisconnectStatusInfo,
+  type ProviderDisconnectStatusInfo,
+  type DisconnectServiceResult,
+} from '../../lib/providerDisconnect';
 import type { IUserWithRoles } from '@alga-psa/types';
 
 type XeroCatalogActionError = ActionMessageError | ActionPermissionError;
 type XeroCatalogResult<T> = Promise<T[] | XeroCatalogActionError>;
 
 async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
     throw new Error('Forbidden: You do not have permission to view Xero integration settings.');
   }
 }
 
+/**
+ * Catalog contents (accounts, items, tax rates, tracking categories) require
+ * accounting_integrations:catalog_read — granted by default to Admin and Finance only.
+ * Connection diagnostics stay on billing_settings:read via
+ * checkBillingReadAccess so status screens work without catalog access.
+ */
 async function getXeroCatalogAccessError(user: IUserWithRoles): Promise<XeroCatalogActionError | null> {
   if (!isEnterpriseEdition()) {
-    return actionError('Xero integration is only available in Enterprise Edition.');
+    return actionError('Xero integration is only available in Enterprise Edition.', 'msp/integrations:errors.xero.enterpriseOnly');
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'catalog_read');
   if (!allowed) {
-    return permissionError('Forbidden: You do not have permission to view Xero integration settings.');
+    return permissionError('Forbidden: You do not have permission to view Xero integration settings.', 'msp/integrations:errors.xero.viewPermission');
   }
 
   return null;
@@ -137,6 +151,10 @@ export interface XeroConnectionStatus {
   defaultConnection?: XeroConnectionSummary;
   redirectUri: string;
   scopes: string[];
+  /** Whether the requested scopes come from the built-in default set or the XERO_OAUTH_SCOPES deployment override. */
+  scopeSource: 'default' | 'override';
+  /** Override tokens that failed validation and were ignored in favour of the defaults. */
+  scopeOverrideInvalid?: string[];
   credentials: {
     clientIdConfigured: boolean;
     clientSecretConfigured: boolean;
@@ -144,6 +162,11 @@ export interface XeroConnectionStatus {
     clientIdMasked?: string;
     clientSecretMasked?: string;
   };
+  /**
+   * Durable disconnect state, when a disconnect has been started. The settings
+   * UI uses it to show pending/partial/force-finalize states.
+   */
+  disconnect?: ProviderDisconnectStatusInfo | null;
   error?: string;
   errorCode?: 'FORBIDDEN' | 'ENTERPRISE_REQUIRED';
 }
@@ -152,11 +175,14 @@ function xeroConnectionStatusError(
   error: string,
   errorCode?: NonNullable<XeroConnectionStatus['errorCode']>
 ): XeroConnectionStatus {
+  const scopeConfig = getXeroOAuthScopeConfig();
   return {
     connections: [],
     connected: false,
     redirectUri: '',
-    scopes: getXeroOAuthScopes(),
+    scopes: scopeConfig.scopes,
+    scopeSource: scopeConfig.source,
+    scopeOverrideInvalid: scopeConfig.invalidOverrideScopes,
     credentials: {
       clientIdConfigured: false,
       clientSecretConfigured: false,
@@ -180,25 +206,69 @@ function isXeroReconnectError(error: unknown): boolean {
   );
 }
 
-function xeroCatalogFetchError(catalogName: string, error: unknown): XeroCatalogActionError {
+type XeroCatalog = 'accounts' | 'items' | 'taxRates' | 'trackingCategories';
+
+const XERO_CATALOG_LABELS: Record<XeroCatalog, string> = {
+  accounts: 'Xero accounts',
+  items: 'Xero items',
+  taxRates: 'Xero tax rates',
+  trackingCategories: 'Xero tracking categories',
+};
+
+// A frame plus an English catalogue name does not translate, so every catalogue
+// names its own whole sentence.
+const XERO_CATALOG_KEYS: Record<
+  XeroCatalog,
+  { notConnected: string; reconnect: string; loadFailed: string; verifyFailed: string }
+> = {
+  accounts: {
+    notConnected: 'msp/integrations:errors.xero.accounts.notConnected',
+    reconnect: 'msp/integrations:errors.xero.accounts.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.accounts.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.accounts.verifyFailed',
+  },
+  items: {
+    notConnected: 'msp/integrations:errors.xero.items.notConnected',
+    reconnect: 'msp/integrations:errors.xero.items.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.items.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.items.verifyFailed',
+  },
+  taxRates: {
+    notConnected: 'msp/integrations:errors.xero.taxRates.notConnected',
+    reconnect: 'msp/integrations:errors.xero.taxRates.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.taxRates.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.taxRates.verifyFailed',
+  },
+  trackingCategories: {
+    notConnected: 'msp/integrations:errors.xero.trackingCategories.notConnected',
+    reconnect: 'msp/integrations:errors.xero.trackingCategories.reconnect',
+    loadFailed: 'msp/integrations:errors.xero.trackingCategories.loadFailed',
+    verifyFailed: 'msp/integrations:errors.xero.trackingCategories.verifyFailed',
+  },
+};
+
+function xeroCatalogFetchError(catalog: XeroCatalog, error: unknown): XeroCatalogActionError {
+  const catalogName = XERO_CATALOG_LABELS[catalog];
   if (isXeroReconnectError(error)) {
-    return actionError(`Reconnect Xero before loading ${catalogName}.`);
+    return actionError(`Reconnect Xero before loading ${catalogName}.`, XERO_CATALOG_KEYS[catalog].reconnect);
   }
 
   return actionError(
-    `Could not load ${catalogName}. Try again, or reconnect Xero if the problem persists.`
+    `Could not load ${catalogName}. Try again, or reconnect Xero if the problem persists.`,
+    XERO_CATALOG_KEYS[catalog].loadFailed,
   );
 }
 
 async function getXeroCatalogConnectionError(
   tenantId: string,
   connectionId: string | null | undefined,
-  catalogName: string
+  catalog: XeroCatalog
 ): Promise<XeroCatalogActionError | null> {
+  const catalogName = XERO_CATALOG_LABELS[catalog];
   try {
     const summaries = await getXeroConnectionSummaries(tenantId);
     if (summaries.length === 0) {
-      return actionError(`Connect Xero before loading ${catalogName}.`);
+      return actionError(`Connect Xero before loading ${catalogName}.`, XERO_CATALOG_KEYS[catalog].notConnected);
     }
 
     const selectedConnection = connectionId
@@ -206,11 +276,14 @@ async function getXeroCatalogConnectionError(
       : summaries[0];
 
     if (!selectedConnection) {
-      return actionError('The selected Xero organisation is no longer connected. Reconnect Xero and try again.');
+      return actionError(
+        'The selected Xero organisation is no longer connected. Reconnect Xero and try again.',
+        'msp/integrations:errors.xero.organisationDisconnected',
+      );
     }
 
     if (selectedConnection.status === 'expired') {
-      return actionError(`Reconnect Xero before loading ${catalogName}.`);
+      return actionError(`Reconnect Xero before loading ${catalogName}.`, XERO_CATALOG_KEYS[catalog].reconnect);
     }
 
     return null;
@@ -221,7 +294,10 @@ async function getXeroCatalogConnectionError(
       catalogName,
       error
     });
-    return actionError(`Could not verify the Xero connection before loading ${catalogName}. Try again.`);
+    return actionError(
+      `Could not verify the Xero connection before loading ${catalogName}. Try again.`,
+      XERO_CATALOG_KEYS[catalog].verifyFailed,
+    );
   }
 }
 
@@ -230,9 +306,9 @@ async function getXeroUpdateAccessError(user: IUserWithRoles): Promise<string | 
     return 'Xero integration is only available in Enterprise Edition.';
   }
 
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
+  const allowed = await hasPermission(user, 'accounting_integrations', 'connections_manage');
   if (!allowed) {
-    return 'Forbidden: You do not have permission to manage Xero integration settings.';
+    return 'Forbidden: You do not have permission to manage Xero integration connections.';
   }
 
   return null;
@@ -269,6 +345,15 @@ export const saveXeroCredentials = withAuth(async (
       clientSecretConfigured: true
     });
 
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_credentials_saved', {
+      userId: user.user_id,
+      provider: 'xero',
+      details: { action: 'replace_client_credentials', source: 'tenant' },
+    }).catch((error) => {
+      logger.warn('[xeroActions] Failed to write Xero credentials audit entry', { tenantId: tenant, error });
+    });
+
     revalidatePath('/msp/settings');
     return { success: true };
   } catch (error) {
@@ -280,26 +365,103 @@ export const saveXeroCredentials = withAuth(async (
   }
 });
 
-export const disconnectXero = withAuth(async (
+export interface XeroDisconnectActionResult {
+  success: boolean;
+  /**
+   * 'disconnected' when provider cleanup was confirmed and local credentials
+   * were removed; 'pending'/'partial' while retryable provider cleanup is in
+   * flight; 'failed_permanent' when an operator force-finalize is required.
+   */
+  status: 'disconnected' | 'pending' | 'partial' | 'failed_permanent';
+  error?: string;
+  pendingTargets?: number;
+  failedTargets?: number;
+}
+
+function mapDisconnectProgress(progress: DisconnectServiceResult): XeroDisconnectActionResult {
+  switch (progress.status) {
+    case 'disconnected':
+    case 'already_disconnected':
+    case 'no_credentials':
+      return { success: true, status: 'disconnected' };
+    case 'partial':
+      return {
+        success: false,
+        status: 'partial',
+        error: progress.error,
+        pendingTargets: progress.record?.targets.filter((t) => t.status === 'pending_revocation').length,
+        failedTargets: progress.record?.targets.filter((t) => t.status === 'failed_permanent').length,
+      };
+    case 'pending':
+      return { success: false, status: 'pending', error: progress.error };
+    case 'failed_permanent':
+      return { success: false, status: 'failed_permanent', error: progress.error };
+  }
+}
+
+export const forceFinalizeXeroDisconnect = withAuth(async (
   user,
-  { tenant }
+  { tenant },
+  input: { reason: string }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const accessError = await getXeroUpdateAccessError(user);
     if (accessError) {
       return { success: false, error: accessError };
     }
-    const secretProvider = await getSecretProviderInstance();
+
+    if (!input?.reason?.trim()) {
+      return { success: false, error: 'A reason is required to force-finalize a Xero disconnect.' };
+    }
+
+    const { knex } = await createTenantKnex();
+    const progress = await forceFinalizeProviderDisconnect(knex, tenant, PROVIDER_XERO, {
+      userId: user.user_id,
+      reason: input.reason.trim(),
+    });
+
+    revalidatePath('/msp/settings');
+    if (progress.status === 'disconnected' || progress.status === 'already_disconnected') {
+      return { success: true };
+    }
+    return { success: false, error: progress.error };
+  } catch (error) {
+    logger.error('[xeroActions] Xero force-finalize disconnect failed', { tenantId: tenant, error });
+    return { success: false, error: 'Failed to finalize the Xero disconnect. Please try again.' };
+  }
+});
+
+export const disconnectXero = withAuth(async (
+  user,
+  { tenant }
+): Promise<XeroDisconnectActionResult> => {
+  try {
+    const accessError = await getXeroUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, status: 'failed_permanent', error: accessError };
+    }
 
     logger.info('[xeroActions] Disconnecting Xero integration', { tenantId: tenant });
-    await secretProvider.deleteTenantSecret(tenant, XERO_CREDENTIALS_SECRET_NAME);
+
+    const { knex } = await createTenantKnex();
+    const progress = await disconnectProvider(knex, tenant, PROVIDER_XERO, {
+      userId: user.user_id,
+    });
+
+    const { knex: auditKnex } = await createTenantKnex();
+    await writeAccountingAudit(auditKnex, tenant, 'accounting_disconnected', {
+      userId: user.user_id,
+      provider: 'xero',
+    }).catch((error) => {
+      logger.warn('[xeroActions] Failed to write Xero disconnect audit entry', { tenantId: tenant, error });
+    });
 
     revalidatePath('/msp/settings');
 
-    return { success: true };
+    return mapDisconnectProgress(progress);
   } catch (error) {
     logger.error('[xeroActions] Xero disconnect failed', { tenantId: tenant, error });
-    return { success: false, error: 'Failed to disconnect Xero. Please try again.' };
+    return { success: false, status: 'pending', error: 'Failed to disconnect Xero. Please try again.' };
   }
 });
 
@@ -317,6 +479,7 @@ export const getXeroConnectionStatus = withAuth(async (
   try {
     await checkBillingReadAccess(user);
 
+    const scopeConfig = getXeroOAuthScopeConfig();
     const secretProvider = await getSecretProviderInstance();
     const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
       secretProvider.getTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME),
@@ -336,10 +499,16 @@ export const getXeroConnectionStatus = withAuth(async (
       clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
     };
 
+    const { knex } = await createTenantKnex();
+    const disconnect = await getProviderDisconnectStatusInfo(knex, tenant, PROVIDER_XERO).catch(() => null);
+    const disconnectBlocking = disconnect !== null && disconnect.status !== 'finalized';
+
     let connected = false;
     let error: string | undefined;
 
-    if (!credentials.ready) {
+    if (disconnectBlocking) {
+      error = 'Xero is being disconnected. Sync and exports are paused until the disconnect completes.';
+    } else if (!credentials.ready) {
       error = 'Add a Xero client ID and client secret before connecting live Xero.';
     } else if (!defaultConnection) {
       error = 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.';
@@ -358,8 +527,11 @@ export const getXeroConnectionStatus = withAuth(async (
       defaultConnectionId: defaultConnection?.connectionId,
       defaultConnection,
       redirectUri,
-      scopes: getXeroOAuthScopes(),
+      scopes: scopeConfig.scopes,
+      scopeSource: scopeConfig.source,
+      scopeOverrideInvalid: scopeConfig.invalidOverrideScopes,
       credentials,
+      disconnect,
       error
     };
   } catch (error) {
@@ -387,7 +559,7 @@ export const getXeroAccounts = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero accounts');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'accounts');
   if (connectionError) return connectionError;
 
   try {
@@ -401,7 +573,7 @@ export const getXeroAccounts = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero accounts', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero accounts', error);
+    return xeroCatalogFetchError('accounts', error);
   }
 });
 
@@ -413,7 +585,7 @@ export const getXeroItems = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero items');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'items');
   if (connectionError) return connectionError;
 
   try {
@@ -427,7 +599,7 @@ export const getXeroItems = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero items', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero items', error);
+    return xeroCatalogFetchError('items', error);
   }
 });
 
@@ -439,7 +611,7 @@ export const getXeroTaxRates = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero tax rates');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'taxRates');
   if (connectionError) return connectionError;
 
   try {
@@ -455,7 +627,7 @@ export const getXeroTaxRates = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero tax rates', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero tax rates', error);
+    return xeroCatalogFetchError('taxRates', error);
   }
 });
 
@@ -467,7 +639,7 @@ export const getXeroTrackingCategories = withAuth(async (
   const accessError = await getXeroCatalogAccessError(user);
   if (accessError) return accessError;
 
-  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'Xero tracking categories');
+  const connectionError = await getXeroCatalogConnectionError(tenant, connectionId, 'trackingCategories');
   if (connectionError) return connectionError;
 
   try {
@@ -485,6 +657,6 @@ export const getXeroTrackingCategories = withAuth(async (
     }));
   } catch (error) {
     logger.warn('[xeroActions] Failed to load Xero tracking categories', { tenantId: tenant, connectionId, error });
-    return xeroCatalogFetchError('Xero tracking categories', error);
+    return xeroCatalogFetchError('trackingCategories', error);
   }
 });

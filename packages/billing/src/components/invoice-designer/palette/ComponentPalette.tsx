@@ -1,10 +1,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Invoice designer palette uses shared expression-authoring utilities to enumerate available template fields */
 import React, { useMemo, useState } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import {
-  buildInvoiceExpressionPathOptions,
-  type SharedExpressionPathOption,
-} from '@alga-psa/workflows/expression-authoring';
+import { type SharedExpressionPathOption } from '@alga-psa/workflows/expression-authoring';
 import { COMPONENT_CATALOG, ComponentDefinition } from '../constants/componentCatalog';
 import { LAYOUT_PRESETS } from '../constants/presets';
 import { OutlineView } from './OutlineView';
@@ -12,7 +9,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import clsx from 'clsx';
 import { useInvoiceDesignerStore } from '../state/designerStore';
 import { resolveDesignerDocumentKind } from '../utils/documentKind';
-import { getTemplateFieldDefinition, type InvoiceFieldCategory } from '../fields/fieldCatalog';
+import { type InvoiceFieldCategory } from '../fields/fieldCatalog';
+import { buildDocumentExpressionPathOptions, describeBindingOption } from '../fields/documentBindingCatalog';
 
 interface PaletteProps {
   onSearch?: (query: string) => void;
@@ -40,48 +38,10 @@ type TemplateVariableOption = {
   description: string;
 };
 
-const categoryLabelByRoot: Record<string, InvoiceFieldCategory> = {
-  invoice: 'Invoice',
-  customer: 'Customer',
-  quote: 'Quote',
-  quoteTotals: 'Quote Totals',
-  client: 'Client',
-  contact: 'Contact',
-  tenant: 'Tenant',
-  item: 'Line Item',
-};
-
-const toTitleCase = (value: string) =>
-  value
-    .replace(/([a-z])([A-Z])/g, '$1 $2')
-    .replace(/[_-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
 const toTemplateVariableOption = (option: SharedExpressionPathOption): TemplateVariableOption | null => {
-  const knownField = getTemplateFieldDefinition(option.path);
-  if (knownField) {
-    return {
-      path: knownField.path,
-      label: knownField.label,
-      category: knownField.category,
-      description: knownField.description,
-    };
-  }
-  const category = categoryLabelByRoot[option.root];
-  if (!category) return null;
-  const pathSegments = option.path.split('.');
-  if (pathSegments.length < 2 || !option.isLeaf) return null;
-  const fieldName = pathSegments[pathSegments.length - 1]?.replace(/\[\]/g, '') ?? option.path;
-  const categoryPrefix = category === 'Line Item' ? 'Item' : category;
-  const fieldLabel = toTitleCase(fieldName);
-  return {
-    path: option.path,
-    label: category === 'Invoice' ? fieldLabel : `${categoryPrefix} ${fieldLabel}`,
-    category,
-    description: option.description ?? option.path,
-  };
+  const described = describeBindingOption(option);
+  if (!described) return null;
+  return { path: option.path, ...described };
 };
 
 const groupTemplateVariablesByCategory = (variables: TemplateVariableOption[]) =>
@@ -249,7 +209,7 @@ export const ComponentPalette: React.FC<PaletteProps> = ({
   }, [normalizedQuery]);
 
   const templateVariableGroups = useMemo(() => {
-    const pathOptions = buildInvoiceExpressionPathOptions({
+    const pathOptions = buildDocumentExpressionPathOptions({
       mode: 'template',
       includeRootPaths: false,
       documentKind,

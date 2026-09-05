@@ -16,6 +16,9 @@ export interface JobMetrics {
   total: number;
   completed: number;
   failed: number;
+  // Failures in the trailing 24h only — drives the header attention dot, which
+  // must clear on its own rather than latch on all-time history.
+  failedLast24h?: number;
   pending: number;
   active: number;
   queued: number;
@@ -53,18 +56,20 @@ export const getQueueMetricsAction = withAuth(async (user, { tenant }): Promise<
       knex.raw('COUNT(*) as total'),
       knex.raw(`COUNT(*) FILTER (WHERE status = ?) as completed`, [JobStatus.Completed]),
       knex.raw(`COUNT(*) FILTER (WHERE status = ?) as failed`, [JobStatus.Failed]),
+      knex.raw(`COUNT(*) FILTER (WHERE status = ? AND updated_at >= NOW() - INTERVAL '24 hours') as failed_last_24h`, [JobStatus.Failed]),
       knex.raw(`COUNT(*) FILTER (WHERE status = ?) as pending`, [JobStatus.Pending]),
       knex.raw(`COUNT(*) FILTER (WHERE status = ?) as active`, [JobStatus.Active]),
       knex.raw(`COUNT(*) FILTER (WHERE status = ?) as queued`, [JobStatus.Queued]),
       knex.raw(`COUNT(*) FILTER (WHERE runner_type = 'pgboss') as pgboss`),
       knex.raw(`COUNT(*) FILTER (WHERE runner_type = 'temporal') as temporal`)
     )
-    .first() as unknown as { total: string; completed: string; failed: string; pending: string; active: string; queued: string; pgboss: string; temporal: string } | undefined;
+    .first() as unknown as { total: string; completed: string; failed: string; failed_last_24h: string; pending: string; active: string; queued: string; pgboss: string; temporal: string } | undefined;
 
   return {
     total: parseInt(String(result?.total || '0'), 10),
     completed: parseInt(String(result?.completed || '0'), 10),
     failed: parseInt(String(result?.failed || '0'), 10),
+    failedLast24h: parseInt(String(result?.failed_last_24h || '0'), 10),
     pending: parseInt(String(result?.pending || '0'), 10),
     active: parseInt(String(result?.active || '0'), 10),
     queued: parseInt(String(result?.queued || '0'), 10),

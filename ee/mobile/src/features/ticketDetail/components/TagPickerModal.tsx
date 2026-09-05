@@ -5,25 +5,28 @@ import { useTheme } from "../../../ui/ThemeContext";
 import { searchTagSuggestions, type TagSuggestion } from "../../../api/tags";
 import type { ApiClient } from "../../../api/client";
 import { getTagChipColors } from "../../../ui/tagColors";
+import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 
 export function TagPickerModal({
   visible,
   updating,
   updateError,
   appliedTagTexts,
-  onSelect,
+  onApply,
   onClose,
   client,
   apiKey,
+  ticketUpdate = true,
 }: {
   visible: boolean;
   updating: boolean;
   updateError: string | null;
   appliedTagTexts: string[];
-  onSelect: (tagText: string) => void;
+  onApply: (tagTexts: string[]) => void;
   onClose: () => void;
   client: ApiClient | null;
   apiKey: string;
+  ticketUpdate?: boolean;
 }) {
   const { mode, colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
@@ -32,8 +35,10 @@ export function TagPickerModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [selectedTagTexts, setSelectedTagTexts] = useState<string[]>([]);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const appliedTagsKey = appliedTagTexts.join("\u0000");
 
   const fetchSuggestions = useCallback(async (query: string) => {
     if (!client || !apiKey) return;
@@ -71,13 +76,14 @@ export function TagPickerModal({
   useEffect(() => {
     if (visible) {
       setSearch("");
+      setSelectedTagTexts(appliedTagsKey ? appliedTagsKey.split("\u0000") : []);
       void fetchSuggestions("");
     } else {
       abortRef.current?.abort();
       setSuggestions([]);
       setError(null);
     }
-  }, [visible, fetchSuggestions]);
+  }, [visible, fetchSuggestions, appliedTagsKey]);
 
   const handleSearchChange = (text: string) => {
     setSearch(text);
@@ -88,13 +94,35 @@ export function TagPickerModal({
   };
 
   const busy = updating;
-  const appliedLower = appliedTagTexts.map((text) => text.toLowerCase());
-  const isApplied = (text: string) => appliedLower.includes(text.toLowerCase());
+  const selectedLower = selectedTagTexts.map((text) => text.toLowerCase());
+  const isSelected = (text: string) => selectedLower.includes(text.toLowerCase());
+  const toggleTag = (tagText: string) => {
+    setSelectedTagTexts((current) => {
+      const key = tagText.toLowerCase();
+      return current.some((text) => text.toLowerCase() === key)
+        ? current.filter((text) => text.toLowerCase() !== key)
+        : [...current, tagText];
+    });
+  };
   const trimmedSearch = search.trim();
   const showCreateRow = Boolean(
     trimmedSearch &&
-    !isApplied(trimmedSearch) &&
+    !isSelected(trimmedSearch) &&
     !suggestions.some((s) => s.tag_text.toLowerCase() === trimmedSearch.toLowerCase()),
+  );
+  const knownTagTextsLower = new Set([
+    ...appliedTagTexts.map((text) => text.toLowerCase()),
+    ...suggestions.map((suggestion) => suggestion.tag_text.toLowerCase()),
+  ]);
+  const visibleTags = Array.from(
+    new Map<string, TagSuggestion>([
+      // Selected-but-unknown texts (new tags staged via the create row) must
+      // stay visible as selected rows; later entries win so known tags keep
+      // their server-provided colors.
+      ...selectedTagTexts.map((tag_text): [string, TagSuggestion] => [tag_text.toLowerCase(), { tag_text, background_color: null, text_color: null }]),
+      ...appliedTagTexts.map((tag_text): [string, TagSuggestion] => [tag_text.toLowerCase(), { tag_text, background_color: null, text_color: null }]),
+      ...suggestions.map((suggestion): [string, TagSuggestion] => [suggestion.tag_text.toLowerCase(), suggestion]),
+    ]).values(),
   );
 
   return (
@@ -107,7 +135,7 @@ export function TagPickerModal({
       <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingBottom: spacing.xl, maxHeight: "70%", flexShrink: 1 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: spacing.lg, paddingBottom: spacing.sm }}>
           <Text style={{ ...typography.title, color: colors.text }}>
-            {t("tags.pickerTitle", { defaultValue: "Add tag" })}
+            {t("tags.pickerTitle", { defaultValue: "Edit tags" })}
           </Text>
           <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t("common:close")} hitSlop={12}>
             <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>{t("common:close")}</Text>
@@ -148,7 +176,7 @@ export function TagPickerModal({
               accessibilityRole="button"
               accessibilityLabel={t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
               disabled={busy}
-              onPress={() => onSelect(trimmedSearch)}
+              onPress={() => toggleTag(trimmedSearch)}
               style={({ pressed }) => ({
                 flexDirection: "row",
                 alignItems: "center",
@@ -162,14 +190,30 @@ export function TagPickerModal({
                 marginBottom: spacing.sm,
               })}
             >
-              <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600", flex: 1 }}>
-                {t("tags.createNew", { tag: trimmedSearch, defaultValue: "Add \"{{tag}}\"" })}
+              <View
+                style={{
+                  borderRadius: 999,
+                  borderWidth: 1,
+                  // Dashed preview: this tag doesn't exist yet.
+                  borderStyle: "dashed",
+                  borderColor: colors.primary,
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: 4,
+                }}
+              >
+                <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                  {trimmedSearch}
+                </Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              <Text style={{ ...typography.body, color: colors.primary, fontWeight: "600" }}>
+                {t("tags.addTag", { defaultValue: "Add tag" })}
               </Text>
-              {busy ? <ActivityIndicator size="small" /> : null}
+              {busy ? <ActivityIndicator size="small" style={{ marginLeft: spacing.sm }} /> : null}
             </Pressable>
           ) : null}
 
-          {loading && suggestions.length === 0 ? (
+          {loading && visibleTags.length === 0 ? (
             <View style={{ paddingVertical: spacing.lg, alignItems: "center" }}>
               <ActivityIndicator />
               <Text style={{ ...typography.caption, marginTop: spacing.sm, color: colors.textSecondary }}>
@@ -182,24 +226,27 @@ export function TagPickerModal({
             </Text>
           ) : (
             <>
-            {suggestions.length === 0 && !showCreateRow ? (
+            {visibleTags.length === 0 && !showCreateRow ? (
               <Text style={{ ...typography.body, color: colors.textSecondary, paddingVertical: spacing.sm }}>
                 {t("tags.noResults", { defaultValue: "No tags found." })}
               </Text>
             ) : null}
 
-            {suggestions.map((suggestion) => {
-              const applied = isApplied(suggestion.tag_text);
+            {visibleTags.map((suggestion) => {
+              const selected = isSelected(suggestion.tag_text);
+              const isNew = !knownTagTextsLower.has(suggestion.tag_text.toLowerCase());
               const chip = getTagChipColors(suggestion, mode);
-              const disabled = busy || applied;
+              const disabled = busy;
               return (
                 <Pressable
                   key={suggestion.tag_text.toLowerCase()}
                   accessibilityRole="button"
-                  accessibilityLabel={t("tags.selectTag", { tag: suggestion.tag_text, defaultValue: "Add tag {{tag}}" })}
+                  accessibilityLabel={selected
+                    ? t("tags.removeTag", { tag: suggestion.tag_text, defaultValue: "Remove tag {{tag}}" })
+                    : t("tags.selectTag", { tag: suggestion.tag_text, defaultValue: "Add tag {{tag}}" })}
                   accessibilityState={{ disabled }}
                   disabled={disabled}
-                  onPress={() => onSelect(suggestion.tag_text)}
+                  onPress={() => toggleTag(suggestion.tag_text)}
                   style={({ pressed }) => ({
                     flexDirection: "row",
                     alignItems: "center",
@@ -207,7 +254,7 @@ export function TagPickerModal({
                     paddingHorizontal: spacing.md,
                     borderRadius: 12,
                     borderWidth: 1,
-                    borderColor: colors.border,
+                    borderColor: selected ? colors.primary : colors.border,
                     backgroundColor: colors.card,
                     opacity: disabled ? 0.65 : pressed ? 0.95 : 1,
                     marginBottom: spacing.sm,
@@ -217,7 +264,10 @@ export function TagPickerModal({
                     style={{
                       borderRadius: 999,
                       borderWidth: 1,
-                      borderColor: chip.borderColor,
+                      // Dashed border marks a tag that doesn't exist yet and
+                      // will be created on Apply.
+                      borderStyle: isNew ? "dashed" : "solid",
+                      borderColor: isNew ? colors.primary : chip.borderColor,
                       backgroundColor: chip.backgroundColor,
                       paddingHorizontal: spacing.md,
                       paddingVertical: 4,
@@ -228,9 +278,23 @@ export function TagPickerModal({
                     </Text>
                   </View>
                   <View style={{ flex: 1 }} />
-                  {applied ? (
-                    <Text style={{ ...typography.caption, color: colors.textSecondary }}>
-                      {t("tags.alreadyAdded", { defaultValue: "Added" })}
+                  {isNew ? (
+                    <View
+                      style={{
+                        borderWidth: 1,
+                        borderColor: colors.primary,
+                        borderRadius: 999,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: 2,
+                      }}
+                    >
+                      <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "700" }}>
+                        {t("tags.newLabel", { defaultValue: "New" })}
+                      </Text>
+                    </View>
+                  ) : selected ? (
+                    <Text style={{ ...typography.caption, color: colors.primary, fontWeight: "600" }}>
+                      {t("tags.selected", { defaultValue: "Selected" })}
                     </Text>
                   ) : busy ? (
                     <ActivityIndicator size="small" />
@@ -241,6 +305,33 @@ export function TagPickerModal({
             </>
           )}
         </ScrollView>
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+          {ticketUpdate ? (
+            <Text style={{ ...typography.caption, color: colors.textSecondary, marginBottom: spacing.sm }}>
+              {t("tags.notificationsHelper", { defaultValue: "Tag changes do not send ticket notifications." })}
+            </Text>
+          ) : null}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("common:cancel")}
+              disabled={busy}
+              onPress={onClose}
+              style={{ flex: 1, minHeight: 44, alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: colors.border, borderRadius: 10 }}
+            >
+              <Text style={{ ...typography.body, color: colors.text, fontWeight: "600" }}>{t("common:cancel")}</Text>
+            </Pressable>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                onPress={() => onApply(selectedTagTexts)}
+                disabled={busy}
+                accessibilityLabel={t("common:apply", { defaultValue: "Apply" })}
+              >
+                {t("common:apply", { defaultValue: "Apply" })}
+              </PrimaryButton>
+            </View>
+          </View>
+        </View>
       </View>
       </KeyboardAvoidingView>
     </Modal>

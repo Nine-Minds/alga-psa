@@ -113,7 +113,8 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     // ── Idempotency: skip if a credit_application mapping already exists ──
     const existingApplicationMapping = await deps.ledger.findByAlgaId(
       'credit_application',
-      op.alga_entity_id
+      op.alga_entity_id,
+      deps.targetRealm
     );
     if (existingApplicationMapping) {
       logger.debug('[creditApplicationApplier] Credit application already mapped; marking done', {
@@ -165,10 +166,55 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     }
 
     // ── Resolve both QBO entity IDs ────────────────────────────────────
-    const creditMemoMapping = await deps.ledger.findByAlgaId('invoice', payload.creditNoteInvoiceId);
-    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.targetInvoiceId);
+    // Exact tenant + provider + type + realm match; a mapping in another
+    // company or a tombstone never satisfies these lookups.
+    const creditMemoMapping = await deps.ledger.findByAlgaId('invoice', payload.creditNoteInvoiceId, deps.targetRealm);
+    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.targetInvoiceId, deps.targetRealm);
 
     if (!creditMemoMapping || !invoiceMapping) {
+      const blockedCredit = creditMemoMapping
+        ? null
+        : await deps.ledger.findNonConsumable('invoice', payload.creditNoteInvoiceId, deps.targetRealm);
+      const blockedInvoice = invoiceMapping
+        ? null
+        : await deps.ledger.findNonConsumable('invoice', payload.targetInvoiceId, deps.targetRealm);
+
+      if (blockedCredit || blockedInvoice) {
+        const blockedName = blockedCredit ? 'credit note' : 'invoice';
+        const reason = (blockedCredit ?? blockedInvoice)!.deleted_at
+          ? 'was unlinked from QuickBooks'
+          : 'maps to a different QuickBooks company';
+        const message = `Cannot apply credit: the ${blockedName} ${reason}. Relink it to this company first.`;
+        logger.warn('[creditApplicationApplier] Credit application blocked by non-consumable mapping', {
+          opId: op.op_id,
+          allocationId: op.alga_entity_id,
+          blockedCredit: Boolean(blockedCredit),
+          blockedInvoice: Boolean(blockedInvoice)
+        });
+        await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'credit_allocation',
+          entityId: op.alga_entity_id,
+          title: 'Credit application blocked — document mapping is unlinked or points at another company',
+          context: {
+            reason: 'credit_application_mapping_non_consumable',
+            alga_entity_id: op.alga_entity_id,
+            alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
+            alga_target_invoice_id: payload.targetInvoiceId,
+            requested_amount_cents: payload.amountCents,
+            message,
+            details:
+              `${message} No QuickBooks document was touched. Relink the document in the accounting ` +
+              'mapping screen, then retry the credit application.',
+            realm: deps.targetRealm
+          }
+        });
+        deps.stats.exceptionsCreated += 1;
+        continue;
+      }
+
       // Otherwise an export simply hasn't drained yet — leave pending without
       // burning attempts. But waiting is only healthy for so long: past the
       // stall window, surface an exception instead of hiding behind the
@@ -280,6 +326,56 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
       continue;
     }
 
+    // ── Revalidate the target invoice exists before creating the link ────
+    // The credit memo balance is verified above; the target invoice must also
+    // still exist in this company, or the linking payment would be written
+    // against a ghost document. Read it once and reuse the result for the
+    // customer ref when the mapping metadata lacks one.
+    let qboInvoiceForRevalidation: any = null;
+    try {
+      qboInvoiceForRevalidation = await qboClient.read<any>('Invoice', qboInvoiceId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to read QBO invoice';
+      logger.warn('[creditApplicationApplier] Could not revalidate target invoice; retrying later', {
+        opId: op.op_id,
+        qboInvoiceId,
+        error: message
+      });
+      await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      deps.stats.opsFailed += 1;
+      continue;
+    }
+
+    if (!qboInvoiceForRevalidation) {
+      const message = `QBO Invoice ${qboInvoiceId} no longer exists in this company — credit application not pushed`;
+      logger.warn('[creditApplicationApplier] Target invoice missing at push time; marking failed', {
+        opId: op.op_id,
+        qboInvoiceId
+      });
+      await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      await deps.exceptions.createOrUpdate({
+        type: 'accounting_sync_export_error',
+        entityType: 'credit_allocation',
+        entityId: op.alga_entity_id,
+        title: 'Credit application blocked — QuickBooks invoice is missing',
+        context: {
+          reason: 'credit_application_invoice_missing',
+          alga_entity_id: op.alga_entity_id,
+          alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
+          alga_target_invoice_id: payload.targetInvoiceId,
+          qbo_credit_memo_id: qboCreditMemoId,
+          qbo_invoice_id: qboInvoiceId,
+          requested_amount_cents: payload.amountCents,
+          message,
+          details:
+            `${message}. Re-link the invoice in the accounting mapping screen, then retry the credit application.`,
+          realm: deps.targetRealm
+        }
+      });
+      deps.stats.exceptionsCreated += 1;
+      continue;
+    }
+
     // ── Resolve the QBO customer ID from the target invoice mapping ────
     // The customer ref is stored in the invoice's QBO entity. We look it
     // up from the metadata; if unavailable we fetch from QBO directly.
@@ -289,37 +385,9 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
       null;
 
     if (!qboCustomerId) {
-      // Fall back: read the invoice from QBO to get the CustomerRef.
-      try {
-        const qboInvoice = await qboClient.read<any>('Invoice', qboInvoiceId);
-        qboCustomerId = qboInvoice?.CustomerRef?.value ?? null;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to read QBO invoice for customer ref';
-        logger.warn('[creditApplicationApplier] Could not resolve QBO customer ID', {
-          opId: op.op_id,
-          qboInvoiceId,
-          error: message
-        });
-        const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
-        deps.stats.opsFailed += 1;
-        if (nextStatus === 'skipped') {
-          await deps.exceptions.createOrUpdate({
-            type: 'accounting_sync_export_error',
-            entityType: 'credit_allocation',
-            entityId: op.alga_entity_id,
-            title: 'Credit application keeps failing in accounting',
-            context: {
-              alga_entity_id: op.alga_entity_id,
-              attempts: op.attempts + 1,
-              message,
-              details: message,
-              realm: deps.targetRealm
-            }
-          });
-          deps.stats.exceptionsCreated += 1;
-        }
-        continue;
-      }
+      // The revalidation read above already has the CustomerRef — use it
+      // instead of a second remote read.
+      qboCustomerId = qboInvoiceForRevalidation?.CustomerRef?.value ?? null;
     }
 
     if (!qboCustomerId) {

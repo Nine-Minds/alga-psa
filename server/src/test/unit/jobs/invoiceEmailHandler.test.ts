@@ -20,6 +20,8 @@ const mocks = vi.hoisted(() => ({
   getContactByContactNameId: vi.fn(),
   // DB connection (knex passed through to fetchTenantParty)
   getConnection: vi.fn(),
+  // Acting-user resolution (runAsJobActingUser looks the enqueuer up)
+  getUserWithRoles: vi.fn(),
   // Tenant party (sender company name lookup)
   fetchTenantParty: vi.fn(),
   // Billing actions
@@ -80,6 +82,9 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
   return {
     ...actual,
+    // runAsJobActingUser resolves the enqueuer before the handler body runs;
+    // without a stub this reaches for a real connection in a unit test.
+    getUserWithRoles: mocks.getUserWithRoles,
     tenantDb: () => ({
       table: (name: string) => {
         const chain: any = {};
@@ -167,6 +172,13 @@ describe('InvoiceEmailHandler', () => {
     vi.clearAllMocks();
     vi.spyOn(console, 'log').mockImplementation(() => {});
 
+    mocks.getUserWithRoles.mockResolvedValue({
+      user_id: 'user-1',
+      tenant: TENANT,
+      is_inactive: false,
+      roles: [],
+    });
+
     mocks.jobServiceCreate.mockResolvedValue({
       createJobDetail: mocks.createJobDetail,
       updateJobDetailRecord: mocks.updateJobDetailRecord,
@@ -234,6 +246,30 @@ describe('InvoiceEmailHandler', () => {
       await expect(
         InvoiceEmailHandler.handle('pg-1', buildJobData({ invoiceIds: [] })),
       ).rejects.toThrow('No invoice IDs provided');
+    });
+  });
+
+  describe('acting user', () => {
+    it('should run as the enqueuing user so the withAuth actions resolve an identity', async () => {
+      await InvoiceEmailHandler.handle('pg-1', buildJobData());
+
+      expect(mocks.getUserWithRoles).toHaveBeenCalledWith('user-1', TENANT);
+    });
+
+    it('should refuse to run when the enqueuer is inactive', async () => {
+      mocks.getUserWithRoles.mockResolvedValue({ user_id: 'user-1', tenant: TENANT, is_inactive: true });
+
+      await expect(
+        InvoiceEmailHandler.handle('pg-1', buildJobData()),
+      ).rejects.toThrow('could not resolve an active acting user');
+      expect(mocks.jobServiceCreate).not.toHaveBeenCalled();
+    });
+
+    it('should refuse to run when job data carries no user_id', async () => {
+      await expect(
+        InvoiceEmailHandler.handle('pg-1', buildJobData({ metadata: { tenantId: TENANT } as any })),
+      ).rejects.toThrow('requires user_id in job data');
+      expect(mocks.getUserWithRoles).not.toHaveBeenCalled();
     });
   });
 

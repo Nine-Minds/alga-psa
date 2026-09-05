@@ -218,7 +218,7 @@ export function bootstrapIframe(opts: IframeBootstrapOptions): void {
   });
   observer.observe(document.documentElement, {
     attributes: true,
-    attributeFilter: ['class', 'data-theme'],
+    attributeFilter: ['class', 'data-theme', 'data-theme-pair'],
   });
 
   // Cleanup helper if needed by caller (not exported; documented usage can remove listener manually if creating multiple bootstraps)

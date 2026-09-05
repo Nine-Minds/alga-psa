@@ -3,6 +3,16 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { TicketModel } from '@alga-psa/shared/models/ticketModel';
 
+// Ticket numbering now goes through the shared service (prefix + padding + the
+// tenant's optional date format) instead of a raw generate_next_number call.
+const numbering = vi.hoisted(() => ({
+  getNextNumber: vi.fn(async () => 'T-1001'),
+}));
+
+vi.mock('@alga-psa/shared/services/numberingService', () => ({
+  SharedNumberingService: { getNextNumber: numbering.getNextNumber },
+}));
+
 const UUIDS = {
   tenant: '11111111-1111-4111-8111-111111111111',
   board: '22222222-2222-4222-8222-222222222222',

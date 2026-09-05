@@ -31,7 +31,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
 
   if (!isExpanded) {
     return (
-      <Card className="p-4 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+      <Card className="p-4 bg-gradient-to-r from-blue-50 to-[rgb(var(--color-primary-50))] border-blue-200">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <PlayCircle className="h-5 w-5 text-blue-600" />
@@ -57,7 +57,7 @@ export const QuickStartGuide: React.FC<QuickStartGuideProps> = ({
   }
 
   return (
-    <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+    <Card className="p-6 bg-gradient-to-r from-blue-50 to-[rgb(var(--color-primary-50))] border-blue-200">
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <PlayCircle className="h-6 w-6 text-blue-600" />

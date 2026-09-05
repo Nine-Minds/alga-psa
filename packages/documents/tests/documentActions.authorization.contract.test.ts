@@ -44,9 +44,9 @@ describe('document authorization kernel wiring contracts', () => {
 
   it('T012: enforces record-level document authorization across mutation and folder-operation surfaces', () => {
     expect(source).toContain('async function assertAuthorizedDocumentSetForMutation(');
-    expect(source).toContain("return permissionError('Permission denied: Cannot update documents');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update documents', 'documents:errors.permissions.update');");
     expect(source).toContain("'Permission denied: Cannot delete documents'");
-    expect(source).toContain("return permissionError('Permission denied: Cannot update document associations');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update document associations', 'documents:errors.permissions.updateAssociations');");
     expect(source).toContain("'Permission denied: Cannot move documents'");
     expect(source).toContain("'Permission denied: Cannot update document visibility'");
     expect(source).toContain("'Permission denied: Cannot update folder visibility'");

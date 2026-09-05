@@ -127,15 +127,26 @@ interface DefinitionSubmissionRow {
   submitted_at: string | Date;
 }
 
+interface DefinitionSubmissionAuditEvent {
+  audit_id: string;
+  operation: string;
+  user_id: string | null;
+  actor_name: string | null;
+  timestamp: string | Date;
+  details: Record<string, unknown>;
+}
+
 interface DefinitionSubmissionDetail extends DefinitionSubmissionRow {
   definition_id: string;
   definition_version_id: string;
+  definition_version_number: number;
   submitted_payload: Record<string, unknown>;
   execution_error_summary: string | null;
   requester_user_name: string | null;
   client_name: string | null;
   contact_name: string | null;
   created_ticket_display: string | null;
+  audit_events: DefinitionSubmissionAuditEvent[];
 }
 
 function FieldRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -437,7 +448,7 @@ function FormFieldEditorCard({
             variant="ghost"
             size="icon"
             tooltipText={t('editor.form.remove')}
-            className="text-[rgb(var(--color-accent-600))] hover:text-[rgb(var(--color-accent-700))] hover:bg-[rgb(var(--color-accent-50))]"
+            className="chip-accent hover: hover:"
             onClick={async () => {
               await removeServiceRequestFormFieldAction(definitionId, key);
               await reloadDefinitionEditorState(definitionId);
@@ -703,6 +714,7 @@ export default function ServiceRequestDefinitionEditorPage() {
 
   const isWorkflowBackedExecution = data?.execution.showWorkflowExecutionConfigPanel === true;
   const isTicketOnlyExecution = data?.execution.executionProvider === 'ticket-only';
+  const isStoreOnlyExecution = data?.execution.executionProvider === 'store-only';
   const hasLivePublishedVersion = Boolean(data?.publish.publishedVersionNumber);
   const draftLifecycleLabel = getServiceRequestDraftLifecycleLabel(
     data?.lifecycleState,
@@ -773,7 +785,7 @@ export default function ServiceRequestDefinitionEditorPage() {
       ]);
 
       replaceDrawer(
-        <div className="bg-gray-100">
+        <div className="bg-[rgb(var(--color-app-ground))]">
           <MspTicketDetailsContainerClient
             ticketData={ticketData as any}
             surveySummary={surveySummary ?? null}
@@ -785,7 +797,7 @@ export default function ServiceRequestDefinitionEditorPage() {
     } catch (error) {
       console.error('[ServiceRequestDefinitionEditorPage] Failed to load ticket drawer', error);
       replaceDrawer(
-        <div className="p-4 text-sm text-[rgb(var(--color-danger-600))]">
+        <div className="p-4 text-sm text-[rgb(var(--color-destructive))]">
           {error instanceof Error ? error.message : t('editor.submissions.ticketLoadError')}
         </div>,
         undefined,
@@ -1159,7 +1171,7 @@ export default function ServiceRequestDefinitionEditorPage() {
   }
 
   if (!data) {
-    return <div className="p-6 text-sm text-[rgb(var(--color-danger-600))]">{t('editor.notFound')}</div>;
+    return <div className="p-6 text-sm text-[rgb(var(--color-destructive))]">{t('editor.notFound')}</div>;
   }
 
   return (
@@ -1409,7 +1421,7 @@ export default function ServiceRequestDefinitionEditorPage() {
 
       <Card id="service-request-editor-form" className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">{t('editor.form.title')}</h2>
-        <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-3">
+        <div className="rounded border p-3 bg-[rgb(var(--color-border-100))] space-y-3">
           <div className="text-sm font-semibold">{t('editor.form.authorFields')}</div>
           <div className="flex flex-wrap items-start gap-2">
             <div className="min-w-[220px] flex-1">
@@ -1528,8 +1540,19 @@ export default function ServiceRequestDefinitionEditorPage() {
             }}
           />
         </div>
+        {isStoreOnlyExecution && (
+          <div
+            id="service-request-store-only-explanation"
+            className="space-y-1 rounded border p-3 bg-[rgb(var(--color-border-100))]"
+          >
+            <h3 className="text-sm font-semibold">{t('editor.execution.storeOnly.title')}</h3>
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('editor.execution.storeOnly.description')}
+            </p>
+          </div>
+        )}
         {isTicketOnlyExecution && (
-          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <h3 className="text-sm font-semibold">{t('editor.execution.ticketRouting.title')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <div className="grid gap-1 text-sm md:col-span-2">
@@ -1656,7 +1679,7 @@ export default function ServiceRequestDefinitionEditorPage() {
                   </div>
                   <div className="grid gap-1 text-sm md:col-span-2">
                     <span className="font-medium">{t('editor.execution.ticketRouting.priorityCalculated')}</span>
-                    <div className="rounded border px-3 py-2 text-sm bg-[rgb(var(--color-background-50))]">
+                    <div className="rounded border px-3 py-2 text-sm bg-[rgb(var(--color-border-50))]">
                       {calculatedItilPriority ? (
                         <span>
                           {t('editor.execution.ticketRouting.priorityFormula', {
@@ -1713,7 +1736,7 @@ export default function ServiceRequestDefinitionEditorPage() {
           </div>
         )}
         {isWorkflowBackedExecution && (
-          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <h3 className="text-sm font-semibold">{t('editor.execution.workflow.title')}</h3>
             <Input
               id="service-request-workflow-id-input"
@@ -1777,7 +1800,7 @@ export default function ServiceRequestDefinitionEditorPage() {
           </div>
         )}
         {data.execution.showAdvancedFormBehaviorConfigPanel && (
-          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+          <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
             <div className="text-sm font-semibold">{t('editor.execution.advanced.title')}</div>
             <TextArea
               id="service-request-form-behavior-config"
@@ -1816,7 +1839,7 @@ export default function ServiceRequestDefinitionEditorPage() {
             </div>
           </div>
         )}
-        <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-background-100))]">
+        <div className="space-y-3 rounded border p-3 bg-[rgb(var(--color-border-100))]">
           <div className="text-sm font-semibold">{t('editor.execution.visibility.title')}</div>
           <TextArea
             id="service-request-visibility-config"
@@ -1933,9 +1956,15 @@ export default function ServiceRequestDefinitionEditorPage() {
           </div>
         )}
         {selectedSubmissionDetail && (
-          <div className="rounded border p-3 bg-[rgb(var(--color-background-100))] space-y-2">
+          <div className="rounded border p-3 bg-[rgb(var(--color-border-100))] space-y-2">
             <div className="text-sm font-semibold">{t('editor.submissions.detailTitle')}</div>
             <FieldRow label={t('editor.submissions.submissionId')} value={selectedSubmissionDetail.submission_id} />
+            <FieldRow
+              label={t('editor.submissions.formVersion')}
+              value={t('editor.submissions.formVersionValue', {
+                version: selectedSubmissionDetail.definition_version_number,
+              })}
+            />
             <FieldRow
               label={t('editor.submissions.requesterUser')}
               value={
@@ -1975,6 +2004,33 @@ export default function ServiceRequestDefinitionEditorPage() {
               label={t('editor.submissions.executionError')}
               value={selectedSubmissionDetail.execution_error_summary ?? '-'}
             />
+            <div className="pt-2">
+              <div className="text-sm font-semibold">{t('editor.submissions.historyTitle')}</div>
+              {selectedSubmissionDetail.audit_events.length === 0 ? (
+                <div className="text-sm text-[rgb(var(--color-text-600))]">
+                  {t('editor.submissions.historyEmpty')}
+                </div>
+              ) : (
+                <ol className="mt-1 space-y-1">
+                  {selectedSubmissionDetail.audit_events.map((event) => (
+                    <li key={event.audit_id} className="text-sm">
+                      <span className="font-medium">
+                        {t(`editor.submissions.historyOperations.${event.operation}`, {
+                          defaultValue: event.operation,
+                        })}
+                      </span>
+                      <span className="text-[rgb(var(--color-text-600))]">
+                        {' · '}
+                        {formatDate(new Date(event.timestamp), { dateStyle: 'medium', timeStyle: 'short' })}
+                        {event.actor_name
+                          ? ` · ${t('editor.submissions.historyActor', { actor: event.actor_name })}`
+                          : ''}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </div>
             <pre className="text-xs bg-white p-2 rounded overflow-auto">
               {JSON.stringify(selectedSubmissionDetail.submitted_payload, null, 2)}
             </pre>
@@ -1987,16 +2043,16 @@ export default function ServiceRequestDefinitionEditorPage() {
         <aside className="space-y-4 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
           <Card
             id="service-request-editor-preview"
-            className="border-dashed border-2 border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-background-50))] p-0 overflow-hidden"
+            className="border-dashed border-2 border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-border-50))] p-0 overflow-hidden"
           >
-            <div className="flex items-center justify-between border-b border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-background-100))] px-4 py-2">
+            <div className="flex items-center justify-between border-b border-dashed border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-border-100))] px-4 py-2">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-[rgb(var(--color-text-600))]">
                   {t('editor.preview.title')}
                 </h2>
               </div>
-              <span className="rounded-full bg-[rgb(var(--color-primary-100))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-primary-700))]">
+              <span className="chip-primary rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
                 {t('editor.preview.badge')}
               </span>
             </div>
@@ -2021,10 +2077,10 @@ export default function ServiceRequestDefinitionEditorPage() {
                   {t('editor.preview.formSubheading')}
                 </div>
                 <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-white shadow-md">
-                  <div className="flex items-center gap-1.5 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background-50))] px-3 py-2">
+                  <div className="flex items-center gap-1.5 border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] px-3 py-2">
                     <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-accent-400))]" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-warning-400))]" />
-                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-success-400))]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-status-warning))]" />
+                    <span className="h-2.5 w-2.5 rounded-full bg-[rgb(var(--color-status-success))]" />
                   </div>
                   <div className="p-4 pointer-events-none select-none">
                     {getSchemaFields(data.form.schema).length > 0 ? (

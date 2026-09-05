@@ -552,7 +552,7 @@ function DocumentStorageCardComponent({
             setShowFullSizeModal(true);
         } else {
             // For other files, download
-            const downloadUrl = getDocumentDownloadUrl(document.file_id);
+            const downloadUrl = getDocumentDownloadUrl(document.document_id);
             const filename = document.document_name || 'download';
             try {
                 await downloadDocument(downloadUrl, filename, true);
@@ -592,7 +592,7 @@ function DocumentStorageCardComponent({
         <ReflectionContainer id={id} label={`Document Card - ${document.document_name}`}>
             <div
                 ref={cardRef}
-                className={`bg-white dark:bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] shadow-sm p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
+                className={`bg-[rgb(var(--color-card))] rounded-lg border border-[rgb(var(--color-border-200))] card-elevated p-4 h-full flex flex-col transition-all hover:border-[rgb(var(--color-border-300))] ${(isContentDocument || !document.file_id) ? 'cursor-pointer' : ''
                 }`}
                 onClick={(isContentDocument || !document.file_id) && onClick ? (e) => {
                     // Prevent click event if it's coming from the delete button
@@ -639,7 +639,7 @@ function DocumentStorageCardComponent({
                                         className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                                             document.is_client_visible
                                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                                                : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-400))]'
+                                                : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-600))]'
                                         }`}
                                     >
                                         {document.is_client_visible
@@ -859,7 +859,7 @@ function DocumentStorageCardComponent({
                                         onMove(document);
                                     }}
                                     disabled={isDeleteProcessing}
-                                    className="text-[rgb(var(--color-text-600))] hover:text-purple-600 hover:bg-purple-500/10 p-1.5"
+                                    className="text-[rgb(var(--color-text-600))] hover:text-[rgb(var(--color-primary-600))] hover:bg-[rgb(var(--color-primary-500)/0.1)] p-1.5"
                                 >
                                     <FolderInput className="w-4 h-4" />
                                 </Button>
@@ -941,7 +941,7 @@ function DocumentStorageCardComponent({
                         <div className="flex justify-center items-center" onClick={(e) => e.stopPropagation()}>
                             {document.mime_type?.startsWith('image/') ? (
                                 <img
-                                    src={`/api/documents/view/${document.file_id}`}
+                                    src={`/api/documents/view/${document.document_id}`}
                                     alt={document.document_name}
                                     className="max-w-full max-h-[70vh] object-contain"
                                 />
@@ -954,7 +954,7 @@ function DocumentStorageCardComponent({
                                 />
                             ) : document.mime_type === 'application/pdf' ? (
                                 <iframe
-                                    src={`/api/documents/view/${document.file_id}`}
+                                    src={`/api/documents/view/${document.document_id}`}
                                     className="w-full border-0"
                                     style={{ height: 'calc(90vh - 120px)', width: '100%' }}
                                     title={document.document_name}
@@ -965,7 +965,7 @@ function DocumentStorageCardComponent({
                                     <Button
                                         id={`${id}-download-modal-button`}
                                         onClick={async () => {
-                                            const downloadUrl = getDocumentDownloadUrl(document.file_id!);
+                                            const downloadUrl = getDocumentDownloadUrl(document.document_id);
                                             const filename = document.document_name || 'download';
                                             try {
                                                 await downloadDocument(downloadUrl, filename, true);

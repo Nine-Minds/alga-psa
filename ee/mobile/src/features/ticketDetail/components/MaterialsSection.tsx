@@ -16,6 +16,7 @@ import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 import { SectionHeader } from "../../../ui/components/SectionHeader";
 import { useTheme } from "../../../ui/ThemeContext";
 import { EntityPickerModal, type EntityPickerItem } from "../../../ui/components/EntityPickerModal";
+import { SectionCollapseToggle } from "./SectionCollapseToggle";
 
 function formatCurrencyMinorUnits(value: number, currencyCode: string): string {
   try {
@@ -51,10 +52,12 @@ export function MaterialsSection({
   client,
   apiKey,
   ticketId,
+  initiallyCollapsed = false,
 }: {
   client: ApiClient | null;
   apiKey: string;
   ticketId: string;
+  initiallyCollapsed?: boolean;
 }) {
   const { t } = useTranslation("tickets");
   const { colors, spacing, typography } = useTheme();
@@ -72,6 +75,7 @@ export function MaterialsSection({
   const [rateInput, setRateInput] = useState("0.00");
   const [descriptionInput, setDescriptionInput] = useState("");
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed);
 
   const computedTotal = useMemo(() => {
     const qty = parseQuantity(quantityInput);
@@ -240,13 +244,21 @@ export function MaterialsSection({
           action={(
             <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
               <Badge label={String(materials.length)} tone="neutral" />
-              <PrimaryButton onPress={openProductPicker} accessibilityLabel={t("materials.addProduct")}>
-                {t("materials.addProduct")}
-              </PrimaryButton>
+              {!collapsed ? (
+                <PrimaryButton onPress={openProductPicker} accessibilityLabel={t("materials.addProduct")}>
+                  {t("materials.addProduct")}
+                </PrimaryButton>
+              ) : null}
+              <SectionCollapseToggle
+                collapsed={collapsed}
+                onToggle={() => setCollapsed((value) => !value)}
+                sectionLabel={t("materials.title")}
+              />
             </View>
           )}
         />
 
+        {collapsed ? null : <>
         {error ? (
           <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
             {error}
@@ -301,6 +313,7 @@ export function MaterialsSection({
             ))}
           </View>
         )}
+        </>}
       </Card>
 
       <EntityPickerModal

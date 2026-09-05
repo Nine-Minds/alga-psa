@@ -66,7 +66,7 @@ function StoreLink({ url, label, qrAlt, qrDataUrl, zoomId, zoomAriaLabel, onZoom
             style={{ imageRendering: 'pixelated' }}
           />
         ) : (
-          <div className="h-40 w-40 animate-pulse rounded bg-slate-100" />
+          <div className="h-40 w-40 animate-pulse rounded skeleton-fill" />
         )}
         <span className="text-sm font-medium text-slate-900">{label}</span>
       </a>
@@ -200,7 +200,7 @@ export default function MobileAppCard({ onDismiss, isDismissing = false, selfHos
                 style={{ imageRendering: 'pixelated' }}
               />
             ) : (
-              <div className="h-40 w-40 animate-pulse rounded bg-slate-100" />
+              <div className="h-40 w-40 animate-pulse rounded skeleton-fill" />
             )}
             <span className="text-sm font-medium text-slate-900">{connectServerLabel}</span>
             {connectQr ? (

@@ -3,15 +3,31 @@
 /**
  * Generate pseudo-locale files for visual QA testing.
  *
- * Reads every English translation JSON file and produces matching files
- * for the xx and yy pseudo-locales with all leaf values replaced by a
- * fill string.  {{interpolation}} tokens are preserved so i18next can
- * still substitute variables at runtime.
+ * Reads every English translation JSON file and produces matching files for
+ * the xx and yy pseudo-locales.  Each leaf value is accented character by
+ * character and wrapped in locale-specific markers, so a pseudo string stays
+ * readable, stays unique, and is impossible to mistake for real English.
+ *
+ *   "Save changes"  ->  xx: "⟦Şȧṽḗ ƈħȧƞɠḗş⟧"
+ *                       yy: "〖Şȧṽḗ ƈħȧƞɠḗş····〗"
+ *
+ * Why not a single fill string: identical values collide when a component
+ * uses a translated label as a React key, which corrupts sibling lists, and
+ * an opaque fill hides which string is which during QA.
+ *
+ * Untranslated (hardcoded) UI still stands out — it renders as plain English
+ * with no markers.  yy additionally pads to ~40% extra width to surface
+ * layout truncation.  {{interpolation}} tokens and <tags> are passed through
+ * untouched so i18next and <Trans> keep working.
+ *
+ * The transform itself lives in tools/i18n/lib/pseudo-locale.mjs, which the
+ * tests assert against.
  *
  * Usage:
- *   node scripts/generate-pseudo-locales.js
+ *   node scripts/generate-pseudo-locales.cjs
  *
- * Re-run after adding or changing any English namespace file.
+ * Re-run after adding or changing any English namespace file.  Never hand-edit
+ * the xx/yy files.
  */
 
 const fs = require('fs');
@@ -20,29 +36,17 @@ const path = require('path');
 const LOCALES_DIR = path.resolve(__dirname, '../server/public/locales');
 const EN_DIR = path.join(LOCALES_DIR, 'en');
 
-const PSEUDO_LOCALES = {
-  xx: '11111',
-  yy: '55555',
-};
-
-function replaceValues(obj, fill) {
-  const out = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-      out[key] = replaceValues(value, fill);
-    } else if (typeof value === 'string') {
-      // Preserve {{variable}} tokens
-      const vars = value.match(/\{\{.*?\}\}/g);
-      if (vars) {
-        out[key] = vars.map((v) => `${fill} ${v}`).join(' ') + ` ${fill}`;
-      } else {
-        out[key] = fill;
-      }
-    } else {
-      out[key] = value;
+function replaceValues(input, pseudoString, locale) {
+  if (typeof input === 'string') return pseudoString(input, locale);
+  if (Array.isArray(input)) return input.map((entry) => replaceValues(entry, pseudoString, locale));
+  if (input && typeof input === 'object') {
+    const out = {};
+    for (const [key, value] of Object.entries(input)) {
+      out[key] = replaceValues(value, pseudoString, locale);
     }
+    return out;
   }
-  return out;
+  return input;
 }
 
 function walkDir(dir) {
@@ -58,20 +62,31 @@ function walkDir(dir) {
   return results;
 }
 
-const enFiles = walkDir(EN_DIR);
-let totalFiles = 0;
+async function main() {
+  const { PSEUDO_LOCALES, pseudoString } = await import(
+    require('url').pathToFileURL(path.resolve(__dirname, '../tools/i18n/lib/pseudo-locale.mjs')).href
+  );
 
-for (const enFile of enFiles) {
-  const rel = path.relative(EN_DIR, enFile);
-  const data = JSON.parse(fs.readFileSync(enFile, 'utf8'));
+  const enFiles = walkDir(EN_DIR);
+  let totalFiles = 0;
 
-  for (const [locale, fill] of Object.entries(PSEUDO_LOCALES)) {
-    const outFile = path.join(LOCALES_DIR, locale, rel);
-    fs.mkdirSync(path.dirname(outFile), { recursive: true });
-    const pseudo = replaceValues(data, fill);
-    fs.writeFileSync(outFile, JSON.stringify(pseudo, null, 2) + '\n', 'utf8');
-    totalFiles++;
+  for (const enFile of enFiles) {
+    const rel = path.relative(EN_DIR, enFile);
+    const data = JSON.parse(fs.readFileSync(enFile, 'utf8'));
+
+    for (const locale of Object.keys(PSEUDO_LOCALES)) {
+      const outFile = path.join(LOCALES_DIR, locale, rel);
+      fs.mkdirSync(path.dirname(outFile), { recursive: true });
+      const pseudo = replaceValues(data, pseudoString, locale);
+      fs.writeFileSync(outFile, JSON.stringify(pseudo, null, 2) + '\n', 'utf8');
+      totalFiles++;
+    }
   }
+
+  console.log(`Generated ${totalFiles} pseudo-locale files from ${enFiles.length} English sources.`);
 }
 
-console.log(`Generated ${totalFiles} pseudo-locale files from ${enFiles.length} English sources.`);
+main().catch((error) => {
+  console.error(error);
+  process.exit(1);
+});

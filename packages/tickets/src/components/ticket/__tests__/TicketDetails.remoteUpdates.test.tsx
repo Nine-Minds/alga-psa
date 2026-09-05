@@ -5,6 +5,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import TicketDetails from '../TicketDetails';
+import { entryLayoutBootstrap } from './entryLayoutBootstrap';
 
 const {
   routerPushMock,
@@ -416,6 +417,7 @@ const enabledBoard = {
 function renderTicketDetails() {
   return render(
     <TicketDetails
+      bootstrap={entryLayoutBootstrap}
       initialTicket={baseTicket}
       initialBoard={enabledBoard}
       statusOptions={[
@@ -477,6 +479,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -523,6 +526,7 @@ describe('TicketDetails remote live updates', () => {
       act(() => {
         view.rerender(
           <TicketDetails
+            bootstrap={entryLayoutBootstrap}
             initialTicket={baseTicket}
             initialBoard={enabledBoard}
             statusOptions={[
@@ -578,6 +582,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -627,6 +632,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -676,6 +682,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -729,6 +736,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[
@@ -775,6 +783,7 @@ describe('TicketDetails remote live updates', () => {
     act(() => {
       view.rerender(
         <TicketDetails
+          bootstrap={entryLayoutBootstrap}
           initialTicket={baseTicket}
           initialBoard={enabledBoard}
           statusOptions={[

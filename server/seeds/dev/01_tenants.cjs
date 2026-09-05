@@ -8,7 +8,7 @@ exports.seed = async function(knex) {
       {
         tenant: knex.raw('gen_random_uuid()'),
         client_name: 'Oz',
-        phone_number: '123-456-7899',
+        phone_number: '+1 212-555-0199',
         email: 'oz@example.com',
         created_at: knex.fn.now(),
         payment_platform_id: 'platform-123-abc',

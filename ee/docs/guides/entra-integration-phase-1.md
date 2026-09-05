@@ -20,6 +20,19 @@ All user-visible Entra surfaces are feature-flag gated.
   - View endpoints/actions: `system_settings.read`
   - Connect/map/sync/resolve endpoints/actions: `system_settings.update`
 
+For the `direct` connection type, Microsoft-side prerequisites also apply:
+
+- The MSP's partner tenant must be onboarded to **Microsoft 365 Lighthouse** with active
+  **GDAP** relationships to its customer tenants. The integration reads the managed tenant
+  list from the Lighthouse `managedTenants` Graph API; a partner tenant without Lighthouse
+  gets an empty or failing tenant list no matter how the OAuth app is configured.
+- The person clicking through the connect flow must be able to grant **admin consent** in
+  the MSP tenant: `ManagedTenants.Read.All` and `Directory.Read.All` are admin-consent
+  scopes, so a non-admin hits Microsoft's "needs admin approval" screen.
+- The `managedTenants` API is a **beta** Graph API (`https://graph.microsoft.com/beta`);
+  it does not exist on v1.0. Alga targets the beta endpoint for these calls and v1.0 for
+  everything else — a version regression fails every Direct connect with a Graph 400.
+
 ## Connection Path Decision Guide
 
 Choose one connection type per tenant:
@@ -80,6 +93,62 @@ For direct Microsoft OAuth credentials, resolution order is:
 1. Tenant secrets (`microsoft_client_id` + `microsoft_client_secret`, optional `microsoft_tenant_id`)
 2. Environment variables (`MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`)
 3. App secrets (`MICROSOFT_CLIENT_ID`, `MICROSOFT_CLIENT_SECRET`, `MICROSOFT_TENANT_ID`)
+
+## Azure App Registration Requirements (Direct)
+
+Whichever slot the credentials come from, the Azure app registration they name must have:
+
+- **Redirect URI** (Web platform): `https://<your-host>/api/auth/microsoft/entra/callback`.
+  The URI is built from `NEXT_PUBLIC_BASE_URL`/`NEXTAUTH_URL`, and Microsoft rejects any
+  URI not registered — the operator sees `AADSTS50011` after consenting.
+- **Multi-tenant sign-in** (supported account types: *Accounts in any organizational
+  directory*). Per-client sync mints tokens against each managed tenant's authority; a
+  single-tenant registration can never do that, and every sync fails with
+  `invalid_grant`/`AADSTS700016` no matter what else is configured.
+- **Delegated Microsoft Graph permissions** (from
+  `ee/server/src/lib/integrations/entra/auth/directScopes.ts`): `User.Read`,
+  `ManagedTenants.Read.All`, `Directory.Read.All`, plus `offline_access`. Grant admin
+  consent for the two admin-consent scopes.
+
+### Per-Client Tenant Access (GDAP Reads)
+
+Discovery and sync use the same grant differently, and their prerequisites differ:
+
+- **Discovery** (`/beta/tenantRelationships/managedTenants/tenants`) runs against the
+  **partner** tenant. Home-tenant consent for `ManagedTenants.Read.All` is enough.
+- **Per-client sync and preflight** (`/v1.0/users`), and group scoping (`/v1.0/groups`,
+  `checkMemberGroups`), run against the **managed tenant**: the stored refresh token is
+  redeemed against `login.microsoftonline.com/<managed-tenant>/oauth2/v2.0/token`
+  (`refreshEntraDirectAccessTokenForTenant`), and that redemption only succeeds when the
+  managed tenant has admitted the app — admin consent granted there, by the client's own
+  Global Administrator or via a GDAP role that permits tenant-wide consent:
+  `https://login.microsoftonline.com/<managed-tenant-id-or-domain>/adminconsent?client_id=<app-id>`.
+
+So "mapping works but sync never does" is the expected symptom of a missing per-client
+consent, not a product fault. Decode the token-refresh failures (the AADSTS code is
+surfaced in run history and preflight since the 2026-08 fixes):
+
+| OAuth error | Meaning | Remedy |
+| --- | --- | --- |
+| `invalid_grant` + `consent_required` / `AADSTS65001` | App not consented in the managed tenant | Grant admin consent in that tenant; reconnecting the partner tenant changes nothing |
+| `AADSTS700016` | App is single-tenant, or has no service principal there | Set supported account types to multi-tenant; re-grant consent |
+| `AADSTS50076` / `AADSTS50079` | The managed tenant's Conditional Access demands MFA or a compliant device for this account | Adjust the CA policy with the client, or satisfy it interactively — silent refresh cannot |
+| `invalid_grant` with none of the above | Grant revoked or expired at the partner tenant | Reconnect from Settings > Integrations > Microsoft Entra > Connection |
+
+One app registration is often shared across every Alga Microsoft integration. Each flow
+has its own callback, and Microsoft validates them independently, so a shared app must
+register **all** of the callbacks it will serve:
+
+| Callback path | Used by |
+| --- | --- |
+| `/api/auth/microsoft/callback` | Email mailbox OAuth |
+| `/api/auth/microsoft/email-setup/callback` | M365 email provider setup wizard |
+| `/api/auth/microsoft/calendar/callback` | Calendar integration |
+| `/api/auth/microsoft/entra/callback` | Entra Identity direct connect |
+
+(The `/api/email/webhooks/microsoft` and `/api/calendar/webhooks/microsoft` paths are
+Graph change-notification webhooks, not OAuth redirects — they do not belong in the
+redirect URI list.)
 
 ## Feature Flags (Phase 1)
 

@@ -1,6 +1,7 @@
 export * from './appointmentRequestActions';
 export * from './client-billing-metrics';
 export * from './client-billing';
+export * from './client-billing-segments';
 export * from './client-client';
 export * from './client-documents';
 // Note: client-payment re-exports from clientPaymentActions, excluded to avoid duplicates

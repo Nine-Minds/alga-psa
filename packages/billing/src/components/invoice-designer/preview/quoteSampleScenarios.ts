@@ -52,6 +52,8 @@ const createBaseQuote = (): QuoteViewModel => ({
     name: 'Dr. Sarah Chen',
     email: 'sarah.chen@hawthorneclinic.com',
   },
+  // Fallback issuer only: overlayQuoteSampleTenant replaces this with the tenant's real
+  // "Your Company" branding whenever it resolves.
   tenant: {
     name: 'Northwind MSP',
     address: '400 SW Main St, Portland, OR 97204',

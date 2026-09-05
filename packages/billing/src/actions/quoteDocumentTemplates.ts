@@ -33,7 +33,7 @@ export const getQuoteDocumentTemplate = withAuth(async (
   templateId: string
 ): Promise<IQuoteDocumentTemplate | null | ActionPermissionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot read quote document templates');
+    return permissionError('Permission denied: Cannot read quote document templates', 'msp/quotes:errors.permissions.readDocumentTemplates');
   }
 
   const { knex } = await createTenantKnex();
@@ -46,7 +46,7 @@ export const getQuoteDocumentTemplates = withAuth(async (
   { tenant }
 ): Promise<IQuoteDocumentTemplate[] | ActionPermissionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot read quote document templates');
+    return permissionError('Permission denied: Cannot read quote document templates', 'msp/quotes:errors.permissions.readDocumentTemplates');
   }
 
   const { knex } = await createTenantKnex();
@@ -59,7 +59,7 @@ export const saveQuoteDocumentTemplate = withAuth(async (
   template: Partial<IQuoteDocumentTemplate> & { isClone?: boolean }
 ): Promise<{ success: boolean; template?: IQuoteDocumentTemplate; error?: string } | ActionPermissionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot modify quote document templates');
+    return permissionError('Permission denied: Cannot modify quote document templates', 'msp/quotes:errors.permissions.modifyDocumentTemplates');
   }
 
   if (!template.name?.trim()) {
@@ -93,7 +93,7 @@ export const setDefaultQuoteDocumentTemplate = withAuth(async (
   payload: SetDefaultQuoteTemplatePayload
 ): Promise<void | ActionPermissionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot set default quote document template');
+    return permissionError('Permission denied: Cannot set default quote document template', 'msp/quotes:errors.permissions.setDefaultDocumentTemplate');
   }
 
   const { knex } = await createTenantKnex();
@@ -134,7 +134,7 @@ export const deleteQuoteDocumentTemplate = withAuth(async (
   templateId: string
 ): Promise<{ success: boolean; error?: string } | ActionPermissionError> => {
   if (!await hasPermission(user as any, 'billing', 'delete')) {
-    return permissionError('Permission denied: Cannot delete quote document templates');
+    return permissionError('Permission denied: Cannot delete quote document templates', 'msp/quotes:errors.permissions.deleteDocumentTemplates');
   }
 
   const { knex } = await createTenantKnex();

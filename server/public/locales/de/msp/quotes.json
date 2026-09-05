@@ -114,7 +114,9 @@
       "delete": "Das Angebot konnte nicht gelöscht werden.",
       "duplicate": "Das Angebot konnte nicht dupliziert werden.",
       "load": "Angebote konnten nicht geladen werden",
-      "send": "Angebot konnte nicht gesendet werden."
+      "send": "Angebot konnte nicht gesendet werden.",
+      "resend": "Das Angebot konnte nicht erneut gesendet werden.",
+      "sendReminder": "Die Erinnerung konnte nicht gesendet werden."
     },
     "loading": "Angebote werden geladen...",
     "rowActions": {
@@ -733,7 +735,9 @@
       "notFound": "Angebotsdokumentvorlage nicht gefunden.",
       "previewPipeline": "Vorschau-Pipeline fehlgeschlagen.",
       "saveFailed": "Angebotsvorlage konnte nicht gespeichert werden",
-      "unknownAstExport": "Unbekannter AST-Exportfehler"
+      "unknownAstExport": "Unbekannter AST-Exportfehler",
+      "quoteNotFound": "Angebotsdetails konnten für die Vorschau nicht geladen werden.",
+      "quoteDetailLoad": "Angebotsdetails konnten nicht geladen werden."
     },
     "fields": {
       "layoutDetails": "Layoutdetails",
@@ -757,7 +761,17 @@
       "sampleScenario": "Beispielszenario",
       "selectScenario": "Szenario auswählen...",
       "selectScenarioPrompt": "Wählen Sie ein Beispielszenario aus, um eine verlässliche Vorschau zu erstellen.",
-      "templateGenerationFailed": "Die Vorschauvorlage konnte nicht aus dem aktuellen Arbeitsbereich generiert werden."
+      "templateGenerationFailed": "Die Vorschauvorlage konnte nicht aus dem aktuellen Arbeitsbereich generiert werden.",
+      "source": {
+        "sample": "Beispiel",
+        "existing": "Vorhanden"
+      },
+      "searchQuotes": "Angebote suchen…",
+      "searchQuotesHint": "Nach Nummer oder Kunde suchen…",
+      "noQuotesFound": "Keine Angebote gefunden.",
+      "selectQuote": "Angebot wählen",
+      "selectQuoteHint": "Wählen Sie ein Angebot für die datengebundene Vorschau.",
+      "loadingQuoteDetails": "Angebotsdetails werden geladen…"
     },
     "pipeline": {
       "render": "Rendern",
@@ -795,6 +809,33 @@
     },
     "labels": {
       "custom": "Brauch"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "create": "Berechtigung verweigert: Angebote können nicht erstellt werden",
+      "update": "Berechtigung verweigert: Angebote können nicht aktualisiert werden",
+      "read": "Berechtigung verweigert: Angebote können nicht gelesen werden",
+      "delete": "Berechtigung verweigert: Angebote können nicht gelöscht werden",
+      "readOne": "Berechtigung verweigert: Angebot kann nicht gelesen werden",
+      "approve": "Berechtigung verweigert: Angebote können nicht genehmigt werden",
+      "updateApprovalSettings": "Berechtigung verweigert: Genehmigungseinstellungen für Angebote können nicht aktualisiert werden",
+      "readDocumentTemplates": "Berechtigung verweigert: Angebotsdokumentvorlagen können nicht gelesen werden",
+      "modifyDocumentTemplates": "Berechtigung verweigert: Angebotsdokumentvorlagen können nicht geändert werden",
+      "setDefaultDocumentTemplate": "Berechtigung verweigert: Standard-Angebotsdokumentvorlage kann nicht festgelegt werden",
+      "deleteDocumentTemplates": "Berechtigung verweigert: Angebotsdokumentvorlagen können nicht gelöscht werden"
+    },
+    "quote": {
+      "formInvalid": "Das Angebotsformular enthält ungültige Werte. Bitte prüfen Sie es und versuchen Sie es erneut.",
+      "notFoundRefresh": "Angebot nicht gefunden. Es wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "itemNotFoundRefresh": "Angebotsposition nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "templateNotFoundRefresh": "Angebotsvorlage nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "invalidValue": "Einer der ausgewählten Angebotswerte ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Das ausgewählte Angebot, der Kunde, Kontakt oder Dienst existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "conflict": "Diese Angebotsänderung steht im Konflikt mit einem vorhandenen Datensatz. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "notAllowed": "Einer der Angebotswerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Angebotsfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Angebotsfeld fehlt: {{field}}."
     }
   }
 }

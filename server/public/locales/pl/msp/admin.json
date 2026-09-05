@@ -630,5 +630,35 @@
       "error": "Błąd",
       "metadata": "Metadane"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Diagnostyka dostarczania Gmaila",
+    "description": "Sprawdza temat Pub/Sub, jego uprawnienia, punkt końcowy push wraz z odbiorcą tokenu, obserwację Gmaila oraz moment odebrania ostatniego powiadomienia push.",
+    "labels": {
+      "provider": "Dostawca:",
+      "mailbox": "Skrzynka pocztowa:",
+      "overall": "Ogólnie:",
+      "recommendations": "Zalecenia",
+      "error": "Błąd"
+    },
+    "audienceMismatch": {
+      "title": "Odbiorca tokenu push nie pasuje do tej instancji",
+      "expected": "Oczekiwano:",
+      "actual": "Google używa:"
+    },
+    "actions": {
+      "copySupportBundle": "Kopiuj pakiet wsparcia",
+      "copied": "Skopiowano"
+    },
+    "states": {
+      "running": "Uruchamianie diagnostyki...",
+      "diagnosticsFailed": "Diagnostyka nie powiodła się"
+    },
+    "statuses": {
+      "pass": "Zaliczono",
+      "warn": "Ostrzeżenie",
+      "fail": "Niepowodzenie",
+      "skip": "Pominięto"
+    }
   }
 }

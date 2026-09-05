@@ -104,9 +104,7 @@ export default function DocumentListView({
                     rangeSelect.handleSelect(doc.document_id, {
                       shiftKey: event.shiftKey,
                       selected: !isChecked,
-                      preventDefault: () => event.preventDefault(),
                     });
-                    event.preventDefault();
                   }}
                   onChange={() => { /* controlled via onClick for shift-range support */ }}
                 />
@@ -150,7 +148,7 @@ export default function DocumentListView({
                       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
                         doc.is_client_visible
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
-                          : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-400))]'
+                          : 'bg-gray-100 text-gray-700 dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-600))]'
                       }`}
                     >
                       {doc.is_client_visible

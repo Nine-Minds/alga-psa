@@ -47,23 +47,23 @@ function transferActionErrorFrom(error: unknown): TransferActionError | null {
 
     switch (error.message) {
       case 'from_location_id and to_location_id are required':
-        return actionError('Choose both a source location and a destination location.');
+        return actionError('Choose both a source location and a destination location.', 'features/inventory:errors.transfers.locationsRequired');
       case 'Transfer source and destination must differ':
-        return actionError('Choose different source and destination locations.');
+        return actionError('Choose different source and destination locations.', 'features/inventory:errors.shared.sameSourceAndDestination');
       case 'A transfer requires at least one line':
-        return actionError('Add at least one transfer line.');
+        return actionError('Add at least one transfer line.', 'features/inventory:errors.transfers.lineRequired');
       case 'Each transfer line requires a service_id':
-        return actionError('Each transfer line needs a product or service.');
+        return actionError('Each transfer line needs a product or service.', 'features/inventory:errors.transfers.productRequired');
       case 'Transfer line quantity must be positive':
-        return actionError('Transfer line quantity must be greater than zero.');
+        return actionError('Transfer line quantity must be greater than zero.', 'features/inventory:errors.transfers.quantityPositive');
       case 'Stock unit does not match line service_id':
-        return actionError('The selected stock unit does not match the transfer line product.');
+        return actionError('The selected stock unit does not match the transfer line product.', 'features/inventory:errors.transfers.unitProductMismatch');
       case 'Only in_stock units can be transferred':
-        return actionError('Only units currently in stock can be transferred.');
+        return actionError('Only units currently in stock can be transferred.', 'features/inventory:errors.transfers.unitNotInStock');
       case 'Stock unit is not at the transfer source location':
-        return actionError('The selected stock unit is not at the source location.');
+        return actionError('The selected stock unit is not at the source location.', 'features/inventory:errors.transfers.unitNotAtSource');
       case 'Transfer not found':
-        return actionError('Transfer not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Transfer not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.transfers.notFound');
       default:
         if (
           error.message.startsWith('Stock unit ') ||
@@ -78,10 +78,10 @@ function transferActionErrorFrom(error: unknown): TransferActionError | null {
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected transfer records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected transfer records is no longer valid. Please refresh and try again.', 'features/inventory:errors.transfers.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This transfer conflicts with an existing record. Please refresh and try again.');
+    return actionError('This transfer conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.transfers.conflict');
   }
 
   return null;

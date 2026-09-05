@@ -5,7 +5,7 @@ export interface SsoProviderOption {
   configured: boolean;
 }
 
-export async function getSsoProviderOptions(): Promise<SsoProviderOption[]> {
+export async function getSsoProviderOptions(_tenantId?: string): Promise<SsoProviderOption[]> {
   return [
     {
       id: 'google',

@@ -118,14 +118,14 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
                 value={phaseName}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPhaseName(e.target.value)}
                 placeholder={t('projectPhases.phaseNamePlaceholder', 'Phase name... *')}
-                className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500 text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-destructive' : 'border-gray-300'}`}
+                className={`w-full px-3 py-3 border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] text-lg font-semibold ${hasAttemptedSubmit && !phaseName.trim() ? 'border-destructive' : 'border-gray-300'}`}
                 rows={1}
               />
               <TextArea
                 value={description}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDescription(e.target.value)}
                 placeholder={t('projectPhases.descriptionPlaceholder', 'Description')}
-                className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="w-full p-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]"
                 rows={3}
               />
               <div className="grid grid-cols-2 gap-4">

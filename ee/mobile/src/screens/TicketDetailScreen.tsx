@@ -1,6 +1,5 @@
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Linking, Platform, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { RootStackParamList } from "../navigation/types";
 import { useTheme } from "../ui/ThemeContext";
@@ -14,7 +13,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useNetworkStatus } from "../network/useNetworkStatus";
 import { isOffline as isOfflineStatus } from "../network/isOffline";
 import { useToast } from "../ui/toast/ToastProvider";
-import { Badge } from "../ui/components/Badge";
 import { Avatar } from "../ui/components/Avatar";
 import { formatDateTimeWithRelative } from "../ui/formatters/dateTime";
 import type { TicketRichTextQaScenario } from "../qa/ticketRichTextQa";
@@ -32,20 +30,28 @@ import { useTicketAssignment } from "../features/ticketDetail/hooks/useTicketAss
 import { useTicketTitle } from "../features/ticketDetail/hooks/useTicketTitle";
 import { useTicketContact } from "../features/ticketDetail/hooks/useTicketContact";
 import { useTicketTags } from "../features/ticketDetail/hooks/useTicketTags";
+import { useTicketChecklist } from "../features/ticketDetail/hooks/useTicketChecklist";
 import { useTicketQa } from "../features/ticketDetail/hooks/useTicketQa";
 
 // Components
 import { ActionChip } from "../features/ticketDetail/components/ActionChip";
 import { KeyValue } from "../features/ticketDetail/components/KeyValue";
-import { TicketActions } from "../features/ticketDetail/components/TicketActions";
+import { TicketMetaBar } from "../features/ticketDetail/components/TicketMetaBar";
+import { MoreActionsSheet } from "../features/ticketDetail/components/MoreActionsSheet";
 import { DueDateModal } from "../features/ticketDetail/components/DueDateModal";
 import { TimeEntryModal } from "../features/ticketDetail/components/TimeEntryModal";
 import { PriorityPickerModal } from "../features/ticketDetail/components/PriorityPickerModal";
 import { StatusPickerModal } from "../features/ticketDetail/components/StatusPickerModal";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { ContactPickerModal } from "../features/ticketDetail/components/ContactPickerModal";
+import {
+  activeTicketNotificationSuppression,
+  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
+  TicketUpdateFooter,
+} from "../features/ticketDetail/components/TicketUpdateFooter";
 import { TagsSection } from "../features/ticketDetail/components/TagsSection";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
+import { ChecklistSection } from "../features/ticketDetail/components/ChecklistSection";
 import { TicketTimerChip } from "../features/timer/components/TicketTimerChip";
 import { useTimer } from "../features/timer/TimerContext";
 
@@ -66,6 +72,7 @@ import { DocumentsSection } from "../features/ticketDetail/components/DocumentsS
 import { MaterialsSection } from "../features/ticketDetail/components/MaterialsSection";
 import { AssetsSection } from "../features/ticketDetail/components/AssetsSection";
 import { TimeEntriesSection } from "../features/ticketDetail/components/TimeEntriesSection";
+import { TicketDetailsSection } from "../features/ticketDetail/components/TicketDetailsSection";
 
 type Props = NativeStackScreenProps<RootStackParamList, "TicketDetail">;
 
@@ -116,6 +123,8 @@ export function TicketDetailBody({
   const network = useNetworkStatus();
   const isOffline = isOfflineStatus(network);
   const scrollRef = useRef<ScrollView>(null);
+  const sectionsYRef = useRef(0);
+  const checklistYRef = useRef(0);
 
   const imageAuth = useMemo(() => {
     if (!config.ok || !session) return undefined;
@@ -181,8 +190,17 @@ export function TicketDetailBody({
 
   const commentDraftHook = useCommentDraft({ ...deps, isOffline, fetchTicket, fetchComments, setComments });
   const descEditor = useDescriptionEditor({ ...deps, ticket, setTicket: ticketData.setTicket });
+  const checklistHook = useTicketChecklist(deps);
   const boardId = ticket?.board_id as string | undefined;
-  const statusHook = useTicketStatus({ ...deps, fetchTicket, boardId });
+  const statusHook = useTicketStatus({
+    ...deps,
+    fetchTicket,
+    boardId,
+    onChecklistBlocked: () => {
+      void checklistHook.fetchChecklist();
+      scrollRef.current?.scrollTo({ y: Math.max(0, sectionsYRef.current + checklistYRef.current - spacing.md), animated: true });
+    },
+  });
   const priorityHook = useTicketPriority({ ...deps, fetchTicket });
   const dueDateHook = useTicketDueDate({ ...deps, ticket, fetchTicket });
   const watchHook = useTicketWatch({ ...deps, ticket, fetchTicket });
@@ -222,7 +240,9 @@ export function TicketDetailBody({
     }
   }, [ticket?.ticket_number, navigation]);
 
-  const [composerCollapsed, setComposerCollapsed] = useState(false);
+  const [composerCollapsed, setComposerCollapsed] = useState(true);
+  const [moreActionsOpen, setMoreActionsOpen] = useState(false);
+  const [titleSuppression, setTitleSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
 
   const renderEntityValue = useCallback((name: string | null | undefined, imageUri: string | null | undefined, accessibilityLabel: string) => (
     <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.sm }}>
@@ -265,7 +285,6 @@ export function TicketDetailBody({
 
   const meUserId = session.user?.id;
   const isWatching = meUserId ? getWatcherUserIds(ticket).includes(meUserId) : false;
-  const isAssignedToMe = Boolean(meUserId && ticket.assigned_to && ticket.assigned_to === meUserId);
 
   // --- Render ---
   return (
@@ -274,7 +293,10 @@ export function TicketDetailBody({
         ref={scrollRef}
         style={{ flex: 1, backgroundColor: colors.background }}
         contentContainerStyle={{ padding: spacing.lg }}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+        refreshControl={<RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => { void Promise.all([refresh(), tagsHook.fetchTags(), checklistHook.fetchChecklist()]); }}
+        />}
         keyboardShouldPersistTaps="handled"
       >
         {error ? (
@@ -335,7 +357,7 @@ export function TicketDetailBody({
         </Text>
         {titleHook.titleEditing ? (
           <View style={{ marginTop: 2 }}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: spacing.xs }}>
+            <View>
               <TextInput
                 value={titleHook.titleDraft}
                 onChangeText={titleHook.setTitleDraft}
@@ -352,103 +374,99 @@ export function TicketDetailBody({
                   paddingVertical: spacing.xs,
                   backgroundColor: colors.card,
                 }}
-                onSubmitEditing={() => void titleHook.saveTitle()}
+                returnKeyType="done"
               />
-              <Pressable
-                onPress={titleHook.cancelTitleEditing}
-                disabled={titleHook.titleSaving}
-                accessibilityRole="button"
-                accessibilityLabel={t("common:cancel")}
-                style={{ padding: spacing.xs, opacity: titleHook.titleSaving ? 0.4 : 1 }}
-              >
-                <Feather name="x" size={22} color={colors.textSecondary} />
-              </Pressable>
-              <Pressable
-                onPress={() => void titleHook.saveTitle()}
-                disabled={titleHook.titleSaving}
-                accessibilityRole="button"
-                accessibilityLabel={t("common:save")}
-                style={{ padding: spacing.xs, opacity: titleHook.titleSaving ? 0.4 : 1 }}
-              >
-                {titleHook.titleSaving ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Feather name="check" size={22} color={colors.primary} />
-                )}
-              </Pressable>
             </View>
             {titleHook.titleError ? (
               <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.xs }}>
                 {titleHook.titleError}
               </Text>
             ) : null}
+            <TicketUpdateFooter
+              suppression={titleSuppression}
+              onSuppressionChange={setTitleSuppression}
+              onCancel={() => {
+                titleHook.cancelTitleEditing();
+                setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+              }}
+              onApply={() => {
+                void titleHook.saveTitle(activeTicketNotificationSuppression(titleSuppression)).then((saved) => {
+                  if (saved) setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+                });
+              }}
+              applyLabel={t("detail.saveTitle", "Save title")}
+              applyDisabled={!titleHook.titleDraft.trim() || titleHook.titleDraft.trim() === ticket.title}
+              busy={titleHook.titleSaving}
+            />
           </View>
         ) : (
-          <Pressable onPress={titleHook.startTitleEditing} accessibilityRole="button" accessibilityLabel={t("detail.editTitle")}>
+          <Pressable
+            onPress={() => {
+              setTitleSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+              titleHook.startTitleEditing();
+            }}
+            accessibilityRole="button"
+            accessibilityLabel={t("detail.editTitle")}
+          >
             <Text accessibilityRole="header" style={{ ...typography.title, marginTop: 2, color: colors.text }}>
               {ticket.title}
             </Text>
           </Pressable>
         )}
 
-        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md }}>
-          <Badge label={statusLabel} tone={ticket.status_is_closed ? "neutral" : "info"} />
-          {ticket.priority_name ? <View style={{ width: spacing.sm }} /> : null}
-          {ticket.priority_name ? <Badge label={ticket.priority_name} tone="warning" /> : null}
-        </View>
-
-        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.sm, gap: spacing.sm }}>
-          <TicketTimerChip ticketId={ticketId} />
-          <ActionChip
-            label={t("detail.changeStatus")}
-            onPress={() => { void statusHook.openStatusPicker(); }}
-          />
-          <ActionChip
-            label={t("detail.changePriority")}
-            onPress={() => { void priorityHook.openPriorityPicker(); }}
-          />
-          <ActionChip
-            label={t("detail.dueDate")}
-            onPress={() => {
+        <View style={{ marginTop: spacing.sm }}>
+          <TicketMetaBar
+            statusLabel={statusLabel}
+            statusIsClosed={Boolean(ticket.status_is_closed)}
+            priorityName={ticket.priority_name ?? null}
+            assignedToName={ticket.assigned_to_name ?? null}
+            dueDateIso={getDueDateIso(ticket)}
+            assigneeDisabled={assignmentHook.assignmentUpdating}
+            onStatusPress={() => { void statusHook.openStatusPicker(); }}
+            onPriorityPress={() => { void priorityHook.openPriorityPicker(); }}
+            onAssigneePress={assignmentHook.openAgentPicker}
+            onDuePress={() => {
               dueDateHook.setDueDateDraft(isoToDateInput(getDueDateIso(ticket)) ?? "");
               dueDateHook.setDueDateOpen(true);
             }}
           />
-          <ActionChip
-            label={isWatching ? t("detail.unwatch") : t("detail.watch")}
-            loading={watchHook.watchUpdating}
-            disabled={!meUserId}
-            onPress={() => { void watchHook.toggleWatch(); }}
+        </View>
+
+        <View style={{ marginTop: spacing.md }}>
+          <DescriptionSection
+            ticket={ticket}
+            isEditing={descEditor.descriptionEditing}
+            draftContent={descEditor.descriptionDraft}
+            draftPlainText={descEditor.descriptionPlainText}
+            saving={descEditor.descriptionSaving}
+            error={descEditor.descriptionError}
+            editorRef={descEditor.descriptionEditorRef}
+            onLinkPress={qaHook.handleRichTextLinkPress}
+            qaAutoPressFirstLink={qaHook.qaAutoPressLink}
+            imageAuth={imageAuth}
+            onStartEditing={descEditor.startDescriptionEditing}
+            onCancelEditing={descEditor.cancelDescriptionEditing}
+            onSave={(notificationSuppression) => descEditor.saveDescription(notificationSuppression)}
+            onMentionSearch={handleMentionSearch}
+            mentionBaseUrl={config.ok ? config.baseUrl : null}
+            mentionAuthToken={session?.accessToken}
+            onDraftChange={(nextContent, nextPlainText) => {
+              descEditor.setDescriptionDraft(nextContent);
+              descEditor.setDescriptionPlainText(nextPlainText);
+            }}
           />
+        </View>
+
+        <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: spacing.md, gap: spacing.sm }}>
+          <TicketTimerChip ticketId={ticketId} />
           <ActionChip
             label={t("detail.addTime")}
             onPress={() => { timeEntryHook.openTimeEntryModal(); }}
           />
           <ActionChip
-            label={
-              assignmentHook.assignmentUpdating && assignmentHook.assignmentAction === "assign"
-                ? t("detail.assigning")
-                : isAssignedToMe
-                  ? t("detail.assignedToMe")
-                  : t("detail.assignToMe")
-            }
-            loading={assignmentHook.assignmentUpdating && assignmentHook.assignmentAction === "assign"}
-            disabled={assignmentHook.assignmentUpdating || isAssignedToMe}
-            onPress={() => { void assignmentHook.assignToMe(); }}
+            label={t("detail.more", { defaultValue: "More" })}
+            onPress={() => setMoreActionsOpen(true)}
           />
-          <ActionChip
-            label={t("detail.reassign")}
-            disabled={assignmentHook.assignmentUpdating}
-            onPress={assignmentHook.openAgentPicker}
-          />
-          {ticket.assigned_to_name ? (
-            <ActionChip
-              label={assignmentHook.assignmentUpdating && assignmentHook.assignmentAction === "unassign" ? t("detail.unassigning") : t("detail.unassign")}
-              loading={assignmentHook.assignmentUpdating && assignmentHook.assignmentAction === "unassign"}
-              disabled={assignmentHook.assignmentUpdating}
-              onPress={() => { void assignmentHook.unassign(); }}
-            />
-          ) : null}
         </View>
 
         {watchHook.watchError ? (
@@ -463,34 +481,76 @@ export function TicketDetailBody({
           </Text>
         ) : null}
 
-        <TicketActions
-          baseUrl={config.ok ? config.baseUrl : null}
-          ticketId={ticket.ticket_id}
-          ticketNumber={ticket.ticket_number}
-        />
-
-        {ticket.assigned_to_name ? (
-          <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.text }}>
-            {t("detail.assignedTo", { name: ticket.assigned_to_name })}
-          </Text>
-        ) : (
-          <Text style={{ ...typography.body, marginTop: spacing.md, color: colors.textSecondary }}>
-            {t("detail.unassigned")}
-          </Text>
-        )}
-
-        <View style={{ marginTop: spacing.lg }}>
-          <TagsSection
-            tags={tagsHook.tags}
-            loading={tagsHook.tagsLoading}
-            hidden={tagsHook.tagsHidden}
-            error={tagsHook.tagsError}
-            actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
-            updating={tagsHook.tagUpdating}
-            onAddPress={tagsHook.openTagPicker}
-            onRemoveTag={(tag) => { void tagsHook.removeTag(tag); }}
+        <View
+          style={{ marginTop: spacing.lg }}
+          onLayout={(event) => { sectionsYRef.current = event.nativeEvent.layout.y; }}
+        >
+          <View onLayout={(event) => { checklistYRef.current = event.nativeEvent.layout.y; }}>
+            <ChecklistSection
+              items={checklistHook.items}
+              loading={checklistHook.loading}
+              hidden={checklistHook.hidden}
+              error={checklistHook.error}
+              actionError={checklistHook.actionError}
+              adding={checklistHook.adding}
+              updatingIds={checklistHook.updatingIds}
+              onAdd={checklistHook.addItem}
+              onToggle={(item) => { void checklistHook.toggleItem(item); }}
+              initiallyCollapsed
+            />
+          </View>
+          <View style={{ height: spacing.sm }} />
+          <CommentsSection
+            comments={comments}
+            visibleCount={commentDraftHook.commentsVisibleCount}
+            onLoadMore={() => commentDraftHook.setCommentsVisibleCount((c) => c + 20)}
+            error={commentsError}
+            onLinkPress={qaHook.handleRichTextLinkPress}
+            imageAuth={imageAuth}
+            baseUrl={config.ok ? config.baseUrl : null}
+            ticketId={ticketId}
+            onCommentUpdated={() => void fetchComments()}
+            onSubmitReply={commentDraftHook.submitReply}
+            initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
+          <CommentComposer
+            draftContent={commentDraftHook.commentDraft}
+            draftPlainText={commentDraftHook.commentDraftPlainText}
+            isInternal={commentDraftHook.commentIsInternal}
+            onChangeIsInternal={commentDraftHook.setCommentIsInternal}
+            isResolution={commentDraftHook.commentIsResolution}
+            onChangeIsResolution={(value) => {
+              commentDraftHook.setCommentIsResolution(value);
+              if (!value) {
+                commentDraftHook.setCommentCloseStatusId(null);
+              } else if (statusHook.statusOptions.length === 0) {
+                void statusHook.openStatusPicker();
+                statusHook.setStatusPickerOpen(false);
+              }
+            }}
+            closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
+            closeStatusId={commentDraftHook.commentCloseStatusId}
+            onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
+            onSend={(notificationSuppression) => void commentDraftHook.sendComment(notificationSuppression)}
+            sending={commentDraftHook.commentSending}
+            offline={isOffline}
+            error={commentDraftHook.commentSendError}
+            editorRef={commentDraftHook.commentEditorRef}
+            onDraftChange={(nextContent, nextPlainText) => {
+              commentDraftHook.setCommentDraft(nextContent);
+              commentDraftHook.setCommentDraftPlainText(nextPlainText);
+            }}
+            collapsed={composerCollapsed}
+            onToggleCollapse={() => setComposerCollapsed((v) => !v)}
+            onMentionSearch={handleMentionSearch}
+            mentionBaseUrl={config.ok ? config.baseUrl : null}
+            mentionAuthToken={session?.accessToken}
+          />
+        </View>
+
+        <View style={{ marginTop: spacing.lg }}>
+          <TicketDetailsSection initiallyCollapsed>
           <KeyValue
             label={t("detail.contact")}
             value={renderEntityValue(
@@ -529,13 +589,6 @@ export function TicketDetailBody({
                 disabled={contactHook.contactUpdating}
                 onPress={contactHook.openContactPicker}
               />
-              {ticket.contact_name ? (
-                <ActionChip
-                  label={t("detail.removeContact")}
-                  disabled={contactHook.contactUpdating}
-                  onPress={() => { void contactHook.removeContact(); }}
-                />
-              ) : null}
             </View>
             {contactHook.contactError ? (
               <Text style={{ ...typography.caption, color: colors.danger, marginTop: spacing.sm }}>
@@ -593,74 +646,24 @@ export function TicketDetailBody({
             ) : null}
           </KeyValue>
           <View style={{ height: spacing.sm }} />
-          <DescriptionSection
-            ticket={ticket}
-            isEditing={descEditor.descriptionEditing}
-            draftContent={descEditor.descriptionDraft}
-            draftPlainText={descEditor.descriptionPlainText}
-            saving={descEditor.descriptionSaving}
-            error={descEditor.descriptionError}
-            editorRef={descEditor.descriptionEditorRef}
-            onLinkPress={qaHook.handleRichTextLinkPress}
-            qaAutoPressFirstLink={qaHook.qaAutoPressLink}
-            imageAuth={imageAuth}
-            onStartEditing={descEditor.startDescriptionEditing}
-            onCancelEditing={descEditor.cancelDescriptionEditing}
-            onSave={() => void descEditor.saveDescription()}
-            onMentionSearch={handleMentionSearch}
-            mentionBaseUrl={config.ok ? config.baseUrl : null}
-            mentionAuthToken={session?.accessToken}
-            onDraftChange={(nextContent, nextPlainText) => {
-              descEditor.setDescriptionDraft(nextContent);
-              descEditor.setDescriptionPlainText(nextPlainText);
-            }}
-          />
+          <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
           <View style={{ height: spacing.sm }} />
-          <CommentsSection
-            comments={comments}
-            visibleCount={commentDraftHook.commentsVisibleCount}
-            onLoadMore={() => commentDraftHook.setCommentsVisibleCount((c) => c + 20)}
-            error={commentsError}
-            onLinkPress={qaHook.handleRichTextLinkPress}
-            imageAuth={imageAuth}
-            baseUrl={config.ok ? config.baseUrl : null}
-            ticketId={ticketId}
-            onCommentUpdated={() => void fetchComments()}
-            onSubmitReply={commentDraftHook.submitReply}
-          />
+          <KeyValue label={t("detail.updated")} value={formatDateTimeWithRelative(ticket.updated_at)} />
           <View style={{ height: spacing.sm }} />
-          <CommentComposer
-            draftContent={commentDraftHook.commentDraft}
-            draftPlainText={commentDraftHook.commentDraftPlainText}
-            isInternal={commentDraftHook.commentIsInternal}
-            onChangeIsInternal={commentDraftHook.setCommentIsInternal}
-            isResolution={commentDraftHook.commentIsResolution}
-            onChangeIsResolution={(value) => {
-              commentDraftHook.setCommentIsResolution(value);
-              if (!value) {
-                commentDraftHook.setCommentCloseStatusId(null);
-              } else if (statusHook.statusOptions.length === 0) {
-                void statusHook.openStatusPicker();
-                statusHook.setStatusPickerOpen(false);
-              }
-            }}
-            closedStatuses={statusHook.statusOptions.filter((s) => s.is_closed)}
-            closeStatusId={commentDraftHook.commentCloseStatusId}
-            onChangeCloseStatusId={commentDraftHook.setCommentCloseStatusId}
-            onSend={() => void commentDraftHook.sendComment()}
-            sending={commentDraftHook.commentSending}
-            offline={isOffline}
-            error={commentDraftHook.commentSendError}
-            editorRef={commentDraftHook.commentEditorRef}
-            onDraftChange={(nextContent, nextPlainText) => {
-              commentDraftHook.setCommentDraft(nextContent);
-              commentDraftHook.setCommentDraftPlainText(nextPlainText);
-            }}
-            collapsed={composerCollapsed}
-            onToggleCollapse={() => setComposerCollapsed((v) => !v)}
-            onMentionSearch={handleMentionSearch}
-            mentionBaseUrl={config.ok ? config.baseUrl : null}
-            mentionAuthToken={session?.accessToken}
+          <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
+          <View style={{ height: spacing.sm }} />
+          <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
+          </TicketDetailsSection>
+          <View style={{ height: spacing.sm }} />
+          <TagsSection
+            tags={tagsHook.tags}
+            loading={tagsHook.tagsLoading}
+            hidden={tagsHook.tagsHidden}
+            error={tagsHook.tagsError}
+            actionError={tagsHook.tagPickerOpen ? null : tagsHook.tagActionError}
+            updating={tagsHook.tagUpdating}
+            onAddPress={tagsHook.openTagPicker}
+            initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
           <DocumentsSection
@@ -668,18 +671,21 @@ export function TicketDetailBody({
             apiKey={session.accessToken}
             ticketId={ticketId}
             baseUrl={config.ok ? config.baseUrl : null}
+            initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
           <MaterialsSection
             client={client}
             apiKey={session.accessToken}
             ticketId={ticketId}
+            initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
           <AssetsSection
             client={client}
             apiKey={session.accessToken}
             ticketId={ticketId}
+            initiallyCollapsed
           />
           <View style={{ height: spacing.sm }} />
           <TimeEntriesSection
@@ -689,26 +695,29 @@ export function TicketDetailBody({
             refreshKey={timeEntriesRefreshKey}
             meUserId={meUserId}
             onAddPress={() => { timeEntryHook.openTimeEntryModal(); }}
+            initiallyCollapsed
           />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.created")} value={formatDateTimeWithRelative(ticket.entered_at)} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.updated")} value={formatDateTimeWithRelative(ticket.updated_at)} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.due")} value={formatDateTimeWithRelative(getDueDateIso(ticket))} />
-          <View style={{ height: spacing.sm }} />
-          <KeyValue label={t("detail.closed")} value={formatDateTimeWithRelative(ticket.closed_at)} />
         </View>
       </ScrollView>
+
+      <MoreActionsSheet
+        visible={moreActionsOpen}
+        onClose={() => setMoreActionsOpen(false)}
+        baseUrl={config.ok ? config.baseUrl : null}
+        ticketId={ticket.ticket_id}
+        ticketNumber={ticket.ticket_number}
+        isWatching={isWatching}
+        watchUpdating={watchHook.watchUpdating}
+        watchDisabled={!meUserId}
+        onToggleWatch={() => { void watchHook.toggleWatch(); }}
+      />
 
       <DueDateModal
         visible={dueDateHook.dueDateOpen}
         currentDueDateIso={getDueDateIso(ticket)}
         updating={dueDateHook.dueDateUpdating}
         error={dueDateHook.dueDateError}
-        onClear={() => void dueDateHook.submitDueDateIso(null)}
-        onSave={(iso) => void dueDateHook.submitDueDateIso(iso)}
-        onSetInDays={(days) => void dueDateHook.setDueDateInDays(days)}
+        onSave={(iso, notificationSuppression) => void dueDateHook.submitDueDateIso(iso, notificationSuppression)}
         onClose={() => dueDateHook.setDueDateOpen(false)}
       />
 
@@ -740,7 +749,7 @@ export function TicketDetailBody({
         currentPriorityId={ticket.priority_id ?? null}
         updating={priorityHook.priorityUpdating}
         updateError={priorityHook.priorityUpdateError}
-        onSelect={(id) => void priorityHook.submitPriority(id)}
+        onApply={(id, notificationSuppression) => void priorityHook.submitPriority(id, notificationSuppression)}
         onClose={() => priorityHook.setPriorityPickerOpen(false)}
       />
 
@@ -749,10 +758,10 @@ export function TicketDetailBody({
         loading={statusHook.statusOptionsLoading}
         error={statusHook.statusOptionsError}
         statuses={statusHook.statusOptions}
-        currentStatusId={statusHook.pendingStatusId ?? ticket.status_id ?? null}
+        currentStatusId={ticket.status_id ?? null}
         updating={statusHook.statusUpdating}
         updateError={statusHook.statusUpdateError}
-        onSelect={(id) => void statusHook.submitStatus(id)}
+        onApply={(id, notificationSuppression) => void statusHook.submitStatus(id, notificationSuppression)}
         onClose={() => statusHook.setStatusPickerOpen(false)}
       />
 
@@ -760,9 +769,14 @@ export function TicketDetailBody({
         visible={assignmentHook.agentPickerOpen}
         updating={assignmentHook.assignmentUpdating}
         updateError={assignmentHook.assignmentError}
+        currentAssignedToId={ticket.assigned_to}
         currentAssignedToName={ticket.assigned_to_name}
-        onSelect={(userId) => { void assignmentHook.assignToUser(userId); }}
-        onUnassign={() => { void assignmentHook.unassign(); assignmentHook.closeAgentPicker(); }}
+        onApply={(userId, notificationSuppression) => {
+          if (userId) void assignmentHook.assignToUser(userId, notificationSuppression);
+          else void assignmentHook.unassign(notificationSuppression).then((updated) => {
+            if (updated) assignmentHook.closeAgentPicker();
+          });
+        }}
         onClose={assignmentHook.closeAgentPicker}
         client={client}
         apiKey={session?.accessToken ?? ""}
@@ -774,7 +788,7 @@ export function TicketDetailBody({
         updating={tagsHook.tagUpdating}
         updateError={tagsHook.tagActionError}
         appliedTagTexts={tagsHook.tags.map((tag) => tag.tag_text)}
-        onSelect={(tagText) => { void tagsHook.selectTag(tagText); }}
+        onApply={(tagTexts) => { void tagsHook.applyTags(tagTexts); }}
         onClose={tagsHook.closeTagPicker}
         client={client}
         apiKey={session?.accessToken ?? ""}
@@ -784,10 +798,13 @@ export function TicketDetailBody({
         visible={contactHook.contactPickerOpen}
         updating={contactHook.contactUpdating}
         updateError={contactHook.contactError}
+        currentContactId={(ticket as Record<string, unknown>).contact_name_id as string | null | undefined}
         currentContactName={ticket.contact_name}
         clientId={(ticket as Record<string, unknown>).client_id as string | null | undefined}
-        onSelect={(contactNameId) => { void contactHook.selectContact(contactNameId); }}
-        onRemove={() => { void contactHook.removeContact(); }}
+        onApply={(contactNameId, notificationSuppression) => {
+          if (contactNameId) void contactHook.selectContact(contactNameId, notificationSuppression);
+          else void contactHook.removeContact(notificationSuppression);
+        }}
         onClose={contactHook.closeContactPicker}
         client={client}
         apiKey={session?.accessToken ?? ""}

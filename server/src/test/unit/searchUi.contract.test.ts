@@ -390,4 +390,14 @@ describe('app-wide search UI contracts', () => {
 
     expect(humanize('service_request_submission')).toBe('Service request submission');
   });
+
+  it('keeps the sidebar search hint on the sidebar palette', () => {
+    const paletteSource = readFileSync(resolve(process.cwd(), 'src/components/search/SearchPalette.tsx'), 'utf8');
+    const globalsSource = readFileSync(resolve(process.cwd(), 'src/app/globals.css'), 'utf8');
+
+    expect(paletteSource).toContain('app-sidebar-search-input');
+    expect(paletteSource).toContain('text-sidebar-icon');
+    expect(globalsSource).toContain('.app-sidebar-search-input::placeholder {');
+    expect(globalsSource).toContain('color: rgb(var(--color-sidebar-icon)) !important;');
+  });
 });

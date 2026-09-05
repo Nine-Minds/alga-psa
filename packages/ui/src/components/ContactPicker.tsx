@@ -244,7 +244,7 @@ export const ContactPicker = ({
       >
         <div
           ref={dropdownContentRef}
-          className="fixed z-[9999] overflow-hidden bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] pointer-events-auto"
+          className="fixed z-[9999] overflow-hidden bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] pointer-events-auto"
           style={{
             top: `${dropdownCoords.top}px`,
             left: `${dropdownCoords.left}px`,
@@ -257,7 +257,7 @@ export const ContactPicker = ({
           data-radix-popper-content-wrapper=""
         >
           {/* Search Input Container */}
-          <div className="p-2 border-b border-gray-200">
+          <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
             <div className="relative">
               <Input
                 ref={searchInputRef}
@@ -269,7 +269,7 @@ export const ContactPicker = ({
                   setSearchTerm(e.target.value);
                 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+                className="w-full px-3 py-2 pl-9 text-sm border border-[rgb(var(--color-border-200))] rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
                 autoComplete="off"
                 autoFocus
               />
@@ -290,7 +290,7 @@ export const ContactPicker = ({
               label="None"
               selected={value === ''}
               onSelect={() => handleSelect('')}
-              className="relative flex w-full items-center px-3 py-2 text-left text-sm rounded text-gray-700 cursor-pointer hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
+              className="relative flex w-full items-center px-3 py-2 text-left text-sm rounded text-gray-700 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset"
             >
               None
             </ContactOptionButton>
@@ -308,11 +308,11 @@ export const ContactPicker = ({
                   onSelect={() => handleSelect(contact.contact_name_id)}
                   className={`
                     relative flex w-full items-center justify-between px-3 py-2 text-left text-sm rounded cursor-pointer
-                    hover:bg-gray-100 focus:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
+                    hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-inset
                     ${contact.is_inactive
-                      ? 'text-gray-400 bg-gray-50'
+                      ? 'text-gray-400 bg-[rgb(var(--color-border-100))]'
                       : contact.contact_name_id === value
-                        ? 'bg-gray-100 font-medium text-gray-900'
+                        ? 'bg-[rgb(var(--color-table-selected))] font-medium text-gray-900'
                         : 'text-gray-900'
                       }
                   `}
@@ -336,7 +336,7 @@ export const ContactPicker = ({
           </div>
           {onAddNew && (
             <>
-              <div className="border-t border-gray-200" />
+              <div className="border-t border-[rgb(var(--color-border-200))]" />
               <Button
                 id="contact-picker-add-new-btn"
                 type="button"
@@ -451,7 +451,7 @@ export const ContactPicker = ({
               inline-flex items-center justify-between
               rounded-lg p-2 h-10
               text-sm font-medium transition-colors
-              bg-white cursor-pointer
+              bg-[rgb(var(--color-card))] cursor-pointer
               border border-[rgb(var(--color-border-400))] text-[rgb(var(--color-text-700))]
               hover:bg-[rgb(var(--color-primary-50))] hover:text-[rgb(var(--color-primary-700))]
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2

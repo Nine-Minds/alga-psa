@@ -1,0 +1,50 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed integration: create a client with no email via the create action succeeds and persists email = NULL (happy path).",
+    "implemented": false,
+    "featureIds": ["F004", "F010"]
+  },
+  {
+    "id": "T002",
+    "description": "DB-backed integration: update an existing client to clear its email; row persists NULL and read-back succeeds without error.",
+    "implemented": false,
+    "featureIds": ["F005", "F008", "F010"]
+  },
+  {
+    "id": "T003",
+    "description": "Guard: create/update action rejects a supplied-but-malformed email with a validation error (email format still enforced when present).",
+    "implemented": false,
+    "featureIds": ["F006", "F003"]
+  },
+  {
+    "id": "T004",
+    "description": "REST parity: createClientSchema/updateClientSchema parse a payload with no email, and reject an invalid email string.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T005",
+    "description": "Representation: ClientSchema parses a client record whose email is null/absent without throwing.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  },
+  {
+    "id": "T006",
+    "description": "UI smoke: Quick Add / Create Client submits with blank email (no required marker, no submit block); entering an invalid email shows inline error.",
+    "implemented": false,
+    "featureIds": ["F001", "F003"]
+  },
+  {
+    "id": "T007",
+    "description": "UI smoke: Client Details edit clears an existing email and saves successfully.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T008",
+    "description": "OpenAPI check: client email is not in the required list for ClientBody; SDK/type generation builds clean.",
+    "implemented": false,
+    "featureIds": ["F009"]
+  }
+]

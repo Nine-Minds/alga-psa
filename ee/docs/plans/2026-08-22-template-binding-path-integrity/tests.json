@@ -1,0 +1,284 @@
+[
+  {
+    "id": "T001",
+    "description": "buildPickerOptionsFromBindings maps a binding catalog entry {id:'quoteNumber', path:'quote_number'} to an option whose display path is quote.quoteNumber and whose resolved path is quote_number.",
+    "implemented": false,
+    "featureIds": ["F002"]
+  },
+  {
+    "id": "T002",
+    "description": "buildPickerOptionsFromBindings groups options under the correct category root for quote, quoteTotals, client, contact, tenant and item.",
+    "implemented": false,
+    "featureIds": ["F002", "F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Quote context roots generated from the catalog contain exactly the value bindings in QUOTE_TEMPLATE_VALUE_BINDINGS, with no extra or missing ids.",
+    "implemented": false,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T004",
+    "description": "Sales-order context roots contain exactly the sales-order catalog bindings, including the previously absent salesOrder.* set.",
+    "implemented": false,
+    "featureIds": ["F001", "F004"]
+  },
+  {
+    "id": "T005",
+    "description": "Invoice context roots after generation match the pre-change option set exactly, minus invoice.discount (regression guard for the one healthy document type).",
+    "implemented": false,
+    "featureIds": ["F005", "F020"]
+  },
+  {
+    "id": "T006",
+    "description": "createQuoteRootSchema, createQuoteTotalsSchema and createSalesOrderRootSchema no longer exist in invoiceContextAdapter.ts.",
+    "implemented": false,
+    "featureIds": ["F006"]
+  },
+  {
+    "id": "T007",
+    "description": "item.* options for sales order remain snake_case (service_sku, quantity_ordered, quantity_fulfilled, unit_price, amount) and still resolve against a sample line item.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T008",
+    "description": "item.* options for invoice remain camelCase (unitPrice, servicePeriodStart, billingTiming) and still resolve against a sample WasmInvoiceLineItem.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T009",
+    "description": "Binding quote.quoteNumber on a Data Field exports bindingId 'quoteNumber' (the existing built-in) and NOT a new value.quoteNumber binding.",
+    "implemented": false,
+    "featureIds": ["F011", "F012"]
+  },
+  {
+    "id": "T010",
+    "description": "Evaluating a template with quote.quoteNumber bound returns the sample quote number rather than undefined.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T011",
+    "description": "quote.quoteDate and quote.validUntil resolve to quote_date and valid_until values.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T012",
+    "description": "quote.total resolves to total_amount, not to a nonexistent 'total' path.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T013",
+    "description": "quote.scope resolves to scope_of_work and honours the binding's empty-string fallback.",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T014",
+    "description": "All twelve quoteTotals.* options resolve to non-undefined values against a sample enriched with service and product groupings.",
+    "implemented": false,
+    "featureIds": ["F013"]
+  },
+  {
+    "id": "T015",
+    "description": "Quote tenant.name resolves to the sample tenant name and does not silently fall back to the 'Your Company' fallback.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T016",
+    "description": "Quote tenant.address resolves to the sample tenant address.",
+    "implemented": false,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T017",
+    "description": "Quote client.name and contact.name still resolve after the change (guard against regressing the fields that already worked).",
+    "implemented": false,
+    "featureIds": ["F012", "F014"]
+  },
+  {
+    "id": "T018",
+    "description": "Quote status, title, subtotal, tax and version still resolve (the coincidental passes must not break).",
+    "implemented": false,
+    "featureIds": ["F012"]
+  },
+  {
+    "id": "T019",
+    "description": "salesOrder.orderNumber binds to so_number and resolves to the sample order number.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T020",
+    "description": "salesOrder.expectedShipDate, salesOrder.orderDate and salesOrder.poNumber resolve to expected_ship_date, order_date and client_po_number.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T021",
+    "description": "salesOrder.currencyCode, status, notes, subtotal, tax and total all resolve against the sales-order sample.",
+    "implemented": false,
+    "featureIds": ["F015"]
+  },
+  {
+    "id": "T022",
+    "description": "Packing slip picker options resolve against the sales-order sample without any packing-slip-specific code.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T023",
+    "description": "Pick list picker options resolve against the sales-order sample.",
+    "implemented": false,
+    "featureIds": ["F016"]
+  },
+  {
+    "id": "T024",
+    "description": "A Text Block containing {{quote.quoteNumber}} exports a path expression naming quote_number and evaluates to the sample quote number.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T025",
+    "description": "A Text Block mixing literal text and {{quote.validUntil}} exports a template expression whose arg resolves to valid_until.",
+    "implemented": false,
+    "featureIds": ["F017"]
+  },
+  {
+    "id": "T026",
+    "description": "{{salesOrder.orderNumber}} in a Text Block resolves against the sales-order sample.",
+    "implemented": false,
+    "featureIds": ["F017", "F018"]
+  },
+  {
+    "id": "T027",
+    "description": "{{client.name}} and {{invoice.number}} still resolve after the isLikelyBindingTokenPath change (no regression to previously working tokens).",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T028",
+    "description": "A token naming a path that exists in no catalog is still treated as literal text rather than becoming a dangling binding.",
+    "implemented": false,
+    "featureIds": ["F018"]
+  },
+  {
+    "id": "T029",
+    "description": "A transform pipeline whose outputBindingId refers to a quote binding still evaluates after the normalization change.",
+    "implemented": false,
+    "featureIds": ["F019"]
+  },
+  {
+    "id": "T030",
+    "description": "invoice.discount is absent from getTemplateFieldDefinition and from the generated invoice picker options.",
+    "implemented": false,
+    "featureIds": ["F020"]
+  },
+  {
+    "id": "T031",
+    "description": "flattenInvoiceBindingMap no longer contains an 'invoice.discount' key, and resolveInvoiceBindingRawValue('invoice.discount') returns null.",
+    "implemented": false,
+    "featureIds": ["F021"]
+  },
+  {
+    "id": "T032",
+    "description": "Curated labels survive generation: customer.address still reports label 'Customer Address' and its multiline/single-line/raw display formats.",
+    "implemented": false,
+    "featureIds": ["F022"]
+  },
+  {
+    "id": "T033",
+    "description": "Quote picker label for quote.quoteNumber reads 'Quote Number', not 'Quote Quote Number'.",
+    "implemented": false,
+    "featureIds": ["F023"]
+  },
+  {
+    "id": "T034",
+    "description": "GUARD: for every document type (invoice, quote, sales-order, packing-slip, pick-list), every generated picker option binds, exports, and evaluates to a defined value against that type's sample model.",
+    "implemented": false,
+    "featureIds": ["F024"]
+  },
+  {
+    "id": "T035",
+    "description": "The guard test failure message names the document type, the option path, and the resolved path when an option fails to resolve.",
+    "implemented": false,
+    "featureIds": ["F025"]
+  },
+  {
+    "id": "T036",
+    "description": "Adding a temporary binding to the quote catalog makes a corresponding picker option appear, with no edit to any adapter or alias file.",
+    "implemented": false,
+    "featureIds": ["F026"]
+  },
+  {
+    "id": "T037",
+    "description": "ROUND TRIP: all four standard quote templates import then export with zero binding path changes.",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T038",
+    "description": "ROUND TRIP: both standard sales-order templates, the packing slip and the pick list import then export with zero binding path changes.",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T039",
+    "description": "ROUND TRIP: all standard invoice templates import then export with zero binding path changes.",
+    "implemented": false,
+    "featureIds": ["F009", "F010"]
+  },
+  {
+    "id": "T040",
+    "description": "ROUND TRIP: a template whose field was bound via the picker survives import -> export -> import with a stable bindingKey and binding id.",
+    "implemented": false,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T041",
+    "description": "A template already containing an orphaned value.quoteDate binding still imports, exports and renders without error (back-compat for the NVTS templates).",
+    "implemented": false,
+    "featureIds": ["F011", "F028"]
+  },
+  {
+    "id": "T042",
+    "description": "Re-binding a field that currently points at an orphaned value.* binding relinks it to the correct built-in binding.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T043",
+    "description": "ComponentPalette quote fields test asserts the inserted token resolves against the quote sample, not merely that onInsertTemplateVariable was called.",
+    "implemented": false,
+    "featureIds": ["F027"]
+  },
+  {
+    "id": "T044",
+    "description": "Custom path entry still works: typing a raw snake_case path binds to the matching built-in binding.",
+    "implemented": false,
+    "featureIds": ["F011"]
+  },
+  {
+    "id": "T045",
+    "description": "Table column bindings (item.* inside a repeater) resolve for quote, sales-order and invoice line items after the change.",
+    "implemented": false,
+    "featureIds": ["F007"]
+  },
+  {
+    "id": "T046",
+    "description": "resolveDesignerDocumentKind still classifies all five standard template families correctly after any binding catalog changes.",
+    "implemented": false,
+    "featureIds": ["F001", "F004"]
+  },
+  {
+    "id": "T047",
+    "description": "Every generated picker option exposes both a display path and a resolved data path, and the resolved path equals the binding catalog's path for that id.",
+    "implemented": false,
+    "featureIds": ["F008"]
+  }
+]

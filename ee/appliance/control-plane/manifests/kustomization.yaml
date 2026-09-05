@@ -4,3 +4,4 @@ resources:
   - namespace.yaml
   - rbac.yaml
   - workload.yaml
+  - support-namespace.yaml

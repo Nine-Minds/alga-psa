@@ -60,7 +60,7 @@ describe('assertCanActOnBehalf', () => {
     };
 
     vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       return action === 'approve' || action === 'read_all';
     });
 
@@ -82,7 +82,7 @@ describe('assertCanActOnBehalf', () => {
     };
 
     vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       return action === 'approve';
     });
 
@@ -115,7 +115,7 @@ describe('assertCanActOnBehalf', () => {
     };
 
     vi.mocked(hasPermission).mockImplementation(async (_user, resource, action) => {
-      if (resource !== 'timesheet') return false;
+      if (resource !== 'time_sheet') return false;
       return action === 'approve';
     });
 

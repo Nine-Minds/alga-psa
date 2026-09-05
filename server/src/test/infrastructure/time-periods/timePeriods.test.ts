@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
+import { runWithTenant, tenantDb } from '@alga-psa/db';
 import { ITimePeriodSettings, ITimePeriod } from '../../../interfaces/timeEntry.interfaces';
 import { createTimePeriod, generateAndSaveTimePeriods, generateTimePeriods, createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
 import { ISO8601String } from '../../../types/types.d';
@@ -13,7 +13,6 @@ import {
   mockRBAC
 } from '../../../../test-utils/testMocks';
 import {
-  resetDatabase,
   createCleanupHook,
   cleanupTables
 } from '../../../../test-utils/dbReset';
@@ -36,6 +35,17 @@ function tenantTable<Row extends object = Record<string, unknown>>(
   return tenantDb(context.db, context.tenantId).table<Row>(tableExpression);
 }
 
+// createTimePeriodSettings always writes the semi-monthly columns (defaulting
+// them), and every read path validates them as numbers. Fixtures that insert a
+// bare row leave NULLs behind and fail that validation, so fill them here.
+const withSettingsDefaults = <T extends object>(setting: T) => ({
+  start_month: 1,
+  start_day_of_month: 1,
+  end_month: 12,
+  end_day_of_month: 0,
+  ...setting,
+});
+
 describe('Time Periods Infrastructure', () => {
   const context = new TestContext({
     cleanupTables: ['time_entries', 'time_sheets', 'time_periods', 'time_period_settings'],
@@ -53,8 +63,11 @@ describe('Time Periods Infrastructure', () => {
   });
 
   beforeEach(async () => {
-    // Reset database state
-    await resetDatabase(context.db);
+    // Roll the per-test transaction back and open a fresh one. resetDatabase()
+    // used to run here: it destroys the handle it is given and drops the
+    // database out from under the context, so every query after the first
+    // beforeEach failed with "not queryable".
+    await context.reset();
 
     // Get tenant from context
     tenantId = context.tenantId;
@@ -89,7 +102,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: undefined
     };
 
-    await tenantTable(context, 'time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(withSettingsDefaults(setting));
 
     const timePeriodData: Omit<ITimePeriod, 'period_id'> = {
       start_date: '2023-01-01',
@@ -124,7 +137,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: 0
     };
 
-    await tenantTable(context, 'time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(withSettingsDefaults(setting));
 
     const result = await generateAndSaveTimePeriods(
       '2023-01-01',
@@ -171,7 +184,7 @@ describe('Time Periods Infrastructure', () => {
       },
     ];
 
-    await tenantTable(context, 'time_period_settings').insert(settings);
+    await tenantTable(context, 'time_period_settings').insert(settings.map(withSettingsDefaults));
 
     const result = await generateAndSaveTimePeriods(
       '2023-01-01',
@@ -206,7 +219,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: 0
     };
 
-    await tenantTable(context, 'time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(withSettingsDefaults(setting));
 
     const timePeriodData1: Omit<ITimePeriod, 'period_id'> = {
       start_date: createTestDateISO({ year: 2026, month: 1, day: 1 }),
@@ -244,7 +257,7 @@ describe('Time Periods Infrastructure', () => {
       end_day: 0
     };
 
-    await tenantTable(context, 'time_period_settings').insert(setting);
+    await tenantTable(context, 'time_period_settings').insert(withSettingsDefaults(setting));
 
     const existingPeriod: Omit<ITimePeriod, 'period_id'> = {
       start_date: '2023-01-15',
@@ -289,7 +302,7 @@ describe('Time Periods Infrastructure', () => {
       },
     ];
 
-    await tenantTable(context, 'time_period_settings').insert(settings);
+    await tenantTable(context, 'time_period_settings').insert(settings.map(withSettingsDefaults));
 
     const periods = await generateTimePeriods(
       settings,
@@ -351,7 +364,9 @@ describe('Time Periods Infrastructure', () => {
       };
       await createTimePeriod(initialPeriod);
 
-      const result = await createNextTimePeriod(settings, 7);
+      // createNextTimePeriod is a plain function, not a withAuth action: it
+      // reads the tenant from async-local context and throws without one.
+      const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 7));
 
       expect(result).not.toBeNull();
       expect(result!.tenant).toBe(tenantId);
@@ -381,7 +396,7 @@ describe('Time Periods Infrastructure', () => {
       };
       await createTimePeriod(initialPeriod);
 
-      const result = await createNextTimePeriod(settings, 5);
+      const result = await runWithTenant(tenantId, () => createNextTimePeriod(settings, 5));
 
       expect(result).toBeNull();
     });

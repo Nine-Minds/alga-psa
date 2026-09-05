@@ -99,8 +99,8 @@
   },
   "po": {
     "labels": {
-      "amount": "Valor da ordem de compra",
-      "number": "Número do pedido",
+      "amount": "Valor do pedido de compra",
+      "number": "Número do pedido de compra",
       "required": "Pedido de compra obrigatório"
     }
   },
@@ -290,7 +290,7 @@
     },
     "po": {
       "prefix": "PO",
-      "requiredForContract": "Ordem de compra necessária para este contrato."
+      "requiredForContract": "Pedido de compra obrigatório para este contrato."
     },
     "status": {
       "active": "Ativo",
@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Adicione linhas de contrato para definir o que está incluído neste contrato",
       "noContractLinesYet": "Ainda não há linhas de contrato",
       "noServicesConfigured": "Nenhum serviço configurado",
+      "billedOnRecordedUsage": "Faturado com base na utilização registada",
       "serviceCountOne": "Serviço {{count}}",
-      "serviceCountOther": "Serviços {{count}}"
+      "serviceCountOther": "Serviços {{count}}",
+      "previouslyConfiguredQuantity": "Quantidade configurada anteriormente: {{count}} — não usada para faturamento",
+      "billedOnPeriodCount": "Faturado pela contagem informada em cada período",
+      "recurringSeats": "{{count}} × {{rate}} (postos recorrentes)",
+      "bundleAllocation": "Distribuição do preço do pacote — não são postos faturáveis",
+      "setUpRecurringSeats": "Configurar postos recorrentes",
+      "reportPeriodCount": "Informar uma contagem do período"
     },
     "stats": {
       "contractLines": "Linhas de Contrato",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variável (por hora/uso)",
       "viewDetails": "Ver detalhes"
     },
-    "title": "O que está incluído"
+    "title": "O que está incluído",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configurar postos recorrentes",
+        "explanation": "Os postos recorrentes faturam quantidade × tarifa unitária em cada período sem registos de consumo, pelo que pertencem a uma linha de contrato fixa precificada por postos/unidades recorrentes — não a esta linha de consumo.",
+        "nextStep": "Vai a Linhas de contrato, adiciona (ou abre) uma linha fixa, adiciona este serviço e escolhe «Postos/unidades recorrentes»; depois confirma a quantidade e a tarifa unitária. A alteração passa a valer no próximo período de serviço não faturado; esta linha de consumo e o seu histórico mantêm-se até a removeres.",
+        "manualHandoff": "Acesse Linhas de contrato → Criar personalizada, escolha Taxa Fixa, adicione este serviço e selecione “Postos/unidades recorrentes”. Revise a quantidade, a taxa unitária e o cronograma de cobrança antes de salvar. Isso cria um compromisso recorrente separado; não converte nem encerra este serviço baseado em uso. Coordene o início dele com o fim do faturamento por uso e revise o uso pendente antes de habilitar os dois para o mesmo período."
+      },
+      "periodCount": {
+        "title": "Informar uma contagem do período",
+        "explanation": "Informar uma contagem do período muda este serviço para uma contagem substituível por período de serviço: corrigir 10 para 12 fatura 12, nunca 22, e o mínimo aplica-se uma vez. O período seguinte começa sem informação — nenhuma contagem é transportada.",
+        "nextStep": "Confirmar altera apenas a forma como este serviço é medido a partir do próximo período de serviço não faturado. Os lançamentos existentes continuam somando e nenhuma contagem é criada — depois, informe a contagem do período no Rastreamento de uso."
+      },
+      "referenceHeading": "Referência não confirmada da configuração anterior",
+      "referenceQuantity": "Quantidade configurada anteriormente: {{count}}",
+      "referenceRate": "Tarifa guardada: {{rate}}",
+      "referenceCaveat": "Estes valores nunca foram faturados. Nada aqui é guardado ou cobrado até confirmares tu próprio os valores no fluxo abaixo.",
+      "actions": {
+        "close": "Fechar",
+        "cancel": "Cancelar",
+        "switching": "A alterar…",
+        "confirmPeriodCount": "Mudar para contagens por período"
+      },
+      "errors": {
+        "missingConfiguration": "Este serviço não tem configuração guardada para converter. Atualiza e tenta novamente.",
+        "failed": "Não foi possível alterar a forma como este serviço é medido."
+      },
+      "effectiveFrom": "Alteração de medição em vigor a partir de"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -367,14 +402,14 @@
       "useTenantDefaultsLabel": "Usar padrões de renovação de locatário"
     },
     "po": {
-      "amountLabel": "Valor do pedido (opcional)",
+      "amountLabel": "Valor do pedido de compra (opcional)",
       "amountPlaceholder": "0.00",
       "comingSoon": "Integração de faturas em breve. As configurações serão salvas, mas a aplicação do pedido de compra não estará ativa até uma versão futura.",
       "noteLabel": "Observação:",
-      "numberLabel": "Número do pedido *",
+      "numberLabel": "Número do pedido de compra *",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
-      "requirePurchaseOrder": "Exigir ordem de compra",
-      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido."
+      "requirePurchaseOrder": "Exigir pedido de compra",
+      "requirePurchaseOrderTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de pedido de compra seja fornecido."
     },
     "presetDetails": {
       "defaultBaseRate": "Taxa básica padrão:",
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Nenhum serviço configurado para esta predefinição",
       "notSet": "Não definido",
       "overrideBaseRate": "Substituir taxa básica",
-      "quantity": "Quantidade",
+      "usageRecordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "quantityShort": "Quantidade: {{quantity}}",
       "ratePerUnit": "Taxa (por unidade)",
       "roundUpToNearestMinutes": "Arredondar para o mais próximo (minutos)",
@@ -470,6 +505,12 @@
       "collapseLine": "Recolher linha de contrato",
       "createCustom": "Criar personalizado",
       "expandLine": "Expandir linha de contrato"
+    },
+    "billingProfile": {
+      "hint": "Os encargos desta linha são faturados neste perfil, substituindo o contrato.",
+      "label": "Perfil de faturamento",
+      "none": "Usar o perfil do contrato",
+      "updated": "Perfil de faturamento atualizado"
     },
     "bucket": {
       "billingPeriod": "Período de cobrança: {{period}}",
@@ -553,7 +594,12 @@
       "typeLabel": "Serviço {{type}}",
       "unitOfMeasure": "Unidade de Medida",
       "unitPlaceholder": "unidade",
-      "unitRate": "Taxa unitária"
+      "unitRate": "Taxa unitária",
+      "effectiveFrom": "Alterações de postos recorrentes em vigor a partir de",
+      "prospectiveSeatHelp": "Os postos faturam quantidade × taxa unitária. As alterações se aplicam no limite deste período de serviço; as quantidades e os preços anteriores são preservados.",
+      "recurringUnits": "Postos/unidades recorrentes",
+      "semanticsEffectiveFrom": "Alterações de preços e medição do serviço em vigor a partir de",
+      "prospectiveSemanticsHelp": "As alterações se aplicam no limite deste período de serviço; as quantidades, a medição e os preços anteriores são preservados. Alterar a data recarrega as configurações aplicáveis para revisão."
     },
     "title": "Linhas de Contrato"
   },
@@ -661,7 +707,7 @@
     "title": "Adicionar linhas de contrato de predefinições",
     "usageConfig": {
       "defaultRate": "Padrão: ${{rate}}",
-      "quantity": "Quantidade",
+      "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar esses serviços.",
       "ratePerUnit": "Taxa (por unidade)",
       "unitHint": "por exemplo, GB, chamada de API, usuário",
       "unitOfMeasure": "Unidade de Medida",
@@ -686,7 +732,8 @@
       "hourlyDescription": "Faturar com base em entradas de tempo aprovadas.",
       "hourlyTitle": "De hora em hora",
       "usageDescription": "Fatura por unidades consumidas.",
-      "usageTitle": "Baseado no uso"
+      "usageTitle": "Baseado no uso",
+      "fixedSemantics": "Fature um preço de pacote ou quantidade recorrente × taxa unitária a cada período."
     },
     "billingTiming": {
       "advance": "Adiantamento (fatura no início do período)",
@@ -752,8 +799,15 @@
       "unitOfMeasureRequired": "Serviço {{index}}: Unidade de medida obrigatória",
       "unitRateRequired": "Serviço {{index}}: taxa unitária é obrigatória",
       "usageServiceRequired": "É necessário pelo menos um serviço baseado em uso",
-      "usageServiceSelectRequired": "Serviço {{index}}: Selecione um serviço"
-    }
+      "usageServiceSelectRequired": "Serviço {{index}}: Selecione um serviço",
+      "invalidQuantity": "A quantidade deve ser zero ou maior.",
+      "recurringUnitRateRequired": "Insira uma taxa unitária para cada serviço recorrente."
+    },
+    "fixedServicesPricingIntent": "Escolha um preço de pacote ou postos/unidades recorrentes para cada serviço.",
+    "fixedServicesPricingExplanation": "As alocações de pacote compartilham a taxa básica da linha. Os postos recorrentes faturam a quantidade acordada × taxa unitária a cada período, sem registros de uso.",
+    "recurringQuantity": "Quantidade recorrente",
+    "allocationQuantity": "Quantidade de alocação",
+    "bundleBaseRateHelp": "Taxa recorrente para os serviços com preço de pacote. Os postos recorrentes são faturados separadamente por quantidade × taxa unitária."
   },
   "pricingSchedules": {
     "list": {
@@ -827,7 +881,6 @@
         "editPricingSchedule": "Editar tabela de preços"
       },
       "validation": {
-        "currencySettingsLoading": "As configurações de moeda ainda estão a carregar; tente novamente num instante",
         "customRatePositive": "A taxa personalizada precisa ser um número positivo",
         "customRateRequired": "A taxa personalizada é obrigatória quando não se usa a taxa padrão",
         "durationPositive": "A duração precisa ser um número positivo",
@@ -1151,8 +1204,8 @@
         "start": "Começar",
         "end": "Fim",
         "poRequired": "Pedido de compra obrigatório",
-        "poNumber": "Número do pedido",
-        "poAmount": "Valor da ordem de compra"
+        "poNumber": "Número do pedido de compra",
+        "poAmount": "Valor do pedido de compra"
       },
       "status": {
         "active": "Ativo",
@@ -1181,7 +1234,7 @@
         "clearNames": "Use nomes de contratos claros e descritivos (por exemplo, \"Acme Corp - MSP Services Q4 2024\")",
         "endDates": "Defina datas de término para contratos por prazo determinado para rastrear datas de renovação",
         "partialPeriodAdjustment": "Use o ajuste de período parcial quando as datas do contrato cobrirem apenas parte de um período de serviço",
-        "poNumbers": "Adicione números de ordem de compra quando exigido pelas políticas de compras do cliente"
+        "poNumbers": "Adicione números de pedido de compra quando exigido pelas políticas de compras do cliente"
       },
       "title": "Melhores Práticas"
     },
@@ -1388,16 +1441,16 @@
     "heading": "Noções básicas do contrato",
     "po": {
       "amountHint": "Valor total autorizado no pedido de compra.",
-      "amountLabel": "Valor da ordem de compra",
+      "amountLabel": "Valor do pedido de compra",
       "noteLabel": "Observação:",
-      "noteText": "A aplicação da ordem de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
+      "noteText": "A exigência de pedido de compra será aplicada quando a automação de faturas estiver habilitada. Configure agora para ficar à frente.",
       "numberHint": "Número de referência do pedido de compra do cliente.",
-      "numberLabel": "Número do pedido",
+      "numberLabel": "Número do pedido de compra",
       "numberPlaceholder": "por exemplo, PO-2024-12345",
-      "requireForInvoicing": "Exigir ordem de compra para faturamento",
-      "requireHint": "Bloqueie a geração de fatura se o pedido não for fornecido.",
-      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de ordem de compra seja fornecido.",
-      "title": "Ordem de compra (opcional)"
+      "requireForInvoicing": "Exigir pedido de compra para faturamento",
+      "requireHint": "Bloqueie a geração de fatura se o pedido de compra não for fornecido.",
+      "requireTooltip": "Quando ativado, as faturas não podem ser geradas para este contrato, a menos que um número de pedido de compra seja fornecido.",
+      "title": "Pedido de compra (opcional)"
     },
     "renewal": {
       "evergreen": {
@@ -1430,9 +1483,9 @@
         "currency": "Moeda:",
         "noticePeriod": "Período de aviso prévio:",
         "period": "Período:",
-        "poAmount": "Valor da ordem de compra:",
-        "poNumber": "Número da PO:",
-        "poRequired": "PO necessário:",
+        "poAmount": "Valor do pedido de compra:",
+        "poNumber": "Número do pedido de compra:",
+        "poRequired": "Pedido de compra obrigatório:",
         "renewalMode": "Modo de renovação:",
         "renewalTerm": "Prazo de renovação:"
       },
@@ -1673,9 +1726,9 @@
     },
     "po": {
       "title": "Requisitos do pedido de compra",
-      "requiredLabel": "PO necessário:",
-      "numberLabel": "Número da PO:",
-      "amountLabel": "Valor da ordem de compra:"
+      "requiredLabel": "Pedido de compra obrigatório:",
+      "numberLabel": "Número do pedido de compra:",
+      "amountLabel": "Valor do pedido de compra:"
     },
     "bucket": {
       "includedHours": "Horas {{formattedValue}}",
@@ -2172,8 +2225,8 @@
     },
     "runBar": {
       "compareToggle": "Mostrar alterações em relação ao contrato atual",
-      "horizonOption": "{{count}} períodos de faturamento",
-      "lastRun": "Simulação atualizada · {{count}} períodos de faturamento",
+      "horizonOption": "{{count}} períodos de faturamento do cliente",
+      "lastRun": "Simulação atualizada · {{count}} períodos de faturamento do cliente",
       "neverRun": "Ainda não simulado",
       "simulate": "Simular",
       "simulating": "Simulando…",
@@ -2342,7 +2395,7 @@
       "scopeCatchAll": "Cobre todos os serviços da linha (os serviços membros substituem o multiplicador)",
       "scopeMembers": "Somente serviços membros",
       "totalHours": "Horas totais",
-      "overageRate": "Taxa de excedente ($/h)",
+      "overageRate": "Taxa de excedente por hora",
       "rollover": "Permitir transferência de saldo",
       "afterHours": "Multiplicador de consumo fora do horário",
       "afterHoursMultiplier": "Multiplicador (ex.: 1,5)",
@@ -2351,20 +2404,80 @@
       "members": "Serviços membros",
       "multiplier": "×",
       "noMembers": "Nenhum serviço membro vinculado.",
+      "noServicesOnLine": "Adicione um serviço a esta linha de contrato antes de criar um banco de horas.",
       "selectService": "Selecione um serviço…",
       "poolName": "Nome do banco (opcional)",
       "poolNamePlaceholder": "ex.: Horas padrão",
-      "coversAll": "Cobre todos os serviços desta linha"
+      "coversAll": "Cobre todos os serviços desta linha",
+      "burnMultiplier": "Multiplicador de consumo"
     },
     "badges": {
       "dormant": "nenhum serviço vinculado — nada é consumido deste banco"
     },
     "errors": {
-      "catchAllExists": "Esta linha já tem um banco abrangente."
+      "catchAllExists": "Esta linha já tem um banco abrangente.",
+      "invalidAfterHoursRule": "Insira uma regra válida fora do horário.",
+      "scheduleLoadFailed": "Não foi possível carregar as agendas de horário comercial.",
+      "scheduleRequired": "Selecione uma agenda de horário comercial antes de aplicar esta regra."
     }
   },
   "wizardBucketPools": {
     "heading": "Banco de horas para esta linha",
     "empty": "Ainda não há bancos de horas nesta linha. Adicione um banco para incluir horas pré-pagas."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Permissão negada: não é possível modificar as linhas de contrato",
+      "deleteContracts": "Permissão negada: não é possível excluir contratos de faturamento"
+    },
+    "contract": {
+      "hasInvoices": "Este contrato possui faturas associadas e não pode ser excluído.",
+      "invalidValue": "Um dos valores de contrato selecionados é inválido. Atualize a página e tente novamente.",
+      "referenceMissing": "O contrato, cliente ou registro relacionado selecionado não existe mais. Atualize a página e tente novamente.",
+      "conflict": "Esta alteração do contrato conflita com um registro existente. Atualize a página e tente novamente.",
+      "notAllowed": "Um dos valores do contrato não é permitido. Revise o formulário e tente novamente.",
+      "missingField": "Falta um campo obrigatório do contrato.",
+      "missingFieldNamed": "Falta um campo obrigatório do contrato: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Permissão negada: não é possível criar modelos de faturamento",
+        "createContracts": "Permissão negada: não é possível criar contratos de faturamento",
+        "listTemplates": "Permissão negada: não é possível listar os modelos de contrato",
+        "viewSnapshot": "Permissão negada: não é possível visualizar o instantâneo do modelo de contrato",
+        "resumeContracts": "Permissão negada: não é possível retomar contratos de faturamento"
+      },
+      "templateNotFound": "Modelo não encontrado",
+      "contractNotFound": "Contrato não encontrado",
+      "notDraft": "O contrato não é um rascunho",
+      "missingClient": "Falta a atribuição de cliente no contrato em rascunho",
+      "invalidStartDate": "O contrato em rascunho tem uma data de início inválida",
+      "recordInvalid": "Um dos registros selecionados do assistente de contrato não é mais válido. Atualize a página e tente novamente.",
+      "duplicate": "Já existe um registro correspondente do assistente de contrato."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "A data de término deve ser posterior à data de vigência",
+      "overlaps": "Esta agenda se sobrepõe a uma agenda de preços existente",
+      "wouldOverlap": "Esta agenda se sobreporia a uma agenda de preços existente",
+      "notFound": "Agenda de preços não encontrada"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Permissão negada: não é possível ler a fila de renovações",
+        "update": "Permissão negada: não é possível atualizar a fila de renovações",
+        "ownerOtherTenant": "Permissão negada: não é possível atribuir renovações a um usuário de outro tenant.",
+        "contractOtherTenant": "Permissão negada: não é possível concluir a renovação com um contrato de outro tenant."
+      },
+      "clientContractIdRequired": "O id do contrato do cliente é obrigatório.",
+      "workItemNotFound": "Item de trabalho de renovação não encontrado. Ele pode ter sido atualizado ou excluído. Atualize a página e tente novamente.",
+      "snoozeDateRequired": "Escolha uma data de adiamento antes de salvar.",
+      "snoozeDateInvalid": "Escolha uma data de adiamento válida.",
+      "snoozeDateFuture": "Escolha uma data de adiamento futura.",
+      "ownerInvalid": "Escolha um responsável de renovação válido.",
+      "ownerUnavailable": "O responsável de renovação selecionado não está mais disponível. Atualize a página e tente novamente.",
+      "activatedContractIdRequired": "O id do contrato de renovação ativado é obrigatório.",
+      "contractNotActive": "O contrato de renovação ativado não está mais ativo. Atualize a página e tente novamente.",
+      "manualRetryDueOnly": "A nova tentativa manual só está disponível para ciclos de renovação vencidos."
+    }
   }
 }

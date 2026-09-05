@@ -12,25 +12,26 @@
  * secret or an `otpauth://` URI and is normalized server-side.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Dice5, RefreshCw } from 'lucide-react';
+import { Copy, Dice5, Eye, EyeOff, RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient } from '@alga-psa/types';
 import type { CredentialsContext } from '../../lib/actions/credentials/credentialActions';
+import type { CredentialSaveResult } from '../../lib/actions/credentials/credentialActions';
 import type { CredentialAttachment, CredentialAssociationEntityType, CredentialSummary } from '../../lib/credentials/contracts';
-
-// Client-safe TOTP seed validation. The server-side RFC 6238 util lives in
-// totp.ts and depends on node:crypto (server-only); this copy only validates
-// the base32 alphabet so the browser bundle never pulls in node builtins.
-const BASE32_REGEX = /^[A-Z2-7]+$/i;
+import { validateOtpSeed } from '../../lib/credentials/totpCore';
+import { generateTotpInBrowser } from '../../lib/credentials/totpBrowser';
+import { TotpCode } from './TotpCode';
 
 export interface CredentialFormValue {
   clientId: string;
@@ -56,7 +57,7 @@ interface CredentialFormDialogProps {
    * view) — a dialog stacked on a dialog reads as broken chrome.
    */
   inline?: boolean;
-  onSubmit: (value: CredentialFormValue) => Promise<void>;
+  onSubmit: (value: CredentialFormValue) => Promise<CredentialSaveResult>;
   /** When set, prefill client (unified client tab / entity sections). */
   defaultClientId?: string | null;
   /** When set with `entityId`, this is an entity-scoped create (the entity is
@@ -67,39 +68,53 @@ interface CredentialFormDialogProps {
   clients?: IClient[];
   context: CredentialsContext | null;
   onError?: () => void;
+  /** Lets an inline host route its Back affordance through this form's dirty guard. */
+  onRequestClose?: (requestClose: () => void) => void;
 }
 
-const PASSWORD_ALPHABET =
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-const PASSWORD_ALPHABET_SYMBOLS = '!@#$%^&*()_+-=[]{};:,.<>?';
+const PASSWORD_SETS = {
+  uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', lowercase: 'abcdefghijklmnopqrstuvwxyz', digits: '0123456789', symbols: '!@#$%^&*()_+-=[]{};:,.<>?',
+} as const;
 
-function generatePassword(length: number, includeSymbols: boolean): string {
-  const alphabet = includeSymbols ? PASSWORD_ALPHABET + PASSWORD_ALPHABET_SYMBOLS : PASSWORD_ALPHABET;
-  const randomValues = new Uint32Array(length);
-  crypto.getRandomValues(randomValues);
-  let password = '';
-  for (let i = 0; i < length; i += 1) {
-    password += alphabet[randomValues[i] % alphabet.length];
+function randomChar(chars: string): string {
+  const value = new Uint32Array(1);
+  crypto.getRandomValues(value);
+  // rejection sampling avoids modulo bias for the small alphabets used here
+  const limit = Math.floor(0x100000000 / chars.length) * chars.length;
+  while (value[0] >= limit) crypto.getRandomValues(value);
+  return chars[value[0] % chars.length];
+}
+
+function randomIndex(upperBound: number): number {
+  const value = new Uint32Array(1);
+  const limit = Math.floor(0x100000000 / upperBound) * upperBound;
+  do crypto.getRandomValues(value); while (value[0] >= limit);
+  return value[0] % upperBound;
+}
+
+export function generatePassword(length: number, selected: Array<keyof typeof PASSWORD_SETS>): string {
+  length = Math.max(8, Math.min(64, Math.floor(length)));
+  if (!selected.length || length < selected.length) return '';
+  const alphabet = selected.map((key) => PASSWORD_SETS[key]).join('');
+  const chars = selected.map((key) => randomChar(PASSWORD_SETS[key]));
+  while (chars.length < length) chars.push(randomChar(alphabet));
+  for (let i = chars.length - 1; i > 0; i -= 1) {
+    const j = randomIndex(i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
   }
-  return password;
+  return chars.join('');
 }
 
-function isValidOtpSeed(value: string): boolean {
-  const trimmed = value.trim();
-  if (!trimmed) return true;
-  // Reduce an otpauth:// URI to its secret query param, else treat as raw seed.
-  let secret = trimmed;
-  if (/^otpauth:\/\/totp\//i.test(trimmed)) {
-    try {
-      const secretParam = new URL(trimmed).searchParams.get('secret');
-      if (!secretParam) return false;
-      secret = secretParam;
-    } catch {
-      return false;
-    }
-  }
-  return BASE32_REGEX.test(secret.replace(/[=\s-]/g, ''));
-}
+const SAVE_ERROR_KEY: Partial<Record<Exclude<CredentialSaveResult, { ok: true }>['code'], string>> = {
+  PERMISSION_DENIED: 'permissionDenied',
+  CLIENT_MISMATCH: 'clientMismatch',
+  HUDU_UNMAPPED: 'huduUnmapped',
+  HUDU_API: 'huduApi',
+  VALIDATION: 'validation',
+  NOT_FOUND: 'notFound',
+  CONFIGURATION: 'configuration',
+  VAULT_NOT_CONFIGURED: 'vaultNotConfigured',
+};
 
 /** Read-only edit-dialog summary of the credential's entity attachments. */
 function associationSummaryLabel(
@@ -127,7 +142,9 @@ export function CredentialFormDialog({
   entityId,
   editing,
   clients: clientsProp,
+  context,
   onError,
+  onRequestClose,
 }: CredentialFormDialogProps) {
   const { t } = useTranslation('msp/credentials');
 
@@ -143,8 +160,15 @@ export function CredentialFormDialog({
   const [attachments, setAttachments] = useState<CredentialAttachment[]>([]);
 
   const [generatorOpen, setGeneratorOpen] = useState(false);
-  const [genLength, setGenLength] = useState(16);
-  const [genSymbols, setGenSymbols] = useState(true);
+  const [genLength, setGenLength] = useState(20);
+  const [genSets, setGenSets] = useState<Record<keyof typeof PASSWORD_SETS, boolean>>({ uppercase: true, lowercase: true, digits: true, symbols: true });
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const [initialSnapshot, setInitialSnapshot] = useState('');
+  const [otpCleared, setOtpCleared] = useState(false);
+  const [otpPreview, setOtpPreview] = useState<{ code: string; secondsRemaining: number } | null>(null);
+  const [otpError, setOtpError] = useState<'invalid' | 'unsupportedParams' | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +186,7 @@ export function CredentialFormDialog({
   }, [clientsProp]);
 
   useEffect(() => {
-    if (!isOpen || editing || !clientId) {
+    if (!isOpen || editing || !clientId || context?.huduConnected !== true) {
       setHuduClientMapped(null);
       return;
     }
@@ -182,7 +206,7 @@ export function CredentialFormDialog({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, editing, clientId]);
+  }, [isOpen, editing, clientId, context?.huduConnected]);
 
   useEffect(() => {
     if (isOpen) {
@@ -193,6 +217,7 @@ export function CredentialFormDialog({
         setUsername(editing.username ?? '');
         setPassword('');
         setOtpSecret('');
+        setOtpCleared(false);
         setUrl(editing.url ?? '');
         setDescription(editing.description ?? '');
         setDestination('alga');
@@ -200,23 +225,76 @@ export function CredentialFormDialog({
         // read-only summary, never edited from the credential form
         // (associations are managed from the entity side).
         setAttachments(editing.attachments ?? []);
+        setInitialSnapshot(JSON.stringify([editing.clientId, editing.name, editing.username ?? '', '', '', false, editing.url ?? '', editing.description ?? '', 'alga']));
       } else {
         setClientId(defaultClientId ?? '');
         setName('');
         setUsername('');
         setPassword('');
         setOtpSecret('');
+        setOtpCleared(false);
         setUrl('');
         setDescription('');
         setDestination('alga');
         // Entity-section create is pre-attached: the new credential must carry
         // the entity it was created from so it appears in the section's list.
         setAttachments(entityType && entityId ? [{ entityType, entityId }] : []);
+        setInitialSnapshot(JSON.stringify([defaultClientId ?? '', '', '', '', '', false, '', '', 'alga']));
       }
+      setPasswordVisible(false);
+      setCopied(false);
+      setGeneratorOpen(false);
+      setDiscardOpen(false);
+      setGenLength(20);
+      setGenSets({ uppercase: true, lowercase: true, digits: true, symbols: true });
+      setOtpPreview(null); setOtpError(null);
     }
   }, [isOpen, editing, defaultClientId, entityType, entityId]);
 
   const canUseHudu = huduClientMapped === true;
+  const snapshot = useMemo(() => JSON.stringify([clientId, name, username, password, otpSecret, otpCleared, url, description, destination]), [clientId, name, username, password, otpSecret, otpCleared, url, description, destination]);
+  const isDirty = snapshot !== initialSnapshot;
+  const requestClose = () => { if (isSaving) return; if (isDirty) setDiscardOpen(true); else onClose(); };
+
+  useEffect(() => { onRequestClose?.(requestClose); }, [onRequestClose, requestClose]);
+
+  useEffect(() => {
+    if (!isOpen || !otpSecret.trim()) { setOtpPreview(null); setOtpError(null); return; }
+    const validation = validateOtpSeed(otpSecret);
+    if ("reason" in validation) { setOtpPreview(null); setOtpError(validation.reason); return; }
+    let cancelled = false;
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let remaining = 0;
+    let refreshInFlight = false;
+    const refresh = async () => {
+      if (refreshInFlight) return;
+      refreshInFlight = true;
+      try {
+        const preview = await generateTotpInBrowser(validation.secret);
+        if (!cancelled) {
+          remaining = preview.secondsRemaining;
+          setOtpPreview(preview);
+          setOtpError(null);
+        }
+      } catch {
+        if (!cancelled) { setOtpPreview(null); setOtpError('invalid'); }
+      } finally {
+        refreshInFlight = false;
+      }
+    };
+    void refresh();
+    timer = setInterval(() => {
+      if (remaining <= 1) {
+        remaining = 0;
+        setOtpPreview((current) => current ? { ...current, secondsRemaining: 0 } : current);
+        void refresh();
+        return;
+      }
+      remaining -= 1;
+      setOtpPreview((current) => current ? { ...current, secondsRemaining: remaining } : current);
+    }, 1000);
+    return () => { cancelled = true; if (timer) clearInterval(timer); };
+  }, [isOpen, otpSecret]);
 
   const handleSubmit = async () => {
     if (!name.trim()) {
@@ -227,14 +305,15 @@ export function CredentialFormDialog({
       setError(t('credentials.form.clientRequired'));
       return;
     }
-    if (!isValidOtpSeed(otpSecret)) {
-      setError(t('credentials.form.otpInvalid'));
+    const otpValidation = otpSecret.trim() ? validateOtpSeed(otpSecret) : null;
+    if (otpValidation && "reason" in otpValidation) {
+      setError(t(`credentials.form.${otpValidation.reason === 'unsupportedParams' ? 'otpUnsupportedParams' : 'otpInvalid'}`));
       return;
     }
     setIsSaving(true);
     setError(null);
     try {
-      await onSubmit({
+      const result = await onSubmit({
         clientId,
         name: name.trim(),
         username: username.trim(),
@@ -242,14 +321,21 @@ export function CredentialFormDialog({
         // (undefined), never "clear" (null) — the plaintext is deliberately not
         // echoed back into the dialog, so saving untouched must not wipe it.
         password: password ? password : editing ? undefined : null,
-        otpSecret: otpSecret ? otpSecret : editing ? undefined : null,
+        otpSecret: otpSecret.trim() ? otpSecret : otpCleared ? null : editing ? undefined : null,
         url: url.trim() || '',
         description: description.trim(),
         destination,
         attachments: editing ? [] : attachments,
       });
-    } catch {
-      setError(t('credentials.form.createFailed'));
+      if (result.ok === false) {
+        const key = SAVE_ERROR_KEY[result.code];
+        setError(t(key ? `credentials.form.errors.${key}` : editing ? 'credentials.form.updateFailed' : 'credentials.form.createFailed'));
+        onError?.();
+      }
+    } catch (caught) {
+      // A transport/rendering failure has no trusted semantic code. Never use
+      // its message: server actions can redact or replace thrown errors.
+      setError(t(editing ? 'credentials.form.updateFailed' : 'credentials.form.createFailed'));
       onError?.();
     } finally {
       setIsSaving(false);
@@ -257,7 +343,7 @@ export function CredentialFormDialog({
   };
 
   const cancelButton = (
-    <Button id="credential-form-cancel" variant="outline" onClick={onClose} disabled={isSaving}>
+    <Button id="credential-form-cancel" variant="outline" onClick={requestClose} disabled={isSaving}>
       {t('credentials.form.cancel')}
     </Button>
   );
@@ -282,19 +368,13 @@ export function CredentialFormDialog({
           {!defaultClientId && (
             <div className="space-y-1">
               <Label htmlFor="credential-form-client">{t('credentials.form.client')}</Label>
-              <select
+              <ClientPicker
                 id="credential-form-client"
-                className="h-9 w-full rounded-md border border-gray-200 px-2 text-sm"
-                value={clientId}
-                onChange={(event) => setClientId(event.target.value)}
-              >
-                <option value="">{t('credentials.form.selectClient')}</option>
-                {clients.map((client) => (
-                  <option key={client.client_id} value={client.client_id}>
-                    {client.client_name}
-                  </option>
-                ))}
-              </select>
+                clients={clients}
+                selectedClientId={clientId || null}
+                onSelect={(id) => setClientId(id ?? '')}
+                placeholder={t('credentials.form.selectClient')}
+              />
             </div>
           )}
 
@@ -313,11 +393,17 @@ export function CredentialFormDialog({
             <div className="flex items-center gap-2">
               <Input
                 id="credential-form-password"
-                type="password"
+                type={passwordVisible ? 'text' : 'password'}
                 placeholder={t('credentials.form.passwordPlaceholder')}
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
               />
+              <Button id="credential-form-password-visibility" type="button" variant="ghost" size="sm" aria-label={t(passwordVisible ? 'credentials.form.passwordHide' : 'credentials.form.passwordShow')} onClick={() => setPasswordVisible((visible) => !visible)}>
+                {passwordVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+              <Button id="credential-form-password-copy" type="button" variant="ghost" size="sm" aria-label={t('credentials.form.passwordCopy')} disabled={!password} onClick={async () => { await navigator.clipboard?.writeText(password); setCopied(true); }}>
+                <Copy className="h-4 w-4" />
+              </Button>
               <Button
                 id="credential-form-generate"
                 type="button"
@@ -342,19 +428,19 @@ export function CredentialFormDialog({
                     max={64}
                     className="w-20"
                     value={genLength}
-                    onChange={(event) => setGenLength(Number(event.target.value) || 16)}
+                    onChange={(event) => setGenLength(Math.max(8, Math.min(64, Number(event.target.value) || 20)))}
                   />
                 </div>
-                <SwitchWithLabel
-                  label={t('credentials.form.passwordGeneratorSymbols')}
-                  checked={genSymbols}
-                  onCheckedChange={setGenSymbols}
-                />
+                {(Object.keys(PASSWORD_SETS) as Array<keyof typeof PASSWORD_SETS>).map((key) => (
+                  <SwitchWithLabel key={key} label={t(`credentials.form.gen${key[0].toUpperCase()}${key.slice(1)}`)} checked={genSets[key]} onCheckedChange={(checked) => setGenSets((sets) => ({ ...sets, [key]: checked }))} />
+                ))}
+                {!Object.values(genSets).some(Boolean) && <p id="credential-form-generator-empty" className="text-xs text-red-600 dark:text-red-400">{t('credentials.form.genNoSetSelected')}</p>}
                 <Button
                   id="credential-form-generator-apply"
                   type="button"
                   size="sm"
-                  onClick={() => setPassword(generatePassword(genLength, genSymbols))}
+                  disabled={!Object.values(genSets).some(Boolean) || genLength < Object.values(genSets).filter(Boolean).length}
+                  onClick={() => { const selected = (Object.keys(genSets) as Array<keyof typeof PASSWORD_SETS>).filter((key) => genSets[key]); setPassword(generatePassword(genLength, selected)); setPasswordVisible(true); }}
                 >
                   <RefreshCw className="mr-1 h-3.5 w-3.5" />
                   {t('credentials.form.passwordGeneratorGenerate')}
@@ -369,9 +455,14 @@ export function CredentialFormDialog({
               id="credential-form-otp"
               placeholder={t('credentials.form.otpSecretPlaceholder')}
               value={otpSecret}
-              onChange={(event) => setOtpSecret(event.target.value)}
+              onChange={(event) => { setOtpSecret(event.target.value); setOtpCleared(false); }}
             />
-            <p className="text-xs text-gray-500">{t('credentials.form.otpSecretHelp')}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpLeadIn')}</p>
+            <p className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpSecretHelp')}</p>
+            {otpError && <p id="credential-form-otp-error" className="text-xs text-[rgb(var(--badge-error-text))]">{t(`credentials.form.${otpError === 'unsupportedParams' ? 'otpUnsupportedParams' : 'otpInvalid'}`)}</p>}
+            {otpPreview && <div className="pt-2"><p className="mb-1 text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpPreviewHint')}</p><TotpCode {...otpPreview} idPrefix="credential-form-otp" onCopy={() => void navigator.clipboard?.writeText(otpPreview.code)} /></div>}
+            {editing?.hasOtp && !otpSecret.trim() && !otpCleared && <div className="flex items-center gap-2 pt-1"><p id="credential-form-otp-saved" className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpSaved')}</p><Button id="credential-form-otp-remove" type="button" variant="ghost" size="sm" onClick={() => setOtpCleared(true)}>{t('credentials.form.otpRemove')}</Button></div>}
+            {otpCleared && <p id="credential-form-otp-removed" className="text-xs text-[rgb(var(--color-text-500))]">{t('credentials.form.otpRemoved')}</p>}
           </div>
 
           <div className="space-y-1">
@@ -457,6 +548,7 @@ export function CredentialFormDialog({
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          {copied && <span id="credential-form-password-copied" className="sr-only">{t('credentials.form.passwordCopied')}</span>}
         </div>
   );
 
@@ -471,6 +563,7 @@ export function CredentialFormDialog({
           {cancelButton}
           {submitButton}
         </div>
+        <ConfirmationDialog id="credential-form-discard" isOpen={discardOpen} onClose={() => setDiscardOpen(false)} onConfirm={() => { setDiscardOpen(false); onClose(); }} title={t('credentials.form.discardTitle')} message={t('credentials.form.discardMessage')} confirmLabel={t('credentials.form.discardConfirm')} cancelLabel={t('credentials.form.keepEditing')} />
       </div>
     );
   }
@@ -480,7 +573,7 @@ export function CredentialFormDialog({
     <Dialog
       id="credential-form-dialog"
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={requestClose}
       title={editing ? t('credentials.form.editTitle') : t('credentials.form.title')}
       className="max-w-lg"
       footer={
@@ -491,6 +584,7 @@ export function CredentialFormDialog({
       }
     >
       {body}
+      <ConfirmationDialog id="credential-form-discard" isOpen={discardOpen} onClose={() => setDiscardOpen(false)} onConfirm={() => { setDiscardOpen(false); onClose(); }} title={t('credentials.form.discardTitle')} message={t('credentials.form.discardMessage')} confirmLabel={t('credentials.form.discardConfirm')} cancelLabel={t('credentials.form.keepEditing')} />
     </Dialog>
   );
 }

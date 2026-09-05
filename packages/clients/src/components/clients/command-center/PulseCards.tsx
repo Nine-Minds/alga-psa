@@ -290,6 +290,21 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
               total: formatMoney(data.outstandingTotalCents),
             })}
           </p>
+          {/* Who inside the client actually owes it (F113). Present only when
+              the client is segmented, and the rows sum to the total above —
+              a collections call needs to name the entity, not the client. */}
+          {data.agingByProfile && data.agingByProfile.length > 0 && (
+            <div className="mb-2 border-t border-[rgb(var(--color-border-100))] pt-1.5">
+              {data.agingByProfile
+                .filter((profile) => profile.outstandingTotalCents > 0)
+                .map((profile) => (
+                  <div key={profile.billingProfileId} className="flex justify-between text-[11px] text-[rgb(var(--color-text-500))]">
+                    <span className="truncate pr-2">{profile.name}</span>
+                    <span className="tabular-nums">{formatMoney(profile.outstandingTotalCents)}</span>
+                  </div>
+                ))}
+            </div>
+          )}
         </>
       ) : (
         <BentoTileEmpty id={`${id}-empty`}>

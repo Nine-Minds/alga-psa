@@ -19,6 +19,9 @@ const validateStatusBelongsToBoardMock = vi.fn();
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action({ user_id: 'internal-user-1', user_type: 'internal', tenant: 'tenant-1' }, { tenant: 'tenant-1' }, ...args),
+  // The real one resolves the caller's locale; with no request scope here it
+  // would return the payload unchanged anyway.
+  localizeActionError: async (result: unknown) => result,
 }));
 
 vi.mock('@alga-psa/auth/actions', () => ({

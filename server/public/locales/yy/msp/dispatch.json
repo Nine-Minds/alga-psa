@@ -1,159 +1,159 @@
 {
   "page": {
-    "title": "55555",
-    "filteredWorkItems": "55555"
+    "title": "〖Ŧḗƈħƞīƈīȧƞ Ḓīşƥȧŧƈħ ········〗",
+    "filteredWorkItems": "〖Şħȯẇīƞɠ ƒīŀŧḗřḗḓ ẇȯřķ īŧḗḿş ···········〗"
   },
   "workItems": {
-    "title": "55555",
-    "searchPlaceholder": "55555",
-    "filterPlaceholder": "55555",
+    "title": "〖Ẇȯřķ Īŧḗḿş ····〗",
+    "searchPlaceholder": "〖Şḗȧřƈħ ẇȯřķ īŧḗḿş... ········〗",
+    "filterPlaceholder": "〖Ƒīŀŧḗř ƀẏ şŧȧŧŭş... ········〗",
     "status": {
-      "unscheduled": "55555",
-      "scheduled": "55555"
+      "unscheduled": "〖Ŭƞşƈħḗḓŭŀḗḓ ·····〗",
+      "scheduled": "〖Şƈħḗḓŭŀḗḓ ····〗"
     },
     "pagination": {
-      "previous": "55555",
-      "next": "55555",
-      "pageInfo": "55555 {{current}} 55555 {{total}} 55555",
-      "showing": "55555 {{count}} 55555 {{total}} 55555"
+      "previous": "〖Ƥřḗṽīȯŭş ····〗",
+      "next": "〖Ƞḗẋŧ ··〗",
+      "pageInfo": "〖Ƥȧɠḗ {{current}} ȯƒ {{total}} ············〗",
+      "showing": "〖Şħȯẇīƞɠ {{count}} ȯƒ {{total}} īŧḗḿş ···············〗"
     }
   },
   "schedule": {
-    "showInactive": "55555",
-    "prev": "55555",
-    "next": "55555",
-    "today": "55555",
-    "viewDay": "55555",
-    "viewWeek": "55555",
-    "prevAria": "55555 {{mode}} 55555",
-    "nextAria": "55555 {{mode}} 55555",
-    "viewWeekTooltip": "55555",
-    "viewWeekAria": "55555 {{name}} 55555",
-    "viewWeekAriaInactive": "55555 {{name}} 55555",
-    "compareAll": "55555",
-    "clearAll": "55555",
-    "compare": "55555",
-    "stopComparing": "55555",
-    "compareAria": "55555 {{name}} 55555",
-    "compareAriaInactive": "55555 {{name}} 55555"
+    "showInactive": "〖Şħȯẇ Īƞȧƈŧīṽḗ Ŭşḗřş ········〗",
+    "prev": "〖< Ƥřḗṽ ···〗",
+    "next": "〖Ƞḗẋŧ > ···〗",
+    "today": "〖Ŧȯḓȧẏ ··〗",
+    "viewDay": "〖Ḓȧẏ ··〗",
+    "viewWeek": "〖Ẇḗḗķ ··〗",
+    "prevAria": "〖Ƥřḗṽīȯŭş {{mode}} ·······〗",
+    "nextAria": "〖Ƞḗẋŧ {{mode}} ······〗",
+    "viewWeekTooltip": "〖Ṽīḗẇ Ẇḗḗķ ····〗",
+    "viewWeekAria": "〖Ṽīḗẇ ẇḗḗķ ƒȯř {{name}} ·········〗",
+    "viewWeekAriaInactive": "〖Ṽīḗẇ ẇḗḗķ ƒȯř {{name}} (Īƞȧƈŧīṽḗ) ··············〗",
+    "compareAll": "〖Ƈȯḿƥȧřḗ Ȧŀŀ ·····〗",
+    "clearAll": "〖Ƈŀḗȧř Ȧŀŀ ····〗",
+    "compare": "〖Ƈȯḿƥȧřḗ ···〗",
+    "stopComparing": "〖Şŧȯƥ Ƈȯḿƥȧřīƞɠ ······〗",
+    "compareAria": "〖Ƈȯḿƥȧřḗ {{name}} ·······〗",
+    "compareAriaInactive": "〖Ƈȯḿƥȧřḗ {{name}} (Īƞȧƈŧīṽḗ) ···········〗"
   },
   "details": {
     "appointmentRequest": {
-      "title": "55555"
+      "title": "〖Ȧƥƥȯīƞŧḿḗƞŧ Řḗʠŭḗşŧ Ḓḗŧȧīŀş ···········〗"
     },
     "sections": {
-      "approvalInformation": "55555"
+      "approvalInformation": "〖Ȧƥƥřȯṽȧŀ Īƞƒȯřḿȧŧīȯƞ ········〗"
     },
     "fields": {
-      "service": "55555",
-      "status": "55555",
-      "client": "55555",
-      "contact": "55555",
-      "company": "55555",
-      "requester": "55555",
-      "email": "55555",
-      "phone": "55555",
-      "requestedDate": "55555",
-      "requestedTime": "55555",
-      "duration": "55555",
-      "preferredTechnician": "55555",
-      "description": "55555",
-      "declineReason": "55555",
-      "approvedBy": "55555",
-      "approvedAt": "55555",
-      "opportunity": "55555",
-      "assignedTo": "55555",
-      "dueDate": "55555"
+      "service": "〖Şḗřṽīƈḗ ···〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "contact": "〖Ƈȯƞŧȧƈŧ ···〗",
+      "company": "〖Ƈȯḿƥȧƞẏ ···〗",
+      "requester": "〖Řḗʠŭḗşŧḗř ····〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "phone": "〖Ƥħȯƞḗ ··〗",
+      "requestedDate": "〖Řḗʠŭḗşŧḗḓ Ḓȧŧḗ ······〗",
+      "requestedTime": "〖Řḗʠŭḗşŧḗḓ Ŧīḿḗ ······〗",
+      "duration": "〖Ḓŭřȧŧīȯƞ ····〗",
+      "preferredTechnician": "〖Ƥřḗƒḗřřḗḓ Ŧḗƈħƞīƈīȧƞ ········〗",
+      "description": "〖Ḓḗşƈřīƥŧīȯƞ ·····〗",
+      "declineReason": "〖Ḓḗƈŀīƞḗ Řḗȧşȯƞ ······〗",
+      "approvedBy": "〖Ȧƥƥřȯṽḗḓ ƀẏ: ·····〗",
+      "approvedAt": "〖Ȧƥƥřȯṽḗḓ ȧŧ: ·····〗",
+      "opportunity": "〖Ȯƥƥȯřŧŭƞīŧẏ ·····〗",
+      "assignedTo": "〖Ȧşşīɠƞḗḓ ŧȯ ·····〗",
+      "dueDate": "〖Ḓŭḗ ··〗"
     },
     "messages": {
-      "notAvailable": "55555",
-      "unsupportedWorkItemType": "55555"
+      "notAvailable": "〖Ƞ/Ȧ ··〗",
+      "unsupportedWorkItemType": "〖Ŭƞşŭƥƥȯřŧḗḓ ẇȯřķ īŧḗḿ ŧẏƥḗ ···········〗"
     },
     "toasts": {
-      "noUsersAvailable": "55555",
-      "noUserSession": "55555",
-      "failedToLoadTicketData": "55555",
-      "failedToLoadProjectTaskData": "55555",
-      "failedToLoadAdHocEntryData": "55555",
-      "failedToLoadInteractionData": "55555",
-      "failedToLoadAppointmentRequestData": "55555",
-      "failedToLoadOpportunityStepData": "55555"
+      "noUsersAvailable": "〖Ƞȯ ŭşḗřş ȧṽȧīŀȧƀŀḗ īƞ ŧħḗ şẏşŧḗḿ ·············〗",
+      "noUserSession": "〖Ƞȯ ŭşḗř şḗşşīȯƞ ƒȯŭƞḓ ·········〗",
+      "failedToLoadTicketData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ḓȧŧȧ ···········〗",
+      "failedToLoadProjectTaskData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥřȯĵḗƈŧ ŧȧşķ ḓȧŧȧ ·············〗",
+      "failedToLoadAdHocEntryData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧḓ-ħȯƈ ḗƞŧřẏ ḓȧŧȧ ·············〗",
+      "failedToLoadInteractionData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ īƞŧḗřȧƈŧīȯƞ ḓȧŧȧ ·············〗",
+      "failedToLoadAppointmentRequestData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ȧƥƥȯīƞŧḿḗƞŧ řḗʠŭḗşŧ ḓȧŧȧ ················〗",
+      "failedToLoadOpportunityStepData": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ḓḗȧŀ şŧḗƥ ḓȧŧȧ ············〗"
     },
     "errors": {
-      "loadUsers": "55555",
-      "loadingContent": "55555",
-      "tryAgain": "55555"
+      "loadUsers": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŭşḗřş. Ƥŀḗȧşḗ ŧřẏ řḗƒřḗşħīƞɠ ŧħḗ ƥȧɠḗ. ······················〗",
+      "loadingContent": "〖Ḗřřȯř ŀȯȧḓīƞɠ ƈȯƞŧḗƞŧ ·········〗",
+      "tryAgain": "〖Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ·······〗"
     },
     "units": {
-      "minutes": "55555"
+      "minutes": "〖ḿīƞŭŧḗş ···〗"
     },
     "actions": {
-      "openOpportunity": "55555"
+      "openOpportunity": "〖Ȯƥḗƞ ȯƥƥȯřŧŭƞīŧẏ ·······〗"
     }
   },
   "dashboard": {
     "filters": {
-      "allOpen": "55555",
-      "allClosed": "55555"
+      "allOpen": "〖Ȧŀŀ Ȯƥḗƞ ····〗",
+      "allClosed": "〖Ȧŀŀ Ƈŀȯşḗḓ ····〗"
     },
     "messages": {
-      "accessDenied": "55555",
-      "unknownError": "55555",
-      "permissionDeniedSchedule": "55555",
-      "couldNotLoadWorkItemDetails": "55555"
+      "accessDenied": "〖Ȧƈƈḗşş Ḓḗƞīḗḓ: Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ṽīḗẇ ŧħḗ Ŧḗƈħƞīƈīȧƞ Ḓīşƥȧŧƈħ ḓȧşħƀȯȧřḓ. ··································〗",
+      "unknownError": "〖Ȧƞ ŭƞķƞȯẇƞ ḗřřȯř ȯƈƈŭřřḗḓ. ···········〗",
+      "permissionDeniedSchedule": "〖Ẏȯŭ ḓȯƞ'ŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ şƈħḗḓŭŀḗ ƒȯř ŧħīş ŧḗƈħƞīƈīȧƞ. ························〗",
+      "couldNotLoadWorkItemDetails": "〖Ƈȯŭŀḓ ƞȯŧ ŀȯȧḓ ẇȯřķ īŧḗḿ ḓḗŧȧīŀş. ··············〗"
     },
     "errors": {
-      "searchWorkItems": "55555",
-      "loadStatusFilterOptions": "55555",
-      "refreshScheduleEntries": "55555",
-      "refreshData": "55555",
-      "loadPermissions": "55555",
-      "fetchScheduleEntries": "55555",
-      "fetchData": "55555",
-      "updateSchedule": "55555",
-      "createScheduleEntry": "55555",
-      "deleteScheduleEntry": "55555",
-      "updateTask": "55555",
-      "updateScheduleEntry": "55555",
-      "saveScheduleEntry": "55555",
-      "openWorkItemDetails": "55555"
+      "searchWorkItems": "〖Ƒȧīŀḗḓ ŧȯ şḗȧřƈħ ẇȯřķ īŧḗḿş ···········〗",
+      "loadStatusFilterOptions": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ şŧȧŧŭş ƒīŀŧḗř ȯƥŧīȯƞş. ···············〗",
+      "refreshScheduleEntries": "〖Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ şƈħḗḓŭŀḗ ḗƞŧřīḗş ··············〗",
+      "refreshData": "〖Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ ḓȧŧȧ ·········〗",
+      "loadPermissions": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥḗřḿīşşīȯƞş. ···········〗",
+      "fetchScheduleEntries": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ şƈħḗḓŭŀḗ ḗƞŧřīḗş ·············〗",
+      "fetchData": "〖Ƒȧīŀḗḓ ŧȯ ƒḗŧƈħ ḓȧŧȧ ········〗",
+      "updateSchedule": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şƈħḗḓŭŀḗ ··········〗",
+      "createScheduleEntry": "〖Ƒȧīŀḗḓ ŧȯ ƈřḗȧŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ ·············〗",
+      "deleteScheduleEntry": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ ·············〗",
+      "updateTask": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŧȧşķ ·········〗",
+      "updateScheduleEntry": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ ·············〗",
+      "saveScheduleEntry": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ şƈħḗḓŭŀḗ ḗƞŧřẏ ············〗",
+      "openWorkItemDetails": "〖Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ẇȯřķ īŧḗḿ ḓḗŧȧīŀş. ··············〗"
     },
     "success": {
-      "taskUpdated": "55555",
-      "scheduleEntryUpdated": "55555",
-      "scheduleEntryCreated": "55555"
+      "taskUpdated": "〖Ŧȧşķ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ··········〗",
+      "scheduleEntryUpdated": "〖Şƈħḗḓŭŀḗ ḗƞŧřẏ ŭƥḓȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ··············〗",
+      "scheduleEntryCreated": "〖Şƈħḗḓŭŀḗ ḗƞŧřẏ ƈřḗȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ··············〗"
     }
   },
   "events": {
     "actions": {
-      "viewDetails": "55555",
-      "delete": "55555",
-      "deleteScheduleEntry": "55555"
+      "viewDetails": "〖Ṽīḗẇ Ḓḗŧȧīŀş ·····〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "deleteScheduleEntry": "〖Ḓḗŀḗŧḗ şƈħḗḓŭŀḗ ḗƞŧřẏ ·········〗"
     },
     "fallbacks": {
-      "busy": "55555",
-      "unknown": "55555",
-      "unassigned": "55555",
-      "unknownAgent": "55555",
-      "untitled": "55555",
-      "thisScheduleEntry": "55555"
+      "busy": "〖Ɓŭşẏ ··〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ···〗",
+      "unassigned": "〖Ŭƞȧşşīɠƞḗḓ ····〗",
+      "unknownAgent": "〖Ŭƞķƞȯẇƞ Ȧɠḗƞŧ ······〗",
+      "untitled": "〖Ŭƞŧīŧŀḗḓ ····〗",
+      "thisScheduleEntry": "〖ŧħīş şƈħḗḓŭŀḗ ḗƞŧřẏ ········〗"
     },
     "tooltip": {
-      "privateEvent": "55555 {{start}} 55555 {{end}} 55555",
-      "eventDetails": "55555 {{title}} 55555 {{assigned}} 55555 {{start}} 55555 {{end}} 55555"
+      "privateEvent": "〖Ɓŭşẏ\nŞŧȧřŧ: {{start}}\nḖƞḓ: {{end}} ··············〗",
+      "eventDetails": "〖{{title}}\nȦşşīɠƞḗḓ ŧȯ: {{assigned}}\nŞŧȧřŧ: {{start}}\nḖƞḓ: {{end}} ··························〗"
     },
     "errors": {
-      "validateDeletion": "55555"
+      "validateDeletion": "〖Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗"
     }
   },
   "badges": {
-    "needsDispatch": "55555",
-    "needsDispatchFor": "55555 {{agents}} 55555"
+    "needsDispatch": "〖Ƞḗḗḓş Ḓīşƥȧŧƈħ ······〗",
+    "needsDispatchFor": "〖Ƞḗḗḓş ḓīşƥȧŧƈħ ƒȯř: {{agents}} ············〗"
   },
   "time": {
     "suffixes": {
-      "am": "55555",
-      "pm": "55555"
+      "am": "〖 ȦḾ ··〗",
+      "pm": "〖 ƤḾ ··〗"
     }
   }
 }

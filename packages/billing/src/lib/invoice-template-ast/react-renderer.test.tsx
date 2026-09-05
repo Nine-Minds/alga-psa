@@ -3,6 +3,7 @@ import type { TemplateAst } from '@alga-psa/types';
 import { TEMPLATE_AST_VERSION } from '@alga-psa/types';
 import type { TemplateEvaluationResult } from './evaluator';
 import { evaluateTemplateAst } from './evaluator';
+import { formatTemplateFieldValue } from './fieldFormatting';
 import { renderEvaluatedTemplateAst } from './react-renderer';
 
 const invoiceFixture = {
@@ -407,6 +408,108 @@ describe('renderEvaluatedTemplateAst', () => {
     expect(rendered.html).toContain('Products');
     expect(rendered.html).toContain('300');
     expect(rendered.html).toContain('30');
+  });
+
+  it('renders date-only dynamic-table cells without timezone shift in negative-offset timezones', async () => {
+    const previousTimeZone = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+
+    try {
+      const ast: TemplateAst = {
+        kind: 'invoice-template-ast',
+        version: TEMPLATE_AST_VERSION,
+        bindings: {
+          collections: {
+            timeEntries: { id: 'timeEntries', kind: 'collection', path: 'items' },
+          },
+        },
+        layout: {
+          id: 'root',
+          type: 'document',
+          children: [
+            {
+              id: 'billed-time',
+              type: 'dynamic-table',
+              repeat: {
+                sourceBinding: { bindingId: 'timeEntries' },
+                itemBinding: 'item',
+              },
+              columns: [
+                { id: 'entry-date', header: 'Date', value: { type: 'path', path: 'entryDate' }, format: 'date' },
+                { id: 'entry-description', header: 'Description', value: { type: 'path', path: 'description' } },
+              ],
+            },
+          ],
+        },
+      };
+
+      const evaluation = evaluateTemplateAst(ast, {
+        items: [{ entryDate: '2026-01-18', description: 'Ticket work' }],
+      });
+      const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+      expect(rendered.html).toContain('1/18/2026');
+      expect(rendered.html).not.toContain('1/17/2026');
+    } finally {
+      if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = previousTimeZone;
+      }
+    }
+  });
+
+  it('renders dynamic-table date cells identically to field formatting in negative-offset timezones', async () => {
+    const previousTimeZone = process.env.TZ;
+    process.env.TZ = 'America/New_York';
+
+    try {
+      const entryDate = '2026-01-18';
+      const fieldText = formatTemplateFieldValue({
+        value: entryDate,
+        format: 'date',
+        currencyCode: 'USD',
+      }).text;
+
+      const ast: TemplateAst = {
+        kind: 'invoice-template-ast',
+        version: TEMPLATE_AST_VERSION,
+        bindings: {
+          collections: {
+            timeEntries: { id: 'timeEntries', kind: 'collection', path: 'items' },
+          },
+        },
+        layout: {
+          id: 'root',
+          type: 'document',
+          children: [
+            {
+              id: 'billed-time',
+              type: 'dynamic-table',
+              repeat: {
+                sourceBinding: { bindingId: 'timeEntries' },
+                itemBinding: 'item',
+              },
+              columns: [
+                { id: 'entry-date', header: 'Date', value: { type: 'path', path: 'entryDate' }, format: 'date' },
+              ],
+            },
+          ],
+        },
+      };
+
+      const evaluation = evaluateTemplateAst(ast, { items: [{ entryDate }] });
+      const rendered = await renderEvaluatedTemplateAst(ast, evaluation);
+
+      expect(fieldText).toBe('1/18/2026');
+      expect(rendered.html).toContain(fieldText as string);
+    } finally {
+      if (previousTimeZone === undefined) {
+        delete process.env.TZ;
+      } else {
+        process.env.TZ = previousTimeZone;
+      }
+    }
   });
 
   it('formats template path expressions using currency filter syntax', async () => {

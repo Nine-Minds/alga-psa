@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Goedkeuring teruggedraaid door beheerder",
       "error": "Kan goedkeuring niet ongedaan maken: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "workItemDrawer": {
@@ -463,5 +469,42 @@
   "bundleNotice": {
     "withNumber": "Dit ticket is gebundeld onder {{number}}. Bundeltijd wordt meestal op het hoofdticket geregistreerd.",
     "withoutNumber": "Dit ticket maakt deel uit van een bundel. Bundeltijd wordt meestal op het hoofdticket geregistreerd."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Urenstaat niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "onlySubmittedApprovable": "Alleen ingediende urenstaten kunnen worden goedgekeurd.",
+      "idRequired": "Urenstaat-ID is verplicht.",
+      "ticketIdRequired": "Ticket-ID is verplicht.",
+      "workItemRemoveFailed": "Kan dat werkitem niet verwijderen. Vernieuw de pagina en probeer het opnieuw.",
+      "onlyDraftRemovable": "Alleen concepturenstaten kunnen worden verwijderd.",
+      "removeEntriesFirst": "Verwijder de tijdregistraties voordat u deze urenstaat verwijdert.",
+      "onlyApprovedReopenable": "Alleen goedgekeurde urenstaten kunnen worden heropend.",
+      "invoicedCannotReopen": "Deze urenstaat bevat gefactureerde tijd en kan niet worden heropend."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Tijdregistratie niet gevonden. Mogelijk is deze verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "serviceRequired": "Selecteer een service voordat u deze tijdregistratie opslaat.",
+      "alreadyInvoiced": "Deze tijdregistratie is al gefactureerd en kan niet worden gewijzigd.",
+      "workItemTypeUnsupported": "Het geselecteerde type werkitem wordt niet ondersteund voor tijdregistraties.",
+      "bucketUpdateFailed": "Het verbruik van de urenbundel kan voor deze tijdregistratie niet worden bijgewerkt. Vernieuw de pagina en probeer het opnieuw.",
+      "wrongTimeSheet": "Deze tijdregistratie hoort niet bij de geselecteerde urenstaat.",
+      "outsidePeriod": "De tijdregistratie moet binnen de periode van de geselecteerde urenstaat vallen.",
+      "invalidReference": "De geselecteerde tijdregistratie, urenstaat of het werkitem is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde urenstaat, tijdregistratie, het werkitem of de gebruiker is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterende tijdregistratie. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van de urenstaat of tijdregistratie.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de urenstaat of tijdregistratie: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Voer geldige begin- en einddatums in."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "Een van de waarden van de periode-instelling is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde periode-instelling is niet meer geldig. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterende periode-instelling.",
+      "missingField": "Er ontbreekt een verplicht veld van de periode-instelling.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van de periode-instelling: {{field}}."
+    }
   }
 }

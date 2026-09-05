@@ -1838,7 +1838,7 @@ function SummaryTile({ id, title, helper, value, icon, isLoading }: SummaryTileP
         <div>
           <p className="text-sm font-medium text-gray-600">{title}</p>
           {isLoading ? (
-            <div className="mt-1 h-6 w-20 animate-pulse rounded bg-gray-200" />
+            <div className="mt-1 h-6 w-20 animate-pulse rounded skeleton-fill" />
           ) : (
             <p className="text-2xl font-semibold text-gray-900">{value}</p>
           )}

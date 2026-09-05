@@ -611,6 +611,8 @@ describe('inbound webhook server actions', () => {
 
     expect(result).toEqual({
       actionError: 'Inbound webhook slug "rmm-alerts" already exists.',
+      messageKey: 'msp/profile:errors.inboundWebhooks.duplicateSlug',
+      messageParams: { slug: 'rmm-alerts' },
     });
 
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'create', knex);
@@ -658,6 +660,7 @@ describe('inbound webhook server actions', () => {
 
     expect(result).toEqual({
       actionError: 'Inbound webhook workflow handlers require Enterprise edition.',
+      messageKey: 'msp/profile:errors.inboundWebhooks.workflowRequiresEe',
     });
 
     expect(hasPermission).toHaveBeenCalledWith(
@@ -800,6 +803,7 @@ describe('inbound webhook server actions', () => {
 
     expect(result).toEqual({
       permissionError: 'Permission denied: inbound_webhook:read permission required',
+      messageKey: 'msp/profile:errors.inboundWebhooks.permissions.read',
     });
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
     expect(knex).not.toHaveBeenCalled();

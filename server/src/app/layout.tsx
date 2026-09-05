@@ -6,7 +6,15 @@ import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
 // Granular action imports: the /actions barrel would pull every tenancy 'use server'
 // file into every route's server-reference manifest (dev OOM — see package-build-system.md).
 import { getCurrentTenant } from '@alga-psa/tenancy/actions/coreTenantActions';
-import { getTenantBrandingByDomain } from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
+import {
+  getTenantBrandingByDomain,
+  getTenantPortalConfigBySlug,
+  getTenantThemeByDomain,
+} from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
+import { getTenantThemeByTenantId } from '@alga-psa/tenancy/actions/tenant-actions/tenantThemeActions';
+import { DEFAULT_TENANT_THEME } from '@alga-psa/tenancy/lib/tenantTheme';
+import { generateCustomThemeStyles } from '@alga-psa/tenancy/lib/customTheme';
+import { isEnterprise } from '@alga-psa/core/features';
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
@@ -92,8 +100,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-async function MainContent({ children }: { children: React.ReactNode }) {
-  const tenant = await getCurrentTenant();
+function MainContent({ children, tenant }: { children: React.ReactNode; tenant: string | null }) {
   return (
     <TenantProvider tenant={tenant}>
       <AppThemeProvider>
@@ -127,26 +134,68 @@ export default async function RootLayout({
   const pathname = headersList.get('x-pathname')
     || headersList.get('x-middleware-pathname')
     || '';
+  const portalDomain = headersList.get('x-client-portal-domain') || host;
+  const portalTenantSlug = headersList.get('x-client-portal-tenant-slug');
 
   // Determine if we're on a client portal page
-  const isClientPortal = pathname.includes('/client-portal') || pathname.includes('/auth/client-portal');
+  const isClientPortal = pathname.includes('/client-portal')
+    || pathname.includes('/auth/client-portal')
+    || headersList.get('x-client-portal-theme-context') === '1';
+
+  const tenant = await getCurrentTenant();
 
   let brandingStyles = '';
+  let anonymousPortalTheme = DEFAULT_TENANT_THEME;
   if (isClientPortal) {
-    const branding = await getTenantBrandingByDomain(host);
+    const portalConfig = portalTenantSlug
+      ? await getTenantPortalConfigBySlug(portalTenantSlug)
+      : {
+          branding: await getTenantBrandingByDomain(portalDomain),
+          theme: await getTenantThemeByDomain(portalDomain),
+        };
     // Use precomputed styles if available, otherwise generate them
-    brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
+    brandingStyles = portalConfig.branding?.computedStyles
+      || generateBrandingStyles(portalConfig.branding);
+    anonymousPortalTheme = portalConfig.theme;
   }
+
+  // The theme pair is tenant-wide, so it has to resolve on every surface: from
+  // the session when someone is signed in, from the request host otherwise
+  // (same vanity-domain lookup portal branding already uses).
+  const theme = isEnterprise
+    ? tenant
+      ? await getTenantThemeByTenantId(tenant)
+      : isClientPortal
+        ? anonymousPortalTheme
+        : DEFAULT_TENANT_THEME
+    : DEFAULT_TENANT_THEME;
+
+  const customThemeStyles = theme.pairId === 'custom' && theme.customTheme
+    ? theme.customTheme.computedStyles || generateCustomThemeStyles(theme.customTheme)
+    : '';
 
   // Drives screen-reader pronunciation, browser translation prompts and CSS
   // `:lang()` — it has to follow the resolved locale, not a hardcoded 'en'.
   const locale = await getServerLocale();
 
   return (
-    <html lang={locale} className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
+    <html
+      lang={locale}
+      data-theme-pair={theme.pairId}
+      className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`}
+      suppressHydrationWarning
+    >
       <head>
         <link rel="stylesheet" href="https://unpkg.com/react-big-calendar/lib/css/react-big-calendar.css" />
         <link rel="stylesheet" href="https://unpkg.com/@radix-ui/themes@3.2.0/styles.css" />
+        {/* Cascade order matters: the pair blocks in globals.css lose to the custom
+            pair, which loses to the branding accents (they carry !important). */}
+        {customThemeStyles && (
+          <style
+            id="server-tenant-theme-styles"
+            dangerouslySetInnerHTML={{ __html: customThemeStyles }}
+          />
+        )}
         {/* Inject client portal branding styles directly in head for immediate application */}
         {brandingStyles && (
           <style
@@ -157,7 +206,7 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.className} ${inter.variable}`} suppressHydrationWarning>
         <PostHogProvider>
-           <MainContent>{children}</MainContent>
+           <MainContent tenant={tenant}>{children}</MainContent>
         </PostHogProvider>
       </body>
     </html>

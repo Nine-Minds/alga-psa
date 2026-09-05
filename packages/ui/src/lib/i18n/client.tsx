@@ -15,7 +15,9 @@ import {
   SupportedLocale,
   isSupportedLocale,
   filterPseudoLocales,
+  getTranslationLanguageCode,
 } from './config';
+import { formatDateValue } from './formatDateValue';
 
 /**
  * Initialize i18next on the client side.
@@ -34,6 +36,10 @@ const BOOTSTRAP_LOADING_TEXT: Record<
   { translations: string; languagePreferences: string }
 > = {
   en: {
+    translations: 'Loading translations...',
+    languagePreferences: 'Loading language preferences...',
+  },
+  'en-AU': {
     translations: 'Loading translations...',
     languagePreferences: 'Loading language preferences...',
   },
@@ -65,13 +71,14 @@ const BOOTSTRAP_LOADING_TEXT: Record<
     translations: 'Carregando traduções...',
     languagePreferences: 'Carregando preferências de idioma...',
   },
+  // Mirrors scripts/generate-pseudo-locales.cjs; these two never reach a pack.
   xx: {
-    translations: '11111',
-    languagePreferences: '11111',
+    translations: '⟦Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş...⟧',
+    languagePreferences: '⟦Ŀȯȧḓīƞɠ ŀȧƞɠŭȧɠḗ ƥřḗƒḗřḗƞƈḗş...⟧',
   },
   yy: {
-    translations: '55555',
-    languagePreferences: '55555',
+    translations: '〖Ŀȯȧḓīƞɠ ŧřȧƞşŀȧŧīȯƞş... ··········〗',
+    languagePreferences: '〖Ŀȯȧḓīƞɠ ŀȧƞɠŭȧɠḗ ƥřḗƒḗřḗƞƈḗş... ·············〗',
   },
 };
 
@@ -93,15 +100,21 @@ export type PreloadedNamespaceResources = Record<string, Record<string, unknown>
  * Merge server-embedded namespace resources into i18next so the HTTP backend
  * never fetches them. Safe to call before or after init (addResourceBundle is
  * idempotent with the merge flag).
+ *
+ * Bundles are keyed by the locale's translation-language code: packs are
+ * language-only and i18next runs with `load: 'languageOnly'`, so a regional
+ * locale (`en-AU`) resolves its resources from `en`. Seeding under the full
+ * tag instead would strand the data where lookups never read it.
  */
 function applyPreloadedResources(
   locale: SupportedLocale,
   preloaded?: PreloadedNamespaceResources,
 ) {
   if (!preloaded) return;
+  const resourcesLocale = getTranslationLanguageCode(locale);
   for (const [namespace, resources] of Object.entries(preloaded)) {
-    if (!i18next.hasResourceBundle(locale, namespace)) {
-      i18next.addResourceBundle(locale, namespace, resources, true, true);
+    if (!i18next.hasResourceBundle(resourcesLocale, namespace)) {
+      i18next.addResourceBundle(resourcesLocale, namespace, resources, true, true);
     }
   }
 }
@@ -122,8 +135,9 @@ async function ensureNamespacesLoaded(
 ) {
   if (!namespaces || namespaces.length === 0) return;
 
+  const resourcesLocale = getTranslationLanguageCode(locale);
   const missing = namespaces.filter(
-    (namespace) => !i18next.hasResourceBundle(locale, namespace)
+    (namespace) => !i18next.hasResourceBundle(resourcesLocale, namespace)
   );
   if (missing.length === 0) return;
 
@@ -151,6 +165,16 @@ async function initI18n(
     return;
   }
 
+  // Seed resources under the translation-language code the regional tag will
+  // actually resolve (see applyPreloadedResources), and only when the server
+  // actually embedded namespace data — an empty seed would mark the bundle as
+  // loaded and mask the real (fetched) translations with missing keys.
+  const resourcesLocale = getTranslationLanguageCode(resolvedLocale);
+  const hasPreloadedContent = preloaded && Object.keys(preloaded).length > 0;
+  const seededResources = hasPreloadedContent
+    ? { [resourcesLocale]: preloaded }
+    : undefined;
+
   await i18next
     .use(HttpBackend)
     .use(initReactI18next)
@@ -159,7 +183,7 @@ async function initI18n(
       lng: resolvedLocale,
       // Seed the route's namespaces so useTranslation() resolves them without a
       // network round-trip; the HTTP backend still covers anything not seeded.
-      resources: preloaded ? { [resolvedLocale]: preloaded } : undefined,
+      resources: seededResources,
       partialBundledLanguages: true,
       backend: {
         loadPath: '/locales/{{lng}}/{{ns}}.json',
@@ -382,8 +406,9 @@ export function useFormatters() {
       date: Date | string,
       options?: Intl.DateTimeFormatOptions
     ) => {
-      const dateObj = typeof date === 'string' ? new Date(date) : date;
-      return new Intl.DateTimeFormat(locale, options).format(dateObj);
+      // Date-only strings are calendar dates and must not shift through the
+      // browser timezone; see formatDateValue.
+      return formatDateValue(date, locale, options);
     },
 
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => {
@@ -407,15 +432,18 @@ export function useFormatters() {
       const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' });
 
       const diff = dateObj.getTime() - Date.now();
-      const seconds = Math.floor(diff / 1000);
-      const minutes = Math.floor(seconds / 60);
-      const hours = Math.floor(minutes / 60);
-      const days = Math.floor(hours / 24);
+      const absoluteDiff = Math.abs(diff);
 
-      if (Math.abs(days) > 0) return rtf.format(days, 'day');
-      if (Math.abs(hours) > 0) return rtf.format(hours, 'hour');
-      if (Math.abs(minutes) > 0) return rtf.format(minutes, 'minute');
-      return rtf.format(seconds, 'second');
+      if (absoluteDiff >= 24 * 60 * 60 * 1000) {
+        return rtf.format(Math.trunc(diff / (24 * 60 * 60 * 1000)), 'day');
+      }
+      if (absoluteDiff >= 60 * 60 * 1000) {
+        return rtf.format(Math.trunc(diff / (60 * 60 * 1000)), 'hour');
+      }
+      if (absoluteDiff >= 60 * 1000) {
+        return rtf.format(Math.trunc(diff / (60 * 1000)), 'minute');
+      }
+      return rtf.format(Math.trunc(diff / 1000), 'second');
     },
   }), [locale]);
 }

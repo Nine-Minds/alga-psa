@@ -5,6 +5,7 @@ import type { SuccessResponse } from "./tickets";
 export type FeatureCapabilities = {
   inventory: boolean;
   opportunities: boolean;
+  opportunitiesCreate: boolean;
 };
 
 export type MyCapabilities = {
@@ -14,6 +15,7 @@ export type MyCapabilities = {
 export const EMPTY_FEATURE_CAPABILITIES: FeatureCapabilities = {
   inventory: false,
   opportunities: false,
+  opportunitiesCreate: false,
 };
 
 export function getMyCapabilities(

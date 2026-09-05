@@ -1,5 +1,6 @@
 import logger from '@alga-psa/core/logger';
 import { fetchMicrosoftGraphAppToken } from '../graphAuth';
+import { getMicrosoftGraphBaseUrl } from '../teams/microsoftEndpoints';
 import {
   resolveTeamsMeetingConfigState,
   type TeamsMeetingConfigSkipReason,
@@ -83,7 +84,7 @@ async function resolveOnlineMeetingIdFromJoinUrl(params: {
 }): Promise<string> {
   const filter = encodeURIComponent(`JoinWebUrl eq '${escapeODataString(params.joinWebUrl)}'`);
   const response = await fetch(
-    `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(params.organizerUpn)}/onlineMeetings?$filter=${filter}`,
+    `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(params.organizerUpn)}/onlineMeetings?$filter=${filter}`,
     {
       method: 'GET',
       headers: {
@@ -149,7 +150,7 @@ export async function createTeamsMeetingWithResult(
     const bodyHtml = normalizeString(input.bodyHtml);
 
     const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(config.organizerUpn)}/events`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events`,
       {
         method: 'POST',
         headers: {

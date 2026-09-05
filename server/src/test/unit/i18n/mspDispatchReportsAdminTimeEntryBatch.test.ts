@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ROUTE_NAMESPACES } from '@alga-psa/core/i18n/config';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const productionLocales = ['en', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt'] as const;
@@ -83,22 +84,22 @@ describe('MSP dispatch/reports/admin/time-entry locale batch', () => {
       timeEntry: readLocaleJson('xx', 'time-entry'),
     };
 
-    expect(getValue(xx.reports, 'contractReports.tabs.revenue')).toBe('11111');
-    expect(getValue(xx.reports, 'reportsPage.cards.timeUtilization.title')).toBe('11111');
-    expect(getValue(xx.admin, 'telemetry.page.title')).toBe('11111');
-    expect(getValue(xx.admin, 'email.tabs.inbound')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'timePeriodList.title')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'timeEntryForm.labels.service')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'workItemList.pagination.previous')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'timeSheetHeader.title')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'workItemPicker.actions.createAdHocEntry')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'approval.sections.summary')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'managerDashboard.title')).toBe('11111');
-    expect(getValue(xx.timeEntry, 'managerDashboard.access.title')).toBe('11111');
+    expect(getValue(xx.reports, 'contractReports.tabs.revenue')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.reports, 'reportsPage.cards.timeUtilization.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.admin, 'telemetry.page.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.admin, 'email.tabs.inbound')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'timePeriodList.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'timeEntryForm.labels.service')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'workItemList.pagination.previous')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'timeSheetHeader.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'workItemPicker.actions.createAdHocEntry')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'approval.sections.summary')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'managerDashboard.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx.timeEntry, 'managerDashboard.access.title')).toMatch(pseudoPattern('xx'));
 
     for (const [namespace, key] of representativeXXKeys) {
       const localeJson = readLocaleJson('xx', namespace);
-      expect(getValue(localeJson, key)).toContain('11111');
+      expect(getValue(localeJson, key)).toMatch(pseudoPattern('xx'));
     }
   });
 

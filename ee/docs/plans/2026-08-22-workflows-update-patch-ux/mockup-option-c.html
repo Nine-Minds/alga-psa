@@ -1,0 +1,97 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Option C — Summary-first with drill-in</title>
+<link rel="stylesheet" href="mockup-shared.css">
+<style>
+.stepcard { width:340px; background:#fff; border:1px solid var(--border-300); border-radius:10px; padding:12px 14px; box-shadow:0 2px 8px rgb(15 23 42 / .08); margin:0 auto; }
+.stepcard .k { font-size:11px; color:var(--text-400); text-transform:uppercase; letter-spacing:.04em; }
+.stepcard .chg { font-size:13px; color:var(--text-600); margin-top:6px; }
+.cat { border-bottom:1px solid var(--border-100); }
+.cat-h { font-size:12px; font-weight:600; color:var(--text-500); text-transform:uppercase; letter-spacing:.05em; padding:10px 14px 6px; }
+.cfield { display:flex; align-items:center; gap:8px; padding:7px 14px; font-size:13.5px; color:var(--text-700); cursor:pointer; }
+.cfield:hover { background:var(--border-100); }
+.cfield .add { margin-left:auto; color:var(--primary-600); font-size:12.5px; }
+.cfield.used { color:var(--text-400); }
+.cfield.used .add { color:var(--text-400); }
+.chgrow { border:1px solid var(--border-200); border-radius:8px; padding:10px 12px; }
+.chgrow .line { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13.5px; }
+.pill { border:1px solid var(--border-300); background:#fff; border-radius:6px; padding:5px 9px; font-size:13px; }
+.pill.field { background:var(--primary-50); border-color:var(--primary-100); color:var(--primary-600); font-weight:600; }
+.rm { margin-left:auto; color:var(--text-400); cursor:pointer; }
+</style></head><body>
+
+<h1 class="page">Option C — Summary-first step card + two-pane change dialog</h1>
+<p class="sub">The step card itself reads as a change summary. Editing opens a focused dialog: a grouped catalog of the record's fields on the left, the authored changes on the right — a "diff you write".</p>
+
+<div class="frame" style="padding:28px; background:var(--ground);">
+  <div class="stepcard">
+    <div class="k">Business operation · Step 4</div>
+    <div style="font-weight:600; margin-top:2px;">Update Ticket Fields</div>
+    <div class="chg">✎ Updates the ticket from “Ticket created”<br>
+      Changes <b>Status, Priority, Due date</b> · all other fields unchanged</div>
+    <button class="btn btn-outline btn-sm" style="margin-top:10px;">Edit changes…</button>
+  </div>
+</div>
+
+<div class="annotation">“Edit changes…” (or selecting the step) opens the dialog:</div>
+
+<div class="frame overlay">
+  <div class="dialog" style="width:760px;">
+    <div class="dialog-h">
+      <h3>Update Ticket Fields — edit changes</h3>
+      <p>Updating <b>the ticket from “Ticket created”</b>. Only the fields listed on the right will change; everything else keeps its current value.</p>
+    </div>
+    <div style="display:flex; min-height:340px;">
+
+      <!-- field catalog -->
+      <div style="width:250px; border-right:1px solid var(--border-200); overflow:auto;">
+        <div class="cat">
+          <div class="cat-h">Details</div>
+          <div class="cfield used">Status <span class="add">added ✓</span></div>
+          <div class="cfield used">Priority <span class="add">added ✓</span></div>
+          <div class="cfield">Title <span class="add">＋</span></div>
+          <div class="cfield">Category <span class="add">＋</span></div>
+          <div class="cfield">Location <span class="add">＋</span></div>
+        </div>
+        <div class="cat">
+          <div class="cat-h">Assignment</div>
+          <div class="cfield">Assignment <span class="add">＋</span></div>
+        </div>
+        <div class="cat">
+          <div class="cat-h">Dates & tags</div>
+          <div class="cfield used">Due date <span class="add">added ✓</span></div>
+          <div class="cfield">Tags <span class="add">＋</span></div>
+        </div>
+        <div class="cat">
+          <div class="cat-h">Advanced</div>
+          <div class="cfield">Custom fields <span class="add">＋</span></div>
+          <div class="cfield">Attributes <span class="add">＋</span></div>
+          <div class="cfield">Safe-update options <span class="add">＋</span></div>
+        </div>
+      </div>
+
+      <!-- authored changes -->
+      <div style="flex:1; padding:14px 18px; display:flex; flex-direction:column; gap:10px; background:var(--border-100);">
+        <div style="font-size:12px; font-weight:600; color:var(--text-500); text-transform:uppercase; letter-spacing:.05em;">Changes (3)</div>
+        <div class="chgrow" style="background:#fff;">
+          <div class="line">Set <span class="pill field">Status</span> to <span class="pill">Escalated ▾</span> <span class="rm">✕</span></div>
+        </div>
+        <div class="chgrow" style="background:#fff;">
+          <div class="line">Set <span class="pill field">Priority</span> to <span class="pill">⚡ Priority from “Classify ticket” ▾</span> <span class="rm">✕</span></div>
+        </div>
+        <div class="chgrow" style="background:#fff;">
+          <div class="line">Set <span class="pill field">Due date</span> to <span class="pill" style="color:var(--text-500);">Clear the value ▾</span> <span class="rm">✕</span></div>
+        </div>
+        <div style="margin-top:auto; font-size:12.5px; color:var(--text-500);">8 fields not listed — they keep their current values.</div>
+      </div>
+    </div>
+    <div class="dialog-f">
+      <button class="btn btn-outline">Cancel</button>
+      <button class="btn btn-primary">Done</button>
+    </div>
+  </div>
+</div>
+
+<div class="annotation">
+  <b>Pros:</b> best at-a-glance readability on the canvas (the card *is* the summary); the catalog answers "what can I change?" while the right pane answers "what am I changing?" — both visible at once; grouped catalog scales to field-heavy records (contacts, clients). <b>Cons:</b> heaviest build (new dialog surface diverging from the inline mapping panel used by every other action); modal editing breaks the side-panel convention.
+</div>
+
+</body></html>

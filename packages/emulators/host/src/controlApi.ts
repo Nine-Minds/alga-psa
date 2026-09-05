@@ -91,21 +91,28 @@ export function buildControlApp(host: EmulatorHost): express.Express {
 
   app.post('/control/:emu/reset', route(async (req, res) => {
     await host.reset(req.params.emu);
+    host.persistState();
     res.json({ ok: true, result: null });
   }));
 
   app.post('/control/:emu/actions/:name', route(async (req, res) => {
     const result = await host.instance(req.params.emu).controls.runAction(req.params.name, req.body);
+    host.recordStep({ emulator: req.params.emu, kind: 'action', name: req.params.name, params: req.body });
+    host.persistState();
     res.json({ ok: true, result: result ?? null });
   }));
 
   app.post('/control/:emu/faults/:name/arm', route(async (req, res) => {
     await host.instance(req.params.emu).controls.armFault(req.params.name, req.body);
+    host.recordStep({ emulator: req.params.emu, kind: 'arm', name: req.params.name, params: req.body });
+    host.persistState();
     res.json({ ok: true, result: null });
   }));
 
   app.post('/control/:emu/faults/:name/disarm', route(async (req, res) => {
     await host.instance(req.params.emu).controls.disarmFault(req.params.name);
+    host.recordStep({ emulator: req.params.emu, kind: 'disarm', name: req.params.name });
+    host.persistState();
     res.json({ ok: true, result: null });
   }));
 
@@ -116,7 +123,31 @@ export function buildControlApp(host: EmulatorHost): express.Express {
 
   app.post('/control/:emu/seed/:name', route(async (req, res) => {
     const result = await host.instance(req.params.emu).controls.runSeeder(req.params.name, req.body);
+    host.recordStep({ emulator: req.params.emu, kind: 'seed', name: req.params.name, params: req.body });
+    host.persistState();
     res.json({ ok: true, result: result ?? null });
+  }));
+
+  // Scenario record mode: hand back everything captured so far as a scenario
+  // document that `algasim scenario run` replays verbatim.
+  app.get('/control/recording', route((_req, res) => {
+    res.json({
+      ok: true,
+      result: {
+        enabled: host.recordingEnabled,
+        scenario: {
+          name: 'recorded',
+          description: 'Captured from live control calls',
+          steps: host.recordedSteps.map((step) => ({
+            // Scenario targets are "<emulator>/<control>"; disarm takes no params.
+            [step.kind]: `${step.emulator}/${step.name}`,
+            ...(step.kind !== 'disarm' && step.params && Object.keys(step.params as object).length > 0
+              ? { params: step.params }
+              : {}),
+          })),
+        },
+      },
+    });
   }));
 
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {

@@ -2,7 +2,12 @@ import { redirect } from 'next/navigation';
 import { ClientPortalSignIn, PortalSwitchPrompt } from '@alga-psa/auth/client';
 import { ClientPortalTenantDiscovery } from '@alga-psa/client-portal/components';
 import { I18nWrapper } from '@alga-psa/tenancy/components';
-import { getTenantBrandingByDomain, getTenantLocaleByDomain, getTenantLocaleBySlug } from '@alga-psa/tenancy/actions';
+import {
+  getTenantBrandingByDomain,
+  getTenantBrandingBySlug,
+  getTenantLocaleByDomain,
+  getTenantLocaleBySlug,
+} from '@alga-psa/tenancy/actions';
 import { getSession } from '@alga-psa/auth';
 import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
@@ -107,7 +112,12 @@ export default async function ClientSignInPage({
         getTenantBrandingByDomain(portalDomain),
         getTenantLocaleByDomain(portalDomain),
       ])
-    : [null, tenantSlug ? await getTenantLocaleBySlug(tenantSlug) : null];
+    : tenantSlug
+      ? await Promise.all([
+          getTenantBrandingBySlug(tenantSlug),
+          getTenantLocaleBySlug(tenantSlug),
+        ])
+      : [null, null];
 
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>

@@ -46,6 +46,7 @@ Point Alga at it:
 
   MICROSOFT_LOGIN_BASE_URL=${url}
   MICROSOFT_GRAPH_BASE_URL=${url}/v1.0
+  MICROSOFT_GRAPH_BETA_BASE_URL=${url}/beta
   MICROSOFT_CLIENT_ID=${clientId}
   MICROSOFT_CLIENT_SECRET=${clientSecret}
 

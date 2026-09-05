@@ -18,6 +18,7 @@ import {
 } from '@/config/menuConfig';
 import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useTier } from '@/context/TierContext';
+import { TIER_FEATURES } from '@alga-psa/types';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
@@ -107,6 +108,20 @@ export function filterNavigationSectionsByFeatureAccess(
     .filter((section) => section.items.length > 0);
 }
 
+export function filterNavigationSectionsByPermission(
+  sections: readonly NavigationSection[],
+  permissions: readonly string[],
+): NavigationSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter(
+        (item) => !item.requiredPermission || permissions.includes(item.requiredPermission),
+      ),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
 type SidebarWithFeatureFlagsProps = React.ComponentProps<typeof Sidebar>;
 
 export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsProps) {
@@ -117,14 +132,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
   const marketingEnabled =
     typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
-  const credentialsVaultFlag = useFeatureFlag('release-v1.5-feature', { defaultValue: false });
-  const credentialsVaultEnabled =
-    typeof credentialsVaultFlag === 'boolean'
-      ? credentialsVaultFlag
-      : credentialsVaultFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
+  // Mirrors the menuConfig tier gate so the vault nav item tracks the tenant tier.
+  const credentialsVaultEnabled = hasFeature(TIER_FEATURES.CREDENTIALS);
   const { productCode, edition } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
 
@@ -215,8 +227,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   }, [edition, productCode, selfHostMode]);
 
   const billingSections = useMemo(
-    () => filterNavigationSectionsByEdition(billingNavigationSections, edition),
-    [edition],
+    () => filterNavigationSectionsByPermission(
+      filterNavigationSectionsByEdition(billingNavigationSections, edition),
+      userPermissions,
+    ),
+    [edition, userPermissions],
   );
   const extensionsSections = useMemo(
     () => filterNavigationSectionsByEdition(extensionsNavigationSections, edition),

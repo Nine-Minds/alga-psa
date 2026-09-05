@@ -569,6 +569,7 @@ export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
   primaryAgentId: z.string().uuid(),      // Existing primary agent
   additionalAgentId: z.string().uuid(),   // New additional agent
   assignedByUserId: z.string().uuid(),    // Who performed the action
+  ...TicketNotificationSuppressionSchema,
 });
 
 // Project event payload schema

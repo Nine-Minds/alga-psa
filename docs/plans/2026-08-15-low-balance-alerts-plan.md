@@ -12,7 +12,7 @@
 
 ## Outcome
 
-Add a fully `release-v1.5-feature`-gated, per-client policy that warns the assigned account manager and optionally the client billing recipient before prepaid credit or a current bucket is exhausted. The existing daily 09:00 UTC maintenance paths initiate the scan: CE schedules a tenant job and EE reuses the global maintenance schedule plus its per-tenant fanout. The server evaluates canonical ledgers, persists one logical alert per dedupe subject, and routes preference-aware internal/email deliveries through durable leased rows and the existing event-email retry/idempotency path.
+Add a fully `release-v1-5-feature`-gated, per-client policy that warns the assigned account manager and optionally the client billing recipient before prepaid credit or a current bucket is exhausted. The existing daily 09:00 UTC maintenance paths initiate the scan: CE schedules a tenant job and EE reuses the global maintenance schedule plus its per-tenant fanout. The server evaluates canonical ledgers, persists one logical alert per dedupe subject, and routes preference-aware internal/email deliveries through durable leased rows and the existing event-email retry/idempotency path.
 
 The implementation must preserve two intentionally different boundaries:
 
@@ -29,7 +29,7 @@ No product code is part of this design commit. `features.json` and `tests.json` 
 - The card is in Billing > General, after Credit Expiration Settings and before External Credit Settings.
 - Account-manager routing is required whenever an active assigned manager can be resolved. Client email is a separate, default-off opt-in to the canonical invoice billing recipient.
 - Saving only persists policy; it never evaluates or sends immediately. The card says the next check is the daily 09:00 UTC scan.
-- The component, read action, update action, and subscriber independently gate on `release-v1.5-feature` with a false default. Loading, missing, disabled, or throwing flag infrastructure is inert.
+- The component, read action, update action, and subscriber independently gate on `release-v1-5-feature` with a false default. Loading, missing, disabled, or throwing flag infrastructure is inert.
 
 ### Credit subjects
 
@@ -112,7 +112,7 @@ Do not proceed to orchestration until a migrated database proves the check const
 
 17. `server/src/lib/eventBus/subscribers/prepaidBalanceAlertEvaluator.ts` — query configured clients and canonical credit/bucket subjects; lock each `client_billing_settings` row in a short transaction; resolve/rearm policy episodes; insert/upsert stable alert rows; refresh diagnostic observations without duplicating logical alerts.
 18. `server/src/lib/eventBus/subscribers/prepaidBalanceAlertDelivery.ts` — resolve manager/client recipients, normalize/dedupe roles, plan unique delivery rows, claim with `FOR UPDATE SKIP LOCKED`, reclaim stale leases, enforce five attempts, transact internal delivery, and send email outside the transaction through the existing event-email path.
-19. `server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.ts` — fail closed on `release-v1.5-feature`, invoke evaluator then delivery drain, isolate per-client/recipient failures, and emit one tenant summary plus structured warnings.
+19. `server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.ts` — fail closed on `release-v1-5-feature`, invoke evaluator then delivery drain, isolate per-client/recipient failures, and emit one tenant summary plus structured warnings.
 20. `server/src/lib/eventBus/subscribers/index.ts` — register the `PREPAID_BALANCE_ALERT_SCAN_REQUESTED` subscriber.
 21. `server/src/lib/notifications/prepaidBalanceAlertTemplates.ts` — provide localized credit/bucket email and internal template definitions/variables with manager `/msp/clients/{clientId}?tab=billing` and client `/client-portal/billing` links; internal variants are `warning` and default `high`.
 22. `server/src/lib/notifications/prepaidBalanceAlertTemplates.test.ts` — verify every billing-email locale and both event variants/recipient link shapes are registered.
@@ -136,7 +136,7 @@ The subscriber is the only layer allowed to evaluate PostHog, query ledgers, res
    - `server/public/locales/xx/msp/clients.json`
    - `server/public/locales/yy/msp/clients.json`
 
-The component itself must call `useFeatureFlag('release-v1.5-feature', { defaultValue: false })` and return `null` for both loading and disabled states. Do not gate only at the parent or expose settings via an ungated server action.
+The component itself must call `useFeatureFlag('release-v1-5-feature', { defaultValue: false })` and return `null` for both loading and disabled states. Do not gate only at the parent or expose settings via an ungated server action.
 
 ### 6. DB-backed behavior, retry, and schedule tests
 
@@ -149,7 +149,7 @@ Use repository-native integration/bootstrap utilities when implementing these fi
 
 ## Feature-flag and rollout contract
 
-1. Deploy schema, registries, scheduler wiring, subscriber, actions, UI, and tests together while `release-v1.5-feature` remains off.
+1. Deploy schema, registries, scheduler wiring, subscriber, actions, UI, and tests together while `release-v1-5-feature` remains off.
 2. Confirm a configured-low migrated fixture produces zero alert/delivery/notification writes with the flag disabled or checker unavailable.
 3. Enable internal/test tenants and configure explicit policies. Observe two daily runs: the first opens/sends; the second deduplicates.
 4. Exercise recovery/re-drop for credit and a period rollover for buckets before gradual flag expansion.

@@ -28,4 +28,16 @@ describe('quick add interaction contact creation wiring contract', () => {
     expect(source).toContain('clientCrossFeature.scheduleTeamsMeeting!');
     expect(source).toContain('getInteractionById(resultInteraction.interaction_id!)');
   });
+
+  it('Online Meeting quick add requests a schedule entry and names its invite recipients', () => {
+    const source = read('./QuickAddInteraction.tsx');
+
+    expect(source).toContain('createScheduleEntry: true');
+    // MeetingAttendee.emailAddress is a plain string here; reading .address off it
+    // silently emptied the recipient list.
+    expect(source).toContain('.map((attendee) => attendee.emailAddress)');
+    expect(source).toContain("teamsMeetingCapability?.sendMeetingInvites === false");
+    expect(source).toContain('interactions.quickAdd.teams.invitesSummary');
+    expect(source).toContain('interactions.quickAdd.teams.reason.');
+  });
 });

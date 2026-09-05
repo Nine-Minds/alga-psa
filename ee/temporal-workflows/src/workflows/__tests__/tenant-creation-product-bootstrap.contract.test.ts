@@ -41,8 +41,8 @@ describe('tenant creation product bootstrap wiring', () => {
       'project',
       'project_task',
       'service',
-      'timeentry',
-      'timesheet',
+      'time_entry',
+      'time_sheet',
       'workflow',
     ]) {
       expect(seedSource).not.toContain(`['${forbiddenResource}'`);

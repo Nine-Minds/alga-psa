@@ -433,6 +433,13 @@ describeDb('resolve_inbound_ticket_context destination routing (integration)', (
         subject,
         body: { text: 'Hello', html: undefined },
         attachments: [],
+        // Exact-contact attribution requires an aligned SPF/DKIM pass; real
+        // provider-fetched mail carries Authentication-Results. Align DKIM to
+        // the sender's From domain so this contact matches (parity with the
+        // resolveInboundTicketContext action, which routes by sender).
+        headers: {
+          'Authentication-Results': `mx.google.com; dkim=pass header.d=${senderEmail.split('@')[1]}; spf=pass smtp.mailfrom=${senderEmail}`,
+        },
       } as any,
     });
 

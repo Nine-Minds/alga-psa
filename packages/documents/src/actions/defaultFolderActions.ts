@@ -54,7 +54,7 @@ export const getDefaultFolders = withAuth(async (
   entityType?: string | null
 ): Promise<IDefaultFolder[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'read'))) {
-    return permissionError('Permission denied');
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
   }
 
   const { knex } = await createTenantKnex();
@@ -81,7 +81,7 @@ export const saveDefaultFolders = withAuth(async (
   items: IDefaultFolderInput[]
 ): Promise<IDefaultFolder[] | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'create'))) {
-    return permissionError('Permission denied');
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
   }
 
   const type = entityType.trim().toLowerCase();
@@ -137,7 +137,7 @@ export const removeDefaultFolders = withAuth(async (
   entityType: string
 ): Promise<number | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'delete'))) {
-    return permissionError('Permission denied');
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
   }
 
   const { knex } = await createTenantKnex();
@@ -232,7 +232,7 @@ export const loadSuggestedDefaults = withAuth(async (
   { tenant }
 ): Promise<number | ActionPermissionError> => {
   if (!(await hasPermission(user, 'document', 'create'))) {
-    return permissionError('Permission denied');
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
   }
 
   const { knex } = await createTenantKnex();

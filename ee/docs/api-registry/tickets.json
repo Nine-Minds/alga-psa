@@ -488,8 +488,72 @@
           }
         ]
       }
-    }
-    ,
+    },
+    {
+      "match": {
+        "method": "put",
+        "path": "/api/v1/tickets/{id}"
+      },
+      "metadata": {
+        "displayName": "Update Ticket",
+        "summary": "Update a ticket with optional silent-notification controls",
+        "description": "Updates one or more ticket fields. Set suppressContactNotifications=true to avoid customer email and portal notifications for this operation. Set suppressInternalNotifications=true as well to also avoid agent and watcher notifications; internal suppression requires customer suppression. Silent updates still create normal audit, workflow, and webhook records.",
+        "rbacResource": "ticket",
+        "approvalRequired": true,
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Ticket identifier.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBodySchema": {
+          "type": "object",
+          "properties": {
+            "title": { "type": "string", "minLength": 1, "maxLength": 255 },
+            "url": { "type": "string", "format": "uri" },
+            "board_id": { "type": "string", "format": "uuid" },
+            "client_id": { "type": "string", "format": "uuid" },
+            "location_id": { "type": "string", "format": "uuid" },
+            "contact_name_id": { "type": ["string", "null"], "format": "uuid" },
+            "status_id": { "type": "string", "format": "uuid" },
+            "category_id": { "type": "string", "format": "uuid" },
+            "subcategory_id": { "type": "string", "format": "uuid" },
+            "assigned_to": { "type": ["string", "null"], "format": "uuid" },
+            "priority_id": { "type": "string", "format": "uuid" },
+            "attributes": { "type": ["object", "null"], "additionalProperties": true },
+            "tags": { "type": "array", "items": { "type": "string" } },
+            "override_close_rules": { "type": "boolean" },
+            "override_close_rules_reason": { "type": ["string", "null"] },
+            "suppressContactNotifications": {
+              "type": "boolean",
+              "description": "Suppress customer-facing email and portal notifications for this update."
+            },
+            "suppressInternalNotifications": {
+              "type": "boolean",
+              "description": "Also suppress agent and watcher email, in-app, and push notifications. Requires suppressContactNotifications=true."
+            }
+          },
+          "minProperties": 1
+        },
+        "examples": [
+          {
+            "name": "Silently change ticket priority for everyone",
+            "request": {
+              "params": { "id": "11111111-1111-1111-1111-111111111111" },
+              "body": {
+                "priority_id": "44444444-4444-4444-4444-444444444444",
+                "suppressContactNotifications": true,
+                "suppressInternalNotifications": true
+              }
+            },
+            "notes": "The priority change remains visible in ticket history and webhooks, but no customer, agent, or watcher notification is sent."
+          }
+        ]
+      }
+    },
     {
       "match": {
         "method": "get",
@@ -571,7 +635,7 @@
       "metadata": {
         "displayName": "Add Ticket Comment",
         "summary": "Add a comment to a ticket",
-        "description": "Adds a client or internal comment to the specified ticket.",
+        "description": "Adds a client or internal comment to the specified ticket. Silent flags suppress the comment notification without hiding the comment from ticket history, workflows, or webhooks.",
         "rbacResource": "ticket",
         "approvalRequired": true,
         "parameters": [
@@ -595,10 +659,32 @@
               "description": "When true, records the comment as internal only.",
               "default": false
             },
+            "is_resolution": {
+              "type": "boolean",
+              "description": "When true, marks the comment as a resolution.",
+              "default": false
+            },
+            "parent_comment_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Optional parent comment for a threaded reply."
+            },
             "time_spent": {
               "type": "number",
               "description": "Optional time (in minutes) to log with the comment.",
               "minimum": 0
+            },
+            "metadata": {
+              "type": "object",
+              "additionalProperties": true
+            },
+            "suppressContactNotifications": {
+              "type": "boolean",
+              "description": "Suppress customer-facing notification delivery for this comment."
+            },
+            "suppressInternalNotifications": {
+              "type": "boolean",
+              "description": "Also suppress agent and watcher notifications for this comment. Requires suppressContactNotifications=true."
             }
           },
           "required": ["comment_text"]

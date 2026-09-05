@@ -287,7 +287,7 @@ export function ClientContractDialog({
                   />
                 </div>
 
-                <div className="border rounded-md p-3 space-y-3 bg-[rgb(var(--color-surface-50))]">
+                <div className="border rounded-md p-3 space-y-3 bg-[rgb(var(--color-border-50))]">
                   <div>
                     <h4 className="text-sm font-semibold">{t('clientContractDialog.renewalSettings', { defaultValue: 'Renewal Settings' })}</h4>
                     <p className="text-xs text-[rgb(var(--color-text-500))]">

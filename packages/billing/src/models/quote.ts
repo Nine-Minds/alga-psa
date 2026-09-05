@@ -18,6 +18,8 @@ export interface QuoteListOptions {
   pageSize?: number;
   status?: QuoteStatus;
   client_id?: string;
+  /** Free-text match on quote number, title, or client name. */
+  search?: string;
   sortBy?: 'quote_date' | 'total_amount' | 'status' | 'created_at';
   sortOrder?: 'asc' | 'desc';
   is_template?: boolean;
@@ -182,6 +184,17 @@ const Quote = {
 
     if (options.client_id) {
       baseQuery.andWhere('q.client_id', options.client_id);
+    }
+
+    const searchTerm = options.search?.trim();
+    if (searchTerm) {
+      const pattern = `%${searchTerm.replace(/[%_\\]/g, (match) => `\\${match}`)}%`;
+      baseQuery.andWhere((builder) => {
+        builder
+          .whereILike('q.quote_number', pattern)
+          .orWhereILike('q.title', pattern)
+          .orWhereILike('c.client_name', pattern);
+      });
     }
 
     const totalResult = await baseQuery.clone().count<{ count: string }>('q.quote_id as count').first();

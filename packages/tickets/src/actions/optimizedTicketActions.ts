@@ -71,6 +71,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { createTicketRelationshipSqlAdapter } from '../lib/ticketAuthorizationSql';
+import { ticketSlaBreachedBindings, ticketSlaBreachedSql } from '../lib/ticketSlaSql';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
 import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransitionEvents';
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
@@ -84,6 +85,10 @@ import {
 } from '../lib/ticketStatusFilter';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 import { actionError } from '@alga-psa/ui/lib/errorHandling';
+import { scheduleJobAt as scheduleBackgroundJobAt } from '@alga-psa/core';
+
+const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+type ScheduledCommentPublication = { publishAt: string; timeZone: string };
 
 function isTicketActionError(value: unknown): value is TicketActionError {
   const candidate = value as Record<string, unknown>;
@@ -100,7 +105,7 @@ function isTicketActionError(value: unknown): value is TicketActionError {
 function ticketListActionErrorFrom(error: unknown): TicketActionError | null {
   const issues = (error as { issues?: unknown })?.issues;
   if (Array.isArray(issues) && issues.length > 0) {
-    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.');
+    return actionError('Ticket list filters are no longer valid. Refresh the page and try again.', 'features/tickets:errors.list.filtersInvalid');
   }
 
   return ticketActionErrorFrom(error);
@@ -730,20 +735,66 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
       board.enable_live_ticket_timer = true;
     }
 
+    // The `users` fetch above is deliberately narrowed to internal active users so
+    // the agent pickers only offer assignable agents. Comment authors are not
+    // bound by that: client-portal repliers and deactivated agents also write
+    // comments, so fetch the missing authors separately for display purposes only.
+    const pickerUserIds = new Set((users as Array<{ user_id: string }>).map((agent) => agent.user_id));
+    const extraAuthorIds = Array.from(
+      new Set(
+        (comments as Array<{ user_id?: string | null }>)
+          .map((comment) => comment.user_id)
+          .filter((userId): userId is string => Boolean(userId))
+      )
+    ).filter((userId) => !pickerUserIds.has(userId));
+
+    const extraCommentAuthors: Array<{ user_id: string; user_type?: string | null; contact_id?: string | null }> =
+      extraAuthorIds.length > 0
+        ? await tenantScopedTable(trx, 'users', tenant).whereIn('user_id', extraAuthorIds)
+        : [];
+
+    // Client-portal authors carry their avatar on the linked contact, not the user
+    // record — mirror the client-portal conversation view here.
+    const authorContactIds = Array.from(
+      new Set(
+        extraCommentAuthors
+          .filter((author) => author.user_type === 'client' && author.contact_id)
+          .map((author) => author.contact_id as string)
+      )
+    );
+
     // Resolve avatar URLs in one batch (2 queries) instead of a DB transaction per
     // tenant user — the per-user path scaled O(users) and dominated ticket-open latency.
-    const userAvatarUrls = await getEntityImageUrlsBatch(
-      'user',
-      users.map((user: any) => user.user_id),
-      tenant,
-    ).catch((imgError) => {
-      console.error('Error batch-fetching user avatar URLs:', imgError);
-      return new Map<string, string | null>();
-    });
-    const usersWithAvatars = users.map((user: any) => ({
-      ...user,
-      avatarUrl: userAvatarUrls.get(user.user_id) ?? null,
-    }));
+    const [userAvatarUrls, authorContactAvatarUrls] = await Promise.all([
+      getEntityImageUrlsBatch(
+        'user',
+        [...users.map((user: any) => user.user_id), ...extraAuthorIds],
+        tenant,
+      ).catch((imgError) => {
+        console.error('Error batch-fetching user avatar URLs:', imgError);
+        return new Map<string, string | null>();
+      }),
+      authorContactIds.length > 0
+        ? getEntityImageUrlsBatch('contact', authorContactIds, tenant).catch((imgError) => {
+            console.error('Error batch-fetching comment author contact avatar URLs:', imgError);
+            return new Map<string, string | null>();
+          })
+        : Promise.resolve(new Map<string, string | null>()),
+    ]);
+    // Comment authors are merged into the display map below only — availableAgents
+    // and agentOptions keep deriving from the internal active `users` list.
+    const usersWithAvatars = [
+      ...users.map((user: any) => ({
+        ...user,
+        avatarUrl: userAvatarUrls.get(user.user_id) ?? null,
+      })),
+      ...extraCommentAuthors.map((author: any) => ({
+        ...author,
+        avatarUrl: (author.user_type === 'client' && author.contact_id
+          ? authorContactAvatarUrls.get(author.contact_id)
+          : userAvatarUrls.get(author.user_id)) ?? null,
+      })),
+    ];
 
     const userMap = usersWithAvatars.reduce((acc: Record<string, { user_id: string; first_name: string; last_name: string; email?: string, user_type: string, avatarUrl: string | null }>, user: { user_id: string; first_name?: string | null; last_name?: string | null; email?: string; user_type: string; avatarUrl: string | null }) => {
       acc[user.user_id] = {
@@ -1372,20 +1423,13 @@ async function buildTicketListBaseQuery(
           break;
 
         case 'breached':
-          baseQuery = baseQuery
-            .whereNotNull('t.sla_policy_id')
-            .where(function() {
-              this.where(function() {
-                this.where('t.sla_response_due_at', '<', nowIso)
-                  .whereNull('t.sla_response_at');
-              })
-              .orWhere(function() {
-                this.where('t.sla_resolution_due_at', '<', nowIso)
-                  .whereNull('t.sla_resolution_at');
-              })
-              .orWhere('t.sla_response_met', false)
-              .orWhere('t.sla_resolution_met', false);
-            });
+          // Shared with getBoardListStats' sla_breached aggregate: the board
+          // header's breach count and this filter must describe the same set,
+          // which they can only be relied on to do if they read one predicate.
+          baseQuery = baseQuery.whereRaw(
+            ticketSlaBreachedSql('t'),
+            ticketSlaBreachedBindings(nowIso)
+          );
           break;
 
         case 'paused':
@@ -3141,6 +3185,7 @@ export const addTicketCommentWithCache = withAuth(async (
     UpdateTicketInTransactionOptions,
     'suppressContactNotifications' | 'suppressInternalNotifications'
   >,
+  schedule?: ScheduledCommentPublication | null,
 ): Promise<IComment | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
 
@@ -3162,6 +3207,31 @@ export const addTicketCommentWithCache = withAuth(async (
     if (isInternal && authorType !== 'internal') {
       throw new Error('Only MSP users can create internal comments');
     }
+
+    let scheduledPublishAt: Date | null = null;
+    if (schedule) {
+      scheduledPublishAt = new Date(schedule.publishAt);
+      if (
+        authorType !== 'internal' ||
+        isInternal ||
+        Number.isNaN(scheduledPublishAt.getTime()) ||
+        scheduledPublishAt.getTime() <= Date.now() ||
+        !schedule.timeZone ||
+        schedule.timeZone.length > 64
+      ) {
+        throw new Error('Only internal MSP users may schedule client-visible comments for a valid future time');
+      }
+      try {
+        Intl.DateTimeFormat(undefined, { timeZone: schedule.timeZone });
+      } catch {
+        throw new Error('A valid IANA time zone is required for scheduled comments');
+      }
+    }
+    const scheduledPublishAtIso = scheduledPublishAt?.toISOString() ?? null;
+    const isScheduled = scheduledPublishAtIso !== null;
+    // A scheduled resolution must not close (or suppress the normal comment
+    // notification for) a ticket before it is actually published.
+    const effectiveClosesTicket = closesTicket && !isScheduled;
 
     // Verify ticket exists
     const ticket = await tenantScopedTable(trx, 'tickets', tenant)
@@ -3224,32 +3294,39 @@ export const addTicketCommentWithCache = withAuth(async (
       is_resolution: isResolution,
       markdown_content: markdownContent,
       created_at: nowIso,
+      ...(isScheduled ? {
+        publish_state: 'scheduled',
+        scheduled_publish_at: scheduledPublishAtIso,
+        scheduled_publish_tz: schedule!.timeZone,
+      } : {}),
       // The email subscriber reads metadata.closes_ticket and skips the
       // comment-added email so the close email is the single source of
       // truth when the UI is closing the ticket immediately after.
-      ...(closesTicket ? { metadata: { closes_ticket: true } } : {}),
+      ...(effectiveClosesTicket ? { metadata: { closes_ticket: true } } : {}),
     }).returning('*');
 
     // Update ticket response state based on comment visibility and author (F005-F008)
-    await updateTicketResponseStateFromComment(
-      trx,
-      tenant,
-      ticketId,
-      authorType,
-      authorType === 'internal' ? isInternal : false,
-      user.user_id ?? null
-    );
+    if (!isScheduled) {
+      await updateTicketResponseStateFromComment(
+        trx,
+        tenant,
+        ticketId,
+        authorType,
+        authorType === 'internal' ? isInternal : false,
+        user.user_id ?? null
+      );
+    }
 
     // Bundle child→master reopen: a public reply on a bundled child can
     // reopen the closed master when reopen_on_child_reply is set. This
     // mirrors the wiring in commentActions.createComment so the optimized
     // MSP-side comment path doesn't silently skip the reopen.
-    if (!isInternal) {
+    if (!isInternal && !isScheduled) {
       await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
     }
 
     // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
-    if (!isInternal) {
+    if (!isInternal && !isScheduled) {
       const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
         .where({ master_ticket_id: ticketId })
         .first();
@@ -3324,7 +3401,7 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Publish comment added event after the comment transaction commits.
-    registerAfterCommit(trx, () =>
+    if (!isScheduled) registerAfterCommit(trx, () =>
       publishEvent({
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
@@ -3348,7 +3425,7 @@ export const addTicketCommentWithCache = withAuth(async (
     );
 
     // Publish workflow v2 ticket message events (additive).
-    try {
+    if (!isScheduled) try {
       const occurredAt = newComment.created_at ?? new Date().toISOString();
       const workflowCtx = {
         tenantId: tenant,
@@ -3397,7 +3474,9 @@ export const addTicketCommentWithCache = withAuth(async (
     await writeTicketActivity(trx, {
       tenant,
       ticketId,
-      eventType: isInternal
+      eventType: isScheduled
+        ? 'TICKET_COMMENT_SCHEDULED'
+        : isInternal
         ? TICKET_ACTIVITY_EVENT.INTERNAL_NOTE_ADDED
         : TICKET_ACTIVITY_EVENT.MESSAGE_ADDED,
       entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
@@ -3412,11 +3491,32 @@ export const addTicketCommentWithCache = withAuth(async (
       details: {
         is_internal: !!isInternal,
         is_resolution: !!isResolution,
+        ...(isScheduled ? {
+          scheduled_publish_at: scheduledPublishAtIso,
+          scheduled_publish_tz: schedule!.timeZone,
+        } : {}),
       },
     });
 
+    if (scheduledPublishAt && scheduledPublishAtIso && schedule) {
+      // Arm only after commit: a worker must never observe a schedule before
+      // its comment row is durable. Startup reconciliation repairs an arming
+      // failure after the transaction has committed.
+      registerAfterCommit(trx, async () => {
+        const job = await scheduleBackgroundJobAt(
+          SCHEDULED_COMMENT_JOB,
+          { tenantId: tenant, ticketId, commentId: newComment.comment_id },
+          scheduledPublishAt,
+          { singletonKey: `publish-comment:${newComment.comment_id}`, metadata: { scheduledPublishTz: schedule.timeZone } },
+        );
+        await tenantDb(db, tenant).table('comments')
+          .where({ comment_id: newComment.comment_id, publish_state: 'scheduled' })
+          .update({ schedule_job_id: job.jobId });
+      }, `schedule comment publication ${newComment.comment_id}`);
+    }
+
     // Track comment analytics
-    captureAnalytics('ticket_comment_added', {
+    captureAnalytics(isScheduled ? 'ticket_comment_scheduled' : 'ticket_comment_added', {
       is_internal: isInternal,
       is_resolution: isResolution,
       content_length: markdownContent.length,
@@ -3453,6 +3553,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     UpdateTicketInTransactionOptions,
     'suppressContactNotifications' | 'suppressInternalNotifications'
   >,
+  schedule?: ScheduledCommentPublication | null,
 ): Promise<IComment | TicketActionError> {
   return addTicketCommentWithCache(
     ticketId,
@@ -3461,6 +3562,7 @@ export async function addTicketCommentWithCacheForCurrentUser(
     isResolution,
     closesTicket,
     notificationSuppression,
+    schedule,
   );
 }
 

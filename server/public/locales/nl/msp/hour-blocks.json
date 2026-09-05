@@ -137,5 +137,22 @@
     "remaining": "{{hours}} uur ongebruikt gaat verloren.",
     "submit": "Blok laten vervallen",
     "title": "Urenblok laten vervallen"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Urenblok niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "serviceNotFound": "Service niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "hoursPositive": "De uren van het blok moeten groter zijn dan nul.",
+      "ratePositive": "Het uurtarief moet nul of hoger zijn.",
+      "reasonRequired": "Voor deze bewerking is een reden vereist.",
+      "adjustExpiredOrVoided": "Een verlopen of gestorneerd urenblok kan niet worden aangepast.",
+      "usedCannotVoid": "Dit urenblok is gebruikt en kan niet worden gestorneerd. Laat het in plaats daarvan verlopen.",
+      "onlyPendingOrActiveVoid": "Alleen openstaande of actieve urenblokken kunnen worden gestorneerd.",
+      "expireVoided": "Een gestorneerd urenblok kan niet worden verlopen.",
+      "updateExpirationVoided": "De vervaldatum van een gestorneerd urenblok kan niet worden bijgewerkt.",
+      "invalidValue": "Een van de geselecteerde waarden van het urenblok is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht veld van het urenblok. Controleer het formulier en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde klant, service of factuur bestaat niet meer. Vernieuw de pagina en probeer het opnieuw."
+    }
   }
 }

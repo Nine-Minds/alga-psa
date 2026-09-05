@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Generuj fakturę na koniec miesiąca",
+      "title": "Zamknąć okres {{servicePeriod}} na koniec miesiąca?",
+      "warning": "Spowoduje to zafakturowanie okresu {{servicePeriod}} w jego ostatnim dniu kalendarzowym. Wpisy czasu lub zużycia zarejestrowane po tym zamknięciu nie zostaną uwzględnione. Zamknij okres dopiero po pełnym zarejestrowaniu całej pracy.",
+      "confirm": "Generuj na koniec miesiąca",
+      "omissionWarning": "Wpisy czasu lub zużycia zarejestrowane po tym zamknięciu NIE zostaną uwzględnione na fakturze.",
+      "generationFailed": "Nie udało się wygenerować faktury na koniec miesiąca. Spróbuj ponownie."
+    },
     "ready": {
       "title": "Gotowy do wystawienia faktury",
       "description": "Przeglądaj powtarzające się terminy prac i generuj wersje robocze faktur za wybrane okresy.",
@@ -116,7 +124,8 @@
       "closePreview": "Zamknij podgląd",
       "generateInvoice": "Wygeneruj fakturę",
       "generateSelected_few": "Generuj faktury za wybrane okresy ({{count}})",
-      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})"
+      "generateSelected_many": "Generuj faktury za wybrane okresy ({{count}})",
+      "recordUsage": "Zarejestruj użycie"
     },
     "dialogs": {
       "reverse": {
@@ -181,7 +190,14 @@
         "generating": "Generowanie...",
         "generateError": "Nie udało się wygenerować faktury z podglądu",
         "summary_few": "Wybrano {{count}} faktury",
-        "summary_many": "Wybrano {{count}} faktur"
+        "summary_many": "Wybrano {{count}} faktur",
+        "missingUsageHeading": "Nie zarejestrowano użycia dla tego okresu",
+        "missingUsageService": "{{service}}: brak rekordów użycia od {{periodStart}} do {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: zarejestrowane użycie od {{periodStart}} do {{periodEnd}} jest wykluczone, dopóki nie zostanie rozstrzygnięte przypisanie do pozycji umowy — rozstrzygnij przypisanie zamiast rejestrować kolejne użycie",
+        "usageCalculationError": "{{service}}: zarejestrowanego użycia od {{periodStart}} do {{periodEnd}} nie udało się wycenić — popraw ceny usługi zamiast rejestrować kolejne użycie",
+        "recordScopedUsage": "Zarejestruj użycie: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: od {{periodStart}} do {{periodEnd}} — zarejestrowanego użycia nie udało się wycenić. Przejrzyj konfigurację cen tej usługi.",
+        "reportedPeriodTotalsHeading": "Zgłoszone liczby dla okresów"
       },
       "poOverage": {
         "title": "Przekroczenie limitu zamówienia zakupu",
@@ -196,6 +212,13 @@
         "proceedAnyway": "Kontynuować mimo to?",
         "proceedConfirm": "Kontynuuj mimo to",
         "skippedError": "Pominięte ze względu na nadmiar zamówienia ({{poLabel}}): przekroczone przez {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Brak zgłoszonego użycia za ten okres",
+        "description": "Te usługi rozliczane według użycia nie mają zgłoszenia w oknie fakturowania. Wygenerowanie teraz pominie je na fakturze; pozostaną rozliczalne po zgłoszeniu użycia.",
+        "omittedItem": "{{services}}: brak zgłoszonego użycia od {{periodStart}} do {{periodEnd}}",
+        "question": "Wygenerować bez tych usług?",
+        "confirm": "Generuj bez niezgłoszonego użycia"
       }
     },
     "history": {
@@ -361,7 +384,8 @@
       "refresh": "Wystąpił błąd podczas odświeżania danych faktury.",
       "updateFailed": "Błąd podczas aktualizowania faktury",
       "generateFailed": "Błąd podczas generowania faktury",
-      "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej klienta i spróbuj ponownie.",
+      "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej i spróbuj ponownie.",
+      "USAGE_RECORDS_MISSING": "Brak kwalifikujących się rekordów użycia dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}}. Zarejestruj użycie dla tego okresu (lub wpis zerowego użycia), aby rozliczyć te usługi.",
       "CLIENT_NOT_FOUND": "Nie znaleziono wybranego klienta. Odśwież stronę i spróbuj ponownie.",
       "SERVICE_NOT_FOUND": "Nie znaleziono usługi {{serviceId}}. Odśwież stronę i spróbuj ponownie.",
       "INVALID_QUANTITY": "Ilość musi być większa od zera.",
@@ -372,10 +396,13 @@
       "UNEXPECTED": "Wystąpił błąd podczas generowania faktury. Kontaktując się z pomocą techniczną, podaj numer referencyjny {{ref}}.",
       "salesOrderGenerateFailed": "Nie udało się utworzyć faktury z zamówienia sprzedaży.",
       "salesOrderNothingToInvoice": "To zamówienie sprzedaży nie zawiera już niczego do zafakturowania.",
-      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży."
+      "salesOrderNotInvoiceable": "Nie można już wystawić faktury dla tego zamówienia sprzedaży.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "To okno fakturowania zawiera pozycje do rozliczenia, ale dla {{services}} nie zgłoszono użycia za okres rozliczeniowy od {{periodStart}} do {{periodEnd}}. Najpierw zarejestruj użycie albo wyraźnie potwierdź wygenerowanie bez niego — niezgłoszone usługi pozostaną rozliczalne później.",
+      "USAGE_PERIOD_TOTAL_STALE": "Podgląd jest nieaktualny: {{details}}. Uruchom podgląd ponownie, aby zobaczyć aktualne wartości, a następnie wygeneruj fakturę jeszcze raz.",
+      "USAGE_CALCULATION_ERROR": "Użycie dla {{services}} w okresie rozliczeniowym od {{periodStart}} do {{periodEnd}} zostało zarejestrowane, ale nie udało się go wycenić. Popraw ceny usługi (cena katalogowa w walucie umowy, stawka indywidualna lub progi stawek) i spróbuj ponownie. Nie rejestruj użycia zastępczego."
     },
     "warnings": {
-      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej przed wygenerowaniem faktury."
+      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw kontakt ds. rozliczeń, adres e-mail do rozliczeń klienta lub adres e-mail w lokalizacji rozliczeniowej albo domyślnej przed wygenerowaniem faktury."
     },
     "errorFallback": {
       "title": "Coś poszło nie tak",
@@ -388,8 +415,6 @@
   "draftsTab": {
     "title": "Projekty faktur",
     "searchPlaceholder": "Wyszukaj faktury...",
-    "bulkActions_one": "Działania ({{count}})",
-    "bulkActions_other": "Działania ({{count}})",
     "columns": {
       "invoiceNumber": "Numer faktury",
       "client": "Klient",
@@ -449,14 +474,16 @@
       "confirm": "Przełącz na podatek wewnętrzny i sfinalizuj",
       "cancel": "Anuluj"
     },
-    "bulkActions_few": "Działania ({{count}})",
-    "bulkActions_many": "Działania ({{count}})"
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
+    }
   },
   "finalizedTab": {
     "title": "Sfinalizowane faktury",
     "searchPlaceholder": "Wyszukaj faktury...",
-    "bulkActions_one": "Działania ({{count}})",
-    "bulkActions_other": "Działania ({{count}})",
     "columns": {
       "invoiceNumber": "Numer faktury",
       "client": "Klient",
@@ -491,8 +518,12 @@
       "bulkUnfinalizeFailed": "Nie udało się cofnąć finalizacji faktur. Spróbuj ponownie.",
       "bulkUnfinalizeInvoiceFailed": "Nie można ponownie otworzyć {{invoiceNumber}}: {{reason}}"
     },
-    "bulkActions_few": "Działania ({{count}})",
-    "bulkActions_many": "Działania ({{count}})"
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
+    }
   },
   "recurringServicePeriods": {
     "title": "Powtarzające się okresy świadczenia usług",
@@ -1028,38 +1059,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Wygeneruj fakturę zaliczkową",
-      "creditMemo": "Wygeneruj notę ​​kredytową"
+      "prepayment": "Wygeneruj fakturę zaliczkową"
     },
     "descriptions": {
-      "prepayment": "Faktury z przedpłatą tworzą kredyt klienta na przyszłą wartość. Nie tworzą powtarzających się okresów świadczenia usług; późniejsze faktury cykliczne zachowują własny zakres okresu świadczenia usługi.",
-      "creditMemo": "Noty kredytowe korygują salda finansowe bez ponownego definiowania powtarzającego się okresu świadczenia usługi na fakturze źródłowej."
+      "prepayment": "Faktury z przedpłatą tworzą kredyt klienta na przyszłą wartość. Nie tworzą powtarzających się okresów świadczenia usług; późniejsze faktury cykliczne zachowują własny zakres okresu świadczenia usługi."
     },
     "fields": {
-      "type": "Typ",
       "client": "Klient",
       "amount": "Kwota",
-      "description": "Opis"
-    },
-    "types": {
-      "prepaymentInvoice": "Faktura zaliczkowa",
-      "creditMemo": "Notatka kredytowa"
+      "descriptionOptional": "Opis (optional)"
     },
     "placeholders": {
       "amount": "Wpisz kwotę",
-      "prepaymentDescription": "Przedpłata na przyszłe usługi",
-      "creditMemoDescription": "Powód noty kredytowej"
+      "prepaymentDescription": "Przedpłata na przyszłe usługi"
     },
     "errors": {
       "allFieldsRequired": "Proszę wypełnić wszystkie pola",
       "validAmount": "Proszę wprowadzić prawidłową kwotę",
-      "creditMemosUnsupported": "Noty kredytowe nie są jeszcze obsługiwane",
       "generateFailed": "Błąd podczas generowania faktury"
     },
     "actions": {
       "generating": "Generowanie...",
-      "generatePrepayment": "Wygeneruj fakturę zaliczkową",
-      "generateCreditMemo": "Wygeneruj notę ​​kredytową"
+      "generatePrepayment": "Wygeneruj fakturę zaliczkową"
     }
   },
   "contractItems": {
@@ -1294,7 +1315,12 @@
         "emptyState": "Wybierz dane przykładowe lub istniejące, aby wygenerować wiarygodny podgląd.",
         "loadingPreview": "Kształtowanie i renderowanie podglądu…",
         "templateError": "Nie można wygenerować szablonu podglądu z bieżącego obszaru roboczego.",
-        "renderError": "Renderowanie podglądu nie powiodło się."
+        "renderError": "Renderowanie podglądu nie powiodło się.",
+        "searchQuotes": "Szukaj wycen…",
+        "noQuotesFound": "Brak wycen.",
+        "selectQuote": "Wybierz wycenę",
+        "loadingQuoteDetails": "Ładowanie szczegółów wyceny…",
+        "loadingDocumentDetails": "Ładowanie szczegółów dokumentu…"
       },
       "tabs": {
         "design": "Projektowanie",
@@ -1725,7 +1751,6 @@
   },
   "projectBilling": {
     "subtitle": "Gotowe kamienie milowe i zaliczki oczekujące na zatwierdzenie we wszystkich projektach.",
-    "bulkActions": "Działania ({{count}})",
     "loading": "Wczytywanie kolejki rozliczeń projektów...",
     "empty": "Nic nie oczekuje na sprawdzenie. Gotowe kamienie milowe i zaliczki pojawią się tutaj.",
     "columns": {
@@ -1781,6 +1806,12 @@
       "message": "Anulowanie tego wpisu harmonogramu usuwa go z rozliczeń. Tej operacji nie można cofnąć.",
       "confirm": "Anuluj wpis",
       "dismiss": "Zachowaj wpis"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "Zaznaczono {{count}}",
+        "clear": "Wyczyść zaznaczenie"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1884,7 +1915,9 @@
         "productItems": "Pozycje produktów",
         "items": "Elementy",
         "transformsSource": "{{binding}} (źródło transformacji)",
-        "transformsOutput": "{{binding}} (wynik transformacji)"
+        "transformsOutput": "{{binding}} (wynik transformacji)",
+        "ticketGroups": "Rozliczony czas według zgłoszeń",
+        "timeEntries": "Rozliczone wpisy czasu"
       },
       "presets": {
         "description": {
@@ -1902,6 +1935,46 @@
         "amount": {
           "label": "Kwota",
           "hint": "Suma wiersza"
+        },
+        "ticket": {
+          "label": "Zgłoszenie",
+          "hint": "Numer i tytuł zgłoszenia"
+        },
+        "ticketDescription": {
+          "hint": "Widoczny dla klienta opis zgłoszenia"
+        },
+        "hours": {
+          "label": "Godziny"
+        },
+        "ticketHours": {
+          "hint": "Łączna liczba rozliczonych godzin dla zgłoszenia"
+        },
+        "ticketRate": {
+          "hint": "Stawka godzinowa („Stawki mieszane”, gdy wpisy się różnią)"
+        },
+        "ticketAmount": {
+          "hint": "Łączna rozliczona kwota dla zgłoszenia"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data wykonania pracy"
+        },
+        "entryTicket": {
+          "hint": "Numer zgłoszenia źródłowego"
+        },
+        "entryTitle": {
+          "hint": "Tytuł zgłoszenia lub nazwa zadania"
+        },
+        "entryHours": {
+          "hint": "Rozliczone godziny dla wpisu"
+        },
+        "entryRate": {
+          "hint": "Stawka godzinowa dla wpisu"
+        },
+        "entryAmount": {
+          "hint": "Rozliczona kwota dla wpisu"
         }
       },
       "sourceBinding": {
@@ -2038,7 +2111,13 @@
       "preview": {
         "sampleNote": "Wygenerowano przy użyciu reprezentatywnych danych przykładowych dla dokumentu typu „{{type}}”.",
         "frameTitle": "Podgląd dokumentu typu „{{type}}”",
-        "empty": "Otwórz tę kartę, aby wygenerować podgląd referencyjny."
+        "empty": "Otwórz tę kartę, aby wygenerować podgląd referencyjny.",
+        "existingNote": "Wygenerowano na podstawie wybranego zamówienia sprzedaży.",
+        "searchDocuments": "Szukaj zamówień sprzedaży…",
+        "searchDocumentsHint": "Szukaj po numerze lub kliencie…",
+        "noDocumentsFound": "Brak zamówień sprzedaży.",
+        "selectDocument": "Wybierz zamówienie sprzedaży",
+        "selectDocumentHint": "Wybierz zamówienie sprzedaży, aby zobaczyć podgląd z danymi."
       },
       "errors": {
         "nameRequired": "Nazwa szablonu jest wymagana.",
@@ -2055,5 +2134,71 @@
       "packingSlip": "Dokument dostawy",
       "pickList": "Lista kompletacyjna"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Odmowa uprawnień: wymagane uprawnienie aktualizacji faktur",
+      "invoiceDelete": "Odmowa uprawnień: wymagane uprawnienie usuwania faktur",
+      "invoiceAccess": "Odmowa uprawnień: odmowa dostępu do faktury",
+      "otherClientInvoices": "Odmowa uprawnień: brak dostępu do faktur innego klienta"
+    },
+    "invoice": {
+      "notFound": "Nie znaleziono faktury",
+      "notFoundRefresh": "Nie znaleziono faktury. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "notFoundNumbered": "Nie znaleziono faktury {{invoiceId}}.",
+      "clientNotFoundForInvoice": "Nie znaleziono klienta dla faktury {{invoiceNumber}}.",
+      "numberRequired": "Numer faktury jest wymagany",
+      "dateRequired": "Data faktury jest wymagana",
+      "dateInvalid": "Data faktury jest nieprawidłowa",
+      "dueDateInvalid": "Termin płatności jest nieprawidłowy",
+      "onlyDraftEditable": "Edytować można tylko faktury w wersji roboczej",
+      "numberExists": "Numer faktury już istnieje. Wybierz inny numer.",
+      "notFinalized": "Faktura nie została sfinalizowana",
+      "unfinalizeFailed": "Nie udało się cofnąć finalizacji faktury z powodu nieoczekiwanego błędu danych. Odśwież stronę i spróbuj ponownie.",
+      "paidOrCancelled": "Nie można modyfikować opłaconej lub anulowanej faktury",
+      "syncedVoidInstead": "Ta faktura jest zsynchronizowana z systemem księgowym — anuluj ją zamiast usuwać.",
+      "invalidValue": "Jedna z wybranych wartości faktury jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana faktura, klient, umowa lub zapis rozliczeniowy już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Istnieje już sprzeczna faktura. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola faktury.",
+      "missingFieldNamed": "Brakuje wymaganego pola faktury: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Nie znaleziono cyklu rozliczeniowego. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "invalidDates": "Cykl rozliczeniowy zawiera nieprawidłowe daty. Sprawdź cykl i spróbuj ponownie."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Wybierz co najmniej jedną fakturę, aby wygenerować pliki PDF.",
+      "selectInvoicesEmail": "Wybierz co najmniej jedną fakturę do wysłania e-mailem.",
+      "selectInvoices": "Wybierz co najmniej jedną fakturę.",
+      "emailNotConfigured": "E-mail nie jest skonfigurowany. Skonfiguruj ustawienia e-mail w Ustawieniach przed wysłaniem faktur.",
+      "schedulePdfFailed": "Nie udało się rozpocząć generowania plików PDF faktur. Spróbuj ponownie.",
+      "scheduleEmailFailed": "Nie udało się rozpocząć wysyłania faktur e-mailem. Spróbuj ponownie.",
+      "recipientFailed": "Nie udało się wczytać informacji o odbiorcy tej faktury.",
+      "sendFailed": "Nie udało się wysłać faktury e-mailem. Spróbuj ponownie."
+    },
+    "template": {
+      "selectStandard": "Przed zapisaniem wybierz standardowy szablon faktury.",
+      "selectBeforePreview": "Przed podglądem wybierz szablon faktury.",
+      "notFoundRefresh": "Nie znaleziono szablonu faktury. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "missingDesign": "W szablonie faktury brakuje danych projektu. Wybierz inny szablon.",
+      "invalidValue": "Jedna z wybranych wartości szablonu faktury jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrany szablon faktury lub klient już nie istnieje. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Szablon faktury o tych ustawieniach już istnieje.",
+      "missingField": "Brakuje wymaganego pola szablonu faktury.",
+      "missingFieldNamed": "Brakuje wymaganego pola szablonu faktury: {{field}}."
+    }
+  },
+  "periodTotal": {
+    "missingContext": "Brak konfiguracji klienta lub usługi dla tego raportu.",
+    "invalidQuantity": "Podaj liczbę całkowitą 0 lub większą jako liczbę dla okresu.",
+    "saveError": "Nie udało się zapisać liczby dla okresu.",
+    "retryError": "Nie udało się zapisać liczby dla okresu. Ponów przesłanie.",
+    "correct": "Popraw zgłoszoną liczbę {{quantity}} dla usługi {{service}} (od {{periodStart}} do {{periodEnd}})",
+    "report": "Zgłoś liczbę dla okresu usługi {{service}} (od {{periodStart}} do {{periodEnd}})",
+    "quantityLabel": "Liczba dla okresu usługi {{service}}",
+    "saving": "Zapisywanie…",
+    "saveCorrection": "Zapisz korektę",
+    "save": "Zapisz"
   }
 }

@@ -17,7 +17,10 @@ describe('ContactDetails normalized phone save contract', () => {
   });
 
   it('T017: ContactDetails.tsx blocks save when validateContactPhoneNumbers reports invalid default selection or type state', () => {
-    expect(contactDetailsSource).toContain('const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers);');
+    // The stored rows are passed so an unchanged legacy number is grandfathered
+    // rather than blocking every other edit to the contact, and `t` so the message
+    // it blocks with is in the user's language.
+    expect(contactDetailsSource).toContain('const currentPhoneErrors = validateContactPhoneNumbers(editedContact.phone_numbers, { existingRows: contact.phone_numbers, t });');
     expect(contactDetailsSource).toContain('setPhoneValidationErrors(currentPhoneErrors);');
     expect(contactDetailsSource).toContain('if (currentPhoneErrors.length > 0) {');
     expect(contactDetailsSource).toContain("description: currentPhoneErrors[0]");

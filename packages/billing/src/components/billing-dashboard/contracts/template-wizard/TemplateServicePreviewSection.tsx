@@ -121,7 +121,7 @@ export function TemplateServicePreviewSection({
                       {service.name}
                     </span>
                     {service.fromPreset && (
-                      <div className="flex items-center gap-1 px-2 py-0.5 bg-purple-100 border border-purple-200 rounded text-xs text-purple-700">
+                      <div className="chip-primary flex items-center gap-1 px-2 py-0.5 border border-[rgb(var(--color-primary-200))] rounded text-xs">
                         <Sparkles className="h-3 w-3" />
                         <span>{service.fromPreset.presetName}</span>
                       </div>
@@ -151,7 +151,7 @@ export function TemplateServicePreviewSection({
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemoveClick(service)}
-                  className="text-[rgb(var(--color-destructive))] hover:text-[rgb(var(--color-destructive))] hover:bg-[rgb(var(--color-destructive)/0.1)]"
+                  className="chip-danger hover: hover:"
                 >
                   <X className="h-4 w-4" />
                 </Button>

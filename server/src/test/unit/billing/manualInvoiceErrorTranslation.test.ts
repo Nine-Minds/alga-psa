@@ -5,7 +5,7 @@ describe('manual invoice error translation', () => {
   it('renders the specific billing-email message instead of the generic generation error', () => {
     const t = vi.fn((key: string, options?: Record<string, unknown>) => {
       if (key === 'manualInvoices.errors.NO_BILLING_EMAIL') {
-        return `${options?.clientName} has no billing email. Set an email address on the client's billing location, then try again.`;
+        return `${options?.clientName} has no billing email. Set a billing contact, a client billing email, or an email on the billing or default location, then try again.`;
       }
       return 'Error generating invoice';
     });

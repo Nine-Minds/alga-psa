@@ -499,6 +499,7 @@ export default function KBArticleEditor({
             documentId={article.document_id}
             userId={userId}
             initialContent={article.block_data ?? null}
+            imageNamePrefix={article.slug}
           />
         ) : (
           <CollaborativeEditor
@@ -510,6 +511,7 @@ export default function KBArticleEditor({
             searchMentions={searchUsersForMentions}
             aiAssistantEnabled={aiAssistantEnabled}
             initialContent={article.block_data ?? undefined}
+            imageNamePrefix={article.slug}
             onConnectionStatusChange={(status) => {
               if (status === 'connected') collabConnectedRef.current = true;
               if (status === 'disconnected') setIsFallbackMode(true);

@@ -51,7 +51,7 @@ export function UpgradePrompt({
     >
       <div className="absolute inset-x-0 top-0 h-1 bg-[rgb(var(--color-primary-500))]" />
       <div className="mx-auto flex max-w-lg flex-col items-center text-center">
-        <div className="mb-4 rounded-full bg-[rgb(var(--color-primary-50))] p-3 text-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400)/0.15)] dark:text-[rgb(var(--color-primary-300))]">
+        <div className="chip-primary mb-4 rounded-full p-3">
           <LockKeyhole aria-hidden="true" className="h-5 w-5" />
         </div>
         <p className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">

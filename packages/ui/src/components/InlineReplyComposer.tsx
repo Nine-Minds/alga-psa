@@ -61,9 +61,12 @@ export function InlineReplyComposer({
   const editorInitialContent = useMemo(() => DEFAULT_REPLY_BLOCK, []);
 
   return (
+    // Sticky so replying to a comment taller than the viewport keeps the
+    // composer pinned to the bottom edge instead of mounting off-screen —
+    // same behavior as the top/bottom add-comment docks.
     <div
       {...withDataAutomationId({ id: componentId })}
-      className="inline-reply-composer rounded-lg border border-gray-200 bg-gray-50 p-3"
+      className="inline-reply-composer sticky bottom-2 z-10 rounded-lg border border-gray-200 bg-gray-50 p-3 shadow-lg"
     >
       {showInternalToggle && (
         <div className="mb-2 flex items-center gap-2">
@@ -82,6 +85,7 @@ export function InlineReplyComposer({
         onContentChange={setContent}
         searchMentions={searchMentions}
         uploadFile={uploadFile}
+        autoFocus
       />
       <div className="mt-2 flex justify-end gap-2">
         <Button

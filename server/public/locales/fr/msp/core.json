@@ -11,10 +11,13 @@
     "clients": "Clients",
     "opportunities": "Opportunités",
     "contacts": "Contacts",
+    "interactions": "Interactions",
     "documents": "Documents",
     "documentsAll": "Tous les documents",
     "knowledgeBase": "Base de connaissances",
     "assets": "Actifs",
+    "assetsAll": "Tous les actifs",
+    "assetsMaintenance": "Entretien",
     "inventory": {
       "label": "Inventaire",
       "sections": {
@@ -127,11 +130,13 @@
       "users": "Utilisateurs",
       "teams": "Équipes",
       "language": "Langue",
+      "appearance": "Apparence",
       "clientPortal": "Portail client",
       "license": "Licence",
       "ticketing": "Gestion des tickets",
       "sla": "SLA",
       "projects": "Projets",
+      "assets": "Actifs",
       "interactions": "Interactions",
       "opportunities": "Opportunités",
       "notifications": "Notifications",
@@ -194,6 +199,12 @@
           "description": "Ajouter un nouveau produit à votre catalogue"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Ressources et aide",
+      "title": "Ressources",
+      "documentation": "Documentation",
+      "support": "Contacter l'assistance"
     },
     "jobs": {
       "ariaLabel": "Voir l'activité des tâches d'arrière-plan",

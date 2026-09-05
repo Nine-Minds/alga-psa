@@ -508,13 +508,8 @@ describe('Credit Expiration Integration Tests', () => {
       related_transaction_id: expiredCreditTransaction.transaction_id
     });
 
-    // Update client credit balance to reflect the expired credit
-    await context.db('clients')
-      .where({ client_id: clientId, tenant: context.tenantId })
-      .update({
-        credit_balance: activeCreditAmount, // Only the active credit remains
-        updated_at: new Date().toISOString()
-      });
+    // No cached balance to update: zeroing the expired tracking row above is
+    // what makes only the active credit count.
 
     // Step 6: Verify initial credit balance (should only include active credit)
     const initialCredit = await ClientContractLine.getClientCredit(clientId);
@@ -615,20 +610,18 @@ describe('Credit Expiration Integration Tests', () => {
           updated_at: nowIso
         });
 
+      // Invoice totals are immutable after finalization: credit is recorded in
+      // credit_applied and the balance due is derived, so total_amount stays
+      // gross here exactly as the real finalize path leaves it.
       await context.db('invoices')
         .where({ invoice_id: positiveInvoiceId })
         .update({
           credit_applied: activeCreditAmount,
-          total_amount: totalBeforeCredit - expectedAppliedCredit,
           updated_at: nowIso
         });
 
-      await context.db('clients')
-        .where({ client_id: clientId, tenant: context.tenantId })
-        .update({
-          credit_balance: newBalance,
-          updated_at: nowIso
-        });
+      // The remaining balance follows from the credit_tracking update above —
+      // there is no cached column on the client to write it to.
     }
 
     // Step 9: Get the updated invoice to verify credit application
@@ -642,7 +635,8 @@ describe('Credit Expiration Integration Tests', () => {
     expect(updatedInvoice.subtotal).toBe(subtotal);
     expect(updatedInvoice.tax).toBe(tax);
     expect(updatedInvoice.credit_applied).toBe(expectedAppliedCredit);
-    expect(parseInt(updatedInvoice.total_amount)).toBe(expectedRemainingTotal);
+    expect(parseInt(updatedInvoice.total_amount)).toBe(totalBeforeCredit);
+    expect(parseInt(updatedInvoice.total_amount) - Number(updatedInvoice.credit_applied)).toBe(expectedRemainingTotal);
 
     // Step 11: Verify credit application transaction
     const creditApplicationTx = await context.db('transactions')

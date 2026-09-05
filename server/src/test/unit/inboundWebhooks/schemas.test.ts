@@ -38,6 +38,9 @@ describe('inbound webhook schemas', () => {
         expect.objectContaining({
           path: ['slug'],
           message: 'Slug is reserved for a bundled integration',
+          params: {
+            messageKey: 'msp/profile:errors.inboundWebhooks.validation.slugReserved',
+          },
         }),
       ]),
     );

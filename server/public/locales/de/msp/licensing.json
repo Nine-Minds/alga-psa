@@ -353,5 +353,9 @@
       "startTrial": "Die Testversion konnte nicht gestartet werden.",
       "refreshLicense": "Die Lizenz konnte nicht aktualisiert werden."
     }
+  },
+  "errors": {
+    "notSignedIn": "Nicht autorisiert. Melden Sie sich an, um die Lizenzierung zu verwalten.",
+    "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   }
 }

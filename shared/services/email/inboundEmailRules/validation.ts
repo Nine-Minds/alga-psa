@@ -12,7 +12,11 @@ const regexPatternSchema = z
       // eslint-disable-next-line no-new
       new RegExp(pattern);
     } catch {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid regular expression' });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid regular expression',
+        params: { messageKey: 'msp/email-providers:errors.inboundRules.invalidRegex' },
+      });
     }
   });
 
@@ -26,10 +30,14 @@ export const inboundEmailRuleConditionSchema = z
     if (condition.operator === 'matches_regex') {
       const result = regexPatternSchema.safeParse(condition.value);
       if (!result.success) {
+        const issue = result.error.issues[0];
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['value'],
-          message: result.error.issues[0]?.message ?? 'Invalid regular expression',
+          message: issue?.message ?? 'Invalid regular expression',
+          params: issue?.code === z.ZodIssueCode.custom
+            ? issue.params
+            : { messageKey: 'msp/email-providers:errors.inboundRules.invalidRegex' },
         });
       }
     }
@@ -98,9 +106,8 @@ export const inboundEmailRuleInputSchema = z
     if (!result.success) {
       for (const issue of result.error.issues) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          ...issue,
           path: ['action_config', ...issue.path],
-          message: issue.message,
         });
       }
     }
@@ -110,6 +117,7 @@ export const inboundEmailRuleInputSchema = z
         code: z.ZodIssueCode.custom,
         path: ['fallback_inbound_ticket_defaults_id'],
         message: 'A fallback destination is required when non-match behavior is "fallback_destination"',
+        params: { messageKey: 'msp/email-providers:errors.inboundRules.fallbackDestinationRequired' },
       });
     }
   });

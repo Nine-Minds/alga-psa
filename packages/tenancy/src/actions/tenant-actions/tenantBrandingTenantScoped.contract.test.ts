@@ -15,6 +15,32 @@ describe('tenant branding actions tenant-scoped query contract', () => {
     expect(source).toContain('portalHeroGradient: branding.portalHeroGradient');
   });
 
+  it('persists the optional dark logo and side panel style', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(source).toContain("export type PortalSidebarStyle = 'default' | 'primary' | 'secondary'");
+    expect(source).toContain('logoDarkUrl,');
+    expect(source).toContain('portalSidebarStyle,');
+  });
+
+  it('carries existing optional branding forward so a partial save cannot wipe it', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(source).toContain('branding.logoDarkUrl ?? existingSettings.branding?.logoDarkUrl');
+    expect(source).toContain('branding.portalSidebarStyle ?? existingSettings.branding?.portalSidebarStyle');
+    expect(source).toContain('branding.portalFollowsTheme ?? existingSettings.branding?.portalFollowsTheme');
+  });
+
+  it('persists the portal theme opt-in and feeds it to the style generator', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(source).toContain('portalFollowsTheme?: boolean');
+    expect(source).toContain('portalFollowsTheme,');
+  });
+
+  it('writes each tenant logo variant to its own branding key', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantLogoActions.ts'), 'utf8');
+    expect(source).toContain("variant === 'dark' ? 'logoDarkUrl' : 'logoUrl'");
+    expect(source).toContain('[brandingLogoKey(logoVariant)]');
+  });
+
   it('uses structural tenant scoping for tenant settings branding roots', () => {
     for (const file of files) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');

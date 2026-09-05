@@ -37,7 +37,7 @@ export const SlaTrendChart: React.FC<SlaTrendChartProps> = ({ data, loading }) =
           <CardTitle>{t('sla.dashboard.trendChart.title', { defaultValue: 'Compliance Trend' })}</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="animate-pulse h-64 bg-gray-100 rounded"></div>
+          <div className="animate-pulse h-64 skeleton-fill rounded"></div>
         </CardContent>
       </Card>
     );

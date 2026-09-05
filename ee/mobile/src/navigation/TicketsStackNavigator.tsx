@@ -8,6 +8,7 @@ import type { RootStackParamList } from "./types";
 import { TicketsListScreen } from "../screens/TicketsListScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
+import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
 
 const Stack = createNativeStackNavigator<TicketsStackParamList>();
 
@@ -82,7 +83,12 @@ export function TicketsStackNavigator() {
         options={{
           title: tTickets("list.title", "Tickets"),
           headerLeft: () => <DrawerToggleButton />,
-          headerRight: () => <View><CreateTicketButton /></View>,
+          headerRight: () => (
+            <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+              <HeaderTimerChip />
+              <CreateTicketButton />
+            </View>
+          ),
         }}
       />
     </Stack.Navigator>

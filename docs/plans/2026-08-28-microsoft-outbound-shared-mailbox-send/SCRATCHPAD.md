@@ -92,3 +92,11 @@ The stored `microsoft_email_provider_config.tenant_id` is `951536bd-...` (the Ni
 - `187db3db76` introduced outbound Graph sending on 2026-08-02, without `Mail.Send.Shared`.
 - Teams already uses app-only auth: `ee/packages/microsoft-teams/src/lib/graphAuth.ts:23`. Email is the outlier at `MicrosoftGraphAdapter.ts:388`, which only ever does `grant_type: 'refresh_token'`.
 - `packages/emulators/msgraph/src/core.ts:366` already models the client credentials grant, so the emulator can cover an app-only path when it is built.
+
+## Draft implementation verification
+
+- The maintained `packages/emulators/msgraph` now captures `POST /v1.0/me/sendMail` and `POST /v1.0/users/{encoded-mailbox}/sendMail` in its `send-mails` state view. Adapter smoke coverage uses that simulator to assert the actual route and payload, but it cannot prove delegated `Mail.Send.Shared`, a refreshed grant, Exchange Send As, or delivery by a real Microsoft tenant.
+- Focused adapter tests additionally exercise the `/me/sendMail` and `/users/{mailbox}/sendMail` selection directly. The Graph simulator is not a real Microsoft tenant send.
+- The system fallback rejects a missing or malformed configured sender rather than passing an invalid tenant identity to the shared provider. A configured system sender remains an operator-managed verified-domain requirement; Resend verification cannot be inferred locally.
+- The system-Resend fallback smoke drives `TenantEmailService.sendEmail` through failed tenant-provider initialization into the system factory, then asserts the resulting provider message has the parsed `EMAIL_FROM` address, tenant display name, and tenant Reply-To.
+- Existing OAuth grants do not gain `Mail.Send.Shared` automatically. Shared-mailbox tenants must reconnect to receive it, then separately receive Exchange Send As permission.

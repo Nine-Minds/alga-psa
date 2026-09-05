@@ -10,7 +10,7 @@ describe('renewalsQueueActions permission wiring', () => {
   it('enforces billing update permission for queue mutation actions', () => {
     expect(source).toContain("const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {");
     expect(source).toContain("if (!await hasPermission(user as any, 'billing', 'update')) {");
-    expect(source).toContain("return permissionError('Permission denied: Cannot update renewals queue');");
+    expect(source).toContain("return permissionError('Permission denied: Cannot update renewals queue', 'msp/contracts:errors.renewals.permissions.update');");
 
     expect(source).toContain("export const markRenewalQueueItemRenewing = withAuth(async (");
     expect(source).toContain("export const markRenewalQueueItemNonRenewing = withAuth(async (");

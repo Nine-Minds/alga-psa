@@ -41,6 +41,9 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'client_contracts').del();
   await tenantTable(tenantId, 'contract_lines').del();
   await tenantTable(tenantId, 'contracts').del();
+  // Billing profiles reference clients (NO ACTION); the service under test
+  // provisions one per client it creates, so clear them before the clients.
+  await tenantTable(tenantId, 'client_billing_profiles').del();
   await tenantTable(tenantId, 'clients').del();
   await tenantRows().where({ tenant: tenantId }).del();
 }

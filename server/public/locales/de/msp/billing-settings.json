@@ -1151,7 +1151,48 @@
   },
   "errors": {
     "failedToLoadSettings": "Die Einstellungen konnten nicht geladen werden",
-    "failedToSaveSettings": "Einstellungen konnten nicht gespeichert werden"
+    "failedToSaveSettings": "Einstellungen konnten nicht gespeichert werden",
+    "permissions": {
+      "readSettings": "Berechtigung verweigert: Abrechnungseinstellungen können nicht gelesen werden",
+      "updateSettings": "Berechtigung verweigert: Abrechnungseinstellungen können nicht aktualisiert werden",
+      "readClientSettings": "Berechtigung verweigert: Abrechnungseinstellungen des Kunden können nicht gelesen werden",
+      "updateClientSettings": "Berechtigung verweigert: Abrechnungseinstellungen des Kunden können nicht aktualisiert werden",
+      "settingsRead": "Berechtigung verweigert: Leseberechtigung für Abrechnungseinstellungen erforderlich",
+      "settingsUpdate": "Berechtigung verweigert: Aktualisierungsberechtigung für Abrechnungseinstellungen erforderlich",
+      "readTaxRates": "Berechtigung verweigert: Steuersätze können nicht gelesen werden",
+      "createTaxRates": "Berechtigung verweigert: Steuersätze können nicht erstellt werden",
+      "updateTaxRates": "Berechtigung verweigert: Steuersätze können nicht aktualisiert werden",
+      "updateTaxRegions": "Berechtigung verweigert: Steuerregionen können nicht aktualisiert werden"
+    },
+    "taxRate": {
+      "notAvailableForTenant": "Berechtigung verweigert: Abrechnungssteuersätze sind für diesen Mandanten nicht verfügbar.",
+      "overlap": "Der Zeitraum des Steuersatzes überschneidet sich mit einem vorhandenen Satz für diese Region.",
+      "regionRequired": "Die Region ist erforderlich.",
+      "idRequired": "Für Aktualisierungen ist die Steuersatz-ID erforderlich.",
+      "notFound": "Steuersatz nicht gefunden.",
+      "notFoundOrAlreadyDeleted": "Steuersatz nicht gefunden oder bereits gelöscht.",
+      "invalid": "Der ausgewählte Steuersatz oder die Region ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "regionInvalid": "Die ausgewählte Steuerregion ist nicht mehr gültig. Bitte aktualisieren Sie die Seite und wählen Sie eine andere Region.",
+      "duplicate": "Für diese Region und diesen Zeitraum existiert bereits ein Steuersatz.",
+      "missingField": "Erforderliches Steuersatzfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Steuersatzfeld fehlt: {{field}}."
+    },
+    "tax": {
+      "defaultRequiresActiveRate": "Konfigurieren Sie mindestens einen aktiven Steuersatz, bevor Sie Standard-Steuereinstellungen erstellen.",
+      "componentNotFound": "Steuerkomponente nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "bracketNotFound": "Steuerstufe nicht gefunden. Sie wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "holidayNotFound": "Steuerbefreiungszeitraum nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "recordInvalid": "Einer der ausgewählten Steuerdatensätze ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "referenceMissing": "Einer der ausgewählten Steuerdatensätze existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "duplicate": "Ein Steuerdatensatz mit diesen Angaben existiert bereits.",
+      "notAllowed": "Einer der Steuerwerte ist nicht zulässig. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "missingField": "Erforderliches Steuerfeld fehlt.",
+      "missingFieldNamed": "Erforderliches Steuerfeld fehlt: {{field}}."
+    },
+    "taxRegion": {
+      "duplicateCode": "Eine Steuerregion mit dem Code „{{code}}“ existiert bereits.",
+      "notFoundCode": "Steuerregion mit dem Code „{{code}}“ nicht gefunden."
+    }
   },
   "toast": {
     "saved": "Erfolgreich gespeichert"
@@ -1164,7 +1205,12 @@
     "fields": {
       "prefix": {
         "label": "Nummernpräfix",
-        "help": "Optionales Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben."
+        "help": "Optionales festes Präfix für die Nummernsequenz. Leer lassen für kein Präfix oder ein eigenes Präfix eingeben. Für das Ausstellungsdatum verwenden Sie das Feld Datumsformat, statt es hier einzutragen."
+      },
+      "dateFormat": {
+        "label": "Datumsformat",
+        "help": "Optionales Datum, das zwischen Präfix und laufender Nummer eingefügt wird. Beispiel: {YYYY}-{MM}- ergibt INV-2026-08-000001. Leer lassen, um Nummern ohne Datum zu vergeben.",
+        "tokensHint": "Platzhalter: {YYYY} vierstelliges Jahr, {YY} zweistelliges Jahr, {MM} Monat, {DD} Tag. Das Datum wird bei der Vergabe der Nummer in der unter Einstellungen konfigurierten Standard-Zeitzone bestimmt. Die Sequenz läuft fortlaufend weiter — sie beginnt nicht jedes Jahr, jeden Monat oder jeden Tag neu."
       },
       "minimumDigits": {
         "label": "Mindestanzahl Ziffern",
@@ -1198,7 +1244,14 @@
     },
     "errors": {
       "load": "Fehler beim Laden der Nummerierungseinstellungen.",
-      "save": "Fehler beim Aktualisieren der Einstellungen."
+      "save": "Fehler beim Aktualisieren der Einstellungen.",
+      "dateFormat": {
+        "notText": "Das Datumsformat muss Text sein.",
+        "unmatchedBrace": "Im Datumsformat fehlt eine öffnende oder schließende Klammer. Platzhalter so schreiben: {{supported}}.",
+        "unknownToken": "Unbekannter Platzhalter {{tokens}}. Unterstützte Platzhalter: {{supported}}.",
+        "unknownTokens": "Unbekannte Platzhalter {{tokens}}. Unterstützte Platzhalter: {{supported}}.",
+        "tooLong": "Das Datumsformat ergibt {{length}} Zeichen und überschreitet damit das Limit von {{max}} Zeichen."
+      }
     }
   },
   "payment": {

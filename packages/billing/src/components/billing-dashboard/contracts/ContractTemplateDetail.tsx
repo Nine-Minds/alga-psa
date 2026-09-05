@@ -1853,7 +1853,10 @@ const ContractTemplateDetail: React.FC = () => {
                                 </p>
                               </div>
                               <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                {service.quantity != null && (
+                                {/* Usage configs bill recorded usage; a legacy configured
+                                    quantity is inert metadata and must not read as billable. */}
+                                {service.quantity != null &&
+                                  service.configuration.configuration_type !== "Usage" && (
                                   <span>
                                     {t(
                                       "templateDetail.composition.quantityLabel",
@@ -1912,7 +1915,7 @@ const ContractTemplateDetail: React.FC = () => {
                                 )}
                                 {service.bucket_overlay && (
                                   <span className="flex items-center gap-1">
-                                    <Package className="h-3 w-3 text-purple-500" />
+                                    <Package className="h-3 w-3 text-[rgb(var(--color-primary-500))]" />
                                     {t(
                                       "templateDetail.composition.bucketSummary",
                                       {

@@ -1,708 +1,733 @@
 {
   "common": {
     "actions": {
-      "add": "55555",
-      "back": "55555",
-      "cancel": "55555",
-      "close": "55555",
-      "create": "55555",
-      "delete": "55555",
-      "downloadCsv": "55555",
-      "edit": "55555",
-      "import": "55555",
-      "reactivate": "55555",
-      "remove": "55555",
-      "retry": "55555",
-      "save": "55555",
-      "saving": "55555",
-      "search": "55555",
-      "select": "55555",
-      "update": "55555",
-      "uploadCsv": "55555",
-      "view": "55555"
+      "add": "〖Ȧḓḓ ··〗",
+      "back": "〖Ɓȧƈķ ··〗",
+      "cancel": "〖Ƈȧƞƈḗŀ ···〗",
+      "close": "〖Ƈŀȯşḗ ··〗",
+      "create": "〖Ƈřḗȧŧḗ ···〗",
+      "delete": "〖Ḓḗŀḗŧḗ ···〗",
+      "downloadCsv": "〖Ḓȯẇƞŀȯȧḓ ƇŞṼ ·····〗",
+      "edit": "〖Ḗḓīŧ ··〗",
+      "import": "〖Īḿƥȯřŧ ···〗",
+      "reactivate": "〖Řḗȧƈŧīṽȧŧḗ ····〗",
+      "remove": "〖Řḗḿȯṽḗ ···〗",
+      "retry": "〖Řḗŧřẏ ··〗",
+      "save": "〖Şȧṽḗ ··〗",
+      "saving": "〖Şȧṽīƞɠ... ····〗",
+      "search": "〖Şḗȧřƈħ ···〗",
+      "select": "〖Şḗŀḗƈŧ ···〗",
+      "update": "〖Ŭƥḓȧŧḗ ···〗",
+      "uploadCsv": "〖Ŭƥŀȯȧḓ ƇŞṼ ····〗",
+      "view": "〖Ṽīḗẇ ··〗"
     },
     "states": {
-      "active": "55555",
-      "inactive": "55555",
-      "loading": "55555",
-      "na": "55555",
-      "none": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗",
+      "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+      "na": "〖Ƞ/Ȧ ··〗",
+      "none": "〖Ƞȯƞḗ ··〗"
     },
-    "no": "55555",
-    "yes": "55555"
+    "no": "〖Ƞȯ ·〗",
+    "yes": "〖Ẏḗş ··〗"
   },
   "contactsPage": {
-    "title": "55555",
-    "description": "55555",
-    "heading": "55555",
-    "addContact": "55555",
-    "actions": "55555",
-    "searchPlaceholder": "55555",
-    "resetFilters": "55555",
-    "unknownClient": "55555",
-    "noClient": "55555",
-    "thisContact": "55555",
-    "actionsMenuSrOnly": "55555",
-    "quickView": "55555",
-    "deleteValidationError": "55555",
-    "deleteSuccess": "55555 {{name}} 55555",
-    "deleteError": "55555",
-    "markInactiveSuccess": "55555 {{name}} 55555",
-    "markInactiveError": "55555",
+    "title": "〖Ƈȯƞŧȧƈŧş Ƥȧɠḗ ······〗",
+    "description": "〖Ḿȧīƞ ƈȯƞŧȧƈŧş ḿȧƞȧɠḗḿḗƞŧ ƥȧɠḗ ẇīŧħ şḗȧřƈħ, ƒīŀŧḗřş, ŀīşŧ ṽīḗẇ, ȧƞḓ ƀŭŀķ ȧƈŧīȯƞş ································〗",
+    "heading": "〖Ƈȯƞŧȧƈŧş ····〗",
+    "addContact": "〖+ Ȧḓḓ Ƈȯƞŧȧƈŧ ······〗",
+    "actions": "〖Ȧƈŧīȯƞş ···〗",
+    "searchPlaceholder": "〖Şḗȧřƈħ ƈȯƞŧȧƈŧş, ƞȯŧḗş, ȧƞḓ īƞŧḗřȧƈŧīȯƞş ················〗",
+    "resetFilters": "〖Řḗşḗŧ ··〗",
+    "unknownClient": "〖Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ ······〗",
+    "noClient": "〖Ƞȯ Ƈŀīḗƞŧ ····〗",
+    "thisContact": "〖ŧħīş ƈȯƞŧȧƈŧ ·····〗",
+    "actionsMenuSrOnly": "〖Ȯƥḗƞ ḿḗƞŭ ····〗",
+    "quickView": "〖Ɋŭīƈķ Ṽīḗẇ ····〗",
+    "deleteValidationError": "〖Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+    "deleteSuccess": "〖{{name}} ħȧş ƀḗḗƞ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ. ················〗",
+    "deleteError": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧȧƈŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ··················〗",
+    "markInactiveSuccess": "〖{{name}} ħȧş ƀḗḗƞ ḿȧřķḗḓ ȧş īƞȧƈŧīṽḗ şŭƈƈḗşşƒŭŀŀẏ. ····················〗",
+    "markInactiveError": "〖Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ḿȧřķīƞɠ ŧħḗ ƈȯƞŧȧƈŧ ȧş īƞȧƈŧīṽḗ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ······························〗",
     "statusOptions": {
-      "all": "55555",
-      "active": "55555",
-      "inactive": "55555"
+      "all": "〖Ȧŀŀ ƈȯƞŧȧƈŧş ·····〗",
+      "active": "〖Ȧƈŧīṽḗ ƈȯƞŧȧƈŧş ······〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ƈȯƞŧȧƈŧş ·······〗"
     },
     "table": {
-      "name": "55555",
-      "created": "55555",
-      "email": "55555",
-      "phoneNumber": "55555",
-      "client": "55555",
-      "tags": "55555",
-      "actions": "55555"
+      "name": "〖Ƞȧḿḗ ··〗",
+      "created": "〖Ƈřḗȧŧḗḓ ···〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "phoneNumber": "〖Ƥħȯƞḗ Ƞŭḿƀḗř ·····〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "tags": "〖Ŧȧɠş ··〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗"
     },
     "lastPhoneTypeUsage": {
-      "title": "55555",
-      "message_one": "55555 {{labels}} 55555",
-      "message_other": "55555 {{labels}} 55555",
-      "deleteType": "55555",
-      "keepType": "55555"
+      "title": "〖Ŀȧşŧ Ƥħȯƞḗ Ŧẏƥḗ Ŭşȧɠḗ ·········〗",
+      "message_one": "〖Ŧħḗ ƒȯŀŀȯẇīƞɠ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ īş ƞȯ ŀȯƞɠḗř ŭşḗḓ ƀẏ ȧƞẏ ƈȯƞŧȧƈŧ: {{labels}}. Ḓḗŀḗŧḗ ŧħḗ ŧẏƥḗ ḓḗƒīƞīŧīȯƞ, ȯř ķḗḗƥ īŧ ƒȯř ƒŭŧŭřḗ ŭşḗ? ·····················································〗",
+      "message_other": "〖Ŧħḗ ƒȯŀŀȯẇīƞɠ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗş ȧřḗ ƞȯ ŀȯƞɠḗř ŭşḗḓ ƀẏ ȧƞẏ ƈȯƞŧȧƈŧ: {{labels}}. Ḓḗŀḗŧḗ ŧħḗ ŧẏƥḗ ḓḗƒīƞīŧīȯƞş, ȯř ķḗḗƥ ŧħḗḿ ƒȯř ƒŭŧŭřḗ ŭşḗ? ·······················································〗",
+      "deleteType": "〖Ḓḗŀḗŧḗ Ŧẏƥḗ ·····〗",
+      "keepType": "〖Ķḗḗƥ Ŧẏƥḗ ····〗"
     },
     "print": {
-      "title": "55555",
-      "subtitle": "55555 {{count}} 55555",
-      "noContacts": "55555",
-      "emptyValue": "55555",
+      "title": "〖Ƈȯƞŧȧƈŧş ····〗",
+      "subtitle": "〖{{count}} ƈȯƞŧȧƈŧş ········〗",
+      "noContacts": "〖Ƞȯ ƈȯƞŧȧƈŧş ŧȯ ƥřīƞŧ ········〗",
+      "emptyValue": "〖- ·〗",
       "columns": {
-        "name": "55555",
-        "email": "55555",
-        "phone": "55555",
-        "client": "55555",
-        "status": "55555"
+        "name": "〖Ƞȧḿḗ ··〗",
+        "email": "〖Ḗḿȧīŀ ··〗",
+        "phone": "〖Ƥħȯƞḗ ··〗",
+        "client": "〖Ƈŀīḗƞŧ ···〗",
+        "status": "〖Şŧȧŧŭş ···〗"
       },
       "optionsDialog": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗",
+        "description": "〖Ƈħȯȯşḗ ẇħīƈħ ƈȯŀŭḿƞş ŧȯ īƞƈŀŭḓḗ ẇħḗƞ ƥřīƞŧīƞɠ ƈȯƞŧȧƈŧş. ······················〗"
       }
     },
-    "shareTooltip": "55555"
+    "shareTooltip": "〖Ƥřīƞŧ, īḿƥȯřŧ ȧƞḓ ḗẋƥȯřŧ ··········〗"
   },
   "contactDetails": {
-    "title": "55555",
-    "description": "55555",
-    "backToContacts": "55555",
-    "inactiveBadge": "55555",
+    "title": "〖Ƈȯƞŧȧƈŧ Ḓḗŧȧīŀş ······〗",
+    "description": "〖Ƈȯƞŧȧƈŧ ḓḗŧȧīŀ ṽīḗẇ ẇīŧħ ŧȧƀş, īƞŀīƞḗ ḗḓīŧīƞɠ, ƥȯřŧȧŀ ȧƈƈḗşş, ŧȧɠş, ȧƞḓ ƞȯŧḗş ·······························〗",
+    "backToContacts": "〖Ɓȧƈķ ŧȯ Ƈȯƞŧȧƈŧş ·······〗",
+    "inactiveBadge": "〖īƞȧƈŧīṽḗ ····〗",
     "actions": {
-      "goToContact": "55555",
-      "saveChanges": "55555"
+      "goToContact": "〖Ɠȯ ŧȯ ƈȯƞŧȧƈŧ ······〗",
+      "saveChanges": "〖Şȧṽḗ Ƈħȧƞɠḗş ·····〗"
     },
     "tabs": {
-      "details": "55555",
-      "tickets": "55555",
-      "documents": "55555",
-      "interactions": "55555",
-      "notes": "55555",
-      "portal": "55555"
+      "details": "〖Ḓḗŧȧīŀş ···〗",
+      "tickets": "〖Ŧīƈķḗŧş ···〗",
+      "documents": "〖Ḓȯƈŭḿḗƞŧş ····〗",
+      "interactions": "〖Īƞŧḗřȧƈŧīȯƞş ·····〗",
+      "notes": "〖Ƞȯŧḗş ··〗",
+      "portal": "〖Ƥȯřŧȧŀ ···〗"
     },
     "fields": {
-      "fullName": "55555",
-      "client": "55555",
-      "email": "55555",
-      "role": "55555",
-      "inboundTicketDestinationOverride": "55555",
-      "useClientDestination": "55555",
-      "inboundTicketDestinationHelp": "55555",
-      "tags": "55555",
-      "notes": "55555",
-      "status": "55555",
-      "phone": "55555"
+      "fullName": "〖Ƒŭŀŀ Ƞȧḿḗ ····〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "role": "〖Řȯŀḗ ··〗",
+      "inboundTicketDestinationOverride": "〖Īƞƀȯŭƞḓ ŧīƈķḗŧ ḓḗşŧīƞȧŧīȯƞ ȯṽḗřřīḓḗ ··············〗",
+      "useClientDestination": "〖Ŭşḗ ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ ·········〗",
+      "inboundTicketDestinationHelp": "〖Īƒ şḗŧ, ŧħīş ȯṽḗřřīḓḗş ŧħḗ ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ ƒȯř ŧħīş ḗẋȧƈŧ şḗƞḓḗř ƈȯƞŧȧƈŧ. Ƥřḗƈḗḓḗƞƈḗ: Ƈȯƞŧȧƈŧ ȯṽḗřřīḓḗ -> Ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ -> Ƥřȯṽīḓḗř ḓḗƒȧŭŀŧ. ····························································〗",
+      "tags": "〖Ŧȧɠş ··〗",
+      "notes": "〖Ƞȯŧḗş ··〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "phone": "〖Ƥħȯƞḗ ··〗"
     },
     "status": {
-      "label": "55555",
-      "helper": "55555",
-      "active": "55555",
-      "inactive": "55555"
+      "label": "〖Şŧȧŧŭş ···〗",
+      "helper": "〖Şḗŧ ƈȯƞŧȧƈŧ şŧȧŧŭş ȧş ȧƈŧīṽḗ ȯř īƞȧƈŧīṽḗ ················〗",
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗"
     },
     "loading": {
-      "destinations": "55555",
-      "ticketFilters": "55555"
+      "destinations": "〖Ŀȯȧḓīƞɠ ḓḗşŧīƞȧŧīȯƞş... ··········〗",
+      "ticketFilters": "〖Ŀȯȧḓīƞɠ ŧīƈķḗŧ ƒīŀŧḗřş... ··········〗"
     },
     "empty": {
-      "notSet": "55555",
-      "unknownClient": "55555"
+      "notSet": "〖Ƞȯŧ şḗŧ ···〗",
+      "unknownClient": "〖Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ ······〗"
     },
     "client": {
-      "noClientAssigned": "55555"
+      "noClientAssigned": "〖Ƞȯ ƈŀīḗƞŧ ȧşşīɠƞḗḓ ········〗"
     },
     "delete": {
-      "successTitle": "55555",
-      "successDescription": "55555",
-      "validationFailed": "55555",
-      "failed": "55555"
+      "successTitle": "〖Ƈȯƞŧȧƈŧ Ḓḗŀḗŧḗḓ ······〗",
+      "successDescription": "〖Ƈȯƞŧȧƈŧ ħȧş ƀḗḗƞ ḓḗŀḗŧḗḓ şŭƈƈḗşşƒŭŀŀẏ. ················〗",
+      "validationFailed": "〖Ƒȧīŀḗḓ ŧȯ ṽȧŀīḓȧŧḗ ḓḗŀḗŧīȯƞ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+      "failed": "〖Ƒȧīŀḗḓ ŧȯ ḓḗŀḗŧḗ ƈȯƞŧȧƈŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ··················〗"
     },
     "deactivate": {
-      "successTitle": "55555",
-      "successDescription": "55555"
+      "successTitle": "〖Ƈȯƞŧȧƈŧ Ḓḗȧƈŧīṽȧŧḗḓ ········〗",
+      "successDescription": "〖Ƈȯƞŧȧƈŧ ħȧş ƀḗḗƞ ḿȧřķḗḓ ȧş īƞȧƈŧīṽḗ şŭƈƈḗşşƒŭŀŀẏ. ····················〗"
     },
     "reactivate": {
-      "successTitle": "55555",
-      "successDescription": "55555"
+      "successTitle": "〖Ƈȯƞŧȧƈŧ Řḗȧƈŧīṽȧŧḗḓ ········〗",
+      "successDescription": "〖Ƈȯƞŧȧƈŧ ħȧş ƀḗḗƞ řḗȧƈŧīṽȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ. ·················〗"
     },
     "update": {
-      "successTitle": "55555",
-      "successDescription": "55555"
+      "successTitle": "〖Ƈȯƞŧȧƈŧ Ŭƥḓȧŧḗḓ ······〗",
+      "successDescription": "〖Ƈȯƞŧȧƈŧ ḓḗŧȧīŀş ħȧṽḗ ƀḗḗƞ şȧṽḗḓ şŭƈƈḗşşƒŭŀŀẏ. ··················〗"
     },
     "saveFailed": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Şȧṽḗ Ƒȧīŀḗḓ ·····〗",
+      "description": "〖Ƈȯŭŀḓ ƞȯŧ şȧṽḗ ƈȯƞŧȧƈŧ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ····················〗"
     },
     "error": {
-      "title": "55555"
+      "title": "〖Ḗřřȯř ··〗"
     },
     "errors": {
-      "permissionDenied": "55555",
-      "markInactiveFailed": "55555",
-      "reactivateFailed": "55555"
+      "permissionDenied": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ. Ƥŀḗȧşḗ ƈȯƞŧȧƈŧ ẏȯŭř ȧḓḿīƞīşŧřȧŧȯř īƒ ẏȯŭ ƞḗḗḓ ȧḓḓīŧīȯƞȧŀ ȧƈƈḗşş. ··································〗",
+      "markInactiveFailed": "〖Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ḿȧřķīƞɠ ŧħḗ ƈȯƞŧȧƈŧ ȧş īƞȧƈŧīṽḗ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ······························〗",
+      "reactivateFailed": "〖Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ řḗȧƈŧīṽȧŧīƞɠ ŧħḗ ƈȯƞŧȧƈŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···························〗"
     }
   },
   "contactsImportDialog": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Īḿƥȯřŧ Ƈȯƞŧȧƈŧş ······〗",
+    "description": "〖ƇŞṼ īḿƥȯřŧ ḓīȧŀȯɠ ƒȯř ƈȯƞŧȧƈŧ ḿȧƥƥīƞɠ, ƥřḗṽīḗẇ, ṽȧŀīḓȧŧīȯƞ, ȧƞḓ řḗşŭŀŧş ·····························〗",
     "fields": {
-      "name": "55555",
-      "email": "55555",
-      "defaultPhoneNumber": "55555",
-      "client": "55555",
-      "tags": "55555",
-      "role": "55555",
-      "notes": "55555",
-      "primaryEmailLabel": "55555",
-      "additionalEmails": "55555"
+      "name": "〖Ƞȧḿḗ * ···〗",
+      "email": "〖Ḗḿȧīŀ * ···〗",
+      "defaultPhoneNumber": "〖Ḓḗƒȧŭŀŧ Ƥħȯƞḗ Ƞŭḿƀḗř ········〗",
+      "client": "〖Ƈŀīḗƞŧ ···〗",
+      "tags": "〖Ŧȧɠş ··〗",
+      "role": "〖Řȯŀḗ ··〗",
+      "notes": "〖Ƞȯŧḗş ··〗",
+      "primaryEmailLabel": "〖Ƥřīḿȧřẏ Ḗḿȧīŀ Ŀȧƀḗŀ ········〗",
+      "additionalEmails": "〖Ȧḓḓīŧīȯƞȧŀ Ḗḿȧīŀ Ȧḓḓřḗşşḗş ···········〗"
     },
-    "unassigned": "55555",
+    "unassigned": "〖Şḗŀḗƈŧ ƒīḗŀḓ ·····〗",
     "errors": {
-      "emptyCsv": "55555",
-      "readingCsv": "55555 {{message}} 55555",
-      "unknownError": "55555",
-      "requiredFieldNotMapped": "55555 {{field}} 55555",
-      "nameRequired": "55555",
-      "emailRequired": "55555",
-      "invalidEmail": "55555",
-      "processingCsv": "55555",
-      "importFailed": "55555"
+      "emptyCsv": "〖ƇŞṼ ƒīŀḗ īş ḗḿƥŧẏ ȯř īƞṽȧŀīḓ ············〗",
+      "readingCsv": "〖Ḗřřȯř řḗȧḓīƞɠ ƇŞṼ ƒīŀḗ: {{message}} ··············〗",
+      "unknownError": "〖Ŭƞķƞȯẇƞ ḗřřȯř ······〗",
+      "requiredFieldNotMapped": "〖Řḗʠŭīřḗḓ ƒīḗŀḓ \"{{field}}\" īş ƞȯŧ ḿȧƥƥḗḓ ················〗",
+      "nameRequired": "〖Ƞȧḿḗ īş řḗʠŭīřḗḓ ·······〗",
+      "emailRequired": "〖Ḗḿȧīŀ īş řḗʠŭīřḗḓ ·······〗",
+      "invalidEmail": "〖Īƞṽȧŀīḓ ḗḿȧīŀ ƒȯřḿȧŧ ········〗",
+      "processingCsv": "〖Ḗřřȯř ƥřȯƈḗşşīƞɠ ƇŞṼ ḓȧŧȧ ··········〗",
+      "importFailed": "〖Īḿƥȯřŧ ƒȧīŀḗḓ ······〗"
     },
     "importOptions": {
       "updateExisting": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Ŭƥḓȧŧḗ ḗẋīşŧīƞɠ ƈȯƞŧȧƈŧş ··········〗",
+        "description": "〖Řḗƥŀȧƈḗ ḓȧŧȧ ƒȯř ḗẋīşŧīƞɠ ƈȯƞŧȧƈŧş ··············〗"
       },
       "skipInvalid": {
-        "title": "55555",
-        "description": "55555"
+        "title": "〖Şķīƥ īƞṽȧŀīḓ řḗƈȯřḓş ········〗",
+        "description": "〖Ƈȯƞŧīƞŭḗ īḿƥȯřŧ ḗṽḗƞ īƒ şȯḿḗ řḗƈȯřḓş ħȧṽḗ ṽȧŀīḓȧŧīȯƞ ḗřřȯřş ························〗"
       }
     },
     "results": {
-      "title": "55555",
-      "downloadFailedRecords": "55555"
+      "title": "〖Īḿƥȯřŧ Řḗşŭŀŧş ······〗",
+      "downloadFailedRecords": "〖Ḓȯẇƞŀȯȧḓ Ƒȧīŀḗḓ Řḗƈȯřḓş ··········〗"
     },
     "table": {
-      "status": "55555",
-      "name": "55555",
-      "email": "55555",
-      "message": "55555",
-      "exists": "55555",
-      "issues": "55555"
+      "status": "〖Şŧȧŧŭş ···〗",
+      "name": "〖Ƞȧḿḗ ··〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "message": "〖Ḿḗşşȧɠḗ ···〗",
+      "exists": "〖Ḗẋīşŧş ···〗",
+      "issues": "〖Īşşŭḗş ···〗"
     },
     "tooltips": {
-      "importSuccessful": "55555",
-      "importFailed": "55555",
-      "validReady": "55555",
-      "invalidHasErrors": "55555"
+      "importSuccessful": "〖Īḿƥȯřŧ şŭƈƈḗşşƒŭŀ ·······〗",
+      "importFailed": "〖Īḿƥȯřŧ ƒȧīŀḗḓ ······〗",
+      "validReady": "〖Ṽȧŀīḓ - Řḗȧḓẏ ŧȯ īḿƥȯřŧ ··········〗",
+      "invalidHasErrors": "〖Īƞṽȧŀīḓ - Ħȧş ḗřřȯřş ········〗"
     },
     "upload": {
-      "help": "55555",
-      "requiredLabel": "55555",
-      "contactFieldsLabel": "55555",
-      "contactFieldsDescription": "55555",
-      "clientFieldLabel": "55555",
-      "clientFieldDescription": "55555",
-      "noteLabel": "55555",
-      "noteDescription": "55555",
-      "downloadTemplate": "55555",
-      "emailFieldsLabel": "55555",
-      "emailFieldsDescription": "55555",
-      "hybridEmailNote": "55555"
+      "help": "〖Ŭƥŀȯȧḓ ȧ ƇŞṼ ƒīŀḗ ẇīŧħ ƈȯƞŧȧƈŧ ḓȧŧȧ ··············〗",
+      "requiredLabel": "〖Řḗʠŭīřḗḓ: ····〗",
+      "contactFieldsLabel": "〖Ƈȯƞŧȧƈŧ ƒīḗŀḓş: ······〗",
+      "contactFieldsDescription": "〖ƥħȯƞḗ_ƞŭḿƀḗř (īḿƥȯřŧş ȧş ŧħḗ ḓḗƒȧŭŀŧ ẇȯřķ ƥħȯƞḗ), řȯŀḗ, ƞȯŧḗş, ŧȧɠş ···························〗",
+      "clientFieldLabel": "〖Ƈŀīḗƞŧ ƒīḗŀḓ: ······〗",
+      "clientFieldDescription": "〖ƈŀīḗƞŧ (ḿȧŧƈħḗş ḗẋīşŧīƞɠ ƈŀīḗƞŧş ƀẏ ƞȧḿḗ) ·················〗",
+      "noteLabel": "〖Ƞȯŧḗ: ··〗",
+      "noteDescription": "〖ƇŞṼ īḿƥȯřŧ/ḗẋƥȯřŧ īƞ ṽ1 ħȧƞḓŀḗş ȯƞḗ ḓḗƒȧŭŀŧ ƥħȯƞḗ ƞŭḿƀḗř ƥḗř ƈȯƞŧȧƈŧ. Ŧȧɠş şħȯŭŀḓ ƀḗ ƈȯḿḿȧ-şḗƥȧřȧŧḗḓ ṽȧŀŭḗş. ············································〗",
+      "downloadTemplate": "〖Ḓȯẇƞŀȯȧḓ ƇŞṼ Ŧḗḿƥŀȧŧḗ ·········〗",
+      "emailFieldsLabel": "〖Ḗḿȧīŀ ƒīḗŀḓş: ······〗",
+      "emailFieldsDescription": "〖ƥřīḿȧřẏ_ḗḿȧīŀ_ŧẏƥḗ (ẇȯřķ/ƥḗřşȯƞȧŀ/ƀīŀŀīƞɠ/ȯŧħḗř ȯř ȧ ƈŭşŧȯḿ ŀȧƀḗŀ), ȧḓḓīŧīȯƞȧŀ_ḗḿȧīŀ_ȧḓḓřḗşşḗş (ŭşḗ `ŀȧƀḗŀ:ḗḿȧīŀ@ḗẋȧḿƥŀḗ.ƈȯḿ | ŀȧƀḗŀ:ḗḿȧīŀ@ḗẋȧḿƥŀḗ.ƈȯḿ`) ·····························································〗",
+      "hybridEmailNote": "〖ƇŞṼ īḿƥȯřŧ/ḗẋƥȯřŧ ķḗḗƥş `ḗḿȧīŀ` ȧş ŧħḗ ƥřīḿȧřẏ/ḓḗƒȧŭŀŧ ƈȯƞŧȧƈŧ ḗḿȧīŀ. Ŧȧɠş şħȯŭŀḓ ƀḗ ƈȯḿḿȧ-şḗƥȧřȧŧḗḓ ṽȧŀŭḗş. ············································〗"
     },
     "mapping": {
-      "title": "55555",
-      "description": "55555",
-      "contactFieldHeader": "55555",
-      "csvColumnHeader": "55555",
-      "notMapped": "55555",
-      "requiredFieldsNote": "55555",
-      "largeImportWarning": "55555 {{count}} 55555",
-      "processing": "55555",
-      "preview": "55555"
+      "title": "〖Ḿȧƥ Ƈȯƞŧȧƈŧ Ƒīḗŀḓş ŧȯ ƇŞṼ Ƈȯŀŭḿƞş ··············〗",
+      "description": "〖Şḗŀḗƈŧ ẇħīƈħ ƇŞṼ ƈȯŀŭḿƞ ƈȯƞŧȧīƞş ŧħḗ ḓȧŧȧ ƒȯř ḗȧƈħ ƈȯƞŧȧƈŧ ƒīḗŀḓ. Ƒīḗŀḓş ḿȧřķḗḓ ẇīŧħ * ȧřḗ řḗʠŭīřḗḓ. ········································〗",
+      "contactFieldHeader": "〖Ƈȯƞŧȧƈŧ Ƒīḗŀḓ ······〗",
+      "csvColumnHeader": "〖Şḗŀḗƈŧ ƇŞṼ Ƈȯŀŭḿƞ ·······〗",
+      "notMapped": "〖Ƞȯŧ ḿȧƥƥḗḓ ····〗",
+      "requiredFieldsNote": "〖* Řḗʠŭīřḗḓ ƒīḗŀḓş ḿŭşŧ ƀḗ ḿȧƥƥḗḓ ƒȯř īḿƥȯřŧ ŧȯ ƥřȯƈḗḗḓ ······················〗",
+      "largeImportWarning": "〖Ẏȯŭ ȧřḗ īḿƥȯřŧīƞɠ {{count}} řḗƈȯřḓş. Ƥřȯƈḗşşīƞɠ ḿȧẏ ŧȧķḗ ȧ ḿȯḿḗƞŧ. ···························〗",
+      "processing": "〖Ƥřȯƈḗşşīƞɠ... ······〗",
+      "preview": "〖Ƥřḗṽīḗẇ ···〗"
     },
     "preview": {
-      "title": "55555",
-      "totalRecords": "55555",
-      "valid": "55555",
-      "invalid": "55555"
+      "title": "〖Ƥřḗṽīḗẇ Īḿƥȯřŧ ······〗",
+      "totalRecords": "〖Ŧȯŧȧŀ řḗƈȯřḓş: ······〗",
+      "valid": "〖Ṽȧŀīḓ: ···〗",
+      "invalid": "〖Īƞṽȧŀīḓ: ····〗"
     },
     "importing": {
-      "title": "55555",
-      "processing": "55555 {{current}} 55555 {{total}} 55555",
-      "currentItem": "55555 {{item}} 55555"
+      "title": "〖Īḿƥȯřŧīƞɠ Ƈȯƞŧȧƈŧş ········〗",
+      "processing": "〖Ƥřȯƈḗşşīƞɠ: {{current}} ȯƒ {{total}} ···············〗",
+      "currentItem": "〖Ƈŭřřḗƞŧŀẏ ƥřȯƈḗşşīƞɠ: {{item}} ············〗"
     },
     "complete": {
-      "title": "55555",
-      "successMessage": "55555 {{count}} 55555"
+      "title": "〖Īḿƥȯřŧ Ƈȯḿƥŀḗŧḗ ······〗",
+      "successMessage": "〖Şŭƈƈḗşşƒŭŀŀẏ īḿƥȯřŧḗḓ {{count}} ƈȯƞŧȧƈŧş ················〗"
     },
     "confirmUpdate": {
-      "title": "55555",
-      "message": "55555 {{count}} 55555"
+      "title": "〖Ŭƥḓȧŧḗ Ḗẋīşŧīƞɠ Ƈȯƞŧȧƈŧş ··········〗",
+      "message": "〖{{count}} ƈȯƞŧȧƈŧş ȧŀřḗȧḓẏ ḗẋīşŧ. Ḓȯ ẏȯŭ ẇȧƞŧ ŧȯ ŭƥḓȧŧḗ ŧħḗḿ ẇīŧħ ŧħḗ ƞḗẇ ḓȧŧȧ? ································〗"
     }
   },
   "contactEmailAddressesEditor": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ḗḿȧīŀ Ȧḓḓřḗşşḗş ······〗",
+    "description": "〖Ȧḓḓ ȯƞḗ ȯř ḿȯřḗ ḗḿȧīŀ ȧḓḓřḗşşḗş ȧƞḓ ƈħȯȯşḗ ḗẋȧƈŧŀẏ ȯƞḗ ḓḗƒȧŭŀŧ. ··························〗",
     "actions": {
-      "addEmail": "55555"
+      "addEmail": "〖Ȧḓḓ Ḗḿȧīŀ ····〗"
     },
     "emailTypes": {
-      "work": "55555",
-      "personal": "55555",
-      "billing": "55555",
-      "other": "55555",
-      "custom": "55555"
+      "work": "〖Ẇȯřķ ··〗",
+      "personal": "〖Ƥḗřşȯƞȧŀ ····〗",
+      "billing": "〖Ɓīŀŀīƞɠ ···〗",
+      "other": "〖Ȯŧħḗř ··〗",
+      "custom": "〖Ƈŭşŧȯḿ ···〗"
     },
     "primary": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ƥřīḿȧřẏ ḗḿȧīŀ ······〗",
+      "description": "〖Ŧħīş řḗḿȧīƞş ŧħḗ ḓḗƒȧŭŀŧ ȧḓḓřḗşş şŧȯřḗḓ ȯƞ ŧħḗ ƈȯƞŧȧƈŧ řḗƈȯřḓ ·························〗"
     },
     "row": {
-      "title": "55555 {{number}} 55555",
-      "secondaryDescription": "55555",
-      "defaultLabel": "55555",
-      "noEmailYet": "55555",
-      "editLabel": "55555",
-      "edit": "55555 {{number}} 55555",
-      "doneLabel": "55555",
-      "done": "55555 {{number}} 55555",
-      "moveUp": "55555 {{number}} 55555",
-      "moveDown": "55555 {{number}} 55555",
-      "remove": "55555 {{number}} 55555"
+      "title": "〖Ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ···········〗",
+      "secondaryDescription": "〖Şŧȯřḗḓ ȧş ȧ ƞȯƞ-ḓḗƒȧŭŀŧ ḗḿȧīŀ ȧḓḓřḗşş ···············〗",
+      "defaultLabel": "〖Ḓḗƒȧŭŀŧ ···〗",
+      "noEmailYet": "〖Ƞȯ ḗḿȧīŀ ḗƞŧḗřḗḓ ẏḗŧ ········〗",
+      "editLabel": "〖Ḗḓīŧ ··〗",
+      "edit": "〖Ḗḓīŧ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ·············〗",
+      "doneLabel": "〖Ḓȯƞḗ ··〗",
+      "done": "〖Ḓȯƞḗ ḗḓīŧīƞɠ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ················〗",
+      "moveUp": "〖Ḿȯṽḗ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ŭƥ ··············〗",
+      "moveDown": "〖Ḿȯṽḗ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ḓȯẇƞ ···············〗",
+      "remove": "〖Řḗḿȯṽḗ ȧḓḓīŧīȯƞȧŀ ḗḿȧīŀ {{number}} ··············〗"
     },
     "fields": {
-      "emailAddress": "55555",
-      "emailPlaceholder": "55555",
-      "emailLabel": "55555",
-      "customEmailLabel": "55555",
-      "customTypePlaceholder": "55555",
-      "customTypeSearchPlaceholder": "55555",
-      "customTypeEmpty": "55555",
-      "customTypeUseValue": "55555 {{value}} 55555"
+      "emailAddress": "〖Ḗḿȧīŀ Ȧḓḓřḗşş ······〗",
+      "emailPlaceholder": "〖ƞȧḿḗ@ḗẋȧḿƥŀḗ.ƈȯḿ ·······〗",
+      "emailLabel": "〖Ḗḿȧīŀ Ŀȧƀḗŀ ·····〗",
+      "customEmailLabel": "〖Ƈŭşŧȯḿ Ḗḿȧīŀ Ŀȧƀḗŀ ········〗",
+      "customTypePlaceholder": "〖Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ḗḿȧīŀ ŀȧƀḗŀ ···············〗",
+      "customTypeSearchPlaceholder": "〖Şḗȧřƈħ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ḗḿȧīŀ ŀȧƀḗŀ... ················〗",
+      "customTypeEmpty": "〖Ƞȯ ḿȧŧƈħīƞɠ ƈŭşŧȯḿ ḗḿȧīŀ ŀȧƀḗŀş. ·············〗",
+      "customTypeUseValue": "〖Ŭşḗ \"{{value}}\" ······〗"
     }
   },
   "contactPhoneNumbersEditor": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƥħȯƞḗ Ƞŭḿƀḗřş ······〗",
+    "description": "〖Ƥħȯƞḗ ƞŭḿƀḗř ḗḓīŧȯř ẇīŧħ ŧẏƥḗ ḿȧƞȧɠḗḿḗƞŧ, ṽȧŀīḓȧŧīȯƞ, ḓḗƒȧŭŀŧş, ȧƞḓ ḗẋŧḗƞşīȯƞ şŭƥƥȯřŧ ··································〗",
     "actions": {
-      "addPhone": "55555"
+      "addPhone": "〖Ȧḓḓ ƥħȯƞḗ ····〗"
     },
-    "empty": "55555",
+    "empty": "〖Ƞȯ ƥħȯƞḗ ƞŭḿƀḗřş ẏḗŧ. ·········〗",
     "phoneTypes": {
-      "work": "55555",
-      "mobile": "55555",
-      "home": "55555",
-      "fax": "55555",
-      "other": "55555",
-      "custom": "55555"
+      "work": "〖Ẇȯřķ ··〗",
+      "mobile": "〖Ḿȯƀīŀḗ ···〗",
+      "home": "〖Ħȯḿḗ ··〗",
+      "fax": "〖Ƒȧẋ ··〗",
+      "other": "〖Ȯŧħḗř ··〗",
+      "custom": "〖Ƈŭşŧȯḿ ···〗"
     },
     "row": {
-      "title": "55555 {{number}} 55555",
-      "defaultDescription": "55555",
-      "secondaryDescription": "55555",
-      "defaultLabel": "55555",
-      "moveUp": "55555 {{number}} 55555",
-      "moveDown": "55555 {{number}} 55555",
-      "remove": "55555 {{number}} 55555"
+      "title": "〖Ƥħȯƞḗ {{number}} ·······〗",
+      "defaultDescription": "〖Ḓḗƒȧŭŀŧ ƥħȯƞḗ ƞŭḿƀḗř ········〗",
+      "secondaryDescription": "〖Şḗƈȯƞḓȧřẏ ƥħȯƞḗ ƞŭḿƀḗř ·········〗",
+      "defaultLabel": "〖Ḓḗƒȧŭŀŧ ···〗",
+      "moveUp": "〖Ḿȯṽḗ ƥħȯƞḗ {{number}} ŭƥ ··········〗",
+      "moveDown": "〖Ḿȯṽḗ ƥħȯƞḗ {{number}} ḓȯẇƞ ···········〗",
+      "remove": "〖Řḗḿȯṽḗ ƥħȯƞḗ {{number}} ··········〗"
     },
     "fields": {
-      "phoneNumber": "55555",
-      "phoneType": "55555",
-      "customPhoneType": "55555",
-      "customTypePlaceholder": "55555",
-      "customTypeSearchPlaceholder": "55555",
-      "customTypeEmpty": "55555",
-      "customTypeUseValue": "55555 {{value}} 55555"
+      "phoneNumber": "〖Ƥħȯƞḗ ··〗",
+      "extension": "〖Ḗẋŧḗƞşīȯƞ ····〗",
+      "phoneType": "〖Ƥħȯƞḗ Ŧẏƥḗ ····〗",
+      "customPhoneType": "〖Ƈŭşŧȯḿ Ƥħȯƞḗ Ŧẏƥḗ ·······〗",
+      "customTypePlaceholder": "〖Şḗŀḗƈŧ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ ··············〗",
+      "customTypeSearchPlaceholder": "〖Şḗȧřƈħ ȯř ḗƞŧḗř ȧ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ... ················〗",
+      "customTypeEmpty": "〖Ƞȯ ḿȧŧƈħīƞɠ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗş. ·············〗",
+      "customTypeUseValue": "〖Ŭşḗ \"{{value}}\" ······〗"
     },
     "validation": {
-      "selectExactlyOneDefault": "55555",
-      "phoneRow": "55555 {{number}} 55555",
-      "enterCompletePhoneNumber": "55555",
-      "enterCustomPhoneType": "55555",
-      "customTypesUnique": "55555"
+      "selectExactlyOneDefault": "〖Şḗŀḗƈŧ ḗẋȧƈŧŀẏ ȯƞḗ ḓḗƒȧŭŀŧ ƥħȯƞḗ ƞŭḿƀḗř. ················〗",
+      "phoneRow": "〖Ƥħȯƞḗ {{number}} ·······〗",
+      "enterCompletePhoneNumber": "〖Ḗƞŧḗř ȧ ƈȯḿƥŀḗŧḗ ƥħȯƞḗ ƞŭḿƀḗř. ············〗",
+      "includeCountryCallingCode": "〖Īƞƈŀŭḓḗ ŧħḗ ƈȯŭƞŧřẏ ƈȧŀŀīƞɠ ƈȯḓḗ, şŧȧřŧīƞɠ ẇīŧħ +. ····················〗",
+      "enterCustomPhoneType": "〖Ḗƞŧḗř ȧ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ. ···········〗",
+      "customTypesUnique": "〖Ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ ŀȧƀḗŀş ḿŭşŧ ƀḗ ŭƞīʠŭḗ. ················〗"
     },
     "lastTypeUsage": {
-      "title": "55555",
-      "message": "55555 {{label}} 55555",
-      "removeAndDelete": "55555",
-      "removeAndKeep": "55555"
+      "title": "〖Ŀȧşŧ Ƥħȯƞḗ Ŧẏƥḗ Ŭşȧɠḗ ·········〗",
+      "message": "〖Ŧħīş īş ŧħḗ ŀȧşŧ ŭşḗ ȯƒ ƈŭşŧȯḿ ƥħȯƞḗ ŧẏƥḗ \"{{label}}\". Ḓḗŀḗŧḗ ŧħḗ ŧẏƥḗ ḓḗƒīƞīŧīȯƞ, ȯř ķḗḗƥ īŧ ƒȯř ƒŭŧŭřḗ ŭşḗ? ············································〗",
+      "removeAndDelete": "〖Řḗḿȯṽḗ & Ḓḗŀḗŧḗ Ŧẏƥḗ ········〗",
+      "removeAndKeep": "〖Řḗḿȯṽḗ & Ķḗḗƥ Ŧẏƥḗ ········〗"
     }
   },
   "contactPortalTab": {
-    "boardCount_one": "55555 {{count}} 55555",
-    "boardCount_other": "55555 {{count}} 55555",
-    "title": "55555",
-    "description": "55555",
-    "loadingDescription": "55555",
-    "information": "55555",
-    "activeAccess": "55555",
+    "boardCount_one": "〖{{count}} ƀȯȧřḓ ······〗",
+    "boardCount_other": "〖{{count}} ƀȯȧřḓş ·······〗",
+    "title": "〖Ƥȯřŧȧŀ Ȧƈƈḗşş ······〗",
+    "description": "〖Ƈŀīḗƞŧ ƥȯřŧȧŀ ȧƈƈḗşş ḿȧƞȧɠḗḿḗƞŧ ƒȯř ȧ ƈȯƞŧȧƈŧ, īƞƈŀŭḓīƞɠ īƞṽīŧȧŧīȯƞş ȧƞḓ řȯŀḗ ŭƥḓȧŧḗş ··································〗",
+    "loadingDescription": "〖Ŀȯȧḓīƞɠ ƥȯřŧȧŀ īƞƒȯřḿȧŧīȯƞ... ············〗",
+    "information": "〖Īƞṽīŧȧŧīȯƞ ḗḿȧīŀş ẇīŀŀ ƀḗ şḗƞŧ ƒřȯḿ ẏȯŭř ȯřɠȧƞīẑȧŧīȯƞ'ş ḗḿȧīŀ şẏşŧḗḿ. Řḗƥŀīḗş ẇīŀŀ ɠȯ ŧȯ ẏȯŭř ƈŀīḗƞŧ'ş ḓḗƒȧŭŀŧ ŀȯƈȧŧīȯƞ ḗḿȧīŀ ȧḓḓřḗşş. ······················································〗",
+    "activeAccess": "〖Ƥȯřŧȧŀ ȧƈƈḗşş ȧƈŧīṽḗ ········〗",
     "noAccess": {
-      "title": "55555",
-      "description": "55555"
+      "title": "〖Ƞȯ Ƥȯřŧȧŀ Ȧƈƈḗşş ·······〗",
+      "description": "〖Ŧħīş ƈȯƞŧȧƈŧ ḓȯḗş ƞȯŧ ħȧṽḗ ƈŀīḗƞŧ ƥȯřŧȧŀ ȧƈƈḗşş ẏḗŧ ·····················〗"
     },
     "noClient": {
-      "description": "55555"
+      "description": "〖Ȧşşīɠƞ ŧħīş ƈȯƞŧȧƈŧ ŧȯ ȧ ƈŀīḗƞŧ ŧȯ ḿȧƞȧɠḗ ƥȯřŧȧŀ ȧƈƈḗşş. ·······················〗"
     },
     "portalAdmin": {
-      "label": "55555",
-      "helper": "55555"
+      "label": "〖Ƥȯřŧȧŀ Ȧḓḿīƞīşŧřȧŧȯř ········〗",
+      "helper": "〖Ẇħḗƞ ḗƞȧƀŀḗḓ, ŧħḗ ŭşḗř ẇīŀŀ ƀḗ ƈřḗȧŧḗḓ ẇīŧħ Ƈŀīḗƞŧ Ȧḓḿīƞ řȯŀḗ. Ẇħḗƞ ḓīşȧƀŀḗḓ, ŧħḗẏ'ŀŀ ɠḗŧ Ƈŀīḗƞŧ Ŭşḗř řȯŀḗ. ···········································〗"
     },
     "roles": {
-      "label": "55555",
-      "none": "55555",
-      "placeholder": "55555",
-      "addButton": "55555"
+      "label": "〖Ƥȯřŧȧŀ Řȯŀḗş ·····〗",
+      "none": "〖Ƞȯ řȯŀḗş ȧşşīɠƞḗḓ ·······〗",
+      "placeholder": "〖Şḗŀḗƈŧ řȯŀḗ ŧȯ ȧḓḓ ········〗",
+      "addButton": "〖Ȧḓḓ Řȯŀḗ ····〗"
     },
     "userStatus": {
-      "label": "55555",
-      "active": "55555",
-      "inactive": "55555"
+      "label": "〖Ŭşḗř Şŧȧŧŭş ·····〗",
+      "active": "〖Ŭşḗř īş ƈŭřřḗƞŧŀẏ ȧƈŧīṽḗ ··········〗",
+      "inactive": "〖Ŭşḗř īş ƈŭřřḗƞŧŀẏ īƞȧƈŧīṽḗ ···········〗"
     },
     "lastLogin": {
-      "label": "55555",
-      "via": "55555 {{method}} 55555"
+      "label": "〖Ŀȧşŧ Ŀȯɠīƞ ····〗",
+      "via": "〖ṽīȧ {{method}} ······〗"
     },
     "history": {
-      "title": "55555",
-      "description": "55555",
-      "empty": "55555",
-      "sentPrefix": "55555",
-      "expiresPrefix": "55555",
-      "usedPrefix": "55555",
+      "title": "〖Īƞṽīŧȧŧīȯƞ Ħīşŧȯřẏ ········〗",
+      "description": "〖Řḗƈḗƞŧ ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş şḗƞŧ ŧȯ ŧħīş ƈȯƞŧȧƈŧ ···················〗",
+      "empty": "〖Ƞȯ ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş ħȧṽḗ ƀḗḗƞ şḗƞŧ ŧȯ ŧħīş ƈȯƞŧȧƈŧ ẏḗŧ. ·······················〗",
+      "sentPrefix": "〖Şḗƞŧ: ··〗",
+      "expiresPrefix": "〖Ḗẋƥīřḗş: ····〗",
+      "usedPrefix": "〖Ŭşḗḓ: ··〗",
       "status": {
-        "pending": "55555",
-        "used": "55555",
-        "expired": "55555",
-        "revoked": "55555"
+        "pending": "〖Ƥḗƞḓīƞɠ ···〗",
+        "used": "〖Ŭşḗḓ ··〗",
+        "expired": "〖Ḗẋƥīřḗḓ ···〗",
+        "revoked": "〖Řḗṽȯķḗḓ ···〗"
       }
     },
     "actions": {
-      "sendInvitation": "55555",
-      "sending": "55555",
-      "refresh": "55555",
-      "refreshing": "55555",
-      "resend": "55555",
-      "resending": "55555",
-      "revoke": "55555"
+      "sendInvitation": "〖Şḗƞḓ Ƥȯřŧȧŀ Īƞṽīŧȧŧīȯƞ ·········〗",
+      "sending": "〖Şḗƞḓīƞɠ... ····〗",
+      "refresh": "〖Řḗƒřḗşħ ···〗",
+      "refreshing": "〖Řḗƒřḗşħīƞɠ... ······〗",
+      "resend": "〖Řḗşḗƞḓ ···〗",
+      "resending": "〖Řḗşḗƞḓīƞɠ... ·····〗",
+      "revoke": "〖Řḗṽȯķḗ ···〗"
     },
     "toast": {
-      "successTitle": "55555",
-      "errorTitle": "55555",
-      "permissionDeniedTitle": "55555",
-      "loadError": "55555",
-      "refreshHistoryError": "55555",
-      "sendInvitePermissionDenied": "55555",
-      "sendInviteSuccess": "55555",
-      "sendInviteFailed": "55555",
-      "revokeInviteSuccess": "55555",
-      "revokeInviteFailed": "55555",
-      "resendInviteSuccess": "55555",
-      "resendInviteFailed": "55555",
-      "updatePortalSettingsPermissionDenied": "55555",
-      "portalAdminEnabled": "55555",
-      "portalAdminDisabled": "55555",
-      "updatePortalAdminFailed": "55555",
-      "updateAdminFailed": "55555",
-      "updateRolesPermissionDenied": "55555",
-      "roleAdded": "55555",
-      "addRoleFailed": "55555",
-      "roleRemoved": "55555",
-      "removeRoleFailed": "55555",
-      "updateStatusPermissionDenied": "55555",
-      "userActivated": "55555",
-      "userDeactivated": "55555",
-      "updateUserStatusFailed": "55555",
+      "successTitle": "〖Şŭƈƈḗşş ···〗",
+      "errorTitle": "〖Ḗřřȯř ··〗",
+      "permissionDeniedTitle": "〖Ƥḗřḿīşşīȯƞ Ḓḗƞīḗḓ ·······〗",
+      "loadError": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƥȯřŧȧŀ īƞƒȯřḿȧŧīȯƞ ··············〗",
+      "refreshHistoryError": "〖Ƒȧīŀḗḓ ŧȯ řḗƒřḗşħ īƞṽīŧȧŧīȯƞ ħīşŧȯřẏ ···············〗",
+      "sendInvitePermissionDenied": "〖Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ şḗƞḓ īƞṽīŧȧŧīȯƞş ···················〗",
+      "sendInviteSuccess": "〖Ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞ şḗƞŧ şŭƈƈḗşşƒŭŀŀẏ! ···············〗",
+      "sendInviteFailed": "〖Ƒȧīŀḗḓ ŧȯ şḗƞḓ īƞṽīŧȧŧīȯƞ ··········〗",
+      "revokeInviteSuccess": "〖Īƞṽīŧȧŧīȯƞ řḗṽȯķḗḓ şŭƈƈḗşşƒŭŀŀẏ ·············〗",
+      "revokeInviteFailed": "〖Ƒȧīŀḗḓ ŧȯ řḗṽȯķḗ īƞṽīŧȧŧīȯƞ ···········〗",
+      "resendInviteSuccess": "〖Ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞ řḗşḗƞŧ şŭƈƈḗşşƒŭŀŀẏ! ················〗",
+      "resendInviteFailed": "〖Ƒȧīŀḗḓ ŧȯ řḗşḗƞḓ īƞṽīŧȧŧīȯƞ ···········〗",
+      "updatePortalSettingsPermissionDenied": "〖Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ şḗŧŧīƞɠş ·····················〗",
+      "portalAdminEnabled": "〖Ƈȯƞŧȧƈŧ ḿȧřķḗḓ ȧş ȧḓḿīƞ ƒȯř ƈŀīḗƞŧ ƥȯřŧȧŀ ·················〗",
+      "portalAdminDisabled": "〖Ƈȯƞŧȧƈŧ ŭƞḿȧřķḗḓ ȧş ȧḓḿīƞ ƒȯř ƈŀīḗƞŧ ƥȯřŧȧŀ ··················〗",
+      "updatePortalAdminFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ şŧȧŧŭş ··········〗",
+      "updateAdminFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ȧḓḿīƞ ƒŀȧɠ ···········〗",
+      "updateRolesPermissionDenied": "〖Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ŭƥḓȧŧḗ ŭşḗř řȯŀḗş ···················〗",
+      "roleAdded": "〖Řȯŀḗ ȧḓḓḗḓ şŭƈƈḗşşƒŭŀŀẏ ··········〗",
+      "addRoleFailed": "〖Ƒȧīŀḗḓ ŧȯ ȧḓḓ řȯŀḗ ········〗",
+      "roleRemoved": "〖Řȯŀḗ řḗḿȯṽḗḓ şŭƈƈḗşşƒŭŀŀẏ ··········〗",
+      "removeRoleFailed": "〖Ƒȧīŀḗḓ ŧȯ řḗḿȯṽḗ řȯŀḗ ·········〗",
+      "updateStatusPermissionDenied": "〖Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ ŭƥḓȧŧḗ ŭşḗř şŧȧŧŭş ····················〗",
+      "userActivated": "〖Ŭşḗř ȧƈŧīṽȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ···········〗",
+      "userDeactivated": "〖Ŭşḗř ḓḗȧƈŧīṽȧŧḗḓ şŭƈƈḗşşƒŭŀŀẏ ············〗",
+      "updateUserStatusFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ŭşḗř şŧȧŧŭş ············〗",
       "errors": {
-        "permissionDeniedInvite": "55555",
-        "emailNotConfigured": "55555",
-        "contactNotFound": "55555",
-        "contactMissingEmail": "55555",
-        "contactInvalidEmail": "55555",
-        "userExistsForContact": "55555",
-        "noDefaultClient": "55555",
-        "noDefaultLocation": "55555",
-        "noLocationEmail": "55555",
-        "noBaseUrl": "55555",
-        "invitationNotFound": "55555"
+        "permissionDeniedInvite": "〖Ẏȯŭ ḓȯ ƞȯŧ ħȧṽḗ ƥḗřḿīşşīȯƞ ŧȯ īƞṽīŧḗ ŭşḗřş. ··················〗",
+        "emailNotConfigured": "〖Ḗḿȧīŀ şḗřṽīƈḗ īş ḓīşȧƀŀḗḓ ȯř ƞȯŧ ƈȯƞƒīɠŭřḗḓ. ··················〗",
+        "contactNotFound": "〖Ƈȯƞŧȧƈŧ ƞȯŧ ƒȯŭƞḓ. ········〗",
+        "contactMissingEmail": "〖Ƈȯƞŧȧƈŧ ḓȯḗş ƞȯŧ ħȧṽḗ ȧƞ ḗḿȧīŀ ȧḓḓřḗşş. Ƥŀḗȧşḗ ȧḓḓ ȧƞ ḗḿȧīŀ ȧḓḓřḗşş ŧȯ ŧħḗ ƈȯƞŧȧƈŧ ƀḗƒȯřḗ şḗƞḓīƞɠ ȧƞ īƞṽīŧȧŧīȯƞ. ·············································〗",
+        "contactInvalidEmail": "〖Ƈȯƞŧȧƈŧ ħȧş ȧƞ īƞṽȧŀīḓ ḗḿȧīŀ ȧḓḓřḗşş. Ƥŀḗȧşḗ ŭƥḓȧŧḗ ŧħḗ ƈȯƞŧȧƈŧ ẇīŧħ ȧ ṽȧŀīḓ ḗḿȧīŀ ȧḓḓřḗşş ƀḗƒȯřḗ şḗƞḓīƞɠ ȧƞ īƞṽīŧȧŧīȯƞ. ················································〗",
+        "userExistsForContact": "〖Ȧ ŭşḗř ȧƈƈȯŭƞŧ ȧŀřḗȧḓẏ ḗẋīşŧş ƒȯř ŧħīş ƈȯƞŧȧƈŧ. Ŭşḗ ƥȧşşẇȯřḓ řḗşḗŧ īƞşŧḗȧḓ ȯƒ şḗƞḓīƞɠ ȧƞ īƞṽīŧȧŧīȯƞ. ········································〗",
+        "noDefaultClient": "〖Ƞȯ ḓḗƒȧŭŀŧ ƈŀīḗƞŧ ƈȯƞƒīɠŭřḗḓ ƒȯř ŧħīş ŧḗƞȧƞŧ. Ƥŀḗȧşḗ şḗŧ ȧ ḓḗƒȧŭŀŧ ƈŀīḗƞŧ īƞ Ɠḗƞḗřȧŀ Şḗŧŧīƞɠş. ······································〗",
+        "noDefaultLocation": "〖Ḓḗƒȧŭŀŧ ƈŀīḗƞŧ ḿŭşŧ ħȧṽḗ ȧ ḓḗƒȧŭŀŧ ŀȯƈȧŧīȯƞ ƈȯƞƒīɠŭřḗḓ ŧȯ şḗƞḓ ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş. ·································〗",
+        "noLocationEmail": "〖Ḓḗƒȧŭŀŧ ƈŀīḗƞŧ'ş ŀȯƈȧŧīȯƞ ḿŭşŧ ħȧṽḗ ȧ ƈȯƞŧȧƈŧ ḗḿȧīŀ ƈȯƞƒīɠŭřḗḓ. ··························〗",
+        "noBaseUrl": "〖Ɓȧşḗ ŬŘĿ īş ƞȯŧ ƈȯƞƒīɠŭřḗḓ ƒȯř ƥȯřŧȧŀ īƞṽīŧȧŧīȯƞş. ····················〗",
+        "invitationNotFound": "〖Īƞṽīŧȧŧīȯƞ ƞȯŧ ƒȯŭƞḓ ȯř ȧŀřḗȧḓẏ ŭşḗḓ. ···············〗"
       },
-      "userNotFound": "55555"
+      "userNotFound": "〖Ƈŀīḗƞŧ ŭşḗř ƞȯŧ ƒȯŭƞḓ ·········〗"
     }
   },
   "quickAddContact": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ȧḓḓ Ƞḗẇ Ƈȯƞŧȧƈŧ ······〗",
+    "description": "〖Ɋŭīƈķ-ȧḓḓ ƒȯřḿ ƒȯř ƈřḗȧŧīƞɠ ȧ ƈȯƞŧȧƈŧ ẇīŧħ ƈŀīḗƞŧ, řȯŀḗ, ƥħȯƞḗ, ȧƞḓ ŧȧɠ ƒīḗŀḓş ································〗",
     "dialog": {
-      "title": "55555"
+      "title": "〖Ȧḓḓ Ƞḗẇ Ƈȯƞŧȧƈŧ ······〗"
     },
     "errorFallback": {
-      "title": "55555",
-      "tryAgain": "55555"
+      "title": "〖Şȯḿḗŧħīƞɠ ẇḗƞŧ ẇřȯƞɠ: ·········〗",
+      "tryAgain": "〖Ŧřẏ ȧɠȧīƞ ····〗"
     },
     "actions": {
-      "submit": "55555"
+      "submit": "〖Ȧḓḓ Ƈȯƞŧȧƈŧ ·····〗"
     },
     "fields": {
-      "fullName": "55555",
-      "email": "55555",
-      "clientOptional": "55555",
-      "role": "55555",
-      "rolePlaceholder": "55555",
-      "notes": "55555",
-      "notesPlaceholder": "55555"
+      "fullName": "〖Ƒŭŀŀ Ƞȧḿḗ * ·····〗",
+      "email": "〖Ḗḿȧīŀ * ···〗",
+      "clientOptional": "〖Ƈŀīḗƞŧ (Ȯƥŧīȯƞȧŀ) ·······〗",
+      "role": "〖Řȯŀḗ ··〗",
+      "rolePlaceholder": "〖ḗ.ɠ., Ḿȧƞȧɠḗř, Ḓḗṽḗŀȯƥḗř, ḗŧƈ. ············〗",
+      "notes": "〖Ƞȯŧḗş ··〗",
+      "notesPlaceholder": "〖Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħḗ ƈȯƞŧȧƈŧ... ··················〗"
     },
     "status": {
-      "label": "55555",
-      "active": "55555",
-      "inactive": "55555"
+      "label": "〖Şŧȧŧŭş ···〗",
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗"
     },
     "validation": {
-      "alertIntro": "55555",
-      "fullNameRequired": "55555",
-      "fullNameEmpty": "55555",
-      "fullNameSpaces": "55555",
-      "emailRequired": "55555",
-      "emailSpaces": "55555",
-      "roleSpaces": "55555",
-      "roleLength": "55555",
-      "roleCharacters": "55555",
-      "notesSpaces": "55555"
+      "alertIntro": "〖Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ ḗřřȯřş: ·············〗",
+      "fullNameRequired": "〖Ƒŭŀŀ ƞȧḿḗ īş řḗʠŭīřḗḓ ·········〗",
+      "fullNameEmpty": "〖Ƒŭŀŀ ƞȧḿḗ ƈȧƞƞȯŧ ƀḗ ḗḿƥŧẏ ··········〗",
+      "fullNameSpaces": "〖Ƒŭŀŀ ƞȧḿḗ ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş ···············〗",
+      "emailRequired": "〖Ḗḿȧīŀ ȧḓḓřḗşş īş řḗʠŭīřḗḓ ··········〗",
+      "emailSpaces": "〖Ḗḿȧīŀ ȧḓḓřḗşş ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş ················〗",
+      "roleSpaces": "〖Řȯŀḗ ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş ·············〗",
+      "roleLength": "〖Řȯŀḗ ḿŭşŧ ƀḗ 100 ƈħȧřȧƈŧḗřş ȯř ŀḗşş ··············〗",
+      "roleCharacters": "〖Řȯŀḗ ḿŭşŧ ƈȯƞŧȧīƞ ŀḗŧŧḗřş ȯř ƞŭḿƀḗřş ···············〗",
+      "notesSpaces": "〖Ƞȯŧḗş ƈȧƞƞȯŧ ƈȯƞŧȧīƞ ȯƞŀẏ şƥȧƈḗş ·············〗"
     },
     "toasts": {
-      "warningTitle": "55555",
-      "tagsFailed": "55555 {{count}} 55555",
-      "contactCreated": "55555",
-      "contactAdded": "55555 {{name}} 55555"
+      "warningTitle": "〖Ẇȧřƞīƞɠ ···〗",
+      "tagsFailed": "〖{{count}} ŧȧɠ(ş) ƈȯŭŀḓ ƞȯŧ ƀḗ ƈřḗȧŧḗḓ ···············〗",
+      "contactCreated": "〖Ƈȯƞŧȧƈŧ ƈřḗȧŧḗḓ ······〗",
+      "contactAdded": "〖{{name}} ħȧş ƀḗḗƞ ȧḓḓḗḓ şŭƈƈḗşşƒŭŀŀẏ. ···············〗"
     },
     "errors": {
-      "createContactTitle": "55555",
-      "unexpected": "55555",
-      "validationTitle": "55555",
-      "emailExistsTitle": "55555",
-      "invalidReferenceTitle": "55555",
-      "systemTitle": "55555",
-      "genericTitle": "55555",
-      "closeMessage": "55555",
-      "createContactHeading": "55555",
-      "validationPrefix": "55555",
-      "emailExistsPrefix": "55555",
-      "invalidReferencePrefix": "55555",
-      "systemPrefix": "55555"
+      "createContactTitle": "〖Ḗřřȯř ƈřḗȧŧīƞɠ ƈȯƞŧȧƈŧ ·········〗",
+      "unexpected": "〖Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+      "validationTitle": "〖Ṽȧŀīḓȧŧīȯƞ Ḗřřȯř ·······〗",
+      "emailExistsTitle": "〖Ḗḿȧīŀ Ȧŀřḗȧḓẏ Ḗẋīşŧş ········〗",
+      "invalidReferenceTitle": "〖Īƞṽȧŀīḓ Řḗƒḗřḗƞƈḗ ·······〗",
+      "systemTitle": "〖Şẏşŧḗḿ Ḗřřȯř ·····〗",
+      "genericTitle": "〖Ḗřřȯř ··〗",
+      "closeMessage": "〖Ƈŀȯşḗ ḗřřȯř ḿḗşşȧɠḗ ········〗",
+      "createContactHeading": "〖Ḗřřȯř ƈřḗȧŧīƞɠ ƈȯƞŧȧƈŧ: ··········〗",
+      "validationPrefix": "〖Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ: ··········〗",
+      "emailExistsPrefix": "〖Ḗḿȧīŀ ȧŀřḗȧḓẏ ḗẋīşŧş: ·········〗",
+      "invalidReferencePrefix": "〖Īƞṽȧŀīḓ řḗƒḗřḗƞƈḗ: ········〗",
+      "systemPrefix": "〖Şẏşŧḗḿ ḗřřȯř: ······〗"
     }
   },
   "contactDetailsEdit": {
-    "title": "55555 {{name}} 55555",
-    "heading": "55555 {{name}} 55555",
-    "inactiveBadge": "55555",
-    "description": "55555",
+    "title": "〖Ḗḓīŧ Ƈȯƞŧȧƈŧ - {{name}} ··········〗",
+    "heading": "〖Ḗḓīŧ Ƈȯƞŧȧƈŧ: {{name}} ·········〗",
+    "inactiveBadge": "〖īƞȧƈŧīṽḗ ····〗",
+    "description": "〖Ḗḓīŧȧƀŀḗ ƈȯƞŧȧƈŧ ƒȯřḿ ŭşḗḓ ƒřȯḿ ŧħḗ ḓḗŧȧīŀ ṽīḗẇ ȧƞḓ ḓřȧẇḗř ƒŀȯẇş ··························〗",
     "validation": {
-      "fullNameRequired": "55555",
-      "emailRequired": "55555",
-      "invalidEmail": "55555"
+      "fullNameRequired": "〖Ƒŭŀŀ ƞȧḿḗ īş řḗʠŭīřḗḓ ·········〗",
+      "emailRequired": "〖Ḗḿȧīŀ ȧḓḓřḗşş īş řḗʠŭīřḗḓ ··········〗",
+      "invalidEmail": "〖Ƥŀḗȧşḗ ḗƞŧḗř ȧ ṽȧŀīḓ ḗḿȧīŀ ȧḓḓřḗşş ··············〗"
     },
     "errors": {
-      "validationPrefix": "55555",
-      "emailExists": "55555",
-      "invalidReferencePrefix": "55555",
-      "systemPrefix": "55555",
-      "saveFailed": "55555",
-      "unexpected": "55555"
+      "validationPrefix": "〖Ƥŀḗȧşḗ ƒīẋ ŧħḗ ƒȯŀŀȯẇīƞɠ: ··········〗",
+      "emailExists": "〖Ḗḿȧīŀ ȧŀřḗȧḓẏ ḗẋīşŧş: Ȧ ƈȯƞŧȧƈŧ ẇīŧħ ŧħīş ḗḿȧīŀ ȧḓḓřḗşş ȧŀřḗȧḓẏ ḗẋīşŧş īƞ ŧħḗ şẏşŧḗḿ ··································〗",
+      "invalidReferencePrefix": "〖Īƞṽȧŀīḓ řḗƒḗřḗƞƈḗ: ········〗",
+      "systemPrefix": "〖Şẏşŧḗḿ ḗřřȯř: ······〗",
+      "saveFailed": "〖Ȧƞ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ şȧṽīƞɠ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ····················〗",
+      "unexpected": "〖Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗"
     },
     "fields": {
-      "fullName": "55555",
-      "email": "55555",
-      "role": "55555",
-      "rolePlaceholder": "55555",
-      "phoneNumbers": "55555",
-      "inboundTicketDestinationOverride": "55555",
-      "inboundTicketDestinationHelp": "55555",
-      "useClientDestination": "55555",
-      "client": "55555",
-      "status": "55555",
-      "notes": "55555",
-      "notesPlaceholder": "55555",
-      "tags": "55555",
-      "emailAddresses": "55555"
+      "fullName": "〖Ƒŭŀŀ Ƞȧḿḗ ····〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "role": "〖Řȯŀḗ ··〗",
+      "rolePlaceholder": "〖ḗ.ɠ., Ḿȧƞȧɠḗř, Ḓḗṽḗŀȯƥḗř, ḗŧƈ. ············〗",
+      "phoneNumbers": "〖Ƥħȯƞḗ ƞŭḿƀḗřş: ······〗",
+      "inboundTicketDestinationOverride": "〖Īƞƀȯŭƞḓ ŧīƈķḗŧ ḓḗşŧīƞȧŧīȯƞ ȯṽḗřřīḓḗ: ···············〗",
+      "inboundTicketDestinationHelp": "〖Ƥřḗƈḗḓḗƞƈḗ: Ƈȯƞŧȧƈŧ ȯṽḗřřīḓḗ -> Ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ -> Ƥřȯṽīḓḗř ḓḗƒȧŭŀŧ. ·····························〗",
+      "useClientDestination": "〖Ŭşḗ ƈŀīḗƞŧ ḓḗşŧīƞȧŧīȯƞ ·········〗",
+      "client": "〖Ƈŀīḗƞŧ: ···〗",
+      "status": "〖Şŧȧŧŭş: ···〗",
+      "notes": "〖Ƞȯŧḗş: ···〗",
+      "notesPlaceholder": "〖Ȧḓḓ ȧƞẏ ȧḓḓīŧīȯƞȧŀ ƞȯŧḗş ȧƀȯŭŧ ŧħḗ ƈȯƞŧȧƈŧ... ··················〗",
+      "tags": "〖Ŧȧɠş: ··〗",
+      "emailAddresses": "〖Ḗḿȧīŀ ȧḓḓřḗşşḗş: ·······〗"
     },
     "loading": {
-      "destinations": "55555"
+      "destinations": "〖Ŀȯȧḓīƞɠ ḓḗşŧīƞȧŧīȯƞş... ··········〗"
     },
     "status": {
-      "active": "55555",
-      "inactive": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗"
     }
   },
   "contactDetailsView": {
-    "title": "55555 {{name}} 55555",
-    "description": "55555",
+    "title": "〖Ƈȯƞŧȧƈŧ Ḓḗŧȧīŀş - {{name}} ···········〗",
+    "description": "〖Řḗȧḓ-ȯřīḗƞŧḗḓ ƈȯƞŧȧƈŧ şŭḿḿȧřẏ ẇīŧħ ȧşşȯƈīȧŧḗḓ ƈŀīḗƞŧ, ƥħȯƞḗş, ȧƞḓ ḿḗŧȧḓȧŧȧ ······························〗",
     "actions": {
-      "goToContact": "55555"
+      "goToContact": "〖Ɠȯ ŧȯ ƈȯƞŧȧƈŧ ······〗"
     },
     "empty": {
-      "notSet": "55555",
-      "unknownClient": "55555"
+      "notSet": "〖Ƞȯŧ şḗŧ ···〗",
+      "unknownClient": "〖Ŭƞķƞȯẇƞ Ƈŀīḗƞŧ ······〗"
     },
     "phoneTypes": {
-      "work": "55555",
-      "mobile": "55555",
-      "home": "55555",
-      "fax": "55555",
-      "other": "55555"
+      "work": "〖Ẇȯřķ ··〗",
+      "mobile": "〖Ḿȯƀīŀḗ ···〗",
+      "home": "〖Ħȯḿḗ ··〗",
+      "fax": "〖Ƒȧẋ ··〗",
+      "other": "〖Ȯŧħḗř ··〗"
     },
     "fields": {
-      "fullName": "55555",
-      "email": "55555",
-      "phone": "55555",
-      "defaultPhone": "55555",
-      "client": "55555",
-      "noClientAssigned": "55555",
-      "role": "55555",
-      "status": "55555",
-      "createdAt": "55555",
-      "updatedAt": "55555",
-      "notes": "55555",
-      "tags": "55555",
-      "emailAddresses": "55555",
-      "defaultEmail": "55555"
+      "fullName": "〖Ƒŭŀŀ Ƞȧḿḗ ····〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "phone": "〖Ƥħȯƞḗ: ···〗",
+      "defaultPhone": "〖Ḓḗƒȧŭŀŧ ···〗",
+      "client": "〖Ƈŀīḗƞŧ: ···〗",
+      "noClientAssigned": "〖Ƞȯ ƈŀīḗƞŧ ȧşşīɠƞḗḓ ········〗",
+      "role": "〖Řȯŀḗ ··〗",
+      "status": "〖Şŧȧŧŭş ···〗",
+      "createdAt": "〖Ƈřḗȧŧḗḓ Ȧŧ ····〗",
+      "updatedAt": "〖Ŭƥḓȧŧḗḓ Ȧŧ ····〗",
+      "notes": "〖Ƞȯŧḗş: ···〗",
+      "tags": "〖Ŧȧɠş: ··〗",
+      "emailAddresses": "〖Ḗḿȧīŀ ȧḓḓřḗşşḗş: ·······〗",
+      "defaultEmail": "〖Ḓḗƒȧŭŀŧ ···〗"
     },
     "status": {
-      "active": "55555",
-      "inactive": "55555"
+      "active": "〖Ȧƈŧīṽḗ ···〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ ····〗"
     },
     "sections": {
-      "documents": "55555"
+      "documents": "〖Ḓȯƈŭḿḗƞŧş ····〗"
     },
     "errors": {
-      "loadTagsSystem": "55555",
-      "loadTagsFailed": "55555",
-      "unexpected": "55555",
-      "clientNotFound": "55555",
-      "loadClientSystem": "55555",
-      "clientMissing": "55555",
-      "loadClientFailed": "55555",
-      "updateClientFailedWithMessage": "55555 {{message}} 55555",
-      "updateClientFailed": "55555"
+      "loadTagsSystem": "〖Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ŀȯȧḓīƞɠ ŧȧɠş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ȯř ƈȯƞŧȧƈŧ şŭƥƥȯřŧ. ··································〗",
+      "loadTagsFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧȧɠş. Ƥŀḗȧşḗ ŧřẏ řḗƒřḗşħīƞɠ ŧħḗ ƥȧɠḗ. ·····················〗",
+      "unexpected": "〖Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ···················〗",
+      "clientNotFound": "〖Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ. Ŧħḗ ƈŀīḗƞŧ ḿȧẏ ħȧṽḗ ƀḗḗƞ ḓḗŀḗŧḗḓ. ·····················〗",
+      "loadClientSystem": "〖Ȧƞ ŭƞḗẋƥḗƈŧḗḓ ḗřřȯř ȯƈƈŭřřḗḓ ẇħīŀḗ ŀȯȧḓīƞɠ ƈŀīḗƞŧ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ ȯř ƈȯƞŧȧƈŧ şŭƥƥȯřŧ. ······································〗",
+      "clientMissing": "〖Ŧħḗ ƈŀīḗƞŧ ƞȯ ŀȯƞɠḗř ḗẋīşŧş īƞ ŧħḗ şẏşŧḗḿ. ·················〗",
+      "loadClientFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ ḓḗŧȧīŀş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ····················〗",
+      "updateClientFailedWithMessage": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ: {{message}} ···············〗",
+      "updateClientFailed": "〖Ƒȧīŀḗḓ ŧȯ ŭƥḓȧŧḗ ƈŀīḗƞŧ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·················〗"
     }
   },
   "clientContactsList": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƈŀīḗƞŧ Ƈȯƞŧȧƈŧş ······〗",
+    "description": "〖Ḗḿƀḗḓḓḗḓ ƈŀīḗƞŧ-şƥḗƈīƒīƈ ƈȯƞŧȧƈŧş ŀīşŧ ẇīŧħ ƒīŀŧḗřş ȧƞḓ řȯẇ ȧƈŧīȯƞş ···························〗",
     "table": {
-      "name": "55555",
-      "email": "55555",
-      "phoneNumber": "55555",
-      "actions": "55555",
-      "role": "55555"
+      "name": "〖Ƞȧḿḗ ··〗",
+      "email": "〖Ḗḿȧīŀ ··〗",
+      "phoneNumber": "〖Ƥħȯƞḗ Ƞŭḿƀḗř ·····〗",
+      "actions": "〖Ȧƈŧīȯƞş ···〗",
+      "role": "〖Řȯŀḗ ··〗"
     },
     "filter": {
-      "show": "55555",
-      "active": "55555",
-      "inactive": "55555",
-      "all": "55555",
-      "searchPlaceholder": "55555"
+      "show": "〖Şħȯẇ: ··〗",
+      "active": "〖Ȧƈŧīṽḗ Ƈȯƞŧȧƈŧş ······〗",
+      "inactive": "〖Īƞȧƈŧīṽḗ Ƈȯƞŧȧƈŧş ·······〗",
+      "all": "〖Ȧŀŀ Ƈȯƞŧȧƈŧş ·····〗",
+      "searchPlaceholder": "〖Şḗȧřƈħ ƈȯƞŧȧƈŧş... ········〗"
     },
     "actions": {
-      "openMenu": "55555",
-      "quickView": "55555",
-      "addNewContact": "55555"
+      "openMenu": "〖Ȯƥḗƞ ḿḗƞŭ ····〗",
+      "quickView": "〖Ɋŭīƈķ Ṽīḗẇ ····〗",
+      "addNewContact": "〖Ȧḓḓ ƈȯƞŧȧƈŧ ·····〗"
     },
     "errors": {
-      "loadFailed": "55555",
-      "loadingTitle": "55555",
-      "retryFailed": "55555"
+      "loadFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧȧƈŧş. ··········〗",
+      "loadingTitle": "〖Ḗřřȯř ŀȯȧḓīƞɠ ƈȯƞŧȧƈŧş ·········〗",
+      "retryFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈȯƞŧȧƈŧş. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·················〗"
     }
   },
   "contactsLayout": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ƈȯƞŧȧƈŧş Ŀȧẏȯŭŧ ······〗",
+    "description": "〖Ƈȯƞŧȧƈŧş řȯŭŧḗ şħḗŀŀ ȧƞḓ ƥȧɠḗ ƈħřȯḿḗ ···············〗"
   },
   "contactsSkeleton": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ƈȯƞŧȧƈŧş Ŀȯȧḓīƞɠ Şŧȧŧḗ ·········〗",
+    "description": "〖Ŀȯȧḓīƞɠ ƥŀȧƈḗħȯŀḓḗřş ƒȯř ƈȯƞŧȧƈŧş ŀīşŧ ȧƞḓ ḓḗŧȧīŀ şŭřƒȧƈḗş ························〗"
   },
   "contactAvatarUpload": {
-    "title": "55555",
-    "description": "55555"
+    "title": "〖Ƈȯƞŧȧƈŧ Ȧṽȧŧȧř Ŭƥŀȯȧḓ ·········〗",
+    "description": "〖Ȧṽȧŧȧř ŭƥŀȯȧḓ ȧƒƒȯřḓȧƞƈḗ ƒȯř ƈȯƞŧȧƈŧ ƥřȯƒīŀḗ īḿȧɠḗş ·····················〗"
   },
   "contactNotesPanel": {
-    "title": "55555",
-    "description": "55555",
+    "title": "〖Ƞȯŧḗş ··〗",
+    "description": "〖Řīƈħ ŧḗẋŧ ƞȯŧḗş ƥȧƞḗŀ ẇīŧħ ŀḗɠȧƈẏ ƞȯŧḗ ḓīşƥŀȧẏ ȧƞḓ şȧṽḗ/řḗŧřẏ ȧƈŧīȯƞş ····························〗",
     "legacy": {
-      "initialNote": "55555"
+      "initialNote": "〖Īƞīŧīȧŀ Ƞȯŧḗ ·····〗"
     },
     "errors": {
-      "loadTitle": "55555",
-      "unknown": "55555"
+      "loadTitle": "〖Ƞȯŧḗş ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ········〗",
+      "unknown": "〖Ŭƞķƞȯẇƞ ḗřřȯř ······〗"
     },
-    "lastUpdated": "55555 {{date}} 55555"
+    "lastUpdated": "〖Ŀȧşŧ ŭƥḓȧŧḗḓ: {{date}} ·········〗"
   },
   "notes": {
     "messages": {
-      "saveSuccess": "55555",
-      "saveFailed": "55555"
+      "saveSuccess": "〖Ƞȯŧḗş şȧṽḗḓ ·····〗",
+      "saveFailed": "〖Ƒȧīŀḗḓ ŧȯ şȧṽḗ ƞȯŧḗş ········〗"
     }
   },
   "actions": {
-    "print": "55555",
-    "printOptions": "55555"
+    "print": "〖Ƥřīƞŧ ··〗",
+    "printOptions": "〖Ƥřīƞŧ ȯƥŧīȯƞş ······〗"
   },
   "contactTabs": {
     "tickets": {
-      "addTicket": "55555",
-      "empty": "55555",
+      "addTicket": "〖Ȧḓḓ Ŧīƈķḗŧ ····〗",
+      "empty": "〖Ƞȯ ŧīƈķḗŧş ƒȯŭƞḓ ƒȯř ŧħīş ƈȯƞŧȧƈŧ ··············〗",
       "filters": {
-        "allAssignees": "55555",
-        "allPriorities": "55555",
-        "categoryPlaceholder": "55555",
-        "reset": "55555",
-        "searchPlaceholder": "55555",
-        "statusPlaceholder": "55555"
+        "allAssignees": "〖Ȧŀŀ Ȧşşīɠƞḗḗş ······〗",
+        "allPriorities": "〖Ȧŀŀ Ƥřīȯřīŧīḗş ······〗",
+        "categoryPlaceholder": "〖Ƒīŀŧḗř ƀẏ ƈȧŧḗɠȯřẏ ········〗",
+        "reset": "〖Řḗşḗŧ ··〗",
+        "searchPlaceholder": "〖Şḗȧřƈħ ŧīƈķḗŧş... ·······〗",
+        "statusPlaceholder": "〖Şḗŀḗƈŧ Şŧȧŧŭş ······〗"
       },
       "loadMore": {
-        "label": "55555",
-        "loading": "55555"
+        "label": "〖Ŀȯȧḓ Ḿȯřḗ Ŧīƈķḗŧş ·······〗",
+        "loading": "〖Ŀȯȧḓīƞɠ... ····〗"
       },
-      "loading": "55555",
-      "title": "55555",
+      "loading": "〖Ŀȯȧḓīƞɠ... ····〗",
+      "title": "〖Ƈȯƞŧȧƈŧ Ŧīƈķḗŧş ······〗",
       "toasts": {
-        "clientNotFound": "55555",
-        "loadClientFailed": "55555",
-        "loadTicketFailed": "55555",
-        "openTicketFailed": "55555",
-        "userNotAuthenticated": "55555"
+        "clientNotFound": "〖Ƈŀīḗƞŧ ƞȯŧ ƒȯŭƞḓ ·······〗",
+        "loadClientFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ ḓḗŧȧīŀş ············〗",
+        "loadTicketFailed": "〖Ƒȧīŀḗḓ ŧȯ ŀȯȧḓ ŧīƈķḗŧ ·········〗",
+        "openTicketFailed": "〖Ƒȧīŀḗḓ ŧȯ ȯƥḗƞ ŧīƈķḗŧ ·········〗",
+        "userNotAuthenticated": "〖Ŭşḗř ƞȯŧ ȧŭŧħḗƞŧīƈȧŧḗḓ ·········〗"
       }
     }
   },
   "contactBento": {
     "toast": {
-      "saved": "55555",
-      "saveFailed": "55555",
-      "saveFailedDescription": "55555"
+      "saved": "〖Ƈȯƞŧȧƈŧ ŭƥḓȧŧḗḓ ······〗",
+      "saveFailed": "〖Ƈȯŭŀḓ ƞȯŧ ŭƥḓȧŧḗ ƈȯƞŧȧƈŧ ··········〗",
+      "saveFailedDescription": "〖Ŧħḗ ƈȯƞŧȧƈŧ ƈȯŭŀḓ ƞȯŧ ƀḗ ŭƥḓȧŧḗḓ. Ƥŀḗȧşḗ ŧřẏ ȧɠȧīƞ. ·····················〗"
+    }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "〖Ƈȯƞŧȧƈŧ ƞȯŧ ƒȯŭƞḓ ·······〗",
+      "otherClient": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ ḿȧƞȧɠḗ ƈȯƞŧȧƈŧş ƒȯř ȧƞȯŧħḗř ƈŀīḗƞŧ ························〗",
+      "notAssociatedWithClient": "〖Ƈȯƞŧȧƈŧ īş ƞȯŧ ȧşşȯƈīȧŧḗḓ ẇīŧħ ȧ ƈŀīḗƞŧ ················〗",
+      "emailExists": "〖Ȧ ƈȯƞŧȧƈŧ ẇīŧħ ŧħīş ḗḿȧīŀ ȧḓḓřḗşş ȧŀřḗȧḓẏ ḗẋīşŧş īƞ ŧħḗ şẏşŧḗḿ ·························〗",
+      "fieldRequired": "〖Ŧħḗ {{field}} īş řḗʠŭīřḗḓ ··········〗",
+      "clientInvalid": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ ················〗",
+      "duplicate": "〖Ȧ ƈȯƞŧȧƈŧ ẇīŧħ ŧħḗşḗ ḓḗŧȧīŀş ȧŀřḗȧḓẏ ḗẋīşŧş. ··················〗",
+      "destinationInvalid": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƈŀīḗƞŧ ȯř īƞƀȯŭƞḓ ŧīƈķḗŧ ḓḗşŧīƞȧŧīȯƞ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ ····························〗",
+      "invalidDataRefresh": "〖Īƞṽȧŀīḓ ƈȯƞŧȧƈŧ ḓȧŧȧ ƥřȯṽīḓḗḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ························〗",
+      "invalidDataFields": "〖Īƞṽȧŀīḓ ƈȯƞŧȧƈŧ ḓȧŧȧ ƥřȯṽīḓḗḓ. Ƥŀḗȧşḗ ƈħḗƈķ ȧŀŀ ƒīḗŀḓş ȧƞḓ ŧřẏ ȧɠȧīƞ. ····························〗",
+      "bulkEmailExists": "〖Ȯƞḗ ȯř ḿȯřḗ ƈȯƞŧȧƈŧş ȧŀřḗȧḓẏ ħȧṽḗ ŧħīş ḗḿȧīŀ ȧḓḓřḗşş ·····················〗",
+      "invalidReference": "〖Īƞṽȧŀīḓ řḗƒḗřḗƞƈḗ īƞ ŭƥḓȧŧḗ ḓȧŧȧ ·············〗",
+      "visibilityMissingField": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ƒīḗŀḓ. ················〗",
+      "visibilityMissingFieldNamed": "〖Ḿīşşīƞɠ řḗʠŭīřḗḓ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ƒīḗŀḓ: {{field}}. ·····················〗",
+      "visibilityReferenceInvalid": "〖Ŧħḗ şḗŀḗƈŧḗḓ ƈȯƞŧȧƈŧ, ṽīşīƀīŀīŧẏ ɠřȯŭƥ, ȯř ƀȯȧřḓ īş ƞȯ ŀȯƞɠḗř ṽȧŀīḓ. Ƥŀḗȧşḗ řḗƒřḗşħ ȧƞḓ ŧřẏ ȧɠȧīƞ. ········································〗",
+      "visibilityDuplicate": "〖Ȧ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ẇīŧħ ŧħḗşḗ ḓḗŧȧīŀş ȧŀřḗȧḓẏ ḗẋīşŧş ƒȯř ŧħīş ƈŀīḗƞŧ. ····························〗",
+      "visibilityInvalidData": "〖Īƞṽȧŀīḓ ṽīşīƀīŀīŧẏ ɠřȯŭƥ ḓȧŧȧ ƥřȯṽīḓḗḓ. Ƥŀḗȧşḗ ƈħḗƈķ ŧħḗ ɠřȯŭƥ ḓḗŧȧīŀş ȧƞḓ şḗŀḗƈŧḗḓ ƀȯȧřḓş. ·····································〗",
+      "groupNameRequired": "〖Ɠřȯŭƥ ƞȧḿḗ īş řḗʠŭīřḗḓ ·········〗",
+      "readPermission": "〖Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: Ƈȧƞƞȯŧ řḗȧḓ ƈȯƞŧȧƈŧş ················〗"
     }
   }
 }

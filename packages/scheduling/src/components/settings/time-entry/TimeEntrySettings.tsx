@@ -6,10 +6,12 @@ import { Settings, Calendar } from 'lucide-react';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import TimePeriodSettings from './TimePeriodSettings';
 import TimePeriodList from './TimePeriodList';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const DEFAULT_TAB = 'time-period-settings';
 
 const TimeEntrySettings: React.FC = () => {
+  const { t } = useTranslation('msp/settings');
   const searchParams = useSearchParams();
 
   // Determine initial active tab based on URL parameter
@@ -52,13 +54,13 @@ const TimeEntrySettings: React.FC = () => {
   const tabContent: TabContent[] = [
     {
       id: 'time-period-settings',
-      label: "Time Period Settings",
+      label: t('timeEntry.timePeriods.title'),
       icon: <Settings className="w-4 h-4" />,
       content: <TimePeriodSettings />,
     },
     {
       id: 'time-periods',
-      label: "Time Periods",
+      label: t('timeEntry.periods.title'),
       icon: <Calendar className="w-4 h-4" />,
       content: <TimePeriodList />,
     },

@@ -4,7 +4,7 @@ import React from 'react';
 
 /** In-body loading block for a tile whose chrome is already painted. */
 export function TileSkeleton({ id }: { id: string }) {
-  return <div id={id} className="animate-pulse bg-[rgb(var(--color-border-100))] h-16 rounded-md" />;
+  return <div id={id} className="animate-pulse skeleton-fill h-16 rounded-md" />;
 }
 
 /**

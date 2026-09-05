@@ -188,7 +188,7 @@ const AgentScheduleView: React.FC<AgentScheduleViewProps> = ({ agentId }) => {
   }, []);
 
   return (
-    <div className="h-full flex flex-col bg-[rgb(var(--color-background-50))]">
+    <div className="h-full flex flex-col bg-[rgb(var(--color-border-50))]">
       <CalendarStyleProvider />
       <AgentScheduleDrawerStyles />
       <div className="flex-grow relative" ref={calendarRef}>

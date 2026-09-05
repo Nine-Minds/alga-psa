@@ -7,6 +7,7 @@ import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
 import { StorageService } from '@alga-psa/storage/StorageService';
 import InteractionModel from '../models/interactions';
+import type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
 import { IInteractionType, IInteraction } from '@alga-psa/types'
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -25,13 +26,15 @@ import {
 
 type InteractionActionError = ActionMessageError | ActionPermissionError;
 
+export type { InteractionPageFilters, InteractionPageResult } from '../models/interactions';
+
 function interactionActionErrorFrom(error: unknown): InteractionActionError | null {
   if (error instanceof Error) {
     if (error.message.includes('Permission denied')) {
       return permissionError(error.message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
-      return permissionError('You must be signed in to manage interactions.');
+      return permissionError('You must be signed in to manage interactions.', 'msp/clients:errors.interaction.signInRequired');
     }
     if (
       error.message === 'User ID is missing' ||
@@ -47,16 +50,22 @@ function interactionActionErrorFrom(error: unknown): InteractionActionError | nu
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the interaction identifiers is invalid. Please refresh and try again.');
+    return actionError('One of the interaction identifiers is invalid. Please refresh and try again.', 'msp/clients:errors.interaction.identifierInvalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required interaction field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required interaction field: ${dbError.column}.`,
+          'msp/clients:errors.interaction.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required interaction field.', 'msp/clients:errors.interaction.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.');
+    return actionError('The selected interaction, client, contact, user, status, or type no longer exists. Please refresh and try again.', 'msp/clients:errors.interaction.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('An interaction with these details already exists.');
+    return actionError('An interaction with these details already exists.', 'msp/clients:errors.interaction.duplicate');
   }
   return null;
 }
@@ -169,6 +178,26 @@ export const getRecentInteractions = withAuth(async (
     const expected = interactionActionErrorFrom(error);
     if (expected) return expected;
     console.error('Error fetching recent interactions:', error);
+    throw error;
+  }
+});
+
+export const getInteractionsPage = withAuth(async (
+  user,
+  { tenant },
+  filters: InteractionPageFilters,
+): Promise<InteractionPageResult | InteractionActionError> => {
+  try {
+    await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
+
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return InteractionModel.getInteractionsPage(filters, tenant, trx);
+    });
+  } catch (error) {
+    const expected = interactionActionErrorFrom(error);
+    if (expected) return expected;
+    console.error('Error fetching interactions page:', error);
     throw error;
   }
 });

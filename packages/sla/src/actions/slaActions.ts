@@ -35,7 +35,7 @@ function tenantScopedTable(
  */
 export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPolicy[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -57,7 +57,7 @@ export const getSlaPolicies = withAuth(async (user, { tenant }): Promise<ISlaPol
  */
 export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyWithTargets | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -98,7 +98,7 @@ export const getSlaPolicyById = withAuth(async (user, { tenant }, policyId: stri
  */
 export const getDefaultSlaPolicy = withAuth(async (user, { tenant }): Promise<ISlaPolicy | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -127,7 +127,7 @@ export const createSlaPolicy = withAuth(async (
   seedDefaultThresholds: boolean = true
 ): Promise<ISlaPolicy | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'create')) {
-    return slaPermissionError('create SLA policies');
+    return slaPermissionError('create');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -203,7 +203,7 @@ export const updateSlaPolicy = withAuth(async (
   input: Partial<ISlaPolicyInput>
 ): Promise<ISlaPolicy | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -270,7 +270,7 @@ export const getSlaPolicyUsage = withAuth(async (user, { tenant }, policyId: str
   ticketCount: number;
 } | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -301,7 +301,7 @@ export const getSlaPolicyUsage = withAuth(async (user, { tenant }, policyId: str
  */
 export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'delete')) {
-    return slaPermissionError('delete SLA policies');
+    return slaPermissionError('delete');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -361,7 +361,7 @@ export const deleteSlaPolicy = withAuth(async (user, { tenant }, policyId: strin
  */
 export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: string): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -406,7 +406,7 @@ export const setDefaultSlaPolicy = withAuth(async (user, { tenant }, policyId: s
  */
 export const getSlaPolicyTargets = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaPolicyTarget[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -434,7 +434,7 @@ export const createSlaPolicyTarget = withAuth(async (
   input: ISlaPolicyTargetInput
 ): Promise<ISlaPolicyTarget | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -507,7 +507,7 @@ export const updateSlaPolicyTarget = withAuth(async (
   input: Partial<ISlaPolicyTargetInput>
 ): Promise<ISlaPolicyTarget | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -591,7 +591,7 @@ export const updateSlaPolicyTarget = withAuth(async (
  */
 export const deleteSlaPolicyTarget = withAuth(async (user, { tenant }, targetId: string): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -627,7 +627,7 @@ export const upsertSlaPolicyTargets = withAuth(async (
   targets: ISlaPolicyTargetInput[]
 ): Promise<ISlaPolicyTarget[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -728,7 +728,7 @@ export const upsertSlaPolicyTargets = withAuth(async (
  */
 export const getSlaNotificationThresholds = withAuth(async (user, { tenant }, policyId: string): Promise<ISlaNotificationThreshold[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -757,7 +757,7 @@ export const upsertSlaNotificationThresholds = withAuth(async (
   thresholds: ISlaNotificationThresholdInput[]
 ): Promise<ISlaNotificationThreshold[] | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -827,7 +827,7 @@ export const upsertSlaNotificationThresholds = withAuth(async (
  */
 export const getClientSlaPolicy = withAuth(async (user, { tenant }, clientId: string): Promise<ISlaPolicy | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -863,7 +863,7 @@ export const setClientSlaPolicy = withAuth(async (
   policyId: string | null
 ): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -916,7 +916,7 @@ export const setClientSlaPolicy = withAuth(async (
  */
 export const getBoardSlaPolicy = withAuth(async (user, { tenant }, boardId: string): Promise<ISlaPolicy | SlaActionError | null> => {
   if (!await hasPermission(user, 'sla_policy', 'read')) {
-    return slaPermissionError('view SLA policies');
+    return slaPermissionError('view');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -952,7 +952,7 @@ export const setBoardSlaPolicy = withAuth(async (
   policyId: string | null
 ): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -1012,7 +1012,7 @@ export const updateSlaPolicyBoardAssignments = withAuth(async (
   boardIds: string[]
 ): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 
@@ -1060,7 +1060,7 @@ export const updateSlaPolicyClientAssignments = withAuth(async (
   clientIds: string[]
 ): Promise<void | SlaActionError> => {
   if (!await hasPermission(user, 'sla_policy', 'update')) {
-    return slaPermissionError('update SLA policies');
+    return slaPermissionError('update');
   }
   const { knex: db } = await createTenantKnex();
 

@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Aggiungi linee contrattuali per definire ciò che è incluso in questo contratto",
       "noContractLinesYet": "Nessuna linea contrattuale ancora",
       "noServicesConfigured": "Nessun servizio configurato",
+      "billedOnRecordedUsage": "Fatturato in base all'utilizzo registrato",
       "serviceCountOne": "{{count}} servizio",
-      "serviceCountOther": "{{count}} servizi"
+      "serviceCountOther": "{{count}} servizi",
+      "previouslyConfiguredQuantity": "Quantità configurata in precedenza: {{count}} — non utilizzata per la fatturazione",
+      "billedOnPeriodCount": "Fatturato in base al conteggio comunicato per ogni periodo",
+      "recurringSeats": "{{count}} × {{rate}} (postazioni ricorrenti)",
+      "bundleAllocation": "Ripartizione del prezzo del pacchetto — non sono postazioni fatturabili",
+      "setUpRecurringSeats": "Configura postazioni ricorrenti",
+      "reportPeriodCount": "Comunica un conteggio di periodo"
     },
     "stats": {
       "contractLines": "Linee contrattuali",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variabile (oraria/utilizzo)",
       "viewDetails": "Visualizza dettagli"
     },
-    "title": "Cosa è incluso"
+    "title": "Cosa è incluso",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configura postazioni ricorrenti",
+        "explanation": "Le postazioni ricorrenti fatturano quantità × tariffa unitaria in ogni periodo senza record di consumo, quindi vivono su una riga di contratto fissa prezzata a postazioni/unità ricorrenti — non su questa riga a consumo.",
+        "nextStep": "Vai alle righe di contratto, aggiungi (o apri) una riga fissa, aggiungi questo servizio e scegli «Postazioni/unità ricorrenti», quindi conferma quantità e tariffa unitaria. La modifica ha effetto dal successivo periodo di servizio non fatturato; questa riga a consumo e la sua cronologia restano invariate finché non la rimuovi.",
+        "manualHandoff": "Vai a Linee contrattuali → Crea personalizzata, scegli Tariffa fissa, aggiungi questo servizio e seleziona «Postazioni/unità ricorrenti». Verifica quantità, tariffa unitaria e pianificazione di fatturazione prima di salvare. Questo crea un impegno ricorrente separato; non converte né chiude questo servizio a consumo. Coordina il suo avvio con la fine della fatturazione a consumo e verifica l'utilizzo ancora da fatturare prima di attivare entrambi per lo stesso periodo."
+      },
+      "periodCount": {
+        "title": "Comunica un conteggio di periodo",
+        "explanation": "Comunicare un conteggio di periodo porta questo servizio a un conteggio sostituibile per periodo di servizio: correggere 10 in 12 fattura 12, mai 22, e il minimo si applica una sola volta. Il periodo successivo inizia non comunicato — nessun conteggio viene riportato.",
+        "nextStep": "La conferma cambia solo il modo in cui questo servizio viene misurato dal successivo periodo di servizio non fatturato. Le voci esistenti restano additive e non viene creato alcun conteggio — comunica poi il conteggio del periodo in Monitoraggio consumi."
+      },
+      "referenceHeading": "Riferimento non confermato dalla configurazione precedente",
+      "referenceQuantity": "Quantità configurata in precedenza: {{count}}",
+      "referenceRate": "Tariffa salvata: {{rate}}",
+      "referenceCaveat": "Questi valori non sono mai stati fatturati. Qui non viene salvato né addebitato nulla finché non confermi tu stesso i valori nel flusso qui sotto.",
+      "actions": {
+        "close": "Chiudi",
+        "cancel": "Annulla",
+        "switching": "Modifica in corso…",
+        "confirmPeriodCount": "Passa ai conteggi di periodo"
+      },
+      "errors": {
+        "missingConfiguration": "Questo servizio non ha una configurazione salvata da convertire. Aggiorna e riprova.",
+        "failed": "Non è stato possibile modificare il modo in cui questo servizio viene misurato."
+      },
+      "effectiveFrom": "Modifica della misurazione con effetto dal"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Nessun servizio configurato per questa preimpostazione",
       "notSet": "Non impostato",
       "overrideBaseRate": "Sovrascrivi tariffa base",
-      "quantity": "Quantità",
+      "usageRecordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questi servizi.",
       "quantityShort": "Qtà: {{quantity}}",
       "ratePerUnit": "Tariffa (per unità)",
       "roundUpToNearestMinutes": "Arrotonda per eccesso al più vicino (minuti)",
@@ -470,6 +505,12 @@
       "collapseLine": "Comprimi linea contrattuale",
       "createCustom": "Crea personalizzata",
       "expandLine": "Espandi linea contrattuale"
+    },
+    "billingProfile": {
+      "hint": "Gli addebiti di questa riga vengono fatturati a questo profilo, prevalendo sul contratto.",
+      "label": "Profilo di fatturazione",
+      "none": "Usa il profilo del contratto",
+      "updated": "Profilo di fatturazione aggiornato"
     },
     "bucket": {
       "billingPeriod": "Periodo di fatturazione: {{period}}",
@@ -553,7 +594,12 @@
       "typeLabel": "Servizio {{type}}",
       "unitOfMeasure": "Unità di misura",
       "unitPlaceholder": "unità",
-      "unitRate": "Tariffa unitaria"
+      "unitRate": "Tariffa unitaria",
+      "effectiveFrom": "Modifiche alle postazioni ricorrenti con effetto dal",
+      "prospectiveSeatHelp": "Le postazioni fatturano quantità × tariffa unitaria. Le modifiche si applicano al confine del periodo di servizio; quantità e prezzi precedenti restano invariati.",
+      "recurringUnits": "Postazioni/unità ricorrenti",
+      "semanticsEffectiveFrom": "Modifiche a prezzi e misurazione del servizio con effetto dal",
+      "prospectiveSemanticsHelp": "Le modifiche si applicano al confine del periodo di servizio; quantità, misurazione e prezzi precedenti restano invariati. Cambiando la data si ricaricano le impostazioni applicabili da rivedere."
     },
     "title": "Linee contrattuali"
   },
@@ -661,7 +707,7 @@
     "title": "Aggiungi linee contrattuali da preimpostazioni",
     "usageConfig": {
       "defaultRate": "Predefinito: ${{rate}}",
-      "quantity": "Quantità",
+      "recordDrivenNote": "I servizi a consumo vengono fatturati in base all'utilizzo registrato nel monitoraggio utilizzo per ogni periodo di servizio. Un periodo senza record di utilizzo non produce alcun addebito: registra l'utilizzo (o uno zero esplicito) in ogni periodo per fatturare questi servizi.",
       "ratePerUnit": "Tariffa (per unità)",
       "unitHint": "es., GB, chiamata API, utente",
       "unitOfMeasure": "Unità di misura",
@@ -686,7 +732,8 @@
       "hourlyDescription": "Fattura in base alle registrazioni di tempo approvate.",
       "hourlyTitle": "Orario",
       "usageDescription": "Fattura per unità consumate.",
-      "usageTitle": "Basato su utilizzo"
+      "usageTitle": "Basato su utilizzo",
+      "fixedSemantics": "Fattura un prezzo forfettario oppure quantità ricorrente × tariffa unitaria in ogni periodo."
     },
     "billingTiming": {
       "advance": "Anticipato (fatturazione all'inizio del periodo)",
@@ -752,8 +799,15 @@
       "unitOfMeasureRequired": "Servizio {{index}}: L'unità di misura è obbligatoria",
       "unitRateRequired": "Servizio {{index}}: La tariffa unitaria è obbligatoria",
       "usageServiceRequired": "È richiesto almeno un servizio basato su utilizzo",
-      "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio"
-    }
+      "usageServiceSelectRequired": "Servizio {{index}}: Seleziona un servizio",
+      "invalidQuantity": "La quantità deve essere maggiore o uguale a zero.",
+      "recurringUnitRateRequired": "Inserisci una tariffa unitaria per ogni servizio ricorrente."
+    },
+    "fixedServicesPricingIntent": "Scegli per ogni servizio un prezzo forfettario o postazioni/unità ricorrenti.",
+    "fixedServicesPricingExplanation": "Le allocazioni a prezzo forfettario condividono la tariffa base della linea. Le postazioni ricorrenti fatturano la quantità concordata × tariffa unitaria in ogni periodo senza record di utilizzo.",
+    "recurringQuantity": "Quantità ricorrente",
+    "allocationQuantity": "Quantità di allocazione",
+    "bundleBaseRateHelp": "Tariffa ricorrente per i servizi a prezzo forfettario. Le postazioni ricorrenti vengono fatturate separatamente a quantità × tariffa unitaria."
   },
   "pricingSchedules": {
     "list": {
@@ -827,7 +881,6 @@
         "editPricingSchedule": "Modifica pianificazione dei prezzi"
       },
       "validation": {
-        "currencySettingsLoading": "Le impostazioni della valuta sono ancora in caricamento; riprova tra un momento",
         "customRatePositive": "La tariffa personalizzata deve essere un numero positivo",
         "customRateRequired": "La tariffa personalizzata è obbligatoria quando non si utilizza la tariffa predefinita",
         "durationPositive": "La durata deve essere un numero positivo",
@@ -2172,8 +2225,8 @@
     },
     "runBar": {
       "compareToggle": "Mostra le differenze rispetto al contratto corrente",
-      "horizonOption": "{{count}} periodi di fatturazione",
-      "lastRun": "Simulazione aggiornata · {{count}} periodi di fatturazione",
+      "horizonOption": "{{count}} periodi di fatturazione del cliente",
+      "lastRun": "Simulazione aggiornata · {{count}} periodi di fatturazione del cliente",
       "neverRun": "Non ancora simulato",
       "simulate": "Simula",
       "simulating": "Simulazione in corso…",
@@ -2342,7 +2395,7 @@
       "scopeCatchAll": "Copre tutti i servizi della linea (i servizi membri sostituiscono il moltiplicatore)",
       "scopeMembers": "Solo servizi membri",
       "totalHours": "Ore totali",
-      "overageRate": "Tariffa di superamento ($/ora)",
+      "overageRate": "Tariffa di superamento oraria",
       "rollover": "Consenti riporto",
       "afterHours": "Moltiplicatore di consumo fuori orario",
       "afterHoursMultiplier": "Moltiplicatore (es. 1,5)",
@@ -2351,20 +2404,80 @@
       "members": "Servizi membri",
       "multiplier": "×",
       "noMembers": "Nessun servizio membro associato.",
+      "noServicesOnLine": "Aggiungere un servizio a questa riga contrattuale prima di creare un pacchetto ore.",
       "selectService": "Seleziona un servizio…",
       "poolName": "Nome del pacchetto (facoltativo)",
       "poolNamePlaceholder": "es. Ore standard",
-      "coversAll": "Copre tutti i servizi di questa linea"
+      "coversAll": "Copre tutti i servizi di questa linea",
+      "burnMultiplier": "Moltiplicatore di consumo"
     },
     "badges": {
       "dormant": "nessun servizio associato — nulla viene consumato da questo pacchetto"
     },
     "errors": {
-      "catchAllExists": "Questa linea ha già un pacchetto generale."
+      "catchAllExists": "Questa linea ha già un pacchetto generale.",
+      "invalidAfterHoursRule": "Inserire una regola fuori orario valida.",
+      "scheduleLoadFailed": "Impossibile caricare le pianificazioni dell'orario lavorativo.",
+      "scheduleRequired": "Selezionare una pianificazione dell'orario lavorativo prima di applicare questa regola."
     }
   },
   "wizardBucketPools": {
     "heading": "Pacchetti ore per questa riga",
     "empty": "Nessun pacchetto ore su questa riga. Aggiungere un pacchetto per includere ore prepagate."
+  },
+  "errors": {
+    "permissions": {
+      "modifyLines": "Autorizzazione negata: impossibile modificare le linee contrattuali",
+      "deleteContracts": "Autorizzazione negata: impossibile eliminare i contratti di fatturazione"
+    },
+    "contract": {
+      "hasInvoices": "Questo contratto ha fatture associate e non può essere eliminato.",
+      "invalidValue": "Uno dei valori del contratto selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il contratto, il cliente o il record correlato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "conflict": "Questa modifica del contratto è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del contratto non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del contratto.",
+      "missingFieldNamed": "Manca un campo obbligatorio del contratto: {{field}}."
+    },
+    "wizard": {
+      "permissions": {
+        "createTemplates": "Autorizzazione negata: impossibile creare modelli di fatturazione",
+        "createContracts": "Autorizzazione negata: impossibile creare contratti di fatturazione",
+        "listTemplates": "Autorizzazione negata: impossibile elencare i modelli di contratto",
+        "viewSnapshot": "Autorizzazione negata: impossibile visualizzare lo snapshot del modello di contratto",
+        "resumeContracts": "Autorizzazione negata: impossibile riprendere i contratti di fatturazione"
+      },
+      "templateNotFound": "Modello non trovato",
+      "contractNotFound": "Contratto non trovato",
+      "notDraft": "Il contratto non è una bozza",
+      "missingClient": "Al contratto in bozza manca l’assegnazione del cliente",
+      "invalidStartDate": "Il contratto in bozza ha una data di inizio non valida",
+      "recordInvalid": "Uno dei record selezionati della procedura guidata del contratto non è più valido. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un record corrispondente della procedura guidata del contratto."
+    },
+    "pricingSchedule": {
+      "endAfterEffective": "La data di fine deve essere successiva alla data di decorrenza",
+      "overlaps": "Questa pianificazione si sovrappone a una pianificazione dei prezzi esistente",
+      "wouldOverlap": "Questa pianificazione si sovrapporrebbe a una pianificazione dei prezzi esistente",
+      "notFound": "Pianificazione dei prezzi non trovata"
+    },
+    "renewals": {
+      "permissions": {
+        "read": "Autorizzazione negata: impossibile leggere la coda dei rinnovi",
+        "update": "Autorizzazione negata: impossibile aggiornare la coda dei rinnovi",
+        "ownerOtherTenant": "Autorizzazione negata: impossibile assegnare i rinnovi a un utente di un altro tenant.",
+        "contractOtherTenant": "Autorizzazione negata: impossibile completare il rinnovo con un contratto di un altro tenant."
+      },
+      "clientContractIdRequired": "L’id del contratto del cliente è obbligatorio.",
+      "workItemNotFound": "Elemento di lavoro del rinnovo non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "snoozeDateRequired": "Scegliere una data di posticipo prima di salvare.",
+      "snoozeDateInvalid": "Scegliere una data di posticipo valida.",
+      "snoozeDateFuture": "Scegliere una data di posticipo futura.",
+      "ownerInvalid": "Scegliere un responsabile del rinnovo valido.",
+      "ownerUnavailable": "Il responsabile del rinnovo selezionato non è più disponibile. Aggiornare la pagina e riprovare.",
+      "activatedContractIdRequired": "L’id del contratto di rinnovo attivato è obbligatorio.",
+      "contractNotActive": "Il contratto di rinnovo attivato non è più attivo. Aggiornare la pagina e riprovare.",
+      "manualRetryDueOnly": "Il nuovo tentativo manuale è disponibile solo per i cicli di rinnovo in scadenza."
+    }
   }
 }

@@ -73,7 +73,7 @@ export async function fetchTimeEntriesForTicketCore(
     throw new Error('Ticket ID is required');
   }
 
-  if (!await hasPermission(user, 'timeentry', 'read', db)) {
+  if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
 

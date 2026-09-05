@@ -604,6 +604,108 @@ export function serializeTicketRichTextContent(content: PartialBlock[]): string 
   return JSON.stringify(content);
 }
 
+const NON_TEXT_BLOCK_TYPES = new Set(['image', 'video', 'audio', 'file']);
+
+function extractInlineTextFromBlockNote(content: unknown): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    return content.map(extractInlineTextFromBlockNote).join('');
+  }
+
+  if (!content || typeof content !== 'object') {
+    return '';
+  }
+
+  const node = content as {
+    type?: unknown;
+    text?: unknown;
+    content?: unknown;
+    rows?: unknown;
+    cells?: unknown;
+    props?: { username?: unknown; displayName?: unknown };
+  };
+
+  if (node.type === 'mention') {
+    // Mirrors packages/ui/src/editor/Mention.tsx so copied text matches the reader's view.
+    const username = typeof node.props?.username === 'string' ? node.props.username.trim() : '';
+    if (username) {
+      return `@${username}`;
+    }
+    const displayName = typeof node.props?.displayName === 'string' ? node.props.displayName.trim() : '';
+    return displayName ? `@[${displayName}]` : '';
+  }
+
+  if (typeof node.text === 'string') {
+    return node.text;
+  }
+
+  if (Array.isArray(node.rows)) {
+    return node.rows
+      .map((row) => {
+        const cells = (row as { cells?: unknown } | null)?.cells;
+        return Array.isArray(cells) ? cells.map(extractInlineTextFromBlockNote).join('\t') : '';
+      })
+      .join('\n');
+  }
+
+  return extractInlineTextFromBlockNote(node.content);
+}
+
+function collectBlockLines(block: unknown, lines: string[]): void {
+  if (!block || typeof block !== 'object') {
+    return;
+  }
+
+  const node = block as { type?: unknown; content?: unknown; children?: unknown };
+
+  if (typeof node.type !== 'string' || !NON_TEXT_BLOCK_TYPES.has(node.type)) {
+    lines.push(extractInlineTextFromBlockNote(node.content));
+  }
+
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) {
+      collectBlockLines(child, lines);
+    }
+  }
+}
+
+export function extractTicketRichTextPlainText(content: string | object | null | undefined): string {
+  if (!content) {
+    return '';
+  }
+
+  if (typeof content === 'string' && !content.trim()) {
+    return '';
+  }
+
+  try {
+    const document = parseTicketMobileRichTextDocument(content);
+    const blocks =
+      document.format === 'blocknote'
+        ? document.content
+        : convertProseMirrorToTicketRichTextBlocks(document.content);
+
+    const lines: string[] = [];
+    for (const block of blocks) {
+      collectBlockLines(block, lines);
+    }
+
+    while (lines.length > 0 && !lines[0].trim()) {
+      lines.shift();
+    }
+    while (lines.length > 0 && !lines[lines.length - 1].trim()) {
+      lines.pop();
+    }
+
+    return lines.join('\n');
+  } catch {
+    return typeof content === 'string' ? content : '';
+  }
+}
+
 export function serializeTicketMobileRichTextDocument(
   document: TicketMobileRichTextDocument
 ): string {

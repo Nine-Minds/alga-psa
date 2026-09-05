@@ -186,9 +186,6 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
   } = useFeatureFlag('contract-simulator', {
     defaultValue: false,
   });
-  const { enabled: creditDrawdownControlsEnabled } = useFeatureFlag('release-v1.5-feature', {
-    defaultValue: false,
-  });
   const contractId = (searchParams?.get('contractId') ?? resolvedContractId ?? null) as string | null;
   const clientContractId = searchParams?.get('clientContractId') ?? resolvedClientContractId ?? null;
   const tenant = useTenant()!;
@@ -970,7 +967,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
         if (editedAssignment.renewal_ticket_status_id !== originalAssignment.renewal_ticket_status_id) {
           updatePayload.renewal_ticket_status_id = editedAssignment.renewal_ticket_status_id ?? null;
         }
-        if (creditDrawdownControlsEnabled && editedAssignment.credit_drawdown_opt_out !== originalAssignment.credit_drawdown_opt_out) {
+        if (editedAssignment.credit_drawdown_opt_out !== originalAssignment.credit_drawdown_opt_out) {
           updatePayload.credit_drawdown_opt_out = editedAssignment.credit_drawdown_opt_out ?? false;
         }
 
@@ -1783,7 +1780,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                       <span className="font-medium">{formatDate(contract.updated_at)}</span>
                     </div>
                     {primaryAssignment && (
-                      <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3 space-y-1.5">
+                      <div className="rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3 space-y-1.5">
                         <p className="text-xs uppercase tracking-wide text-muted-foreground">
                           {t('contractDetail.headerCard.renewalHeading', { defaultValue: 'Renewal' })}
                         </p>
@@ -2133,7 +2130,7 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                                 })}
                               </Label>
                               {isEditing ? (
-                                <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-surface-50))] p-3">
+                                <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
                                   <div className="flex items-center justify-between">
                                     <Label
                                       htmlFor={`assignment-use-tenant-renewal-defaults-${assignment.client_contract_id}`}
@@ -2503,38 +2500,36 @@ const ContractDetail: React.FC<ContractDetailProps> = ({
                             </div>
                           )}
 
-                          {creditDrawdownControlsEnabled && (
-                            <div className="grid gap-4 md:grid-cols-2">
-                              <div>
-                                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
-                                  {t('contractDetail.clientAssignment.creditDrawdownOptOut', {
-                                    defaultValue: 'Exclude from credit draw-down',
-                                  })}
-                                </Label>
-                                {isEditing ? (
-                                  <div className="mt-2">
-                                    <Switch
-                                      id={`credit-drawdown-opt-out-${assignment.client_contract_id}`}
-                                      checked={Boolean(editData.credit_drawdown_opt_out)}
-                                      onCheckedChange={(checked) => {
-                                        handleAssignmentFieldChange(
-                                          assignment.client_contract_id,
-                                          'credit_drawdown_opt_out',
-                                          checked
-                                        );
-                                      }}
-                                    />
-                                  </div>
-                                ) : (
-                                  <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
-                                    {editData.credit_drawdown_opt_out
-                                      ? t('common.labels.yes', { defaultValue: 'Yes' })
-                                      : t('common.labels.no', { defaultValue: 'No' })}
-                                  </p>
-                                )}
-                              </div>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <div>
+                              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                                {t('contractDetail.clientAssignment.creditDrawdownOptOut', {
+                                  defaultValue: 'Exclude from credit draw-down',
+                                })}
+                              </Label>
+                              {isEditing ? (
+                                <div className="mt-2">
+                                  <Switch
+                                    id={`credit-drawdown-opt-out-${assignment.client_contract_id}`}
+                                    checked={Boolean(editData.credit_drawdown_opt_out)}
+                                    onCheckedChange={(checked) => {
+                                      handleAssignmentFieldChange(
+                                        assignment.client_contract_id,
+                                        'credit_drawdown_opt_out',
+                                        checked
+                                      );
+                                    }}
+                                  />
+                                </div>
+                              ) : (
+                                <p className="mt-1 text-sm text-[rgb(var(--color-text-800))]">
+                                  {editData.credit_drawdown_opt_out
+                                    ? t('common.labels.yes', { defaultValue: 'Yes' })
+                                    : t('common.labels.no', { defaultValue: 'No' })}
+                                </p>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     })

@@ -1,9 +1,13 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { ActivityIndicator, Modal, Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { TicketPriority } from "../../../api/tickets";
 import { useTheme } from "../../../ui/ThemeContext";
-import { PrimaryButton } from "../../../ui/components/PrimaryButton";
+import {
+  activeTicketNotificationSuppression,
+  DEFAULT_TICKET_NOTIFICATION_SUPPRESSION,
+  TicketUpdateFooter,
+} from "./TicketUpdateFooter";
 
 export function PriorityPickerModal({
   visible,
@@ -13,7 +17,7 @@ export function PriorityPickerModal({
   currentPriorityId,
   updating,
   updateError,
-  onSelect,
+  onApply,
   onClose,
 }: {
   visible: boolean;
@@ -23,12 +27,21 @@ export function PriorityPickerModal({
   currentPriorityId: string | null;
   updating: boolean;
   updateError: string | null;
-  onSelect: (priorityId: string) => void;
+  onApply: (priorityId: string, notificationSuppression: ReturnType<typeof activeTicketNotificationSuppression>) => void;
   onClose: () => void;
 }) {
   const { colors, spacing, typography } = useTheme();
   const { t } = useTranslation("tickets");
   const busy = loading || updating;
+  const [selectedPriorityId, setSelectedPriorityId] = useState<string | null>(currentPriorityId);
+  const [suppression, setSuppression] = useState(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+
+  useEffect(() => {
+    if (!visible) return;
+    setSelectedPriorityId(currentPriorityId);
+    setSuppression(DEFAULT_TICKET_NOTIFICATION_SUPPRESSION);
+  }, [currentPriorityId, visible]);
+
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: colors.background, padding: spacing.lg }}>
@@ -54,23 +67,21 @@ export function PriorityPickerModal({
 
         <View style={{ marginTop: spacing.lg }}>
           {priorities.map((p) => {
-            const isCurrent = p.priority_id === currentPriorityId;
-            const disabled = busy || isCurrent;
+            const isSelected = p.priority_id === selectedPriorityId;
+            const disabled = busy;
             return (
               <Pressable
                 key={p.priority_id}
                 accessibilityRole="button"
                 accessibilityLabel={t("priorityPicker.setPriority", { name: p.priority_name })}
                 disabled={disabled}
-                onPress={() => {
-                  onSelect(p.priority_id);
-                }}
+                onPress={() => setSelectedPriorityId(p.priority_id)}
                 style={({ pressed }) => ({
                   paddingVertical: spacing.sm,
                   paddingHorizontal: spacing.md,
                   borderRadius: 12,
                   borderWidth: 1,
-                  borderColor: p.priority_id === currentPriorityId ? colors.primary : colors.border,
+                  borderColor: isSelected ? colors.primary : colors.border,
                   backgroundColor: colors.card,
                   opacity: disabled ? 0.65 : pressed ? 0.95 : 1,
                   marginBottom: spacing.sm,
@@ -78,7 +89,7 @@ export function PriorityPickerModal({
               >
                 <Text style={{ ...typography.body, color: colors.text }}>
                   {p.priority_name}
-                  {p.priority_id === currentPriorityId ? " ✓" : ""}
+                  {isSelected ? " ✓" : ""}
                 </Text>
               </Pressable>
             );
@@ -86,7 +97,17 @@ export function PriorityPickerModal({
         </View>
 
         <View style={{ flex: 1 }} />
-        <PrimaryButton onPress={onClose}>{t("common:done")}</PrimaryButton>
+        <TicketUpdateFooter
+          suppression={suppression}
+          onSuppressionChange={setSuppression}
+          onCancel={onClose}
+          onApply={() => {
+            if (selectedPriorityId) onApply(selectedPriorityId, activeTicketNotificationSuppression(suppression));
+          }}
+          applyLabel={t("priorityPicker.apply", "Change priority")}
+          applyDisabled={!selectedPriorityId || selectedPriorityId === currentPriorityId}
+          busy={busy}
+        />
       </View>
     </Modal>
   );

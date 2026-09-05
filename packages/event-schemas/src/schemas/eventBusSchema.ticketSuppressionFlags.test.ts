@@ -85,4 +85,36 @@ describe('ticket lifecycle notification suppression event schemas', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('accepts and defaults suppression flags for additional-agent assignment events', () => {
+    const legacy = EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED.parse({
+      ...baseEvent,
+      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+      payload: {
+        tenantId: '00000000-0000-4000-8000-000000000003',
+        ticketId: '00000000-0000-4000-8000-000000000002',
+        primaryAgentId: '00000000-0000-4000-8000-000000000004',
+        additionalAgentId: '00000000-0000-4000-8000-000000000005',
+        assignedByUserId: '00000000-0000-4000-8000-000000000006',
+      },
+    });
+    const silent = EventSchemas.TICKET_ADDITIONAL_AGENT_ASSIGNED.parse({
+      ...baseEvent,
+      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+      payload: {
+        ...legacy.payload,
+        suppressContactNotifications: true,
+        suppressInternalNotifications: true,
+      },
+    });
+
+    expect(legacy.payload).toEqual(expect.objectContaining({
+      suppressContactNotifications: false,
+      suppressInternalNotifications: false,
+    }));
+    expect(silent.payload).toEqual(expect.objectContaining({
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    }));
+  });
 });

@@ -12,6 +12,42 @@ export function localToUtc(localDate: Date, timeZone: string): Date {
   return fromZonedTime(localDate, timeZone);
 }
 
+/**
+ * Convert an HTML datetime-local wall time to an instant in an explicit IANA
+ * zone. `reject` is deliberate: DST gaps and repeated wall times require the
+ * user to choose an unambiguous time instead of silently moving the schedule.
+ */
+export function zonedWallTimeToUtc(wallTime: string, timeZone: string): Date {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(wallTime);
+  if (!match) throw new Error('Enter a valid local date and time');
+  try {
+    const zoned = Temporal.ZonedDateTime.from({
+      timeZone,
+      year: Number(match[1]),
+      month: Number(match[2]),
+      day: Number(match[3]),
+      hour: Number(match[4]),
+      minute: Number(match[5]),
+      second: Number(match[6] ?? 0),
+    }, { disambiguation: 'reject' });
+    return new Date(zoned.epochMilliseconds);
+  } catch {
+    throw new Error('That local time is invalid or ambiguous in the selected time zone');
+  }
+}
+
+/**
+ * Serialize a Date's local wall-clock fields to an HTML datetime-local string
+ * (`YYYY-MM-DDTHH:mm`). The design-system DateTimePicker emits a browser-local
+ * Date; pairing this with zonedWallTimeToUtc lets callers reinterpret the picked
+ * wall time in an explicit IANA zone with the same DST-reject guarantee a raw
+ * datetime-local string carried.
+ */
+export function dateToWallTimeString(date: Date): string {
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export function formatDateTime(
   date: Date,
   timeZone: string,

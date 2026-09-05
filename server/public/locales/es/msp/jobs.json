@@ -140,5 +140,10 @@
   "page": {
     "heading": "Monitoreo de trabajos",
     "recentJobs": "Trabajos recientes"
+  },
+  "errors": {
+    "job": {
+      "notFound": "No se encontró el trabajo en segundo plano. Es posible que haya caducado o se haya eliminado."
+    }
   }
 }

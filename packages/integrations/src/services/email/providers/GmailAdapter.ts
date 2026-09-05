@@ -625,7 +625,12 @@ This indicates a problem with the OAuth token saving process.`;
           isInline: att.isInline
         })),
         headers: headers.reduce((acc: any, header: any) => {
-          acc[header.name] = header.value;
+          const headerName = String(header?.name || '');
+          const normalizedHeaderName = headerName.toLowerCase();
+          if (normalizedHeaderName.startsWith('x-resolved-') || normalizedHeaderName.startsWith('x-list-')) {
+            return acc;
+          }
+          acc[headerName] = header.value;
           return acc;
         }, {})
       };

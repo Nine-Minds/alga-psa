@@ -7,6 +7,8 @@ import { CollaborativeEditor } from './CollaborativeEditor';
 import { prosemirrorJSONToYXmlFragment } from 'y-prosemirror';
 import { blockNoteJsonToProsemirrorJson } from '../lib/blockContentFormat';
 import { getBlockContent, updateBlockContent } from '../actions/documentBlockContentActions';
+import { EditorImage } from '../lib/editorImageExtension';
+import { EditorImageUploadError } from '../lib/editorImageUpload';
 import { Emoticon } from '@alga-psa/ui/editor';
 
 const mockProvider = {
@@ -58,6 +60,19 @@ const mockLink = vi.hoisted(() => ({
   configure: vi.fn(() => ({})),
 }));
 
+const insertContentMock = vi.hoisted(() => vi.fn());
+const insertUploadedImagesMock = vi.hoisted(() => vi.fn(async () => undefined));
+const toastErrorMock = vi.hoisted(() => vi.fn());
+
+vi.mock('react-hot-toast', () => ({
+  toast: { error: toastErrorMock, success: vi.fn() },
+}));
+
+vi.mock('../lib/editorImageUpload', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../lib/editorImageUpload')>()),
+  insertUploadedImages: insertUploadedImagesMock,
+}));
+
 vi.mock('@tiptap/react', () => ({
   useEditor: vi.fn((options) => {
     editorOptionsRef.current = options;
@@ -69,7 +84,7 @@ vi.mock('@tiptap/react', () => ({
       schema: {},
       isDestroyed: false,
       commands: {
-        insertContent: vi.fn(),
+        insertContent: insertContentMock,
       },
     };
   }),
@@ -185,6 +200,80 @@ describe('CollaborativeEditor initialization', () => {
       block_data: JSON.stringify(converted),
       user_id: 'user-1',
     });
+  });
+
+  it('keeps images when first opening a BlockNote document', async () => {
+    const blocknote = [
+      {
+        type: 'paragraph',
+        props: {},
+        content: [{ type: 'text', text: 'Before the screenshot', styles: {} }],
+      },
+      {
+        type: 'image',
+        props: {
+          url: '/api/documents/view/file-1',
+          caption: 'Spooler dialog',
+          previewWidth: 480,
+        },
+      },
+    ];
+
+    const converted = blockNoteJsonToProsemirrorJson(blocknote);
+
+    (getBlockContent as unknown as { mockResolvedValue: (value: unknown) => void }).mockResolvedValue({
+      block_data: blocknote,
+    });
+
+    render(
+      <CollaborativeEditor
+        documentId="doc-image"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    await waitFor(() => {
+      expect(prosemirrorJSONToYXmlFragment).toHaveBeenCalled();
+    });
+
+    const seeded = (prosemirrorJSONToYXmlFragment as unknown as { mock: { calls: any[][] } }).mock
+      .calls[0][1];
+    expect(seeded.content).toContainEqual({
+      type: 'image',
+      attrs: {
+        src: '/api/documents/view/file-1',
+        alt: 'Spooler dialog',
+        title: 'Spooler dialog',
+        width: 480,
+      },
+    });
+
+    // The first open rewrites block_data to the converted document — it must
+    // not be the moment the picture is destroyed.
+    expect(updateBlockContent).toHaveBeenCalledWith('doc-image', {
+      block_data: JSON.stringify(converted),
+      user_id: 'user-1',
+    });
+    const persisted = (updateBlockContent as unknown as { mock: { calls: any[][] } }).mock
+      .calls[0][1].block_data;
+    expect(persisted).toContain('"type":"image"');
+    expect(persisted).toContain('/api/documents/view/file-1');
+  });
+
+  it('registers an image node so pasted and imported pictures survive', () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-image-ext"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+
+    const extensions = editorOptionsRef.current?.extensions ?? [];
+    expect(extensions).toContain(EditorImage);
   });
 
   it('reopens content saved as ProseMirror JSON string', async () => {
@@ -309,5 +398,138 @@ describe('CollaborativeEditor initialization', () => {
     const label = caret?.querySelector('.collaboration-caret__label');
     expect(label?.textContent).toBe('User Two');
     expect((label as HTMLElement | null)?.style.backgroundColor).toBe('rgb(18, 52, 86)');
+  });
+});
+
+describe('CollaborativeEditor image paste and drop', () => {
+  const imageFile = () => new File(['x'], 'shot.png', { type: 'image/png' });
+
+  const clipboard = (files: File[], data: Record<string, string> = {}) => ({
+    items: files.map((file) => ({ kind: 'file', type: file.type, getAsFile: () => file })),
+    getData: (mime: string) => data[mime] ?? '',
+  });
+
+  const mount = () => {
+    render(
+      <CollaborativeEditor
+        documentId="doc-paste"
+        tenantId="tenant-1"
+        userId="user-1"
+        userName="User One"
+      />
+    );
+    return editorOptionsRef.current.editorProps.handleDOMEvents;
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hasCreated = false;
+    editorOptionsRef.current = null;
+    mockYdoc.getXmlFragment.mockReturnValue(fragment);
+  });
+
+  it('routes a pasted screenshot into the upload path instead of the raw bitmap', () => {
+    const handlers = mount();
+    const file = imageFile();
+    const preventDefault = vi.fn();
+
+    const handled = handlers.paste({}, { preventDefault, clipboardData: clipboard([file]) });
+
+    expect(handled).toBe(true);
+    // Without preventDefault ProseMirror also inserts the clipboard bitmap, so
+    // the author ends up with the picture twice.
+    expect(preventDefault).toHaveBeenCalled();
+    expect(insertUploadedImagesMock).toHaveBeenCalledWith(
+      expect.anything(),
+      [file],
+      expect.objectContaining({ userId: 'user-1', onError: expect.any(Function) })
+    );
+  });
+
+  it('reports an upload failure to the author instead of failing silently', () => {
+    const handlers = mount();
+    handlers.paste({}, { preventDefault: vi.fn(), clipboardData: clipboard([imageFile()]) });
+
+    const { onError } = insertUploadedImagesMock.mock.calls[0][2] as {
+      onError: (error: unknown) => void;
+    };
+    onError(new Error('Storage is full'));
+    expect(toastErrorMock).toHaveBeenCalledWith('Storage is full');
+
+    // A phone screenshot routinely clears 10 MB, so that rejection needs its
+    // own message rather than a generic "upload failed".
+    onError(new EditorImageUploadError('tooLarge', 'Image is larger than the 10 MB upload limit'));
+    expect(toastErrorMock).toHaveBeenLastCalledWith(
+      expect.stringContaining('10 MB')
+    );
+  });
+
+  it('uploads a dropped image at the drop position', () => {
+    const handlers = mount();
+    const file = imageFile();
+    const preventDefault = vi.fn();
+    const view = { posAtCoords: vi.fn(() => ({ pos: 42 })) };
+
+    const handled = handlers.drop(view, {
+      preventDefault,
+      dataTransfer: { files: [file] },
+      clientX: 10,
+      clientY: 20,
+    });
+
+    expect(handled).toBe(true);
+    expect(preventDefault).toHaveBeenCalled();
+    expect(view.posAtCoords).toHaveBeenCalledWith({ left: 10, top: 20 });
+    expect(insertUploadedImagesMock).toHaveBeenCalledWith(
+      expect.anything(),
+      [file],
+      expect.objectContaining({ at: 42, onError: expect.any(Function) })
+    );
+  });
+
+  it('ignores a drop with no image files', () => {
+    const handlers = mount();
+    const preventDefault = vi.fn();
+
+    const handled = handlers.drop(
+      { posAtCoords: vi.fn() },
+      { preventDefault, dataTransfer: { files: [new File(['a'], 'notes.txt', { type: 'text/plain' })] } }
+    );
+
+    expect(handled).toBe(false);
+    expect(preventDefault).not.toHaveBeenCalled();
+    expect(insertUploadedImagesMock).not.toHaveBeenCalled();
+  });
+
+  it('still converts a plain-text markdown paste', () => {
+    const handlers = mount();
+
+    const handled = handlers.paste({}, {
+      preventDefault: vi.fn(),
+      clipboardData: clipboard([], { 'text/plain': '# Title' }),
+    });
+
+    expect(handled).toBe(true);
+    expect(insertUploadedImagesMock).not.toHaveBeenCalled();
+    expect(insertContentMock).toHaveBeenCalledWith(
+      expect.stringContaining('<h1>'),
+      expect.anything()
+    );
+  });
+
+  it('leaves a text/html paste to ProseMirror so <img> markup parses into nodes', () => {
+    const handlers = mount();
+
+    const handled = handlers.paste({}, {
+      preventDefault: vi.fn(),
+      clipboardData: clipboard([], {
+        'text/plain': 'see shot',
+        'text/html': '<p><img src="/api/documents/view/abc" alt="shot" /></p>',
+      }),
+    });
+
+    expect(handled).toBe(false);
+    expect(insertUploadedImagesMock).not.toHaveBeenCalled();
+    expect(insertContentMock).not.toHaveBeenCalled();
   });
 });

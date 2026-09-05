@@ -21,34 +21,34 @@ function TemplatesListSkeleton() {
     <div className="p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <div className="h-8 w-48 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
+        <div className="h-8 w-48 skeleton-fill rounded animate-pulse" />
         <div className="flex gap-2">
-          <div className="h-10 w-32 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
-          <div className="h-10 w-40 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
+          <div className="h-10 w-32 skeleton-fill rounded animate-pulse" />
+          <div className="h-10 w-40 skeleton-fill rounded animate-pulse" />
         </div>
       </div>
 
       {/* Filters */}
       <div className="flex gap-4 mb-6">
-        <div className="h-10 w-80 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
-        <div className="h-10 w-64 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
+        <div className="h-10 w-80 skeleton-fill rounded animate-pulse" />
+        <div className="h-10 w-64 skeleton-fill rounded animate-pulse" />
       </div>
 
       {/* Table skeleton */}
       <div className="border rounded-lg overflow-hidden">
         {/* Table header */}
         <div className="bg-muted border-b px-4 py-3 flex gap-4">
-          <div className="h-4 w-32 bg-[rgb(var(--color-border-300))] rounded animate-pulse" />
-          <div className="h-4 w-48 bg-[rgb(var(--color-border-300))] rounded animate-pulse flex-1" />
-          <div className="h-4 w-24 bg-[rgb(var(--color-border-300))] rounded animate-pulse" />
-          <div className="h-4 w-20 bg-[rgb(var(--color-border-300))] rounded animate-pulse" />
-          <div className="h-4 w-24 bg-[rgb(var(--color-border-300))] rounded animate-pulse" />
-          <div className="h-4 w-16 bg-[rgb(var(--color-border-300))] rounded animate-pulse" />
+          <div className="h-4 w-32 skeleton-fill-strong rounded animate-pulse" />
+          <div className="h-4 w-48 skeleton-fill-strong rounded animate-pulse flex-1" />
+          <div className="h-4 w-24 skeleton-fill-strong rounded animate-pulse" />
+          <div className="h-4 w-20 skeleton-fill-strong rounded animate-pulse" />
+          <div className="h-4 w-24 skeleton-fill-strong rounded animate-pulse" />
+          <div className="h-4 w-16 skeleton-fill-strong rounded animate-pulse" />
         </div>
         {/* Table rows */}
         {[1, 2, 3, 4, 5].map((i) => (
           <div key={i} className="border-b px-4 py-4 flex gap-4 items-center">
-            <div className="h-4 w-32 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
+            <div className="h-4 w-32 skeleton-fill rounded animate-pulse" />
             <div className="h-4 w-48 bg-[rgb(var(--color-border-100))] rounded animate-pulse flex-1" />
             <div className="h-4 w-24 bg-[rgb(var(--color-border-100))] rounded animate-pulse" />
             <div className="h-4 w-20 bg-[rgb(var(--color-border-100))] rounded animate-pulse" />
@@ -60,12 +60,12 @@ function TemplatesListSkeleton() {
 
       {/* Pagination skeleton */}
       <div className="flex justify-between items-center mt-4">
-        <div className="h-4 w-32 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
+        <div className="h-4 w-32 skeleton-fill rounded animate-pulse" />
         <div className="flex gap-2">
-          <div className="h-8 w-20 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
-          <div className="h-8 w-8 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
-          <div className="h-8 w-8 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
-          <div className="h-8 w-20 bg-[rgb(var(--color-border-200))] rounded animate-pulse" />
+          <div className="h-8 w-20 skeleton-fill rounded animate-pulse" />
+          <div className="h-8 w-8 skeleton-fill rounded animate-pulse" />
+          <div className="h-8 w-8 skeleton-fill rounded animate-pulse" />
+          <div className="h-8 w-20 skeleton-fill rounded animate-pulse" />
         </div>
       </div>
     </div>
@@ -105,7 +105,7 @@ export default function ProjectTemplatesPage() {
     return (
       <div className="relative">
         <TemplatesListSkeleton />
-        <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--color-background-50))/0.5]">
+        <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--color-border-50))/0.5]">
           <Spinner size="lg" />
         </div>
       </div>

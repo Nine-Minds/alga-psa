@@ -9,9 +9,14 @@ const config: Config = {
     // EE UI lives outside this package but is imported via Next's `externalDir`.
     "../ee/server/src/**/*.{js,ts,jsx,tsx,mdx}",
 
+    // Monorepo UI sources consumed by the Next.js app. A package missing from this
+    // list is not a small problem: Tailwind never emits its classes, so arbitrary
+    // values like bg-[rgb(var(--color-card))] silently produce no rule at all and the
+    // element renders unstyled. msp-composition (28 components), user-activities (28),
+    // client-portal-composition and reporting were all missing.
     // Monorepo UI sources consumed by the Next.js app. Keep this list explicit to avoid
     // accidentally scanning `node_modules` and to reduce Tailwind's file-watching workload.
-    "../packages/{ui,ui-kit,client-portal,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,inventory,auth,workflows,onboarding,opportunities,tags,jobs,notifications,reference-data,tenancy,users,ee,sla}/src/**/*.{jsx,tsx,mdx}",
+    "../packages/{ui,ui-kit,client-portal,client-portal-composition,clients,tickets,projects,scheduling,surveys,assets,documents,integrations,billing,inventory,auth,workflows,onboarding,opportunities,tags,jobs,notifications,reference-data,reporting,tenancy,users,user-activities,msp-composition,ee,sla}/src/**/*.{jsx,tsx,mdx}",
 
     // A small number of `.ts` files contain Tailwind class strings (not JSX). Include them
     // explicitly rather than enabling a broad `**/*.ts` glob.
@@ -136,22 +141,22 @@ const config: Config = {
           900: 'rgb(var(--color-accent-900) / <alpha-value>)',
         },
         sidebar: {
-          bg: 'var(--color-sidebar-bg)',
-          text: 'var(--color-sidebar-text)',
-          hover: 'var(--color-sidebar-hover)',
-          icon: 'var(--color-sidebar-icon)',
+          bg: 'rgb(var(--color-sidebar-bg) / <alpha-value>)',
+          text: 'rgb(var(--color-sidebar-text) / <alpha-value>)',
+          hover: 'rgb(var(--color-sidebar-hover) / <alpha-value>)',
+          icon: 'rgb(var(--color-sidebar-icon) / <alpha-value>)',
         },
         header: {
-          bg: 'var(--color-header-bg)',
-          text: 'var(--color-header-text)',
-          border: 'var(--color-header-border)',
-          icon: 'var(--color-sidebar-icon)',
+          bg: 'rgb(var(--color-header-bg) / <alpha-value>)',
+          text: 'rgb(var(--color-header-text) / <alpha-value>)',
+          border: 'rgb(var(--color-header-border) / <alpha-value>)',
+          icon: 'rgb(var(--color-sidebar-icon) / <alpha-value>)',
         },
         subMenu: {
-          bg: 'var(--color-submenu-bg)',
-          text: 'var(--color-submenu-text)',
-          hover: 'var(--color-submenu-hover)',
-          icon: 'var(--color-submenu-icon)',
+          bg: 'rgb(var(--color-submenu-bg) / <alpha-value>)',
+          text: 'rgb(var(--color-submenu-text) / <alpha-value>)',
+          hover: 'rgb(var(--color-submenu-hover) / <alpha-value>)',
+          icon: 'rgb(var(--color-submenu-icon) / <alpha-value>)',
         },
         // Table row colors
         'table-row-alt': 'rgb(var(--color-table-row-alt) / <alpha-value>)',

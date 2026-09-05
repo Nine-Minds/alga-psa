@@ -53,7 +53,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
+    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/interactions', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account', '/msp/add-ons'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -207,6 +207,18 @@ export const API_RULES: readonly ApiRule[] = [
     visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
   {
+    // Alga Migration Package (AMP) import workspace: tenant-scoped upload,
+    // spreadsheet conversion, dry-run reporting and export endpoints, gated
+    // by the import_export permission. Administrative onboarding surface, not
+    // v1 API, so it never appears in /api/v1/meta metadata. PSA-only.
+    group: 'api_amp_migrations',
+    staticPrefixes: [
+      '/api/migrations',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
     // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
     // authenticates with a tenant-scoped bearer token, so these endpoints are
     // not v1 API surface and never appear in /api/v1/meta metadata. PSA-only,
@@ -214,6 +226,18 @@ export const API_RULES: readonly ApiRule[] = [
     group: 'api_scim_provisioning',
     staticPrefixes: [
       '/api/scim',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
+  {
+    // Telephony provider webhooks (Microsoft Graph callRecords notifications).
+    // Graph authenticates with the per-subscription clientState secret the
+    // route verifies, so these are not v1 API surface and never appear in
+    // /api/v1/meta metadata. PSA-only, matching the Microsoft Teams integration.
+    group: 'api_telephony_webhooks',
+    staticPrefixes: [
+      '/api/telephony',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },

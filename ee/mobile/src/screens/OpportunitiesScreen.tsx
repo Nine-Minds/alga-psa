@@ -1,7 +1,7 @@
 import type { CompositeScreenProps } from "@react-navigation/native";
 import type { DrawerScreenProps } from "@react-navigation/drawer";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, FlatList, Linking, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,14 +20,18 @@ import {
   listOpportunities,
   type OpportunityListItem,
   type WorkQueue,
-  type WorkQueueItem,
+  type WorkQueueActionItem,
+  type WorkQueueFoundTotal,
+  type WorkQueueSuggestionItem,
 } from "../api/opportunities";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { logger } from "../logging/logger";
 import { StageBadge } from "../features/opportunities/components/StageBadge";
-import { WhySentence } from "../features/opportunities/components/WhySentence";
+import { StructuredWhySentence, translateQueueText } from "../features/opportunities/components/WhySentence";
 import { formatCents, formatDate } from "../features/opportunities/opportunityFormat";
+import { CreateOpportunityModal } from "../features/opportunities/components/CreateOpportunityModal";
+import { useCapabilities } from "../capabilities/CapabilitiesContext";
 
 type Props = CompositeScreenProps<
   DrawerScreenProps<DrawerParamList, "OpportunitiesTab">,
@@ -48,7 +52,9 @@ export function OpportunitiesScreen({ navigation }: Props) {
   const theme = useTheme();
   const config = useMemo(() => getAppConfig(), []);
   const { session, refreshSession } = useAuth();
+  const { features } = useCapabilities();
   const [segment, setSegment] = useState<Segment>("queue");
+  const [createOpen, setCreateOpen] = useState(false);
 
   const client = useMemo(() => {
     if (!config.ok || !session) return null;
@@ -76,12 +82,52 @@ export function OpportunitiesScreen({ navigation }: Props) {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <SegmentedControl theme={theme} value={segment} onChange={setSegment} t={t} />
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <View style={{ flex: 1 }}>
+          <SegmentedControl theme={theme} value={segment} onChange={setSegment} t={t} />
+        </View>
+        {features.opportunitiesCreate ? <Pressable
+          testID="opportunities-create"
+          onPress={() => setCreateOpen(true)}
+          accessibilityRole="button"
+          accessibilityLabel={t("create.new", "New opportunity")}
+          hitSlop={8}
+          style={({ pressed }) => ({
+            marginRight: theme.spacing.md,
+            width: 40,
+            height: 40,
+            borderRadius: 20,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: theme.colors.primary,
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Feather name="plus" size={22} color={theme.colors.textInverse} />
+        </Pressable> : null}
+      </View>
       {segment === "queue" ? (
-        <QueueView client={client} apiKey={session.accessToken} onOpenDeal={openDeal} />
+        <QueueView
+          client={client}
+          apiKey={session.accessToken}
+          onOpenDeal={openDeal}
+          onReviewPipeline={() => setSegment("pipeline")}
+          onOpenSuggestions={() => {
+            void Linking.openURL(`${config.baseUrl}/msp/opportunities?tab=suggestions`).catch((error) => {
+              logger.warn("Unable to open opportunity suggestions in web app", { error });
+            });
+          }}
+        />
       ) : (
         <PipelineView client={client} apiKey={session.accessToken} onOpenDeal={openDeal} />
       )}
+      <CreateOpportunityModal
+        visible={createOpen}
+        client={client}
+        apiKey={session.accessToken}
+        onClose={() => setCreateOpen(false)}
+        onCreated={openDeal}
+      />
     </View>
   );
 }
@@ -144,7 +190,19 @@ function SegmentedControl({
 // Queue
 // ---------------------------------------------------------------------------
 
-function QueueView({ client, apiKey, onOpenDeal }: { client: ApiClient | null; apiKey: string; onOpenDeal: OpenDeal }) {
+function QueueView({
+  client,
+  apiKey,
+  onOpenDeal,
+  onReviewPipeline,
+  onOpenSuggestions,
+}: {
+  client: ApiClient | null;
+  apiKey: string;
+  onOpenDeal: OpenDeal;
+  onReviewPipeline: () => void;
+  onOpenSuggestions: () => void;
+}) {
   const { t } = useTranslation("opportunities");
   const theme = useTheme();
   const abortRef = useRef<AbortController | null>(null);
@@ -217,9 +275,12 @@ function QueueView({ client, apiKey, onOpenDeal }: { client: ApiClient | null; a
     );
   }
 
-  const sections = (queue?.sections ?? []).filter((section) => section.items.length > 0);
+  const doToday = queue?.do_today ?? [];
+  const goingQuiet = queue?.going_quiet ?? [];
+  const moneyFound = queue?.money_found ?? [];
+  const hasContent = doToday.length > 0 || goingQuiet.length > 0 || moneyFound.length > 0 || Boolean(queue?.lesson);
 
-  if (sections.length === 0) {
+  if (!hasContent) {
     return (
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.colors.background }}
@@ -237,41 +298,107 @@ function QueueView({ client, apiKey, onOpenDeal }: { client: ApiClient | null; a
       contentContainerStyle={{ padding: theme.spacing.lg }}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
     >
-      {queue?.greeting ? (
-        <Text style={{ ...theme.typography.subtitle, color: theme.colors.text, marginBottom: theme.spacing.md }}>
-          {queue.greeting}
-        </Text>
-      ) : null}
-      {sections.map((section) => (
-        <View key={section.key} style={{ marginBottom: theme.spacing.lg }}>
-          <SectionHeader title={queueSectionTitle(section.key, section.title, t)} />
+      {queue ? <QueueGreeting queue={queue} /> : null}
+      {doToday.length > 0 ? (
+        <View style={{ marginBottom: theme.spacing.lg }}>
+          <SectionHeader title={t("queue.dueToday", "Do these today")} />
           <View style={{ marginTop: theme.spacing.sm }}>
-            {section.items.map((item) => (
+            {doToday.map((item) => (
               <QueueRow key={item.opportunity_id} item={item} onOpenDeal={onOpenDeal} />
             ))}
           </View>
         </View>
-      ))}
+      ) : null}
+      {goingQuiet.length > 0 ? (
+        <View style={{ marginBottom: theme.spacing.lg }}>
+          <SectionHeader title={t("queue.goingQuiet", "Going quiet")} />
+          <View style={{ marginTop: theme.spacing.sm }}>
+            {goingQuiet.map((item) => (
+              <QueueRow key={item.opportunity_id} item={item} onOpenDeal={onOpenDeal} />
+            ))}
+          </View>
+        </View>
+      ) : null}
+      {moneyFound.length > 0 ? (
+        <View style={{ marginBottom: theme.spacing.lg }}>
+          <SectionHeader title={t("queue.moneyFound", "Money found")} />
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2, marginBottom: theme.spacing.sm }}>
+            {t("queue.moneyFoundSource", "From billing, contracts, and assets")}
+          </Text>
+          {moneyFound.map((item) => <MoneyFoundRow key={item.suggestion_id} item={item} onOpenSuggestions={onOpenSuggestions} />)}
+        </View>
+      ) : null}
+      {queue?.lesson ? (
+        <Pressable
+          testID="opportunities-queue-lesson"
+          onPress={onReviewPipeline}
+          accessibilityRole="button"
+          style={({ pressed }) => ({
+            padding: theme.spacing.md,
+            borderRadius: theme.borderRadius.lg,
+            borderWidth: 1,
+            borderColor: theme.colors.primary,
+            backgroundColor: theme.colors.card,
+            opacity: pressed ? 0.95 : 1,
+          })}
+        >
+          <StructuredWhySentence why={queue.lesson.why} />
+          <Text style={{ ...theme.typography.caption, color: theme.colors.primary, fontWeight: "700", marginTop: theme.spacing.sm }}>
+            {translateQueueText(t, queue.lesson.action_label)}
+          </Text>
+        </Pressable>
+      ) : null}
     </ScrollView>
   );
 }
 
-function queueSectionTitle(
-  key: string,
-  title: string | undefined,
-  t: (key: string, def: string) => string,
-): string {
-  if (title) return title;
-  if (key === "due_today" || key === "dueToday") return t("queue.dueToday", "Do these today");
-  if (key === "going_quiet" || key === "goingQuiet") return t("queue.goingQuiet", "Going quiet");
-  return key;
+function QueueGreeting({ queue }: { queue: WorkQueue }) {
+  const { t } = useTranslation("opportunities");
+  const theme = useTheme();
+  const count = queue.do_today.length + queue.going_quiet.length;
+  const firstName = queue.user_first_name.trim();
+
+  return (
+    <View style={{ marginBottom: theme.spacing.lg }}>
+      {firstName ? (
+        <Text style={{ ...theme.typography.subtitle, color: theme.colors.text }}>
+          {t("queue.greeting", "Hello, {{name}}", { name: firstName })}
+        </Text>
+      ) : null}
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, marginTop: firstName ? 2 : 0 }}>
+        {count === 0
+          ? t("queue.nothingDue", "Nothing is due today.")
+          : t("queue.needsYou", "{{count}} things need you today.", { count })}
+      </Text>
+      {queue.found_totals.map((total) => (
+        <FoundTotalLine key={total.currency_code} total={total} />
+      ))}
+    </View>
+  );
 }
 
-const QueueRow = memo(function QueueRow({ item, onOpenDeal }: { item: WorkQueueItem; onOpenDeal: OpenDeal }) {
+function FoundTotalLine({ total }: { total: WorkQueueFoundTotal }) {
+  const { t } = useTranslation("opportunities");
+  const theme = useTheme();
+  const mrr = total.mrr_cents > 0 ? formatCents(total.mrr_cents, total.currency_code) : null;
+  const nrr = total.nrr_cents > 0 ? formatCents(total.nrr_cents, total.currency_code) : null;
+  if (!mrr && !nrr) return null;
+  const line = mrr && nrr
+    ? t("queue.stakesBoth", "{{mrr}}/mo recurring and {{nrr}} one-time found", { mrr, nrr })
+    : mrr
+      ? t("queue.stakesMrr", "{{amount}}/mo recurring found", { amount: mrr })
+      : t("queue.stakesNrr", "{{amount}} one-time found", { amount: nrr });
+  return (
+    <Text testID={`opportunities-found-total-${total.currency_code}`} style={{ ...theme.typography.caption, color: theme.colors.success, marginTop: 2 }}>
+      {line}
+    </Text>
+  );
+}
+
+const QueueRow = memo(function QueueRow({ item, onOpenDeal }: { item: WorkQueueActionItem; onOpenDeal: OpenDeal }) {
   const { t } = useTranslation("opportunities");
   const theme = useTheme();
 
-  const why = normalizeWhy(item.why);
   const dueLabel = formatDate(item.next_action_due);
   const handlePress = useCallback(() => onOpenDeal(item.opportunity_id, item.title), [item.opportunity_id, item.title, onOpenDeal]);
 
@@ -295,7 +422,7 @@ const QueueRow = memo(function QueueRow({ item, onOpenDeal }: { item: WorkQueueI
         <Text style={{ ...theme.typography.body, color: theme.colors.text, flex: 1, fontWeight: "600" }} numberOfLines={1}>
           {item.title}
         </Text>
-        {item.overdue ? (
+        {item.days_overdue > 0 ? (
           <Badge label={t("queue.overdue", "Overdue")} tone="danger" />
         ) : dueLabel ? (
           <Badge label={t("queue.due", "Due")} tone="info" />
@@ -316,19 +443,55 @@ const QueueRow = memo(function QueueRow({ item, onOpenDeal }: { item: WorkQueueI
           {t("detail.due", "Due {{date}}", { date: dueLabel })}
         </Text>
       ) : null}
-      {why ? (
-        <View style={{ marginTop: theme.spacing.xs }}>
-          <WhySentence testID={`opportunity-why-${item.opportunity_id}`} text={why.text} emphasis={why.emphasis} />
-        </View>
-      ) : null}
+      <View style={{ marginTop: theme.spacing.xs }}>
+        <StructuredWhySentence testID={`opportunity-why-${item.opportunity_id}`} why={item.why} />
+      </View>
     </Pressable>
   );
 });
 
-function normalizeWhy(why: WorkQueueItem["why"]): { text: string; emphasis?: string } | null {
-  if (!why) return null;
-  if (typeof why === "string") return why.trim() ? { text: why } : null;
-  return why.text ? { text: why.text, emphasis: why.emphasis } : null;
+function MoneyFoundRow({ item, onOpenSuggestions }: { item: WorkQueueSuggestionItem; onOpenSuggestions: () => void }) {
+  const { t } = useTranslation("opportunities");
+  const theme = useTheme();
+  const mrr = item.mrr_cents > 0 ? formatCents(item.mrr_cents, item.currency_code) : null;
+  const nrr = item.nrr_cents > 0 ? formatCents(item.nrr_cents, item.currency_code) : null;
+
+  return (
+    <View
+      testID={`opportunity-suggestion-${item.suggestion_id}`}
+      style={{
+        padding: theme.spacing.md,
+        marginBottom: theme.spacing.sm,
+        borderRadius: theme.borderRadius.lg,
+        backgroundColor: theme.colors.card,
+        borderWidth: 1,
+        borderColor: theme.colors.border,
+      }}
+    >
+      <Text style={{ ...theme.typography.subtitle, color: theme.colors.success }}>
+        {[mrr ? t("format.perMonth", "{{value}}/mo", { value: mrr }) : null, nrr].filter(Boolean).join(" · ")}
+      </Text>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600", marginTop: 2 }}>
+        {translateQueueText(t, item.title)}
+      </Text>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+        {translateQueueText(t, item.how)}
+      </Text>
+      <View style={{ marginTop: theme.spacing.xs }}>
+        <StructuredWhySentence why={item.why} />
+      </View>
+      <Pressable
+        testID={`opportunity-suggestion-open-${item.suggestion_id}`}
+        onPress={onOpenSuggestions}
+        accessibilityRole="link"
+        style={{ marginTop: theme.spacing.sm, alignSelf: "flex-start" }}
+      >
+        <Text style={{ ...theme.typography.caption, color: theme.colors.primary, fontWeight: "700" }}>
+          {t("queue.suggestionWebHandoff", "Review in web app")}
+        </Text>
+      </Pressable>
+    </View>
+  );
 }
 
 // ---------------------------------------------------------------------------

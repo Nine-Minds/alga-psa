@@ -34,6 +34,12 @@ export interface ITicket extends TenantEntity, ITaggable {
   board_id: string;
   client_id: string | null;
   location_id?: string | null;
+  /**
+   * Billing profile this ticket's work is attributed to — a soft default, never
+   * required. Unset means charge attribution falls through to the contract or
+   * the client's default profile.
+   */
+  billing_profile_id?: string | null;
   contact_name_id: string | null;
   status_id: string;
   category_id: string | null;

@@ -29,6 +29,11 @@ export interface AddTicketResourceResult {
   event: TicketResourceEvent;
 }
 
+export type TicketResourceNotificationSuppression = {
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
+};
+
 /** Publish what `addTicketResourceCore` returned, once its transaction commits. */
 export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
   await publishEvent(event);
@@ -48,7 +53,8 @@ export async function addTicketResourceCore(
   actorUserId: string,
   ticketId: string,
   additionalUserId: string,
-  role: string
+  role: string,
+  notificationSuppression: TicketResourceNotificationSuppression = {},
 ): Promise<AddTicketResourceResult> {
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
@@ -81,7 +87,8 @@ export async function addTicketResourceCore(
           tenantId: tenant,
           ticketId: ticketId,
           userId: additionalUserId,
-          assignedByUserId: actorUserId
+          assignedByUserId: actorUserId,
+          ...notificationSuppression,
         }
       }
     };
@@ -121,7 +128,8 @@ export async function addTicketResourceCore(
         ticketId: ticketId,
         primaryAgentId: ticket.assigned_to,
         additionalAgentId: additionalUserId,
-        assignedByUserId: actorUserId
+        assignedByUserId: actorUserId,
+        ...notificationSuppression,
       }
     }
   };

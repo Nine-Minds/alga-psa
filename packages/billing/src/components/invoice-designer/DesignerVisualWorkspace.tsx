@@ -9,6 +9,7 @@ import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { fetchInvoicesPaginated, getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries';
 import { runAuthoritativeInvoiceTemplatePreview } from '@alga-psa/billing/actions/invoiceTemplatePreview';
+import { getTenantBrandingForDocumentPreview } from '@alga-psa/billing/actions/tenantBrandingPreview';
 import { mapDbInvoiceToWasmViewModel } from '@alga-psa/billing/lib/adapters/invoiceAdapters';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IInvoiceTemplate } from '@alga-psa/types';
@@ -36,6 +37,8 @@ import {
   getPreviewSampleScenarioById,
   INVOICE_PREVIEW_SAMPLE_SCENARIOS,
 } from './preview/sampleScenarios';
+import { overlayInvoiceSampleTenant } from './preview/tenantBrandingOverlay';
+import type { TenantParty } from '../../lib/adapters/tenantPartyAdapter';
 
 type VisualWorkspaceTab = 'design' | 'transforms' | 'preview';
 
@@ -83,7 +86,26 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
 
   const activeSampleId = previewState.selectedSampleId ?? DEFAULT_PREVIEW_SAMPLE_ID;
   const activeSample = useMemo(() => getPreviewSampleScenarioById(activeSampleId), [activeSampleId]);
-  const previewData = previewState.sourceKind === 'sample' ? activeSample?.data ?? null : previewState.selectedInvoiceData;
+  // Sample scenarios ship a synthetic issuer; show the tenant's real branding so the preview matches
+  // the document a client receives. Existing invoices already carry real branding.
+  const [tenantBranding, setTenantBranding] = useState<TenantParty | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getTenantBrandingForDocumentPreview()
+      .then((party) => {
+        if (!cancelled) setTenantBranding(party ?? null);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  const previewData = useMemo(
+    () => (previewState.sourceKind === 'sample'
+      ? (activeSample ? overlayInvoiceSampleTenant(activeSample.data, tenantBranding) : null)
+      : previewState.selectedInvoiceData),
+    [activeSample, previewState.selectedInvoiceData, previewState.sourceKind, tenantBranding],
+  );
   const hasValidSelectionForSource = hasValidPreviewSelectionForSource({
     sourceKind: previewState.sourceKind,
     selectedInvoiceId: previewState.selectedInvoiceId,

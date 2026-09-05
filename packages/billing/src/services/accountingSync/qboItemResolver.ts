@@ -98,8 +98,23 @@ export interface ItemResolution {
   reason?: string;
 }
 
-/** QBO's US pseudo tax codes — "NON" is an explicit "not taxable", not a gap. */
-const NON_TAXABLE_TAX_CODES = new Set(['NON']);
+/**
+ * QBO's US pseudo tax codes. Intuit prepopulates every US company file with
+ * exactly TAX and NON and lets nobody create more, so neither can ever appear
+ * in the tax-code mapping ledger as a jurisdiction with a rate:
+ *
+ * - NON is an explicit "not taxable", not a gap.
+ * - TAX means "whoever computes tax decides the rate" — under Automated Sales
+ *   Tax that is Intuit's engine, from the transaction's addresses. There is no
+ *   single Alga tax rate it could correspond to.
+ *
+ * Neither is a mapping gap, so neither raises 'unmapped_tax'. This is
+ * deliberately unconditional rather than AST-gated: the two pseudo codes exist
+ * on non-AST US company files too, and this resolver is a pure function with no
+ * access to realm settings — gating it would mean threading the AST flag
+ * through the import pipeline to reach the same answer.
+ */
+const PSEUDO_TAX_CODES = new Set(['TAX', 'NON']);
 
 function toCents(amount: number | undefined | null): number | null {
   if (amount === undefined || amount === null || Number.isNaN(Number(amount))) return null;
@@ -127,7 +142,7 @@ function desiredFields(
 
   const taxCodeId = item.SalesTaxCodeRef?.value?.trim();
   let taxRateId: string | null = null;
-  if (taxCodeId && !NON_TAXABLE_TAX_CODES.has(taxCodeId.toUpperCase())) {
+  if (taxCodeId && !PSEUDO_TAX_CODES.has(taxCodeId.toUpperCase())) {
     taxRateId = taxRateByQboTaxCodeId.get(taxCodeId) ?? null;
     if (!taxRateId) flags.push('unmapped_tax');
   }

@@ -4,6 +4,12 @@ import type { ISO8601String } from '../lib/temporal';
 
 export interface IClientTaxSettings extends TenantEntity {
   client_id: string;
+  /**
+   * Which billing profile these settings apply to. Reverse-charge
+   * applicability is per legal entity, and one client can hold several — so
+   * this is part of the row's identity, not a filter on it.
+   */
+  billing_profile_id?: string;
   tax_rate_id?: string; // Made optional for backward compatibility with tests
   is_reverse_charge_applicable: boolean;
   tax_source_override?: TaxSource | null; // Per-client override of tenant tax source setting

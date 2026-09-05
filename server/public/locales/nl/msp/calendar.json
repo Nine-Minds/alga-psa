@@ -104,6 +104,9 @@
           "confirmLabel": "Provider verwijderen",
           "cancelLabel": "Provider behouden"
         }
+      },
+      "errors": {
+        "notAuthorized": "Deze agendaprovider heeft de OAuth-autorisatie nog niet voltooid. Open de instellingen, klik op Autoriseren en synchroniseer opnieuw."
       }
     },
     "sync": {

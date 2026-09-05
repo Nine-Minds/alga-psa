@@ -51,25 +51,24 @@ const hasQuoteBindingCatalog = (bindings: unknown): boolean => {
   return hasQuoteSpecificValueBinding || hasQuoteSpecificCollectionBinding;
 };
 
-export const resolveDesignerDocumentKind = (nodes: DesignerNode[]): DesignerDocumentKind => {
-  const documentNode =
-    nodes.find((node) => node.type === 'document' && node.parentId === null) ??
-    nodes.find((node) => node.type === 'document');
-  if (!documentNode) {
-    return 'invoice';
-  }
-
-  const metadata = getNodeMetadata(documentNode) as Record<string, unknown>;
+/**
+ * Classifies a template from its binding catalog — usable from both the designer store (via
+ * `resolveDesignerDocumentKind`) and the AST import/export, which only has the raw AST.
+ * Packing slips and pick lists reuse the sales-order catalog, so they classify as 'sales-order'.
+ */
+export const resolveDocumentKindFromBindingCatalog = (
+  bindings: unknown,
+  templateMetadata?: unknown
+): DesignerDocumentKind => {
   // Sales order is checked before quote — both expose tenant/customer bindings, so the
   // sales-order-specific bindings must win.
-  if (hasSalesOrderBindingCatalog(metadata.__astBindingCatalog)) {
+  if (hasSalesOrderBindingCatalog(bindings)) {
     return 'sales-order';
   }
-  if (hasQuoteBindingCatalog(metadata.__astBindingCatalog)) {
+  if (hasQuoteBindingCatalog(bindings)) {
     return 'quote';
   }
 
-  const templateMetadata = metadata.__astTemplateMetadata;
   if (templateMetadata && typeof templateMetadata === 'object') {
     const templateName = String((templateMetadata as { templateName?: unknown }).templateName ?? '').toLowerCase();
     if (templateName.includes('sales order') || templateName.includes('order confirmation')) {
@@ -81,4 +80,16 @@ export const resolveDesignerDocumentKind = (nodes: DesignerNode[]): DesignerDocu
   }
 
   return 'invoice';
+};
+
+export const resolveDesignerDocumentKind = (nodes: DesignerNode[]): DesignerDocumentKind => {
+  const documentNode =
+    nodes.find((node) => node.type === 'document' && node.parentId === null) ??
+    nodes.find((node) => node.type === 'document');
+  if (!documentNode) {
+    return 'invoice';
+  }
+
+  const metadata = getNodeMetadata(documentNode) as Record<string, unknown>;
+  return resolveDocumentKindFromBindingCatalog(metadata.__astBindingCatalog, metadata.__astTemplateMetadata);
 };

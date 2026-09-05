@@ -30,6 +30,8 @@ export interface IUser {
   /** The client_id associated with this user (derived from contact_id for client users) */
   clientId?: string;
   phone?: string;
+  /** Stored separately; never packed into phone. */
+  phone_extension?: string | null;
   timezone?: string;
   last_login_at?: Date | string;
   last_login_method?: string;

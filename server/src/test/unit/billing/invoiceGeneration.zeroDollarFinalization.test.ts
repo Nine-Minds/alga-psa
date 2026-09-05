@@ -1,5 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// Step 5 of the charge-attribution chain reads the client's default billing
+// profile from the database. These suites mock knex, so the read is stubbed —
+// attribution is covered by the resolver unit tests and the profile integration
+// suites, which run against a real schema.
+vi.mock('@alga-psa/shared/billingClients/billingProfiles', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfilesModuleStub(importOriginal as any));
+vi.mock('@alga-psa/shared/billingClients/billingProfileSettings', async (importOriginal) =>
+  (await import('../../../../test-utils/billingProfileUnitStub')).billingProfileSettingsModuleStub(importOriginal as any));
+
+
 type Row = Record<string, any>;
 
 function normalizeTableName(tableName: string): string {
@@ -100,6 +110,15 @@ function createQueryBuilder(rows: Row[], tableName: string) {
     leftJoin: vi.fn(() => builder),
     orderBy: vi.fn(() => builder),
     update: vi.fn(async () => 1),
+    delete: vi.fn(async () => {
+      const deletedCount = resultRows.length;
+      for (const row of resultRows) {
+        const index = rows.indexOf(row);
+        if (index !== -1) rows.splice(index, 1);
+      }
+      resultRows = [];
+      return deletedCount;
+    }),
     insert: vi.fn((payload: Row) => {
       insertedRow = {
         invoice_id: payload.invoice_id ?? 'invoice-created',
@@ -192,6 +211,7 @@ const mocks = vi.hoisted(() => {
       tax_region: 'US-WA',
     })),
     calculateAndDistributeTax: vi.fn(async () => 0),
+    claimRecurringServicePeriodsForSelectionInputs: vi.fn(async () => undefined),
     persistInvoiceCharges: vi.fn(async () => 0),
     updateInvoiceTotalsAndRecordTransaction: vi.fn(async () => undefined),
     getNextBillingDate: vi.fn(async () => '2025-03-01T00:00:00.000Z'),
@@ -288,6 +308,7 @@ vi.mock('../../../../../packages/billing/src/services/invoiceService', () => ({
   validateClientBillingEmail: mocks.validateClientBillingEmail,
   getClientDetails: mocks.getClientDetails,
   calculateAndDistributeTax: mocks.calculateAndDistributeTax,
+  claimRecurringServicePeriodsForSelectionInputs: mocks.claimRecurringServicePeriodsForSelectionInputs,
   persistInvoiceCharges: mocks.persistInvoiceCharges,
   updateInvoiceTotalsAndRecordTransaction: mocks.updateInvoiceTotalsAndRecordTransaction,
 }));
@@ -298,7 +319,21 @@ vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
+  // Re-exported from the real module: generation catches this to surface the
+  // unresolved-item block (D10), so a mock without it turns a caught,
+  // explained refusal into an unrelated crash.
+  UnresolvedCatalogPricingError: class UnresolvedCatalogPricingError extends Error {
+    items: Array<{ kind: string; id: string; label: string }>;
+    constructor(message: string, items: Array<{ kind: string; id: string; label: string }> = []) {
+      super(message);
+      this.name = 'UnresolvedCatalogPricingError';
+      this.items = items;
+    }
+  },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;
@@ -378,6 +413,17 @@ describe('invoice generation zero-dollar recurring handling', () => {
     const result = await generateInvoice('cycle-1');
 
     expect(mocks.persistInvoiceCharges).toHaveBeenCalledTimes(1);
+    expect(mocks.claimRecurringServicePeriodsForSelectionInputs).toHaveBeenCalledWith({
+      tx: mocks.knex,
+      tenant: 'tenant-1',
+      invoiceId: 'invoice-created',
+      selectorInputs: [expect.objectContaining({
+        clientId: 'client-1',
+        windowStart: '2025-02-01',
+        windowEnd: '2025-03-01',
+      })],
+      linkedAt: expect.any(String),
+    });
     expect(mocks.finalizeInvoiceWithKnex).toHaveBeenCalledWith(
       'invoice-created',
       mocks.knex,
@@ -393,5 +439,16 @@ describe('invoice generation zero-dollar recurring handling', () => {
       invoice_id: 'invoice-created',
       status: 'sent',
     });
+  });
+
+  it('removes the draft and does not finalize when recurring service-period claiming fails', async () => {
+    const claimError = new Error('Recurring service period was claimed by another invoice');
+    mocks.claimRecurringServicePeriodsForSelectionInputs.mockRejectedValueOnce(claimError);
+
+    await expect(generateInvoice('cycle-1')).rejects.toThrow(claimError);
+
+    expect(mocks.persistInvoiceCharges).toHaveBeenCalledTimes(1);
+    expect(mocks.rowsByTable.invoices).toEqual([]);
+    expect(mocks.finalizeInvoiceWithKnex).not.toHaveBeenCalled();
   });
 });

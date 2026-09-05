@@ -25,6 +25,9 @@
       "phoneNumber": {
         "label": "Numero di telefono"
       },
+      "phoneExtension": {
+        "label": "Interno"
+      },
       "timeZone": {
         "label": "Fuso orario"
       }
@@ -756,6 +759,49 @@
       "linkedAt": "Collegato il {{date}}",
       "lastUsed": "Ultimo utilizzo: {{date}}",
       "notUsedYet": "Non ancora utilizzato"
+    }
+  },
+  "errors": {
+    "sessions": {
+      "viewAllPermission": "Autorizzazione negata: non si dispone dell’autorizzazione per visualizzare tutte le sessioni."
+    },
+    "permissions": {
+      "adminRequired": "Autorizzazione negata: è richiesto l'accesso da amministratore"
+    },
+    "apiKeys": {
+      "internalOnly": "Autorizzazione negata: la gestione delle chiavi API è riservata agli utenti interni",
+      "configInternalOnly": "Autorizzazione negata: la configurazione delle chiavi API è riservata agli utenti interni",
+      "invalidExpiration": "Scegli una data di scadenza valida per questa chiave API.",
+      "notFound": "Chiave API non trovata.",
+      "rateLimitsPositive": "I limiti di frequenza dell'API devono essere numeri interi positivi."
+    },
+    "webhooks": {
+      "invalidInput": "Controlla le impostazioni del webhook e riprova.",
+      "notFound": "Webhook non trovato.",
+      "signingSecretMissing": "Manca il segreto di firma del webhook. Ruota il segreto di firma e riprova.",
+      "deliveryNotFound": "Consegna non trovata.",
+      "testNotRetryable": "Le consegne di prova non possono essere ritentate.",
+      "payloadInvalid": "Questa consegna non può essere ritentata perché il payload memorizzato non è valido.",
+      "validation": { "unknownEntity": "Entità webhook sconosciuta «{{entity}}».", "unknownField": "Campo sconosciuto «{{field}}» per l’entità webhook «{{entity}}»." }
+    },
+    "inboundWebhooks": {
+      "permissions": {
+        "create": "Autorizzazione negata: è richiesta l'autorizzazione di creazione per i webhook in ingresso",
+        "read": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per i webhook in ingresso",
+        "update": "Autorizzazione negata: è richiesta l'autorizzazione di aggiornamento per i webhook in ingresso",
+        "delete": "Autorizzazione negata: è richiesta l'autorizzazione di eliminazione per i webhook in ingresso",
+        "replay": "Autorizzazione negata: è richiesta l'autorizzazione di riesecuzione per i webhook in ingresso"
+      },
+      "invalidInput": "Controlla le impostazioni del webhook in ingresso e riprova.",
+      "workflowRequiresEe": "I gestori di workflow per i webhook in ingresso richiedono l'edizione Enterprise.",
+      "notFound": "Webhook in ingresso non trovato.",
+      "duplicateSlug": "Lo slug «{{slug}}» del webhook in ingresso esiste già.",
+      "noSecretToRotate": "I webhook in ingresso con elenco IP consentiti non hanno un segreto da ruotare.",
+      "unsupportedAuthType": "Tipo di autenticazione del webhook in ingresso non supportato: {{authType}}.",
+      "deliveryNotFound": "Consegna in ingresso non trovata.",
+      "replayMissingConfig": "Non è possibile rieseguire una consegna in ingresso senza una configurazione del webhook.",
+      "notFoundOrInactive": "Webhook in ingresso non trovato o inattivo.",
+      "validation": { "slugReserved": "Questo identificatore è riservato a un’integrazione inclusa.", "authTypeMismatch": "Il tipo di configurazione dell’autenticazione deve corrispondere al tipo di autenticazione selezionato.", "handlerTypeMismatch": "Il tipo di configurazione del gestore deve corrispondere al tipo di gestore selezionato." }
     }
   }
 }

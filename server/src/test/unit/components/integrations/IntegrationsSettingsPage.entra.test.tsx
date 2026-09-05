@@ -5,19 +5,9 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import { ENTRA_SYNC_FEATURE_FLAG } from '@alga-psa/integrations/components/settings/integrations/integrationsFeatureFlags';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
-
-/** Answer per flag key, so one flag can be off while the others are on. */
-function setFlags(values: Record<string, boolean>): void {
-  useFeatureFlagMock.mockImplementation((flagKey: string) => ({
-    enabled: values[flagKey] ?? false,
-    loading: false,
-    error: null,
-  }));
-}
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
@@ -154,9 +144,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
       get: (key: string) => (key === 'category' ? 'identity' : null),
     });
 
-    // Key-aware: the Identity tab now hangs off one specific flag, so a blanket
-    // "all flags on/off" mock can no longer tell the two cases apart.
-    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: true });
+    // The Hudu settings hook still reads feature flags, but Identity must not.
+    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: false, error: null });
   });
 
   afterEach(() => {
@@ -182,8 +171,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
 
-  it('shows Entra settings surface regardless of unrelated feature flags', async () => {
-    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: true, 'some-other-flag': false });
+  it('shows Entra settings while PostHog is unavailable', async () => {
+    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: true, error: new Error('PostHog unavailable') });
 
     const { default: IntegrationsSettingsPage } = await import(
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
@@ -196,8 +185,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
 
-  it('hides the Identity tab entirely when the entra-sync flag is off', async () => {
-    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: false });
+  it('hides Identity outside EE builds', async () => {
+    process.env.NEXT_PUBLIC_EDITION = 'community';
 
     const { default: IntegrationsSettingsPage } = await import(
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
@@ -205,26 +194,21 @@ describe('IntegrationsSettingsPage Entra placement', () => {
 
     render(<IntegrationsSettingsPage />);
 
-    // Dropping the only entry empties the category, and an empty category is
-    // filtered out — so the tab goes, not just its contents.
     expect(screen.queryByText('Identity')).not.toBeInTheDocument();
     expect(screen.queryByText('Identity Integrations')).not.toBeInTheDocument();
     expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
-    // The rest of the page is untouched.
     expect(screen.getByTestId('custom-tabs-mock')).toBeInTheDocument();
   });
 
-  it('keeps the tab hidden while the flag is still resolving', async () => {
-    // A rollout gate that renders on optimistically flashes the feature at
-    // everyone for as long as PostHog takes to answer.
-    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: true, error: null });
-
+  it('keeps Identity visible while preserving the Entra tier notice', async () => {
     const { default: IntegrationsSettingsPage } = await import(
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
     );
 
-    render(<IntegrationsSettingsPage />);
+    render(<IntegrationsSettingsPage canUseEntraSync={false} />);
 
-    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
+    expect(screen.getByText('Identity')).toBeInTheDocument();
+    expect(screen.getByText('Microsoft Entra requires the Enterprise add-on')).toBeInTheDocument();
+    expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
   });
 });

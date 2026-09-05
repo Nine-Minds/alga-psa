@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Genera fattura di fine mese",
+      "title": "Chiudere il periodo {{servicePeriod}} a fine mese?",
+      "warning": "Questa operazione fattura {{servicePeriod}} nell'ultimo giorno di calendario. Le registrazioni di tempo o utilizzo inserite dopo questa chiusura non verranno incluse. Chiudere il periodo solo quando tutto il lavoro è stato completamente registrato.",
+      "confirm": "Genera a fine mese",
+      "omissionWarning": "Le registrazioni di tempo o utilizzo inserite dopo questa chiusura NON saranno incluse nella fattura.",
+      "generationFailed": "Impossibile generare la fattura di fine mese. Riprova."
+    },
     "ready": {
       "title": "Pronto per la fatturazione",
       "description": "Esamina il lavoro ricorrente dovuto e genera bozze di fatture per i periodi selezionati.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Fattura inversa",
       "deleteInvoice": "Elimina fattura",
       "closePreview": "Chiudi anteprima",
-      "generateInvoice": "Genera fattura"
+      "generateInvoice": "Genera fattura",
+      "recordUsage": "Registra utilizzo"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Totale"
         },
         "generating": "Generazione...",
-        "generateError": "Impossibile generare la fattura dall'anteprima"
+        "generateError": "Impossibile generare la fattura dall'anteprima",
+        "missingUsageHeading": "Nessun utilizzo registrato per questo periodo",
+        "missingUsageService": "{{service}}: nessun record di utilizzo dal {{periodStart}} al {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: l'utilizzo registrato dal {{periodStart}} al {{periodEnd}} è escluso finché non viene risolta l'attribuzione alla riga di contratto — risolvi l'attribuzione invece di registrare altro utilizzo",
+        "usageCalculationError": "{{service}}: l'utilizzo registrato dal {{periodStart}} al {{periodEnd}} non ha potuto essere prezzato — correggi i prezzi del servizio invece di registrare altro utilizzo",
+        "recordScopedUsage": "Registra utilizzo: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: dal {{periodStart}} al {{periodEnd}} — non è stato possibile prezzare l'utilizzo registrato. Verifica la configurazione dei prezzi di questo servizio.",
+        "reportedPeriodTotalsHeading": "Conteggi di periodo comunicati"
       },
       "poOverage": {
         "title": "Eccessioni del limite dell'ordine di acquisto",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Procedere comunque?",
         "proceedConfirm": "Procedi comunque",
         "skippedError": "Saltato a causa dell'eccesso di PO ({{poLabel}}): superato da {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Utilizzo non registrato per questo periodo",
+        "description": "Questi servizi a utilizzo non hanno alcuna registrazione per la finestra di fatturazione. Generando ora resteranno fuori dalla fattura; torneranno fatturabili una volta registrato il loro utilizzo.",
+        "omittedItem": "{{services}}: nessun utilizzo registrato dal {{periodStart}} al {{periodEnd}}",
+        "question": "Generare senza questi servizi?",
+        "confirm": "Genera senza l'utilizzo non registrato"
       }
     },
     "history": {
@@ -343,7 +366,8 @@
       "refresh": "Si è verificato un errore durante l'aggiornamento dei dati della fattura.",
       "updateFailed": "Errore durante l'aggiornamento della fattura",
       "generateFailed": "Errore nella generazione della fattura",
-      "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione del cliente e riprova.",
+      "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita e riprova.",
+      "USAGE_RECORDS_MISSING": "Nessun record di utilizzo idoneo per {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra l'utilizzo per questo periodo (o una voce di utilizzo zero) per fatturare questi servizi.",
       "CLIENT_NOT_FOUND": "Il cliente selezionato non è stato trovato. Aggiorna la pagina e riprova.",
       "SERVICE_NOT_FOUND": "Il servizio {{serviceId}} non è stato trovato. Aggiorna la pagina e riprova.",
       "INVALID_QUANTITY": "La quantità deve essere maggiore di zero.",
@@ -354,10 +378,13 @@
       "UNEXPECTED": "Si è verificato un errore durante la generazione della fattura. Indica il riferimento {{ref}} quando contatti l'assistenza.",
       "salesOrderGenerateFailed": "Impossibile generare la fattura dell'ordine di vendita.",
       "salesOrderNothingToInvoice": "Non resta nulla da fatturare per questo ordine di vendita.",
-      "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione."
+      "salesOrderNotInvoiceable": "Questo ordine di vendita non è più disponibile per la fatturazione.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Questa finestra di fatturazione contiene addebiti fatturabili, ma {{services}} non ha utilizzo registrato per il periodo di servizio dal {{periodStart}} al {{periodEnd}}. Registra prima l'utilizzo oppure conferma esplicitamente la generazione senza di esso: i servizi non registrati resteranno fatturabili in seguito.",
+      "USAGE_PERIOD_TOTAL_STALE": "L'anteprima non è aggiornata: {{details}}. Riesegui l'anteprima per vedere i valori attuali, poi genera di nuovo.",
+      "USAGE_CALCULATION_ERROR": "L'utilizzo di {{services}} nel periodo di servizio dal {{periodStart}} al {{periodEnd}} è registrato ma non è stato possibile prezzarlo. Correggi i prezzi del servizio (prezzo di listino nella valuta del contratto, una tariffa personalizzata o scaglioni tariffari) e riprova. Non registrare utilizzo sostitutivo."
     },
     "warnings": {
-      "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione prima di generare la fattura."
+      "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un contatto per la fatturazione, un indirizzo e-mail di fatturazione del cliente o un indirizzo e-mail nella sede di fatturazione o predefinita prima di generare la fattura."
     },
     "errorFallback": {
       "title": "Qualcosa è andato storto",
@@ -370,8 +397,6 @@
   "draftsTab": {
     "title": "Bozze di fatture",
     "searchPlaceholder": "Cerca fatture...",
-    "bulkActions_one": "Azioni ({{count}})",
-    "bulkActions_other": "Azioni ({{count}})",
     "columns": {
       "invoiceNumber": "Numero della fattura",
       "client": "Cliente",
@@ -422,13 +447,17 @@
       "message": "Questa fattura è impostata per utilizzare l'imposta calcolata da un sistema contabile esterno, ma non è ancora stata importata alcuna imposta, quindi non può essere finalizzata. Esportala nel tuo sistema contabile (QuickBooks, Xero) e reimporta l'imposta per finalizzarla con l'imposta esterna, oppure passa ora questa fattura all'imposta interna in modo che Alga calcoli l'imposta e finalizzala.",
       "confirm": "Passa all'imposta interna e finalizza",
       "cancel": "Annulla"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "finalizedTab": {
     "title": "Fatture finalizzate",
     "searchPlaceholder": "Cerca fatture...",
-    "bulkActions_one": "Azioni ({{count}})",
-    "bulkActions_other": "Azioni ({{count}})",
     "columns": {
       "invoiceNumber": "Numero della fattura",
       "client": "Cliente",
@@ -462,6 +491,12 @@
       "unfinalizeFailed": "Impossibile definalizzare la fattura. Per favore riprova.",
       "bulkUnfinalizeFailed": "Impossibile definalizzare le fatture. Per favore riprova.",
       "bulkUnfinalizeInvoiceFailed": "Impossibile riaprire {{invoiceNumber}}: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -974,38 +1009,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Genera fattura di pagamento anticipato",
-      "creditMemo": "Genera nota di credito"
+      "prepayment": "Genera fattura di pagamento anticipato"
     },
     "descriptions": {
-      "prepayment": "Le fatture con pagamento anticipato creano credito al cliente per un valore futuro. Non creano periodi di servizio ricorrenti; le fatture ricorrenti successive mantengono la propria copertura del periodo di servizio.",
-      "creditMemo": "Le note di credito regolano i saldi finanziari senza ridefinire la copertura del periodo di servizio ricorrente nella fattura di origine."
+      "prepayment": "Le fatture con pagamento anticipato creano credito al cliente per un valore futuro. Non creano periodi di servizio ricorrenti; le fatture ricorrenti successive mantengono la propria copertura del periodo di servizio."
     },
     "fields": {
-      "type": "Tipo",
       "client": "Cliente",
       "amount": "Importo",
-      "description": "Descrizione"
-    },
-    "types": {
-      "prepaymentInvoice": "Fattura di pagamento anticipato",
-      "creditMemo": "Nota di credito"
+      "descriptionOptional": "Descrizione (optional)"
     },
     "placeholders": {
       "amount": "Inserisci l'importo",
-      "prepaymentDescription": "Pagamento anticipato per servizi futuri",
-      "creditMemoDescription": "Motivo della nota di credito"
+      "prepaymentDescription": "Pagamento anticipato per servizi futuri"
     },
     "errors": {
       "allFieldsRequired": "Si prega di compilare tutti i campi",
       "validAmount": "Inserisci un importo valido",
-      "creditMemosUnsupported": "Le note di credito non sono ancora supportate",
       "generateFailed": "Errore nella generazione della fattura"
     },
     "actions": {
       "generating": "Generazione...",
-      "generatePrepayment": "Genera fattura di pagamento anticipato",
-      "generateCreditMemo": "Genera nota di credito"
+      "generatePrepayment": "Genera fattura di pagamento anticipato"
     }
   },
   "contractItems": {
@@ -1240,7 +1265,12 @@
         "emptyState": "Seleziona dati di esempio o di fattura esistente per generare un'anteprima autorevole.",
         "loadingPreview": "Elaborazione e rendering anteprima…",
         "templateError": "Impossibile generare il modello di anteprima dall'area di lavoro corrente.",
-        "renderError": "Rendering anteprima fallito."
+        "renderError": "Rendering anteprima fallito.",
+        "searchQuotes": "Cerca preventivi…",
+        "noQuotesFound": "Nessun preventivo trovato.",
+        "selectQuote": "Seleziona preventivo",
+        "loadingQuoteDetails": "Caricamento dettagli preventivo…",
+        "loadingDocumentDetails": "Caricamento dettagli documento…"
       },
       "tabs": {
         "design": "Progettazione",
@@ -1671,7 +1701,6 @@
   },
   "projectBilling": {
     "subtitle": "Traguardi pronti e acconti in attesa di approvazione per tutti i progetti.",
-    "bulkActions": "Azioni ({{count}})",
     "loading": "Caricamento della coda di fatturazione progetti…",
     "empty": "Non c'è nulla da esaminare. I traguardi pronti e gli acconti compariranno qui.",
     "columns": {
@@ -1727,6 +1756,12 @@
       "message": "L'annullamento di questo elemento della pianificazione lo rimuove dalla fatturazione. L'operazione non può essere annullata.",
       "confirm": "Annulla elemento",
       "dismiss": "Mantieni elemento"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selezionati",
+        "clear": "Annulla selezione"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1830,7 +1865,9 @@
         "productItems": "Voci di prodotto",
         "items": "Elementi",
         "transformsSource": "{{binding}} (origine trasformazioni)",
-        "transformsOutput": "{{binding}} (output trasformazioni)"
+        "transformsOutput": "{{binding}} (output trasformazioni)",
+        "ticketGroups": "Tempo fatturato per ticket",
+        "timeEntries": "Inserimenti ore fatturati"
       },
       "presets": {
         "description": {
@@ -1848,6 +1885,46 @@
         "amount": {
           "label": "Importo",
           "hint": "Totale riga"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Numero e titolo del ticket"
+        },
+        "ticketDescription": {
+          "hint": "Descrizione del ticket visibile al cliente"
+        },
+        "hours": {
+          "label": "Ore"
+        },
+        "ticketHours": {
+          "hint": "Totale ore fatturate per il ticket"
+        },
+        "ticketRate": {
+          "hint": "Tariffa oraria («Tariffe miste» quando gli inserimenti differiscono)"
+        },
+        "ticketAmount": {
+          "hint": "Importo totale fatturato per il ticket"
+        },
+        "date": {
+          "label": "Data"
+        },
+        "entryDate": {
+          "hint": "Data in cui è stato svolto il lavoro"
+        },
+        "entryTicket": {
+          "hint": "Numero del ticket di origine"
+        },
+        "entryTitle": {
+          "hint": "Titolo del ticket o nome dell'attività"
+        },
+        "entryHours": {
+          "hint": "Ore fatturate per l'inserimento"
+        },
+        "entryRate": {
+          "hint": "Tariffa oraria dell'inserimento"
+        },
+        "entryAmount": {
+          "hint": "Importo fatturato per l'inserimento"
         }
       },
       "sourceBinding": {
@@ -1984,7 +2061,13 @@
       "preview": {
         "sampleNote": "Generato usando dati di esempio rappresentativi per {{type}}.",
         "frameTitle": "Anteprima di {{type}}",
-        "empty": "Apri questa scheda per generare un’anteprima attendibile."
+        "empty": "Apri questa scheda per generare un’anteprima attendibile.",
+        "existingNote": "Generato sull'ordine di vendita selezionato.",
+        "searchDocuments": "Cerca ordini di vendita…",
+        "searchDocumentsHint": "Cerca per numero o cliente…",
+        "noDocumentsFound": "Nessun ordine di vendita trovato.",
+        "selectDocument": "Seleziona ordine di vendita",
+        "selectDocumentHint": "Seleziona un ordine di vendita per l'anteprima con dati."
       },
       "errors": {
         "nameRequired": "Il nome del modello è obbligatorio.",
@@ -2001,5 +2084,71 @@
       "packingSlip": "Documento di trasporto",
       "pickList": "Lista di prelievo"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Autorizzazione negata: è richiesta l’autorizzazione di aggiornamento delle fatture",
+      "invoiceDelete": "Autorizzazione negata: è richiesta l’autorizzazione di eliminazione delle fatture",
+      "invoiceAccess": "Autorizzazione negata: accesso alla fattura negato",
+      "otherClientInvoices": "Autorizzazione negata: impossibile accedere alle fatture di un altro cliente"
+    },
+    "invoice": {
+      "notFound": "Fattura non trovata",
+      "notFoundRefresh": "Fattura non trovata. Potrebbe essere stata aggiornata o eliminata. Aggiornare la pagina e riprovare.",
+      "notFoundNumbered": "La fattura {{invoiceId}} non è stata trovata.",
+      "clientNotFoundForInvoice": "Nessun cliente trovato per la fattura {{invoiceNumber}}.",
+      "numberRequired": "Il numero della fattura è obbligatorio",
+      "dateRequired": "La data della fattura è obbligatoria",
+      "dateInvalid": "La data della fattura non è valida",
+      "dueDateInvalid": "La data di scadenza non è valida",
+      "onlyDraftEditable": "Solo le fatture in bozza possono essere modificate",
+      "numberExists": "Il numero della fattura esiste già. Scegliere un numero diverso.",
+      "notFinalized": "La fattura non è finalizzata",
+      "unfinalizeFailed": "Non è stato possibile annullare la finalizzazione della fattura a causa di un errore imprevisto nei dati. Aggiornare la pagina e riprovare.",
+      "paidOrCancelled": "Non è possibile modificare una fattura pagata o annullata",
+      "syncedVoidInstead": "Questa fattura è sincronizzata con un sistema contabile: annullarla anziché eliminarla.",
+      "invalidValue": "Uno dei valori della fattura selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "La fattura, il cliente, il contratto o il record di fatturazione selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già una fattura in conflitto. Aggiornare la pagina e riprovare.",
+      "missingField": "Manca un campo obbligatorio della fattura.",
+      "missingFieldNamed": "Manca un campo obbligatorio della fattura: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Ciclo di fatturazione non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "invalidDates": "Il ciclo di fatturazione contiene date non valide. Controllare il ciclo e riprovare."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Selezionare almeno una fattura per generare i PDF.",
+      "selectInvoicesEmail": "Selezionare almeno una fattura da inviare via email.",
+      "selectInvoices": "Selezionare almeno una fattura.",
+      "emailNotConfigured": "L’email non è configurata. Configurare le impostazioni email in Impostazioni prima di inviare le fatture.",
+      "schedulePdfFailed": "Impossibile avviare la generazione dei PDF delle fatture. Riprovare.",
+      "scheduleEmailFailed": "Impossibile avviare l’invio delle fatture via email. Riprovare.",
+      "recipientFailed": "Impossibile caricare le informazioni sul destinatario di questa fattura.",
+      "sendFailed": "Impossibile inviare la fattura via email. Riprovare."
+    },
+    "template": {
+      "selectStandard": "Selezionare un modello di fattura standard prima di salvare.",
+      "selectBeforePreview": "Selezionare un modello di fattura prima dell’anteprima.",
+      "notFoundRefresh": "Modello di fattura non trovato. Potrebbe essere stato aggiornato o eliminato. Aggiornare la pagina e riprovare.",
+      "missingDesign": "Al modello di fattura manca il contenuto di progettazione. Scegliere un altro modello.",
+      "invalidValue": "Uno dei valori selezionati del modello di fattura non è valido. Aggiornare la pagina e riprovare.",
+      "referenceMissing": "Il modello di fattura o il cliente selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicate": "Esiste già un modello di fattura con queste impostazioni.",
+      "missingField": "Manca un campo obbligatorio del modello di fattura.",
+      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}."
+    }
+  },
+  "periodTotal": {
+    "missingContext": "Configurazione del cliente o del servizio mancante per questo report.",
+    "invalidQuantity": "Inserisci un numero intero maggiore o uguale a 0 per il conteggio del periodo.",
+    "saveError": "Impossibile salvare il conteggio del periodo.",
+    "retryError": "Impossibile salvare il conteggio del periodo. Riprova l'invio.",
+    "correct": "Correggi il conteggio comunicato di {{quantity}} per {{service}} (dal {{periodStart}} al {{periodEnd}})",
+    "report": "Comunica un conteggio di periodo per {{service}} (dal {{periodStart}} al {{periodEnd}})",
+    "quantityLabel": "Conteggio del periodo per {{service}}",
+    "saving": "Salvataggio…",
+    "saveCorrection": "Salva correzione",
+    "save": "Salva"
   }
 }

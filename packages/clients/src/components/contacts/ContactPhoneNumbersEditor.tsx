@@ -11,13 +11,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { FieldWarnings } from '@alga-psa/ui/components/FieldWarnings';
 import { Label } from '@alga-psa/ui/components/Label';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import SearchableSelect from '@alga-psa/ui/components/SearchableSelect';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { validatePhoneNumber } from '@alga-psa/validation';
+import { isUnchangedFromStored, translateFieldValidation, validatePhoneNumberField } from '@alga-psa/validation';
 import type { ICountry } from '@alga-psa/clients/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -28,8 +29,6 @@ type EditablePhoneRow = ContactPhoneNumberInput & {
 type ContactPhoneRowInput = ContactPhoneNumberInput | IContactPhoneNumber;
 
 const COUNTRY_CODE_ONLY_PATTERN = /^\+\d{1,4}\s*$/;
-const PHONE_ROW_ERROR_PATTERN = /^Phone (\d+):/;
-const PHONE_ROW_DETAIL_PATTERN = /^Phone (\d+):\s*(.+)$/;
 
 function normalizeCustomTypeLabel(label: string | null | undefined): string {
   return (label ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
@@ -50,6 +49,7 @@ function normalizePhoneRowForDraft(
   return {
     contact_phone_number_id: row.contact_phone_number_id,
     phone_number: row.phone_number ?? '',
+    extension: row.extension ?? null,
     canonical_type: isCustomType ? null : row.canonical_type ?? 'work',
     custom_type: customType,
     is_default: Boolean(row.is_default),
@@ -77,6 +77,7 @@ export function normalizeDraftContactPhoneNumbers(
     return {
       contact_phone_number_id: row.contact_phone_number_id,
       phone_number,
+      extension: row.extension?.trim() || null,
       canonical_type,
       custom_type,
       is_default: index === normalizedDefaultIndex,
@@ -99,11 +100,49 @@ export function compactContactPhoneNumbers(
   return normalizeDraftContactPhoneNumbers(filteredRows);
 }
 
-export function validateContactPhoneNumbers(
-  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>
-): string[] {
-  const errors: string[] = [];
+/**
+ * i18next-shaped translator. Keys are fully namespaced (`msp/contacts:…`) so a caller
+ * bound to a different namespace — QuickAddClient is on `msp/clients` — still resolves
+ * them. Omitting it yields English.
+ */
+export type PhoneValidationTranslator = (key: string, options?: Record<string, unknown>) => string;
+
+const englishPhoneFallback: PhoneValidationTranslator = (_key, options) => {
+  const { defaultValue = '', ...params } = (options ?? {}) as Record<string, unknown>;
+  return String(defaultValue).replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+    String(params[name] ?? '')
+  );
+};
+
+/**
+ * A validation failure, kept with the row it belongs to. The row index is carried as a
+ * number rather than parsed back out of a "Phone 2: …" prefix, which stopped being
+ * readable the moment the message was translated.
+ */
+export type ContactPhoneValidationIssue = {
+  readonly rowIndex: number | null;
+  readonly message: string;
+};
+
+export interface ContactPhoneValidationOptions {
+  /**
+   * Pass on an edit form: a stored number that comes back unchanged is grandfathered, so a
+   * contact recorded before the schema existed ("front desk", "call the tea table") stays
+   * editable on everything else. The default-selection and type rules still apply to every
+   * row — those are about the form, not the data.
+   */
+  existingRows?: Array<ContactPhoneNumberInput | IContactPhoneNumber>;
+  t?: PhoneValidationTranslator;
+}
+
+export function collectContactPhoneValidationIssues(
+  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>,
+  options: ContactPhoneValidationOptions = {}
+): ContactPhoneValidationIssue[] {
+  const t = options.t ?? englishPhoneFallback;
+  const issues: ContactPhoneValidationIssue[] = [];
   const normalizedRows = normalizeDraftContactPhoneNumbers(rows);
+  const storedRows = options.existingRows ? normalizeDraftContactPhoneNumbers(options.existingRows) : [];
 
   if (normalizedRows.length === 0) {
     return [];
@@ -111,85 +150,78 @@ export function validateContactPhoneNumbers(
 
   const defaultCount = normalizedRows.filter((row) => row.is_default).length;
   if (defaultCount !== 1) {
-    errors.push('Select exactly one default phone number.');
+    issues.push({
+      rowIndex: null,
+      message: t('msp/contacts:contactPhoneNumbersEditor.validation.selectExactlyOneDefault', {
+        defaultValue: 'Select exactly one default phone number.'
+      })
+    });
   }
 
   const seenCustomTypes = new Set<string>();
 
   normalizedRows.forEach((row, index) => {
-    const rowLabel = `Phone ${index + 1}`;
+    const rowLabel = t('msp/contacts:contactPhoneNumbersEditor.validation.phoneRow', {
+      defaultValue: 'Phone {{number}}',
+      number: index + 1
+    });
+    const push = (message: string) => issues.push({ rowIndex: index, message: `${rowLabel}: ${message}` });
 
-    if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
-      errors.push(`${rowLabel}: Enter a complete phone number.`);
-    } else {
-      const phoneError = validatePhoneNumber(row.phone_number);
-      if (phoneError) {
-        errors.push(`${rowLabel}: ${phoneError}`);
+    const stored = row.contact_phone_number_id
+      ? storedRows.find((candidate) => candidate.contact_phone_number_id === row.contact_phone_number_id)
+      : undefined;
+    const grandfathered = Boolean(
+      stored?.phone_number && isUnchangedFromStored(row.phone_number, stored.phone_number)
+    );
+
+    if (!grandfathered) {
+      if (!row.phone_number || COUNTRY_CODE_ONLY_PATTERN.test(row.phone_number)) {
+        push(t('msp/contacts:contactPhoneNumbersEditor.validation.enterCompletePhoneNumber', {
+          defaultValue: 'Enter a complete phone number.'
+        }));
+      } else {
+        const phoneError = translateFieldValidation(
+          validatePhoneNumberField(row.phone_number),
+          (key, translateOptions) => t(`common:${key}`, translateOptions)
+        ).error;
+        if (phoneError) {
+          push(phoneError);
+        } else if (!row.phone_number.trim().startsWith('+')) {
+          push(t('msp/contacts:contactPhoneNumbersEditor.validation.includeCountryCallingCode', {
+            defaultValue: 'Include the country calling code, starting with +.'
+          }));
+        }
       }
     }
 
     const customType = row.custom_type?.trim() ?? '';
     if (row.canonical_type === null) {
       if (!customType) {
-        errors.push(`${rowLabel}: Enter a custom phone type.`);
+        push(t('msp/contacts:contactPhoneNumbersEditor.validation.enterCustomPhoneType', {
+          defaultValue: 'Enter a custom phone type.'
+        }));
         return;
       }
 
       const normalizedCustomType = normalizeCustomTypeLabel(customType);
       if (seenCustomTypes.has(normalizedCustomType)) {
-        errors.push(`${rowLabel}: Custom phone type labels must be unique.`);
+        push(t('msp/contacts:contactPhoneNumbersEditor.validation.customTypesUnique', {
+          defaultValue: 'Custom phone type labels must be unique.'
+        }));
       } else {
         seenCustomTypes.add(normalizedCustomType);
       }
     }
   });
 
-  return Array.from(new Set(errors));
+  return issues;
 }
 
-export function translateContactPhoneValidationErrors(
-  errors: string[],
-  t: (key: string, options?: Record<string, unknown>) => string
+export function validateContactPhoneNumbers(
+  rows: Array<ContactPhoneNumberInput | IContactPhoneNumber>,
+  options: ContactPhoneValidationOptions = {}
 ): string[] {
-  return errors.map((error) => {
-    if (error === 'Select exactly one default phone number.') {
-      return t('contactPhoneNumbersEditor.validation.selectExactlyOneDefault', {
-        defaultValue: 'Select exactly one default phone number.'
-      });
-    }
-
-    const detailMatch = PHONE_ROW_DETAIL_PATTERN.exec(error);
-    if (!detailMatch) {
-      return error;
-    }
-
-    const rowNumber = Number.parseInt(detailMatch[1] ?? '', 10);
-    const detail = detailMatch[2] ?? '';
-    const rowPrefix = t('contactPhoneNumbersEditor.validation.phoneRow', {
-      defaultValue: 'Phone {{number}}',
-      number: rowNumber
-    });
-
-    if (detail === 'Enter a complete phone number.') {
-      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.enterCompletePhoneNumber', {
-        defaultValue: 'Enter a complete phone number.'
-      })}`;
-    }
-
-    if (detail === 'Enter a custom phone type.') {
-      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.enterCustomPhoneType', {
-        defaultValue: 'Enter a custom phone type.'
-      })}`;
-    }
-
-    if (detail === 'Custom phone type labels must be unique.') {
-      return `${rowPrefix}: ${t('contactPhoneNumbersEditor.validation.customTypesUnique', {
-        defaultValue: 'Custom phone type labels must be unique.'
-      })}`;
-    }
-
-    return `${rowPrefix}: ${detail}`;
-  });
+  return Array.from(new Set(collectContactPhoneValidationIssues(rows, options).map((issue) => issue.message)));
 }
 
 function buildEditablePhoneRows(
@@ -212,6 +244,7 @@ function buildEditablePhoneRows(
 function createEmptyPhoneRow(isDefault: boolean): EditablePhoneRow {
   return {
     phone_number: '',
+    extension: null,
     canonical_type: 'work',
     custom_type: null,
     is_default: isDefault,
@@ -243,33 +276,12 @@ export function moveContactPhoneRows(
   }));
 }
 
-function inferCountryCode(phoneNumber: string, countries: ICountry[]): string {
-  const trimmedPhoneNumber = phoneNumber.trim();
-  if (!trimmedPhoneNumber.startsWith('+')) {
-    return 'US';
-  }
-
-  const matches = countries
-    .map((country) => ({
-      ...country,
-      normalized_phone_code: country.phone_code?.startsWith('+')
-        ? country.phone_code
-        : country.phone_code
-          ? `+${country.phone_code}`
-          : undefined,
-    }))
-    .filter((country) => country.normalized_phone_code && trimmedPhoneNumber.startsWith(country.normalized_phone_code))
-    .sort((a, b) => (b.normalized_phone_code?.length ?? 0) - (a.normalized_phone_code?.length ?? 0));
-
-  return matches[0]?.code ?? 'US';
-}
-
 function getRowKey(row: EditablePhoneRow, index: number): string {
   return row.contact_phone_number_id ?? row._localId ?? `${index}`;
 }
 
 function getVisibleValidationErrors(
-  errors: string[],
+  issues: ContactPhoneValidationIssue[],
   rows: EditablePhoneRow[],
   touchedRowKeys: Set<string>
 ): string[] {
@@ -277,26 +289,20 @@ function getVisibleValidationErrors(
     return [];
   }
 
-  return errors.filter((error) => {
-    const match = PHONE_ROW_ERROR_PATTERN.exec(error);
-    if (!match) {
-      return false;
-    }
-
-    const rowIndex = Number.parseInt(match[1] ?? '', 10) - 1;
-    if (rowIndex < 0 || rowIndex >= rows.length) {
-      return false;
-    }
-
-    return touchedRowKeys.has(getRowKey(rows[rowIndex]!, rowIndex));
-  });
+  return issues
+    .filter(({ rowIndex }) => {
+      if (rowIndex === null || rowIndex < 0 || rowIndex >= rows.length) {
+        return false;
+      }
+      return touchedRowKeys.has(getRowKey(rows[rowIndex]!, rowIndex));
+    })
+    .map((issue) => issue.message);
 }
 
 interface ContactPhoneRowProps {
   id: string;
   index: number;
   row: EditablePhoneRow;
-  countries: ICountry[];
   customTypeSuggestions: string[];
   disabled?: boolean;
   canMoveUp: boolean;
@@ -315,7 +321,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   id,
   index,
   row,
-  countries,
   customTypeSuggestions,
   disabled = false,
   canMoveUp,
@@ -330,9 +335,14 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
   onRemove,
 }) => {
   const { t } = useTranslation('msp/contacts');
+  // Field messages live under common:clients.validation.*, not this page's namespace.
+  const { t: tValidation } = useTranslation('common');
   const rowKey = row.contact_phone_number_id ?? row._localId ?? `${index}`;
-  const [countryCode, setCountryCode] = useState(() => inferCountryCode(row.phone_number ?? '', countries));
-  const phoneCode = countries.find((country) => country.code === countryCode)?.phone_code;
+  // Plausibility only; the row still saves.
+  const phoneWarnings = useMemo(
+    () => translateFieldValidation(validatePhoneNumberField(row.phone_number ?? ''), tValidation).warnings,
+    [row.phone_number, tValidation]
+  );
   const typeValue = row.canonical_type === null ? 'custom' : row.canonical_type ?? 'work';
   const phoneTypeOptions = useMemo(
     () => [
@@ -363,16 +373,6 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
     })),
     [customTypeSuggestions]
   );
-
-  useEffect(() => {
-    setCountryCode((current) => {
-      if (!row.phone_number?.trim()) {
-        return current;
-      }
-      const inferred = inferCountryCode(row.phone_number, countries);
-      return current === inferred ? current : inferred;
-    });
-  }, [countries, row.phone_number, rowKey]);
 
   return (
     <Card
@@ -465,23 +465,27 @@ const ContactPhoneRow: React.FC<ContactPhoneRowProps> = ({
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.6fr)_minmax(240px,0.9fr)] xl:items-start">
-        <PhoneInput
-          id={`${id}-phone-${index}`}
-          label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
-            defaultValue: 'Phone Number',
-          })}
-          value={row.phone_number ?? ''}
-          onChange={(value) => onChange({ phone_number: value })}
-          onBlur={onBlur}
-          countryCode={countryCode}
-          phoneCode={phoneCode}
-          countries={countries}
-          onCountryChange={setCountryCode}
-          allowExtensions={true}
-          disabled={disabled}
-          className="w-full"
-          data-automation-id={`${id}-phone-${index}`}
-        />
+        <div>
+          <PhoneInput
+            id={`${id}-phone-${index}`}
+            label={t('contactPhoneNumbersEditor.fields.phoneNumber', {
+              defaultValue: 'Phone',
+            })}
+            value={row.phone_number ?? ''}
+            onChange={(value) => onChange({ phone_number: value })}
+            extension={row.extension ?? ''}
+            onExtensionChange={(value) => onChange({ extension: value })}
+            extensionLabel={t('contactPhoneNumbersEditor.fields.extension', {
+              defaultValue: 'Extension',
+            })}
+            onBlur={onBlur}
+            allowExtensions={true}
+            disabled={disabled}
+            className="w-full"
+            data-automation-id={`${id}-phone-${index}`}
+          />
+          <FieldWarnings warnings={phoneWarnings} />
+        </div>
         <div className="space-y-1">
           <Label
             htmlFor={`${id}-type-${index}`}
@@ -570,7 +574,6 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
   id,
   value,
   onChange,
-  countries,
   customTypeSuggestions = [],
   disabled = false,
   errorMessages,
@@ -617,13 +620,13 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
     });
   }, [allowEmpty, draftSignature, externalSignature, value]);
 
-  const validationErrors = useMemo(
-    () => translateContactPhoneValidationErrors(validateContactPhoneNumbers(draftRows), t),
+  const validationIssues = useMemo(
+    () => collectContactPhoneValidationIssues(draftRows, { t }),
     [draftRows, t]
   );
   const visibleValidationErrors = useMemo(
-    () => getVisibleValidationErrors(validationErrors, draftRows, touchedRowKeys),
-    [draftRows, touchedRowKeys, validationErrors]
+    () => getVisibleValidationErrors(validationIssues, draftRows, touchedRowKeys),
+    [draftRows, touchedRowKeys, validationIssues]
   );
 
   useEffect(() => {
@@ -805,7 +808,6 @@ const ContactPhoneNumbersEditor: React.FC<ContactPhoneNumbersEditorProps> = ({
               id={id}
               index={index}
               row={row}
-              countries={countries}
               customTypeSuggestions={customTypeSuggestions}
               disabled={disabled}
               canMoveUp={index > 0}

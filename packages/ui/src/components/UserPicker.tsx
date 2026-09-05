@@ -368,9 +368,9 @@ const UserPicker = ({
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div className="bg-white dark:bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-gray-200 dark:border-[rgb(var(--color-border-200))] overflow-hidden w-full">
+      <div className="bg-[rgb(var(--color-card))] rounded-md shadow-lg border border-[rgb(var(--color-border-200))] overflow-hidden w-full">
         {/* Search Input */}
-        <div className="p-2 border-b border-gray-200 dark:border-[rgb(var(--color-border-200))]">
+        <div className="p-2 border-b border-[rgb(var(--color-border-200))]">
           <div className="relative">
             <Input
               ref={searchInputRef}
@@ -379,7 +379,7 @@ const UserPicker = ({
               placeholder="Search users..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 pl-9 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
+              className="w-full px-3 py-2 pl-9 text-sm border border-[rgb(var(--color-border-200))] rounded-md focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))] focus:border-transparent"
               autoComplete="off"
             />
             <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
@@ -403,7 +403,7 @@ const UserPicker = ({
             id={`${pickerId}-option-unassigned`}
             label={unassignedLabel}
             onClick={() => handleSelectUser('unassigned')}
-            className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-gray-100 focus:bg-gray-100"
+            className="relative flex items-center px-3 py-2 text-sm rounded text-gray-900 cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)]"
             parentId={pickerId}
           >
             {unassignedLabel}
@@ -418,7 +418,7 @@ const UserPicker = ({
                 id={`${pickerId}-option-${user.user_id}`}
                 label={userName}
                 onClick={() => handleSelectUser(user.user_id)}
-                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-gray-100 focus:bg-gray-100 text-gray-900"
+                className="relative flex items-center px-3 py-2 text-sm rounded cursor-pointer hover:bg-[rgb(var(--color-primary-500)/0.08)] focus:bg-[rgb(var(--color-primary-500)/0.08)] text-gray-900"
                 parentId={pickerId}
               >
                 <div className="flex items-center gap-2">

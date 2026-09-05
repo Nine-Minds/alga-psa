@@ -69,7 +69,7 @@ type ClientPortalVisibilityGroupActionError = ActionMessageError | ActionPermiss
 
 function visibilityGroupActionErrorFrom(error: unknown): ClientPortalVisibilityGroupActionError | null {
   if (error instanceof z.ZodError) {
-    return actionError('Please check the visibility group details and try again.');
+    return actionError('Please check the visibility group details and try again.', 'client-portal:errors.visibilityGroups.checkDetails');
   }
 
   if (error instanceof Error) {
@@ -79,32 +79,41 @@ function visibilityGroupActionErrorFrom(error: unknown): ClientPortalVisibilityG
 
     switch (error.message) {
       case 'One or more boards are invalid for this tenant':
-        return actionError('One or more selected boards are no longer available. Please refresh and try again.');
+        return actionError('One or more selected boards are no longer available. Please refresh and try again.', 'client-portal:errors.visibilityGroups.boardsUnavailable');
       case 'Contact not found':
-        return actionError('Contact not found. It may have been deleted. Please refresh and try again.');
+        return actionError('Contact not found. It may have been deleted. Please refresh and try again.', 'client-portal:errors.visibilityGroups.contactNotFound');
       case 'Cannot manage visibility groups for another client':
-        return permissionError('Permission denied: Cannot manage visibility groups for another client');
+        return permissionError('Permission denied: Cannot manage visibility groups for another client', 'client-portal:errors.visibilityGroups.otherClient');
       case 'A target client or contact is required':
-        return actionError('Select a client or contact before managing visibility groups.');
+        return actionError('Select a client or contact before managing visibility groups.', 'client-portal:errors.visibilityGroups.selectClientOrContact');
       case 'Visibility group not found':
-        return actionError('Visibility group not found. It may have been deleted. Please refresh and try again.');
+        return actionError('Visibility group not found. It may have been deleted. Please refresh and try again.', 'client-portal:errors.visibilityGroups.groupNotFound');
       case 'Assigned visibility group is invalid for this contact':
-        return actionError('The selected visibility group is not valid for this contact. Please refresh and try again.');
+        return actionError('The selected visibility group is not valid for this contact. Please refresh and try again.', 'client-portal:errors.visibilityGroups.groupNotValidForContact');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '23502') {
-    return actionError(`Missing required visibility group field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required visibility group field: ${dbError.column}.`,
+          'client-portal:errors.visibilityGroups.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError(
+          'Missing required visibility group field.',
+          'client-portal:errors.visibilityGroups.missingField',
+        );
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected visibility group records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected visibility group records is no longer valid. Please refresh and try again.', 'client-portal:errors.visibilityGroups.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A visibility group with these details already exists for this client.');
+    return actionError('A visibility group with these details already exists for this client.', 'client-portal:errors.visibilityGroups.duplicate');
   }
   if (dbError?.code === '23514' || dbError?.code === '22P02') {
-    return actionError('Invalid visibility group data provided. Please check the group details and selected boards.');
+    return actionError('Invalid visibility group data provided. Please check the group details and selected boards.', 'client-portal:errors.visibilityGroups.invalidData');
   }
 
   return null;

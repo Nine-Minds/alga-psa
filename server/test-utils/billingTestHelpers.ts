@@ -190,9 +190,24 @@ async function upsertClientTaxSettings(
     baseData.tax_rate_id = taxRateId;
   }
 
+  // Since S7 the table is keyed per billing profile, so the conflict target is
+  // (tenant, client_id, billing_profile_id). Fixtures seed the client's default
+  // profile's row, which is the one the pre-S7 schema held.
+  const conflictColumns = ['tenant', 'client_id'];
+  if ('billing_profile_id' in clientTaxSettingsColumnsCache) {
+    const defaultProfile = await tenantTable(context, 'client_billing_profiles')
+      .where({ client_id: clientId, is_default: true })
+      .first('billing_profile_id');
+    if (!defaultProfile) {
+      return;
+    }
+    baseData.billing_profile_id = defaultProfile.billing_profile_id;
+    conflictColumns.push('billing_profile_id');
+  }
+
   await tenantTable(context, 'client_tax_settings')
     .insert(baseData)
-    .onConflict(['tenant', 'client_id'])
+    .onConflict(conflictColumns)
     .merge(baseData);
 }
 
@@ -1009,9 +1024,10 @@ export async function createFixedPlanAssignment(
   };
 }
 
-// Invoice generation refuses clients without a billing email
-// (validateClientBillingEmail), which is read off a billing-or-default
-// client_locations row. Clients created straight through createEntity have none.
+// Invoice generation refuses clients that resolve to no billing recipient
+// (validateClientBillingEmail: billing contact, then clients.billing_email, then a
+// billing-or-default client_locations email). Clients created straight through
+// createEntity satisfy none of those, so this seeds the location email.
 export async function ensureClientBillingEmail(
   context: TestContext,
   clientId?: string

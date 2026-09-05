@@ -58,9 +58,13 @@ cd ee/mobile
 npm run lint
 npm run typecheck
 npm run test
+npm run verify:expo-config
 ```
 
-## Build / Release (draft)
+All four checks are mandatory in the distribution workflow and complete before
+an EAS build is started.
+
+## Build / Release
 
 This repo currently uses Expo managed workflow. A typical path to internal distribution:
 
@@ -78,8 +82,18 @@ Workflow: `.github/workflows/mobile-distribute.yml` (manual trigger).
 Required repo secrets:
 
 - `EXPO_TOKEN` (Expo access token for EAS)
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` (the complete Google Play service account
+  key JSON; required only for Play Internal submission)
 
 Notes:
 
 - `ee/mobile/app.json` defines the bundle identifiers/package names used by EAS builds.
-- `ee/mobile/eas.json` includes placeholder submit configuration (e.g. `ascAppId`); replace with real values before using `eas submit`.
+- Keep `expo.version` in `ee/mobile/app.json` aligned with the version in
+  `ee/mobile/package.json`, and increment both platform build numbers for each
+  store build.
+- The distribution workflow validates the Google Play JSON secret and writes
+  it to the ignored `ee/mobile/google-service-account.json` path only on the
+  ephemeral Android runner, then removes it after submission. Never commit the
+  service account key.
+- `ee/mobile/eas.json` contains the App Store Connect app ID and store submit
+  profiles used by CI.

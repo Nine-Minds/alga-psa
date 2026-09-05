@@ -137,5 +137,22 @@
     "remaining": "{{hours}} Std. ungenutzt verfallen.",
     "submit": "Block verfallen lassen",
     "title": "Stundenblock verfallen lassen"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Stundenblock nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "serviceNotFound": "Dienst nicht gefunden. Er wurde möglicherweise aktualisiert oder gelöscht. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "hoursPositive": "Die Stunden des Blocks müssen größer als null sein.",
+      "ratePositive": "Der Stundensatz muss null oder größer sein.",
+      "reasonRequired": "Für diesen Vorgang ist eine Begründung erforderlich.",
+      "adjustExpiredOrVoided": "Ein abgelaufener oder stornierter Stundenblock kann nicht angepasst werden.",
+      "usedCannotVoid": "Dieser Stundenblock wurde bereits genutzt und kann nicht storniert werden. Lassen Sie ihn stattdessen ablaufen.",
+      "onlyPendingOrActiveVoid": "Nur ausstehende oder aktive Stundenblöcke können storniert werden.",
+      "expireVoided": "Ein stornierter Stundenblock kann nicht ablaufen gelassen werden.",
+      "updateExpirationVoided": "Das Ablaufdatum eines stornierten Stundenblocks kann nicht aktualisiert werden.",
+      "invalidValue": "Einer der ausgewählten Werte des Stundenblocks ist ungültig. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut.",
+      "missingField": "Ein erforderliches Feld des Stundenblocks fehlt. Bitte prüfen Sie das Formular und versuchen Sie es erneut.",
+      "referenceMissing": "Der ausgewählte Kunde, Dienst oder die Rechnung existiert nicht mehr. Bitte aktualisieren Sie die Seite und versuchen Sie es erneut."
+    }
   }
 }

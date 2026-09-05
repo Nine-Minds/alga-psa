@@ -1,9 +1,11 @@
 import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { hitSlop } from "../a11y";
 import { useTheme } from "../ThemeContext";
 
 export function OfflineBanner({ onRetry }: { onRetry?: () => void }) {
   const theme = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <View
       style={{
@@ -11,7 +13,8 @@ export function OfflineBanner({ onRetry }: { onRetry?: () => void }) {
         borderBottomWidth: 1,
         borderBottomColor: theme.colors.border,
         paddingHorizontal: theme.spacing.lg,
-        paddingVertical: theme.spacing.sm,
+        paddingTop: theme.spacing.sm + insets.top,
+        paddingBottom: theme.spacing.sm,
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",

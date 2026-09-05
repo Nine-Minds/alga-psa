@@ -60,7 +60,7 @@ export function TagFilter({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className={`w-[300px] p-4 bg-white rounded-lg shadow-lg border border-gray-200 z-50 ${contentClassName}`}
+          className={`w-[300px] p-4 bg-[rgb(var(--color-card))] rounded-lg shadow-lg border border-[rgb(var(--color-border-200))] z-50 ${contentClassName}`}
           sideOffset={5}
           align={align}
         >
@@ -77,7 +77,7 @@ export function TagFilter({
               onTagSelect={onToggleTag}
             />
             {selectedTags.length > 0 && (
-              <div className="pt-2 border-t flex justify-end">
+              <div className="pt-2 border-t border-[rgb(var(--color-border-200))] flex justify-end">
                 <Button id={`${id}-clear`} variant="ghost" size="sm" onClick={onClearTags}>
                   {t('tagFilter.clearAll', { defaultValue: 'Clear all' })}
                 </Button>

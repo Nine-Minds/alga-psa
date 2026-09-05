@@ -47,7 +47,6 @@ describe('UsageBasedServicesStep i18n wiring contract', () => {
       'wizardUsage.labels.unitOfMeasurePlaceholder',
       'wizardUsage.labels.unitOfMeasureHint',
       'wizardUsage.values.defaultUnit',
-      'wizardUsage.labels.setBucketAllocation',
       'wizardUsage.actions.addUsageBasedService',
       'wizardUsage.emptyState',
       'wizardUsage.alternateFrequencyLabel',

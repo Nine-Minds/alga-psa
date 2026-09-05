@@ -36,16 +36,16 @@ function stockUnitActionErrorFrom(error: unknown): StockUnitActionError | null {
 
   const dbError = error as { code?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected stock-unit values is invalid. Please refresh and try again.');
+    return actionError('One of the selected stock-unit values is invalid. Please refresh and try again.', 'features/inventory:errors.stockUnits.invalidValue');
   }
   if (dbError?.code === '22007' || dbError?.code === '22008') {
-    return actionError('Choose a valid stock movement date range.');
+    return actionError('Choose a valid stock movement date range.', 'features/inventory:errors.stockUnits.invalidDateRange');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected stock-unit records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected stock-unit records is no longer valid. Please refresh and try again.', 'features/inventory:errors.stockUnits.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This stock-unit lookup conflicts with an existing record. Please refresh and try again.');
+    return actionError('This stock-unit lookup conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.stockUnits.conflict');
   }
 
   return null;

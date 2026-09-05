@@ -54,6 +54,7 @@ const SUBTYPES = [
   { category: 'Projects', name: 'Project Milestone Ready', description: 'When a project billing schedule entry becomes ready for review' },
   { category: 'Projects', name: 'Project Budget Threshold Reached', description: 'When project billing crosses a configured budget threshold' },
   { category: 'Projects', name: 'Project Budget Exceeded', description: 'When billable project work first exceeds a hard budget cap' },
+  { category: 'Projects', name: 'Project Status Update', description: 'Status update sent to the client contact for a project' },
   // Time Entries
   { category: 'Time Entries', name: 'Time Entry Submitted', description: 'When time entries are submitted for approval' },
   { category: 'Time Entries', name: 'Time Entry Approved', description: 'When time entries are approved' },
@@ -78,6 +79,7 @@ const SUBTYPES = [
   // Prepaid Alerts
   { category: 'Prepaid Alerts', name: 'prepaid-credit-low-balance', description: 'When a client prepaid credit balance drops below its configured floor' },
   { category: 'Prepaid Alerts', name: 'prepaid-bucket-threshold-reached', description: 'When a client prepaid hour bucket reaches its configured consumption threshold' },
+  { category: 'Prepaid Alerts', name: 'prepaid-replenishment-created', description: 'When an automatic prepaid replenishment invoice is created or issued' },
 ];
 
 /**

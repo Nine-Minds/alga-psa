@@ -65,12 +65,22 @@ export const rmmMaintenanceWindowRecurrenceSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: 'startTime and endTime must differ (a window spanning a full day should use multiple days instead)',
+        params: {
+          messageKey: 'msp/integrations:errors.rmm.validation.timesMustDiffer',
+        },
       });
     }
     try {
       new Intl.DateTimeFormat('en-US', { timeZone: value.timezone });
     } catch {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: `Unknown timezone: ${value.timezone}` });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Unknown timezone: ${value.timezone}`,
+        params: {
+          messageKey: 'msp/integrations:errors.rmm.validation.unknownTimezone',
+          messageParams: { timezone: value.timezone },
+        },
+      });
     }
   });
 
@@ -94,7 +104,13 @@ export const rmmAlertRuleConditionsSchema = z
         try {
           new RegExp(pattern);
         } catch {
-          ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'messagePattern is not a valid regular expression' });
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'messagePattern is not a valid regular expression',
+            params: {
+              messageKey: 'msp/integrations:errors.rmm.validation.messagePatternInvalid',
+            },
+          });
         }
       }),
     /** Case-insensitive substrings matched against the alert message. */

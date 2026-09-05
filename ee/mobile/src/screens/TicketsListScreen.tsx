@@ -29,7 +29,7 @@ import { DatePickerField } from "../ui/components/DatePickerField";
 import { AgentPickerModal } from "../features/ticketDetail/components/AgentPickerModal";
 import { TagPickerModal } from "../features/ticketDetail/components/TagPickerModal";
 import { withClientFilter, withContactFilter } from "./ticketsClientFilter";
-import { addTagFilter, normalizeSavedTags, removeTagFilter, withTagsFilter } from "./ticketsTagsFilter";
+import { normalizeSavedTags, removeTagFilter, withTagsFilter } from "./ticketsTagsFilter";
 import { computeVisibleTagCount, TAG_CHIP_MAX_TEXT_WIDTH } from "./ticketRowTags";
 import { getTagChipColors } from "../ui/tagColors";
 
@@ -1143,6 +1143,7 @@ function FiltersModal({
           visible={agentFilterPickerOpen}
           updating={false}
           updateError={null}
+          currentAssignedToId={null}
           currentAssignedToName={null}
           onSelect={(userId, displayName) => {
             setFilters({ ...filters, assignee: "agent", assigneeUserId: userId, assigneeName: displayName });
@@ -1254,10 +1255,14 @@ function FiltersModal({
           updating={false}
           updateError={null}
           appliedTagTexts={filters.tags}
-          onSelect={(tagText) => setFilters({ ...filters, tags: addTagFilter(filters.tags, tagText) })}
+          onApply={(tagTexts) => {
+            setFilters({ ...filters, tags: tagTexts });
+            setTagFilterPickerOpen(false);
+          }}
           onClose={() => setTagFilterPickerOpen(false)}
           client={client}
           apiKey={apiKey ?? ""}
+          ticketUpdate={false}
         />
 
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: theme.spacing.lg }}>{t("filters.updatedSince")}</Text>

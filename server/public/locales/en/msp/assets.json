@@ -1162,14 +1162,6 @@
       "saveFailed": "Failed to create maintenance schedule"
     }
   },
-  "documentsPasswordsTab": {
-    "title": "Documents & Passwords",
-    "description": "Combined tab for asset documents, credentials, and related secure records",
-    "passwords": {
-      "title": "Passwords & Secrets",
-      "comingSoon": "Secure password management coming soon."
-    }
-  },
   "maintenanceSchedulesTab": {
     "title": "Maintenance Schedules",
     "description": "Maintenance schedule management tab for planned service and recurring work",
@@ -1215,6 +1207,7 @@
     },
     "types": {
       "preventive": "Preventive",
+      "corrective": "Corrective",
       "inspection": "Inspection",
       "calibration": "Calibration",
       "replacement": "Replacement"
@@ -1234,6 +1227,17 @@
         "title": "Delete Maintenance Schedule",
         "message": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
       }
+    }
+  },
+  "maintenanceCommandCenter": {
+    "title": "Maintenance",
+    "description": "Command center for preventive work across all client assets.",
+    "assetsLink": "Assets"
+  },
+  "maintenanceCompletionDialog": {
+    "errors": {
+      "performedDateRequired": "A performed date is required.",
+      "completeFailed": "Failed to complete maintenance."
     }
   },
   "relatedAssetsTab": {
@@ -1489,6 +1493,36 @@
       "active": "active",
       "inactive": "inactive",
       "maintenance": "maintenance"
+    }
+  },
+  "errors": {
+    "permissions": {
+      "readAssets": "Permission denied: Cannot read assets",
+      "readAssetTypes": "Permission denied: Cannot read asset types",
+      "manageAssetTypes": "Permission denied: Cannot manage asset types",
+      "readDocuments": "Permission denied: Cannot read asset documents",
+      "associateDocuments": "Permission denied: Cannot associate documents with assets",
+      "removeDocuments": "Permission denied: Cannot remove documents from assets",
+      "updateDocumentNotes": "Permission denied: Cannot update asset document notes"
+    },
+    "asset": {
+      "notFoundRefresh": "Asset not found. It may have been deleted. Please refresh and try again.",
+      "clientNotFound": "Client not found. It may have been deleted. Please refresh and try again.",
+      "maintenanceNotFound": "Maintenance schedule not found. It may have been deleted. Please refresh and try again.",
+      "maintenanceMismatch": "This maintenance record does not match the selected asset. Please refresh and try again.",
+      "locationUnavailable": "Selected location is not available for this client.",
+      "selfRelation": "An asset cannot be related to itself.",
+      "selectAtLeastOne": "Select at least one asset.",
+      "typeUnavailable": "Asset type is not available. Choose a valid asset type.",
+      "typeUnavailableNamed": "Asset type \"{{assetType}}\" is not available. Choose a valid asset type.",
+      "documentAssociationNotFound": "Document association not found. It may have already been removed. Please refresh and try again.",
+      "invalidValue": "One of the selected asset values is invalid. Please refresh and try again.",
+      "invalidDate": "One of the selected asset dates is invalid. Please review the form and try again.",
+      "referenceMissing": "The selected asset, document, or related record no longer exists. Please refresh and try again.",
+      "conflict": "This asset change conflicts with an existing record. Please refresh and try again.",
+      "notAllowed": "One of the asset values is not allowed. Please review the form and try again.",
+      "missingField": "Missing required asset field.",
+      "missingFieldNamed": "Missing required asset field: {{field}}."
     }
   }
 }

@@ -2,7 +2,7 @@
 
 **Card:** 29.8.23 (release v1.5) · **Branch:** `feature/weighted-burn-rates-for-bucket-hours`
 **Status:** approved design, ready for implementation
-**Feature flag:** all new/changed UI behind `release-v1.5-feature`; flag off ⇒ existing UI and behavior preserved.
+**Feature flag:** all new/changed UI behind `release-v1-5-feature`; flag off ⇒ existing UI and behavior preserved.
 
 ## Goal
 
@@ -191,7 +191,7 @@ and the `bucket_usage.bucket_id` column; the frozen legacy tables still describe
   from `bucket_config.service_id` to the scope-resolution rule (membership or line catch-all);
   tie-break "prefer the line with a bucket for this service" is unchanged in spirit.
 
-## 5. UI (all changes behind `release-v1.5-feature`; use `alga-feature-flags` patterns)
+## 5. UI (all changes behind `release-v1-5-feature`; use `alga-feature-flags` patterns)
 
 **Flag off:** every existing component (`BucketOverlayFields.tsx`, `ServiceBucketConfigForm.tsx`,
 `BucketServiceConfigPanel.tsx`, wizard steps, `ContractLineDialog`) renders exactly as today,

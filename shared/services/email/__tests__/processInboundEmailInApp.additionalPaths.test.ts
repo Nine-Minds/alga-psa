@@ -54,6 +54,9 @@ function buildEmailData(
     subject: 'Inbound subject',
     body: { text: 'Hello from client', html: undefined },
     attachments: [],
+    headers: {
+      'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com',
+    },
     ...overrides,
   };
 }
@@ -278,6 +281,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       emailData: buildEmailData({
         id: 'email-reply-internal-1',
         from: { email: 'ROBERT@NINEMINDS.COM', name: 'Robert Isaacs' },
+        headers: { 'authentication-results': 'mx.nineminds.com; dmarc=pass header.from=nineminds.com' },
       }),
     });
 
@@ -297,7 +301,11 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     );
   });
 
-  it('T019: thread-header path without sender contact keeps fallback behavior', async () => {
+  it('T019: thread-header path without an authorized sender contact is quarantined', async () => {
+    // A thread-header match whose sender resolves to no contact (and is neither
+    // an internal user nor an active watcher) is the spoofed-reply hijack vector:
+    // the hijack guard quarantines it instead of appending a comment to the
+    // originating ticket.
     findContactByEmailMock.mockResolvedValue(null);
     findTicketByReplyTokenMock.mockResolvedValue(null);
     findTicketByEmailThreadMock.mockResolvedValue({ ticketId: 'ticket-thread-1' });
@@ -316,22 +324,15 @@ describe('processInboundEmailInApp additional authorship paths', () => {
     });
 
     expect(result).toMatchObject({
-      outcome: 'replied',
+      outcome: 'quarantined',
+      reason: 'unauthorized_thread_header_sender',
       matchedBy: 'thread_headers',
       ticketId: 'ticket-thread-1',
     });
     expect(findContactByEmailMock).toHaveBeenCalledWith('sender@example.com', 'tenant-1', {
       ticketId: 'ticket-thread-1',
     });
-    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        ticket_id: 'ticket-thread-1',
-        author_type: 'contact',
-        author_id: undefined,
-        contact_id: undefined,
-      }),
-      'tenant-1'
-    );
+    expect(createCommentFromEmailMock).not.toHaveBeenCalled();
   });
 
   it('T036: new-ticket inbound processing preserves the exact sender email separately when the contact matched through an additional email row', async () => {
@@ -352,6 +353,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'billing@example.com', name: 'Billing Sender' },
+        headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com' },
       }),
     });
 
@@ -397,6 +399,7 @@ describe('processInboundEmailInApp additional authorship paths', () => {
       providerId: 'provider-1',
       emailData: buildEmailData({
         from: { email: 'billing@example.com', name: 'Billing Contact' },
+        headers: { 'authentication-results': 'mx.example; spf=pass smtp.mailfrom=example.com' },
       }),
     });
 
@@ -418,6 +421,63 @@ describe('processInboundEmailInApp additional authorship paths', () => {
             matchedAddress: 'billing@example.com',
             contactEmail: 'primary@example.com',
           }),
+        }),
+      }),
+      'tenant-1'
+    );
+  });
+
+  it('T040: Gmail-shaped Authentication-Results resolves a known contact as email_match', async () => {
+    findContactByEmailMock.mockResolvedValue({
+      contact_id: 'contact-gmail-1',
+      client_id: 'client-gmail-1',
+      user_id: 'client-user-gmail-1',
+      email: 'munjal@joymode.io',
+      name: 'Munjal Thakkar',
+      client_name: 'Joymode Business Solutions',
+    });
+
+    const { processInboundEmailInApp } = await import('../processInboundEmailInApp');
+
+    const result = await processInboundEmailInApp({
+      tenantId: 'tenant-1',
+      providerId: 'provider-1',
+      emailData: buildEmailData({
+        from: { email: 'munjal@joymode.io', name: 'Munjal Thakkar' },
+        headers: {
+          'authentication-results': `mx.google.com;
+       dkim=pass header.i=@techff.onmicrosoft.com header.s=selector1-techff-onmicrosoft-com header.b="cmLi/gLS";
+       arc=pass (i=1 spf=pass spfdomain=joymode.io dkim=pass dkdomain=joymode.io dmarc=pass fromdomain=joymode.io);
+       spf=pass (google.com: domain of munjal@joymode.io designates 2a01:111:f403:c005::5 as permitted sender) smtp.mailfrom=munjal@joymode.io`,
+        },
+      }),
+    });
+
+    expect(result.outcome).toBe('created');
+    expect(findContactByEmailMock).toHaveBeenCalledWith('munjal@joymode.io', 'tenant-1', {
+      defaultClientId: 'default-client-id',
+    });
+    expect(createTicketFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        client_id: 'client-gmail-1',
+        contact_id: 'contact-gmail-1',
+        email_metadata: expect.objectContaining({
+          clientMatchSource: 'email_match',
+          authResults: expect.objectContaining({
+            aligned: { spf: true, dkim: false, dmarc: false },
+            dmarc: null,
+          }),
+        }),
+      }),
+      'tenant-1'
+    );
+    expect(createCommentFromEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        author_type: 'contact',
+        author_id: 'client-user-gmail-1',
+        contact_id: 'contact-gmail-1',
+        metadata: expect.objectContaining({
+          unmatchedSender: false,
         }),
       }),
       'tenant-1'

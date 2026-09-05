@@ -82,7 +82,7 @@
       "linkQuote": "Vincular una cotización existente",
       "loadFailed": "No se pudo cargar la oportunidad",
       "loading": "Cargando oportunidad...",
-      "markLost": "Marque como perdida",
+      "markLost": "Marcar como perdida",
       "markWon": "Marcar como ganada",
       "metadataTitle": "Oportunidad",
       "nextAction": "Siguiente acción",
@@ -147,7 +147,7 @@
       "plusOneTime": "+ {{amount}} una vez",
       "thisQuarter": "Este trimestre ({{q}})",
       "weighted": "{{stage}} · ponderado {{pct}}%",
-      "won": "Ganó este período"
+      "won": "Ganado en este período"
     },
     "linkQuoteDialog": {
       "confirm": "cotización de enlace",
@@ -171,8 +171,8 @@
       "notesPlaceholder": "¿Qué debería saber el equipo si esto vuelve?",
       "reason": "Motivo",
       "reasonPlaceholder": "¿Por qué no avanzó?",
-      "submit": "Marque como perdida",
-      "title": "Marque como perdida"
+      "submit": "Marcar como perdida",
+      "title": "Marcar como perdida"
     },
     "lossReason": {
       "chose_competitor": "Elige un competidor",
@@ -228,7 +228,7 @@
         "reviewPipeline": "Revisar el embudo de ventas",
         "viewAssessmentDeals": "Ver ofertas de evaluación"
       },
-      "markLost": "Marque como perdida",
+      "markLost": "Marcar como perdida",
       "moneyFound": "dinero encontrado",
       "moneyFoundSource": "de facturación, contratos y activos",
       "needsYou_one": "{{count}} cosa requiere su atención hoy.",
@@ -349,14 +349,14 @@
     "stage": {
       "assessment": "Evaluación",
       "identified": "Identificado",
-      "lost": "perdido",
+      "lost": "Perdido",
       "proposed": "Propuesto",
       "qualified": "Calificado",
-      "verbal": "verbal",
+      "verbal": "Acuerdo verbal",
       "won": "Ganado"
     },
     "status": {
-      "lost": "perdido",
+      "lost": "Perdido",
       "won": "Ganado"
     },
     "steps": {

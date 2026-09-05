@@ -9,17 +9,29 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Switch } from '@alga-psa/ui/components/Switch';
 import { ExternalLink, Link2, RefreshCw } from 'lucide-react';
 import {
   disconnectQbo,
+  forceFinalizeQboDisconnect,
+  getQboAutomatedSalesTaxMode,
   getQboConnectionStatus,
-  saveQboCredentials
+  saveQboCredentials,
+  setQboAutomatedSalesTaxMode
 } from '../../../actions/qboActions';
 import { QboLiveMappingManager } from '../../qbo/QboLiveMappingManager';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useAccountingCapabilities } from './useAccountingCapabilities';
 
 type QboStatus = Awaited<ReturnType<typeof getQboConnectionStatus>>;
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * The setup guide lives in this repository rather than on a docs site, so the
+ * link points at the published source. Update both together.
+ */
+const QBO_SETUP_GUIDE_URL =
+  'https://github.com/Nine-Minds/alga-psa/blob/main/docs/integrations/quickbooks.md';
 
 interface QboIntegrationSettingsProps {
   syncHealthSlot?: React.ReactNode;
@@ -36,10 +48,22 @@ function describeCallbackError(code: string | null, t: TranslateFn): string | nu
       return t('integrations.qbo.settings.callback.oauthFailed', { defaultValue: 'The QuickBooks OAuth callback failed. Try connecting again. If the problem persists, review your redirect URI and scopes.' });
     case 'invalid_state':
       return t('integrations.qbo.settings.callback.invalidState', { defaultValue: 'The QuickBooks OAuth state was invalid or expired. Start the connect flow again.' });
+    case 'state_replayed':
+      return t('integrations.qbo.settings.callback.stateReplayed', { defaultValue: 'This QuickBooks connection request was already used. Start the connect flow again.' });
+    case 'session_expired':
+      return t('integrations.qbo.settings.callback.sessionExpired', { defaultValue: 'Your session is no longer valid. Sign in and start the QuickBooks connection again.' });
+    case 'user_mismatch':
+      return t('integrations.qbo.settings.callback.userMismatch', { defaultValue: 'This QuickBooks connection request belongs to another user. Sign in as the user who started it and try again.' });
+    case 'tenant_mismatch':
+      return t('integrations.qbo.settings.callback.tenantMismatch', { defaultValue: 'This QuickBooks connection request belongs to another workspace. Sign in to the correct workspace and start again.' });
+    case 'forbidden':
+      return t('integrations.qbo.settings.callback.forbidden', { defaultValue: 'You no longer have permission to manage accounting connections. Ask an administrator for access.' });
     case 'missing_params':
       return t('integrations.qbo.settings.callback.missingParams', { defaultValue: 'The QuickBooks callback was missing required parameters. Start the connect flow again.' });
     case 'access_denied':
       return t('integrations.qbo.settings.callback.accessDenied', { defaultValue: 'QuickBooks access was denied before the connection completed.' });
+    case 'disconnect_in_progress':
+      return t('integrations.qbo.settings.callback.disconnectInProgress', { defaultValue: 'QuickBooks is being disconnected. Finish or finalize the disconnect before connecting again.' });
     default:
       return code ? t('integrations.qbo.settings.callback.generic', { defaultValue: 'QuickBooks returned an OAuth error: {{code}}', code }) : null;
   }
@@ -57,6 +81,7 @@ function statusBadgeVariant(status?: 'active' | 'expired' | 'error'): 'success' 
 
 export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot }: QboIntegrationSettingsProps = {}) {
   const { t } = useTranslation('msp/integrations');
+  const caps = useAccountingCapabilities();
   const searchParams = useSearchParams();
   const [status, setStatus] = React.useState<QboStatus | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -66,6 +91,8 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const [successMessage, setSuccessMessage] = React.useState<string | null>(null);
   const [clientId, setClientId] = React.useState('');
   const [clientSecret, setClientSecret] = React.useState('');
+  const [automatedSalesTax, setAutomatedSalesTax] = React.useState(false);
+  const [savingAutomatedSalesTax, setSavingAutomatedSalesTax] = React.useState(false);
 
   const oauthStatus = searchParams?.get('qbo_status');
   const oauthError = React.useMemo(
@@ -79,12 +106,55 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
     try {
       const result = await getQboConnectionStatus();
       setStatus(result);
+
+      const realmId = result.defaultConnection?.realmId ?? null;
+      if (realmId) {
+        const astResult = await getQboAutomatedSalesTaxMode({ realmId });
+        setAutomatedSalesTax('enabled' in astResult ? astResult.enabled : false);
+      } else {
+        setAutomatedSalesTax(false);
+      }
     } catch (err) {
       setError(t('integrations.qbo.settings.errors.load', { defaultValue: 'Failed to load QuickBooks settings.' }));
     } finally {
       setLoading(false);
     }
   }, [t]);
+
+  const handleAutomatedSalesTaxChange = async (enabled: boolean) => {
+    const realmId = status?.defaultConnection?.realmId;
+    if (!realmId) return;
+
+    setSavingAutomatedSalesTax(true);
+    setError(null);
+    setSuccessMessage(null);
+    // Optimistic, then reconciled by load() — the switch must not feel laggy.
+    setAutomatedSalesTax(enabled);
+
+    try {
+      const result = await setQboAutomatedSalesTaxMode({ realmId, enabled });
+      if (!result.success) {
+        setAutomatedSalesTax(!enabled);
+        setError(result.error ?? t('integrations.qbo.settings.errors.automatedSalesTax', { defaultValue: 'Failed to update Automated Sales Tax mode.' }));
+        return;
+      }
+      setSuccessMessage(
+        enabled
+          ? t('integrations.qbo.settings.automatedSalesTax.enabledMessage', { defaultValue: 'QuickBooks will now calculate sales tax on delegated invoices for this company.' })
+          : t('integrations.qbo.settings.automatedSalesTax.disabledMessage', { defaultValue: 'Automated Sales Tax mode is off. Alga keeps calculating tax for this company.' })
+      );
+      await load();
+    } catch {
+      // A throw here — the action never reached the server, or the deployment
+      // restarted mid-click — must not leave the optimistic flip standing as if
+      // it saved. Which way tax is calculated is too consequential to show a
+      // state we have no confirmation of.
+      setAutomatedSalesTax(!enabled);
+      setError(t('integrations.qbo.settings.errors.automatedSalesTax', { defaultValue: 'Failed to update Automated Sales Tax mode.' }));
+    } finally {
+      setSavingAutomatedSalesTax(false);
+    }
+  };
 
   React.useEffect(() => {
     void load();
@@ -134,12 +204,50 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
 
     try {
       const result = await disconnectQbo();
-      if (!result.success) {
-        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+      if (result.status === 'disconnected') {
+        setSuccessMessage(t('integrations.qbo.settings.disconnectSuccess', { defaultValue: 'The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.' }));
+        await load();
         return;
       }
 
-      setSuccessMessage(t('integrations.qbo.settings.disconnectSuccess', { defaultValue: 'The stored QuickBooks connection was removed. Tenant-owned QuickBooks app credentials were preserved.' }));
+      if (result.status === 'pending' || result.status === 'partial') {
+        setSuccessMessage(t('integrations.qbo.settings.disconnectPending', { defaultValue: 'QuickBooks is being disconnected. Sync and exports are paused until provider cleanup completes; the disconnect keeps retrying automatically.' }));
+        await load();
+        return;
+      }
+
+      if (result.status === 'failed_permanent') {
+        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+        await load();
+        return;
+      }
+
+      setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to disconnect QuickBooks.' }));
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleRetryDisconnect = async () => {
+    await handleDisconnect();
+  };
+
+  const handleForceFinalize = async () => {
+    const reason = window.prompt(
+      t('integrations.qbo.settings.disconnect.forceFinalizePrompt', { defaultValue: 'Reason for force-finalizing the QuickBooks disconnect (recorded in the audit log):' })
+    );
+    if (!reason?.trim()) return;
+
+    setDisconnecting(true);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await forceFinalizeQboDisconnect({ reason: reason.trim() });
+      if (!result.success) {
+        setError(result.error ?? t('integrations.qbo.settings.errors.disconnect', { defaultValue: 'Failed to finalize the QuickBooks disconnect.' }));
+        return;
+      }
+      setSuccessMessage(t('integrations.qbo.settings.disconnectForceFinalized', { defaultValue: 'The QuickBooks disconnect was force-finalized. Provider cleanup could not be confirmed, so the credentials were removed locally with an audit record.' }));
       await load();
     } finally {
       setDisconnecting(false);
@@ -149,6 +257,27 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
   const readyToSave = clientId.trim().length > 0 && clientSecret.trim().length > 0;
   const canConnect = Boolean(status?.credentials.ready);
   const defaultConnection = status?.defaultConnection;
+  const canManageConnections = caps.connectionsManage;
+  const canManageMappings = caps.mappingsManage;
+
+  // Wait for the capability check to resolve before hiding the panel, so a
+  // capable user never sees a brief "no permission" card while it loads.
+  if (caps.loaded && !caps.hasAny) {
+    return (
+      <div className="space-y-6" id="qbo-integration-settings">
+        <Card id="qbo-integration-no-permission-card">
+          <CardHeader>
+            <CardTitle>{t('integrations.qbo.settings.title', { defaultValue: 'QuickBooks Online' })}</CardTitle>
+            <CardDescription>
+              {t('integrations.qbo.settings.noPermissionDescription', { defaultValue: 'You do not have permission to view or configure accounting integrations.' })}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+  const disconnectPending = Boolean(status?.disconnect && status.disconnect.status !== 'finalized');
+  const disconnectFailedPermanent = status?.disconnect?.status === 'failed_permanent';
 
   return (
     <div className="space-y-6" id="qbo-integration-settings">
@@ -164,6 +293,14 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
         </Alert>
       ) : null}
 
+      {!canManageConnections ? (
+        <Alert variant="info" id="qbo-connection-manage-permission-notice">
+          <AlertDescription>
+            {t('integrations.qbo.settings.connectionsPermissionNotice', { defaultValue: 'You can view QuickBooks settings, but saving credentials, connecting, and disconnecting require the manage-connections capability. Ask an administrator to grant it.' })}
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
       <Card id="qbo-integration-overview-card">
         <CardHeader>
           <CardTitle>{t('integrations.qbo.settings.title', { defaultValue: 'QuickBooks Online' })}</CardTitle>
@@ -176,6 +313,18 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
             <p className="font-medium text-foreground">{t('integrations.qbo.settings.howItWorksTitle', { defaultValue: 'How live QuickBooks works in this release' })}</p>
             <p className="mt-2">
               {t('integrations.qbo.settings.howItWorksDescription', { defaultValue: 'Save QuickBooks app credentials here, complete the Intuit OAuth flow, and AlgaPSA will use the connected QuickBooks company as the default live context for exports and mappings.' })}
+            </p>
+            <p className="mt-3">
+              <a
+                id="qbo-setup-guide-link"
+                href={QBO_SETUP_GUIDE_URL}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 font-medium text-foreground underline underline-offset-4"
+              >
+                {t('integrations.qbo.settings.setupGuideLink', { defaultValue: 'QuickBooks setup guide' })}
+                <ExternalLink className="h-4 w-4 opacity-80" />
+              </a>
             </p>
           </div>
 
@@ -195,9 +344,9 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
 
       <Card id="qbo-integration-credentials-card">
         <CardHeader>
-          <CardTitle>{t('integrations.qbo.settings.tenantOauthTitle', { defaultValue: 'Tenant-Owned OAuth App' })}</CardTitle>
+          <CardTitle>{t('integrations.qbo.settings.tenantOauthTitle', { defaultValue: 'Intuit App Credentials' })}</CardTitle>
           <CardDescription>
-            {t('integrations.qbo.settings.tenantOauthDescription', { defaultValue: 'Paste the Intuit app credentials registered for this tenant, or leave blank to use the application-level QuickBooks app if one is configured. Secret values are never returned to the browser after they are saved.' })}
+            {t('integrations.qbo.settings.tenantOauthDescription', { defaultValue: 'Which Intuit app this tenant connects through. Secret values are never returned to the browser after they are saved.' })}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -205,6 +354,19 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
             <div className="text-sm text-muted-foreground">{t('integrations.qbo.settings.loading', { defaultValue: 'Loading QuickBooks settings…' })}</div>
           ) : (
             <>
+              {/* Whether a shared app exists is the whole difference between
+                  "click Connect" and "go register an Intuit app first", so it is
+                  stated before the credential fields rather than after them. */}
+              <Alert variant="info" id="qbo-credential-source-alert">
+                <AlertDescription>
+                  {status?.credentials.source === 'app'
+                    ? t('integrations.qbo.settings.credentialSource.app', { defaultValue: 'This deployment provides a shared Intuit app, so you can connect QuickBooks without registering one. Fill in the fields below only if you want this tenant to use its own Intuit app instead.' })
+                    : status?.credentials.source === 'tenant'
+                      ? t('integrations.qbo.settings.credentialSource.tenant', { defaultValue: 'This tenant connects through its own Intuit app, using the credentials stored below.' })
+                      : t('integrations.qbo.settings.credentialSource.none', { defaultValue: 'No Intuit app is available yet. Register one in the Intuit Developer portal and paste its client ID and secret below — the setup guide walks through it.' })}
+                </AlertDescription>
+              </Alert>
+
               <div className="rounded-lg border bg-muted/20 p-4 space-y-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">{t('integrations.qbo.settings.redirectUri', { defaultValue: 'Redirect URI' })}</p>
@@ -242,6 +404,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                   <Input
                     id="qbo-client-id"
                     value={clientId}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientId(event.target.value)}
                     placeholder={t('integrations.qbo.settings.clientIdPlaceholder', { defaultValue: 'Paste your Intuit app client ID' })}
                   />
@@ -262,6 +425,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                     id="qbo-client-secret"
                     type="password"
                     value={clientSecret}
+                    disabled={!canManageConnections}
                     onChange={(event) => setClientSecret(event.target.value)}
                     placeholder={t('integrations.qbo.settings.clientSecretPlaceholder', { defaultValue: 'Paste your Intuit app client secret' })}
                   />
@@ -310,7 +474,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                   id="qbo-settings-save"
                   type="button"
                   onClick={() => void handleSave()}
-                  disabled={!readyToSave || saving}
+                  disabled={!readyToSave || saving || !canManageConnections}
                 >
                   {saving
                     ? t('integrations.qbo.settings.actions.saving', { defaultValue: 'Saving…' })
@@ -330,6 +494,38 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {status?.disconnect && status.disconnect.status !== 'finalized' ? (
+            <div className="rounded-lg border border-amber-300 bg-amber-50 p-4 dark:border-amber-500/40 dark:bg-amber-500/10" id="qbo-disconnect-progress">
+              <p className="text-sm font-medium text-foreground">
+                {t('integrations.qbo.settings.disconnect.inProgressTitle', { defaultValue: 'QuickBooks disconnect in progress' })}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t('integrations.qbo.settings.disconnect.inProgressDescription', { defaultValue: 'Provider grants are being revoked. Sync and exports stay paused until every connected company is confirmed revoked.' })}
+              </p>
+              <ul className="mt-3 space-y-1.5 text-xs">
+                {status.disconnect.targets.map((target) => (
+                  <li key={target.targetId} className="flex items-center justify-between gap-2">
+                    <span className="truncate font-mono">{target.targetId}</span>
+                    <Badge variant={target.status === 'revoked' ? 'success' : target.status === 'failed_permanent' ? 'error' : 'secondary'}>
+                      {target.status === 'revoked'
+                        ? t('integrations.qbo.settings.disconnect.targetRevoked', { defaultValue: 'revoked' })
+                        : target.status === 'failed_permanent'
+                          ? t('integrations.qbo.settings.disconnect.targetFailed', { defaultValue: 'needs attention' })
+                          : t('integrations.qbo.settings.disconnect.targetPending', { defaultValue: 'pending' })}
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+              {status.disconnect.status === 'failed_permanent' ? (
+                <Alert variant="destructive" className="mt-3">
+                  <AlertDescription>
+                    {t('integrations.qbo.settings.disconnect.failedPermanentDescription', { defaultValue: 'Provider cleanup hit a permanent error. You can retry, or force-finalize to remove the stored credentials with an audit record.' })}
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+            </div>
+          ) : null}
+
           {defaultConnection ? (
             <div className="rounded-lg border bg-muted/20 p-4 text-sm">
               <div className="flex flex-wrap items-center gap-2">
@@ -354,6 +550,29 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
             </Alert>
           )}
 
+          {defaultConnection ? (
+            <div className="rounded-lg border p-4" id="qbo-automated-sales-tax-section">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label htmlFor="qbo-automated-sales-tax-toggle" className="text-sm font-medium">
+                    {t('integrations.qbo.settings.automatedSalesTax.label', { defaultValue: 'QuickBooks calculates sales tax' })}
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    {t('integrations.qbo.settings.automatedSalesTax.hint', { defaultValue: 'Turn this on when this QuickBooks company uses Automated Sales Tax, so exported invoices are taxed by Intuit from the customer address and the tax comes back to Alga.' })}
+                  </p>
+                </div>
+                {/* No `label` prop: Switch renders its own label beside the
+                    thumb when given one, which would repeat the Label above. */}
+                <Switch
+                  id="qbo-automated-sales-tax-toggle"
+                  checked={automatedSalesTax}
+                  disabled={savingAutomatedSalesTax || loading || !canManageConnections}
+                  onCheckedChange={(checked) => void handleAutomatedSalesTaxChange(checked)}
+                />
+              </div>
+            </div>
+          ) : null}
+
           {status?.error && defaultConnection ? (
             <Alert variant={status.connected ? 'info' : 'destructive'}>
               <AlertDescription>{status.error}</AlertDescription>
@@ -364,7 +583,7 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           <Button
             id="qbo-connect-button"
             type="button"
-            disabled={!canConnect}
+            disabled={!canConnect || !canManageConnections || disconnectPending}
             onClick={() => window.location.assign('/api/integrations/qbo/connect')}
           >
             {defaultConnection
@@ -373,11 +592,33 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
+            {disconnectPending ? (
+              <Button
+                id="qbo-retry-disconnect-button"
+                type="button"
+                variant="outline"
+                disabled={disconnecting || !canManageConnections}
+                onClick={() => void handleRetryDisconnect()}
+              >
+                {t('integrations.qbo.settings.actions.retryDisconnect', { defaultValue: 'Retry Disconnect' })}
+              </Button>
+            ) : null}
+            {disconnectFailedPermanent ? (
+              <Button
+                id="qbo-force-finalize-disconnect-button"
+                type="button"
+                variant="destructive"
+                disabled={disconnecting || !canManageConnections}
+                onClick={() => void handleForceFinalize()}
+              >
+                {t('integrations.qbo.settings.actions.forceFinalizeDisconnect', { defaultValue: 'Force Finalize' })}
+              </Button>
+            ) : null}
             <Button
               id="qbo-disconnect-button"
               type="button"
               variant="destructive"
-              disabled={!defaultConnection || disconnecting}
+              disabled={(!defaultConnection && !disconnectPending) || disconnecting || !canManageConnections}
               onClick={() => void handleDisconnect()}
             >
               {disconnecting
@@ -385,12 +626,14 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                 : t('integrations.qbo.settings.actions.disconnect', { defaultValue: 'Disconnect QuickBooks' })}
             </Button>
 
-            <Button id="qbo-open-accounting-exports" asChild variant="outline">
-              <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
-                {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
-                <ExternalLink className="h-4 w-4 opacity-80" />
-              </Link>
-            </Button>
+            {caps.exportsExecute && (
+              <Button id="qbo-open-accounting-exports" asChild variant="outline">
+                <Link href="/msp/billing?tab=accounting-exports" className="inline-flex items-center gap-2">
+                  {t('integrations.csv.settings.exports.openButton', { defaultValue: 'Open Accounting Exports' })}
+                  <ExternalLink className="h-4 w-4 opacity-80" />
+                </Link>
+              </Button>
+            )}
           </div>
         </CardFooter>
       </Card>
@@ -414,7 +657,15 @@ export default function QboIntegrationSettings({ syncHealthSlot, onboardingSlot 
                 {t('integrations.qbo.settings.mapping.alert', { defaultValue: 'QuickBooks items, tax codes, and terms are loaded from the connected company so live exports can keep using the first stored QuickBooks connection in v1.' })}
               </AlertDescription>
             </Alert>
-            <QboLiveMappingManager defaultConnection={defaultConnection} />
+            {canManageMappings ? (
+              <QboLiveMappingManager defaultConnection={defaultConnection} />
+            ) : (
+              <Alert variant="info" id="qbo-mapping-permission-notice">
+                <AlertDescription>
+                  {t('integrations.qbo.settings.mapping.permissionNotice', { defaultValue: 'You can view the connected company, but editing mappings requires the manage-mappings capability. Ask an administrator to grant it.' })}
+                </AlertDescription>
+              </Alert>
+            )}
           </CardContent>
         </Card>
       ) : (

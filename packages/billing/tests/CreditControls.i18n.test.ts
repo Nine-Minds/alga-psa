@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -35,8 +36,8 @@ describe('Credits control i18n wiring contract', () => {
       '../../../server/public/locales/xx/msp/credits.json',
     );
 
-    expect(getLeaf(pseudo, 'actions.addCredit')).toBe('11111');
-    expect(getLeaf(pseudo, 'actions.cancel')).toBe('11111');
-    expect(getLeaf(pseudo, 'addCredit.fields.client')).toBe('11111');
+    expect(getLeaf(pseudo, 'actions.addCredit')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'actions.cancel')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'addCredit.fields.client')).toMatch(pseudoPattern('xx'));
   });
 });

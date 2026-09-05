@@ -41,10 +41,16 @@ function inboundTicketDestinationActionErrorFrom(error: unknown): InboundTicketD
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '23502') {
-    return actionError(`Missing required inbound ticket destination field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required inbound ticket destination field: ${dbError.column}.`,
+          'msp/clients:errors.inboundTicketDestination.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required inbound ticket destination field.', 'msp/clients:errors.inboundTicketDestination.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected inbound ticket destination is no longer valid. Please refresh and try again.');
+    return actionError('The selected inbound ticket destination is no longer valid. Please refresh and try again.', 'msp/clients:errors.inboundTicketDestination.referenceInvalid');
   }
 
   return null;

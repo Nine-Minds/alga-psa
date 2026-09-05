@@ -1,7 +1,7 @@
 [
   {
     "id": "F001",
-    "description": "The prepaid balance alert settings card is absent, without residual layout, while release-v1.5-feature is loading, unavailable, or disabled.",
+    "description": "The prepaid balance alert settings card is absent, without residual layout, while release-v1-5-feature is loading, unavailable, or disabled.",
     "implemented": true,
     "prdRefs": [
       "Requirements > Feature gating",
@@ -10,7 +10,7 @@
   },
   {
     "id": "F002",
-    "description": "The dedicated settings read and update actions independently fail closed behind release-v1.5-feature and retain billing_settings.read and billing_settings.update permissions.",
+    "description": "The dedicated settings read and update actions independently fail closed behind release-v1-5-feature and retain billing_settings.read and billing_settings.update permissions.",
     "implemented": true,
     "prdRefs": [
       "Requirements > Feature gating",
@@ -20,7 +20,7 @@
   },
   {
     "id": "F003",
-    "description": "The scan subscriber performs no evaluation, alert, delivery, or notification write when release-v1.5-feature is disabled or its checker is unavailable.",
+    "description": "The scan subscriber performs no evaluation, alert, delivery, or notification write when release-v1-5-feature is disabled or its checker is unavailable.",
     "implemented": true,
     "prdRefs": [
       "Requirements > Feature gating",
@@ -319,7 +319,7 @@
   },
   {
     "id": "F038",
-    "description": "Disabling release-v1.5-feature after rollout makes scheduling effects inert without deleting nullable policy settings, alert history, or delivery audit rows.",
+    "description": "Disabling release-v1-5-feature after rollout makes scheduling effects inert without deleting nullable policy settings, alert history, or delivery audit rows.",
     "implemented": true,
     "prdRefs": [
       "Rollout / Migration",

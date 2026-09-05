@@ -1,0 +1,26 @@
+[
+  {
+    "id": "F001",
+    "description": "Hide Accounting Exports billing navigation and tab availability without exports_execute",
+    "implemented": true,
+    "prdRefs": ["Goals", "Functional Requirements"]
+  },
+  {
+    "id": "F002",
+    "description": "Render a generic blocked presentation for unauthorized direct Accounting Exports URLs",
+    "implemented": true,
+    "prdRefs": ["Goals", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Render denied list results as access denied and suppress all export controls",
+    "implemented": true,
+    "prdRefs": ["Goals", "Security / Permissions"]
+  },
+  {
+    "id": "F004",
+    "description": "Show integration-settings Accounting Exports links only with exports_execute",
+    "implemented": true,
+    "prdRefs": ["Functional Requirements"]
+  }
+]

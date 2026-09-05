@@ -12,7 +12,6 @@ import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces'
 import { ISO8601String } from 'server/src/types/types.d';
 import { TestContext } from '../../../../test-utils/testContext';
 import {
-  resetDatabase,
   createCleanupHook,
   cleanupTables
 } from '../../../../test-utils/dbReset';
@@ -24,6 +23,17 @@ import {
   dateHelpers
 } from '../../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
+
+// createTimePeriodSettings always writes the semi-monthly columns (defaulting
+// them), and every read path validates them as numbers. Fixtures that insert a
+// bare row leave NULLs behind and fail that validation, so fill them here.
+const withSettingsDefaults = <T extends object>(setting: T) => ({
+  start_month: 1,
+  start_day_of_month: 1,
+  end_month: 12,
+  end_day_of_month: 0,
+  ...setting,
+});
 
 describe('Time Periods Actions', () => {
   const context = new TestContext({
@@ -46,8 +56,11 @@ describe('Time Periods Actions', () => {
   });
 
   beforeEach(async () => {
-    // Reset database state
-    await resetDatabase(context.db);
+    // Roll the per-test transaction back and open a fresh one. resetDatabase()
+    // used to run here: it destroys the handle it is given and drops the
+    // database out from under the context, so every query after the first
+    // beforeEach failed with "not queryable".
+    await context.reset();
 
     // Set up mocks
     setupCommonMocks({ tenantId: context.tenantId });
@@ -67,7 +80,7 @@ describe('Time Periods Actions', () => {
       updated_at: createTestDateISO({ year: 2024, month: 1, day: 1 })
     };
 
-    await tenantTable('time_period_settings').insert(settings);
+    await tenantTable('time_period_settings').insert(withSettingsDefaults(settings));
   });
 
   // Use cleanup hook for test isolation

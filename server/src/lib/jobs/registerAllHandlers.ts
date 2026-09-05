@@ -13,6 +13,12 @@ import {
   ProjectDateReadinessJobData,
 } from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
+import { handleMigrationApplyJob, MigrationApplyJobData } from './handlers/migrationJobHandler';
+import {
+  KB_ARTICLE_IMPORT_JOB,
+  kbArticleImportHandler,
+  KbArticleImportJobData,
+} from '@alga-psa/jobs/handlers/kbArticleImportHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import {
   expiringCreditsNotificationHandler,
@@ -66,6 +72,17 @@ import {
   TeamsMeetingArtifactSubscriptionRenewalJobData,
   TeamsMeetingArtifactNotificationJobData,
 } from '@alga-psa/jobs/handlers/teamsMeetingArtifactWebhookHandler';
+import {
+  renewTelephonyCallSubscriptions,
+  processTelephonyCallNotification,
+  TelephonyCallSubscriptionRenewalJobData,
+  TelephonyCallNotificationJobData,
+} from '@alga-psa/jobs/handlers/telephonyCallNotificationHandler';
+import {
+  telephonyCallArtifactSweepHandler,
+  TelephonyCallArtifactSweepJobData,
+  TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+} from '@alga-psa/jobs/handlers/telephonyCallArtifactHandler';
 import {
   teamsMeetingCleanupHandler,
   TeamsMeetingCleanupJobData,
@@ -139,6 +156,11 @@ import {
   inboundEmailRecoveryHandler,
   InboundEmailRecoveryJobData,
 } from './handlers/inboundEmailRecoveryHandler';
+import {
+  PUBLISH_SCHEDULED_COMMENT_JOB,
+  publishScheduledCommentHandler,
+  PublishScheduledCommentJobData,
+} from './handlers/publishScheduledCommentHandler';
 
 /**
  * Options for registering handlers
@@ -183,6 +205,12 @@ export async function registerAllJobHandlers(
   const resolvedStorageService = storageService ?? new StorageService();
 
   const registerOpts = { force };
+
+  JobHandlerRegistry.register<PublishScheduledCommentJobData & BaseJobData>({
+    name: PUBLISH_SCHEDULED_COMMENT_JOB,
+    handler: async (_jobId, data) => publishScheduledCommentHandler(data),
+    retry: { maxAttempts: 3 },
+  }, registerOpts);
 
   // ============================================================================
   // BILLING & INVOICE HANDLERS
@@ -360,6 +388,35 @@ export async function registerAllJobHandlers(
         await handleAssetImportJob({ id: jobId, data } as Job<AssetImportJobData>);
       },
       retry: { maxAttempts: 3 },
+      timeoutMs: 600000, // 10 minutes for large imports
+    },
+    registerOpts
+  );
+
+  // AMP migration apply handler. Retries are safe by construction: the
+  // identity ledger skips every record already applied under its source key.
+  JobHandlerRegistry.register<MigrationApplyJobData & BaseJobData>(
+    {
+      name: 'migration_apply',
+      handler: async (jobId, data) => {
+        await handleMigrationApplyJob({ id: jobId, data } as any);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 3600000, // 1 hour for large packages
+    },
+    registerOpts
+  );
+
+  // KB article import handler — parses staged markdown/HTML off the web
+  // request. Retries are safe: kb_import_files rows are consumed only while
+  // they are still 'pending'.
+  JobHandlerRegistry.register<KbArticleImportJobData & BaseJobData>(
+    {
+      name: KB_ARTICLE_IMPORT_JOB,
+      handler: async (jobId, data) => {
+        await kbArticleImportHandler(jobId, data);
+      },
+      retry: { maxAttempts: 2 },
       timeoutMs: 600000, // 10 minutes for large imports
     },
     registerOpts
@@ -573,6 +630,39 @@ export async function registerAllJobHandlers(
           await processTeamsMeetingArtifactNotification(data);
         },
         retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallSubscriptionRenewalJobData & BaseJobData>(
+      {
+        name: 'renew-telephony-call-subscriptions',
+        handler: async (_jobId, data) => {
+          await renewTelephonyCallSubscriptions(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallNotificationJobData & BaseJobData>(
+      {
+        name: 'process-telephony-call-notification',
+        handler: async (_jobId, data) => {
+          await processTelephonyCallNotification(data);
+        },
+        retry: { maxAttempts: 3 },
+      },
+      registerOpts
+    );
+
+    JobHandlerRegistry.register<TelephonyCallArtifactSweepJobData & BaseJobData>(
+      {
+        name: TELEPHONY_CALL_ARTIFACT_SWEEP_JOB,
+        handler: async (_jobId, data) => {
+          await telephonyCallArtifactSweepHandler(data);
+        },
+        retry: { maxAttempts: 2 },
       },
       registerOpts
     );
@@ -795,6 +885,7 @@ export function getAvailableJobHandlers(): string[] {
     'opportunity-generators',
     // Assets & Import
     'asset_import',
+    KB_ARTICLE_IMPORT_JOB,
     // Usage & Reconciliation
     SEARCH_VISIBLE_USER_REINDEX_JOB_NAME,
     SEARCH_RECONCILE_JOB_NAME,
@@ -815,7 +906,7 @@ export function getAvailableJobHandlers(): string[] {
       process.env.EDITION === 'enterprise'
       || process.env.EDITION === 'ee'
       || process.env.NEXT_PUBLIC_EDITION === 'enterprise'
-        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification']
+        ? ['renew-teams-meeting-artifact-subscriptions', 'process-teams-meeting-artifact-notification', 'renew-telephony-call-subscriptions', 'process-telephony-call-notification', TELEPHONY_CALL_ARTIFACT_SWEEP_JOB]
         : []
     ),
     // SLA

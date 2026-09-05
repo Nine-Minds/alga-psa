@@ -12,6 +12,8 @@ type Criteria = Record<string, unknown>;
 const dbState = vi.hoisted(() => ({
   comments: new Map<string, { comment_id: string; thread_id: string; parent_comment_id: string | null }>(),
   commentThreads: new Map<string, { thread_id: string; ticket_id: string }>(),
+  tickets: new Map<string, Record<string, unknown>>(),
+  boards: new Map<string, Record<string, unknown>>(),
   emailLogs: [] as Record<string, unknown>[],
 }));
 
@@ -88,8 +90,10 @@ function makeQueryBuilder(table: string) {
   const whereCriteria: Criteria = {};
   const builder = {
     select: vi.fn(() => builder),
-    where: vi.fn((criteria: Criteria) => {
-      if (typeof criteria === 'object') {
+    where: vi.fn((criteria: Criteria | string, value?: unknown) => {
+      if (typeof criteria === 'string') {
+        whereCriteria[criteria] = value;
+      } else if (typeof criteria === 'object') {
         Object.assign(whereCriteria, criteria);
       }
       return builder;
@@ -118,6 +122,16 @@ function makeQueryBuilder(table: string) {
           .filter((comment) => comment.thread_id === threadId)
           .at(-1);
         return latest ? { parentCommentId: latest.comment_id } : null;
+      }
+
+      if (table === 'tickets') {
+        const ticketId = whereCriteria.ticket_id ? String(whereCriteria.ticket_id) : null;
+        return ticketId ? dbState.tickets.get(ticketId) ?? null : null;
+      }
+
+      if (table === 'boards') {
+        const boardId = whereCriteria.board_id ? String(whereCriteria.board_id) : null;
+        return boardId ? dbState.boards.get(boardId) ?? null : null;
       }
 
       if (table === 'comment_threads') {
@@ -161,6 +175,12 @@ function buildEmailData(overrides: Partial<EmailMessageDetails> = {}): EmailMess
     subject: 'Re: Round trip',
     body: { text: 'Inbound response', html: undefined },
     attachments: [],
+    // Provider-fetched mail always carries the receiving MTA's
+    // Authentication-Results; contact attribution now needs an aligned pass.
+    headers: {
+      'Authentication-Results':
+        'mx.google.com; dkim=pass header.d=example.com; spf=pass smtp.mailfrom=client@example.com',
+    },
     ...overrides,
   };
 }
@@ -210,6 +230,8 @@ describe('email thread outbound/inbound round trip', () => {
     vi.clearAllMocks();
     dbState.comments.clear();
     dbState.commentThreads.clear();
+    dbState.tickets.clear();
+    dbState.boards.clear();
     dbState.emailLogs.length = 0;
 
     mocks.parseEmailReplyBody.mockResolvedValue({
@@ -256,11 +278,39 @@ describe('email thread outbound/inbound round trip', () => {
     const threadId = 'thread-t044';
     const outboundCommentId = 'outbound-comment-t044';
 
+    const clientId = 'client-t044';
+    const boardId = 'board-t044';
+
     dbState.commentThreads.set(threadId, { thread_id: threadId, ticket_id: ticketId });
     dbState.comments.set(outboundCommentId, {
       comment_id: outboundCommentId,
       thread_id: threadId,
       parent_comment_id: null,
+    });
+    // The thread-header hijack guard quarantines thread-header matches from
+    // senders that are not the ticket's client contact / internal user / active
+    // watcher. This round trip is a legitimate reply from the ticket's own
+    // client contact, so model the ticket (with its client) and resolve the
+    // sender to that client's contact.
+    dbState.tickets.set(ticketId, {
+      ticket_id: ticketId,
+      board_id: boardId,
+      status_id: null,
+      is_closed: false,
+      closed_at: null,
+      client_id: clientId,
+      attributes: {},
+    });
+    dbState.boards.set(boardId, {
+      inbound_reply_reopen_enabled: false,
+      inbound_reply_reopen_cutoff_hours: 168,
+      inbound_reply_reopen_status_id: null,
+      inbound_reply_ai_ack_suppression_enabled: false,
+    });
+    mocks.findContactByEmail.mockResolvedValue({
+      contact_id: 'contact-t044',
+      user_type: 'client',
+      client_id: clientId,
     });
 
     const service = new TestEmailService({

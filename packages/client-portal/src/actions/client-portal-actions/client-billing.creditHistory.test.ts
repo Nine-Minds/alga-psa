@@ -257,6 +257,7 @@ describe('getClientCreditHistory portal action', () => {
 
     await expect(getClientCreditHistory()).resolves.toEqual({
       permissionError: 'Unauthorized to access billing data',
+      messageKey: 'client-portal:errors.access.billingData',
     });
   });
 
@@ -266,6 +267,7 @@ describe('getClientCreditHistory portal action', () => {
 
     await expect(getClientCreditHistory()).resolves.toEqual({
       permissionError: 'Unauthorized',
+      messageKey: 'client-portal:errors.access.unauthorized',
     });
   });
 });

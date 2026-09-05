@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import {
   setupCommonMocks,
   mockNextHeaders,
@@ -17,11 +17,6 @@ import {
   createTestEnvironment
 } from '../../../../test-utils/testDataFactory';
 import {
-  resetDatabase,
-  createCleanupHook,
-  cleanupTables
-} from '../../../../test-utils/dbReset';
-import {
   expectPermissionDenied,
   expectError
 } from '../../../../test-utils/errorUtils';
@@ -34,7 +29,10 @@ vi.mock('@alga-psa/auth', async () => {
 
 describe('Project Permissions Infrastructure', () => {
   const context = new TestContext({
-    cleanupTables: ['projects', 'clients', 'users', 'roles', 'permissions'],
+    // No cleanupTables: each test runs in a transaction that is rolled back, and
+    // TRUNCATE ... CASCADE on clients/users took the seeded statuses and
+    // priorities with it — every fixture lookup then failed for the rest of the
+    // file.
     runSeeds: true
   });
   let testProject: IProject;
@@ -59,13 +57,16 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   beforeEach(async () => {
-    // Reset database state
-    await resetDatabase(context.db);
+    // Roll the per-test transaction back and open a fresh one. resetDatabase()
+    // used to run here: it destroys the handle it is given and drops the
+    // database out from under the context, so every query after the first
+    // beforeEach failed with "not queryable".
+    await context.reset();
 
-    // Set up common test environment
-    const { tenantId, clientId } = await createTestEnvironment(context.db, {
-      clientName: 'Test Client'
-    });
+    // Use the seeded tenant: createTestEnvironment mints a fresh one, which has
+    // none of the seeded statuses or priorities these fixtures look up.
+    const tenantId = context.tenantId;
+    const clientId = context.clientId;
 
     // Create users with different roles
     const regularUserId = await createUser(context.db, tenantId, {
@@ -99,16 +100,20 @@ describe('Project Permissions Infrastructure', () => {
     tenantScope(tenantId).tenantJoin(adminUserQuery, 'roles', 'user_roles.role_id', 'roles.role_id', { type: 'left' });
     adminUser = await adminUserQuery.first();
 
-    // Set up mocks
+    // Set up mocks. projectActions imports hasPermission from
+    // '@alga-psa/auth/rbac', a different specifier than the '@alga-psa/auth'
+    // mocked above — patching only the latter left the rbac mock on its
+    // default ("no roles => allow everything"), so the regular user was
+    // granted update/create/delete. Routing the check through
+    // setupCommonMocks drives both specifiers off the same predicate.
     setupCommonMocks({
       tenantId,
-      user: createMockUser('admin')
-    });
-
-    vi.mocked(auth.hasPermission).mockImplementation(async (user: any, resource: string, action: string): Promise<boolean> => {
-      if (user?.username === 'janeadmin') return true;
-      if (user?.username === 'johndoe' && resource === 'project' && action === 'read') return true;
-      return false;
+      user: createMockUser('admin'),
+      permissionCheck: (user: any, resource?: string, action?: string): boolean => {
+        if (user?.username === 'janeadmin') return true;
+        if (user?.username === 'johndoe' && resource === 'project' && action === 'read') return true;
+        return false;
+      }
     });
 
     // Create test project
@@ -131,6 +136,8 @@ describe('Project Permissions Infrastructure', () => {
       created_at: new Date(),
       updated_at: new Date(),
       wbs_code: 'TEST-001',
+      // projects.project_number is NOT NULL and unique per tenant.
+      project_number: `PRJ-${uuidv4().slice(0, 8)}`,
       is_inactive: false,
       status: initiatingSpellStatus.status_id
     };
@@ -138,10 +145,11 @@ describe('Project Permissions Infrastructure', () => {
     await tenantTable(tenantId, 'projects').insert(testProject);
   });
 
-  // Use cleanup hook for test isolation
-  afterEach(async () => {
-    await createCleanupHook(context.db, ['projects', 'clients', 'users', 'roles', 'permissions'])();
-  });
+  // No cleanup hook: beforeEach rolls the per-test transaction back, which
+  // already discards every fixture row. Deleting them by hand instead hit
+  // role_permissions' foreign key on `permissions`, and that error aborts the
+  // surrounding transaction — every later statement in the hook then failed
+  // with "current transaction is aborted".
 
   it('should allow regular user to view projects', async () => {
     vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);

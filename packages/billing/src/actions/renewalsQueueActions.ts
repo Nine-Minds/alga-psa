@@ -30,13 +30,13 @@ const toRenewalWorkItemStatus = (value: unknown): RenewalWorkItemStatus =>
 const getTodayDateOnly = (): string => new Date().toISOString().slice(0, 10);
 const requireBillingReadPermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    return permissionError('Permission denied: Cannot read renewals queue');
+    return permissionError('Permission denied: Cannot read renewals queue', 'msp/contracts:errors.renewals.permissions.read');
   }
   return null;
 };
 const requireBillingUpdatePermission = async (user: unknown): Promise<ActionPermissionError | null> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    return permissionError('Permission denied: Cannot update renewals queue');
+    return permissionError('Permission denied: Cannot update renewals queue', 'msp/contracts:errors.renewals.permissions.update');
   }
   return null;
 };
@@ -211,29 +211,29 @@ function renewalQueueActionErrorFrom(error: unknown): RenewalQueueActionError | 
 
     switch (error.message) {
       case 'Client contract id is required':
-        return actionError('Client contract id is required.');
+        return actionError('Client contract id is required.', 'msp/contracts:errors.renewals.clientContractIdRequired');
       case 'Renewal work item not found':
-        return actionError('Renewal work item not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Renewal work item not found. It may have been updated or deleted. Please refresh and try again.', 'msp/contracts:errors.renewals.workItemNotFound');
       case 'Snooze target date is required':
-        return actionError('Choose a snooze date before saving.');
+        return actionError('Choose a snooze date before saving.', 'msp/contracts:errors.renewals.snoozeDateRequired');
       case 'Snooze target date is invalid':
-        return actionError('Choose a valid snooze date.');
+        return actionError('Choose a valid snooze date.', 'msp/contracts:errors.renewals.snoozeDateInvalid');
       case 'Snooze target date must be in the future':
-        return actionError('Choose a future snooze date.');
+        return actionError('Choose a future snooze date.', 'msp/contracts:errors.renewals.snoozeDateFuture');
       case 'Assigned owner must be a user id string or null':
-        return actionError('Choose a valid renewal owner.');
+        return actionError('Choose a valid renewal owner.', 'msp/contracts:errors.renewals.ownerInvalid');
       case 'Assigned owner was not found in this tenant':
-        return actionError('The selected renewal owner is no longer available. Please refresh and try again.');
+        return actionError('The selected renewal owner is no longer available. Please refresh and try again.', 'msp/contracts:errors.renewals.ownerUnavailable');
       case 'Cross-tenant owner identifier is not allowed':
-        return permissionError('Permission denied: Cannot assign renewals to a user from another tenant.');
+        return permissionError('Permission denied: Cannot assign renewals to a user from another tenant.', 'msp/contracts:errors.renewals.permissions.ownerOtherTenant');
       case 'Activated renewal contract id is required':
-        return actionError('Activated renewal contract id is required.');
+        return actionError('Activated renewal contract id is required.', 'msp/contracts:errors.renewals.activatedContractIdRequired');
       case 'Cross-tenant activated contract identifier is not allowed':
-        return permissionError('Permission denied: Cannot complete renewal with a contract from another tenant.');
+        return permissionError('Permission denied: Cannot complete renewal with a contract from another tenant.', 'msp/contracts:errors.renewals.permissions.contractOtherTenant');
       case 'Activated renewal contract was not found in active status':
-        return actionError('The activated renewal contract is no longer active. Please refresh and try again.');
+        return actionError('The activated renewal contract is no longer active. Please refresh and try again.', 'msp/contracts:errors.renewals.contractNotActive');
       case 'Manual retry is only available for due renewal cycles':
-        return actionError('Manual retry is only available for due renewal cycles.');
+        return actionError('Manual retry is only available for due renewal cycles.', 'msp/contracts:errors.renewals.manualRetryDueOnly');
     }
 
     if (error.message.startsWith('Only ') || error.message.startsWith('Cannot snooze renewal work item')) {

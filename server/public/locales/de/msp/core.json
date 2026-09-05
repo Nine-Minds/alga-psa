@@ -11,10 +11,13 @@
     "clients": "Kunden",
     "opportunities": "Verkaufschancen",
     "contacts": "Kontakte",
+    "interactions": "Interaktionen",
     "documents": "Dokumente",
     "documentsAll": "Alle Dokumente",
     "knowledgeBase": "Wissensdatenbank",
     "assets": "Assets",
+    "assetsAll": "Alle Assets",
+    "assetsMaintenance": "Wartung",
     "inventory": {
       "label": "Lagerbestand",
       "sections": {
@@ -127,11 +130,13 @@
       "users": "Benutzer",
       "teams": "Teams",
       "language": "Sprache",
+      "appearance": "Erscheinungsbild",
       "clientPortal": "Kundenportal",
       "license": "Lizenz",
       "ticketing": "Ticketverwaltung",
       "sla": "SLA",
       "projects": "Projekte",
+      "assets": "Assets",
       "interactions": "Interaktionen",
       "opportunities": "Verkaufschancen",
       "notifications": "Benachrichtigungen",
@@ -194,6 +199,12 @@
           "description": "Neues Produkt zu Ihrem Katalog hinzufügen"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Ressourcen und Hilfe",
+      "title": "Ressourcen",
+      "documentation": "Dokumentation",
+      "support": "Support kontaktieren"
     },
     "jobs": {
       "ariaLabel": "Aktivität der Hintergrundjobs anzeigen",

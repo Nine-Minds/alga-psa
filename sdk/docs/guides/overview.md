@@ -19,3 +19,7 @@ Example query params:
 ```text
 search=printer&page=1&limit=25
 ```
+
+## Tickets
+
+- [Make a silent ticket update](./ticket-silent-updates.md)

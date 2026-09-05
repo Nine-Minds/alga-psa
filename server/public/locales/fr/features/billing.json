@@ -6,7 +6,8 @@
     "invoices": "Factures",
     "overview": "Aperçu",
     "quotes": "Devis",
-    "usageMetrics": "Indicateurs d'utilisation"
+    "usageMetrics": "Indicateurs d'utilisation",
+    "segments": "Par segment"
   },
   "currentContractLine": "Forfait actuel",
   "nextInvoice": "Prochaine facture",

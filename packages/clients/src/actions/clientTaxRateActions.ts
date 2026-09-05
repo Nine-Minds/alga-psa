@@ -22,7 +22,7 @@ function clientTaxRateActionErrorFrom(error: unknown): ClientTaxRateActionError 
       return permissionError(error.message);
     }
     if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
-      return permissionError('You must be signed in to update client tax rates.');
+      return permissionError('You must be signed in to update client tax rates.', 'msp/clients:errors.taxRate.signInRequired');
     }
     if (error.message === 'A default tax rate already exists for this client. Only one default rate is allowed.') {
       return actionError(error.message);
@@ -31,16 +31,22 @@ function clientTaxRateActionErrorFrom(error: unknown): ClientTaxRateActionError 
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('The selected client or tax rate is invalid. Please refresh and try again.');
+    return actionError('The selected client or tax rate is invalid. Please refresh and try again.', 'msp/clients:errors.taxRate.invalidReference');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required client tax-rate field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required client tax-rate field: ${dbError.column}.`,
+          'msp/clients:errors.taxRate.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required client tax-rate field.', 'msp/clients:errors.taxRate.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('The selected client or tax rate no longer exists. Please refresh and try again.');
+    return actionError('The selected client or tax rate no longer exists. Please refresh and try again.', 'msp/clients:errors.taxRate.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('This tax rate is already associated with the client.');
+    return actionError('This tax rate is already associated with the client.', 'msp/clients:errors.taxRate.duplicate');
   }
 
   return null;
@@ -224,7 +230,7 @@ export const removeClientTaxRate = withAuth(async (
     });
 
     if (deletedCount === 0) {
-      return actionError('Client tax rate association not found.');
+      return actionError('Client tax rate association not found.', 'msp/clients:errors.taxRate.associationNotFound');
     }
 
     return { success: true };
@@ -260,7 +266,11 @@ export const updateDefaultClientTaxRate = withAuth(async (
         .first();
     });
     if (!newRateExists) {
-      return actionError(`Tax rate with ID ${newTaxRateId} not found.`);
+      return actionError(
+        `Tax rate with ID ${newTaxRateId} not found.`,
+        'msp/clients:errors.taxRate.rateNotFound',
+        { id: newTaxRateId },
+      );
     }
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {

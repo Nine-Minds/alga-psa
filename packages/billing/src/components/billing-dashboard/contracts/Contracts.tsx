@@ -649,7 +649,7 @@ const Contracts: React.FC = () => {
           <Button
             id="client-wizard-button"
             onClick={() => setShowClientWizard(true)}
-            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-[rgb(var(--color-primary-600))] text-white hover:from-blue-700 hover:to-[rgb(var(--color-primary-700))]"
           >
             <Wand2 className="h-4 w-4" />
             {t('contractsList.actions.createContract', { defaultValue: 'Create Contract' })}

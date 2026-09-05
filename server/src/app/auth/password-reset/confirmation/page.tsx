@@ -28,15 +28,28 @@ export default async function PasswordResetConfirmation({
   const { t } = await getServerTranslation(undefined, 'msp/auth');
 
   return (
-    <div className={`flex flex-col items-center p-20 min-h-screen ${
-      branding
-        ? 'bg-gradient-to-br from-[rgb(var(--color-primary-50))] to-[rgb(var(--color-secondary-100))] dark:from-[rgb(var(--color-primary-950))] dark:to-[rgb(var(--color-secondary-950))]'
-        : 'bg-[rgb(var(--color-background-50))] dark:bg-[rgb(var(--color-background))]'
-    }`}>
+    <div className="flex flex-col items-center p-20 min-h-screen auth-page-surface">
       <PortalBrandingStyles branding={branding} />
       <div className="w-full max-w-md p-8 space-y-8 text-center">
         <div>
-          {branding?.logoUrl ? (
+          {branding?.logoUrl && branding?.logoDarkUrl ? (
+            <>
+              <img
+                src={branding.logoUrl}
+                alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Logo')}
+                width={60}
+                height={60}
+                className="mx-auto h-[60px] w-[60px] rounded-full object-contain dark:hidden"
+              />
+              <img
+                src={branding.logoDarkUrl}
+                alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Logo')}
+                width={60}
+                height={60}
+                className="mx-auto h-[60px] w-[60px] rounded-full object-contain hidden dark:block"
+              />
+            </>
+          ) : branding?.logoUrl ? (
             <img
               src={branding.logoUrl}
               alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Logo')}

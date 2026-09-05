@@ -40,7 +40,7 @@ export function BentoTile({ id, title, icon, action, subtitle, error, className,
     <ReflectionContainer id={id} label={title ?? id} className={`min-w-0 ${className ?? ''}`}>
       <section
         id={id}
-        className={`rounded-lg border p-4 flex flex-col min-w-0 h-full ${surfaceClassName ?? 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]'}`}
+        className={`rounded-lg border p-4 flex flex-col min-w-0 h-full card-elevated ${surfaceClassName ?? 'border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]'}`}
       >
         {title ? (
           <div className="flex items-center gap-2 mb-2">

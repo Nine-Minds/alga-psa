@@ -1,10 +1,10 @@
 import { useState } from "react";
-import type { TicketDetail } from "../../../api/tickets";
+import type { TicketDetail, TicketNotificationSuppressionOptions } from "../../../api/tickets";
 import { updateTicketAttributes } from "../../../api/tickets";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
 import { invalidateTicketsListCache } from "../../../cache/ticketsCache";
 import type { TicketDetailDeps } from "../types";
-import { dateInputToIso, getApiErrorMessage, getTicketAttributes } from "../utils";
+import { dateInputToIso, getApiErrorMessage, getTicketAttributes, ticketUpdateSuccessMessage } from "../utils";
 
 export function useTicketDueDate(
   deps: TicketDetailDeps & {
@@ -12,14 +12,17 @@ export function useTicketDueDate(
     fetchTicket: () => Promise<void>;
   },
 ) {
-  const { client, session, ticketId, t, ticket, fetchTicket } = deps;
+  const { client, session, ticketId, t, showToast, ticket, fetchTicket } = deps;
 
   const [dueDateOpen, setDueDateOpen] = useState(false);
   const [dueDateDraft, setDueDateDraft] = useState("");
   const [dueDateUpdating, setDueDateUpdating] = useState(false);
   const [dueDateError, setDueDateError] = useState<string | null>(null);
 
-  const submitDueDateIso = async (nextIso: string | null) => {
+  const submitDueDateIso = async (
+    nextIso: string | null,
+    notificationSuppression?: TicketNotificationSuppressionOptions,
+  ) => {
     if (!client || !session || !ticket) return;
     if (dueDateUpdating) return;
     setDueDateError(null);
@@ -40,6 +43,7 @@ export function useTicketDueDate(
         apiKey: session.accessToken,
         ticketId,
         attributes: attributesToSend,
+        notificationSuppression,
         auditHeaders,
       });
       if (!res.ok) {
@@ -58,6 +62,10 @@ export function useTicketDueDate(
       invalidateTicketsListCache();
       await fetchTicket();
       setDueDateOpen(false);
+      showToast({
+        message: ticketUpdateSuccessMessage(t, notificationSuppression, t("detail.dueDateUpdated", { defaultValue: "Due date updated" })),
+        tone: "success",
+      });
     } finally {
       setDueDateUpdating(false);
     }

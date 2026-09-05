@@ -56,21 +56,21 @@ function cycleCountActionErrorFrom(error: unknown): CycleCountActionError | null
 
     switch (error.message) {
       case 'Count session not found':
-        return actionError('Count session not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Count session not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.cycleCounts.sessionNotFound');
       case 'location_id is required':
-        return actionError('Pick a location to count.');
+        return actionError('Pick a location to count.', 'features/inventory:errors.cycleCounts.locationRequired');
       case 'Stock location not found':
-        return actionError('Stock location not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Stock location not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.cycleCounts.stockLocationNotFound');
       case 'This location already has an open count session':
-        return actionError('This location already has an open count session.');
+        return actionError('This location already has an open count session.', 'features/inventory:errors.cycleCounts.sessionAlreadyOpen');
       case 'This product is not part of the count session':
-        return actionError('This product is not part of the count session. Refresh the session and try again.');
+        return actionError('This product is not part of the count session. Refresh the session and try again.', 'features/inventory:errors.cycleCounts.productNotInSession');
       case 'counted_qty must be a non-negative integer':
-        return actionError('Count must be a non-negative whole number.');
+        return actionError('Count must be a non-negative whole number.', 'features/inventory:errors.cycleCounts.countNonNegative');
       case 'An approved session cannot be cancelled':
-        return actionError('An approved count session cannot be cancelled.');
+        return actionError('An approved count session cannot be cancelled.', 'features/inventory:errors.cycleCounts.approvedCannotCancel');
       case 'Four-eyes: you counted in this session, so a different approver must sign it off':
-        return actionError('A different approver must sign off because you counted in this session.');
+        return actionError('A different approver must sign off because you counted in this session.', 'features/inventory:errors.cycleCounts.separateApproverRequired');
       default:
         if (
           error.message.startsWith('Counts can only be recorded ') ||
@@ -86,10 +86,10 @@ function cycleCountActionErrorFrom(error: unknown): CycleCountActionError | null
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected count records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected count records is no longer valid. Please refresh and try again.', 'features/inventory:errors.cycleCounts.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This count update conflicts with an existing record. Please refresh and try again.');
+    return actionError('This count update conflicts with an existing record. Please refresh and try again.', 'features/inventory:errors.cycleCounts.conflict');
   }
 
   return null;

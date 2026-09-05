@@ -620,10 +620,10 @@ export function RequestAppointmentModal({
                         className={`
                           p-3 rounded-lg border-2 text-sm font-medium transition-all
                           ${selectedTime === slot.time
-                            ? 'border-[rgb(var(--color-primary-500))] bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]'
+                            ? 'chip-primary border-[rgb(var(--color-primary-500))]'
                             : slot.available
                               ? 'border-[rgb(var(--color-border-200))] hover:border-[rgb(var(--color-primary-300))] hover:bg-[rgb(var(--color-primary-50))]'
-                              : 'border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-400))] cursor-not-allowed'
+                              : 'border-[rgb(var(--color-border-100))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-500))] cursor-not-allowed'
                           }
                         `}
                       >

@@ -4,7 +4,6 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { isEnterprise } from '@alga-psa/core/features';
-import { ADD_ONS } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import {
   availabilitySettingSchema,
@@ -64,7 +63,18 @@ export interface TeamsMeetingOrganizerState {
 export interface TeamsMeetingOrganizerVerification {
   valid: boolean;
   displayName?: string;
-  reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
+  reason?: 'ee_disabled' | 'feature_disabled' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
+}
+
+// Postgres `time` columns read back as HH:MM:SS; the UI pickers and the
+// validation schema both speak HH:MM, so trim seconds on the way out.
+function normalizeSettingTimes<T extends { start_time?: string | null; end_time?: string | null }>(
+  setting: T | undefined
+): T | undefined {
+  if (!setting) return setting;
+  const trim = (value?: string | null) =>
+    typeof value === 'string' && /^\d{2}:\d{2}:/.test(value) ? value.slice(0, 5) : value;
+  return { ...setting, start_time: trim(setting.start_time), end_time: trim(setting.end_time) };
 }
 
 function availabilityActionErrorMessage(error: unknown, fallback: string): string {
@@ -84,18 +94,6 @@ function availabilityActionErrorMessage(error: unknown, fallback: string): strin
   return fallback;
 }
 
-async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
-  const scopedDb = tenantDb(db, tenant);
-  const row = await scopedDb.table('tenant_addons')
-    .where({ addon_key: ADD_ONS.TEAMS })
-    .andWhere((builder: any) => {
-      builder.whereNull('expires_at').orWhere('expires_at', '>', db.fn.now());
-    })
-    .first('addon_key');
-
-  return Boolean(row);
-}
-
 export const getTeamsMeetingsTabState = withAuth(async (
   user,
   { tenant }
@@ -109,10 +107,6 @@ export const getTeamsMeetingsTabState = withAuth(async (
 
     const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
     if (!hasTeamsIntegrationsTable) {
-      return { success: true, data: { visible: false, organizerUpn: null } };
-    }
-
-    if (!(await tenantHasTeamsAddOn(db, tenant))) {
       return { success: true, data: { visible: false, organizerUpn: null } };
     }
 
@@ -149,10 +143,6 @@ export const setDefaultMeetingOrganizer = withAuth(async (
     const hasTeamsIntegrationsTable = await db.schema.hasTable('teams_integrations');
     if (!hasTeamsIntegrationsTable) {
       return { success: false, error: 'Teams integration is not available in this environment' };
-    }
-
-    if (!(await tenantHasTeamsAddOn(db, tenant))) {
-      return { success: false, error: 'Microsoft Teams meetings require the Teams add-on.' };
     }
 
     const scopedDb = tenantDb(db, tenant);
@@ -199,10 +189,6 @@ export const verifyMeetingOrganizer = withAuth(async (
 
     if (!isEnterprise) {
       return { success: true, data: { valid: false, reason: 'ee_disabled' } };
-    }
-
-    if (!(await tenantHasTeamsAddOn(db, tenant))) {
-      return { success: true, data: { valid: false, reason: 'addon_required' } };
     }
 
     const organizerUpn = (input.upn || '').trim();
@@ -284,7 +270,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
           })
           .first();
 
-        return updated as IAvailabilitySetting;
+        return normalizeSettingTimes(updated) as IAvailabilitySetting;
       }
 
       // Check for existing setting with same criteria
@@ -333,7 +319,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
           })
           .first();
 
-        return updated as IAvailabilitySetting;
+        return normalizeSettingTimes(updated) as IAvailabilitySetting;
       }
 
       // Create new setting
@@ -355,7 +341,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
         })
         .first();
 
-      return created as IAvailabilitySetting;
+      return normalizeSettingTimes(created) as IAvailabilitySetting;
     });
 
     return { success: true, data: result };
@@ -406,7 +392,7 @@ export const getAvailabilitySettings = withAuth(async (
       return await query;
     });
 
-    return { success: true, data: settings as IAvailabilitySetting[] };
+    return { success: true, data: settings.map(normalizeSettingTimes) as IAvailabilitySetting[] };
   } catch (error) {
     console.error('Error fetching availability settings:', error);
     const message = availabilityActionErrorMessage(error, 'Failed to fetch availability settings');

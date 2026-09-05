@@ -99,7 +99,15 @@ export class TestContext {
       }
 
       if (typeof dbModule.runWithTenant === 'function') {
-        vi.spyOn(dbModule, 'runWithTenant').mockImplementation(async (_tenant, fn) => fn());
+        // Delegate to the real implementation, pinned to this context's tenant.
+        // A bare pass-through leaves the AsyncLocalStorage store empty, so
+        // plain (non-withAuth) helpers that read getTenantContext() — e.g.
+        // createNextTimePeriod — throw "Tenant context is required" even when
+        // the caller wrapped them in runWithTenant.
+        const realRunWithTenant = dbModule.runWithTenant;
+        vi.spyOn(dbModule, 'runWithTenant').mockImplementation(
+          async (tenant, fn) => realRunWithTenant(this.tenantId ?? tenant, fn)
+        );
       }
 
       // Package actions import createTenantKnex from '@alga-psa/db', not
@@ -119,7 +127,10 @@ export class TestContext {
           vi.spyOn(pkgDbModule, 'getCurrentTenantId').mockImplementation(async () => this.tenantId ?? null);
         }
         if (typeof pkgDbModule.runWithTenant === 'function') {
-          vi.spyOn(pkgDbModule, 'runWithTenant').mockImplementation(async (_tenant: unknown, fn: () => unknown) => fn());
+          const realRunWithTenant = pkgDbModule.runWithTenant;
+          vi.spyOn(pkgDbModule, 'runWithTenant').mockImplementation(
+            async (tenant: string, fn: () => unknown) => realRunWithTenant(this.tenantId ?? tenant, fn)
+          );
         }
       } catch {
         // Unmockable namespace (file doesn't mock @alga-psa/db) — fall back to
@@ -332,6 +343,13 @@ export class TestContext {
       throw new Error('Failed to ensure client record');
     }
 
+    // Every client has exactly one default billing profile (F002/F143), and
+    // production provisions it eagerly at client creation. Do the same for the
+    // fixture client so the lazy net in the attribution chain never fires
+    // mid-test — it would run on the pooled connection while this transaction
+    // holds the rows it needs, and the test would hang rather than fail.
+    await this.ensureDefaultBillingProfileId(this.clientId);
+
     this.client = clientRecord as IClient;
 
     let userRecord = this.userId
@@ -408,8 +426,59 @@ export class TestContext {
       entityData[idField] = uuidv4();
     }
 
+    // Billing cycles carry the profile they bill (S8, NOT NULL). Fixtures
+    // predate profiles, so supply the client's default one — which is what a
+    // single-profile client's cycle has always meant. Doing it here rather than
+    // at every call site is what keeps the existing billing suites unchanged
+    // (F100).
+    if (table === 'client_billing_cycles' && !entityData.billing_profile_id) {
+      entityData.billing_profile_id = await this.ensureDefaultBillingProfileId(
+        entityData.client_id as string,
+      );
+    }
+
     await tenantDb(this.db, this.tenantId).table(table).insert(entityData);
+
+    // Every client has exactly one default billing profile (F002/F143), and
+    // production provisions it eagerly at client creation. Fixtures insert
+    // clients directly, so do the same here: the lazy net in the attribution
+    // chain would otherwise fire mid-test, from inside the fixture's own
+    // transaction, on rows it is concurrently holding.
+    if (table === 'clients') {
+      await this.ensureDefaultBillingProfileId(entityData[idField] as string);
+    }
+
     return entityData[idField] as string;
+  }
+
+  /**
+   * The client's default billing profile, provisioning one if the fixture
+   * created the client by direct insert (which most do).
+   */
+  async ensureDefaultBillingProfileId(clientId: string): Promise<string> {
+    const existing = await tenantDb(this.db, this.tenantId)
+      .table('client_billing_profiles')
+      .where({ client_id: clientId, is_default: true })
+      .first('billing_profile_id');
+    if (existing?.billing_profile_id) {
+      return existing.billing_profile_id as string;
+    }
+
+    const client = await tenantDb(this.db, this.tenantId)
+      .table('clients')
+      .where({ client_id: clientId })
+      .first('client_name');
+    const billingProfileId = uuidv4();
+    await tenantDb(this.db, this.tenantId).table('client_billing_profiles').insert({
+      tenant: this.tenantId,
+      billing_profile_id: billingProfileId,
+      client_id: clientId,
+      name: client?.client_name ?? 'Default',
+      is_default: true,
+      is_system_managed_default: true,
+      is_active: true,
+    });
+    return billingProfileId;
   }
 
   /**

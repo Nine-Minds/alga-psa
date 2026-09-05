@@ -315,12 +315,17 @@
       "minimumUsage": {
         "placeholder": "0",
         "label": "Minimalny próg wykorzystania",
-        "help": "Minimalne płatne użycie w okresie (0 oznacza brak minimum)",
-        "errorNegative": "Minimalne użycie nie może być ujemne"
+        "help": "Minimalny próg stosowany do zarejestrowanego użycia (0 = brak minimum). Obowiązuje tylko wtedy, gdy okres ma rekord użycia — nawet jawne zero — i nigdy samodzielnie nie tworzy opłaty.",
+        "errorNegative": "Minimalne użycie nie może być ujemne",
+        "labelAdditive": "Minimum na wpis",
+        "labelPeriodTotal": "Minimum na zgłoszenie okresu",
+        "helpAdditive": "Dolna granica stosowana do każdego zarejestrowanego wpisu (0 oznacza brak minimum). Obowiązuje tylko wtedy, gdy okres ma wpis zużycia — również jawne zero — i nigdy sama nie tworzy obciążenia.",
+        "helpPeriodTotal": "Dolna granica stosowana raz do zgłoszonej liczby okresu (0 oznacza brak minimum). Obowiązuje tylko wtedy, gdy liczba została zgłoszona — również jawne zero — i nigdy sama nie tworzy obciążenia."
       },
       "enableTieredPricing": "Włącz ceny warstwowe"
     },
     "title": "Konfiguracja oparta na użyciu",
+    "recordDrivenNote": "Usługi rozliczane według użycia są fakturowane na podstawie użycia zarejestrowanego w śledzeniu użycia dla każdego okresu rozliczeniowego. Okres bez rekordu użycia nie generuje opłaty — rejestruj użycie (lub jawne zero) w każdym okresie, aby rozliczyć tę usługę.",
     "tiers": {
       "title": "Poziomy cenowe",
       "addTier": "Dodaj poziom",
@@ -336,6 +341,18 @@
         "upperGreaterThanLower": "Górna granica poziomu musi być większa niż dolna granica",
         "rateNegative": "Stawki poziomów nie mogą być ujemne"
       }
+    },
+    "measurementMode": {
+      "label": "Jak mierzone jest zużycie?",
+      "additive": {
+        "label": "Rejestruj zużycie na bieżąco",
+        "description": "Datowane wpisy sumują się: wpisy 10 i 12 dają 22 na fakturze. Minimum i progi obowiązują dla każdego wpisu. Kolejny okres zaczyna się bez wpisów."
+      },
+      "periodTotal": {
+        "label": "Zgłaszaj jedną liczbę na każdy okres",
+        "description": "Jedna liczba na okres usługi zastępuje poprzednią: korekta z 10 na 12 daje 12 na fakturze, nigdy 22. Minimum i progi obowiązują raz dla tej liczby. Kolejny okres zaczyna się bez zgłoszenia — nic nie jest przenoszone."
+      },
+      "transitionNote": "Zmiana trybu obowiązuje od następnego niezafakturowanego okresu usługi. Wpisy lub liczby już zarejestrowane w otwartym okresie trzeba najpierw zafakturować lub usunąć."
     }
   },
   "rateTiers": {
@@ -396,12 +413,30 @@
         "label": "Wyrównanie cykli rozliczeniowych",
         "placeholder": "Wybierz wyrównanie",
         "help": "Kontroluje sposób obliczania zasięgu częściowego okresu, gdy opłata cykliczna musi zostać skalowana do okresu krótszego niż pełny okres świadczenia usługi."
+      },
+      "unitRate": {
+        "label": "Stawka jednostkowa",
+        "placeholder": "0,00",
+        "help": "Stawka fakturowana za każde stanowisko/jednostkę w każdym okresie usługi."
       }
     },
     "options": {
       "start": "Początek cyklu rozliczeniowego",
       "end": "Koniec cyklu rozliczeniowego",
       "prorated": "Proporcjonalne pokrycie"
+    },
+    "pricingBasis": {
+      "label": "Jak wyceniana jest ta usługa?",
+      "bundle": {
+        "label": "Cena pakietu",
+        "description": "Fakturowana jest stała suma pozycji umowy. Ilości przy tej usłudze jedynie rozdzielają część tej sumy na potrzeby raportowania — nie są fakturowanymi stanowiskami, a ich zmiana nie zmienia fakturowanej kwoty.",
+        "allocationNote": "Ilość podziału: {{quantity}} — służy do podziału sumy pakietu na potrzeby raportowania, nie jest fakturowana jako stanowiska."
+      },
+      "unit": {
+        "label": "Cykliczne stanowiska/jednostki",
+        "description": "Fakturuje ilość × stawkę jednostkową w każdym okresie, bez pierwszeństwa sumy pozycji. Ta sama ilość i stawka zostaną zafakturowane ponownie w kolejnym okresie, dopóki nie zaplanujesz zmiany. Ilość zero daje zero.",
+        "summary": "{{quantity}} × {{rate}} (cykliczne stanowiska) = {{total}} na okres"
+      }
     }
   },
   "bucketConfig": {
@@ -444,6 +479,66 @@
     "baseRate": {
       "summary": "{{rate}} na {{unit}}",
       "help": "Stawkę podstawową można zastąpić poniższymi progami opartymi na ilości."
+    }
+  },
+  "errors": {
+    "permissions": {
+      "createServices": "Odmowa uprawnień: nie można tworzyć usług/produktów",
+      "updateServices": "Odmowa uprawnień: nie można aktualizować usług/produktów",
+      "deleteServices": "Odmowa uprawnień: nie można usuwać usług",
+      "deleteServicesProducts": "Odmowa uprawnień: nie można usuwać usług/produktów",
+      "createServiceTypes": "Odmowa uprawnień: nie można tworzyć typów usług",
+      "updateServiceTypes": "Odmowa uprawnień: nie można aktualizować typów usług",
+      "deleteServiceTypes": "Odmowa uprawnień: nie można usuwać typów usług",
+      "updatePricing": "Odmowa uprawnień: nie można aktualizować cen usług"
+    },
+    "category": {
+      "duplicateName": "Kategoria usług o tej nazwie już istnieje",
+      "notFound": "Nie znaleziono kategorii usług",
+      "invalid": "Wybrana kategoria usług jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "inUse": "Nie można usunąć kategorii, ponieważ jest nadal używana.",
+      "inUseByServices": "Nie można usunąć kategorii: korzystają z niej usługi",
+      "inUseByTickets": "Nie można usunąć kategorii używanej przez zgłoszenia",
+      "nameRequired": "Nazwa kategorii jest wymagana",
+      "nameEmpty": "Nazwa kategorii nie może być pusta",
+      "idRequired": "Identyfikator kategorii jest wymagany",
+      "missingField": "Brakuje wymaganego pola kategorii usług.",
+      "missingFieldNamed": "Brakuje wymaganego pola kategorii usług: {{field}}."
+    },
+    "service": {
+      "selectType": "Przed zapisaniem wybierz typ usługi.",
+      "typeNotFound": "Nie znaleziono wybranego typu usługi. Odśwież stronę i wybierz inny typ usługi.",
+      "selectBillingMethod": "Przed zapisaniem wybierz metodę rozliczeń.",
+      "notFoundRefresh": "Nie znaleziono usługi. Mogła zostać usunięta. Odśwież stronę i spróbuj ponownie.",
+      "invalidValue": "Jedna z wybranych wartości usługi jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "referenceMissing": "Wybrana usługa, kategoria, stawka podatku lub typ usługi nie jest już dostępny. Odśwież stronę i spróbuj ponownie.",
+      "duplicate": "Usługa lub produkt o tych wartościach już istnieje.",
+      "missingField": "Brakuje wymaganego pola usługi.",
+      "missingFieldNamed": "Brakuje wymaganego pola usługi: {{field}}."
+    },
+    "product": {
+      "notFound": "Nie znaleziono produktu",
+      "alreadyDeleted": "Nie znaleziono produktu. Mógł już zostać usunięty.",
+      "barcodeExists": "Produkt o tym kodzie kreskowym już istnieje. Użyj innego kodu kreskowego lub edytuj istniejący produkt.",
+      "barcodeExistsNamed": "Produkt o kodzie kreskowym „{{barcode}}” już istnieje. Użyj innego kodu kreskowego lub edytuj istniejący produkt.",
+      "skuExists": "Produkt o tym SKU już istnieje. Użyj innego SKU lub edytuj istniejący produkt.",
+      "skuExistsNamed": "Produkt o SKU „{{sku}}” już istnieje. Użyj innego SKU lub edytuj istniejący produkt.",
+      "cannotDelete": "Nie można usunąć produktu: {{reasons}}"
+    },
+    "serviceType": {
+      "duplicateName": "Typ usługi o tej nazwie już istnieje.",
+      "notFoundRefresh": "Nie znaleziono typu usługi. Mógł zostać usunięty. Odśwież stronę i spróbuj ponownie.",
+      "notFound": "Nie znaleziono typu usługi.",
+      "inUse": "Nie można usunąć typu usługi, ponieważ jest obecnie używany przez co najmniej jedną usługę.",
+      "inUseByCount": "Nie można usunąć typu usługi, ponieważ jest obecnie używany przez {{serviceCount}} usług(i)."
+    },
+    "rateTier": {
+      "overlap": "Zakresy progów nie mogą się nakładać.",
+      "notFound": "Nie znaleziono progu stawki. Odśwież usługę i spróbuj ponownie.",
+      "invalid": "Wybrany próg stawki jest nieprawidłowy. Odśwież usługę i spróbuj ponownie.",
+      "serviceInvalid": "Wybrana usługa dla tego progu stawki nie jest już prawidłowa. Odśwież usługę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola progu stawki.",
+      "missingFieldNamed": "Brakuje wymaganego pola progu stawki: {{field}}."
     }
   }
 }

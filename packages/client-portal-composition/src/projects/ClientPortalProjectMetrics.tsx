@@ -38,8 +38,8 @@ export function ClientPortalProjectMetrics({ projectId, showBudgetHours = false 
   if (loading) {
     return (
       <div className={gridClass}>
-        <div className="bg-gray-50 p-4 rounded-lg animate-pulse h-36" />
-        {showBudgetHours && <div className="bg-gray-50 p-4 rounded-lg animate-pulse h-36" />}
+        <div className="skeleton-fill p-4 rounded-lg animate-pulse h-36" />
+        {showBudgetHours && <div className="skeleton-fill p-4 rounded-lg animate-pulse h-36" />}
       </div>
     );
   }

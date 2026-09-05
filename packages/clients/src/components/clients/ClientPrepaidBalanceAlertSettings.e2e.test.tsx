@@ -4,17 +4,6 @@ import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-let flagEnabled = true;
-let flagLoading = false;
-const flagMock = vi.fn((_flagKey: string, _opts?: { defaultValue?: boolean }) => ({
-  enabled: flagEnabled,
-  loading: flagLoading,
-}));
-
-vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
-  useFeatureFlag: (flagKey: string, opts?: { defaultValue?: boolean }) => flagMock(flagKey, opts),
-}));
-
 vi.mock('next-auth/react', () => ({
   useSession: () => ({ data: null, status: 'unauthenticated' }),
 }));
@@ -46,6 +35,8 @@ vi.mock('../../lib/billingHelpers', () => ({
   updateClientContractLineSettingsAsync: (...args: unknown[]) => updateContractLineSettingsMock(...args),
   getPrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => getPrepaidSettingsMock(...args),
   updatePrepaidBalanceAlertSettingsAsync: (...args: unknown[]) => updatePrepaidSettingsMock(...args),
+  getPrepaidReplenishmentContractOverridesAsync: async () => [],
+  updatePrepaidReplenishmentContractOverrideAsync: async () => ({ success: true }),
 }));
 
 vi.mock('@alga-psa/clients/actions', () => ({
@@ -112,8 +103,6 @@ const client = {
 
 describe('ClientPrepaidBalanceAlertSettings e2e journey (Billing > General)', () => {
   beforeEach(() => {
-    flagEnabled = true;
-    flagLoading = false;
     getPrepaidSettingsMock.mockReset();
     updatePrepaidSettingsMock.mockReset();
     getPrepaidSettingsMock.mockResolvedValue({
@@ -121,6 +110,10 @@ describe('ClientPrepaidBalanceAlertSettings e2e journey (Billing > General)', ()
       prepaidCreditAlertCurrencyCode: null,
       bucketUsageAlertPercent: null,
       notifyClientOnPrepaidAlert: false,
+      // Notify-only is the loaded policy here so the save journey does not also
+      // require top-up amounts; the replenishment fields have dedicated coverage
+      // in ClientPrepaidBalanceAlertSettings.test.tsx.
+      prepaidReplenishmentTier: 'notify',
       defaultCurrencyCode: 'USD',
     });
     updatePrepaidSettingsMock.mockResolvedValue({ success: true });
@@ -162,6 +155,10 @@ describe('ClientPrepaidBalanceAlertSettings e2e journey (Billing > General)', ()
           prepaidCreditAlertThreshold: 25000,
           prepaidCreditAlertCurrencyCode: 'USD',
           bucketUsageAlertPercent: 85,
+          prepaidReplenishmentTier: 'notify',
+          prepaidCreditReplenishmentAmount: null,
+          prepaidBucketReplenishmentMinutes: null,
+          prepaidReplenishmentHorizonDays: 30,
           notifyClientOnPrepaidAlert: true,
         })
       );
@@ -173,11 +170,4 @@ describe('ClientPrepaidBalanceAlertSettings e2e journey (Billing > General)', ()
     15_000
   );
 
-  it('is structurally absent while the feature flag is off', async () => {
-    flagEnabled = false;
-    flagLoading = false;
-    render(<BillingConfiguration client={client as never} onSave={vi.fn()} />);
-    await waitFor(() => expect(screen.getByText('Credit Expiration Settings')).toBeDefined());
-    expect(screen.queryByText('Prepaid Balance Alerts')).toBeNull();
-  });
 });

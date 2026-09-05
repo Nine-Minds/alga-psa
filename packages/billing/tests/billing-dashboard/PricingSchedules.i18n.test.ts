@@ -83,7 +83,6 @@ describe('Pricing schedules i18n wiring contract', () => {
       'pricingSchedules.dialog.fields.endDate',
       'pricingSchedules.dialog.fields.useDefaultRate',
       'pricingSchedules.dialog.fields.customRate',
-      'pricingSchedules.dialog.fields.customRatePlaceholder',
       'pricingSchedules.dialog.fields.notes',
       'pricingSchedules.dialog.fields.notesPlaceholder',
       'pricingSchedules.dialog.validation.effectiveDateRequired',

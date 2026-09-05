@@ -30,19 +30,25 @@ function materialActionErrorFrom(error: unknown): MaterialActionError | null {
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected material values is invalid. Please refresh and try again.');
+    return actionError('One of the selected material values is invalid. Please refresh and try again.', 'msp/billing:errors.material.invalidValue');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required material field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required material field: ${dbError.column}.`,
+          'msp/billing:errors.material.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required material field.', 'msp/billing:errors.material.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected material records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected material records is no longer valid. Please refresh and try again.', 'msp/billing:errors.material.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('This material record already exists.');
+    return actionError('This material record already exists.', 'msp/billing:errors.material.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the material values is not allowed. Please review the form and try again.');
+    return actionError('One of the material values is not allowed. Please review the form and try again.', 'msp/billing:errors.material.notAllowed');
   }
 
   return null;

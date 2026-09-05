@@ -21,6 +21,7 @@ import {
 } from '@blocknote/core';
 import { TextSelection } from '@tiptap/pm/state';
 import { Mention } from './Mention';
+import { splitEmbeddedNewlineBlocks } from './normalizeBlocks';
 import { Emoticon } from './EmoticonExtension';
 import { useShortcutScope } from '../keyboard-shortcuts';
 
@@ -218,7 +219,7 @@ export default function TextEditor({
       return DEFAULT_BLOCK;
     }
 
-    const trimmed = trimTrailingPlaceholderBlocks(blocks);
+    const trimmed = trimTrailingPlaceholderBlocks(splitEmbeddedNewlineBlocks(blocks));
     return trimmed.length > 0 ? trimmed : DEFAULT_BLOCK;
   })();
 
@@ -460,7 +461,11 @@ export default function TextEditor({
       if (onContentChange) {
         // Strip empty trailing heading/list/etc. blocks so their placeholder
         // text ("Heading", "List item", ...) doesn't ghost into saved content.
-        const trimmed = trimTrailingPlaceholderBlocks(editor.document as PartialBlock[]);
+        // Normalize any text items carrying raw "\n" (multi-line paste,
+        // programmatic inserts) into separate blocks before saving.
+        const trimmed = trimTrailingPlaceholderBlocks(
+          splitEmbeddedNewlineBlocks(editor.document as PartialBlock[])
+        );
         onContentChange((trimmed.length > 0 ? trimmed : DEFAULT_BLOCK) as any);
       }
     };
@@ -473,7 +478,7 @@ export default function TextEditor({
     <div className="w-full h-full min-w-0" data-keyboard-shortcuts-editor-root="true">
       {children}
       <div
-        className="min-h-[100px] h-full w-full editor-paper border border-[#e5e7eb] dark:border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
+        className="min-h-[100px] h-full w-full editor-paper border border-[rgb(var(--color-border-200))] rounded-lg p-4 overflow-auto min-w-0"
         onDragStart={(e) => {
           // Only prevent drag from elements with draggable="true" attribute (the drag handle)
           const target = e.target as HTMLElement;

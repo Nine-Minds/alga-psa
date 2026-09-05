@@ -98,6 +98,8 @@
       "packages/billing/src/components/invoice-designer/preview/sampleScenarios.ts",
       "packages/billing/src/lib/adapters/invoiceAdapters.test.ts",
       "packages/billing/src/lib/adapters/invoiceAdapters.ts",
+      "packages/billing/src/lib/billing/domain/calculateContractBilling.ts",
+      "packages/billing/src/lib/billing/domain/contracts.ts",
       "packages/billing/src/models/invoice.ts",
       "packages/billing/src/repositories/accountingExportRepository.ts",
       "packages/billing/src/services/accountingExportInvoiceSelector.ts",
@@ -110,6 +112,7 @@
       "packages/billing/tests/accountingExportValidation.servicePeriods.wiring.test.ts",
       "packages/billing/tests/accountingServicePeriodAudit.wiring.test.ts",
       "packages/billing/tests/authoritativeRecurringReaders.servicePeriods.wiring.test.ts",
+      "packages/billing/tests/contractBilling.domain.test.ts",
       "packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts",
       "packages/billing/tests/invoiceService.externalTax.servicePeriods.wiring.test.ts",
       "packages/billing/tests/sampleInvoicePreview.test.ts",
@@ -269,9 +272,7 @@
       "packages/client-portal/src/components/billing/ContractLineDetailsDialog.tsx",
       "packages/client-portal/src/components/account/BillingSection.tsx"
     ],
-    "reportingRefs": [
-      "packages/billing/src/actions/contractReportActions.ts"
-    ]
+    "reportingRefs": ["packages/billing/src/actions/contractReportActions.ts"]
   },
   "outOfScopeCompatibilityMatrix": [
     {

@@ -83,7 +83,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     // ── Idempotency: skip if payment mapping already exists ──────────────
     // This covers both already-pushed payments and the pulled-payment case
     // (inbound applier wrote the mapping row before this drain ran).
-    const existingMapping = await deps.ledger.findByAlgaId('invoice_payment', paymentId);
+    const existingMapping = await deps.ledger.findByAlgaId('invoice_payment', paymentId, deps.targetRealm);
     if (existingMapping) {
       logger.debug('[paymentPushApplier] Payment already mapped; marking done', {
         opId: op.op_id,
@@ -95,12 +95,20 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     }
 
     // ── Resolve invoice mapping (QBO Invoice ID) ─────────────────────────
-    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.invoiceId);
+    // Exact tenant + provider + type + realm match — a mapping in another
+    // company or a tombstone never satisfies the lookup.
+    const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.invoiceId, deps.targetRealm);
     if (!invoiceMapping) {
-      const message = `No QBO invoice mapping found for invoice ${payload.invoiceId}`;
-      logger.debug('[paymentPushApplier] Invoice mapping missing; marking failed', {
+      const blocked = await deps.ledger.findNonConsumable('invoice', payload.invoiceId, deps.targetRealm);
+      const message = blocked
+        ? `Cannot push payment: ${blocked.deleted_at
+            ? 'invoice was unlinked from QuickBooks'
+            : 'invoice maps to a different QuickBooks company'}. Relink the invoice mapping to this company first.`
+        : `No QBO invoice mapping found for invoice ${payload.invoiceId}`;
+      logger.warn('[paymentPushApplier] Invoice mapping missing or non-consumable; marking failed', {
         opId: op.op_id,
-        invoiceId: payload.invoiceId
+        invoiceId: payload.invoiceId,
+        blocked: Boolean(blocked)
       });
       const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
@@ -133,7 +141,7 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
 
     const clientId = invoiceRow?.client_id;
     const customerMapping = clientId
-      ? await deps.ledger.findByAlgaId('client', clientId)
+      ? await deps.ledger.findByAlgaId('client', clientId, deps.targetRealm)
       : undefined;
 
     if (!customerMapping) {
@@ -171,6 +179,76 @@ export async function drainRecordPaymentOps(deps: DrainDeps): Promise<void> {
     const customerId = customerMapping.external_entity_id;
     const amountDollars = Math.round(payload.amountCents) / 100;
     const paymentRefNum = truncateRef(payload.referenceNumber);
+
+    // ── Revalidate the remote invoice immediately before acting ──────────
+    // The mapping is realm-exact, but the remote record itself may be stale
+    // (deleted in QBO, or the id retargeted by an out-of-band edit). A payment
+    // pushed against a ghost invoice would land as unapplied credit or fail
+    // mid-create, so read the invoice first and abort without writing.
+    let remoteInvoice: any = null;
+    try {
+      remoteInvoice = await qboClient.read<any>('Invoice', invoiceExternalId);
+    } catch (error) {
+      const readMessage = error instanceof Error ? error.message : 'Failed to read QBO invoice';
+      logger.warn('[paymentPushApplier] Failed to revalidate QBO invoice before payment push', {
+        opId: op.op_id,
+        invoiceId: payload.invoiceId,
+        externalInvoiceId: invoiceExternalId,
+        error: readMessage
+      });
+      const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, readMessage);
+      deps.stats.opsFailed += 1;
+      if (nextStatus === 'skipped') {
+        await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'invoice_payment',
+          entityId: paymentId,
+          title: 'Payment push keeps failing — QBO invoice could not be verified',
+          context: {
+            alga_payment_id: paymentId,
+            alga_invoice_id: payload.invoiceId,
+            external_invoice_id: invoiceExternalId,
+            attempts: op.attempts + 1,
+            message: readMessage,
+            details: readMessage,
+            realm: deps.targetRealm
+          }
+        });
+        deps.stats.exceptionsCreated += 1;
+      }
+      continue;
+    }
+
+    if (!remoteInvoice) {
+      const message = `QBO Invoice ${invoiceExternalId} no longer exists in this company — the payment was not pushed`;
+      logger.warn('[paymentPushApplier] QBO invoice missing at push time; marking failed', {
+        opId: op.op_id,
+        invoiceId: payload.invoiceId,
+        externalInvoiceId: invoiceExternalId
+      });
+      const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      deps.stats.opsFailed += 1;
+      if (nextStatus === 'skipped') {
+        await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'invoice_payment',
+          entityId: paymentId,
+          title: 'Payment push blocked — QuickBooks invoice is missing',
+          context: {
+            alga_payment_id: paymentId,
+            alga_invoice_id: payload.invoiceId,
+            external_invoice_id: invoiceExternalId,
+            attempts: op.attempts + 1,
+            message,
+            details:
+              `${message}. Re-link the invoice in the accounting mapping screen, then retry the payment push.`,
+            realm: deps.targetRealm
+          }
+        });
+        deps.stats.exceptionsCreated += 1;
+      }
+      continue;
+    }
 
     const qboPaymentPayload: Record<string, unknown> = {
       CustomerRef: { value: customerId },

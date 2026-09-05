@@ -1,0 +1,10 @@
+[
+  {"id":"T001","description":"DB integration: publish and submit store-only; assert exact versioned payload/metadata/attachments, succeeded status, and null ticket/workflow ids.","implemented":true,"featureIds":["F001","F002","F003","F007","F008","F009"]},
+  {"id":"T002","description":"DB integration side-effect guard: store-only creates zero tickets, workflow runs, ticket events, and ticket notifications while retaining submission search events.","implemented":false,"featureIds":["F010","F011"]},
+  {"id":"T003","description":"DB integration compatibility: an existing/default ticket-only definition stores its response and creates exactly one ticket.","implemented":true,"featureIds":["F006","F019"]},
+  {"id":"T004","description":"DB integration idempotency: sequential and concurrent same-key requests return one submission and invoke the provider at most once; distinct keys remain distinct.","implemented":true,"featureIds":["F015","F016","F017","F018","F019"]},
+  {"id":"T005","description":"DB integration authorization: own-client portal and authorized MSP reads succeed; foreign client and tenant reads fail closed.","implemented":true,"featureIds":["F012","F013"]},
+  {"id":"T006","description":"Behavioral UI test: select Store only, verify explanatory copy and hidden ticket routing, publish, reload, and retain selection.","implemented":false,"featureIds":["F001","F004","F005"]},
+  {"id":"T007","description":"Behavioral history test: store-only row and detail show response metadata/answers without an error or ticket link.","implemented":false,"featureIds":["F012","F013","F014"]},
+  {"id":"T008","description":"DB guard: required-field or invalid-attachment submission fails before persistence and produces no downstream side effect.","implemented":true,"featureIds":["F020"]}
+]

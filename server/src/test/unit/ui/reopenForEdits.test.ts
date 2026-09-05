@@ -12,7 +12,7 @@ describe('reopen for edits (static)', () => {
     const src = readRepoFile('server/src/app/msp/time-entry/timesheet/[id]/page.tsx');
     expect(src).toContain('canReopenForEdits');
     expect(src).toContain("timeSheet.approval_status === 'APPROVED'");
-    expect(src).toContain("hasPermission(currentUser, 'timesheet', 'reverse'");
+    expect(src).toContain("hasPermission(currentUser, 'time_sheet', 'reverse'");
     expect(src).toContain('hasInvoicedEntries');
     expect(src).toContain('assertCanActOnBehalf');
   });

@@ -17,6 +17,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
     adapterType: AccountingAdapterType;
     companyId: string;
     targetRealm?: string | null;
+    algaEntityType?: string;
   }): Promise<CompanyMappingLookupResult | null> {
     const row = await this.lookupMapping(params);
     if (!row) {
@@ -35,6 +36,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         record.tenantId,
         record.adapterType,
         record.targetRealm ?? 'default',
+        record.algaEntityType ?? 'client',
         record.algaCompanyId
       ].join(':');
 
@@ -47,7 +49,8 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         tenantId: record.tenantId,
         adapterType: record.adapterType,
         companyId: record.algaCompanyId,
-        targetRealm: record.targetRealm ?? null
+        targetRealm: record.targetRealm ?? null,
+        algaEntityType: record.algaEntityType
       };
 
       const existing = await this.lookupMapping(lookupParams, trx);
@@ -60,7 +63,7 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
         id: trx.raw('gen_random_uuid()'),
         tenant: record.tenantId,
         integration_type: record.adapterType,
-        alga_entity_type: 'client',
+        alga_entity_type: record.algaEntityType ?? 'client',
         alga_entity_id: record.algaCompanyId,
         external_entity_id: record.externalCompanyId,
         external_realm_id: record.targetRealm ?? null,
@@ -83,21 +86,24 @@ export class KnexCompanyMappingRepository implements CompanyMappingRepository {
       adapterType: AccountingAdapterType;
       companyId: string;
       targetRealm?: string | null;
+      algaEntityType?: string;
     },
     executor: Knex | Knex.Transaction = this.knex
   ) {
     const query = tenantDb(executor, params.tenantId).table(TABLE_NAME)
       .where({
         integration_type: params.adapterType,
-        alga_entity_type: 'client',
+        alga_entity_type: params.algaEntityType ?? 'client',
         alga_entity_id: params.companyId
-      })
-      .orderByRaw('CASE WHEN external_realm_id IS NOT NULL THEN 0 ELSE 1 END');
-
-    if (params.targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', params.targetRealm!).orWhereNull('external_realm_id');
       });
+
+    // Realm-scoped lookups are realm-exact: a mapping from another realm — or a
+    // legacy realm-less row — must never resolve for a realm-scoped write. Legacy
+    // rows are handled by migration/reconciliation, not guessed here; ignoring
+    // them lets the sync service resolve the company inside the correct realm
+    // and persist a realm-scoped mapping.
+    if (params.targetRealm) {
+      query.andWhere('external_realm_id', params.targetRealm);
     } else {
       query.whereNull('external_realm_id');
     }

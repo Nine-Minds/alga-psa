@@ -10,6 +10,7 @@ import {
   assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
+  materializeRecurringServicePeriods,
   addServiceToFixedPlan,
   setupClientTaxConfiguration,
   assignServiceTaxRate,
@@ -215,6 +216,11 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         detailBaseRateCents: 15000
       });
 
+      // generateInvoice refuses a window with no recurring service period, and
+      // the fixture only materializes on request. Run it after the extra
+      // service so the line is complete.
+      await materializeRecurringServicePeriods(context, planId);
+
       // Create billing cycle
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
@@ -251,14 +257,15 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         tax_region: 'US-NY'
       });
 
-      const { planId } = await createFixedPlanAssignment(context, serviceId, {
+      await createFixedPlanAssignment(context, serviceId, {
         planName: 'Taxable Plan',
         billingFrequency: 'monthly',
         baseRateCents: 50000,
         detailBaseRateCents: 50000,
         quantity: 1,
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        billingTiming: 'advance'
+        billingTiming: 'advance',
+        materializeServicePeriods: true
       });
 
       // Create billing cycle
@@ -324,17 +331,23 @@ describe('Billing Invoice Generation – Fixed Price and Time-Based Plans', () =
         tenant: context.tenantId
       });
 
-      // Create billing cycle
+      // Create billing cycle. The window has to be a whole monthly period —
+      // generateInvoice matches recurring_service_periods on the exact
+      // invoice_window pair, and a Jan 1 - Jan 31 window matches none of them.
+      // Arrears: the Feb window bills the January service period, which is
+      // where the time entry below sits.
       const billingCycleId = await context.createEntity('client_billing_cycles', {
         client_id: context.clientId,
         billing_cycle: 'monthly',
-        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
-        period_end_date: createTestDateISO({ year: 2023, month: 1, day: 31 })
+        effective_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
+        period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
 
+      // contract_lines.billing_timing defaults to arrears, so the assignment
+      // starts before the period this invoices.
       await assignContractLineToClient(context, planId, {
-        startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+        startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
       });
 
       // Create test ticket

@@ -302,6 +302,12 @@
     "reverseApproval": {
       "reason": "Approval reversed by manager",
       "error": "Failed to reverse approval: {{error}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} selected",
+        "clear": "Clear"
+      }
     }
   },
   "workItemDrawer": {
@@ -463,5 +469,42 @@
   "bundleNotice": {
     "withNumber": "This ticket is bundled under {{number}}. Bundle time is usually logged on the master ticket.",
     "withoutNumber": "This ticket is part of a bundle. Bundle time is usually logged on the master ticket."
+  },
+  "errors": {
+    "timeSheet": {
+      "notFoundRefresh": "Time sheet not found. It may have been deleted. Please refresh and try again.",
+      "onlySubmittedApprovable": "Only submitted time sheets can be approved.",
+      "idRequired": "Time sheet ID is required.",
+      "ticketIdRequired": "Ticket ID is required.",
+      "workItemRemoveFailed": "Unable to remove that work item. Please refresh and try again.",
+      "onlyDraftRemovable": "Only draft time sheets can be removed.",
+      "removeEntriesFirst": "Remove time entries before removing this time sheet.",
+      "onlyApprovedReopenable": "Only approved time sheets can be reopened.",
+      "invoicedCannotReopen": "This time sheet contains invoiced time and cannot be reopened."
+    },
+    "timeEntry": {
+      "notFoundRefresh": "Time entry not found. It may have been deleted. Please refresh and try again.",
+      "serviceRequired": "Select a service before saving this time entry.",
+      "alreadyInvoiced": "This time entry has already been invoiced and cannot be changed.",
+      "workItemTypeUnsupported": "The selected work item type is not supported for time entries.",
+      "bucketUpdateFailed": "Unable to update bucket usage for this time entry. Please refresh and try again.",
+      "wrongTimeSheet": "This time entry does not belong to the selected time sheet.",
+      "outsidePeriod": "Time entry must fall within the selected time sheet period.",
+      "invalidReference": "The selected time entry, time sheet, or work item is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected time sheet, time entry, work item, or user is no longer valid. Please refresh and try again.",
+      "duplicate": "A conflicting time entry already exists. Please refresh and try again.",
+      "missingField": "Missing required time sheet or time entry field.",
+      "missingFieldNamed": "Missing required time sheet or time entry field: {{field}}."
+    },
+    "timePeriod": {
+      "datesRequired": "Enter valid start and end dates."
+    },
+    "timePeriodSettings": {
+      "invalidValue": "One of the time period setting values is invalid. Please refresh and try again.",
+      "referenceMissing": "The selected time period setting is no longer valid. Please refresh and try again.",
+      "duplicate": "A conflicting time period setting already exists.",
+      "missingField": "Missing required time period setting field.",
+      "missingFieldNamed": "Missing required time period setting field: {{field}}."
+    }
   }
 }

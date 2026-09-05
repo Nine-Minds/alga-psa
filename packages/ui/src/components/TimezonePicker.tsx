@@ -159,8 +159,8 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
         onClick={() => setIsExpanded(true)}
         className={cn(
           "w-full flex items-center gap-2 px-3 py-2 text-sm",
-          "border border-gray-200 rounded-md",
-          "hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]",
+          "border border-[rgb(var(--color-border-200))] rounded-md",
+          "hover:border-[rgb(var(--color-border-300))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500))]",
           className
         )}
       >
@@ -175,10 +175,10 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
   return (
     <div className={cn("relative", className)}>
       <Command
-        className="border border-gray-200 rounded-md overflow-hidden shadow-md"
+        className="border border-[rgb(var(--color-border-200))] rounded-md overflow-hidden shadow-md"
         shouldFilter={false}
       >
-        <div className="flex items-center border-b p-2">
+        <div className="flex items-center border-b border-[rgb(var(--color-border-200))] p-2">
           <Globe className="w-4 h-4 text-gray-500 mr-2" />
           <Command.Input
             value={search}
@@ -200,9 +200,9 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
                     onSelect={() => handleSelect(option.value)}
                     className={cn(
                       "flex items-center px-2 py-1.5 text-sm rounded-sm cursor-pointer",
-                      "hover:bg-gray-100",
-                      "aria-selected:bg-purple-50 aria-selected:text-purple-900",
-                      value === option.value && "bg-purple-50 text-purple-900"
+                      "hover:bg-[rgb(var(--color-primary-500)/0.08)]",
+                      "aria-selected:bg-[rgb(var(--color-primary-50))] aria-selected:text-[rgb(var(--color-primary-900))]",
+                      value === option.value && "bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-900))]"
                     )}
                   >
                     <span className="flex-1">{option.label}</span>
@@ -210,7 +210,7 @@ export default function TimezonePicker({ value, onValueChange, className }: Time
                       <span className="text-xs text-gray-400 mr-2">{option.abbreviation}</span>
                     )}
                     {value === option.value && (
-                      <Check className="w-4 h-4 text-purple-600" />
+                      <Check className="w-4 h-4 text-[rgb(var(--color-primary-600))]" />
                     )}
                   </Command.Item>
                 ))}

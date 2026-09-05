@@ -31,6 +31,7 @@ interface EeTeamsArtifactModule {
     clientId: string;
     clientSecret: string;
   }) => Promise<string>;
+  annotateLinkedTicketFromTranscript?: NonNullable<CaptureDeps['annotateTicketFromTranscript']>;
 }
 
 async function loadEeTeamsModule(): Promise<EeTeamsArtifactModule> {
@@ -59,16 +60,20 @@ function teamsRecordingDownloadActionError(error: unknown): ActionMessageError |
 
   const status = Number(match[1]);
   if (status === 401 || status === 403) {
-    return actionError('Microsoft Graph denied access to the Teams recording. Check recording permissions and try again.');
+    return actionError('Microsoft Graph denied access to the Teams recording. Check recording permissions and try again.', 'msp/schedule:errors.meetingArtifacts.graphForbidden');
   }
   if (status === 404) {
-    return actionError('The Teams recording is no longer available from Microsoft Graph.');
+    return actionError('The Teams recording is no longer available from Microsoft Graph.', 'msp/schedule:errors.meetingArtifacts.graphNotFound');
   }
   if (status === 429) {
-    return actionError('Microsoft Graph is rate limiting recording downloads. Please try again shortly.');
+    return actionError('Microsoft Graph is rate limiting recording downloads. Please try again shortly.', 'msp/schedule:errors.meetingArtifacts.graphThrottled');
   }
 
-  return actionError(`Microsoft Graph returned HTTP ${status} while downloading the Teams recording.`);
+  return actionError(
+    `Microsoft Graph returned HTTP ${status} while downloading the Teams recording.`,
+    'msp/schedule:errors.meetingArtifacts.graphHttpStatus',
+    { status },
+  );
 }
 
 /**
@@ -121,7 +126,11 @@ export async function buildTeamsArtifactCaptureDeps(): Promise<CaptureDeps> {
     return file.file_id;
   };
 
-  return { fetchArtifacts, downloadRecording };
+  // AI transcript summary onto the linked ticket (EE + AI add-on gated inside).
+  const annotateTicketFromTranscript: CaptureDeps['annotateTicketFromTranscript'] = async (input) =>
+    (ee.annotateLinkedTicketFromTranscript ? ee.annotateLinkedTicketFromTranscript(input) : undefined);
+
+  return { fetchArtifacts, downloadRecording, annotateTicketFromTranscript };
 }
 
 /**
@@ -135,10 +144,10 @@ export const refreshMeetingRecordings = withAuth(async (
   meetingId: string,
 ): Promise<IOnlineMeeting | ActionMessageError | ActionPermissionError> => {
   if (!meetingId) {
-    return actionError('Meeting ID is required');
+    return actionError('Meeting ID is required', 'msp/schedule:errors.meetingArtifacts.meetingIdRequired');
   }
   if (!(await hasPermission(user, 'interaction', 'update'))) {
-    return permissionError('Permission denied: Cannot refresh meeting recordings.');
+    return permissionError('Permission denied: Cannot refresh meeting recordings.', 'msp/schedule:errors.meetingArtifacts.refreshPermission');
   }
 
   try {
@@ -158,6 +167,6 @@ export const refreshMeetingRecordings = withAuth(async (
     if (downloadError) {
       return downloadError;
     }
-    return actionError('Failed to refresh meeting recordings. Please try again.');
+    return actionError('Failed to refresh meeting recordings. Please try again.', 'msp/schedule:errors.meetingArtifacts.refreshFailed');
   }
 });

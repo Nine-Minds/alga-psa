@@ -37,6 +37,34 @@ describe('resolveCommentAuthor', () => {
     expect(resolved.avatarKind).toBe('user');
   });
 
+  it('resolves a client-portal user author with a contact avatar', () => {
+    const resolved = resolveCommentAuthor(
+      {
+        user_id: 'user-client-1',
+        contact_id: null,
+      } as Pick<IComment, 'user_id' | 'contact_id'>,
+      {
+        userMap: {
+          'user-client-1': {
+            user_id: 'user-client-1',
+            first_name: 'Robin',
+            last_name: 'Portal',
+            email: 'robin.portal@example.com',
+            user_type: 'client',
+            avatarUrl: '/avatars/contact-robin.png',
+          },
+        },
+        contactMap: {},
+      }
+    );
+
+    expect(resolved.source).toBe('user');
+    expect(resolved.displayName).toBe('Robin Portal');
+    expect(resolved.userType).toBe('client');
+    expect(resolved.avatarKind).toBe('contact');
+    expect(resolved.avatarUrl).toBe('/avatars/contact-robin.png');
+  });
+
   it('uses contact author when user is not resolvable and contact is present', () => {
     const resolved = resolveCommentAuthor(
       {

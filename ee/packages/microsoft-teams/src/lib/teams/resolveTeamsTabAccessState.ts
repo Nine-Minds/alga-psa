@@ -120,7 +120,7 @@ export async function resolveTeamsTabAccessState(
     case 'approval': {
       const permissionFailure = await requirePermission(
         state,
-        'timesheet',
+        'time_sheet',
         'approve',
         'You do not have permission to open approval work from Teams.'
       );

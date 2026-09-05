@@ -13,7 +13,7 @@ The invoice finalization system provides a way to mark invoices as finalized onc
 
 An invoice becomes finalized when:
 1. **Manual finalization** - User explicitly finalizes via UI action menu
-2. **Email sending** - Future feature (not yet implemented)
+2. **Email sending** - Future feature (not yet implemented — sending email now publishes the filed PDF to the client portal but does not set `finalized_at` or change invoice status)
 
 **Important:** PDF download does NOT automatically finalize invoices. Users must explicitly finalize invoices through the UI action menu.
 
@@ -50,6 +50,13 @@ The `invoices` table includes:
 ```sql
 finalized_at TIMESTAMP WITH TIME ZONE
 ```
+
+The `document_associations` entity-type check constraint now includes `invoice` and `sales_order`, allowing filed PDFs to be linked to their source entity and client.
+
+The `documents` table carries three new provenance columns (nullable, forward-only):
+- `source_template_id` — ID of the document template used to render the PDF
+- `source_template_version` — version of that template at render time
+- `rendered_locale` — locale resolved during rendering
 
 See [IInvoice interface](../server/src/interfaces/invoice.interfaces.ts) line 15 for TypeScript type definition.
 
@@ -162,7 +169,17 @@ id="invoices-finalized-table"  // In FinalizedTab
 
 **File Location:** [server/src/lib/actions/invoiceGeneration.ts](../server/src/lib/actions/invoiceGeneration.ts)
 
-**Current Implementation:**
+**Document-filing model:** Invoice PDFs are now filed as `documents` records with `document_associations` linking them to the source invoice and client. The filing follows a **refresh-until-issued** model:
+
+- While the invoice has not been sent to the client, each download re-renders the PDF in place and updates the stored copy (refresh mode).
+- Once the invoice is sent via email, `sendInvoiceEmailAction` / `InvoiceEmailHandler` call `publishGeneratedDocumentsToClient`, which flips the document's associations to client-visible and freezes the stored copy. All subsequent downloads — by the MSP and by the client from the portal — return this exact same file.
+- A filing failure is logged and swallowed; the rendered bytes are still returned to the caller so download/email continues even if document filing fails.
+- The `document_associations` table now accepts `invoice` as an entity type.
+- New provenance columns on `documents` (`source_template_id`, `source_template_version`, `rendered_locale`) record what produced the stored PDF.
+
+**Note:** The code snippet below reflects the previous simplified implementation shape. The current `downloadInvoicePDF` routes through `PDFGenerationService.generateAndStore` with the filing and refresh logic described above.
+
+**Previous Implementation Shape (for reference):**
 
 ```typescript
 // generateInvoicePDF (lines 644-671)
@@ -186,7 +203,7 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
 // downloadInvoicePDF also exists (line 673+)
 ```
 
-**⚠️ Important:** Unlike the original specification, PDF generation does NOT automatically call `finalizeInvoice()`. Users must manually finalize invoices through the UI action menu.
+**⚠️ Important:** PDF generation does NOT automatically call `finalizeInvoice()`. Users must manually finalize invoices through the UI action menu.
 
 ## Testing Requirements
 
@@ -211,6 +228,8 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
    - ⚠️ PDF generation does NOT automatically finalize
    - ⚠️ Audit trail is incomplete (logging commented out)
    - ✓ Check data consistency after credit operations
+   - ✓ Test refresh-until-issued filing behavior
+   - ✓ Test `publishGeneratedDocumentsToClient` freezes the stored document on email send
 
 ## Implementation Status
 
@@ -223,14 +242,18 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
 - Automatic credit application for regular invoices
 - Bulk finalize/unfinalize operations
 - Event publishing for finalization
+- Invoice PDF filing with refresh-until-issued model (`PDFGenerationService.generateAndStore`)
+- Client-portal PDF consistency: filed document published and frozen via `publishGeneratedDocumentsToClient` on email send
+- Invoice and sales-order entity types in `document_associations`
 
 ### ⚠️ Partially Implemented:
 - **Immutability protection** - Only for paid/cancelled, not finalized_at
 - **Audit logging** - Code exists but is commented out
+- **Email integration with finalization** - Sending email publishes the filed PDF to the client portal, but does not set `finalized_at` or auto-change invoice status
 
 ### ❌ Not Implemented:
 - Automatic finalization on PDF download
-- Email integration with finalization
+- Automatic finalization on email send (setting `finalized_at` when invoice is emailed)
 - Complete audit trail
 - Finalization-based immutability
 
@@ -248,10 +271,8 @@ export async function generateInvoicePDF(invoiceId: string): Promise<{ file_id: 
    - Maintain complete history
 
 3. **Email Integration:**
-   - Add email sending capability
-   - Integrate with finalization system
-   - Include PDF generation
-   - Auto-finalize on email send
+   - ✓ PDF generation, filing, and client-portal publication on email send (implemented)
+   - Auto-finalize on email send (set `finalized_at` when invoice is emailed) — still pending
 
 4. **Approval Workflow:**
    - Optional approval before finalization

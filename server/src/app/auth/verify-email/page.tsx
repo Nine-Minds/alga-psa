@@ -32,7 +32,7 @@ export default async function VerifyEmailPage({ searchParams }: VerifyEmailPageP
   }
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--color-background-50))] flex items-center justify-center">
+    <div className="min-h-screen bg-[rgb(var(--color-border-50))] flex items-center justify-center">
       <div className="bg-card p-8 rounded-lg shadow-lg max-w-md text-center">
         {token ? (
           verificationSuccess ? (

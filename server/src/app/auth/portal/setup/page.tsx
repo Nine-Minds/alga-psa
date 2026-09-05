@@ -167,7 +167,7 @@ function PortalSetupContent() {
     if (!isPasswordValid()) {
       // Surface the specific policy error (e.g. too common / sequential) when present,
       // otherwise fall back to the generic requirements message (e.g. passwords mismatch).
-      const policyError = validatePasswordPolicy(formData.password);
+      const policyError = validatePasswordPolicy(formData.password, t);
       toast.error(policyError ?? t('auth.portalSetup.requirementsNotMet', 'Please ensure all password requirements are met'));
       return;
     }
@@ -220,7 +220,7 @@ function PortalSetupContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))]">
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))]">
         <Card className="w-full max-w-md">
           <CardContent className="p-6">
             <div className="animate-pulse space-y-4">
@@ -236,7 +236,7 @@ function PortalSetupContent() {
 
   if (error || !contactInfo) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))]">
+      <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))]">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle className="text-destructive">{t('auth.portalSetup.invalidInvitation', 'Invalid Invitation')}</CardTitle>
@@ -269,7 +269,7 @@ function PortalSetupContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-background-50))] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--color-border-50))] p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -283,7 +283,7 @@ function PortalSetupContent() {
 
         <CardContent className="space-y-6">
           {/* Account Information */}
-          <div className="space-y-4 p-4 bg-[rgb(var(--color-background-50))] rounded-lg">
+          <div className="space-y-4 p-4 bg-[rgb(var(--color-border-50))] rounded-lg">
             <div className="flex items-center gap-2 text-sm font-medium">
               <User className="h-4 w-4" />
               {t('auth.portalSetup.accountInformation', 'Account Information')}

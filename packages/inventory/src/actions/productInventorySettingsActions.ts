@@ -29,28 +29,28 @@ function productInventorySettingsActionErrorFrom(error: unknown): ProductInvento
 
     switch (error.message) {
       case 'Service not found':
-        return actionError('Product not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Product not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.productSettings.productNotFound');
       case 'Inventory can only be enabled on products (item_kind=product)':
-        return actionError('Inventory can only be enabled on products.');
+        return actionError('Inventory can only be enabled on products.', 'features/inventory:errors.productSettings.productsOnly');
       case 'Inventory not enabled for this product':
-        return actionError('Inventory settings are not enabled for this product. Enable inventory tracking first.');
+        return actionError('Inventory settings are not enabled for this product. Enable inventory tracking first.', 'features/inventory:errors.shared.inventorySettingsDisabled');
       case 'Cannot disable serialization while serialized units exist for this product':
-        return actionError('This product has serialized units. Move, retire, or remove those units before disabling serialization.');
+        return actionError('This product has serialized units. Move, retire, or remove those units before disabling serialization.', 'features/inventory:errors.productSettings.serializedUnitsExist');
       case 'Cannot clear the kit flag while the kit still has components; remove components first':
-        return actionError('Remove all kit components before clearing the kit flag.');
+        return actionError('Remove all kit components before clearing the kit flag.', 'features/inventory:errors.productSettings.removeComponentsFirst');
       default:
         if (error.message.startsWith('Invalid kit_pricing_mode:')) {
-          return actionError('Choose a valid kit pricing mode.');
+          return actionError('Choose a valid kit pricing mode.', 'features/inventory:errors.productSettings.invalidKitPricingMode');
         }
     }
   }
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected inventory records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected inventory records is no longer valid. Please refresh and try again.', 'features/inventory:errors.shared.inventoryRecordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('Inventory settings already exist for this product. Please refresh and try again.');
+    return actionError('Inventory settings already exist for this product. Please refresh and try again.', 'features/inventory:errors.productSettings.alreadyExists');
   }
 
   return null;

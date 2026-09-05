@@ -1,5 +1,7 @@
 import React from "react";
 import { Text } from "react-native";
+import { useTranslation } from "react-i18next";
+import type { TranslatableText, WorkQueueWhy } from "../../../api/opportunities";
 import { useTheme } from "../../../ui/ThemeContext";
 
 // Renders a work-queue "why" sentence, bolding the emphasis substring when the
@@ -34,4 +36,37 @@ export function WhySentence({
       {after}
     </Text>
   );
+}
+
+function mobileTranslationKey(key: string): string {
+  return key.startsWith("opportunities.") ? key.slice("opportunities.".length) : key;
+}
+
+/** Render the server's translated segments without flattening away emphasis. */
+export function StructuredWhySentence({ why, testID }: { why: WorkQueueWhy; testID?: string }) {
+  const { t } = useTranslation("opportunities");
+  const theme = useTheme();
+  const base = { ...theme.typography.caption, color: theme.colors.textSecondary };
+
+  return (
+    <Text testID={testID} style={base}>
+      {why.segments.map((segment, index) => {
+        const message = translateQueueText(t, segment.message);
+        return segment.emphasis ? (
+          <Text key={index} style={{ ...base, color: theme.colors.text, fontWeight: "700" }}>
+            {message}
+          </Text>
+        ) : (
+          <React.Fragment key={index}>{message}</React.Fragment>
+        );
+      })}
+    </Text>
+  );
+}
+
+export function translateQueueText(
+  t: (key: string, options?: Record<string, unknown>) => string,
+  message: TranslatableText,
+): string {
+  return t(mobileTranslationKey(message.key), message.params);
 }

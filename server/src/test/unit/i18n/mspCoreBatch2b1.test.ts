@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 const repoRoot = path.resolve(__dirname, '../../../../..');
 const localeRoot = path.join(repoRoot, 'server/public/locales');
@@ -56,15 +57,6 @@ const extractVariables = (value: string): string[] => {
 // SET of variables has to match English; asserting order would reject correct
 // translations.
 const extractVariableSet = (value: string): string[] => extractVariables(value).sort();
-
-const expectedPseudoValue = (value: string, fill: '11111' | '55555'): string => {
-  const variables = extractVariables(value);
-  if (variables.length === 0) {
-    return fill;
-  }
-
-  return variables.map((v) => `${fill} ${v}`).join(' ') + ` ${fill}`;
-};
 
 describe('MSP core locale batch 2b-1', () => {
   const english = readLocaleJson('en');
@@ -185,12 +177,13 @@ describe('MSP core locale batch 2b-1', () => {
 
   it('T054/T055: pseudo-locale files mirror English keys and preserve interpolation placeholders', () => {
     for (const locale of pseudoLocales) {
-      const fill = locale === 'xx' ? '11111' : '55555';
       const localeLeaves = collectLeafEntries(readLocaleJson(locale));
       expect([...localeLeaves.keys()].sort()).toEqual([...englishLeaves.keys()].sort());
 
       for (const [key, value] of englishLeaves) {
-        expect(localeLeaves.get(key)).toBe(expectedPseudoValue(value, fill));
+        const pseudo = localeLeaves.get(key) as string;
+        expect(pseudo).toMatch(pseudoPattern(locale));
+        expect(extractVariableSet(pseudo)).toEqual(extractVariableSet(value));
       }
     }
   });
@@ -228,16 +221,16 @@ describe('MSP core locale batch 2b-1', () => {
   it('T058-T061: xx pseudo-locale resolves representative sidebar, settings, billing, and quick-create keys to 11111', () => {
     const xx = readLocaleJson('xx');
 
-    expect(getValue(xx, 'sidebar.goToDashboard')).toBe('11111');
-    expect(getValue(xx, 'header.quickCreate.title')).toBe('11111');
-    expect(getValue(xx, 'header.breadcrumb.home')).toBe('11111');
-    expect(getValue(xx, 'settings.sections.organizationAccess')).toBe('11111');
-    expect(getValue(xx, 'settings.tabs.language')).toBe('11111');
-    expect(getValue(xx, 'nav.billing.sections.contracts')).toBe('11111');
-    expect(getValue(xx, 'nav.billing.contractTemplates')).toBe('11111');
-    expect(getValue(xx, 'nav.billing.servicePeriods')).toBe('11111');
-    expect(getValue(xx, 'header.quickCreate.options.ticket.label')).toBe('11111');
-    expect(getValue(xx, 'header.quickCreate.options.ticket.description')).toBe('11111');
+    expect(getValue(xx, 'sidebar.goToDashboard')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'header.quickCreate.title')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'header.breadcrumb.home')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'settings.sections.organizationAccess')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'settings.tabs.language')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'nav.billing.sections.contracts')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'nav.billing.contractTemplates')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'nav.billing.servicePeriods')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'header.quickCreate.options.ticket.label')).toMatch(pseudoPattern('xx'));
+    expect(getValue(xx, 'header.quickCreate.options.ticket.description')).toMatch(pseudoPattern('xx'));
   });
 
   it('T062: German overflow-sensitive labels stay within reasonable length thresholds', () => {

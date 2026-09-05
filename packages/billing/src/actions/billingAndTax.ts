@@ -2,7 +2,7 @@
 
 import { Knex } from 'knex';
 import { Temporal } from '@js-temporal/polyfill';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { ISO8601String } from '@alga-psa/types';
 import { toPlainDate, toISODate } from '@alga-psa/core';
 import { withTransaction } from '@alga-psa/db';
@@ -30,7 +30,12 @@ import { ITaxCalculationResult } from '@alga-psa/types';
 import {
     buildRecurringDueWorkRow,
 } from '@alga-psa/shared/billingClients/recurringDueWork';
-import { groupDueServicePeriodsForInvoiceCandidates } from '@alga-psa/shared/billingClients/recurringTiming';
+import { groupDueServicePeriodsForInvoiceCandidates, isRecurringLineExpectedInClientCadenceWindow } from '@alga-psa/shared/billingClients/recurringTiming';
+import { evaluateCalendarMonthEndEarlyCloseEligibility } from '@alga-psa/shared/billingClients/calendarMonthEndClosePolicy';
+import {
+    listCanonicalClientCadenceWindowPeriods,
+    listUnmaterializedClientCadenceWindowLineIds,
+} from '../lib/billing/clientCadenceWindowMaterialization';
 import {
     buildClientCadenceDueSelectionInput,
     buildContractCadenceDueSelectionInput,
@@ -43,6 +48,10 @@ import {
     buildClientCadencePostDropObligationRef,
     CLIENT_CADENCE_POST_DROP_OBLIGATION_TYPE,
 } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
+import {
+    loadClientBilledLedgerBoundary,
+    resolveClientCadenceObligationStart,
+} from '@alga-psa/shared/billingClients/clientCadenceScheduleRegeneration';
 import { BillingEngine, createFixedChargePreviewSession } from '../lib/billing/billingEngine';
 import {
     detectRecurringApprovalBlockers,
@@ -491,7 +500,32 @@ async function fetchPersistedRecurringDueWorkDbRows(
     const contractLineRows = await contractLineRowsQuery;
     const clientContractLineRows = await clientContractLineRowsQuery as PersistedRecurringDueWorkDbRow[];
 
-    return [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[];
+    // The client_billing_cycles left-join matches on invoice window dates, so
+    // duplicate cycle rows for the same period fan a single persisted
+    // recurring_service_periods record out into several due-work rows that
+    // share an execution identity but disagree on billing_cycle_id. One
+    // persisted record is one obligation: collapse the fan-out per record_id,
+    // preferring a resolved billing cycle and then the lowest id so repeated
+    // reads stay deterministic.
+    const rowsByRecordId = new Map<string, PersistedRecurringDueWorkDbRow>();
+    for (const row of [...contractLineRows, ...clientContractLineRows] as PersistedRecurringDueWorkDbRow[]) {
+        const existing = rowsByRecordId.get(row.record_id);
+        if (!existing) {
+            rowsByRecordId.set(row.record_id, row);
+            continue;
+        }
+
+        const rowCycle = row.billing_cycle_id ?? null;
+        const existingCycle = existing.billing_cycle_id ?? null;
+        const rowWins = existingCycle === null
+            ? rowCycle !== null
+            : rowCycle !== null && rowCycle < existingCycle;
+        if (rowWins) {
+            rowsByRecordId.set(row.record_id, row);
+        }
+    }
+
+    return Array.from(rowsByRecordId.values());
 }
 
 async function fetchClientCadenceMaterializationGaps(
@@ -545,6 +579,14 @@ async function fetchClientCadenceMaterializationGaps(
         recurringClientsById.set(row.client_id, clientRows);
     }
 
+    // Load once per client, not once per line/window. A new schedule has no
+    // billed rows of its own; its first obligation still respects sibling history.
+    const billedBoundaryByClient = new Map(await Promise.all(clientIds.map(async (clientId) => [
+        clientId,
+        await loadClientBilledLedgerBoundary(trx, { tenant, clientId }),
+    ] as const)));
+    const fallbackStart = new Date().toISOString();
+
     const materializationGaps: RecurringDueWorkMaterializationGap[] = [];
     const sortedPeriodsByClient = new Map<string, BillingPeriodWithMeta[]>();
 
@@ -581,6 +623,21 @@ async function fetchClientCadenceMaterializationGaps(
                 rangeEnd: row.end_date ?? null,
                 windowStart: servicePeriodForGap.period_start_date,
                 windowEnd: servicePeriodForGap.period_end_date,
+            })) {
+                continue;
+            }
+
+            const obligationStart = resolveClientCadenceObligationStart({
+                assignmentStart: row.start_date,
+                billedBoundaryEnd: billedBoundaryByClient.get(period.client_id) ?? null,
+                fallbackStart,
+            });
+            if (!isRecurringLineExpectedInClientCadenceWindow({
+                duePosition,
+                assignmentStart: obligationStart,
+                assignmentEnd: row.end_date ? normalizeDateOnly(row.end_date) : null,
+                windowStart: invoiceWindowForGap.period_start_date,
+                windowEnd: invoiceWindowForGap.period_end_date,
             })) {
                 continue;
             }
@@ -822,7 +879,186 @@ async function fetchClientBillingMetadataById(
     );
 }
 
+type PotentialUnresolvedTimeEntry = {
+    entry_id: string;
+    start_time: Date | string;
+    end_time: Date | string;
+    project_client_id?: string | null;
+    ticket_client_id?: string | null;
+};
+
+type PotentialUnresolvedUsageRecord = {
+    usage_id: string;
+    client_id: string;
+    usage_date: Date | string;
+};
+
+type BillingPeriodWindow = {
+    period: BillingPeriodWithMeta;
+    startMs: number;
+    endMs: number;
+};
+
+function toTimestampMs(value: Date | string | null | undefined): number | null {
+    if (value == null) {
+        return null;
+    }
+
+    const timestamp = value instanceof Date ? value.getTime() : Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : null;
+}
+
+/**
+ * Find billing periods that can actually contain unresolved non-contract work.
+ *
+ * The previous reader invoked the full billing engine once for every open
+ * billing period, even though almost all periods contained no unresolved
+ * source rows. Large tenants therefore paid for thousands of transactions and
+ * repeated context/tax/source queries before pagination.
+ *
+ * These two tenant-scoped reads mirror the billing engine's coarse eligibility
+ * filters. They deliberately do not reproduce pricing, deterministic contract
+ * reconciliation, project-cap handling, or tax behavior; the authoritative
+ * billing-engine call still performs the read-only classification and pricing
+ * for each populated window.
+ */
+async function filterBillingPeriodsWithPotentialUnresolvedWork(
+    trx: BillingQueryExecutor,
+    tenant: string,
+    candidateBillingPeriods: BillingPeriodWithMeta[],
+): Promise<BillingPeriodWithMeta[]> {
+    if (candidateBillingPeriods.length === 0) {
+        return [];
+    }
+
+    const windowsByClientId = new Map<string, BillingPeriodWindow[]>();
+    const periodStarts: ISO8601String[] = [];
+    const periodEnds: ISO8601String[] = [];
+
+    for (const period of candidateBillingPeriods) {
+        const start = normalizeDateOnly(period.period_start_date) as ISO8601String | null;
+        const end = normalizeDateOnly(period.period_end_date) as ISO8601String | null;
+        const startMs = toTimestampMs(start);
+        const endMs = toTimestampMs(end);
+        if (!period.client_id || !start || !end || startMs == null || endMs == null) {
+            continue;
+        }
+
+        const windows = windowsByClientId.get(period.client_id) ?? [];
+        windows.push({ period, startMs, endMs });
+        windowsByClientId.set(period.client_id, windows);
+        periodStarts.push(start);
+        periodEnds.push(end);
+    }
+
+    if (periodStarts.length === 0 || periodEnds.length === 0 || windowsByClientId.size === 0) {
+        return [];
+    }
+
+    const earliestStart = periodStarts.reduce(
+        (earliest, start) => start < earliest ? start : earliest,
+    );
+    const latestEnd = periodEnds.reduce(
+        (latest, end) => end > latest ? end : latest,
+    );
+    const clientIds = Array.from(windowsByClientId.keys());
+    const db = tenantDb(trx, tenant);
+    const potentialTimeEntriesQuery = db.table('time_entries');
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'project_tasks',
+        'time_entries.work_item_id',
+        'project_tasks.task_id',
+        { type: 'left' },
+    );
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'project_phases',
+        'project_tasks.phase_id',
+        'project_phases.phase_id',
+        { type: 'left' },
+    );
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'projects',
+        'project_phases.project_id',
+        'projects.project_id',
+        { type: 'left' },
+    );
+    db.tenantJoin(
+        potentialTimeEntriesQuery,
+        'tickets',
+        'time_entries.work_item_id',
+        'tickets.ticket_id',
+        { type: 'left' },
+    );
+
+    const [potentialTimeEntries, potentialUsageRecords] = await Promise.all([
+        potentialTimeEntriesQuery
+            .where('time_entries.tenant', tenant)
+            .where('time_entries.invoiced', false)
+            .whereNull('time_entries.contract_line_id')
+            .whereNotNull('time_entries.service_id')
+            .where('time_entries.approval_status', 'APPROVED')
+            .where('time_entries.billable_duration', '>', 0)
+            .where('time_entries.start_time', '>=', earliestStart)
+            .where('time_entries.end_time', '<', latestEnd)
+            .select(
+                'time_entries.entry_id',
+                'time_entries.start_time',
+                'time_entries.end_time',
+                'projects.client_id as project_client_id',
+                'tickets.client_id as ticket_client_id',
+            ) as Promise<PotentialUnresolvedTimeEntry[]>,
+        db.table('usage_tracking')
+            .where('usage_tracking.tenant', tenant)
+            .whereIn('usage_tracking.client_id', clientIds)
+            .where('usage_tracking.invoiced', false)
+            .whereNull('usage_tracking.contract_line_id')
+            .whereNotNull('usage_tracking.service_id')
+            .where('usage_tracking.usage_date', '>=', earliestStart)
+            .where('usage_tracking.usage_date', '<', latestEnd)
+            .select(
+                'usage_tracking.usage_id',
+                'usage_tracking.client_id',
+                'usage_tracking.usage_date',
+            ) as Promise<PotentialUnresolvedUsageRecord[]>,
+    ]);
+
+    const populatedPeriods = new Set<BillingPeriodWithMeta>();
+    const addMatchingPeriods = (
+        clientId: string | null | undefined,
+        sourceStartMs: number | null,
+        sourceEndMs: number | null = sourceStartMs,
+    ) => {
+        if (!clientId || sourceStartMs == null || sourceEndMs == null) {
+            return;
+        }
+
+        for (const window of windowsByClientId.get(clientId) ?? []) {
+            if (sourceStartMs >= window.startMs && sourceEndMs < window.endMs) {
+                populatedPeriods.add(window.period);
+            }
+        }
+    };
+
+    for (const entry of potentialTimeEntries) {
+        const startMs = toTimestampMs(entry.start_time);
+        const endMs = toTimestampMs(entry.end_time);
+        addMatchingPeriods(entry.project_client_id, startMs, endMs);
+        addMatchingPeriods(entry.ticket_client_id, startMs, endMs);
+    }
+
+    for (const record of potentialUsageRecords) {
+        const usageDateMs = toTimestampMs(record.usage_date);
+        addMatchingPeriods(record.client_id, usageDateMs);
+    }
+
+    return candidateBillingPeriods.filter((period) => populatedPeriods.has(period));
+}
+
 async function fetchUnresolvedNonContractDueWorkRows(
+    trx: BillingQueryExecutor,
     candidateBillingPeriods: BillingPeriodWithMeta[],
     asOf: ISO8601String,
     tenant: string,
@@ -832,10 +1068,21 @@ async function fetchUnresolvedNonContractDueWorkRows(
         return [];
     }
 
+    const populatedBillingPeriods = await filterBillingPeriodsWithPotentialUnresolvedWork(
+        trx,
+        tenant,
+        candidateBillingPeriods,
+    );
+    if (populatedBillingPeriods.length === 0) {
+        return [];
+    }
+
     const billingEngine = new BillingEngine();
     const rows: IRecurringDueWorkRow[] = [];
 
-    for (const period of candidateBillingPeriods) {
+    // Keep these calls serial: each BillingEngine instance pins its own read
+    // connection, and the listing must not reconcile source records as it reads.
+    for (const period of populatedBillingPeriods) {
         if (!period.period_start_date || !period.period_end_date) {
             continue;
         }
@@ -1036,6 +1283,8 @@ async function attachFixedContractLineAmountsToRows(
 function buildRecurringDueWorkInvoiceCandidates(
     rows: IRecurringDueWorkRow[],
     metadataByRecordId: Map<string, RecurringDueWorkGroupingMetadata> = new Map(),
+    asOf?: ISO8601String,
+    monthEndCloseEligibilityDate?: ISO8601String,
 ): IRecurringDueWorkInvoiceCandidate[] {
     if (rows.length === 0) {
         return [];
@@ -1095,9 +1344,16 @@ function buildRecurringDueWorkInvoiceCandidates(
 
     const candidates = grouped
         .map((candidate): IRecurringDueWorkInvoiceCandidate | null => {
+            // Members are the atomic execution units the UI renders and submits;
+            // a duplicated execution identity here becomes two identical child
+            // rows and a double-submitted selection, so dedupe by identity even
+            // if the source rows carried duplicates.
             const members = candidate.dueSelections
                 .map((selection) => rowByExecutionIdentityKey.get(selection.servicePeriod.sourceObligation.obligationId))
-                .filter((row): row is IRecurringDueWorkRow => Boolean(row));
+                .filter((row): row is IRecurringDueWorkRow => Boolean(row))
+                .filter((row, index, allRows) =>
+                    allRows.findIndex((other) => other.executionIdentityKey === row.executionIdentityKey) === index,
+                );
 
             if (members.length === 0) {
                 return null;
@@ -1138,6 +1394,26 @@ function buildRecurringDueWorkInvoiceCandidates(
             const availableOnDate = notYetDue
                 ? (members.map((member) => member.invoiceWindowStart).sort()[0] ?? null)
                 : null;
+            // Month-end early close: every member is a calendar-month arrears
+            // period whose final calendar day is TODAY on the account's effective
+            // billing calendar. It now genuinely is in lock-step with the
+            // server-side policy re-validation the generation action runs — both
+            // resolve "today" with the same timezone function — and it is
+            // deliberately independent of `asOf` (the user's date-range search
+            // end), which would otherwise hide the flag on the one valid day or
+            // invent it early for future-dated searches.
+            const monthEndAsOfDate = monthEndCloseEligibilityDate
+                ?? (asOf ? String(asOf).slice(0, 10) : undefined);
+            const monthEndCloseEligible = members.length > 0 && members.every((member) =>
+                evaluateCalendarMonthEndEarlyCloseEligibility({
+                    duePosition: member.duePosition,
+                    cadenceSource: member.cadenceSource,
+                    servicePeriodStart: member.servicePeriodStart,
+                    servicePeriodEnd: member.servicePeriodEnd,
+                    invoiceWindowStart: member.invoiceWindowStart,
+                    asOfDate: monthEndAsOfDate,
+                }).eligible,
+            );
             const explicitContractCount = members.filter(
                 (member) => member.attribution?.source === 'explicit_contract',
             ).length;
@@ -1181,6 +1457,7 @@ function buildRecurringDueWorkInvoiceCandidates(
                 canGenerate,
                 notYetDue,
                 availableOnDate,
+                monthEndCloseEligible,
                 blockedReason: canGenerate || notYetDue
                     ? null
                     : 'One or more included obligations are not eligible for generation.',
@@ -1209,6 +1486,69 @@ function buildRecurringDueWorkInvoiceCandidates(
 
             return left.candidateKey.localeCompare(right.candidateKey);
         });
+}
+
+/**
+ * Confirms provisionally month-end-eligible candidates against the CANONICAL
+ * window — the same materialization helpers the generation action enforces.
+ *
+ * The member-level policy check in buildRecurringDueWorkInvoiceCandidates sees
+ * only the dateRange-filtered rows, so it can flag a window whose remaining
+ * periods (an advance period due next month, an active line whose schedule
+ * change was never rebuilt) would make generation refuse the close. Any such
+ * candidate must not present an actionable close button: eligibility requires
+ * that every ACTIVE line is materialized for the window, every canonical
+ * period passes the month-end policy, and the candidate's members cover the
+ * complete canonical window (a partial member list would send generation a
+ * partial selection, which it rejects).
+ */
+async function revalidateMonthEndCloseEligibilityAgainstCanonicalWindow(
+    knex: Knex,
+    tenant: string,
+    invoiceCandidates: IRecurringDueWorkInvoiceCandidate[],
+    monthEndCloseEligibilityDate: string,
+): Promise<IRecurringDueWorkInvoiceCandidate[]> {
+    const revalidated: IRecurringDueWorkInvoiceCandidate[] = [];
+    for (const candidate of invoiceCandidates) {
+        if (!candidate.monthEndCloseEligible) {
+            revalidated.push(candidate);
+            continue;
+        }
+
+        const windowParams = {
+            knex,
+            tenant,
+            clientId: candidate.clientId,
+            windowStart: candidate.windowStart,
+            windowEnd: candidate.windowEnd,
+        };
+        const missingLineIds = await listUnmaterializedClientCadenceWindowLineIds(windowParams);
+        let eligible = missingLineIds.length === 0;
+
+        if (eligible) {
+            const canonicalPeriods = await listCanonicalClientCadenceWindowPeriods(windowParams);
+            const memberIdentityKeys = new Set(
+                candidate.members
+                    .filter((member) => member.scheduleKey && member.periodKey)
+                    .map((member) => `${member.scheduleKey}::${member.periodKey}`),
+            );
+            eligible = canonicalPeriods.length > 0
+                && canonicalPeriods.every((period) =>
+                    memberIdentityKeys.has(`${period.scheduleKey}::${period.periodKey}`)
+                    && evaluateCalendarMonthEndEarlyCloseEligibility({
+                        duePosition: period.duePosition,
+                        cadenceSource: 'client_schedule',
+                        servicePeriodStart: period.servicePeriodStart,
+                        servicePeriodEnd: period.servicePeriodEnd,
+                        invoiceWindowStart: period.invoiceWindowStart,
+                        asOfDate: monthEndCloseEligibilityDate,
+                    }).eligible);
+        }
+
+        revalidated.push(eligible ? candidate : { ...candidate, monthEndCloseEligible: false });
+    }
+
+    return revalidated;
 }
 
 function applyClientCadenceMaterializationGapBlocks(
@@ -1271,6 +1611,7 @@ function applyClientCadenceMaterializationGapBlocks(
             canGenerate: false,
             notYetDue: false,
             availableOnDate: null,
+            monthEndCloseEligible: false,
             blockedReason:
                 'Recurring service periods are partially materialized for this window. Repair service periods before generation.',
         };
@@ -1332,6 +1673,7 @@ function applyRecurringApprovalBlocksToInvoiceCandidates(
             canGenerate: false,
             notYetDue: false,
             availableOnDate: null,
+            monthEndCloseEligible: false,
             blockedReason: formatApprovalBlockedReason(approvalBlockedEntryCount),
             approvalBlockedEntryCount,
             hasApprovalBlockers: true,
@@ -1403,7 +1745,7 @@ export const getClientTaxRate = withAuth(async (
     date: ISO8601String
 ): Promise<number | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();
@@ -1432,7 +1774,7 @@ export const getAvailableBillingPeriods = withAuth(async (
     options: FetchBillingPeriodsOptions = {}
 ): Promise<PaginatedBillingPeriodsResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const {
@@ -1570,7 +1912,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
     options: FetchRecurringDueWorkOptions = {},
 ): Promise<PaginatedRecurringDueWorkResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const {
@@ -1579,6 +1921,16 @@ export const getAvailableRecurringDueWork = withAuth(async (
     } = options;
     const { knex } = await createTenantKnex();
     const asOf = options.dateRange?.to ?? toISODate(Temporal.Now.plainDateISO());
+    // Month-end early-close eligibility is defined on the account's effective
+    // billing calendar — the same timezone-resolution function the generation
+    // action re-validates with — never on the user's search window end and never
+    // on the server host's clock. Resolve it once per listing so the flag and the
+    // server-side gate cannot disagree about which day is the final calendar day.
+    const effectiveTimeZone = await resolveEffectiveTimeZone(knex, tenant);
+    const monthEndCloseEligibilityDate = Temporal.Now.instant()
+      .toZonedDateTimeISO(effectiveTimeZone)
+      .toPlainDate()
+      .toString();
 
     try {
         // candidateBillingPeriods and persistedDbRows both derive straight from
@@ -1665,6 +2017,7 @@ export const getAvailableRecurringDueWork = withAuth(async (
             return !suppressionKey || !backfillSuppressionKeys.has(suppressionKey);
         });
         const unresolvedNonContractRows = await fetchUnresolvedNonContractDueWorkRows(
+            knex,
             candidateBillingPeriods,
             asOf,
             tenant,
@@ -1673,6 +2026,8 @@ export const getAvailableRecurringDueWork = withAuth(async (
         const invoiceCandidates = buildRecurringDueWorkInvoiceCandidates(
             [...readyPersistedRows, ...unresolvedNonContractRows],
             groupingMetadataByRecordId,
+            asOf,
+            monthEndCloseEligibilityDate,
         );
         const blockedInvoiceCandidates = applyClientCadenceMaterializationGapBlocks(
             invoiceCandidates,
@@ -1723,9 +2078,20 @@ export const getAvailableRecurringDueWork = withAuth(async (
             visibleInvoiceCandidates.flatMap((candidate) => candidate.members),
             persistedDbRows,
         );
+        // Month-end close is only offered when generation would accept it; a
+        // partially-listed or partially-materialized window must not present
+        // an actionable close button. Runs on the visible page only — the flag
+        // is a UI affordance and the action re-validates server-side anyway.
+        const canonicalizedInvoiceCandidates =
+            await revalidateMonthEndCloseEligibilityAgainstCanonicalWindow(
+                knex,
+                tenant,
+                visibleInvoiceCandidates,
+                monthEndCloseEligibilityDate,
+            );
 
         return {
-            invoiceCandidates: visibleInvoiceCandidates,
+            invoiceCandidates: canonicalizedInvoiceCandidates,
             materializationGaps,
             total,
             page,
@@ -1758,7 +2124,7 @@ export const getDueDate = withAuth(async (
     invoiceDate: ISO8601String
 ): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();
@@ -1795,7 +2161,7 @@ export const getNextBillingDate = withAuth(async (
     currentEndDate: ISO8601String
 ): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        return permissionError('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required', 'msp/billing:errors.permissions.billingRead');
     }
 
     const { knex } = await createTenantKnex();

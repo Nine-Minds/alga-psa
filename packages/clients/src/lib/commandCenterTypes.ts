@@ -109,10 +109,30 @@ export interface ClientPulseWip {
   oldestUnbilledDays: number | null;
 }
 
+/**
+ * One billing profile's slice of the client's AR (F113, F115).
+ *
+ * Present only when the client is segmented; a client with one profile has one
+ * row identical to the client totals, and showing it would be noise.
+ */
+export interface ClientPulseProfileAr {
+  billingProfileId: string;
+  name: string;
+  isDefault: boolean;
+  aging: ClientPulseAging;
+  outstandingTotalCents: number;
+  unpaidInvoiceCount: number;
+}
+
 export interface ClientPulseMoney {
   aging: ClientPulseAging;
   outstandingTotalCents: number;
   unpaidInvoiceCount: number;
+  /**
+   * Per-entity breakdown of the same figures above, which they sum to exactly.
+   * Absent for an unsegmented client (decision D6).
+   */
+  agingByProfile?: ClientPulseProfileAr[];
   /** Preview only (newest first, capped at 5) — draftInvoiceCount is the full count. */
   draftInvoices: ClientPulseDraftInvoice[];
   draftInvoiceCount: number;

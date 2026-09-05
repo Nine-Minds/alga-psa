@@ -53,8 +53,11 @@ export function AccountingMappingDialog({
   const dialogId = module.elements?.dialog ?? `${module.id}-mapping-dialog`;
 
   const isEditing = Boolean(existingMapping);
+  const targetConfig = module.externalTarget;
   const [selectedAlgaId, setSelectedAlgaId] = useState<string>('');
   const [selectedExternalId, setSelectedExternalId] = useState<string>('');
+  const [selectedKindId, setSelectedKindId] = useState<string>('');
+  const [staleTarget, setStaleTarget] = useState(false);
   const [metadataInput, setMetadataInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -65,7 +68,20 @@ export function AccountingMappingDialog({
     }
     if (existingMapping) {
       setSelectedAlgaId(existingMapping.alga_entity_id ?? '');
-      setSelectedExternalId(existingMapping.external_entity_id ?? '');
+      if (targetConfig) {
+        // The stored mapping selects a specific kind-scoped catalog option.
+        // When that option is gone from the live catalog (legacy code that no
+        // longer resolves), start the picker EMPTY: saving again must be an
+        // explicit re-selection, never a silent re-persist of a stale target.
+        const storedOptionId = targetConfig.optionIdForMapping(existingMapping);
+        const stillExists = externalEntities.some((entity) => entity.id === storedOptionId);
+        setSelectedKindId(targetConfig.kindForMapping(existingMapping));
+        setSelectedExternalId(stillExists ? storedOptionId : '');
+        setStaleTarget(!stillExists);
+      } else {
+        setSelectedExternalId(existingMapping.external_entity_id ?? '');
+        setStaleTarget(false);
+      }
       if (module.metadata?.enableJsonEditor) {
         setMetadataInput(
           existingMapping.metadata ? JSON.stringify(existingMapping.metadata, null, 2) : ''
@@ -76,11 +92,13 @@ export function AccountingMappingDialog({
     } else {
       setSelectedAlgaId('');
       setSelectedExternalId('');
+      setSelectedKindId(targetConfig?.defaultKindId ?? '');
+      setStaleTarget(false);
       setMetadataInput('');
     }
     setError(null);
     setIsSaving(false);
-  }, [isOpen, existingMapping, module.metadata]);
+  }, [isOpen, existingMapping, module.metadata, targetConfig, externalEntities]);
 
   const dialogTitle = useMemo(
     () =>
@@ -99,8 +117,16 @@ export function AccountingMappingDialog({
   );
 
   const externalOptions = useMemo(
-    () => externalEntities.map((entity) => ({ value: entity.id, label: entity.name })),
-    [externalEntities]
+    () =>
+      externalEntities
+        .filter((entity) => !targetConfig || !entity.kind || entity.kind === selectedKindId)
+        .map((entity) => ({ value: entity.id, label: entity.name })),
+    [externalEntities, targetConfig, selectedKindId]
+  );
+
+  const kindOptions = useMemo(
+    () => (targetConfig ? targetConfig.kinds.map((kind) => ({ value: kind.id, label: kind.label })) : []),
+    [targetConfig]
   );
 
   const hasExternalOptions = externalOptions.length > 0;
@@ -213,11 +239,36 @@ export function AccountingMappingDialog({
             />
           </div>
 
+          {targetConfig ? (
+            <div className="space-y-2">
+              <Label htmlFor={`${module.id}-target-kind-select`} className="text-sm font-medium text-foreground">
+                {targetConfig.label}
+              </Label>
+              <CustomSelect
+                id={`${module.id}-target-kind-select`}
+                options={kindOptions}
+                value={selectedKindId}
+                onValueChange={(value: string) => {
+                  setSelectedKindId(value || targetConfig.defaultKindId);
+                  // A kind names a different provider catalog; a selection made
+                  // under the previous kind is meaningless under the new one.
+                  setSelectedExternalId('');
+                }}
+                placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: targetConfig.label })}
+                required
+                className="w-full"
+              />
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             <Label htmlFor={`${module.id}-external-select`} className="text-sm font-medium text-foreground">
               {module.labels.dialog.externalField}
             </Label>
-            {hasExternalOptions ? (
+            {hasExternalOptions || targetConfig ? (
+              // With a multi-catalog target config the picker is catalog-backed
+              // only — no free-text fallback, so an arbitrary string, display
+              // name, or other-organisation code can never be submitted.
               <CustomSelect
                 id={`${module.id}-external-select`}
                 options={externalOptions}
@@ -237,6 +288,21 @@ export function AccountingMappingDialog({
                 required
               />
             )}
+            {targetConfig && !hasExternalOptions ? (
+              <p className="text-xs text-muted-foreground">
+                {t('integrations.accounting.dialog.noKindOptions', {
+                  defaultValue: 'No usable records of this type were found in the connected organisation.'
+                })}
+              </p>
+            ) : null}
+            {targetConfig && staleTarget ? (
+              <p
+                data-testid={`${module.id}-stale-target-notice`}
+                className="rounded-md border border-[rgb(var(--badge-warning-border))] bg-[rgb(var(--badge-warning-bg))] px-3 py-2 text-xs text-[rgb(var(--badge-warning-text))]"
+              >
+                {targetConfig.invalidNotice}
+              </p>
+            ) : null}
             {renderExternalFieldHelpText()}
           </div>
 

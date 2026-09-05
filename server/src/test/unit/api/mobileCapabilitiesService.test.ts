@@ -42,10 +42,12 @@ describe('MobileCapabilitiesService', () => {
       features: {
         inventory: true,
         opportunities: true,
+        opportunitiesCreate: true,
       },
     });
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'inventory', 'read', db);
     expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'read', db);
+    expect(mocks.hasPermission).toHaveBeenCalledWith(user, 'opportunities', 'create', db);
   });
 
   it('T050 disables both features for an AlgaDesk tenant regardless of RBAC', async () => {
@@ -56,6 +58,7 @@ describe('MobileCapabilitiesService', () => {
       features: {
         inventory: false,
         opportunities: false,
+        opportunitiesCreate: false,
       },
     });
     expect(mocks.hasPermission).not.toHaveBeenCalled();
@@ -76,6 +79,22 @@ describe('MobileCapabilitiesService', () => {
       features: {
         inventory: expectedInventory,
         opportunities: expectedOpportunities,
+        opportunitiesCreate: expectedOpportunities,
+      },
+    });
+  });
+
+  it('exposes opportunity create permission separately from read access', async () => {
+    mocks.hasPermission.mockImplementation(async (_user, resource, action) => (
+      resource !== 'opportunities' || action !== 'create'
+    ));
+    const service = new MobileCapabilitiesService();
+
+    await expect(service.getMyCapabilities(context)).resolves.toEqual({
+      features: {
+        inventory: true,
+        opportunities: true,
+        opportunitiesCreate: false,
       },
     });
   });

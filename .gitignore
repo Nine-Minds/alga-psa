@@ -182,6 +182,7 @@ secrets/
 !packages/core/src/lib/secrets/
 !shared/workflow/secrets/
 !server/src/components/settings/secrets/
+!server/src/app/msp/settings/secrets/
 .secrets
 .clinerules
 data/
@@ -245,3 +246,6 @@ server/secrets-playwright/
 tools/i18n/*/reports/
 tools/i18n/*/review-state.json
 tools/i18n/*/baseline.json
+
+# T013 gate writes this on a diff for inspection; never committed.
+server/src/test/integration/billing/goldenOutput/baseline.actual.json

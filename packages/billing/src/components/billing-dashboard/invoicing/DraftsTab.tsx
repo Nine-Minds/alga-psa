@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
+import { BulkActionBar } from '@alga-psa/ui/components/BulkActionBar';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -441,9 +442,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
               rangeSelect.handleSelect(record.invoice_id, {
                 shiftKey: event.shiftKey,
                 selected: !isChecked,
-                preventDefault: () => event.preventDefault(),
               });
-              event.preventDefault();
             }}
             onChange={() => { /* controlled via onClick for shift-range support */ }}
           />
@@ -581,33 +580,33 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
             />
           </div>
         </div>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              id="drafts-bulk-actions-trigger"
-              variant="outline"
-              disabled={selectedInvoices.size === 0}
-              className="flex items-center gap-2"
-            >
-              {t('draftsTab.bulkActions', {
-                count: selectedInvoices.size,
-                defaultValue: `Actions (${selectedInvoices.size})`,
-              })}
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleBulkFinalize} className="flex items-center gap-2" id="finalize-selected-drafts-menu-item">
-              <CheckCircle className="h-4 w-4" />
-              {t('draftsTab.actions.finalizeSelected', { defaultValue: 'Finalize Selected' })}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBulkReverse} className="flex items-center gap-2 text-red-600 focus:text-red-600" id="reverse-selected-drafts-menu-item">
-              <RotateCcw className="h-4 w-4" />
-              {t('draftsTab.actions.reverseSelected', { defaultValue: 'Reverse Selected' })}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
+
+      <BulkActionBar
+        idPrefix="drafts-bulk-action-bar"
+        count={selectedInvoices.size}
+        selectedLabel={t('draftsTab.bulk.actionBar.selectedCount', {
+          defaultValue: '{{count}} selected',
+          count: selectedInvoices.size,
+        })}
+        actions={[
+          {
+            id: 'finalize',
+            label: t('draftsTab.actions.finalizeSelected', { defaultValue: 'Finalize Selected' }),
+            icon: <CheckCircle className="h-4 w-4" />,
+            onClick: () => { void handleBulkFinalize(); },
+          },
+          {
+            id: 'reverse',
+            label: t('draftsTab.actions.reverseSelected', { defaultValue: 'Reverse Selected' }),
+            icon: <RotateCcw className="h-4 w-4" />,
+            onClick: () => { void handleBulkReverse(); },
+            destructive: true,
+          },
+        ]}
+        onClear={() => setSelectedInvoices(new Set())}
+        clearLabel={t('draftsTab.bulk.actionBar.clear', { defaultValue: 'Clear' })}
+      />
 
       {error && (
         <Alert variant="destructive" className="mb-4">

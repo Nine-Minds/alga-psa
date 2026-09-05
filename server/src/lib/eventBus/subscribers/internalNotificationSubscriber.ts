@@ -493,6 +493,16 @@ async function handleTicketAdditionalAgentAssigned(
   event: TicketAdditionalAgentAssignedEvent
 ): Promise<void> {
   const { tenantId, ticketId, primaryAgentId, additionalAgentId, assignedByUserId } = event.payload;
+  const suppression = resolveTicketNotificationSuppression(event.payload);
+
+  if (!shouldCreateStaffTicketNotification(suppression)) {
+    logger.debug('[InternalNotificationSubscriber] Skipped additional agent assignment notification due to suppression', {
+      ticketId,
+      tenantId,
+      additionalAgentId,
+    });
+    return;
+  }
 
   try {
     const db = await getConnection(tenantId);

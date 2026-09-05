@@ -9,5 +9,7 @@ export function getCurrencySymbol(code: string): string {
   if (code == "NZD") return "NZ$";
   if (code == "CHF") return "Fr.";
   if (code == "BRL") return "R$";
+  if (code == "ZAR") return "R";
+  if (code == "SEK") return "kr";
   return "$"; // Default to USD/Generic Dollar
 }

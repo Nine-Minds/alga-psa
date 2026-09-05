@@ -56,18 +56,39 @@ cp .env.example .env
 > `SALT_BYTES`). These are safe to ignore for local development — the server
 > image carries its own baked-in defaults.
 
-2. Create development secrets. The Compose stack requires these 11 secret files:
+2. Generate development secrets. The Compose stack requires these 12 secret files
+   (including `credential_encryption_key`, the EE credentials-vault encryption
+   key). Generate them all with the idempotent, secure bootstrap script:
+
+```bash
+./scripts/generate-secrets.sh
+```
+
+   On a fresh checkout it creates every required secret; on an existing or
+   partial `secrets/` directory it **preserves every established value**, adds
+   only the missing `credential_encryption_key`, and **fails loudly** rather
+   than regenerating any other missing secret (silently replacing a live
+   deployment's database/auth/encryption secret would break database access,
+   invalidate sessions, or make encrypted data unrecoverable). It never
+   overwrites existing files, so it is safe to re-run.
+
+   If you prefer to create them by hand (e.g. to pin specific values), the
+   script produces exactly these files:
 
 ```bash
 mkdir -p secrets
 for s in postgres_password db_password_server db_password_hocuspocus \
          redis_password email_password crypto_key token_secret_key \
-         nextauth_secret google_oauth_client_id google_oauth_client_secret \
-         alga_auth_key; do
+         nextauth_secret credential_encryption_key google_oauth_client_id \
+         google_oauth_client_secret alga_auth_key; do
   echo "dev-$(openssl rand -hex 24)" > "secrets/$s"
 done
 chmod 600 secrets/*
 ```
+
+   `scripts/docker-compose-wrapper.sh` runs `generate-secrets.sh` automatically
+   before `docker compose`, and `scripts/validate-secrets.sh` bootstraps any
+   missing required secret before validating.
 
 3. Start development environment (the first run builds the server image from
    source, which can take 15–30 minutes):

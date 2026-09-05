@@ -11,7 +11,15 @@ import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { assignContractLineToClient } from '../../../../../test-utils/billingTestHelpers';
 import { v4 as uuidv4 } from 'uuid';
 import { createTenantKnex } from 'server/src/lib/db';
+import { seedBillingCycle } from '../../../../../test-utils/billingProfileTestHelpers';
 
+
+// billingCycleActions imports hasPermission from '@alga-psa/auth/rbac'. The
+// shared mock testMocks declares for that specifier does not reach this file's
+// module graph, so the real check ran and denied a roleless fixture user.
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(() => Promise.resolve(true)),
+}));
 
 vi.mock('@alga-psa/auth', async () => {
   const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
@@ -121,11 +129,13 @@ describe('Client Billing Cycle Anchors', () => {
       cadence_owner: 'client',
     }, 'contract_line_id');
 
-    const clientContractLineId = uuidv4();
+    // Post-drop obligations use the owned contract line ID, not a removed assignment-row ID.
+    const clientContractLineId = contractLineId;
     await assignContractLineToClient(context, contractLineId, {
       startDate: options?.startDate ?? '2025-01-01T00:00:00Z',
       endDate: options?.endDate ?? null,
-      clientContractLineId: clientContractLineId
+      clientContractLineId: clientContractLineId,
+      materializeServicePeriods: false
     });
 
     return { contractLineId, clientContractLineId };
@@ -329,7 +339,7 @@ describe('Client Billing Cycle Anchors', () => {
       });
 
     // Seed an old "last active" cycle so we have to backfill multiple cycles to reach 2026-01-09.
-    await db('client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: uuidv4(),
       tenant: tenantId,
       client_id: clientId,
@@ -399,7 +409,7 @@ describe('Client Billing Cycle Anchors', () => {
     expect(new Date(cycles[0].period_end_date).toISOString().slice(0, 10)).toBe('2025-07-10');
   });
 
-  it('T083/T086: changing anchor regenerates future client-cadence recurring service periods after the billed boundary while leaving client billing schedule records intact', async () => {
+  it('T083/T086: changing anchor regenerates future client-cadence recurring service periods after the billed boundary while retiring obsolete unbilled cycle windows', async () => {
     const { db, client, clientId, tenantId } = context;
 
     await db('clients')
@@ -429,7 +439,7 @@ describe('Client Billing Cycle Anchors', () => {
     const invoicedCycleId = uuidv4();
     const futureCycleId = uuidv4();
 
-    await db('client_billing_cycles').insert([
+    await seedBillingCycle(db, tenantId, [
       {
         billing_cycle_id: invoicedCycleId,
         tenant: tenantId,
@@ -497,7 +507,9 @@ describe('Client Billing Cycle Anchors', () => {
     const futureCycle = await db('client_billing_cycles')
       .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
       .first();
-    expect(futureCycle?.is_active).toBe(true);
+    // The existing schedule-change action retains the old bridge for audit,
+    // but deactivates its obsolete window after a cadence/anchor change.
+    expect(futureCycle?.is_active).toBe(false);
 
     const recurringRows = await db('recurring_service_periods')
       .where({ tenant: tenantId, obligation_id: clientContractLineId })
@@ -514,7 +526,7 @@ describe('Client Billing Cycle Anchors', () => {
     expect(regeneratedRow?.source_rule_version).toContain('client_schedule|monthly|dom:10');
   });
 
-  it('T083/T086: changing billing cycle type updates the client schedule and regenerates client-cadence recurring service periods without deactivating future client billing cycles', async () => {
+  it('T083/T086: changing billing cycle type updates the client schedule and regenerates client-cadence recurring service periods and deactivates obsolete unbilled cycle windows', async () => {
     const { db, clientId, tenantId } = context;
 
     await db('clients')
@@ -543,7 +555,7 @@ describe('Client Billing Cycle Anchors', () => {
     const invoicedCycleId = uuidv4();
     const futureCycleId = uuidv4();
 
-    await db('client_billing_cycles').insert([
+    await seedBillingCycle(db, tenantId, [
       {
         billing_cycle_id: invoicedCycleId,
         tenant: tenantId,
@@ -613,7 +625,9 @@ describe('Client Billing Cycle Anchors', () => {
     const futureCycle = await db('client_billing_cycles')
       .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
       .first();
-    expect(futureCycle?.is_active).toBe(true);
+    // The existing schedule-change action retains the old bridge for audit,
+    // but deactivates its obsolete window after a cadence/anchor change.
+    expect(futureCycle?.is_active).toBe(false);
 
     const recurringRows = await db('recurring_service_periods')
       .where({ tenant: tenantId, obligation_id: clientContractLineId })
@@ -647,7 +661,7 @@ describe('Client Billing Cycle Anchors', () => {
 
     // Seed a future client billing cycle to prove schedule management records remain available.
     const futureCycleId = uuidv4();
-    await db('client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: futureCycleId,
       tenant: tenantId,
       client_id: clientId,
@@ -675,7 +689,9 @@ describe('Client Billing Cycle Anchors', () => {
     const futureCycle = await db('client_billing_cycles')
       .where({ tenant: tenantId, billing_cycle_id: futureCycleId })
       .first();
-    expect(futureCycle?.is_active).toBe(true);
+    // The existing schedule-change action retains the old bridge for audit,
+    // but deactivates its obsolete window after a cadence/anchor change.
+    expect(futureCycle?.is_active).toBe(false);
 
     const recurringRows = await db('recurring_service_periods')
       .where({ tenant: tenantId, obligation_id: clientContractLineId })

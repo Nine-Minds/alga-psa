@@ -112,9 +112,21 @@ export async function GET(
         return new NextResponse('Unauthorized', { status: 401 });
       }
 
-      // Re-fetch file record with tenant context if needed
+      // Re-fetch inside the caller's tenant: findById resolves its tenant from
+      // async context, which a session request has not entered yet. Without it
+      // a retired or foreign file threw instead of falling through to the 404.
       if (!fileRecord || fileRecord.tenant !== tenant) {
-        fileRecord = await FileStoreModel.findById(knex, fileId);
+        fileRecord = await runWithTenant(tenant, () => FileStoreModel.findById(knex, fileId));
+      }
+      // Also accept a document id and serve its current file: generated PDFs
+      // are re-rendered in place, so a file id copied from a list can be stale.
+      if (!fileRecord) {
+        const document = await tenantDb(knex, tenant).table('documents')
+          .where({ document_id: fileId })
+          .first('file_id');
+        if (document?.file_id) {
+          fileRecord = await runWithTenant(tenant, () => FileStoreModel.findById(knex, document.file_id));
+        }
       }
     }
 
@@ -128,7 +140,7 @@ export async function GET(
         return new NextResponse('Unauthorized', { status: 401 });
       }
       const authorizedDocument = await withTransaction(knex, async (trx) =>
-        getAuthorizedDocumentByFileId(trx, tenant, user, fileId)
+        getAuthorizedDocumentByFileId(trx, tenant, user, fileRecord.file_id)
       );
       if (!authorizedDocument) {
         return new NextResponse('Forbidden', { status: 403 });

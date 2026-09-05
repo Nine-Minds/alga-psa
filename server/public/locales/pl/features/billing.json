@@ -6,7 +6,8 @@
     "invoices": "Faktury",
     "overview": "Przegląd",
     "quotes": "Oferty",
-    "usageMetrics": "Wskaźniki użycia"
+    "usageMetrics": "Wskaźniki użycia",
+    "segments": "Wg segmentu"
   },
   "currentContractLine": "Aktualna linia umowy",
   "nextInvoice": "Następna faktura",

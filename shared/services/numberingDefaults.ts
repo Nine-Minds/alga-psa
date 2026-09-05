@@ -7,7 +7,7 @@
  */
 
 // Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE' | 'SALES_ORDER' | 'OPPORTUNITY';
+export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE' | 'SALES_ORDER' | 'PURCHASE_ORDER' | 'OPPORTUNITY';
 
 // Tenant-facing defaults for each entity type's number format. Self-init
 // inserts these with onConflict-ignore, so a tenant's own settings (edited
@@ -22,5 +22,7 @@ export const NUMBERING_DEFAULTS: Record<
   QUOTE: { prefix: 'QUO-', padding_length: 4, initial_value: 1 },
   CREDIT_NOTE: { prefix: 'CM-', padding_length: 6, initial_value: 1 },
   SALES_ORDER: { prefix: 'SO', padding_length: 5, initial_value: 1 },
+  // Matches the seed in migration 20260626100200 so existing tenants see no change.
+  PURCHASE_ORDER: { prefix: 'PO', padding_length: 5, initial_value: 1 },
   OPPORTUNITY: { prefix: 'OPP-', padding_length: 4, initial_value: 1 },
 };

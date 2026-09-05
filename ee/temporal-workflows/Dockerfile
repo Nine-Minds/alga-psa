@@ -119,17 +119,29 @@ RUN npm run build
 
 # Copy onboarding seeds after build
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+# The permission seeds require the catalog at runtime through
+# seeds/onboarding/lib/permissionCatalog.cjs, which resolves this packaged path
+# when the source checkout is absent. tenantDb.cjs travels with it: the catalog
+# modules require it as ../tenantDb.cjs.
+COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 # Verify seeds were copied (debug step)
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Prebuilt dist stage for parity/runtime validation builds.
 FROM base AS prebuilt
 
 COPY ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY ee/server/seeds/onboarding /app/ee/temporal-workflows/dist/seeds/onboarding
+COPY server/migrations/utils/permissions /app/ee/temporal-workflows/dist/seeds/permissions
+COPY server/migrations/utils/tenantDb.cjs /app/ee/temporal-workflows/dist/seeds/tenantDb.cjs
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt stage"
+
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
 
 # Production image from prebuilt artifacts (skips in-container TypeScript compilation).
 FROM base AS production-prebuilt
@@ -149,6 +161,8 @@ RUN mkdir -p /app/node_modules/@alga-psa \
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
 
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
+
 # Same runtime-resolution guard as the production stage: the prebuilt path
 # relies on packages/*/dist arriving via the build context (.dockerignore
 # whitelist) — fail the build here rather than in prod if they didn't.
@@ -157,6 +171,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = awai
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
 
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = await import('@alga-psa/marketing/lib/posts'); const sequences = await import('@alga-psa/marketing/lib/sequences'); if (typeof posts.flipDuePostsInternal !== 'function' || typeof posts.expireStaleTargetsInternal !== 'function' || typeof sequences.sendDueSequenceStepsInternal !== 'function') throw new Error('@alga-psa/marketing runtime exports are incomplete')"
+
+# Shared source is compiled into the worker's dist tree, so its bare imports
+# must resolve from the worker image rather than shared/node_modules.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
@@ -219,6 +237,8 @@ RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
 
+RUN cd /app/ee/temporal-workflows && node -e "const { syncPermissionCatalog } = require('./dist/seeds/permissions/syncPermissionCatalog.cjs'); const { ACTIVE_PERMISSIONS } = require('./dist/seeds/permissions/catalog.cjs'); if (typeof syncPermissionCatalog !== 'function' || ACTIVE_PERMISSIONS.length === 0) throw new Error('packaged permission catalog is incomplete')"
+
 # Fail the build if the runtime-resolved db package can't load the way the
 # onboarding seeds load it (dynamic import from node_modules). Missing
 # packages/db/dist shipped silently and broke prod tenant provisioning.
@@ -227,6 +247,10 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = awai
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
 
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = await import('@alga-psa/marketing/lib/posts'); const sequences = await import('@alga-psa/marketing/lib/sequences'); if (typeof posts.flipDuePostsInternal !== 'function' || typeof posts.expireStaleTargetsInternal !== 'function' || typeof sequences.sendDueSequenceStepsInternal !== 'function') throw new Error('@alga-psa/marketing runtime exports are incomplete')"
+
+# Catch missing bare dependencies imported by shared code compiled into the
+# worker's dist tree before the image can be deployed.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('./dist/shared/services/email/inboundEmailSourceStager.js'); if (typeof m.parseStagedMimeIntoEmailDetails !== 'function') throw new Error('inbound email source stager runtime export is missing')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps

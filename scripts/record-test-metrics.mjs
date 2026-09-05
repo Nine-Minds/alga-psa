@@ -26,6 +26,7 @@ export const HEADER = [
   'passed', 'failed', 'skipped', 'todo', 'total', 'pass_pct',
   'lines_pct', 'statements_pct', 'branches_pct', 'functions_pct',
   'duration_s', 'run_url',
+  'executed', 'run_status', 'files_measured', 'files_total',
 ];
 
 export const DETAIL_HEADER = [
@@ -45,6 +46,28 @@ function readJson(path) {
   }
 }
 
+// A run that never reached most of its tests still writes a report, and
+// pass_pct over the handful that did run reads as a green day (2026-08-21
+// infrastructure-full: 5 of 354 executed, recorded 100%). Two signals say the
+// report is not a whole run:
+//   - an assertion left in "pending": vitest maps run/queued state there when
+//     the process is cut short, while an intentional skip maps to "skipped"
+//     and a todo to "todo";
+//   - a no-show majority: fewer than half the collected tests executed, which
+//     is what a dead bootstrap looks like.
+export const MIN_EXECUTED_RATIO = 0.5;
+
+export function runStatus(results) {
+  if (!results) return '';
+  const executed = (results.numPassedTests ?? 0) + (results.numFailedTests ?? 0);
+  const total = results.numTotalTests ?? 0;
+  const cutShort = (results.testResults ?? []).some(
+    (f) => (f.assertionResults ?? []).some((a) => a.status === 'pending'),
+  );
+  const noShow = total > 0 && executed < total * MIN_EXECUTED_RATIO;
+  return cutShort || noShow ? 'partial' : 'complete';
+}
+
 export function testCounts(results) {
   if (!results) return null;
   const passed = results.numPassedTests ?? 0;
@@ -52,8 +75,11 @@ export function testCounts(results) {
   const skipped = results.numPendingTests ?? 0;
   const todo = results.numTodoTests ?? 0;
   const total = results.numTotalTests ?? passed + failed + skipped + todo;
-  const passPct = passed + failed > 0
-    ? Math.round((passed / (passed + failed)) * 10000) / 100
+  const executed = passed + failed;
+  const status = runStatus(results);
+  // Blank on partial runs so sheet formulas cannot average a vacuous green.
+  const passPct = executed > 0 && status !== 'partial'
+    ? Math.round((passed / executed) * 10000) / 100
     : '';
   let durationS = '';
   const files = results.testResults ?? [];
@@ -62,7 +88,7 @@ export function testCounts(results) {
   if (starts.length && ends.length) {
     durationS = Math.round((Math.max(...ends) - Math.min(...starts)) / 1000);
   }
-  return { passed, failed, skipped, todo, total, passPct, durationS };
+  return { passed, failed, skipped, todo, total, executed, passPct, durationS, runStatus: status };
 }
 
 export function coveragePcts(summary) {
@@ -167,6 +193,17 @@ export function coverageByDirectory(summary, repoRoot = process.cwd()) {
   return rows.sort((a, b) => a.dir.localeCompare(b.dir));
 }
 
+// Headline coverage only describes the files the suite loaded. Carrying the
+// measured/on-disk file counts onto the summary row keeps a percentage over
+// three quarters of the tree from reading as a percentage over all of it.
+export function coverageFileCounts(summary, repoRoot = process.cwd()) {
+  if (!summary) return { measured: '', total: '' };
+  return coverageByDirectory(summary, repoRoot).reduce(
+    (acc, r) => ({ measured: acc.measured + (r.filesMeasured || 0), total: acc.total + (r.filesTotal || 0) }),
+    { measured: 0, total: 0 },
+  );
+}
+
 export function buildRow() {
   const suite = process.env.TEST_METRICS_SUITE;
   if (!suite) {
@@ -174,7 +211,9 @@ export function buildRow() {
     process.exit(1);
   }
   const counts = testCounts(readJson(process.env.TEST_METRICS_RESULTS));
-  const cov = coveragePcts(readJson(process.env.TEST_METRICS_COVERAGE));
+  const summary = readJson(process.env.TEST_METRICS_COVERAGE);
+  const cov = coveragePcts(summary);
+  const files = coverageFileCounts(summary);
   if (!counts && cov.lines === '') {
     console.warn('test-metrics: no results or coverage files found, nothing to record');
     process.exit(0);
@@ -192,6 +231,8 @@ export function buildRow() {
     cov.lines, cov.statements, cov.branches, cov.functions,
     counts?.durationS ?? '',
     runUrl,
+    counts?.executed ?? '', counts?.runStatus ?? '',
+    files.measured, files.total,
   ];
 }
 
@@ -278,11 +319,11 @@ function writeJobSummary(row) {
   appendFileSync(
     process.env.GITHUB_STEP_SUMMARY,
     [
-      `### Test metrics — ${row[1]}`,
+      `### Test metrics — ${row[1]}${row[17] === 'partial' ? ' (partial run)' : ''}`,
       '',
-      '| passed | failed | skipped | pass % | lines % | branches % | duration |',
-      '|---|---|---|---|---|---|---|',
-      `| ${cell(row[4])} | ${cell(row[5])} | ${cell(row[6])} | ${cell(row[9])} | ${cell(row[10])} | ${cell(row[12])} | ${row[14] !== '' ? `${row[14]}s` : '—'} |`,
+      '| passed | failed | skipped | executed | pass % | lines % | branches % | duration |',
+      '|---|---|---|---|---|---|---|---|',
+      `| ${cell(row[4])} | ${cell(row[5])} | ${cell(row[6])} | ${cell(row[16])} | ${cell(row[9])} | ${cell(row[10])} | ${cell(row[12])} | ${row[14] !== '' ? `${row[14]}s` : '—'} |`,
       '',
     ].join('\n'),
   );
@@ -325,7 +366,7 @@ async function main() {
   if (detailRows.length) {
     await appendRows(token, sheetId, 'coverage_by_dir', DETAIL_HEADER, detailRows);
   }
-  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed)${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
+  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed${row[17] === 'partial' ? ', partial run' : ''})${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function readJson<T>(relativePath: string): T {
   return JSON.parse(
@@ -54,6 +55,7 @@ describe('Quotes i18n wiring contract', () => {
       'quotePreview',
       'templateEditor',
       'templatesPage',
+      'errors',
     ]);
   });
 
@@ -686,10 +688,10 @@ describe('Quotes i18n wiring contract', () => {
     expect(getLeaf(de, 'nav.billing.sections.quotes')).toBe('Angebote');
     expect(getLeaf(de, 'nav.billing.quoteBusinessTemplates')).toBe('Angebotsvorlagen');
     expect(getLeaf(de, 'nav.billing.quoteLayouts')).toBe('Angebotslayouts');
-    expect(getLeaf(xx, 'nav.billing.sections.quotes')).toBe('11111');
-    expect(getLeaf(xx, 'nav.billing.quotes')).toBe('11111');
-    expect(getLeaf(xx, 'nav.billing.quoteBusinessTemplates')).toBe('11111');
-    expect(getLeaf(xx, 'nav.billing.quoteLayouts')).toBe('11111');
+    expect(getLeaf(xx, 'nav.billing.sections.quotes')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'nav.billing.quotes')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'nav.billing.quoteBusinessTemplates')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(xx, 'nav.billing.quoteLayouts')).toMatch(pseudoPattern('xx'));
   });
 
   it('T030: follow-on formatter cleanup removes remaining locale-pinned quote form and draft-money formatting', () => {

@@ -15,6 +15,8 @@ export type ContactEmailCanonicalType = typeof CONTACT_EMAIL_CANONICAL_TYPES[num
 export interface IContactPhoneNumber {
   contact_phone_number_id: string;
   phone_number: string;
+  /** Stored separately; never packed into phone_number. */
+  extension?: string | null;
   normalized_phone_number: string;
   canonical_type: ContactPhoneCanonicalType | null;
   custom_phone_type_id?: string | null;

@@ -332,7 +332,8 @@
       "remove": "Remove phone {{number}}"
     },
     "fields": {
-      "phoneNumber": "Phone Number",
+      "phoneNumber": "Phone",
+      "extension": "Extension",
       "phoneType": "Phone Type",
       "customPhoneType": "Custom Phone Type",
       "customTypePlaceholder": "Select or enter a custom phone type",
@@ -344,6 +345,7 @@
       "selectExactlyOneDefault": "Select exactly one default phone number.",
       "phoneRow": "Phone {{number}}",
       "enterCompletePhoneNumber": "Enter a complete phone number.",
+      "includeCountryCallingCode": "Include the country calling code, starting with +.",
       "enterCustomPhoneType": "Enter a custom phone type.",
       "customTypesUnique": "Custom phone type labels must be unique."
     },
@@ -703,6 +705,29 @@
       "saved": "Contact updated",
       "saveFailed": "Could not update contact",
       "saveFailedDescription": "The contact could not be updated. Please try again."
+    }
+  },
+  "errors": {
+    "contact": {
+      "notFound": "Contact not found",
+      "otherClient": "Permission denied: Cannot manage contacts for another client",
+      "notAssociatedWithClient": "Contact is not associated with a client",
+      "emailExists": "A contact with this email address already exists in the system",
+      "fieldRequired": "The {{field}} is required",
+      "clientInvalid": "The selected client is no longer valid",
+      "duplicate": "A contact with these details already exists.",
+      "destinationInvalid": "The selected client or inbound ticket destination is no longer valid",
+      "invalidDataRefresh": "Invalid contact data provided. Please refresh and try again.",
+      "invalidDataFields": "Invalid contact data provided. Please check all fields and try again.",
+      "bulkEmailExists": "One or more contacts already have this email address",
+      "invalidReference": "Invalid reference in update data",
+      "visibilityMissingField": "Missing required visibility group field.",
+      "visibilityMissingFieldNamed": "Missing required visibility group field: {{field}}.",
+      "visibilityReferenceInvalid": "The selected contact, visibility group, or board is no longer valid. Please refresh and try again.",
+      "visibilityDuplicate": "A visibility group with these details already exists for this client.",
+      "visibilityInvalidData": "Invalid visibility group data provided. Please check the group details and selected boards.",
+      "groupNameRequired": "Group name is required",
+      "readPermission": "Permission denied: Cannot read contacts"
     }
   }
 }

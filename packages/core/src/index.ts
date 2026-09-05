@@ -17,6 +17,9 @@ export * from './lib/dateTimeUtils';
 // Error utilities
 export * from './lib/errors';
 
+// Safe accounting-provider error serialization + log meta redaction
+export * from './lib/providerErrors';
+
 // Edition / feature gating
 export * from './lib/features';
 

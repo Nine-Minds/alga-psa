@@ -1,561 +1,636 @@
-// server/src/components/interactions/OverallInteractionsFeed.tsx
-'use client'
+'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { IInteraction, IInteractionType } from '@alga-psa/types';
-import { IUser } from '@shared/interfaces/user.interfaces';
-import { IContact } from '@alga-psa/types';
-import type { IClient } from '@alga-psa/types';
-import { Filter, XCircle } from 'lucide-react';
-import Link from 'next/link';
-import { getAllContacts } from '@alga-psa/clients/actions';
-import { getRecentInteractions, getInteractionStatuses } from '@alga-psa/clients/actions';
-import { getAllInteractionTypes } from '@alga-psa/clients/actions';
-import { useDrawer } from "@alga-psa/ui";
-import InteractionDetails from './InteractionDetails';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { ColumnDefinition, IClient, IContact, IInteraction, IInteractionType } from '@alga-psa/types';
+import type { IUser } from '@shared/interfaces/user.interfaces';
+import { Filter, Plus, XCircle } from 'lucide-react';
+import {
+  getAllInteractionTypes,
+  getInteractionStatuses,
+  getInteractionsPage,
+} from '@alga-psa/clients/actions';
+import { useClientDrawer, useDrawer } from '@alga-psa/ui';
+import { Button } from '@alga-psa/ui/components/Button';
+import ClientAvatar from '@alga-psa/ui/components/ClientAvatar';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
+import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { Input } from '@alga-psa/ui/components/Input';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
+import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
-import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
-import { Input } from '@alga-psa/ui/components/Input';
-import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
-import { Button } from '@alga-psa/ui/components/Button';
-import { CollapseToggleButton } from '@alga-psa/ui/components/CollapseToggleButton';
-import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
-import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
-import { ButtonComponent, FormFieldComponent, ContainerComponent } from '@alga-psa/ui/ui-reflection/types';
-import QuickAddContact from '../contacts/QuickAddContact';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-
-const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
-  isActionMessageError(value) || isActionPermissionError(value);
+import InteractionDetails from './InteractionDetails';
+import { QuickAddInteraction } from './QuickAddInteraction';
+import ClientQuickView from '../clients/ClientQuickView';
+import QuickAddContact from '../contacts/QuickAddContact';
+import { useContactQuickViewDrawer } from '../contacts/bento/useContactQuickViewDrawer';
 
 interface OverallInteractionsFeedProps {
   users: IUser[];
   contacts: IContact[];
   clients: IClient[];
-  isCollapsed?: boolean;
-  onToggleCollapse?: () => void;
+  onOpenUser?: (userId: string, onUpdate?: () => void) => void;
 }
 
+type InteractionTableRow = IInteraction & { id: string };
 
-const OverallInteractionsFeed: React.FC<OverallInteractionsFeedProps> = ({ 
-  users, 
-  contacts, 
-  clients,
-  isCollapsed = false,
-  onToggleCollapse
-}) => {
-  const { t } = useTranslation('msp/clients');
-  const [interactions, setInteractions] = useState<IInteraction[]>([]);
-  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
-  const [statuses, setStatuses] = useState<any[]>([]);
-  const [selectedUser, setSelectedUser] = useState<string>('all');
-  const [selectedContact, setSelectedContact] = useState<string>('all');
-  const [selectedClient, setSelectedClient] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [startTime, setStartTime] = useState<Date | undefined>(undefined);
-  const [endTime, setEndTime] = useState<Date | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [interactionTypeId, setInteractionTypeId] = useState<string>('all');
-  const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false);
-  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
-  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
-  const [allContacts, setAllContacts] = useState<IContact[]>(contacts);
-  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
-  const { openDrawer } = useDrawer();
-  const [interactionsLoadErrorMessage, setInteractionsLoadErrorMessage] = useState<string | null>(null);
-  const [typesLoadErrorMessage, setTypesLoadErrorMessage] = useState<string | null>(null);
-  const [statusesLoadErrorMessage, setStatusesLoadErrorMessage] = useState<string | null>(null);
-  const loadErrorMessage = interactionsLoadErrorMessage ?? typesLoadErrorMessage ?? statusesLoadErrorMessage;
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
-  // UI Reflection System Integration
-  const { automationIdProps: searchInputProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: 'overall-interactions-search',
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Search All Interactions',
-    helperText: 'Search across all interactions in the system'
-  });
+// Match the compact, colored-dot status pills used by the ticket dashboard.
+const STATUS_PILL_HUES = [
+  'var(--color-primary-500)',
+  'var(--color-secondary-500)',
+  'var(--color-accent-500)',
+  'var(--color-primary-700)',
+  'var(--color-secondary-700)',
+  'var(--color-accent-700)',
+  'var(--color-text-500)',
+] as const;
 
-  const { automationIdProps: filterButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: 'overall-interactions-filter-button',
-    type: 'button',
-    label: 'Filter Interactions',
-    helperText: 'Open advanced filter options for interactions'
-  });
+const hashStatus = (value: string): number => {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) | 0;
+  }
+  return Math.abs(hash);
+};
 
-  const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
-    id: 'overall-interactions-reset-button',
-    type: 'button',
-    label: 'Reset',
-    helperText: 'Clear all applied filters'
-  });
+function InteractionStatusPill({ name, isClosed }: { name?: string; isClosed?: boolean }) {
+  if (!name) return <span className="text-[rgb(var(--color-text-400))]">—</span>;
 
-  const { automationIdProps: clientPickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: 'overall-interactions-client-picker',
-    type: 'formField',
-    fieldType: 'select',
-    label: 'Filter by Client',
-    helperText: 'Filter interactions by associated client'
-  });
+  const hue = isClosed
+    ? 'var(--color-status-success)'
+    : STATUS_PILL_HUES[hashStatus(name) % STATUS_PILL_HUES.length];
 
-  const { automationIdProps: startTimePickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: 'overall-interactions-start-time',
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Interaction Start Time',
-    helperText: 'Filter interactions from this start time'
-  });
+  return (
+    <span
+      className="inline-flex min-w-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium text-[rgb(var(--color-text-700))]"
+      style={{ backgroundColor: `rgb(${hue} / 0.14)`, borderColor: `rgb(${hue} / 0.30)` }}
+    >
+      <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: `rgb(${hue})` }} />
+      <span className="truncate">{name}</span>
+    </span>
+  );
+}
 
-  const { automationIdProps: endTimePickerProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: 'overall-interactions-end-time',
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Interaction End Time',
-    helperText: 'Filter interactions until this end time'
-  });
+function EntityLinkCell({
+  id,
+  name,
+  ariaLabel,
+  avatar,
+  onOpen,
+}: {
+  id: string;
+  name: string | null | undefined;
+  ariaLabel: string;
+  avatar: React.ReactNode;
+  onOpen?: () => void;
+}) {
+  if (!name) return <span className="text-[rgb(var(--color-text-400))]">—</span>;
 
-  useEffect(() => {
-    fetchInteractionTypes();
-    fetchStatuses();
-    fetchInteractions();
-    fetchContacts();
-  }, []);
-
-  const fetchInteractionTypes = async () => {
-    try {
-      const types = await getAllInteractionTypes();
-      if (isReturnedActionError(types)) {
-        setTypesLoadErrorMessage(getErrorMessage(types));
-        return;
-      }
-      // Sort to ensure system types appear first
-      const sortedTypes = types.sort((a, b) => {
-        // If both are system types or both are tenant types, sort by name
-        if (('created_at' in a) === ('created_at' in b)) {
-          return a.type_name.localeCompare(b.type_name);
-        }
-        // System types ('created_at' exists) come first
-        return 'created_at' in a ? -1 : 1;
-      });
-      setTypesLoadErrorMessage(null);
-      setInteractionTypes(sortedTypes);
-    } catch (error) {
-      console.error('Error fetching interaction types:', error);
-      setTypesLoadErrorMessage(t('interactions.feed.typesLoadFailed', { defaultValue: 'Interaction types could not be loaded. Please try again.' }));
-    }
-  };
-
-  const fetchStatuses = async () => {
-    try {
-      const statusList = await getInteractionStatuses();
-      if (isReturnedActionError(statusList)) {
-        setStatuses([]);
-        setStatusesLoadErrorMessage(getErrorMessage(statusList));
-        return;
-      }
-      setStatusesLoadErrorMessage(null);
-      setStatuses(statusList);
-    } catch (error) {
-      console.error('Error fetching interaction statuses:', error);
-      setStatuses([]);
-      setStatusesLoadErrorMessage(t('interactions.overall.statusesLoadFailed', { defaultValue: 'Interaction statuses could not be loaded. Please try again.' }));
-    }
-  };
-
-  const fetchInteractions = useCallback(async () => {
-    try {
-      const fetchedInteractions = await getRecentInteractions({});
-      if (isReturnedActionError(fetchedInteractions)) {
-        setInteractions([]);
-        setInteractionsLoadErrorMessage(getErrorMessage(fetchedInteractions));
-        return;
-      }
-      setInteractionsLoadErrorMessage(null);
-      setInteractions(fetchedInteractions);
-    } catch (error) {
-      console.error('Error fetching interactions:', error);
-      setInteractions([]);
-      setInteractionsLoadErrorMessage(t('interactions.feed.loadFailed', { defaultValue: 'Interactions could not be loaded. Please try again.' }));
-    }
-  }, [t]);
-
-  const fetchContacts = async () => {
-    try {
-      const fetchedContacts = await getAllContacts('all');
-      setAllContacts(fetchedContacts);
-    } catch (error) {
-      console.error('Error fetching contacts:', error);
-    }
-  };
-
-  const getTypeLabel = (type: IInteractionType) => {
-    return (
-      <div className="flex items-center gap-2">
-        <InteractionIcon icon={type.icon} typeName={type.type_name} />
-        <span>{type.type_name}</span>
-      </div>
-    );
-  };
-
-  const typeFilterOptions = useMemo(
-    () => [
-      { value: 'all', label: t('interactions.feed.allTypes', { defaultValue: 'All Types' }) },
-      ...interactionTypes.map((type) => ({
-        value: type.type_id,
-        label: getTypeLabel(type),
-        textValue: type.type_name
-      }))
-    ],
-    [interactionTypes, t]
+  const content = (
+    <span className="flex min-w-0 items-center gap-2">
+      {avatar}
+      <span className="truncate font-medium transition-colors group-hover:text-[rgb(var(--color-primary-700))]">
+        {name}
+      </span>
+    </span>
   );
 
-  const filteredInteractions = useMemo(() => {
-    return interactions.filter(interaction => {
-      // Text search
-      const matchesSearch = !searchTerm || (
-        interaction.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        interaction.contact_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        interaction.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      // Filter conditions
-      const matchesUser = selectedUser === 'all' || interaction.user_id === selectedUser;
-      const matchesContact = selectedContact === 'all' || interaction.contact_name_id === selectedContact;
-      const matchesClient = selectedClient === 'all' || interaction.client_id === selectedClient;
-      const matchesStatus = selectedStatus === 'all' || interaction.status_id === selectedStatus;
-      const matchesType = interactionTypeId === 'all' || interaction.type_id === interactionTypeId;
-      
-      // Time-based filtering (using start_time and end_time if available, fallback to interaction_date)
-      const interactionStartTime = interaction.start_time ? new Date(interaction.start_time) : new Date(interaction.interaction_date);
-      const interactionEndTime = interaction.end_time ? new Date(interaction.end_time) : new Date(interaction.interaction_date);
-      
-      const matchesStartTime = !startTime || interactionStartTime >= startTime;
-      const matchesEndTime = !endTime || interactionEndTime <= endTime;
-      
-      return matchesSearch && matchesUser && matchesContact && matchesClient && 
-             matchesStatus && matchesType && matchesStartTime && matchesEndTime;
-    });
-  }, [interactions, searchTerm, selectedUser, selectedContact, selectedClient, selectedStatus, interactionTypeId, startTime, endTime]);
+  if (!onOpen) return content;
 
-  const isFilterActive = useMemo(() => {
-    return selectedUser !== 'all' ||
-           selectedContact !== 'all' ||
-           selectedClient !== 'all' ||
-           selectedStatus !== 'all' ||
-           interactionTypeId !== 'all' ||
-           startTime !== undefined ||
-           endTime !== undefined;
-  }, [selectedUser, selectedContact, selectedClient, selectedStatus, interactionTypeId, startTime, endTime]);
+  return (
+    <button
+      id={id}
+      type="button"
+      aria-label={ariaLabel}
+      className="group block max-w-full border-0 bg-transparent p-0 text-left text-[rgb(var(--color-text-700))]"
+      onClick={(event) => {
+        event.stopPropagation();
+        onOpen();
+      }}
+    >
+      {content}
+    </button>
+  );
+}
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-  };
+export default function OverallInteractionsFeed({
+  users,
+  contacts,
+  clients,
+  onOpenUser,
+}: OverallInteractionsFeedProps) {
+  const { t } = useTranslation('msp/clients');
+  const { openDrawer } = useDrawer();
+  const clientDrawer = useClientDrawer();
+  const openContactDrawer = useContactQuickViewDrawer();
+  const latestRequestRef = useRef(0);
+  const [interactions, setInteractions] = useState<IInteraction[]>([]);
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [reloadVersion, setReloadVersion] = useState(0);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [interactionTypes, setInteractionTypes] = useState<IInteractionType[]>([]);
+  const [statuses, setStatuses] = useState<Array<{ status_id: string; name: string }>>([]);
+  const [selectedUser, setSelectedUser] = useState('all');
+  const [selectedContact, setSelectedContact] = useState('all');
+  const [selectedClient, setSelectedClient] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
+  const [startTime, setStartTime] = useState<Date | undefined>();
+  const [endTime, setEndTime] = useState<Date | undefined>();
+  const [clientFilterState, setClientFilterState] = useState<'all' | 'active' | 'inactive'>('all');
+  const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [allContacts, setAllContacts] = useState(contacts);
+  const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [isQuickAddInteractionOpen, setIsQuickAddInteractionOpen] = useState(false);
+  const [userAvatarUrls, setUserAvatarUrls] = useState<Record<string, string | null>>({});
 
-  const handleInteractionDeleted = useCallback((deletedInteractionId: string) => {
-    // Remove the deleted interaction from the list
-    setInteractions(prevInteractions => 
-      prevInteractions.filter(i => i.interaction_id !== deletedInteractionId)
-    );
-  }, [setInteractions]);
+  useEffect(() => {
+    setAllContacts(contacts);
+  }, [contacts]);
 
-  const handleInteractionUpdated = useCallback((updatedInteraction: IInteraction) => {
-    // Update the interaction in the list
-    setInteractions(prevInteractions => 
-      prevInteractions.map(i => 
-        i.interaction_id === updatedInteraction.interaction_id ? updatedInteraction : i
-      )
-    );
-  }, [setInteractions]);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [searchTerm]);
 
-  const handleInteractionClick = (interaction: IInteraction) => {
-    openDrawer(
-      <InteractionDetails 
-        interaction={interaction} 
-        onInteractionDeleted={() => handleInteractionDeleted(interaction.interaction_id)}
-        onInteractionUpdated={handleInteractionUpdated}
-      />
-    );
-  };
+  useEffect(() => {
+    void Promise.all([getAllInteractionTypes(), getInteractionStatuses()])
+      .then(([typesResult, statusesResult]) => {
+        if (!isReturnedActionError(typesResult)) {
+          setInteractionTypes([...typesResult].sort((a, b) => a.type_name.localeCompare(b.type_name)));
+        }
+        if (!isReturnedActionError(statusesResult)) {
+          setStatuses(statusesResult);
+        }
+      })
+      .catch((error) => console.error('Error loading interaction filter options:', error));
+  }, []);
+
+  useEffect(() => {
+    const requestId = ++latestRequestRef.current;
+    setIsLoading(true);
+    setLoadError(null);
+
+    void getInteractionsPage({
+      search: debouncedSearch || undefined,
+      userId: selectedUser === 'all' ? undefined : selectedUser,
+      contactId: selectedContact === 'all' ? undefined : selectedContact,
+      clientId: selectedClient === 'all' ? undefined : selectedClient,
+      statusId: selectedStatus === 'all' ? undefined : selectedStatus,
+      typeId: selectedType === 'all' ? undefined : selectedType,
+      dateFrom: startTime,
+      dateTo: endTime,
+      page: currentPage,
+      pageSize,
+    })
+      .then((result) => {
+        if (requestId !== latestRequestRef.current) return;
+        if (isReturnedActionError(result)) {
+          setInteractions([]);
+          setTotal(0);
+          setLoadError(getErrorMessage(result));
+          return;
+        }
+        setInteractions(result.interactions);
+        setTotal(result.total);
+      })
+      .catch((error) => {
+        if (requestId !== latestRequestRef.current) return;
+        console.error('Error fetching interactions:', error);
+        setInteractions([]);
+        setTotal(0);
+        setLoadError(t('interactions.feed.loadFailed', {
+          defaultValue: 'Interactions could not be loaded. Please try again.',
+        }));
+      })
+      .finally(() => {
+        if (requestId === latestRequestRef.current) setIsLoading(false);
+      });
+  }, [currentPage, debouncedSearch, endTime, pageSize, reloadVersion, selectedClient, selectedContact, selectedStatus, selectedType, selectedUser, startTime, t]);
+
+  useEffect(() => {
+    const visibleUserIds = Array.from(new Set(interactions.map((interaction) => interaction.user_id).filter(Boolean)));
+    const tenant = interactions[0]?.tenant
+      ?? users.find((user) => visibleUserIds.includes(user.user_id))?.tenant;
+    if (!tenant || visibleUserIds.length === 0) return;
+
+    let cancelled = false;
+    void getUserAvatarUrlsBatchAction(visibleUserIds, tenant)
+      .then((avatarMap) => {
+        if (!cancelled) setUserAvatarUrls(Object.fromEntries(avatarMap));
+      })
+      .catch((error) => console.error('Error loading interaction user avatars:', error));
+
+    return () => {
+      cancelled = true;
+    };
+  }, [interactions, users]);
+
+  const changeFilter = useCallback((update: () => void) => {
+    update();
+    setCurrentPage(1);
+  }, []);
+
+  const filteredContacts = useMemo(
+    () => selectedClient === 'all'
+      ? allContacts
+      : allContacts.filter((contact) => contact.client_id === selectedClient),
+    [allContacts, selectedClient],
+  );
+
+  const activeFilterCount = [
+    debouncedSearch,
+    selectedUser !== 'all',
+    selectedContact !== 'all',
+    selectedClient !== 'all',
+    selectedStatus !== 'all',
+    selectedType !== 'all',
+    Boolean(startTime),
+    Boolean(endTime),
+  ].filter(Boolean).length;
 
   const resetFilters = () => {
+    setSearchTerm('');
+    setDebouncedSearch('');
     setSelectedUser('all');
     setSelectedContact('all');
     setSelectedClient('all');
     setSelectedStatus('all');
+    setSelectedType('all');
     setStartTime(undefined);
     setEndTime(undefined);
-    setInteractionTypeId('all');
+    setCurrentPage(1);
   };
 
-  const handleApplyFilters = () => {
-    setIsFilterDialogOpen(false);
-  };
+  const refreshInteractions = useCallback(() => {
+    setReloadVersion((version) => version + 1);
+  }, []);
 
-  const handleUserChange = (userId: string) => {
-    setSelectedUser(userId === '' ? 'all' : userId);
-  };
+  const handleInteractionClick = useCallback((interaction: IInteraction) => {
+    openDrawer(
+      <InteractionDetails
+        interaction={interaction}
+        onInteractionDeleted={refreshInteractions}
+        onInteractionUpdated={refreshInteractions}
+      />,
+    );
+  }, [openDrawer, refreshInteractions]);
 
-  const userPickerValue = selectedUser === 'all' ? '' : selectedUser;
-  
-  const handleContactChange = (contactId: string) => {
-    setSelectedContact(contactId === '' ? 'all' : contactId);
-  };
-  const contactPickerValue = selectedContact === 'all' ? '' : selectedContact;
-  
-  const handleClientChange = (clientId: string | null) => {
-    const newClientSelection = clientId === null || clientId === '' ? 'all' : clientId;
-    setSelectedClient(newClientSelection);
-    
-    // Reset contact selection when client changes
-    if (newClientSelection !== selectedClient) {
-      setSelectedContact('all');
+  const clientsById = useMemo(
+    () => new Map(clients.map((client) => [client.client_id, client])),
+    [clients],
+  );
+  const contactsById = useMemo(
+    () => new Map(allContacts.map((contact) => [contact.contact_name_id, contact])),
+    [allContacts],
+  );
+  const usersById = useMemo(
+    () => new Map(users.map((user) => [user.user_id, user])),
+    [users],
+  );
+
+  const handleClientClick = useCallback((clientId: string) => {
+    if (clientDrawer) {
+      clientDrawer.openClientDrawer(clientId);
+      return;
     }
-  };
-  const selectedClientValue = selectedClient === 'all' ? null : selectedClient;
-  
-  // Filter contacts based on selected client
-  const filteredContacts = useMemo(() => {
-    if (selectedClient === 'all') {
-      return allContacts;
+
+    const client = clientsById.get(clientId);
+    if (client) {
+      openDrawer(<ClientQuickView client={client} isInDrawer quickView />);
     }
-    return allContacts.filter(contact => contact.client_id === selectedClient);
-  }, [allContacts, selectedClient]);
+  }, [clientDrawer, clientsById, openDrawer]);
+
+  const columns = useMemo<ColumnDefinition<InteractionTableRow>[]>(() => [
+    {
+      title: t('interactions.overall.columns.title', { defaultValue: 'Title' }),
+      dataIndex: 'title',
+      width: '26%',
+      sortable: false,
+      render: (value, interaction) => (
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))]">
+            <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
+          </span>
+          <span className="flex min-w-0 flex-col gap-0.5">
+            <button
+              id={`overall-interaction-title-${interaction.interaction_id}`}
+              type="button"
+              aria-label={t('interactions.overall.openInteraction', {
+                defaultValue: 'Open interaction {{title}}',
+                title: value || interaction.type_name,
+              })}
+              className="max-w-full truncate border-0 bg-transparent p-0 text-left font-semibold text-[rgb(var(--color-text-900))] hover:text-[rgb(var(--color-primary-700))]"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleInteractionClick(interaction);
+              }}
+            >
+              {value || '—'}
+            </button>
+            <span className="truncate text-[11px] capitalize leading-tight text-[rgb(var(--color-text-500))]">
+              {interaction.type_name || '—'}
+            </span>
+          </span>
+        </div>
+      ),
+    },
+    {
+      title: t('interactions.overall.columns.status', { defaultValue: 'Status' }),
+      dataIndex: 'status_name',
+      width: '12%',
+      sortable: false,
+      render: (_value, interaction) => (
+        <InteractionStatusPill name={interaction.status_name} isClosed={interaction.is_status_closed} />
+      ),
+    },
+    {
+      title: t('interactions.overall.columns.client', { defaultValue: 'Client' }),
+      dataIndex: 'client_name',
+      width: '15%',
+      sortable: false,
+      render: (_value, interaction) => {
+        const client = interaction.client_id ? clientsById.get(interaction.client_id) : undefined;
+        const name = client?.client_name ?? interaction.client_name;
+        return (
+          <EntityLinkCell
+            id={`overall-interaction-client-${interaction.interaction_id}`}
+            name={name}
+            ariaLabel={t('interactions.overall.openClient', {
+              defaultValue: 'Open client {{name}}',
+              name,
+            })}
+            avatar={name && interaction.client_id ? (
+              <ClientAvatar
+                clientId={interaction.client_id}
+                clientName={name}
+                logoUrl={client?.logoUrl ?? null}
+                size="xs"
+              />
+            ) : null}
+            onOpen={interaction.client_id ? () => handleClientClick(interaction.client_id!) : undefined}
+          />
+        );
+      },
+    },
+    {
+      title: t('interactions.overall.columns.contact', { defaultValue: 'Contact' }),
+      dataIndex: 'contact_name',
+      width: '15%',
+      sortable: false,
+      render: (_value, interaction) => {
+        const contact = interaction.contact_name_id ? contactsById.get(interaction.contact_name_id) : undefined;
+        const name = contact?.full_name ?? interaction.contact_name;
+        return (
+          <EntityLinkCell
+            id={`overall-interaction-contact-${interaction.interaction_id}`}
+            name={name}
+            ariaLabel={t('interactions.overall.openContact', {
+              defaultValue: 'Open contact {{name}}',
+              name,
+            })}
+            avatar={name && interaction.contact_name_id ? (
+              <ContactAvatar
+                contactId={interaction.contact_name_id}
+                contactName={name}
+                avatarUrl={contact?.avatarUrl ?? null}
+                size="xs"
+              />
+            ) : null}
+            onOpen={interaction.contact_name_id
+              ? () => void openContactDrawer(interaction.contact_name_id!, { onChangesSaved: refreshInteractions })
+              : undefined}
+          />
+        );
+      },
+    },
+    {
+      title: t('interactions.overall.columns.user', { defaultValue: 'User' }),
+      dataIndex: 'user_name',
+      width: '14%',
+      sortable: false,
+      render: (_value, interaction) => {
+        const user = usersById.get(interaction.user_id);
+        const fullName = [user?.first_name, user?.last_name].filter(Boolean).join(' ');
+        const name = fullName || interaction.user_name;
+        return (
+          <EntityLinkCell
+            id={`overall-interaction-user-${interaction.interaction_id}`}
+            name={name}
+            ariaLabel={t('interactions.overall.openUser', {
+              defaultValue: 'Open user {{name}}',
+              name,
+            })}
+            avatar={name ? (
+              <UserAvatar
+                userId={interaction.user_id}
+                userName={name}
+                avatarUrl={userAvatarUrls[interaction.user_id] ?? null}
+                size="xs"
+              />
+            ) : null}
+            onOpen={onOpenUser ? () => onOpenUser(interaction.user_id, refreshInteractions) : undefined}
+          />
+        );
+      },
+    },
+    {
+      title: t('interactions.overall.columns.date', { defaultValue: 'Date' }),
+      dataIndex: 'interaction_date',
+      width: '14%',
+      sortable: false,
+      render: (value) => {
+        if (!value) return <span className="text-[rgb(var(--color-text-400))]">—</span>;
+        const date = new Date(value);
+        return (
+          <span className="flex flex-col leading-tight">
+            <span className="font-medium text-[rgb(var(--color-text-700))]">
+              {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+            <span className="text-[11px] text-[rgb(var(--color-text-400))]">
+              {date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+            </span>
+          </span>
+        );
+      },
+    },
+  ], [clientsById, contactsById, handleClientClick, handleInteractionClick, onOpenUser, openContactDrawer, refreshInteractions, t, userAvatarUrls, usersById]);
+
+  const tableData = useMemo<InteractionTableRow[]>(
+    () => interactions.map((interaction) => ({ ...interaction, id: interaction.interaction_id })),
+    [interactions],
+  );
 
   return (
-    <ReflectionContainer id="overall-interactions-feed" label="Overall Interactions Feed">
-      {isCollapsed ? (
-        <div className="bg-white shadow rounded-lg h-full flex items-start justify-center p-2">
-          <CollapseToggleButton
-            id="expand-interactions-button"
-            isCollapsed={true}
-            collapsedLabel={t('interactions.overall.expand', { defaultValue: 'Expand Recent Interactions' })}
-            expandedLabel={t('interactions.overall.collapse', { defaultValue: 'Collapse Recent Interactions' })}
-            expandDirection="left"
-            onClick={onToggleCollapse}
-            className="mt-2"
+    <section className="overflow-hidden rounded-lg bg-[rgb(var(--color-card))] shadow" id="overall-interactions-feed" aria-label={t('interactions.overall.title', { defaultValue: 'Recent Interactions' })}>
+      <div className="space-y-3 border-b border-[rgb(var(--color-border-200))] p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Input
+            id="overall-interactions-search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder={t('interactions.feed.searchPlaceholder', { defaultValue: 'Search interactions' })}
+            className="h-[38px]"
+            containerClassName="min-w-[260px] max-w-[460px] flex-1"
           />
-        </div>
-      ) : (
-      <div className="bg-white shadow rounded-lg p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-bold">{t('interactions.overall.title', { defaultValue: 'Recent Interactions' })}</h2>
-        <CollapseToggleButton
-          id="collapse-interactions-button"
-          isCollapsed={false}
-          collapsedLabel={t('interactions.overall.expand', { defaultValue: 'Expand Recent Interactions' })}
-          expandedLabel={t('interactions.overall.collapse', { defaultValue: 'Collapse Recent Interactions' })}
-          expandDirection="left"
-          onClick={onToggleCollapse}
-        />
-      </div>
-      <div className="flex flex-nowrap items-stretch gap-4 mb-4">
-        <div className="flex-grow min-w-0">
-          <div className="flex items-center gap-2 w-full h-full">
-            <Input
-              {...searchInputProps}
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder={t('interactions.feed.searchPlaceholder', { defaultValue: 'Search interactions' })}
-              className="w-full h-full py-3"
-            />
-          </div>
-        </div>
-        {isFilterActive ? (
-          <Button
-            {...resetButtonProps}
-            onClick={resetFilters}
-            size="lg"
-            variant="outline"
-            className="flex-shrink-0 whitespace-nowrap"
-          >
-            <XCircle className="mr-2 h-4 w-4" />
-            {t('interactions.feed.reset', { defaultValue: 'Reset' })}
+          <Button id="overall-interactions-toggle-filters" variant={showFilters ? 'soft' : 'outline'} onClick={() => setShowFilters((visible) => !visible)} className="h-[38px] shrink-0 gap-1.5">
+            <Filter className="h-4 w-4" />
+            {t('interactions.feed.filter', { defaultValue: 'Filters' })}
+            {activeFilterCount > 0 ? <span className="chip-primary ml-0.5 inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[11px] font-semibold">{activeFilterCount}</span> : null}
           </Button>
-        ) : (
           <Button
-            {...filterButtonProps}
-            onClick={() => setIsFilterDialogOpen(true)}
-            size="lg"
-            className="flex-shrink-0 whitespace-nowrap"
+            id="overall-interactions-add"
+            className="h-[38px] shrink-0 gap-1.5"
+            onClick={() => setIsQuickAddInteractionOpen(true)}
           >
-            <Filter className="mr-2" />
-            {t('interactions.feed.filter', { defaultValue: 'Filter' })}
+            <Plus className="h-4 w-4" />
+            {t('interactions.feed.addInteraction', { defaultValue: 'Add Interaction' })}
           </Button>
-        )}
-      </div>
+        </div>
 
-      <Dialog
-        isOpen={isFilterDialogOpen}
-        onClose={() => setIsFilterDialogOpen(false)}
-        title={t('interactions.feed.filterDialogTitle', { defaultValue: 'Filter Interactions' })}
-        disableFocusTrap
-        footer={
-          <div className="flex justify-between w-full">
-            <Button
-              id="reset-filters-button"
-              onClick={resetFilters}
-              variant="ghost"
-              size="sm"
-              className="text-gray-500 hover:text-gray-700 flex items-center gap-1"
-            >
-              <XCircle className="h-4 w-4" />
-              {t('interactions.feed.reset', { defaultValue: 'Reset' })}
-            </Button>
-            <Button
-              id="apply-filters-button"
-              onClick={handleApplyFilters}
-            >
-              {t('interactions.feed.applyFilters', { defaultValue: 'Apply Filters' })}
-            </Button>
-          </div>
-        }
-      >
-        <DialogContent>
-          <div className="space-y-4">
+        {showFilters ? (
+          <div className="grid gap-3 border-t border-[rgb(var(--color-border-200))] pt-3 md:grid-cols-2 xl:grid-cols-4" id="overall-interactions-expanded-filters">
             <CustomSelect
-              options={typeFilterOptions}
-              value={interactionTypeId}
-              onValueChange={setInteractionTypeId}
+              id="overall-interactions-type-filter"
+              options={[
+                { value: 'all', label: t('interactions.feed.allTypes', { defaultValue: 'All Types' }) },
+                ...interactionTypes.map((type) => ({ value: type.type_id, label: type.type_name })),
+              ]}
+              value={selectedType}
+              onValueChange={(value) => changeFilter(() => setSelectedType(value))}
               placeholder={t('interactions.feed.typePlaceholder', { defaultValue: 'Interaction Type' })}
             />
             <UserPicker
               users={users}
-              value={userPickerValue}
-              onValueChange={handleUserChange}
+              value={selectedUser === 'all' ? '' : selectedUser}
+              onValueChange={(value) => changeFilter(() => setSelectedUser(value || 'all'))}
               getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
               placeholder={t('interactions.overall.allUsers', { defaultValue: 'All Users' })}
               buttonWidth="full"
-            />      
-            <div className="space-y-2">
-              <ClientPicker
-                {...clientPickerProps}
-                clients={clients}
-                onSelect={handleClientChange}
-                selectedClientId={selectedClientValue}
-                filterState={clientFilterState}
-                onFilterStateChange={setClientFilterState}
-                clientTypeFilter={clientTypeFilter}
-                onClientTypeFilterChange={setClientTypeFilter}
-                fitContent={false}
-              />
-            </div>
+            />
+            <ClientPicker
+              id="overall-interactions-client-filter"
+              clients={clients}
+              onSelect={(clientId) => changeFilter(() => {
+                setSelectedClient(clientId || 'all');
+                setSelectedContact('all');
+              })}
+              selectedClientId={selectedClient === 'all' ? null : selectedClient}
+              filterState={clientFilterState}
+              onFilterStateChange={setClientFilterState}
+              clientTypeFilter={clientTypeFilter}
+              onClientTypeFilterChange={setClientTypeFilter}
+              fitContent={false}
+            />
             <ContactPicker
               contacts={filteredContacts}
-              value={contactPickerValue}
-              onValueChange={handleContactChange}
-              placeholder={selectedClient === 'all' ? t('interactions.overall.allContacts', { defaultValue: 'All Contacts' }) : t('interactions.overall.contactsFromClient', { defaultValue: 'Contacts from selected client' })}
+              value={selectedContact === 'all' ? '' : selectedContact}
+              onValueChange={(value) => changeFilter(() => setSelectedContact(value || 'all'))}
+              placeholder={selectedClient === 'all'
+                ? t('interactions.overall.allContacts', { defaultValue: 'All Contacts' })
+                : t('interactions.overall.contactsFromClient', { defaultValue: 'Contacts from selected client' })}
               buttonWidth="full"
               onAddNew={() => setIsQuickAddContactOpen(true)}
             />
-            <QuickAddContact
-              isOpen={isQuickAddContactOpen}
-              onClose={() => setIsQuickAddContactOpen(false)}
-              onContactAdded={(newContact) => {
-                setAllContacts((prevContacts) => {
-                  const existingIndex = prevContacts.findIndex((contact) => contact.contact_name_id === newContact.contact_name_id);
-                  if (existingIndex >= 0) {
-                    const nextContacts = [...prevContacts];
-                    nextContacts[existingIndex] = newContact;
-                    return nextContacts;
-                  }
-                  return [...prevContacts, newContact];
-                });
-                setSelectedContact(newContact.contact_name_id);
-                setIsQuickAddContactOpen(false);
-              }}
-              clients={clients}
-              selectedClientId={selectedClientValue ?? undefined}
-            />
             <CustomSelect
+              id="overall-interactions-status-filter"
               options={[
                 { value: 'all', label: t('interactions.overall.allStatuses', { defaultValue: 'All Statuses' }) },
-                ...statuses.map((status) => ({
-                  value: status.status_id,
-                  label: status.name
-                }))
+                ...statuses.map((status) => ({ value: status.status_id, label: status.name })),
               ]}
               value={selectedStatus}
-              onValueChange={setSelectedStatus}
+              onValueChange={(value) => changeFilter(() => setSelectedStatus(value))}
               placeholder={t('interactions.overall.statusPlaceholder', { defaultValue: 'Status' })}
             />
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('interactions.overall.startTimeLabel', { defaultValue: 'Interaction Start Time' })}</label>
-                <DateTimePicker
-                  {...startTimePickerProps}
-                  value={startTime}
-                  onChange={setStartTime}
-                  placeholder={t('interactions.overall.startTimePlaceholder', { defaultValue: 'Filter from this start time' })}
-                  label={t('interactions.overall.startTime', { defaultValue: 'Start Time' })}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <label className="text-sm font-medium">{t('interactions.overall.endTimeLabel', { defaultValue: 'Interaction End Time' })}</label>
-                <DateTimePicker
-                  {...endTimePickerProps}
-                  value={endTime}
-                  onChange={setEndTime}
-                  placeholder={t('interactions.overall.endTimePlaceholder', { defaultValue: 'Filter until this end time' })}
-                  label={t('interactions.overall.endTime', { defaultValue: 'End Time' })}
-                  minDate={startTime}
-                />
-              </div>
+            <DateTimePicker id="overall-interactions-start-time" value={startTime} onChange={(value) => changeFilter(() => setStartTime(value))} placeholder={t('interactions.overall.startTimePlaceholder', { defaultValue: 'Filter from this start time' })} label={t('interactions.overall.startTime', { defaultValue: 'Start Time' })} />
+            <DateTimePicker id="overall-interactions-end-time" value={endTime} onChange={(value) => changeFilter(() => setEndTime(value))} placeholder={t('interactions.overall.endTimePlaceholder', { defaultValue: 'Filter until this end time' })} label={t('interactions.overall.endTime', { defaultValue: 'End Time' })} minDate={startTime} />
+            <div className="flex items-end justify-end">
+              <Button
+                id="overall-interactions-reset-filters"
+                variant="ghost"
+                size="sm"
+                onClick={resetFilters}
+                disabled={activeFilterCount === 0}
+                className="gap-1"
+              >
+                <XCircle className="h-4 w-4" />
+                {t('interactions.feed.reset', { defaultValue: 'Reset' })}
+              </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-      
-      {loadErrorMessage ? (
-        <div role="alert" className="mb-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          {loadErrorMessage}
-        </div>
-      ) : null}
-      <ul className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)]">
-        {filteredInteractions.map((interaction: IInteraction): React.JSX.Element => (
-          <li key={interaction.interaction_id} className="flex items-start space-x-3 p-2 hover:bg-gray-100 rounded cursor-pointer" onClick={() => handleInteractionClick(interaction)}>
-            <InteractionIcon icon={interaction.icon} typeName={interaction.type_name} />
-            <div>
-              <p className="font-semibold">{interaction.title}</p>
-              <p className="text-sm text-gray-500">
-                {new Date(interaction.interaction_date).toLocaleString()} - 
-                {interaction.contact_name && (
-                  <Link href={`/msp/contacts/${interaction.contact_name_id}`} className="text-blue-500 hover:underline">
-                    {interaction.contact_name}
-                  </Link>
-                )}
-                {interaction.client_name && ` (${interaction.client_name})`}
-              </p>
-              <div className="flex items-center gap-2 text-xs text-gray-400">
-                <span>{t('interactions.overall.byUser', { defaultValue: 'By {{name}}', name: interaction.user_name })}</span>
-                {interaction.status_name && (
-                  <>
-                    <span>•</span>
-                    <span className="text-gray-600">{interaction.status_name}</span>
-                  </>
-                )}
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
+        ) : null}
       </div>
-      )}
-    </ReflectionContainer>
-  );
-};
 
-export default OverallInteractionsFeed;
+      {loadError ? <p className="m-4 rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700" role="alert">{loadError}</p> : null}
+      {isLoading ? (
+        <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-loading">{t('interactions.overall.loading', { defaultValue: 'Loading interactions…' })}</p>
+      ) : tableData.length === 0 ? (
+        <p className="p-6 text-sm text-[rgb(var(--color-text-500))]" id="overall-interactions-empty">{t('interactions.overall.empty', { defaultValue: 'No interactions match these filters.' })}</p>
+      ) : (
+        <DataTable
+          id="overall-interactions-table"
+          data={tableData}
+          columns={columns}
+          pagination
+          currentPage={currentPage}
+          onPageChange={setCurrentPage}
+          pageSize={pageSize}
+          totalItems={total}
+          onItemsPerPageChange={(nextPageSize) => {
+            setPageSize(nextPageSize);
+            setCurrentPage(1);
+          }}
+          rowClassName={() => 'cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus-within:outline-none hover:!bg-table-hover'}
+          onRowClick={handleInteractionClick}
+        />
+      )}
+
+      <QuickAddContact
+        isOpen={isQuickAddContactOpen}
+        onClose={() => setIsQuickAddContactOpen(false)}
+        onContactAdded={(newContact) => {
+          setAllContacts((previousContacts) => [
+            ...previousContacts.filter((contact) => contact.contact_name_id !== newContact.contact_name_id),
+            newContact,
+          ]);
+          setSelectedContact(newContact.contact_name_id);
+          setCurrentPage(1);
+          setIsQuickAddContactOpen(false);
+        }}
+        clients={clients}
+        selectedClientId={selectedClient === 'all' ? undefined : selectedClient}
+      />
+      <QuickAddInteraction
+        id="overall-interactions-quick-add"
+        isOpen={isQuickAddInteractionOpen}
+        onClose={() => setIsQuickAddInteractionOpen(false)}
+        onInteractionAdded={() => {
+          setIsQuickAddInteractionOpen(false);
+          refreshInteractions();
+        }}
+      />
+    </section>
+  );
+}

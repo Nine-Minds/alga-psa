@@ -53,6 +53,15 @@ export interface ChargeComputeTaxContext {
     locationId: string | null | undefined,
   ): string | null;
   getClientDefaultTaxRegionCode(clientId: string): string | null;
+  /**
+   * Whether the charge's billing profile is tax exempt (F131).
+   *
+   * Exemption is per legal entity, and one client can hold several, so this is
+   * asked per charge rather than read once from the client. Passing no profile
+   * yields the client-level answer — today's behaviour, and what the contract
+   * simulator gets.
+   */
+  isTaxExemptForProfile(billingProfileId: string | null | undefined): boolean;
   calculateTax(
     clientId: string,
     netAmountInCents: number,
@@ -60,6 +69,7 @@ export interface ChargeComputeTaxContext {
     regionCode: string,
     isTaxable: boolean,
     currencyCode: string,
+    billingProfileId?: string | null,
   ): ChargeComputeTaxResult;
 }
 
@@ -70,3 +80,15 @@ export interface ChargeComputeClient {
   client_id: string;
   is_tax_exempt?: boolean | null;
 }
+
+/**
+ * Billing-profile assignments constant across every charge a contract line
+ * produces. Resolved once during the caller's load phase; the compute modules
+ * combine them with any per-charge work-item assignment through
+ * `resolveChargeProfile`.
+ *
+ * Optional throughout the compute layer: the contract simulator produces
+ * charges that are never persisted and supplies none. Production generation
+ * always supplies one, which is what makes every persisted charge attributed.
+ */
+export type { ChargeProfileAssignments } from "../billingProfileResolution";

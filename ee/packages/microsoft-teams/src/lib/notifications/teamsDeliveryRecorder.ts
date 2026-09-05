@@ -10,7 +10,7 @@ export type TeamsDeliveryErrorCode =
   | 'graph_not_found'
   | 'graph_server_error'
   | 'user_not_mapped'
-  | 'addon_inactive'
+  | 'feature_disabled'
   | 'integration_inactive'
   | 'package_misconfigured'
   | 'transient'

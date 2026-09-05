@@ -137,5 +137,22 @@
     "remaining": "Niewykorzystane {{hours}} godz. przepadnie.",
     "submit": "Wygaś pakiet",
     "title": "Wygaś pakiet godzin"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "Nie znaleziono pakietu godzin. Mógł zostać zaktualizowany lub usunięty. Odśwież stronę i spróbuj ponownie.",
+      "serviceNotFound": "Nie znaleziono usługi. Mogła zostać zaktualizowana lub usunięta. Odśwież stronę i spróbuj ponownie.",
+      "hoursPositive": "Liczba godzin pakietu musi być większa od zera.",
+      "ratePositive": "Stawka godzinowa musi wynosić zero lub więcej.",
+      "reasonRequired": "Ta operacja wymaga podania powodu.",
+      "adjustExpiredOrVoided": "Nie można skorygować wygasłego lub anulowanego pakietu godzin.",
+      "usedCannotVoid": "Ten pakiet godzin został wykorzystany i nie można go anulować. Zamiast tego oznacz go jako wygasły.",
+      "onlyPendingOrActiveVoid": "Anulować można tylko oczekujące lub aktywne pakiety godzin.",
+      "expireVoided": "Nie można oznaczyć anulowanego pakietu godzin jako wygasłego.",
+      "updateExpirationVoided": "Nie można zaktualizować terminu wygaśnięcia anulowanego pakietu godzin.",
+      "invalidValue": "Jedna z wybranych wartości pakietu godzin jest nieprawidłowa. Odśwież stronę i spróbuj ponownie.",
+      "missingField": "Brakuje wymaganego pola pakietu godzin. Sprawdź formularz i spróbuj ponownie.",
+      "referenceMissing": "Wybrany klient, usługa lub faktura już nie istnieje. Odśwież stronę i spróbuj ponownie."
+    }
   }
 }

@@ -33,4 +33,10 @@ describe('document action document CRUD tenant-scoped query contract', () => {
     expect(deleteSection).not.toContain(".where({ document_id: document.document_id, tenant: tenantId })");
     expect(deleteSection).not.toContain("tenant: tenantId");
   });
+
+  it('takes inline image links with the document they point at', () => {
+    expect(deleteSection).toContain(
+      "DocumentAssociation.deleteByEntity(trx, document.document_id, 'document')"
+    );
+  });
 });

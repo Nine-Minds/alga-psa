@@ -46,7 +46,7 @@ describe('tickets modal route infrastructure', () => {
     expect(routeClient).toContain('TicketImportDialog');
     expect(routeClient).toContain('router.back()');
     expect(routeClient).toContain("router.replace('/msp/tickets')");
-    expect(dashboard).toContain("router.push('/msp/tickets/import')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/import')");
     expect(dashboard).not.toContain("import TicketImportDialog from './TicketImportDialog'");
     expect(dashboard).not.toContain('<TicketImportDialog');
   });
@@ -63,7 +63,7 @@ describe('tickets modal route infrastructure', () => {
     expect(routeClient).toContain('useTicketsRouteState');
     expect(routeClient).toContain('filters={filters}');
     expect(routeClient).toContain('selectedTicketIds={selectedTicketIdsArray}');
-    expect(dashboard).toContain("router.push('/msp/tickets/export')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/export')");
     expect(dashboard).not.toContain("import TicketExportDialog from './TicketExportDialog'");
     expect(dashboard).not.toContain('<TicketExportDialog');
   });
@@ -129,12 +129,15 @@ describe('tickets modal route infrastructure', () => {
   it('keeps the bulk action bar in the list while navigating to bulk modal routes', () => {
     const dashboard = read('packages/tickets/src/components/TicketingDashboard.tsx');
 
+    // navigateAwayTo, not router.push directly: leaving the list has to tell the
+    // container to stop mirroring filter state into the URL first, or the write
+    // races the push and lands on top of it.
     expect(dashboard).toContain('<BulkTicketActionBar');
-    expect(dashboard).toContain("router.push('/msp/tickets/bulk-assign')");
-    expect(dashboard).toContain("router.push('/msp/tickets/bulk-tags')");
-    expect(dashboard).toContain("router.push('/msp/tickets/bulk-due-date')");
-    expect(dashboard).toContain("router.push('/msp/tickets/bulk-status')");
-    expect(dashboard).toContain("router.push('/msp/tickets/bulk-priority')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/bulk-assign')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/bulk-tags')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/bulk-due-date')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/bulk-status')");
+    expect(dashboard).toContain("navigateAwayTo('/msp/tickets/bulk-priority')");
   });
 
   it('threads optional notification suppression through eligible bulk dialogs and excludes tag writes', () => {

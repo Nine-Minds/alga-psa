@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -39,6 +40,7 @@ describe('T002: static i18n wiring audit', () => {
     'TaskDependencies.tsx',
     'ProjectMaterialsDrawer.tsx',
     'ProjectTaskExportDialog.tsx',
+    'SendStatusUpdateDialog.tsx',
     'ProjectQuickAdd.tsx',
     'ProjectDetailsEdit.tsx',
     'PrefillFromTicketDialog.tsx',
@@ -201,15 +203,15 @@ describe('T010: /msp/projects list page i18n coverage', () => {
     expect(source).toContain("features/projects");
     // Uses projectListT wrapper that prefixes keys with projectList.*
     expect(source).toContain("projectListT(");
-    expect(getLeaf(pseudo, 'projectList.searchPlaceholder')).toBe('11111');
-    expect(getLeaf(pseudo, 'title')).toBe('11111');
+    expect(getLeaf(pseudo, 'projectList.searchPlaceholder')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'title')).toMatch(pseudoPattern('xx'));
   });
 
   it('DeadlineFilter.tsx wires keys backed by xx pseudo-locale', () => {
     const source = read('./DeadlineFilter.tsx');
     expect(source).toContain("useTranslation");
     expect(source).toContain("features/projects");
-    expect(getLeaf(pseudo, 'filters.deadline.placeholder')).toBe('11111');
+    expect(getLeaf(pseudo, 'filters.deadline.placeholder')).toMatch(pseudoPattern('xx'));
   });
 });
 
@@ -226,8 +228,8 @@ describe('T011: /msp/projects/[id] detail page i18n coverage', () => {
     expect(source).toContain("features/projects");
     expect(source).toContain("t('kanbanView'");
     expect(source).toContain("t('listView'");
-    expect(getLeaf(pseudo, 'kanbanView')).toBe('11111');
-    expect(getLeaf(pseudo, 'listView')).toBe('11111');
+    expect(getLeaf(pseudo, 'kanbanView')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'listView')).toMatch(pseudoPattern('xx'));
   });
 
   it('TaskForm.tsx wires field keys backed by xx pseudo-locale', () => {
@@ -248,32 +250,32 @@ describe('T011: /msp/projects/[id] detail page i18n coverage', () => {
     ];
     for (const key of keys) {
       expect(source).toContain(`t('${key}'`);
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
   });
 
   it('ProjectMaterialsDrawer.tsx wires material keys backed by xx pseudo-locale', () => {
     const source = read('./ProjectMaterialsDrawer.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'materials.title')).toBe('11111');
+    expect(getLeaf(pseudo, 'materials.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('TaskDependencies.tsx wires dependency keys backed by xx pseudo-locale', () => {
     const source = read('./TaskDependencies.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'taskDependencies.title')).toBe('11111');
+    expect(getLeaf(pseudo, 'taskDependencies.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('TaskDocumentsSimple.tsx wires document keys backed by xx pseudo-locale', () => {
     const source = read('./TaskDocumentsSimple.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'taskDocuments.attachmentsTitle')).toBe('11111');
+    expect(getLeaf(pseudo, 'taskDocuments.attachmentsTitle')).toMatch(pseudoPattern('xx'));
   });
 
   it('TaskTicketLinks.tsx wires ticket link keys backed by xx pseudo-locale', () => {
     const source = read('./TaskTicketLinks.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'taskTicketLinks.title')).toBe('11111');
+    expect(getLeaf(pseudo, 'taskTicketLinks.title')).toMatch(pseudoPattern('xx'));
   });
 });
 
@@ -287,13 +289,13 @@ describe('T012: /msp/projects/templates i18n coverage', () => {
   it('ProjectTemplatesList.tsx wires list keys backed by xx pseudo-locale', () => {
     const source = read('./project-templates/ProjectTemplatesList.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'templates.list.title')).toBe('11111');
+    expect(getLeaf(pseudo, 'templates.list.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('TemplateEditor.tsx wires editor keys backed by xx pseudo-locale', () => {
     const source = read('./project-templates/TemplateEditor.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'templates.editor.deletedSuccess')).toBe('11111');
+    expect(getLeaf(pseudo, 'templates.editor.deletedSuccess')).toMatch(pseudoPattern('xx'));
   });
 
   it('TemplateCreationWizard.tsx wires wizard keys backed by xx pseudo-locale', () => {
@@ -320,7 +322,7 @@ describe('T013: /msp/settings/project-settings i18n coverage', () => {
   it('ProjectSettings.tsx wires settings keys', () => {
     const source = read('./settings/ProjectSettings.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'settings.page.title')).toBe('11111');
+    expect(getLeaf(pseudo, 'settings.page.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('ProjectStatusSettings.tsx wires status config keys', () => {
@@ -336,8 +338,8 @@ describe('T013: /msp/settings/project-settings i18n coverage', () => {
   it('AddStatusDialog.tsx wires add-status dialog keys backed by xx pseudo-locale', () => {
     const source = read('./settings/projects/AddStatusDialog.tsx');
     expect(source).toContain("useTranslation");
-    expect(getLeaf(pseudo, 'addStatusDialog.addStatus')).toBe('11111');
-    expect(getLeaf(pseudo, 'addStatusDialog.placeholder')).toBe('11111');
+    expect(getLeaf(pseudo, 'addStatusDialog.addStatus')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'addStatusDialog.placeholder')).toMatch(pseudoPattern('xx'));
   });
 });
 
@@ -352,7 +354,7 @@ describe('T014: global quick-create ProjectQuickAdd i18n coverage', () => {
     const source = read('./ProjectQuickAdd.tsx');
     expect(source).toContain("useTranslation");
     expect(source).toContain("features/projects");
-    expect(getLeaf(pseudo, 'quickAdd.title')).toBe('11111');
+    expect(getLeaf(pseudo, 'quickAdd.title')).toMatch(pseudoPattern('xx'));
   });
 
   it('ProjectQuickAdd is reached through the global quick-create project route', () => {

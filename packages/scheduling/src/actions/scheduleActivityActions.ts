@@ -47,7 +47,7 @@ export const getScheduleActivityEntries = withAuth(async (
       hasPermission(user, 'user_schedule', 'read_all', knex),
     ]);
     if (!canUpdate && !canReadAll) {
-      return permissionError("Permission denied: cannot view another user's schedule activities");
+      return permissionError("Permission denied: cannot view another user's schedule activities", 'msp/schedule:errors.activities.otherUserForbidden');
     }
   }
 

@@ -9,6 +9,7 @@ This document provides comprehensive information about the ITIL (Information Tec
 - [Implementation](#implementation)
 - [Usage](#usage)
 - [Configuration](#configuration)
+- [ITIL Board and Priority Lifecycle](#itil-board-and-priority-lifecycle)
 - [API Reference](#api-reference)
 - [Workflows](#workflows)
 - [Best Practices](#best-practices)
@@ -242,6 +243,33 @@ const escalationRules = {
   level3: ['manager', 'director', 'service_desk_manager']
 };
 ```
+
+## ITIL Board and Priority Lifecycle
+
+### Board-scoped priority pickers
+
+When a user creates or edits a ticket, the priority picker filters options by the board's declared priority type:
+
+- **ITIL boards** — surface only ITIL priorities (Critical, High, Medium, Low, Planning).
+- **Non-ITIL boards** — hide ITIL priorities and show only the custom priorities defined for that board.
+
+A ticket's already-assigned priority always remains visible in the picker even if the ticket is later moved to a board whose type no longer matches. This prevents existing tickets from losing their assigned value while guiding new assignments to the correct priority set for the board.
+
+### ITIL priority protection and deletion
+
+ITIL priorities are protected from deletion as long as at least one board with `priority_type: 'itil'` exists in the tenant. While any such board is present, the delete action does not appear for ITIL priorities in **Settings > Ticketing > Priorities**.
+
+Once every ITIL-typed board has been removed, ITIL priorities become deletable: a delete action appears alongside an informational note explaining the change, and each priority can be removed individually.
+
+### Last-board deletion cleanup
+
+Deleting the last ITIL board triggers an automatic cleanup sequence that runs **before** the board row is removed, so the operation completes cleanly without leaving orphaned data or foreign-key constraint errors:
+
+1. **Category re-pointing** — ITIL categories that still reference the board being deleted are re-pointed to another surviving ITIL board. If no other ITIL board exists, the category's board reference is cleared.
+2. **Priority reference release** — all FK references that would block priority deletion are released: `sla_policy_targets.priority_id`, board `default_priority_id`, and `inbound_ticket_defaults` are cleared or updated before any priority rows are dropped.
+3. **SLA policy retirement** — the auto-created "ITIL Standard" SLA policy is retired once it has no remaining targets and is not assigned to any client. Any ITIL-Standard stamp on tickets and boards is cleared before the policy row is removed.
+
+This means tenants can fully decommission ITIL ticketing — removing the last ITIL board, then deleting ITIL priorities from Settings — without requiring any manual database intervention.
 
 ## API Reference
 

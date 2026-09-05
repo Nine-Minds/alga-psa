@@ -4,13 +4,136 @@
     "queue": "Queue",
     "pipeline": "Pipeline"
   },
+  "create": {
+    "new": "New opportunity",
+    "title": "New opportunity",
+    "requiredHint": "Choose a client and add a title. The first follow-up is scheduled for you.",
+    "client": "Client",
+    "selectClient": "Select a client",
+    "dealTitle": "Title",
+    "titlePlaceholder": "e.g. Managed services agreement",
+    "moreDetails": "More details (optional)",
+    "dealType": "Deal type",
+    "firstAction": "First action",
+    "defaultFirstAction": "Schedule discovery call",
+    "due": "Due",
+    "contact": "Contact",
+    "selectContact": "Select a contact",
+    "unnamedContact": "Unnamed contact",
+    "expectedClose": "Expected close",
+    "currency": "Currency",
+    "mrr": "Monthly recurring revenue",
+    "nrr": "One-time services",
+    "hardware": "Hardware",
+    "submit": "Create opportunity",
+    "creating": "Creating…",
+    "success": "Opportunity created",
+    "unableToLoadClients": "Unable to load clients.",
+    "unableToLoadContacts": "Unable to load contacts.",
+    "types": {
+      "new_logo": "New client",
+      "expansion": "Expansion",
+      "renewal": "Renewal",
+      "project": "Project"
+    },
+    "lifecycle": {
+      "prospect": "Prospect",
+      "active": "Active client",
+      "former": "Former client"
+    }
+  },
   "queue": {
     "dueToday": "Do these today",
     "goingQuiet": "Going quiet",
+    "greeting": "Hello, {{name}}",
+    "needsYou_one": "{{count}} thing needs you today.",
+    "needsYou_other": "{{count}} things need you today.",
+    "nothingDue": "Nothing is due today.",
+    "moneyFound": "Money found",
+    "moneyFoundSource": "From billing, contracts, and assets",
+    "stakesBoth": "{{mrr}}/mo recurring and {{nrr}} one-time found",
+    "stakesMrr": "{{amount}}/mo recurring found",
+    "stakesNrr": "{{amount}} one-time found",
+    "suggestionWebHandoff": "Review in web app",
+    "lesson": {
+      "reviewPipeline": "Review the pipeline",
+      "viewAssessmentDeals": "View assessment deals"
+    },
     "empty": "That's everything. Nothing needs you today.",
     "overdue": "Overdue",
     "due": "Due",
     "loading": "Loading your work"
+  },
+  "suggestionHow": {
+    "assetAging_one": "Scope a refresh for {{count}} aging asset.",
+    "assetAging_other": "Scope a refresh for {{count}} aging assets.",
+    "inboundLead": "Follow up while the interest is warm.",
+    "renewal": "Start {{clientName}}'s renewal conversation before the deadline.",
+    "tmConversion": "Compare trailing T&M spend with a recurring agreement.",
+    "whitespace": "Show {{clientName}} the missing {{serviceName}} coverage."
+  },
+  "suggestionTitles": {
+    "assetAging": "{{clientName}} asset refresh",
+    "inboundLead": "{{clientName}} inbound opportunity",
+    "renewal": "{{contractName}} renewal",
+    "tmConversion": "{{clientName}} T&M agreement conversion",
+    "whitespace": "{{clientName}}: {{serviceName}} opportunity"
+  },
+  "why": {
+    "actionDue": {
+      "deadlinePast_one": " and {{count}} day past your own deadline.",
+      "deadlinePast_other": " and {{count}} days past your own deadline.",
+      "dueToday": "Due today",
+      "inboundChase_one": " They have written once since your last reply.",
+      "inboundChase_other": " They have written {{count}} times since your last reply.",
+      "pastDue_one": "{{count}} day past due",
+      "pastDue_other": "{{count}} days past due",
+      "proposalAgeShort_one": "{{count}} day.",
+      "proposalAgeShort_other": "{{count}} days.",
+      "proposalAge_one": "Day {{count}} since the proposal",
+      "proposalAge_other": "Day {{count}} since the proposal",
+      "quoteIntro": "{{clientName}} has had quote {{quoteNumber}} for "
+    },
+    "assetAging": {
+      "age_one": "{{count}} asset past {{oldestYears}} years old",
+      "age_other": "{{count}} assets past {{oldestYears}} years old",
+      "quoteRefresh": " at {{clientName}}. Quote the refresh before it becomes an outage ticket."
+    },
+    "forClient": " for {{clientName}}.",
+    "goingQuiet": {
+      "nudge": " at {{clientName}}. Deals left this long rarely close without a follow-up.",
+      "paperworkMissing": ". The paperwork never went out.",
+      "quietAge_one": "Quiet for {{count}} day",
+      "quietAge_other": "Quiet for {{count}} days",
+      "verbalAge_one": "{{count}} day since their verbal yes",
+      "verbalAge_other": "{{count}} days since their verbal yes"
+    },
+    "inboundLead": {
+      "raisedHand": "{{clientName}} raised their hand",
+      "source": " via {{formName}}. Inbound interest cools fast."
+    },
+    "lesson": {
+      "assessmentGap_one": " You have not proposed one in {{count}} month. Paid assessments are your strongest opening move.",
+      "assessmentGap_other": " You have not proposed one in {{count}} months. Paid assessments are your strongest opening move.",
+      "assessmentRate": "You close {{wonPerFive}} of every 5 assessments you propose.",
+      "quoteVelocity": "Quotes you send within a week close {{ratio}}x as often",
+      "quoteVelocityCompared": " as the ones that wait."
+    },
+    "renewal": {
+      "age_one": "Renews in {{count}} day",
+      "age_other": "Renews in {{count}} days",
+      "startNow": ". Starting now means the renewal conversation is not rushed."
+    },
+    "tmConversion": {
+      "counted_one": "{{count}} client paid more on T&M than an agreement costs",
+      "counted_other": "{{count}} clients paid more on T&M than an agreement costs",
+      "named": "{{clientNames}} paid more on T&M than an agreement costs",
+      "trailing": " over the trailing 12 months. The one-pager puts the comparison in front of them."
+    },
+    "whitespace": {
+      "comparable": " from you yet. Every comparable client does.",
+      "missing": "{{clientName}} does not buy {{serviceName}}"
+    }
   },
   "pipeline": {
     "searchPlaceholder": "Search deals",
@@ -34,6 +157,9 @@
   },
   "detail": {
     "nextAction": "Next action",
+    "plan": "Current plan",
+    "currentStep": "Current",
+    "plannedStep": "Planned",
     "due": "Due {{date}}",
     "complete": "Complete",
     "timeline": "Timeline",
@@ -72,6 +198,9 @@
     "completing": "Completing",
     "whatDidYouDo": "What happened?",
     "nextAction": "Next action",
+    "pickNext": "Next step",
+    "writeNew": "Write a new one…",
+    "reachesStage": "This also reaches {{stage}}",
     "nextActionRequired": "Every open deal needs a next action.",
     "dueDate": "Due date",
     "dueTime": "Time",

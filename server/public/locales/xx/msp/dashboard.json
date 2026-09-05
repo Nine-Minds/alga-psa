@@ -1,217 +1,217 @@
 {
   "greeting": {
-    "morning": "11111",
-    "morningWithName": "11111 {{name}} 11111",
-    "afternoon": "11111",
-    "afternoonWithName": "11111 {{name}} 11111",
-    "evening": "11111",
-    "eveningWithName": "11111 {{name}} 11111"
+    "morning": "⟦Ɠȯȯḓ ḿȯřƞīƞɠ⟧",
+    "morningWithName": "⟦Ɠȯȯḓ ḿȯřƞīƞɠ, {{name}}⟧",
+    "afternoon": "⟦Ɠȯȯḓ ȧƒŧḗřƞȯȯƞ⟧",
+    "afternoonWithName": "⟦Ɠȯȯḓ ȧƒŧḗřƞȯȯƞ, {{name}}⟧",
+    "evening": "⟦Ɠȯȯḓ ḗṽḗƞīƞɠ⟧",
+    "eveningWithName": "⟦Ɠȯȯḓ ḗṽḗƞīƞɠ, {{name}}⟧"
   },
   "welcome": {
-    "title": "11111",
-    "description": "11111",
-    "titleCommunity": "11111",
-    "descriptionCommunity": "11111"
+    "title": "⟦Ẇḗŀƈȯḿḗ ŧȯ Ẏȯŭř ḾŞƤ Ƈȯḿḿȧƞḓ Ƈḗƞŧḗř⟧",
+    "description": "⟦Ŧřȧƈķ ȯƞƀȯȧřḓīƞɠ ƥřȯɠřḗşş, ƈȯƞƒīɠŭřḗ ƈřīŧīƈȧŀ şḗřṽīƈḗş, ȧƞḓ ķḗḗƥ ḗṽḗřẏ ƈŀīḗƞŧ ḗẋƥḗřīḗƞƈḗ ƈȯƞşīşŧḗƞŧ.⟧",
+    "titleCommunity": "⟦Ẇḗŀƈȯḿḗ ƀȧƈķ⟧",
+    "descriptionCommunity": "⟦Ĵŭḿƥ īƞŧȯ ŧīƈķḗŧş, şƈħḗḓŭŀīƞɠ, ƥřȯĵḗƈŧş, ȧƞḓ řḗƥȯřŧīƞɠ ƒřȯḿ ẏȯŭř ḓȧşħƀȯȧřḓ.⟧"
   },
   "algadesk": {
     "welcome": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ẇḗŀƈȯḿḗ ŧȯ ȦŀɠȧḒḗşķ⟧",
+      "description": "⟦Ŧřȧƈķ ŧīƈķḗŧ ẇȯřķŀȯȧḓ, ḿȯƞīŧȯř ḗḿȧīŀ-ƈħȧƞƞḗŀ ħḗȧŀŧħ, ȧƞḓ şŧȧẏ ȯƞ ŧȯƥ ȯƒ ḗṽḗřẏ ƈȯƞṽḗřşȧŧīȯƞ.⟧"
     },
     "metrics": {
-      "openTickets": "11111",
-      "awaitingCustomer": "11111",
-      "awaitingInternal": "11111",
-      "activeEmailChannels": "11111"
+      "openTickets": "⟦Ȯƥḗƞ ŧīƈķḗŧş⟧",
+      "awaitingCustomer": "⟦Ȧẇȧīŧīƞɠ ƈŭşŧȯḿḗř⟧",
+      "awaitingInternal": "⟦Ȧẇȧīŧīƞɠ īƞŧḗřƞȧŀ⟧",
+      "activeEmailChannels": "⟦Ȧƈŧīṽḗ ḗḿȧīŀ ƈħȧƞƞḗŀş⟧"
     },
     "aging": {
-      "title": "11111",
-      "under2Days": "11111",
-      "days2To7": "11111",
-      "over7Days": "11111"
+      "title": "⟦Ŧīƈķḗŧ ȧɠīƞɠ⟧",
+      "under2Days": "⟦Ŭƞḓḗř 2 ḓȧẏş⟧",
+      "days2To7": "⟦2 ŧȯ 7 ḓȧẏş⟧",
+      "over7Days": "⟦Ȯṽḗř 7 ḓȧẏş⟧"
     },
     "emailHealth": {
-      "title": "11111",
-      "summary": "11111 {{healthy}} 11111 {{active}} 11111",
-      "totalConfigured": "11111 {{total}} 11111"
+      "title": "⟦Ḗḿȧīŀ ƈħȧƞƞḗŀ ħḗȧŀŧħ⟧",
+      "summary": "⟦{{healthy}} ȯƒ {{active}} ȧƈŧīṽḗ ƈħȧƞƞḗŀş ȧřḗ ƈȯƞƞḗƈŧḗḓ.⟧",
+      "totalConfigured": "⟦Ŧȯŧȧŀ ƈȯƞƒīɠŭřḗḓ ƈħȧƞƞḗŀş: {{total}}⟧"
     },
     "recentTickets": {
-      "title": "11111",
-      "empty": "11111"
+      "title": "⟦Řḗƈḗƞŧŀẏ ŭƥḓȧŧḗḓ ŧīƈķḗŧş⟧",
+      "empty": "⟦Ƞȯ řḗƈḗƞŧ ŧīƈķḗŧ ȧƈŧīṽīŧẏ.⟧"
     }
   },
   "features": {
-    "heading": "11111",
-    "comingSoon": "11111",
+    "heading": "⟦Ƥŀȧŧƒȯřḿ Ƒḗȧŧŭřḗş⟧",
+    "comingSoon": "⟦Ƈȯḿīƞɠ şȯȯƞ!⟧",
     "tickets": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ŧīƈķḗŧ Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "description": "⟦Şŧřḗȧḿŀīƞḗ şŭƥƥȯřŧ ẇīŧħ řȯŭŧīƞɠ, ŞĿȦ ŧřȧƈķīƞɠ, ȧƞḓ ɠŭīḓḗḓ ẇȯřķƒŀȯẇş.⟧"
     },
     "monitoring": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Şẏşŧḗḿ Ḿȯƞīŧȯřīƞɠ⟧",
+      "description": "⟦Ẇȧŧƈħ ƈřīŧīƈȧŀ şīɠƞȧŀş ȧƈřȯşş ƈŀīḗƞŧş ȧƞḓ ŧřīɠɠḗř ȧŭŧȯḿȧŧīȯƞ ẇħḗƞ ƞḗḗḓḗḓ.⟧"
     },
     "security": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Şḗƈŭřīŧẏ Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "description": "⟦Ḿȧƞȧɠḗ ƥȯŀīƈīḗş, ȧƥƥřȯṽȧŀş, ȧƞḓ ȧŭḓīŧ řḗşƥȯƞşḗş īƞ ȯƞḗ ƥŀȧƈḗ.⟧"
     },
     "projects": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Ƥřȯĵḗƈŧ Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "description": "⟦Ȯřɠȧƞīẑḗ ḓḗŀīṽḗřẏ ƥŀȧƞş, ŧȧşķş, ȧƞḓ ḿīŀḗşŧȯƞḗş ƒȯř ḗṽḗřẏ ḗƞɠȧɠḗḿḗƞŧ.⟧"
     },
     "reports": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Řḗƥȯřŧīƞɠ & Ȧƞȧŀẏŧīƈş⟧",
+      "description": "⟦Ɓŭīŀḓ řȯŀŀŭƥş ȯƞ ŭŧīŀīẑȧŧīȯƞ, ŞĿȦ ȧŧŧȧīƞḿḗƞŧ, ȧƞḓ ƥřȯƒīŧȧƀīŀīŧẏ.⟧"
     },
     "schedule": {
-      "title": "11111",
-      "description": "11111"
+      "title": "⟦Şƈħḗḓŭŀḗ Ḿȧƞȧɠḗḿḗƞŧ⟧",
+      "description": "⟦Ƈȯȯřḓīƞȧŧḗ ȯƞşīŧḗ ṽīşīŧş ȧƞḓ řḗḿȯŧḗ şḗşşīȯƞş ẇīŧħ ƀī-ḓīřḗƈŧīȯƞȧŀ şẏƞƈ.⟧"
     }
   },
   "knowledgeBase": {
-    "title": "11111",
-    "description": "11111",
-    "cta": "11111"
+    "title": "⟦Ƞḗḗḓ ȧ ḓḗḗƥḗř ḓīṽḗ?⟧",
+    "description": "⟦Ḗẋƥŀȯřḗ ḓḗƥŀȯẏḿḗƞŧ řŭƞƀȯȯķş ȧƞḓ ƀḗşŧ ƥřȧƈŧīƈḗş īƞ ŧħḗ ķƞȯẇŀḗḓɠḗ ƀȧşḗ.⟧",
+    "cta": "⟦Ṽīşīŧ řḗşȯŭřƈḗş⟧"
   },
   "mobileApp": {
-    "title": "11111",
-    "description": "11111",
-    "selfHostDescription": "11111",
-    "appStore": "11111",
-    "playStore": "11111",
-    "appStoreQrAlt": "11111",
-    "playStoreQrAlt": "11111",
-    "connectServer": "11111",
-    "connectServerQrAlt": "11111",
-    "zoomAria": "11111 {{label}} 11111",
-    "hide": "11111",
-    "hiding": "11111",
-    "dismissAria": "11111",
-    "dismissError": "11111",
-    "restore": "11111",
-    "restoring": "11111",
-    "restoreError": "11111",
+    "title": "⟦Ḓȯẇƞŀȯȧḓ ȦŀɠȧƤŞȦ Ḿȯƀīŀḗ ȧƥƥ⟧",
+    "description": "⟦Şƈȧƞ ȧ ɊŘ ƈȯḓḗ ẇīŧħ ẏȯŭř ƥħȯƞḗ ŧȯ ḓȯẇƞŀȯȧḓ ŧħḗ ȦŀɠȧƤŞȦ ḿȯƀīŀḗ ȧƥƥ.⟧",
+    "selfHostDescription": "⟦1. Şƈȧƞ ȧ şŧȯřḗ ɊŘ ƈȯḓḗ ŧȯ īƞşŧȧŀŀ ŧħḗ ȧƥƥ. 2. Īƞ ŧħḗ ȧƥƥ, ŧȧƥ \"Ƈħȧƞɠḗ şḗřṽḗř\" → \"Şƈȧƞ ɊŘ ƈȯḓḗ\" ȧƞḓ şƈȧƞ ŧħḗ \"Ƈȯƞƞḗƈŧ ŧħīş şḗřṽḗř\" ƈȯḓḗ.⟧",
+    "appStore": "⟦Ȧƥƥ Şŧȯřḗ (īȮŞ)⟧",
+    "playStore": "⟦Ɠȯȯɠŀḗ Ƥŀȧẏ (Ȧƞḓřȯīḓ)⟧",
+    "appStoreQrAlt": "⟦ɊŘ ƈȯḓḗ ŀīƞķīƞɠ ŧȯ ŧħḗ ȦŀɠȧƤŞȦ ȧƥƥ ȯƞ ŧħḗ Ȧƥƥŀḗ Ȧƥƥ Şŧȯřḗ⟧",
+    "playStoreQrAlt": "⟦ɊŘ ƈȯḓḗ ŀīƞķīƞɠ ŧȯ ŧħḗ ȦŀɠȧƤŞȦ ȧƥƥ ȯƞ Ɠȯȯɠŀḗ Ƥŀȧẏ⟧",
+    "connectServer": "⟦Ƈȯƞƞḗƈŧ ŧħīş şḗřṽḗř⟧",
+    "connectServerQrAlt": "⟦ɊŘ ƈȯḓḗ ŧħȧŧ ƈȯƞƞḗƈŧş ŧħḗ ȦŀɠȧƤŞȦ ḿȯƀīŀḗ ȧƥƥ ŧȯ ŧħīş şḗřṽḗř⟧",
+    "zoomAria": "⟦Ḗƞŀȧřɠḗ ŧħḗ {{label}} ɊŘ ƈȯḓḗ⟧",
+    "hide": "⟦Ħīḓḗ⟧",
+    "hiding": "⟦Ħīḓīƞɠ...⟧",
+    "dismissAria": "⟦Ħīḓḗ ḿȯƀīŀḗ ȧƥƥ ƈȧřḓ⟧",
+    "dismissError": "⟦Ƒȧīŀḗḓ ŧȯ ħīḓḗ ŧħḗ ƈȧřḓ.⟧",
+    "restore": "⟦Ɠḗŧ ȦŀɠȧƤŞȦ Ḿȯƀīŀḗ ȧƥƥ⟧",
+    "restoring": "⟦Řḗşŧȯřīƞɠ...⟧",
+    "restoreError": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ ŧħḗ ƈȧřḓ.⟧",
     "hidden": {
-      "title": "11111",
-      "subtitle": "11111"
+      "title": "⟦Ħīḓḓḗƞ ḿȯƀīŀḗ ȧƥƥ ƈȧřḓ⟧",
+      "subtitle": "⟦Řḗşŧȯřḗ īŧ īƒ ẏȯŭ ƞḗḗḓ īŧ ŀȧŧḗř.⟧"
     }
   },
   "onboarding": {
-    "completeTitle": "11111",
-    "incompleteTitle": "11111",
-    "completeDescription": "11111",
-    "incompleteDescription": "11111",
-    "stepLabel": "11111 {{index}} 11111",
+    "completeTitle": "⟦Ȯƞƀȯȧřḓīƞɠ ƈȯḿƥŀḗŧḗ⟧",
+    "incompleteTitle": "⟦Ƈȯḿƥŀḗŧḗ ẏȯŭř şḗŧŭƥ⟧",
+    "completeDescription": "⟦Ẏȯŭ'řḗ řḗȧḓẏ ŧȯ ŭşḗ ŧħḗ ƒŭŀŀ ḾŞƤ ḓȧşħƀȯȧřḓ ḗẋƥḗřīḗƞƈḗ.⟧",
+    "incompleteDescription": "⟦Ẇȯřķ ŧħřȯŭɠħ ḗȧƈħ şŧḗƥ ŧȯ ŭƞŀȯƈķ ŧħḗ ƒŭŀŀ ḾŞƤ ḓȧşħƀȯȧřḓ ḗẋƥḗřīḗƞƈḗ.⟧",
+    "stepLabel": "⟦ŞŦḖƤ {{index}}⟧",
     "badges": {
-      "complete": "11111",
-      "notStarted": "11111",
-      "inProgress": "11111",
-      "blocked": "11111"
+      "complete": "⟦Ƈȯḿƥŀḗŧḗ⟧",
+      "notStarted": "⟦Ƞȯŧ Şŧȧřŧḗḓ⟧",
+      "inProgress": "⟦Īƞ Ƥřȯɠřḗşş⟧",
+      "blocked": "⟦Ɓŀȯƈķḗḓ⟧"
     },
     "progress": {
-      "label": "11111",
-      "steps": "11111 {{completed}} 11111 {{total}} 11111",
-      "messageStart": "11111",
-      "messageComplete": "11111",
-      "messageInProgress": "11111"
+      "label": "⟦ƤŘȮƓŘḖŞŞ⟧",
+      "steps": "⟦{{completed}} ȯƒ {{total}} Şŧḗƥş⟧",
+      "messageStart": "⟦Ĵŭşŧ ɠḗŧŧīƞɠ şŧȧřŧḗḓ!⟧",
+      "messageComplete": "⟦Ȧŀŀ şḗŧ - ɠřḗȧŧ ĵȯƀ!⟧",
+      "messageInProgress": "⟦Ķḗḗƥ ɠȯīƞɠ - ẏȯŭ'ṽḗ ɠȯŧ ŧħīş!⟧"
     },
     "substeps": {
-      "dataImport": "11111",
+      "dataImport": "⟦Ƈȯḿƥŀḗŧḗ ẏȯŭř ƒīřşŧ īḿƥȯřŧ ȮŘ ƈřḗȧŧḗ 5 ƈȯƞŧȧƈŧş⟧",
       "identity": {
-        "addProvider": "11111",
-        "linkTeamMember": "11111"
+        "addProvider": "⟦Ȧḓḓ ȧƞ ŞŞȮ ƥřȯṽīḓḗř⟧",
+        "linkTeamMember": "⟦Ŀīƞķ ŧħḗ ƒīřşŧ ŧḗȧḿ ḿḗḿƀḗř⟧"
       },
       "portal": {
-        "customDomain": "11111",
-        "branding": "11111",
-        "inviteFirstContact": "11111"
+        "customDomain": "⟦Ƥȯřŧȧŀ ƈŭşŧȯḿ ḓȯḿȧīƞ⟧",
+        "branding": "⟦Ƥȯřŧȧŀ ƈȯŀȯř ȧƞḓ ŀȯɠȯ ƈŭşŧȯḿīẑȧŧīȯƞş⟧",
+        "inviteFirstContact": "⟦Īƞṽīŧḗ ẏȯŭř ƒīřşŧ ƈȯƞŧȧƈŧ ŧȯ ŧħḗ ƥȯřŧȧŀ⟧"
       },
-      "createContacts": "11111",
+      "createContacts": "⟦Ƈřḗȧŧḗ ẏȯŭř ƒīřşŧ 5 ƈȯƞŧȧƈŧş⟧",
       "calendar": {
-        "addProvider": "11111",
-        "connectAuthorize": "11111"
+        "addProvider": "⟦Ȧḓḓ ȧ ƈȧŀḗƞḓȧř ƥřȯṽīḓḗř⟧",
+        "connectAuthorize": "⟦Ƈȯƞƞḗƈŧ ȧƞḓ ȧŭŧħȯřīẑḗ ŧħḗ ƥřȯṽīḓḗř⟧"
       },
       "email": {
-        "configureInbound": "11111",
-        "configureOutboundDomain": "11111"
+        "configureInbound": "⟦Ƈȯƞƒīɠŭřḗ īƞƀȯŭƞḓ ḗḿȧīŀ⟧",
+        "configureOutboundDomain": "⟦Ƈȯƞƒīɠŭřḗ ȯŭŧƀȯŭƞḓ ƈŭşŧȯḿ ḗḿȧīŀ ḓȯḿȧīƞ⟧"
       }
     },
     "cta": {
-      "completed": "11111",
-      "hiding": "11111",
-      "hide": "11111",
-      "dismiss": "11111 {{title}} 11111",
-      "restoring": "11111"
+      "completed": "⟦Ƈȯḿƥŀḗŧḗḓ⟧",
+      "hiding": "⟦Ħīḓīƞɠ...⟧",
+      "hide": "⟦Ħīḓḗ⟧",
+      "dismiss": "⟦Ḓīşḿīşş {{title}}⟧",
+      "restoring": "⟦Řḗşŧȯřīƞɠ...⟧"
     },
     "hidden": {
-      "title": "11111 {{count}} 11111",
-      "subtitle": "11111",
-      "titleCombined": "11111 {{count}} 11111"
+      "title": "⟦Ħīḓḓḗƞ şḗŧŭƥ ƈȧřḓş ({{count}})⟧",
+      "subtitle": "⟦Řḗşŧȯřḗ ȧƞẏ ƈȧřḓ īƒ ẏȯŭ ƞḗḗḓ īŧ ŀȧŧḗř.⟧",
+      "titleCombined": "⟦Ħīḓḓḗƞ ƈȧřḓş ({{count}})⟧"
     },
     "checklist": {
-      "title": "11111",
-      "progress": "11111 {{completed}} 11111 {{total}} 11111",
-      "completeTitle": "11111",
-      "completeDescription": "11111",
-      "inviteCta": "11111",
-      "viewButton": "11111"
+      "title": "⟦Ȯƞƀȯȧřḓīƞɠ ƈħḗƈķŀīşŧ⟧",
+      "progress": "⟦{{completed}} ȯƒ {{total}} ŧȧşķş ƈȯḿƥŀḗŧḗ⟧",
+      "completeTitle": "⟦Ƈȯƞƒīɠŭřȧŧīȯƞ ƈȯḿƥŀḗŧḗ⟧",
+      "completeDescription": "⟦Īƞṽīŧḗ ƈŀīḗƞŧş ŧȯ ḗẋƥḗřīḗƞƈḗ ẏȯŭř ƀřȧƞḓḗḓ ƥȯřŧȧŀ.⟧",
+      "inviteCta": "⟦Īƞṽīŧḗ ƈŀīḗƞŧş⟧",
+      "viewButton": "⟦Ṽīḗẇ ȯƞƀȯȧřḓīƞɠ ƈħḗƈķŀīşŧ⟧"
     },
     "steps": {
       "identity": {
-        "title": "11111",
-        "description": "11111",
-        "cta": "11111"
+        "title": "⟦Şḗƈŭřḗ Īḓḗƞŧīŧẏ & ŞŞȮ⟧",
+        "description": "⟦Ƈȯƞƞḗƈŧ Ɠȯȯɠŀḗ Ẇȯřķşƥȧƈḗ ȯř Ḿīƈřȯşȯƒŧ 365 şȯ ȧḓḿīƞş şīɠƞ īƞ ẇīŧħ ḿȧƞȧɠḗḓ īḓḗƞŧīŧīḗş.⟧",
+        "cta": "⟦Ƈȯƞƞḗƈŧ ŞŞȮ⟧"
       },
       "portal": {
-        "title": "11111",
-        "description": "11111",
-        "cta": "11111"
+        "title": "⟦Şḗŧ Ŭƥ Ƈŭşŧȯḿḗř Ƥȯřŧȧŀ⟧",
+        "description": "⟦Ƈȯƞƒīɠŭřḗ ẏȯŭř ƥȯřŧȧŀ şȯ ƈŭşŧȯḿḗřş ƈȧƞ şīɠƞ īƞ ȯƞ ẏȯŭř ḓȯḿȧīƞ ẇīŧħ ẏȯŭř ƀřȧƞḓīƞɠ.⟧",
+        "cta": "⟦Ȯƥḗƞ Ƥȯřŧȧŀ Şḗŧŧīƞɠş⟧"
       },
       "dataImport": {
-        "title": "11111",
-        "description": "11111",
-        "cta": "11111"
+        "title": "⟦Īḿƥȯřŧ Ƈȯřḗ Ḓȧŧȧ⟧",
+        "description": "⟦Ȧḓḓ ƈȯƞŧȧƈŧş şȯ ẏȯŭ ƈȧƞ şŧȧřŧ ẇȯřķīƞɠ ƒȯř ƈŀīḗƞŧş ȧƞḓ ķḗḗƥ ẇȯřķƒŀȯẇş ḿȯṽīƞɠ.⟧",
+        "cta": "⟦Ƈřḗȧŧḗ Ƈȯƞŧȧƈŧş⟧"
       },
       "calendar": {
-        "title": "11111",
-        "description": "11111",
-        "cta": "11111"
+        "title": "⟦Ƈȧŀḗƞḓȧř Şẏƞƈ⟧",
+        "description": "⟦Ƈȯƞƞḗƈŧ Ɠȯȯɠŀḗ ȯř Ȯŭŧŀȯȯķ ƈȧŀḗƞḓȧřş ŧȯ ķḗḗƥ ḓīşƥȧŧƈħ ȧƞḓ ƈŀīḗƞŧ ȧƥƥȯīƞŧḿḗƞŧş ȧŀīɠƞḗḓ.⟧",
+        "cta": "⟦Ƈȯƞƒīɠŭřḗ Ƈȧŀḗƞḓȧř⟧"
       },
       "email": {
-        "title": "11111",
-        "description": "11111",
-        "cta": "11111"
+        "title": "⟦Ƈȯƞƒīɠŭřḗ Ḗḿȧīŀ⟧",
+        "description": "⟦Şḗŧ ŭƥ īƞƀȯŭƞḓ ŧīƈķḗŧ ḗḿȧīŀ ȧƞḓ ṽḗřīƒẏ ȧƞ ȯŭŧƀȯŭƞḓ şḗƞḓīƞɠ ḓȯḿȧīƞ ƒȯř řḗŀīȧƀŀḗ ḓḗŀīṽḗřẏ.⟧",
+        "cta": "⟦Ƈȯƞƒīɠŭřḗ Ḗḿȧīŀ⟧"
       }
     },
     "blockers": {
       "identity": {
-        "linkedAccountsUnavailable": "11111",
-        "noLinkedUsers": "11111",
-        "addProviderCredentials": "11111",
-        "configurationUnavailable": "11111",
-        "loadFailed": "11111"
+        "linkedAccountsUnavailable": "⟦Ŭƞȧƀŀḗ ŧȯ ṽḗřīƒẏ ŀīƞķḗḓ ŧḗȧḿ ḿḗḿƀḗřş řīɠħŧ ƞȯẇ.⟧",
+        "noLinkedUsers": "⟦Ƞȯ ŭşḗřş ȧřḗ ŀīƞķḗḓ ŧȯ ȧƞ īḓḗƞŧīŧẏ ƥřȯṽīḓḗř ẏḗŧ. Ȧşķ ȧƞ ḾŞƤ ȧḓḿīƞ ŧȯ ƈȯƞƞḗƈŧ Ɠȯȯɠŀḗ ȯř Ḿīƈřȯşȯƒŧ.⟧",
+        "addProviderCredentials": "⟦Ȧḓḓ Ɠȯȯɠŀḗ Ẇȯřķşƥȧƈḗ ȯř Ḿīƈřȯşȯƒŧ 365 ƈřḗḓḗƞŧīȧŀş ŧȯ ḗƞȧƀŀḗ ŞŞȮ ƒȯř ẏȯŭř ŧḗȧḿ.⟧",
+        "configurationUnavailable": "⟦ŞŞȮ ƥřȯṽīḓḗř ƈȯƞƒīɠŭřȧŧīȯƞ īş ŭƞȧṽȧīŀȧƀŀḗ īƞ ŧħīş ḗƞṽīřȯƞḿḗƞŧ.⟧",
+        "loadFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ŞŞȮ ƈȯƞƒīɠŭřȧŧīȯƞ şŧȧŧŭş.⟧"
       },
       "portal": {
-        "loadFailed": "11111"
+        "loadFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƈŀīḗƞŧ ƥȯřŧȧŀ ḓȯḿȧīƞ şŧȧŧŭş.⟧"
       },
       "import": {
-        "loadFailed": "11111"
+        "loadFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ īḿƥȯřŧ ħīşŧȯřẏ.⟧"
       },
       "calendar": {
-        "providerAttention": "11111 {{provider}} 11111",
-        "loadFailed": "11111"
+        "providerAttention": "⟦{{provider}} řḗʠŭīřḗş ȧŧŧḗƞŧīȯƞ ƀḗƒȯřḗ şẏƞƈīƞɠ ƈȧƞ řḗşŭḿḗ.⟧",
+        "loadFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ƈȧŀḗƞḓȧř īƞŧḗɠřȧŧīȯƞş.⟧"
       },
       "email": {
-        "enterpriseOnly": "11111",
-        "tenantRequired": "11111",
-        "loadFailed": "11111",
-        "verificationFailed": "11111 {{domain}} 11111"
+        "enterpriseOnly": "⟦Ḿȧƞȧɠḗḓ ḗḿȧīŀ ḓȯḿȧīƞş ȧřḗ ȯƞŀẏ ȧṽȧīŀȧƀŀḗ īƞ Ƥřȯ.⟧",
+        "tenantRequired": "⟦Ŧḗƞȧƞŧ ƈȯƞŧḗẋŧ īş řḗʠŭīřḗḓ ŧȯ ŀȯȧḓ ḗḿȧīŀ ȯƞƀȯȧřḓīƞɠ şŧȧŧŭş.⟧",
+        "loadFailed": "⟦Ŭƞȧƀŀḗ ŧȯ ŀȯȧḓ ḿȧƞȧɠḗḓ ḗḿȧīŀ ḓȯḿȧīƞş.⟧",
+        "verificationFailed": "⟦Ṽḗřīƒīƈȧŧīȯƞ ƒȯř {{domain}} ƒȧīŀḗḓ.⟧"
       }
     },
     "errors": {
-      "dismissFailed": "11111",
-      "restoreFailed": "11111"
+      "dismissFailed": "⟦Ƒȧīŀḗḓ ŧȯ ḓīşḿīşş ȯƞƀȯȧřḓīƞɠ şŧḗƥ.⟧",
+      "restoreFailed": "⟦Ƒȧīŀḗḓ ŧȯ řḗşŧȯřḗ ȯƞƀȯȧřḓīƞɠ şŧḗƥ.⟧"
     }
   },
-  "mspDashboard": "11111"
+  "mspDashboard": "⟦ḾŞƤ Ḓȧşħƀȯȧřḓ⟧"
 }

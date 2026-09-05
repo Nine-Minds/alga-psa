@@ -30,9 +30,9 @@ const knex = require(path.join(repoRoot, 'node_modules/knex'))({
 });
 
 const seedFiles = [
-  'ee/server/seeds/onboarding/01_roles.cjs',
-  'ee/server/seeds/onboarding/02_permissions.cjs',
-  'ee/server/seeds/onboarding/03_role_permissions.cjs',
+  'ee/server/seeds/onboarding/psa/01_roles.cjs',
+  'ee/server/seeds/onboarding/psa/02_permissions.cjs',
+  'ee/server/seeds/onboarding/psa/03_role_permissions.cjs',
 ];
 
 (async () => {

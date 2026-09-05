@@ -392,8 +392,8 @@ const ENTRY_TYPE_OPTIONS: { value: string; label: string }[] = [
 
 function sourceBadge(source: string): { label: string; className: string } {
   const map: Record<string, { label: string; className: string }> = {
-    ui: { label: 'UI', className: 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-700))]' },
-    api: { label: 'API', className: 'bg-[rgb(var(--color-secondary-50))] text-[rgb(var(--color-secondary-700))]' },
+    ui: { label: 'UI', className: 'chip-primary' },
+    api: { label: 'API', className: 'chip-secondary' },
     client_portal: { label: 'Client Portal', className: 'bg-blue-50 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
     inbound_email: { label: 'Inbound Email', className: 'bg-amber-50 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
     workflow: { label: 'Workflow', className: 'bg-purple-50 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300' },

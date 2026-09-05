@@ -1,6 +1,6 @@
 'use server';
 
-import { uploadEntityImage, deleteEntityImage, type EntityType } from '@alga-psa/storage';
+import { uploadEntityImage, deleteEntityImage, type EntityLogoVariant, type EntityType } from '@alga-psa/storage';
 import { getConnection, tenantDb } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
@@ -9,10 +9,14 @@ import type { Knex } from 'knex';
 const tenantSettingsQuery = (knex: Knex, tenant: string) =>
   tenantDb(knex, tenant).table('tenant_settings');
 
+/** Branding key each logo variant writes to inside settings.branding. */
+const brandingLogoKey = (variant: EntityLogoVariant) =>
+  variant === 'dark' ? 'logoDarkUrl' : 'logoUrl';
+
 /**
  * Upload a logo for the tenant
  */
-export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string, formData: FormData) => {
+export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string, formData: FormData, logoVariant: EntityLogoVariant = 'default') => {
   try {
     // Check if user has admin permissions
     if (user.user_type !== 'internal') {
@@ -32,7 +36,8 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
       user.user_id,
       tenant,
       'tenant_logo',
-      true // isLogoUpload
+      true, // isLogoUpload
+      logoVariant
     );
 
     if (result.success) {
@@ -47,7 +52,7 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
         ...existingSettings,
         branding: {
           ...(existingSettings.branding || {}),
-          logoUrl: result.imageUrl || '',
+          [brandingLogoKey(logoVariant)]: result.imageUrl || '',
           // Keep existing colors
           primaryColor: existingSettings.branding?.primaryColor,
           secondaryColor: existingSettings.branding?.secondaryColor,
@@ -87,7 +92,7 @@ export const uploadTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
 /**
  * Delete the tenant logo
  */
-export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string) => {
+export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext, tenantId: string, logoVariant: EntityLogoVariant = 'default') => {
   try {
     // Check if user has admin permissions
     if (user.user_type !== 'internal') {
@@ -99,7 +104,9 @@ export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
       'tenant' as EntityType,
       tenantId,
       user.user_id,
-      tenant
+      tenant,
+      undefined,
+      logoVariant
     );
 
     if (result.success) {
@@ -115,7 +122,7 @@ export const deleteTenantLogo = withAuth(async (user: IUserWithRoles, { tenant }
           ...existingSettings,
           branding: {
             ...(existingSettings.branding || {}),
-            logoUrl: '',
+            [brandingLogoKey(logoVariant)]: '',
             // Keep existing colors
             primaryColor: existingSettings.branding?.primaryColor,
             secondaryColor: existingSettings.branding?.secondaryColor,

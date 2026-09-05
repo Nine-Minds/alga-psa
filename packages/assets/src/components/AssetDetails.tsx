@@ -758,7 +758,7 @@ export default function AssetDetails({ asset, maintenanceReport: initialMaintena
 
       <div className="relative">
         {isLoading && (
-          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-white/70 backdrop-blur-sm">
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center rounded-lg bg-[rgb(var(--color-card))]/70 backdrop-blur-sm">
             <Spinner size="md" className="text-primary-500" />
             <Text as="p" size="2" className="mt-2 text-gray-600">
               {t('assetDetails.loading.details', { defaultValue: 'Loading details...' })}
@@ -781,7 +781,7 @@ function renderTabSkeleton(tabId: string) {
   return (
     <div className="space-y-4">
       {rows.map((_, index) => (
-        <div key={`${tabId}-skeleton-${index}`} className="h-16 animate-pulse rounded-lg bg-gray-100" />
+        <div key={`${tabId}-skeleton-${index}`} className="h-16 animate-pulse rounded-lg skeleton-fill" />
       ))}
     </div>
   );

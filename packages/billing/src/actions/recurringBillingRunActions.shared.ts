@@ -3,25 +3,53 @@ import {
   IRecurringDueWorkInvoiceCandidate,
   IRecurringRunExecutionWindowIdentity,
   RecurringRunExecutionWindowKind,
+  type RecurringInvoiceFailureCode,
 } from '@alga-psa/types';
+import type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
+
+/**
+ * Structured failure codes the recurring run can expose to the UI as safe,
+ * localized remediation. These are the coded billing validations the generation
+ * engine produces; everything else stays generic in the UI. Shares the canonical
+ * union with the preview payload (`PreviewInvoiceResponse`).
+ */
+export type HandledRecurringFailureCode = RecurringInvoiceFailureCode;
 
 export type RecurringBillingRunInvoiceFailure = {
   billingCycleId?: string | null;
   executionIdentityKey?: string;
   executionWindowKind?: RecurringRunExecutionWindowKind;
   errorMessage: string;
+  /**
+   * Safe, known failure code carried across the action boundary so the UI can
+   * render localized, actionable guidance instead of the flat error message.
+   * Absent for unknown/internal failures, which keep the generic string.
+   */
+  code?: HandledRecurringFailureCode;
+  /** Interpolation values for the localized failure copy (e.g. clientName). */
+  params?: Record<string, string>;
 };
 
 export type RecurringBillingRunTarget = {
   selectorInput: IRecurringDueSelectionInput;
   executionWindow: IRecurringRunExecutionWindowIdentity;
   billingCycleId?: string | null;
+  /**
+   * Previewed period-total identities for this target's window. Present only
+   * when generation flows from a preview the operator approved; generation
+   * then refuses with USAGE_PERIOD_TOTAL_STALE if the stored reports or their
+   * pricing changed since the preview. Absent for non-preview and automated
+   * runs, which keep the recompute-from-database behavior.
+   */
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
 };
 
 export type RecurringBillingRunGroupedTarget = {
   groupKey: string;
   selectorInputs: IRecurringDueSelectionInput[];
   billingCycleId?: string | null;
+  /** Same contract as {@link RecurringBillingRunTarget.expectedUsagePeriodTotals}. */
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
 };
 
 export type ClientCadenceRecurringRunTarget = RecurringBillingRunTarget & {

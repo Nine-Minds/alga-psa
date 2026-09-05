@@ -430,6 +430,11 @@ spec:
               secretKeyRef:
                 name: "{{include "sebastian.fullname" .}}-secrets"
                 key: NEXTAUTH_SECRET
+          - name: CREDENTIAL_ENCRYPTION_KEY
+            valueFrom:
+              secretKeyRef:
+                name: "{{include "sebastian.fullname" .}}-secrets"
+                key: CREDENTIAL_ENCRYPTION_KEY
           - name: IMAP_WEBHOOK_SECRET
             valueFrom:
               secretKeyRef:

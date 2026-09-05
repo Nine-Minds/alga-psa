@@ -35,7 +35,7 @@ export function BoardCard({
   return (
     <div
       id={`opportunity-board-card-${item.opportunity_id}`}
-      className="mb-2 w-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 text-left shadow-sm transition-colors hover:border-[rgb(var(--color-primary-300))]"
+      className="mb-2 w-full rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3 text-left card-elevated transition-colors hover:border-[rgb(var(--color-primary-300))]"
       draggable={draggable}
       onDragStart={onDragStart ? (e) => onDragStart(e, item) : undefined}
       onDragEnd={onDragEnd ? (e) => onDragEnd(e, item) : undefined}

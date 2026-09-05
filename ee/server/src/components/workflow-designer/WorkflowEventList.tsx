@@ -372,7 +372,7 @@ const WorkflowEventList: React.FC<WorkflowEventListProps> = ({ isActive, canAdmi
             <div className="text-[11px] text-[rgb(var(--color-text-600))] max-w-[260px]">
               <div className="font-mono truncate">{record.payload_schema_ref ?? t('eventList.common.emptyValue', { defaultValue: '—' })}</div>
               {record.schema_ref_conflict && (
-              <div className="text-[10px] text-[rgb(var(--color-warning-600))]">
+              <div className="text-[10px] text-[rgb(var(--color-status-warning))]">
                 {t('eventList.table.schemaConflict', { defaultValue: 'catalog ≠ submission' })}
               </div>
             )}

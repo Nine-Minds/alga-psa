@@ -149,6 +149,10 @@ export interface EmailMessage {
 }
 
 export interface EmailMessageDetails extends EmailMessage {
+  /** Provider-assigned identity, kept separate from the RFC 5322 display id. */
+  providerIdentity?: string;
+  /** SHA-256 of the exact raw MIME bytes used to construct this message. */
+  sourceSha256?: string;
   // Additional details that might be available when fetching full message
   headers?: Record<string, string>;
   messageSize?: number;
@@ -330,4 +334,3 @@ export interface InboundEmailInboxRecord {
 }
 
 export type InboundProviderType = 'microsoft' | 'google' | 'imap';
-

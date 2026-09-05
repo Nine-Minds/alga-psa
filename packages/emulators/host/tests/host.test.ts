@@ -187,6 +187,21 @@ describe('EmulatorHost', () => {
     expect(await page.text()).toContain('algasim');
   });
 
+  it('T055: the console ships the seed-preset round trip', async () => {
+    const h = await startHost();
+    const markup = await (await fetch(`http://localhost:${h.controlPort}/`)).text();
+
+    // Replaying a seed by hand-copying JSON out of a state view was the sharp
+    // edge; the console has to read the form back out and put it back in.
+    expect(markup).toContain('function collectParams');
+    expect(markup).toContain('function fillParams');
+    expect(markup).toContain('actions/save-seed-preset');
+    expect(markup).toContain('actions/delete-seed-preset');
+    expect(markup).toContain('load & seed');
+    // …and only for emulators that actually offer presets.
+    expect(markup).toContain("emu.actions.some((action) => action.name === 'save-seed-preset')");
+  });
+
   it('404s unknown emulators and controls', async () => {
     const h = await startHost();
     expect((await controlPost(h, '/control/nope/reset')).status).toBe(404);

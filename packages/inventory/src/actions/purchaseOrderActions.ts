@@ -43,45 +43,45 @@ function purchaseOrderActionErrorFrom(error: unknown): PurchaseOrderActionError 
 
     switch (error.message) {
       case 'Purchase order not found':
-        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Purchase order not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.shared.purchaseOrderNotFound');
       case 'Purchase order line not found':
-        return actionError('Purchase order line not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Purchase order line not found. It may have been updated or deleted. Please refresh and try again.', 'features/inventory:errors.purchaseOrders.lineNotFound');
       case 'vendor_id is required':
-        return actionError('Select a vendor before creating the purchase order.');
+        return actionError('Select a vendor before creating the purchase order.', 'features/inventory:errors.purchaseOrders.vendorRequired');
       case 'currency_code is required':
-        return actionError('Select a currency before creating the purchase order.');
+        return actionError('Select a currency before creating the purchase order.', 'features/inventory:errors.purchaseOrders.currencyRequired');
       case 'Vendor not found':
-        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.');
+        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.', 'features/inventory:errors.shared.vendorNotFoundChooseAnother');
       case 'quantity_ordered must be greater than 0':
-        return actionError('Each line quantity must be greater than 0.');
+        return actionError('Each line quantity must be greater than 0.', 'features/inventory:errors.shared.lineQuantityPositive');
       case 'Cannot submit a purchase order with no lines':
-        return actionError('Add at least one line before submitting this purchase order.');
+        return actionError('Add at least one line before submitting this purchase order.', 'features/inventory:errors.purchaseOrders.lineRequired');
       case 'Cannot cancel a fully received purchase order':
-        return actionError('This purchase order is already fully received and cannot be cancelled.');
+        return actionError('This purchase order is already fully received and cannot be cancelled.', 'features/inventory:errors.purchaseOrders.fullyReceivedCannotCancel');
       case 'Cannot cancel a purchase order that has already received stock':
-        return actionError('This purchase order has already received stock and cannot be cancelled.');
+        return actionError('This purchase order has already received stock and cannot be cancelled.', 'features/inventory:errors.purchaseOrders.receivedStockCannotCancel');
       case 'quantity must be greater than 0':
-        return actionError('Quantity must be greater than 0.');
+        return actionError('Quantity must be greater than 0.', 'features/inventory:errors.purchaseOrders.quantityPositive');
       case 'location_id is required':
-        return actionError('Select a location before receiving stock.');
+        return actionError('Select a location before receiving stock.', 'features/inventory:errors.shared.locationRequiredForReceipt');
       case 'Cannot receive against a draft purchase order; submit it first':
-        return actionError('Submit this purchase order before receiving stock against it.');
+        return actionError('Submit this purchase order before receiving stock against it.', 'features/inventory:errors.purchaseOrders.submitBeforeReceiving');
       case 'Cannot receive against a cancelled purchase order':
-        return actionError('This purchase order is cancelled and cannot receive stock.');
+        return actionError('This purchase order is cancelled and cannot receive stock.', 'features/inventory:errors.purchaseOrders.cancelledCannotReceive');
       case 'Stock location not found':
-        return actionError('Stock location not found. It may have been deleted. Please choose another location.');
+        return actionError('Stock location not found. It may have been deleted. Please choose another location.', 'features/inventory:errors.purchaseOrders.stockLocationNotFound');
       case 'Inventory is not enabled for this product':
-        return actionError('Inventory is not enabled for this product.');
+        return actionError('Inventory is not enabled for this product.', 'features/inventory:errors.shared.inventoryNotEnabledForProduct');
       case 'Inventory tracking is disabled for this product':
-        return actionError('Inventory tracking is disabled for this product.');
+        return actionError('Inventory tracking is disabled for this product.', 'features/inventory:errors.purchaseOrders.trackingDisabled');
       case 'Each serialized unit requires a serial_number':
-        return actionError('Each serialized unit needs a serial number.');
+        return actionError('Each serialized unit needs a serial number.', 'features/inventory:errors.shared.serialNumberRequired');
       case 'Cannot remove a line that has already received stock':
-        return actionError('This line has already received stock and cannot be removed.');
+        return actionError('This line has already received stock and cannot be removed.', 'features/inventory:errors.purchaseOrders.lineReceivedCannotRemove');
       case 'Cannot edit a cancelled purchase order':
-        return actionError('This purchase order is cancelled and cannot be edited.');
+        return actionError('This purchase order is cancelled and cannot be edited.', 'features/inventory:errors.purchaseOrders.cancelledCannotEdit');
       case 'Only draft purchase orders can be deleted':
-        return actionError('Only draft purchase orders can be deleted. Cancel submitted orders instead.');
+        return actionError('Only draft purchase orders can be deleted. Cancel submitted orders instead.', 'features/inventory:errors.purchaseOrders.onlyDraftDeletable');
       default:
         if (
           error.message.startsWith('Line cost_currency') ||
@@ -102,10 +102,10 @@ function purchaseOrderActionErrorFrom(error: unknown): PurchaseOrderActionError 
 
   const dbError = error as { code?: string };
   if (dbError?.code === '23503') {
-    return actionError('One of the selected purchase order records is no longer valid. Please refresh and try again.');
+    return actionError('One of the selected purchase order records is no longer valid. Please refresh and try again.', 'features/inventory:errors.purchaseOrders.recordInvalid');
   }
   if (dbError?.code === '23505') {
-    return actionError('A stock unit with the same serial number or MAC address already exists.');
+    return actionError('A stock unit with the same serial number or MAC address already exists.', 'features/inventory:errors.shared.duplicateStockUnit');
   }
 
   return null;

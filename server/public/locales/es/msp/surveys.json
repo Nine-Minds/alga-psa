@@ -461,5 +461,39 @@
       "topIssues": "No hay respuestas negativas en este periodo.",
       "recentResponses": "No hay respuestas en este periodo."
     }
+  },
+  "errors": {
+    "template": {
+      "notFound": "No se encontró la plantilla de encuesta. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo."
+    },
+    "trigger": {
+      "notFound": "No se encontró el activador de la encuesta. Es posible que se haya eliminado. Actualice la página e inténtelo de nuevo.",
+      "templateRequired": "Elija una plantilla de encuesta existente antes de guardar el activador."
+    },
+    "survey": {
+      "invalidValue": "Uno de los valores de encuesta seleccionados no es válido. Actualice la página e inténtelo de nuevo.",
+      "referenceMissing": "La plantilla de encuesta o el registro relacionado seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
+      "duplicate": "Ya existe un registro de encuesta con estos datos.",
+      "notAllowed": "Uno de los valores de la encuesta no está permitido. Revise el formulario e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio de la encuesta.",
+      "missingFieldNamed": "Falta un campo obligatorio de la encuesta: {{field}}.",
+      "invalidData": "Los datos de la encuesta no son válidos. Revise el formulario e inténtelo de nuevo."
+    },
+    "options": {
+      "boardsFailed": "No se pueden cargar los tableros.",
+      "statusesFailed": "No se pueden cargar los estados.",
+      "prioritiesFailed": "No se pueden cargar las prioridades.",
+      "triggerOptionsFailed": "No se pueden cargar las opciones del activador de la encuesta. Inténtelo de nuevo."
+    },
+    "response": {
+      "linkInvalidOrUsed": "Este enlace de comentarios ya no es válido o ya se ha utilizado.",
+      "ratingRequired": "Seleccione una valoración entre las opciones mostradas antes de enviar.",
+      "linkInvalidOrExpired": "Este enlace de comentarios no es válido o ha caducado.",
+      "ticketInactive": "Este enlace de comentarios ya no está conectado a un ticket activo. Póngase en contacto con su técnico.",
+      "alreadyCompleted": "Esta encuesta ya se ha completado.",
+      "missingField": "Falta un campo obligatorio de los comentarios.",
+      "missingFieldNamed": "Falta un campo obligatorio de los comentarios: {{field}}.",
+      "invalidData": "Los datos de la respuesta de la encuesta no son válidos. Revise sus comentarios e inténtelo de nuevo."
+    }
   }
 }

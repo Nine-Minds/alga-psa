@@ -216,6 +216,26 @@ export default function ClientKBArticleView({
           );
         case 'horizontalRule':
           return <hr key={key} className="my-6 border-t border-border" />;
+        case 'image': {
+          // BlockNote shape: props.url / props.caption. ProseMirror: attrs.src / attrs.alt.
+          const src = node.props?.url || node.attrs?.src;
+          if (!src) return null;
+          const caption = node.props?.caption || node.attrs?.alt || node.attrs?.title || '';
+          const width = node.props?.previewWidth || node.attrs?.width || undefined;
+          return (
+            <figure key={key} className="my-4">
+              <img
+                src={src}
+                alt={caption}
+                width={width}
+                className="max-w-full h-auto rounded border border-border"
+              />
+              {caption && (
+                <figcaption className="mt-1 text-sm text-muted-foreground">{caption}</figcaption>
+              )}
+            </figure>
+          );
+        }
         case 'table': {
           // BlockNote shape: { content: { type: 'tableContent', rows: [{ cells: [[inline]] }] } }
           // Tiptap/ProseMirror shape: content: [{ type: 'tableRow', content: [{ type: 'tableHeader'|'tableCell', content: [...] }] }]

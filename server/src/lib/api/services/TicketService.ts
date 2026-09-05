@@ -15,7 +15,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
-import { prepareTicketResourceReassignment } from '@alga-psa/tickets/lib/reassignTicketResources';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import {
   TicketResourceError,
   addTicketResourceCore,
@@ -32,6 +32,7 @@ import {
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError, ForbiddenError } from '../middleware/apiMiddleware';
+import { hasPermission } from '../../auth/rbac';
 import { TicketModel, CreateTicketInput } from '@shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,
@@ -90,6 +91,30 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   ...TICKET_MOBILE_LIST_FIELDS,
   'mobile_list',
 ]);
+
+type TicketNotificationSuppressionInput = {
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
+};
+
+function resolveTicketNotificationSuppression(input: TicketNotificationSuppressionInput): {
+  suppressContactNotifications: boolean;
+  suppressInternalNotifications: boolean;
+} {
+  const suppressContactNotifications = input.suppressContactNotifications === true;
+  const suppressInternalNotifications = input.suppressInternalNotifications === true;
+
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new ValidationError('Validation failed', [
+      {
+        path: ['suppressInternalNotifications'],
+        message: 'suppressInternalNotifications requires suppressContactNotifications',
+      },
+    ]);
+  }
+
+  return { suppressContactNotifications, suppressInternalNotifications };
+}
 
 function ticketUploadValidationMessage(error: unknown): string | null {
   if (!(error instanceof Error)) {
@@ -797,6 +822,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<TicketAgentsResponse> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
+    const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
@@ -814,7 +840,8 @@ export class TicketService extends BaseService<ITicket> {
           context.userId,
           ticketId,
           data.user_id,
-          data.role ?? 'support'
+          data.role ?? 'support',
+          notificationSuppression,
         );
       } catch (error) {
         if (error instanceof TicketResourceError) {
@@ -869,6 +896,7 @@ export class TicketService extends BaseService<ITicket> {
   async assignTeam(ticketId: string, data: AssignTicketTeamData, context: ServiceContext): Promise<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
+    const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { ticket, assignedTo } = await withTransaction(knex, async (trx) => {
       let resolvedAssignedTo: string;
@@ -896,8 +924,7 @@ export class TicketService extends BaseService<ITicket> {
       userId: assignedTo,
       assignedByUserId: context.userId,
       changes: { assigned_team_id: data.team_id },
-      suppressContactNotifications: data.suppressContactNotifications === true,
-      suppressInternalNotifications: data.suppressInternalNotifications === true,
+      ...notificationSuppression,
     });
 
     return this.withDescriptionHtml(ticket);
@@ -1535,21 +1562,12 @@ export class TicketService extends BaseService<ITicket> {
       // Close-rule override flags are request options, not ticket columns.
       const overrideCloseRules = (cleanedData as any).override_close_rules === true;
       const overrideCloseRulesReason = (cleanedData as any).override_close_rules_reason ?? null;
-      const suppressContactNotifications = (cleanedData as any).suppressContactNotifications === true;
-      const suppressInternalNotifications = (cleanedData as any).suppressInternalNotifications === true;
+      const { suppressContactNotifications, suppressInternalNotifications } =
+        resolveTicketNotificationSuppression(cleanedData as TicketNotificationSuppressionInput);
       delete (cleanedData as any).override_close_rules;
       delete (cleanedData as any).override_close_rules_reason;
       delete (cleanedData as any).suppressContactNotifications;
       delete (cleanedData as any).suppressInternalNotifications;
-
-      if (suppressInternalNotifications && !suppressContactNotifications) {
-        throw new ValidationError('Validation failed', [
-          {
-            path: ['suppressInternalNotifications'],
-            message: 'suppressInternalNotifications requires suppressContactNotifications',
-          },
-        ]);
-      }
 
       const isBoardChange =
         cleanedData.board_id !== undefined &&
@@ -1902,6 +1920,9 @@ export class TicketService extends BaseService<ITicket> {
       scopedDb.tenantJoin(commentsQuery, 'comment_threads as ct', 'tc.thread_id', 'ct.thread_id', { type: 'left' });
       commentsQuery
         .where('tc.is_internal', false)
+        // This filter deliberately precedes offset/limit below. A scheduled
+        // public comment must be indistinguishable from no comment to clients.
+        .where('tc.publish_state', 'published')
         .where(function (this: Knex.QueryBuilder) {
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
@@ -2020,6 +2041,7 @@ export class TicketService extends BaseService<ITicket> {
     context: ServiceContext
   ): Promise<any> {
     const { knex } = await this.getKnex();
+    const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const result = await withTransaction(knex, async (trx) => {
       // Verify ticket exists
@@ -2174,7 +2196,8 @@ export class TicketService extends BaseService<ITicket> {
             content: comment.note,
             author: authorName,
             isInternal: comment.is_internal
-          }
+          },
+          ...notificationSuppression,
         }
       };
     });
@@ -2187,7 +2210,12 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   /**
-   * Update an existing comment (only the comment author may edit)
+   * Update an existing comment. Only the comment author may edit their own
+   * comment. Comments with no authoring user (user_id null — e.g. inbound
+   * email comments attributed to a contact) have no owner who could ever
+   * edit them, so an operator holding the `ticket:update` RBAC permission
+   * (which covers updating tickets and their comments) may repair them; the
+   * repair is recorded in the comment metadata.
    */
   async updateComment(
     ticketId: string,
@@ -2210,16 +2238,46 @@ export class TicketService extends BaseService<ITicket> {
         throw new ValidationError('System-generated comments cannot be edited');
       }
 
+      let operatorRepair = false;
       if (comment.user_id !== context.userId) {
-        throw new ValidationError('You can only edit your own comments');
+        // Fail closed: the operator path requires a loaded caller user record
+        // (the API controller always provides one) and the RBAC permission.
+        const canOperatorRepair =
+          comment.user_id == null &&
+          context.user != null &&
+          (await hasPermission(context.user, 'ticket', 'update', trx));
+        if (!canOperatorRepair) {
+          throw new ValidationError('You can only edit your own comments');
+        }
+        operatorRepair = true;
+      }
+
+      const update: Record<string, unknown> = {
+        note: data.comment_text,
+        updated_at: knex.raw('now()'),
+      };
+      if (operatorRepair) {
+        // Preserve existing metadata (parser results, email threading data,
+        // attachments references) and append an attributable audit record.
+        const existingMetadata =
+          typeof comment.metadata === 'string'
+            ? JSON.parse(comment.metadata)
+            : comment.metadata ?? {};
+        const operatorEdits = Array.isArray(existingMetadata.operatorEdits)
+          ? existingMetadata.operatorEdits
+          : [];
+        update.metadata = {
+          ...existingMetadata,
+          operatorEdits: [
+            ...operatorEdits,
+            { userId: context.userId, at: new Date().toISOString() },
+          ],
+        };
       }
 
       const [updated] = await tenantScopedTable(trx, 'comments', context.tenant)
         .where({ comment_id: commentId })
-        .update({
-          note: data.comment_text,
-          updated_at: knex.raw('now()'),
-        })
+        .update(update)
         .returning('*');
 
       return {

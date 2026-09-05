@@ -15,11 +15,16 @@ describe('webhook payload fields', () => {
       }).success,
     ).toBe(true);
 
-    expect(
-      payloadFieldsByEntitySchema.safeParse({
-        invoice: ['invoice_number'],
-      }).success,
-    ).toBe(false);
+    const unknownEntity = payloadFieldsByEntitySchema.safeParse({
+      invoice: ['invoice_number'],
+    });
+    expect(unknownEntity.success).toBe(false);
+    expect(unknownEntity.error?.issues[0]).toEqual(expect.objectContaining({
+      params: {
+        messageKey: 'msp/profile:errors.webhooks.validation.unknownEntity',
+        messageParams: { entity: 'invoice' },
+      },
+    }));
 
     expect(
       payloadFieldsByEntitySchema.safeParse({

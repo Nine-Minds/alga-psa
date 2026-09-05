@@ -5,6 +5,7 @@ import {
   normalizeOtpSecret,
   parseOtpAuthUri,
   TOTP_PERIOD_SECONDS,
+  validateOtpSeed,
 } from '@ee/lib/credentials/totp';
 
 // RFC 6238 §5.4 test vectors (SHA-1). The shared ASCII secret
@@ -24,14 +25,14 @@ const RFC_VECTORS_6DIGIT: Array<[number, string]> = [
 
 describe('TOTP base32 decoding (RFC 4648)', () => {
   it('decodes the RFC secret and known encodings', () => {
-    expect(base32Decode('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ').toString('utf8')).toBe('12345678901234567890');
-    expect(base32Decode('MZXW6').toString('utf8')).toBe('foo');
-    expect(base32Decode('MZXW6YTB').toString('utf8')).toBe('fooba');
+    expect(new TextDecoder().decode(base32Decode('GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ'))).toBe('12345678901234567890');
+    expect(new TextDecoder().decode(base32Decode('MZXW6'))).toBe('foo');
+    expect(new TextDecoder().decode(base32Decode('MZXW6YTB'))).toBe('fooba');
   });
 
   it('is tolerant of padding, lowercase, spaces and dashes', () => {
-    expect(base32Decode('mzxw6====').toString('utf8')).toBe('foo');
-    expect(base32Decode('mz xw6y-tb').toString('utf8')).toBe('fooba');
+    expect(new TextDecoder().decode(base32Decode('mzxw6===='))).toBe('foo');
+    expect(new TextDecoder().decode(base32Decode('mz xw6y-tb'))).toBe('fooba');
   });
 
   it('throws on invalid characters and empty input', () => {
@@ -42,9 +43,7 @@ describe('TOTP base32 decoding (RFC 4648)', () => {
 
 describe('TOTP otpauth URI parsing + normalization', () => {
   it('parses an otpauth://totp URI and extracts the secret', () => {
-    expect(parseOtpAuthUri('otpauth://totp/Acme:robert?secret=JBSWY3DPEHPK3PXP&issuer=Acme')).toEqual({
-      secret: 'JBSWY3DPEHPK3PXP',
-    });
+    expect(parseOtpAuthUri('otpauth://totp/Acme:robert?secret=JBSWY3DPEHPK3PXP&issuer=Acme')).toMatchObject({ secret: 'JBSWY3DPEHPK3PXP' });
   });
 
   it('returns null for non-otpauth inputs', () => {
@@ -57,8 +56,19 @@ describe('TOTP otpauth URI parsing + normalization', () => {
     expect(normalizeOtpSecret('otpauth://totp/Acme?secret=jbswy3dpehpk3pxp&issuer=Acme')).toBe('JBSWY3DPEHPK3PXP');
   });
 
+  it('validateOtpSeed accepts a raw seed and a default-parameter URI', () => {
+    expect(validateOtpSeed('jbswy3dpehpk3pxp')).toEqual({ ok: true, secret: 'JBSWY3DPEHPK3PXP' });
+    expect(validateOtpSeed('otpauth://totp/Acme?secret=JBSWY3DPEHPK3PXP&algorithm=SHA1&digits=6&period=30')).toEqual({ ok: true, secret: 'JBSWY3DPEHPK3PXP' });
+  });
+
   it('normalizeOtpSecret throws on a malformed seed', () => {
     expect(() => normalizeOtpSecret('not-a-secret!!!')).toThrow();
+  });
+
+  it.each(['algorithm=SHA256', 'digits=8', 'period=60'])('rejects unsupported URI parameter %s', (parameter) => {
+    const value = `otpauth://totp/Acme?secret=JBSWY3DPEHPK3PXP&${parameter}`;
+    expect(validateOtpSeed(value)).toEqual({ ok: false, reason: 'unsupportedParams' });
+    expect(() => normalizeOtpSecret(value)).toThrow();
   });
 });
 

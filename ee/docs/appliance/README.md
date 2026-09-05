@@ -12,6 +12,8 @@ Ubuntu Server 24.04 LTS is the supported appliance OS path for v1. Talos applian
   - Day-2 operation: status, diagnostics, support bundles, and app-channel updates.
 - `technical-reference.md`
   - Architecture and deeper implementation details.
+- `remote-support.md`
+  - Customer consent, eligibility, root-equivalent scope, recordings, revocation, reboot behavior, and offline fallback.
 
 ## Reading Order
 

@@ -9,7 +9,7 @@
 
 Warn the client account manager, and optionally the client, before prepaid value is exhausted. Each client may configure a currency-specific prepaid-credit floor and/or one bucket-consumption percentage. A daily 09:00 UTC scan evaluates canonical credit and bucket ledgers, creates one durable alert per threshold episode, and routes notifications through the existing notification framework.
 
-The feature is wholly gated by `release-v1.5-feature`. While the flag is loading or disabled, the new client setting card is absent, settings actions reject access, and the scheduled scan performs no alert-state or delivery writes. Nullable/false migration defaults also make deployment inert before enablement.
+The feature is wholly gated by `release-v1-5-feature`. While the flag is loading or disabled, the new client setting card is absent, settings actions reject access, and the scheduled scan performs no alert-state or delivery writes. Nullable/false migration defaults also make deployment inert before enablement.
 
 ## Problem
 
@@ -25,7 +25,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 - Use canonical credit and bucket ledgers without summing unrelated currencies or bucket periods.
 - Send at most one alert per credit below-threshold episode and one alert per bucket period/configured threshold.
 - Make alert creation concurrency-safe and retry notification delivery without creating a second logical alert.
-- Preserve existing UI and runtime behavior while `release-v1.5-feature` is off.
+- Preserve existing UI and runtime behavior while `release-v1-5-feature` is off.
 - Reuse notification subtype, template, localization, preference, and internal-priority infrastructure.
 - Leave a queryable audit of alert decisions and delivery outcomes.
 
@@ -47,7 +47,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 ### Billing administrator configures a client
 
 1. The administrator opens the client's Billing tab and General section.
-2. When `release-v1.5-feature` is enabled, a Prepaid balance alerts card appears after Credit Expiration Settings and before External Credit Settings.
+2. When `release-v1-5-feature` is enabled, a Prepaid balance alerts card appears after Credit Expiration Settings and before External Credit Settings.
 3. The administrator enables a credit alert and supplies a positive minor-unit threshold plus ISO currency, enables a bucket alert and supplies an integer percentage from 1 to 100, or configures both.
 4. The administrator may opt in to also email the client billing recipient. The account manager route is automatic.
 5. One Save action validates and persists only the new alert fields. Saving does not send immediately; the next scheduled scan evaluates the policy.
@@ -55,7 +55,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 ### Daily scan identifies low prepaid credit
 
 1. At 09:00 UTC, the CE or EE scheduler submits a tenant-scoped low-balance scan request.
-2. A server subscriber fails closed unless `release-v1.5-feature` is enabled for the tenant.
+2. A server subscriber fails closed unless `release-v1-5-feature` is enabled for the tenant.
 3. For each configured client/currency with credit history, the subscriber sums non-expired `credit_tracking.remaining_amount` in that currency.
 4. A value strictly below the configured floor opens a credit alert episode. Equality is recovery, not an alert.
 5. Repeated scans below the same policy deduplicate. Recovery to the threshold or above resolves the episode and rearms a later drop.
@@ -77,7 +77,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 ## UX / UI Notes
 
 - Add `ClientPrepaidBalanceAlertSettings.tsx` to `packages/clients/src/components/clients/`, rendered by `BillingConfiguration.tsx` in the existing General billing section.
-- The component must call `useFeatureFlag('release-v1.5-feature', { defaultValue: false })` and return `null` both while loading and when disabled. Do not leave a skeleton, spacer, heading, or altered tab markup in flag-off state.
+- The component must call `useFeatureFlag('release-v1-5-feature', { defaultValue: false })` and return `null` both while loading and when disabled. Do not leave a skeleton, spacer, heading, or altered tab markup in flag-off state.
 - Credit controls: enable switch, threshold money input, and ISO currency selector initialized from `clients.default_currency_code` when no policy exists. Persist money in minor units; never persist a localized decimal string.
 - Bucket controls: enable switch and whole-number percentage input constrained to 1–100 inclusive.
 - Client routing control: “Also email the client billing recipient,” default off and disabled when neither alert type is enabled.
@@ -89,7 +89,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 
 ### Feature gating
 
-- The client component, read action, update action, and scan subscriber must independently gate on `release-v1.5-feature` with a false default.
+- The client component, read action, update action, and scan subscriber must independently gate on `release-v1-5-feature` with a false default.
 - A disabled or unavailable flag checker must cause no alert evaluation, no alert/delivery rows, and no notification side effects.
 - Schema defaults are `NULL` thresholds and `false` client opt-in; the migration itself must not enable a client.
 - Existing expiring-credit scheduling, settings, templates, and subscribers must not be modified as a shortcut for this feature.
@@ -210,7 +210,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 
 ## Rollout / Migration
 
-1. Ship schema, definitions, scheduler wiring, server subscriber, actions, UI, and tests together while `release-v1.5-feature` remains off.
+1. Ship schema, definitions, scheduler wiring, server subscriber, actions, UI, and tests together while `release-v1-5-feature` remains off.
 2. Verify migration distribution metadata and that a disabled tenant produces no alert/delivery writes at the 09:00 UTC run.
 3. Enable the existing flag for internal/test tenants, configure explicit client policies, and observe at least two daily runs to verify first-send and deduplication behavior.
 4. Expand the flag gradually. There is no backfill: the first enabled daily scan establishes current alert episodes from canonical ledgers.
@@ -232,7 +232,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 
 ## Dependencies and Constraints
 
-- Depends on the existing `release-v1.5-feature` bridge in `packages/core/src/lib/features.ts` and UI hook in `packages/ui/src/hooks/useFeatureFlag.tsx`.
+- Depends on the existing `release-v1-5-feature` bridge in `packages/core/src/lib/features.ts` and UI hook in `packages/ui/src/hooks/useFeatureFlag.tsx`.
 - Depends on canonical credit math in `packages/billing/src/lib/creditBalance.ts`.
 - Depends on canonical bucket ownership and period state in `shared/billingClients/bucketUsageService.ts` and `packages/billing/src/lib/billing/compute/computeBucketCharges.ts`.
 - Depends on canonical invoice billing recipient resolution in `packages/billing/src/services/invoiceBillingRecipientService.ts`.
@@ -248,7 +248,7 @@ Without a threshold warning, the first obvious signal may be an overage charge o
 - (2026-08-15) Treat credit equality as recovered and bucket equality as reached.
 - (2026-08-15) Notify the active account manager by internal notification and email; optionally email exactly one canonical client billing recipient.
 - (2026-08-15) Persist alerts and deliveries so deduplication, retries, and operational history survive process restarts.
-- (2026-08-15) Keep notification evaluation fail-closed behind `release-v1.5-feature` in addition to UI/action gating.
+- (2026-08-15) Keep notification evaluation fail-closed behind `release-v1-5-feature` in addition to UI/action gating.
 
 ## Open Questions
 
@@ -256,7 +256,7 @@ None. Engineering choices are resolved for draft implementation.
 
 ## Acceptance Criteria (Definition of Done)
 
-1. With `release-v1.5-feature` disabled or unavailable, the client UI is byte-for-byte structurally unchanged at the insertion point, settings actions cannot expose/mutate the policy, and a scheduled scan creates no alerts, deliveries, or notifications.
+1. With `release-v1-5-feature` disabled or unavailable, the client UI is byte-for-byte structurally unchanged at the insertion point, settings actions cannot expose/mutate the policy, and a scheduled scan creates no alerts, deliveries, or notifications.
 2. An authorized user can independently enable/disable a positive currency-specific credit floor, a 1–100 bucket percentage, and optional client email for one tenant-scoped client.
 3. The migrated schema enforces paired credit amount/currency, valid ranges, composite tenant keys, unique dedupe/delivery keys, and Citus distribution metadata.
 4. A client with relevant credit history opens one alert when non-expired remaining credit in the configured currency is below the floor, does not open at equality, and rearms only after recovery to equality or above.

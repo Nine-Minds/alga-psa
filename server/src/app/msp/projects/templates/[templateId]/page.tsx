@@ -18,21 +18,21 @@ function TemplateEditorSkeleton() {
       <div className="border-b px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="h-9 w-20 bg-gray-200 rounded animate-pulse" />
+            <div className="h-9 w-20 skeleton-fill rounded animate-pulse" />
             <div className="flex items-center gap-3">
-              <div className="h-7 w-24 bg-purple-100 rounded-full animate-pulse" />
-              <div className="h-8 w-48 bg-gray-200 rounded animate-pulse" />
+              <div className="h-7 w-24 bg-[rgb(var(--color-primary-100))] rounded-full animate-pulse" />
+              <div className="h-8 w-48 skeleton-fill rounded animate-pulse" />
             </div>
           </div>
           <div className="flex gap-2">
-            <div className="h-9 w-32 bg-gray-200 rounded animate-pulse" />
-            <div className="h-9 w-28 bg-gray-200 rounded animate-pulse" />
-            <div className="h-9 w-24 bg-gray-200 rounded animate-pulse" />
+            <div className="h-9 w-32 skeleton-fill rounded animate-pulse" />
+            <div className="h-9 w-28 skeleton-fill rounded animate-pulse" />
+            <div className="h-9 w-24 skeleton-fill rounded animate-pulse" />
           </div>
         </div>
         <div className="mt-4 flex gap-6">
-          <div className="h-4 w-64 bg-gray-200 rounded animate-pulse" />
-          <div className="h-4 w-32 bg-gray-200 rounded animate-pulse" />
+          <div className="h-4 w-64 skeleton-fill rounded animate-pulse" />
+          <div className="h-4 w-32 skeleton-fill rounded animate-pulse" />
         </div>
       </div>
 
@@ -42,12 +42,12 @@ function TemplateEditorSkeleton() {
         <div className="w-64 flex-shrink-0">
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <div className="h-5 w-28 bg-gray-200 rounded animate-pulse" />
-              <div className="h-8 w-8 bg-gray-200 rounded animate-pulse" />
+              <div className="h-5 w-28 skeleton-fill rounded animate-pulse" />
+              <div className="h-8 w-8 skeleton-fill rounded animate-pulse" />
             </div>
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />
+                <div key={i} className="h-10 skeleton-fill rounded animate-pulse" />
               ))}
             </div>
           </Card>
@@ -92,7 +92,7 @@ export default function TemplateDetailPage() {
     return (
       <div className="h-full relative">
         <TemplateEditorSkeleton />
-        <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+        <div className="absolute inset-0 flex items-center justify-center bg-[rgb(var(--color-card))]/50">
           <Spinner size="lg" />
         </div>
       </div>

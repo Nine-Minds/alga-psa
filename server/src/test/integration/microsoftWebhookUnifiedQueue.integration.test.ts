@@ -4,6 +4,7 @@ import { NextRequest } from 'next/server';
 const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 const getAdminConnectionMock = vi.fn();
 const withTransactionMock = vi.fn();
+const tryConsumeMock = vi.fn();
 
 const trxMock = vi.fn();
 const trxRawMock = vi.fn((expression: string) => expression);
@@ -47,6 +48,10 @@ vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: (...args: any[]) => getAdminConnectionMock(...args),
 }));
 
+vi.mock('@alga-psa/core/rateLimit', () => ({
+  TokenBucketRateLimiter: { getInstance: () => ({ tryConsume: tryConsumeMock }) },
+}));
+
 // Keep the real tenantDb facade (the handler's tenant scoping runs against the
 // mock trx below); only stub the transaction wrapper.
 vi.mock('@alga-psa/db', async (importOriginal) => {
@@ -62,6 +67,8 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     enqueueUnifiedInboundEmailQueueJobMock.mockReset();
     getAdminConnectionMock.mockReset();
     withTransactionMock.mockReset();
+    tryConsumeMock.mockReset();
+    tryConsumeMock.mockResolvedValue({ allowed: true, remaining: 99 });
     trxMock.mockReset();
     trxRawMock.mockClear();
     providerQueryMock.join.mockClear();
@@ -268,7 +275,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     });
   });
 
-  it('T027: Microsoft clientState validation remains enforced in unified enqueue-only mode', async () => {
+  it('T027: Microsoft notifications with a wrong clientState are rejected fail-closed', async () => {
     const { handleMicrosoftWebhookPost } = await import(
       '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
     );
@@ -296,14 +303,47 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     });
 
     const response = await handleMicrosoftWebhookPost(request);
-    expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body).toMatchObject({
-      success: true,
-      processedCount: 0,
-      unifiedQueuedCount: 0,
-    });
+    expect(response.status).toBe(401);
     expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects a notification with no stored clientState and emits a security event', async () => {
+    providerQueryMock.first.mockResolvedValueOnce({
+      id: 'provider-ms-1', tenant: 'tenant-ms-1', mailbox: 'support@example.com', is_active: true,
+      mc_webhook_verification_token: null,
+    });
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    try {
+      const response = await handleMicrosoftWebhookPost(new NextRequest('http://localhost/api/email/webhooks/microsoft', {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ value: [{ subscriptionId: 'sub-ms-1', clientState: 'forged', resource: '/messages/msg-1', resourceData: { id: 'msg-1' } }] }),
+      }));
+      expect(response.status).toBe(401);
+      expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[MicrosoftWebhook] Rejected notification clientState validation',
+        expect.objectContaining({ reason: 'missing_stored_client_state' }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('returns 429 from an IP-keyed webhook rate bucket before processing notifications', async () => {
+    tryConsumeMock.mockResolvedValueOnce({ allowed: false, remaining: 0, retryAfterMs: 1500 });
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const response = await handleMicrosoftWebhookPost(new NextRequest('http://localhost/api/email/webhooks/microsoft', {
+      method: 'POST', headers: { 'content-type': 'application/json', 'x-forwarded-for': '203.0.113.7, 10.0.0.1' },
+      body: JSON.stringify({ value: [] }),
+    }));
+    expect(response.status).toBe(429);
+    expect(response.headers.get('retry-after')).toBe('2');
+    expect(tryConsumeMock).toHaveBeenCalledWith('email-webhook-inbound', 'global', '203.0.113.7');
   });
 
   it.each([

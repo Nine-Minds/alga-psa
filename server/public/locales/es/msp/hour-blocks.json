@@ -137,5 +137,22 @@
     "remaining": "Se perderán {{hours}} h sin usar.",
     "submit": "Caducar bloque",
     "title": "Caducar bloque de horas"
+  },
+  "errors": {
+    "block": {
+      "notFoundRefresh": "No se encontró el bloque de horas. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "serviceNotFound": "No se encontró el servicio. Es posible que se haya actualizado o eliminado. Actualice la página e inténtelo de nuevo.",
+      "hoursPositive": "Las horas del bloque deben ser mayores que cero.",
+      "ratePositive": "La tarifa por hora debe ser cero o mayor.",
+      "reasonRequired": "Se requiere un motivo para esta operación.",
+      "adjustExpiredOrVoided": "No se puede ajustar un bloque de horas vencido o anulado.",
+      "usedCannotVoid": "Este bloque de horas ya se ha utilizado y no se puede anular. En su lugar, hágalo vencer.",
+      "onlyPendingOrActiveVoid": "Solo se pueden anular los bloques de horas pendientes o activos.",
+      "expireVoided": "No se puede hacer vencer un bloque de horas anulado.",
+      "updateExpirationVoided": "No se puede actualizar el vencimiento de un bloque de horas anulado.",
+      "invalidValue": "Uno de los valores seleccionados del bloque de horas no es válido. Actualice la página e inténtelo de nuevo.",
+      "missingField": "Falta un campo obligatorio del bloque de horas. Revise el formulario e inténtelo de nuevo.",
+      "referenceMissing": "El cliente, servicio o factura seleccionado ya no existe. Actualice la página e inténtelo de nuevo."
+    }
   }
 }

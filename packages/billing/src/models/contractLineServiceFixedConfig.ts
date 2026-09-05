@@ -60,6 +60,7 @@ export default class ContractLineServiceFixedConfig {
     await this.table('contract_line_service_fixed_config').insert({
       config_id: data.config_id,
       base_rate: data.base_rate,
+      pricing_basis: data.pricing_basis ?? 'bundle',
       // enable_proration: data.enable_proration, // Removed: Moved to contract_line_fixed_config
       // billing_cycle_alignment: data.billing_cycle_alignment, // Removed: Moved to contract_line_fixed_config
       tenant: this.tenant,

@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -91,10 +92,13 @@ describe('quick add ticket i18n wiring contract', () => {
 
     for (const key of pseudoKeys) {
       expect(source).toContain(`t('${key}'`);
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
 
-    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_one')).toBe('11111 {{count}} 11111');
-    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_other')).toBe('11111 {{count}} 11111');
+    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_one')).toMatch(pseudoPattern('xx'));
+
+    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_one')).toContain('{{count}}');
+    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_other')).toMatch(pseudoPattern('xx'));
+    expect(getLeaf(pseudo, 'quickAdd.tagCreatePartialFailure_other')).toContain('{{count}}');
   });
 });

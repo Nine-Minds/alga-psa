@@ -15,7 +15,9 @@ no marketing-specific MCP tooling to install.
    tenant (PostHog flag, off by default).
 2. **Create an API key** in AlgaPSA → *Settings → API Keys*. The key's user
    must hold `marketing:read` (list queue) and `marketing:manage`
-   (mark published / skip). Admin roles have both from the seed migration.
+   (mark published / skip). Permissions and default-role grants come from the
+   unified catalog at `server/migrations/utils/permissions/`, which both seeds
+   and reconciliation migrations consume; Admin roles receive both permissions.
 3. **Register the connector** with your MCP client. Claude Desktop example:
 
    ```json

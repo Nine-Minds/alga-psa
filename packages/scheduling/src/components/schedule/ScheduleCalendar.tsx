@@ -518,6 +518,17 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     await fetchEvents();
   };
 
+  // Creating a Teams meeting rewrites the entry's notes server-side (and, for
+  // a recurring occurrence, materializes it into a new concrete entry), so the
+  // events fetched before the call are stale: refetch immediately so closing
+  // and reopening the popup binds to the persisted entry instead of
+  // resurrecting pre-link notes or a virtual occurrence that no longer exists.
+  // Deliberately not routed through onSave — that performs another update
+  // using the stale selected event and is unsafe for virtual occurrences.
+  const handleTeamsMeetingCreated = async () => {
+    await fetchEvents();
+  };
+
   const handleEntryPopupSave = async (entryData: IScheduleEntry) => {
     try {
       console.log('Saving entry:', entryData);
@@ -585,6 +596,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
         onClose={handleEntryPopupClose}
         onSave={handleEntryPopupSave}
         onDelete={handleDeleteEntry}
+        onTeamsMeetingCreated={handleTeamsMeetingCreated}
         canAssignMultipleAgents={canAssignOthers}
         currentUserId={currentUserId ?? ''}
         canModifySchedule={canModifySchedule}
@@ -916,7 +928,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     }
 
     return (
-      <div className="rbc-toolbar flex flex-wrap items-center justify-between p-2 mb-2 bg-[rgb(var(--color-background-100))] rounded-md shadow-sm">
+      <div className="rbc-toolbar flex flex-wrap items-center justify-between p-2 mb-2 bg-[rgb(var(--color-border-100))] rounded-md shadow-sm">
         <div className="rbc-btn-group space-x-1">
           <Button
             id="dispatch-prev-button"
@@ -1172,7 +1184,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   // Show loading state until preferences are loaded
   if (isLoadingPreferences) {
     return (
-      <div className="h-full flex flex-col bg-[rgb(var(--color-background-50))]">
+      <div className="h-full flex flex-col bg-[rgb(var(--color-border-50))]">
         <CalendarStyleProvider />
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
@@ -1210,7 +1222,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
   );
 
   return (
-    <div className="h-full flex flex-col bg-[rgb(var(--color-background-50))]">
+    <div className="h-full flex flex-col bg-[rgb(var(--color-border-50))]">
       <CalendarStyleProvider />
       {headerActionsSlot
         ? createPortal(printActionsMenu, headerActionsSlot)

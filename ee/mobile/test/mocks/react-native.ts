@@ -21,6 +21,7 @@ export const ScrollView = createMockComponent("ScrollView");
 export const Modal = createMockComponent("Modal");
 export const KeyboardAvoidingView = createMockComponent("KeyboardAvoidingView");
 export const RefreshControl = createMockComponent("RefreshControl");
+export const Switch = createMockComponent("Switch");
 export const Alert = {
   alert: () => undefined,
 };

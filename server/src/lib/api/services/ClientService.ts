@@ -38,6 +38,7 @@ import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import {
   ensureDefaultContractForClientIfBillingConfigured,
 } from '@alga-psa/shared/billingClients/defaultContract';
+import { ensureClientDefaultBillingProfile } from '@alga-psa/shared/billingClients/billingProfiles';
 
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
@@ -348,6 +349,11 @@ export class ClientService extends BaseService<IClient> {
 
       // Insert into clients table
       const [client] = await tenantDb(trx, context.tenant).table('clients').insert(clientData).returning('*');
+
+      // Terminal step of charge attribution — every client has exactly one.
+      await ensureClientDefaultBillingProfile(trx, context.tenant, client.client_id, {
+        clientName: client.client_name,
+      });
 
       await ensureDefaultContractForClientIfBillingConfigured(trx, {
         tenant: context.tenant,

@@ -11,10 +11,13 @@
     "clients": "Clientes",
     "opportunities": "Oportunidades",
     "contacts": "Contactos",
+    "interactions": "Interacciones",
     "documents": "Documentos",
     "documentsAll": "Todos los documentos",
     "knowledgeBase": "Base de conocimientos",
     "assets": "Activos",
+    "assetsAll": "Todos los activos",
+    "assetsMaintenance": "Mantenimiento",
     "inventory": {
       "label": "Inventario",
       "sections": {
@@ -127,11 +130,13 @@
       "users": "Usuarios",
       "teams": "Equipos",
       "language": "Idioma",
+      "appearance": "Apariencia",
       "clientPortal": "Portal de clientes",
       "license": "Licencia",
       "ticketing": "Gestión de tickets",
       "sla": "SLA",
       "projects": "Proyectos",
+      "assets": "Activos",
       "interactions": "Interacciones",
       "opportunities": "Oportunidades",
       "notifications": "Notificaciones",
@@ -194,6 +199,12 @@
           "description": "Agregar un nuevo producto a su catálogo"
         }
       }
+    },
+    "resources": {
+      "ariaLabel": "Recursos y ayuda",
+      "title": "Recursos",
+      "documentation": "Documentación",
+      "support": "Contactar con soporte"
     },
     "jobs": {
       "ariaLabel": "Ver actividad de trabajos en segundo plano",

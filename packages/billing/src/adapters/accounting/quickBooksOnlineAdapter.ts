@@ -17,16 +17,35 @@ import {
   ExternalTaxComponent,
   PendingTaxImportRecord
 } from '@alga-psa/types';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { lockInvoiceForExternalSync } from '../../lib/invoiceExternalSyncLock';
 import { AccountingMappingResolver, MappingResolution } from '../../services/accountingMappingResolver';
 import { CompanyAccountingSyncService } from '../../services/companySync/companySyncService';
 import { KnexCompanyMappingRepository } from '../../services/companySync/companyMappingRepository';
 import { buildNormalizedCompanyPayload } from '../../services/companySync/companySyncNormalizer';
 import { QuickBooksOnlineCompanyAdapter } from '../../services/companySync/adapters/quickBooksCompanyAdapter';
 import { KnexInvoiceMappingRepository } from '../../repositories/invoiceMappingRepository';
-import { QboClientService, getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import {
+  BILLING_PROFILE_ENTITY_TYPE,
+  CLIENT_ENTITY_TYPE,
+  resolveInvoiceExportTarget,
+} from '@alga-psa/shared/billingClients/billingProfileExternalMapping';
+import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboInvoice, QboInvoiceLine, QboSalesItemLineDetail } from '@alga-psa/integrations/lib/qbo/types';
+import { isQboAutomatedSalesTaxEnabled } from '@alga-psa/integrations/lib/qbo/qboTaxSettings';
 import { getAccountingSyncSettings } from '../../services/accountingSync/accountingSyncSettings';
+
+/**
+ * QuickBooks' US pseudo tax codes. Intuit ships exactly these two on every US
+ * company file and no others can be created: TAX hands the line to the
+ * Automated Sales Tax engine, NON opts it out.
+ *
+ * Since Intuit's 2018-08-10 AST change an *absent* line TaxCodeRef no longer
+ * means "not taxable" — AST treats it as TAX and falls back to the item's own
+ * taxability. Opting a line out therefore requires sending NON explicitly.
+ */
+const QBO_PSEUDO_TAX_CODE_TAXABLE = 'TAX';
+const QBO_PSEUDO_TAX_CODE_NON_TAXABLE = 'NON';
 
 type DbInvoice = {
   invoice_id: string;
@@ -39,6 +58,7 @@ type DbInvoice = {
   currency_code?: string | null;
   exchange_rate_basis_points?: number | null;
   invoice_type?: string | null;
+  billing_profile_id?: string | null;
 };
 
 type DbCharge = {
@@ -208,11 +228,14 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   }
 
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
-    const { knex } = await createTenantKnex();
     const tenantId = context.batch.tenant;
     if (!tenantId) {
       throw new Error('QuickBooks adapter requires batch tenant identifier');
     }
+    if (!context.batch.target_realm) {
+      throw new Error('QuickBooks adapter requires an immutable batch target realm to transform invoices');
+    }
+    const { knex } = await createTenantKnex();
 
     if (context.batch.export_type === 'vendor_bill') {
       return this.transformVendorBills(context, knex, tenantId);
@@ -228,6 +251,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const syncSettings = await getAccountingSyncSettings(knex, tenantId).catch(() => null);
     const tenantDefaultClassRef = syncSettings?.defaultClassRef ?? null;
     const tenantDefaultDepartmentRef = syncSettings?.defaultDepartmentRef ?? null;
+
+    // Automated Sales Tax is a property of the QuickBooks company file, so it is
+    // resolved once per batch rather than per line. A batch with no target realm
+    // cannot be on AST, and the flag stays false — behavior identical to before.
+    const automatedSalesTaxEnabled = await isQboAutomatedSalesTaxEnabled(
+      knex,
+      tenantId,
+      context.batch.target_realm
+    );
 
     const invoicesById = await this.loadInvoices(knex, tenantId, context);
     const chargesById = await this.loadCharges(knex, tenantId, context);
@@ -259,14 +291,27 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         throw new Error(`QuickBooks adapter: client ${clientId} not found for invoice ${invoiceId}`);
       }
 
-      let clientMapping = clientData.mappings.get(clientId);
+      // Which external customer this invoice belongs to: the client's parent
+      // customer, or the sub-customer of the profile that billed it (F121).
+      // An invoice raised for a separately-billing site is a demand on that
+      // site — exporting it against the parent puts the balance on the wrong
+      // ledger and the wrong statement.
+      const exportTarget = await resolveInvoiceExportTarget(
+        knex,
+        tenantId,
+        clientId,
+        clientRow.client_name ?? clientId,
+        invoice.billing_profile_id ?? null
+      );
+
+      let clientMapping = clientData.mappings.get(exportTarget.algaEntityId);
       if (!clientMapping) {
         // Defense in depth behind the batch-validation check: without explicit
         // opt-in, the delivery path never creates or links QBO customers —
         // that decision belongs to a human in the mapping wizard.
         if (!syncSettings?.autoProvisionCustomers) {
           throw new Error(
-            `QuickBooks adapter: customer "${clientRow.client_name ?? clientId}" has no QuickBooks mapping and automatic customer creation is disabled — link the customer from the QuickBooks customer mapping screen`
+            `QuickBooks adapter: customer "${exportTarget.displayName}" has no QuickBooks mapping and automatic customer creation is disabled — link the customer from the QuickBooks customer mapping screen`
           );
         }
 
@@ -274,18 +319,51 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           throw new Error('QuickBooks adapter requires batch target realm to sync customers');
         }
 
+        // A sub-customer cannot be created without its parent, so the client's
+        // own customer is resolved first (F118).
+        let parentExternalId: string | null = null;
+        if (exportTarget.isSubCustomer) {
+          const parentMapping =
+            clientData.mappings.get(clientId) ??
+            mappingFromResolution(
+              clientId,
+              (await resolver.ensureCompanyMapping({
+                tenantId,
+                adapterType: this.type,
+                companyId: clientId,
+                payload: buildNormalizedCompanyPayload({
+                  companyId: clientId,
+                  name: clientRow.client_name ?? clientId,
+                  primaryEmail: clientRow.billing_email ?? null
+                }),
+                targetRealm: context.batch.target_realm
+              })) ??
+                (() => {
+                  throw new Error(
+                    `QuickBooks adapter: unable to resolve parent customer for client ${clientId}`
+                  );
+                })(),
+              this.type,
+              context.batch.target_realm
+            );
+          clientData.mappings.set(clientId, parentMapping);
+          parentExternalId = parentMapping.external_entity_id;
+        }
+
         const companyPayload = buildNormalizedCompanyPayload({
-          companyId: clientId,
-          name: clientRow.client_name ?? clientId,
+          companyId: exportTarget.algaEntityId,
+          name: exportTarget.displayName,
           primaryEmail: clientRow.billing_email ?? null
         });
+        companyPayload.parentExternalId = parentExternalId;
 
         const mappingResolution = await resolver.ensureCompanyMapping({
           tenantId,
           adapterType: this.type,
-          companyId: clientId,
+          companyId: exportTarget.algaEntityId,
           payload: companyPayload,
-          targetRealm: context.batch.target_realm
+          targetRealm: context.batch.target_realm,
+          algaEntityType: exportTarget.algaEntityType
         });
 
         if (!mappingResolution) {
@@ -293,12 +371,12 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         }
 
         clientMapping = mappingFromResolution(
-          clientId,
+          exportTarget.algaEntityId,
           mappingResolution,
           this.type,
           context.batch.target_realm
         );
-        clientData.mappings.set(clientId, clientMapping);
+        clientData.mappings.set(exportTarget.algaEntityId, clientMapping);
       }
 
       if (!clientMapping) {
@@ -373,28 +451,51 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         // Handle tax based on delegation mode
         const shouldExcludeTax = context.excludeTaxFromExport || context.taxDelegationMode === 'delegate';
 
-        if (!shouldExcludeTax) {
+        // Delegating tax to an Automated Sales Tax company is the one case where
+        // the line still needs a TaxCodeRef: Alga is deliberately not sending a
+        // tax total, so the only thing that makes QuickBooks tax the line at all
+        // is the line's own tax code. Without it AST returns TotalTax 0 and the
+        // import-back path faithfully writes that zero onto the invoice.
+        const shouldSendAstTaxCode =
+          automatedSalesTaxEnabled && context.taxDelegationMode === 'delegate';
+
+        if (!shouldExcludeTax || shouldSendAstTaxCode) {
           const taxRegion = charge.tax_region;
+          let taxCodeRef: string | null = null;
           if (taxRegion) {
-            let taxCodeRef = taxCodeCache.get(taxRegion);
-            if (taxCodeRef === undefined) {
+            const cached = taxCodeCache.get(taxRegion);
+            if (cached === undefined) {
               const taxMapping = await resolver.resolveTaxCodeMapping({
                 tenantId: context.batch.tenant,
                 adapterType: this.type,
                 taxRegionId: taxRegion,
                 targetRealm: context.batch.target_realm
               });
-              const resolvedTaxCodeRef = taxMapping?.external_entity_id ?? null;
-              taxCodeRef = resolvedTaxCodeRef;
-              taxCodeCache.set(taxRegion, resolvedTaxCodeRef);
-            }
-            if (taxCodeRef) {
-              salesDetail.TaxCodeRef = { value: taxCodeRef };
+              taxCodeRef = taxMapping?.external_entity_id ?? null;
+              taxCodeCache.set(taxRegion, taxCodeRef);
+            } else {
+              taxCodeRef = cached;
             }
           }
+
+          if (shouldSendAstTaxCode) {
+            // A non-taxable charge must say NON out loud; an omitted code reads
+            // as taxable to AST. Everything else falls back to the TAX pseudo
+            // code so the AST engine picks the jurisdiction and rate itself.
+            salesDetail.TaxCodeRef = {
+              value:
+                charge.is_taxable === false
+                  ? QBO_PSEUDO_TAX_CODE_NON_TAXABLE
+                  : taxCodeRef ?? QBO_PSEUDO_TAX_CODE_TAXABLE
+            };
+          } else if (taxCodeRef) {
+            salesDetail.TaxCodeRef = { value: taxCodeRef };
+          }
         }
-        // Note: When shouldExcludeTax is true, we don't set TaxCodeRef
-        // QBO will apply default tax behavior or NON depending on settings
+        // Note: When tax is excluded and the realm is not on AST, we don't set
+        // TaxCodeRef. QBO will apply default tax behavior or NON depending on
+        // settings. We never set GlobalTaxCalculation: Intuit documents it as
+        // non-US only, and sending it on a US-locale transaction faults.
 
         const rawNetAmountCents = coerceChargeCents(charge.net_amount);
         if (rawNetAmountCents === null) {
@@ -517,7 +618,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         invoices: documents.length,
         lines: context.lines.length,
         taxDelegationMode: context.taxDelegationMode ?? 'none',
-        taxExcluded: context.excludeTaxFromExport || context.taxDelegationMode === 'delegate'
+        taxExcluded: context.excludeTaxFromExport || context.taxDelegationMode === 'delegate',
+        automatedSalesTax: automatedSalesTaxEnabled
       }
     };
   }
@@ -532,9 +634,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       throw new Error('QuickBooks adapter requires batch tenant identifier for delivery');
     }
 
-    const realmId = context.batch.target_realm ?? await getDefaultQboRealmId(tenantId);
+    const realmId = context.batch.target_realm;
     if (!realmId) {
-      throw new Error('QuickBooks adapter requires a connected QuickBooks Online company to deliver invoices');
+      throw new Error('QuickBooks adapter requires an immutable batch target realm to deliver invoices');
     }
     const qboClient = await QboClientService.create(tenantId, realmId);
 
@@ -545,57 +647,77 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       });
     }
 
-    const invoiceMappingRepository = new KnexInvoiceMappingRepository(knex);
+    // Invoice/CreditMemo delivery serializes against invoice void on the shared
+    // invoice row lock (invoiceExternalSyncLock.ts). The whole batch runs in
+    // one transaction: each invoice row is locked FOR UPDATE and confirmed not
+    // cancelled before its remote mutation, and the mapping writes commit with
+    // those locks held. A concurrent void therefore either waits until the
+    // batch commits and then re-reads the mapping under its own lock (enqueuing
+    // the remote void), or commits first and causes the export of its invoice
+    // to be refused — never a cancelled local invoice with a live remote copy
+    // and no void op.
+    return withTransaction(knex, async (trx) => {
+      const invoiceMappingRepository = new KnexInvoiceMappingRepository(trx);
 
-    const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
-    const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
+      const deliveredLines: { lineId: string; externalDocumentRef?: string | null }[] = [];
+      const failedDocuments: AccountingExportDeliveryDocumentFailure[] = [];
 
-    for (const document of transformResult.documents) {
-      try {
-        const externalRef = await this.deliverInvoiceDocument(document, qboClient, invoiceMappingRepository, {
-          tenantId,
-          realmId
-        });
+      // One batch transaction holds every invoice row lock until it commits,
+      // so lock acquisition must be in a consistent order to avoid a 40P01
+      // deadlock between two concurrent batches delivering the same invoices
+      // (the same discipline the Xero adapter follows).
+      const documents = [...transformResult.documents].sort((a, b) =>
+        a.documentId.localeCompare(b.documentId)
+      );
 
-        deliveredLines.push(
-          ...document.lineIds.map((lineId) => ({
-            lineId,
-            externalDocumentRef: externalRef
-          }))
-        );
-      } catch (error) {
-        // Auth/connection failures affect every remaining call, so isolating them
-        // per invoice would only repeat the same failure across the batch.
-        if (error instanceof AppError && error.code === 'QBO_AUTH_ERROR') {
-          throw error;
+      for (const document of documents) {
+        try {
+          const externalRef = await this.deliverInvoiceDocument(document, qboClient, invoiceMappingRepository, {
+            tenantId,
+            realmId,
+            trx
+          });
+
+          deliveredLines.push(
+            ...document.lineIds.map((lineId) => ({
+              lineId,
+              externalDocumentRef: externalRef
+            }))
+          );
+        } catch (error) {
+          // Auth/connection failures affect every remaining call, so isolating them
+          // per invoice would only repeat the same failure across the batch.
+          if (error instanceof AppError && error.code === 'QBO_AUTH_ERROR') {
+            throw error;
+          }
+
+          const code = error instanceof AppError ? error.code : 'QBO_DELIVERY_ERROR';
+          const message = error instanceof Error ? error.message : 'Unknown QuickBooks delivery error';
+          logger.warn('QuickBooks adapter: invoice delivery failed, continuing with remaining invoices', {
+            invoiceId: document.documentId,
+            tenant: tenantId,
+            code,
+            error: message
+          });
+          failedDocuments.push({
+            documentId: document.documentId,
+            lineIds: document.lineIds,
+            code,
+            message
+          });
         }
-
-        const code = error instanceof AppError ? error.code : 'QBO_DELIVERY_ERROR';
-        const message = error instanceof Error ? error.message : 'Unknown QuickBooks delivery error';
-        logger.warn('QuickBooks adapter: invoice delivery failed, continuing with remaining invoices', {
-          invoiceId: document.documentId,
-          tenant: tenantId,
-          code,
-          error: message
-        });
-        failedDocuments.push({
-          documentId: document.documentId,
-          lineIds: document.lineIds,
-          code,
-          message
-        });
       }
-    }
 
-    return {
-      deliveredLines,
-      failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
-      metadata: {
-        adapter: this.type,
-        deliveredInvoices: transformResult.documents.length - failedDocuments.length,
-      failedInvoices: failedDocuments.length
-      }
-    };
+      return {
+        deliveredLines,
+        failedDocuments: failedDocuments.length > 0 ? failedDocuments : undefined,
+        metadata: {
+          adapter: this.type,
+          deliveredInvoices: transformResult.documents.length - failedDocuments.length,
+        failedInvoices: failedDocuments.length
+        }
+      };
+    });
   }
 
   private async transformVendorBills(
@@ -905,18 +1027,16 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         tenant: params.tenantId,
         integration_type: this.type,
         alga_entity_type: params.entityType,
-        alga_entity_id: params.entityId
+        alga_entity_id: params.entityId,
       })
+      .whereNull('deleted_at')
       .select('external_entity_id', 'metadata');
 
+    // Realm-exact: QBO entity ids are company-local, so a mapping only means
+    // anything within its own realm. Legacy realm-less rows are never usable
+    // for a remote write — they await backfill or reconciliation.
     if (params.targetRealm) {
-      query.andWhere((builder) => {
-        builder.where('external_realm_id', params.targetRealm as string).orWhereNull('external_realm_id');
-      });
-      query.orderByRaw(
-        'CASE WHEN external_realm_id = ? THEN 0 WHEN external_realm_id IS NULL THEN 1 ELSE 2 END',
-        [params.targetRealm]
-      );
+      query.andWhere('external_realm_id', params.targetRealm);
     } else {
       query.whereNull('external_realm_id');
     }
@@ -952,7 +1072,9 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         created_at: now,
         updated_at: now
       })
-      .onConflict(['tenant', 'integration_type', 'alga_entity_type', 'alga_entity_id'])
+      // Matches idx_unique_alga_mapping, which includes the realm expression —
+      // the same local entity may be mapped once per realm.
+      .onConflict(knex.raw("(tenant, integration_type, alga_entity_type, alga_entity_id, COALESCE(external_realm_id, ''))"))
       .merge({
         external_entity_id: params.externalEntityId,
         external_realm_id: params.targetRealm ?? null,
@@ -967,16 +1089,45 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     document: AccountingExportDocument,
     qboClient: QboClientService,
     invoiceMappingRepository: KnexInvoiceMappingRepository,
-    target: { tenantId: string; realmId: string }
+    target: { tenantId: string; realmId: string; trx: Knex.Transaction }
   ): Promise<string> {
-    const { tenantId, realmId } = target;
+    const { tenantId, realmId, trx } = target;
     const payload = document.payload as unknown as InvoiceDocumentPayload;
+
+    // Serialize against a concurrent void before touching the remote document
+    // or its mapping: the invoice row is locked FOR UPDATE and confirmed not
+    // cancelled. A void that already committed shows its cancelled status here
+    // and the export is refused; a void that starts later queues on this same
+    // lock until the mapping commits, then re-reads the mapping under its own
+    // lock and enqueues the remote void.
+    await lockInvoiceForExternalSync(trx, tenantId, document.documentId);
+
     const mapping = await invoiceMappingRepository.findInvoiceMapping({
       tenantId,
       adapterType: this.type,
       invoiceId: document.documentId,
       targetRealm: realmId
     });
+
+    // Export suppression: a tombstoned (unlinked) mapping must never be
+    // re-exported as a brand-new remote document. Unlink is an explicit stop —
+    // a later export requires an explicit relink-or-recreate choice.
+    if (!mapping) {
+      const unlinked = await invoiceMappingRepository.findUnlinkedInvoiceMapping({
+        tenantId,
+        adapterType: this.type,
+        invoiceId: document.documentId,
+        targetRealm: realmId
+      });
+      if (unlinked) {
+        throw new AppError(
+          'QBO_EXPORT_UNLINKED_DOCUMENT',
+          `Invoice ${document.documentId} was unlinked from QuickBooks (external id ${unlinked.externalInvoiceId}). ` +
+            'Relink it or explicitly re-create it before exporting — nothing was written to QuickBooks.'
+        );
+      }
+    }
+
     const mappingMetadata = mapping?.metadata ?? null;
     const existingMetadata = mappingMetadata ?? undefined;
     const qboEntityType = payload.documentType ?? 'Invoice';
@@ -1078,7 +1229,8 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         'client_id',
         'currency_code',
         'exchange_rate_basis_points',
-        'invoice_type'
+        'invoice_type',
+        'billing_profile_id'
       )
       .whereIn('invoice_id', invoiceIds);
 
@@ -1125,10 +1277,16 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     invoices: Map<string, DbInvoice>
   ): Promise<{ clients: Map<string, DbClient>; mappings: Map<string, MappingRow> }> {
     const clientIds = new Set<string>();
+    // Profiles the invoices in this batch bill for. A sub-customer mapping is
+    // keyed on the profile, not the client (F121).
+    const profileIds = new Set<string>();
 
     for (const invoice of invoices.values()) {
       if (invoice.client_id) {
         clientIds.add(invoice.client_id);
+      }
+      if (invoice.billing_profile_id) {
+        profileIds.add(invoice.billing_profile_id);
       }
     }
 
@@ -1151,13 +1309,18 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const mappingRows = await tenantDb(knex, tenantId).table<MappingRowRaw>('tenant_external_entity_mappings')
       .select('*')
       .where('integration_type', this.type)
-      .whereIn('alga_entity_type', ['client'])
-      .whereIn('alga_entity_id', Array.from(clientIds))
+      // Profile-level rows sit in the same table under a second entity type
+      // (F116). Loading both here keeps the export a single query rather than
+      // a per-invoice lookup.
+      .whereIn('alga_entity_type', [CLIENT_ENTITY_TYPE, BILLING_PROFILE_ENTITY_TYPE])
+      .whereIn('alga_entity_id', [...clientIds, ...profileIds])
+      .whereNull('deleted_at')
       .modify((qb) => {
+        // Realm-exact: a customer/profile mapping from another realm (or a
+        // legacy realm-less row) must not select the QBO customer this batch
+        // exports against.
         if (context.batch.target_realm) {
-          qb.andWhere((builder) => {
-            builder.where('external_realm_id', context.batch.target_realm as string).orWhereNull('external_realm_id');
-          });
+          qb.andWhere('external_realm_id', context.batch.target_realm);
         } else {
           qb.andWhere((builder) => builder.whereNull('external_realm_id'));
         }
@@ -1210,7 +1373,11 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
         .where({
           integration_type: this.type,
           alga_entity_type: 'invoice',
-          external_entity_id: externalInvoiceRef
+          external_entity_id: externalInvoiceRef,
+          // QBO ids are company-local: the same Invoice id can exist in two
+          // realms, so the metadata lookup must be scoped to the realm the
+          // invoice was fetched from.
+          external_realm_id: targetRealm
         })
         .first();
 

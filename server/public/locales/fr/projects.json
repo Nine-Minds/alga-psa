@@ -11,5 +11,83 @@
         "wbsCode": "Code WBS"
       }
     }
+  },
+  "errors": {
+    "permissions": {
+      "createProject": "Autorisation refusée : impossible de créer le projet",
+      "readProject": "Autorisation refusée : impossible de lire le projet",
+      "updateProject": "Autorisation refusée : impossible de mettre à jour le projet",
+      "deleteProject": "Autorisation refusée : impossible de supprimer le projet",
+      "materialRead": "Autorisation refusée : autorisation de lecture sur les projets requise",
+      "materialUpdate": "Autorisation refusée : autorisation de mise à jour sur les projets requise"
+    },
+    "project": {
+      "notFound": "Projet introuvable",
+      "validationFailed": "La validation du projet a échoué. Veuillez vérifier les détails du projet et réessayer.",
+      "invalidValue": "L’une des valeurs de projet sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’un des enregistrements de projet sélectionnés n’existe plus. Veuillez actualiser la page et réessayer.",
+      "conflict": "Cette modification du projet entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs du projet n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du projet est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du projet est manquant : {{field}}.",
+      "statusesNotConfigured": "Aucun statut de projet n’est configuré. Ajoutez au moins un statut de projet avant de créer des projets.",
+      "taskStatusesNotConfigured": "Aucun statut de tâche de projet n’est configuré. Ajoutez au moins un statut de tâche avant de créer des projets.",
+      "detailsUnavailableAfterCreate": "Le projet n’a pas pu être créé car ses détails n’ont pas pu être chargés. Veuillez réessayer."
+    },
+    "task": {
+      "validationFailed": "Veuillez corriger les détails de la tâche : {{details}}",
+      "invalidValue": "L’une des valeurs de tâche sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’un des enregistrements de projet ou de tâche sélectionnés n’existe plus. Veuillez actualiser la page et réessayer.",
+      "conflict": "Cette modification de la tâche entre en conflit avec un enregistrement existant. Veuillez actualiser la page et réessayer.",
+      "notAllowed": "L’une des valeurs de la tâche n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire de la tâche est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de la tâche est manquant : {{field}}."
+    },
+    "comment": {
+      "internalOnly": "Seuls les utilisateurs internes peuvent commenter les tâches.",
+      "taskNotFound": "Tâche introuvable. Elle a peut-être été supprimée. Veuillez actualiser la page et réessayer.",
+      "parentNotFound": "Le commentaire auquel vous répondez est introuvable. Veuillez actualiser la page et réessayer.",
+      "sameThreadRequired": "Les réponses doivent rester dans le même fil de la tâche. Veuillez actualiser la page et réessayer.",
+      "parentDeleted": "Vous ne pouvez pas répondre à un commentaire supprimé.",
+      "notFound": "Commentaire introuvable. Il a peut-être été supprimé. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "La tâche ou le commentaire sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du commentaire est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du commentaire est manquant : {{field}}."
+    },
+    "export": {
+      "invalidValue": "L’un des projets, phases ou tâches sélectionnés n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de l’export de projet est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de l’export de projet est manquant : {{field}}."
+    },
+    "status": {
+      "invalidValue": "L’une des valeurs de statut sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’un des statuts de projet sélectionnés n’existe plus. Veuillez actualiser la page et réessayer.",
+      "duplicate": "Un statut de tâche de projet avec ces paramètres existe déjà.",
+      "notAllowed": "L’une des valeurs de statut n’est pas autorisée. Veuillez vérifier le formulaire et réessayer.",
+      "missingField": "Un champ obligatoire du statut est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du statut est manquant : {{field}}."
+    },
+    "template": {
+      "validationFailed": "La validation du modèle a échoué. Veuillez vérifier les détails du modèle et réessayer.",
+      "invalidUuid": "La demande de modèle contient un UUID non valide",
+      "missingStatuses": "Ce modèle référence des statuts qui n’existent plus. Veuillez réparer ses colonnes de statut et réessayer."
+    },
+    "ordering": {
+      "invalidValue": "L’une des valeurs de projet, phase, tâche ou statut sélectionnées n’est pas valide. Veuillez actualiser la page et réessayer.",
+      "referenceMissing": "L’un des enregistrements d’ordre du projet sélectionnés n’existe plus. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire de l’ordre du projet est manquant.",
+      "missingFieldNamed": "Un champ obligatoire de l’ordre du projet est manquant : {{field}}."
+    },
+    "material": {
+      "referenceMissing": "Le projet, le client, le produit ou l’unité de stock sélectionné n’est plus valide. Veuillez actualiser la page et réessayer.",
+      "missingField": "Un champ obligatoire du matériel est manquant.",
+      "missingFieldNamed": "Un champ obligatoire du matériel est manquant : {{field}}."
+    },
+    "statusUpdate": {
+      "noRecipient": "Aucune adresse e-mail n’est configurée pour le contact client de ce projet.",
+      "emailNotConfigured": "L’e-mail n’est pas configuré. Veuillez configurer les paramètres d’e-mail dans les paramètres avant d’envoyer des points d’avancement.",
+      "templateMissing": "Le modèle d’e-mail de point d’avancement du projet est introuvable.",
+      "sendFailed": "Échec de l’envoi du point d’avancement du projet. Veuillez réessayer."
+    }
   }
 }

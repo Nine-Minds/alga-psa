@@ -1,8 +1,8 @@
 # Mobile Release Process (Signing, Versioning, Release Notes)
 
-Scope: Ticketing MVP + SSO (`ee/mobile/` Expo app) for hosted AlgaPSA environments.
+Scope: The first-party `ee/mobile/` Expo app for hosted AlgaPSA environments.
 
-Last updated: 2026-02-03
+Last updated: 2026-08-20
 
 ## Signing
 
@@ -22,8 +22,9 @@ Last updated: 2026-02-03
 
 ### Human version
 
-- Update `ee/mobile/app.json`:
-  - `expo.version` (e.g. `1.0.0` → `1.0.1`)
+- Update `expo.version` in `ee/mobile/app.json` and `version` in both
+  `ee/mobile/package.json` and its lockfile. These values must match (for
+  example, `1.4.0` → `1.5.0`).
 
 ### Build numbers
 
@@ -32,11 +33,20 @@ Last updated: 2026-02-03
 
 Recommendation: bump both build numbers on every CI distribution run, even when `expo.version` stays the same.
 
+Before committing a release bump, resolve the Expo config and verify the
+effective version and build numbers:
+
+```bash
+cd ee/mobile
+npm run verify:expo-config
+```
+
 ## Release Notes
 
-- Keep release notes in this plan folder so they are reviewable alongside scope.
+- Keep release notes in the release's plan folder so they are reviewable
+  alongside scope.
 - Create one file per release:
-  - `docs/plans/2026-02-03-alga-psa-mobile-app/release-notes/YYYY-MM-DD.md`
+  - `ee/docs/plans/<release-plan>/RELEASE_NOTES.md`
 - Minimum structure:
   - Highlights
   - Fixes
@@ -48,7 +58,16 @@ Recommendation: bump both build numbers on every CI distribution run, even when 
 - GitHub Actions workflow: `.github/workflows/mobile-distribute.yml`
 - Required secrets:
   - `EXPO_TOKEN`
+  - `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` containing the complete Google Play
+    service account key JSON (Play Internal only)
+- Every distribution run has a required preflight job. Lint, typecheck, unit
+  tests, and Expo config resolution must all pass before the EAS build job can
+  start.
+- For Android, CI validates `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` and writes it to
+  the gitignored `ee/mobile/google-service-account.json` path on the ephemeral
+  runner, then removes it after submission. Do not commit or upload this key as
+  a build artifact.
 - Before first run:
   - Create the Expo project and run `eas build:configure` locally once to bootstrap config/credentials.
-  - Replace placeholders in `ee/mobile/eas.json` submit profiles (e.g. `ascAppId`) and/or configure EAS submit credentials.
-
+  - Configure the store submit profiles in `ee/mobile/eas.json` and the
+    corresponding repository secrets.

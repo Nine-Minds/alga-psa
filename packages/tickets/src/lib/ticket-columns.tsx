@@ -11,7 +11,12 @@ import { ChevronDown, ChevronRight } from 'lucide-react';
 import { getUserTimeZone } from '@alga-psa/core';
 import { ResponseStateBadge } from '@alga-psa/ui/components/tickets/ResponseStateBadge';
 import type { SlaTimerStatus } from '@alga-psa/types';
-import { resolveTicketColumnVisibility, type TicketListColumnKey } from './ticketColumnCatalog';
+import {
+  TICKET_COLUMNS,
+  resolveTicketColumnOrder,
+  resolveTicketColumnVisibility,
+  type TicketListColumnKey,
+} from './ticketColumnCatalog';
 import { formatTicketDateTime } from './ticketDateTimeFormat';
 import {
   statusPillHue,
@@ -115,6 +120,17 @@ type TicketListSettings = {
   tagsInlineUnderTitle?: boolean;
 };
 
+/**
+ * Kinds that are not reorderable. `fixed` (title) is the hero cell the row is
+ * built around; `folded` columns are not standalone on screen at all; `tags`
+ * renders inline under the title. Letting a stored order move any of them would
+ * mean a saved view could express an arrangement the renderer cannot produce, so
+ * they keep their existing special handling and the order applies to the rest.
+ */
+const REORDERABLE_COLUMN_KEYS: ReadonlySet<string> = new Set(
+  TICKET_COLUMNS.filter((column) => column.kind === 'optional').map((column) => column.key)
+);
+
 type TicketingDisplaySettings = {
   dateTimeFormat?: string;
   responseStateTrackingEnabled?: boolean;
@@ -148,6 +164,12 @@ interface CreateTicketColumnsOptions {
   t?: (key: string, fallback: string) => string;
   /** App locale. Without it the Created column formats in the browser's. */
   locale?: string;
+  /**
+   * On-screen order for the reorderable (optional) columns, resolved through
+   * resolveTicketColumnOrder. Absent means catalog declaration order — the
+   * behaviour before board-level view configuration existed.
+   */
+  columnOrder?: readonly string[];
 }
 
 export function createTicketColumns(options: CreateTicketColumnsOptions): ColumnDefinition<ITicketListItem>[] {
@@ -169,6 +191,7 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
     onToggleBundleExpanded,
     t: _t,
     locale = 'en',
+    columnOrder,
   } = options;
 
   const t = _t ?? ((_key: string, fallback: string) => fallback);
@@ -615,6 +638,26 @@ export function createTicketColumns(options: CreateTicketColumnsOptions): Column
         dataIndex: 'entered_by_name',
         width: '6%',
       }
+    });
+  }
+
+  // Apply the stored order to the reorderable columns only, leaving every other
+  // kind exactly where the builder put it. Sorting the whole array would let a
+  // stored order drag the title cell out of first position.
+  if (columnOrder && columnOrder.length > 0) {
+    const rank = new Map<string, number>();
+    resolveTicketColumnOrder(columnOrder).forEach((key, index) => rank.set(key, index));
+
+    const reorderableSlots = columns
+      .map((entry, index) => ({ entry, index }))
+      .filter(({ entry }) => REORDERABLE_COLUMN_KEYS.has(entry.key));
+
+    const sorted = reorderableSlots
+      .map(({ entry }) => entry)
+      .sort((a, b) => (rank.get(a.key) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.key) ?? Number.MAX_SAFE_INTEGER));
+
+    reorderableSlots.forEach(({ index }, position) => {
+      columns[index] = sorted[position];
     });
   }
 

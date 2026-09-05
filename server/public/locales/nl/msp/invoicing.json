@@ -1,5 +1,13 @@
 {
   "automaticInvoices": {
+    "monthEndClose": {
+      "action": "Factuur aan het einde van de maand genereren",
+      "title": "Periode {{servicePeriod}} aan het einde van de maand afsluiten?",
+      "warning": "Hiermee factureert u {{servicePeriod}} op de laatste kalenderdag. Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden niet meegenomen. Sluit de periode daarom pas af als al het werk volledig is vastgelegd.",
+      "confirm": "Genereren aan het einde van de maand",
+      "omissionWarning": "Tijd- of gebruiksregistraties die na deze afsluiting worden vastgelegd, worden NIET opgenomen in de factuur.",
+      "generationFailed": "Kan de factuur aan het einde van de maand niet genereren. Probeer het opnieuw."
+    },
     "ready": {
       "title": "Klaar om te factureren",
       "description": "Beoordeel terugkerende werkzaamheden en genereer conceptfacturen voor de geselecteerde perioden.",
@@ -100,7 +108,8 @@
       "reverseInvoice": "Omgekeerde factuur",
       "deleteInvoice": "Factuur verwijderen",
       "closePreview": "Voorbeeld sluiten",
-      "generateInvoice": "Factuur genereren"
+      "generateInvoice": "Factuur genereren",
+      "recordUsage": "Verbruik registreren"
     },
     "dialogs": {
       "reverse": {
@@ -163,7 +172,14 @@
           "total": "Totaal"
         },
         "generating": "Genereren...",
-        "generateError": "Kan factuur niet genereren vanuit voorbeeld"
+        "generateError": "Kan factuur niet genereren vanuit voorbeeld",
+        "missingUsageHeading": "Geen verbruik geregistreerd voor deze periode",
+        "missingUsageService": "{{service}}: geen verbruiksrecords voor {{periodStart}} tot {{periodEnd}}",
+        "usageAttributionExcluded": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} is uitgesloten totdat de toewijzing aan een contractregel is opgelost — los de toewijzing op in plaats van meer verbruik te registreren",
+        "usageCalculationError": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} kon niet worden geprijsd — corrigeer de serviceprijzen in plaats van meer verbruik te registreren",
+        "recordScopedUsage": "Verbruik registreren: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} tot {{periodEnd}} — geregistreerd verbruik kon niet worden geprijsd. Controleer de prijsconfiguratie van deze service.",
+        "reportedPeriodTotalsHeading": "Doorgegeven periodeaantallen"
       },
       "poOverage": {
         "title": "Overschrijdingen van inkooporderlimieten",
@@ -178,6 +194,13 @@
         "proceedAnyway": "Toch doorgaan?",
         "proceedConfirm": "Ga hoe dan ook door",
         "skippedError": "Overgeslagen vanwege PO-overschrijding ({{poLabel}}): voorbij door {{amount}}."
+      },
+      "unreportedUsage": {
+        "title": "Geen verbruik gemeld voor deze periode",
+        "description": "Deze verbruiksservices hebben geen melding voor het factuurvenster. Nu genereren laat ze buiten de factuur; ze blijven factureerbaar zodra hun verbruik is gemeld.",
+        "omittedItem": "{{services}}: geen verbruik gemeld voor {{periodStart}} tot {{periodEnd}}",
+        "question": "Genereren zonder deze services?",
+        "confirm": "Genereren zonder niet-gemeld verbruik"
       }
     },
     "history": {
@@ -343,7 +366,8 @@
       "refresh": "Er is een fout opgetreden bij het vernieuwen van de factuurgegevens.",
       "updateFailed": "Fout bij bijwerken factuur",
       "generateFailed": "Fout bij genereren factuur",
-      "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie van de klant en probeer het opnieuw.",
+      "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in en probeer het opnieuw.",
+      "USAGE_RECORDS_MISSING": "Geen in aanmerking komende verbruiksrecords voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer het verbruik voor deze periode (of een invoer met nulverbruik) om deze services te factureren.",
       "CLIENT_NOT_FOUND": "De geselecteerde klant is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "SERVICE_NOT_FOUND": "Service {{serviceId}} is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
       "INVALID_QUANTITY": "De hoeveelheid moet groter zijn dan nul.",
@@ -354,10 +378,13 @@
       "UNEXPECTED": "Er is iets misgegaan bij het genereren van de factuur. Vermeld referentie {{ref}} wanneer u contact opneemt met ondersteuning.",
       "salesOrderGenerateFailed": "Kan de verkooporderfactuur niet genereren.",
       "salesOrderNothingToInvoice": "Er resteert niets om voor deze verkooporder te factureren.",
-      "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering."
+      "salesOrderNotInvoiceable": "Deze verkooporder is niet meer beschikbaar voor facturering.",
+      "USAGE_RECORDS_MISSING_ACK_REQUIRED": "Dit factuurvenster bevat factureerbare regels, maar voor {{services}} is geen verbruik gemeld voor de serviceperiode {{periodStart}} tot {{periodEnd}}. Registreer eerst het verbruik, of bevestig uitdrukkelijk het genereren zonder dit verbruik — de niet-gemelde services blijven later factureerbaar.",
+      "USAGE_PERIOD_TOTAL_STALE": "De voorvertoning is verouderd: {{details}}. Voer de voorvertoning opnieuw uit om de actuele cijfers te zien en genereer daarna opnieuw.",
+      "USAGE_CALCULATION_ERROR": "Het verbruik voor {{services}} in de serviceperiode {{periodStart}} tot {{periodEnd}} is geregistreerd maar kon niet worden geprijsd. Corrigeer de serviceprijzen (catalogusprijs in de contractvaluta, een aangepast tarief of tariefschijven) en probeer het opnieuw. Registreer geen vervangend verbruik."
     },
     "warnings": {
-      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie voordat u de factuur genereert."
+      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een contactpersoon voor facturering, een facturatie-e-mailadres van de klant of een e-mailadres op de facturatielocatie of standaardlocatie in voordat u de factuur genereert."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",
@@ -370,8 +397,6 @@
   "draftsTab": {
     "title": "Conceptfacturen",
     "searchPlaceholder": "Facturen zoeken...",
-    "bulkActions_one": "Acties ({{count}})",
-    "bulkActions_other": "Acties ({{count}})",
     "columns": {
       "invoiceNumber": "Factuurnummer",
       "client": "Klant",
@@ -422,13 +447,17 @@
       "message": "Deze factuur is ingesteld om de belasting te gebruiken die door een extern boekhoudsysteem wordt berekend, maar er is nog geen belasting geïmporteerd, dus kan deze niet worden gefinaliseerd. Exporteer deze naar uw boekhoudsysteem (QuickBooks, Xero) en importeer de belasting terug om deze met externe belasting te finaliseren — of schakel deze factuur nu over naar interne belasting zodat Alga de belasting berekent, en finaliseer deze.",
       "confirm": "Overschakelen naar interne belasting en finaliseren",
       "cancel": "Annuleren"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "finalizedTab": {
     "title": "Gefinaliseerde facturen",
     "searchPlaceholder": "Facturen zoeken...",
-    "bulkActions_one": "Acties ({{count}})",
-    "bulkActions_other": "Acties ({{count}})",
     "columns": {
       "invoiceNumber": "Factuurnummer",
       "client": "Klant",
@@ -462,6 +491,12 @@
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
       "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "recurringServicePeriods": {
@@ -974,38 +1009,28 @@
   },
   "prepayment": {
     "titles": {
-      "prepayment": "Vooruitbetalingsfactuur genereren",
-      "creditMemo": "Creditnota genereren"
+      "prepayment": "Vooruitbetalingsfactuur genereren"
     },
     "descriptions": {
-      "prepayment": "Facturen met vooruitbetaling creëren klantkrediet voor toekomstige waarde. Ze creëren geen terugkerende serviceperioden; latere terugkerende facturen behouden hun eigen serviceperiodedekking.",
-      "creditMemo": "Creditnota's passen financiële saldi aan zonder de dekking van de terugkerende serviceperiode op de bronfactuur opnieuw te definiëren."
+      "prepayment": "Facturen met vooruitbetaling creëren klantkrediet voor toekomstige waarde. Ze creëren geen terugkerende serviceperioden; latere terugkerende facturen behouden hun eigen serviceperiodedekking."
     },
     "fields": {
-      "type": "Type",
       "client": "Klant",
       "amount": "Hoeveelheid",
-      "description": "Beschrijving"
-    },
-    "types": {
-      "prepaymentInvoice": "Vooruitbetalingsfactuur",
-      "creditMemo": "Creditnota"
+      "descriptionOptional": "Beschrijving (optional)"
     },
     "placeholders": {
       "amount": "Voer bedrag in",
-      "prepaymentDescription": "Vooruitbetaling voor toekomstige diensten",
-      "creditMemoDescription": "Reden voor creditnota"
+      "prepaymentDescription": "Vooruitbetaling voor toekomstige diensten"
     },
     "errors": {
       "allFieldsRequired": "Vul alle velden in",
       "validAmount": "Voer een geldig bedrag in",
-      "creditMemosUnsupported": "Creditnota's worden nog niet ondersteund",
       "generateFailed": "Fout bij genereren factuur"
     },
     "actions": {
       "generating": "Genereren...",
-      "generatePrepayment": "Vooruitbetalingsfactuur genereren",
-      "generateCreditMemo": "Creditnota genereren"
+      "generatePrepayment": "Vooruitbetalingsfactuur genereren"
     }
   },
   "contractItems": {
@@ -1240,7 +1265,12 @@
         "emptyState": "Kies voorbeeld- of bestaande factuurgegevens om een definitieve voorvertoning te genereren.",
         "loadingPreview": "Voorvertoning wordt opgebouwd en gerenderd…",
         "templateError": "Voorvertoningssjabloon kon niet uit de huidige werkruimte worden gegenereerd.",
-        "renderError": "Renderen van voorvertoning mislukt."
+        "renderError": "Renderen van voorvertoning mislukt.",
+        "searchQuotes": "Offertes zoeken…",
+        "noQuotesFound": "Geen offertes gevonden.",
+        "selectQuote": "Offerte kiezen",
+        "loadingQuoteDetails": "Offertedetails worden geladen…",
+        "loadingDocumentDetails": "Documentdetails worden geladen…"
       },
       "tabs": {
         "design": "Ontwerp",
@@ -1671,7 +1701,6 @@
   },
   "projectBilling": {
     "subtitle": "Gereedstaande mijlpalen en aanbetalingen uit alle projecten die op goedkeuring wachten.",
-    "bulkActions": "Acties ({{count}})",
     "loading": "Wachtrij voor projectfacturatie laden...",
     "empty": "Er wacht niets op controle. Gereedstaande mijlpalen en aanbetalingen verschijnen hier.",
     "columns": {
@@ -1727,6 +1756,12 @@
       "message": "Door dit planningsitem te annuleren, wordt het uit de facturatie verwijderd. Dit kan niet ongedaan worden gemaakt.",
       "confirm": "Post annuleren",
       "dismiss": "Post behouden"
+    },
+    "bulk": {
+      "actionBar": {
+        "selectedCount": "{{count}} geselecteerd",
+        "clear": "Selectie wissen"
+      }
     }
   },
   "invoiceDesigner": {
@@ -1830,7 +1865,9 @@
         "productItems": "Productregels",
         "items": "Elementen",
         "transformsSource": "{{binding}} (transformatiebron)",
-        "transformsOutput": "{{binding}} (transformatie-uitvoer)"
+        "transformsOutput": "{{binding}} (transformatie-uitvoer)",
+        "ticketGroups": "Gefactureerde tijd per ticket",
+        "timeEntries": "Gefactureerde tijdregistraties"
       },
       "presets": {
         "description": {
@@ -1848,6 +1885,46 @@
         "amount": {
           "label": "Bedrag",
           "hint": "Regeltotaal"
+        },
+        "ticket": {
+          "label": "Ticket",
+          "hint": "Ticketnummer en titel"
+        },
+        "ticketDescription": {
+          "hint": "Voor de klant zichtbare ticketomschrijving"
+        },
+        "hours": {
+          "label": "Uren"
+        },
+        "ticketHours": {
+          "hint": "Totaal gefactureerde uren voor het ticket"
+        },
+        "ticketRate": {
+          "hint": "Uurtarief ('Gemengde tarieven' wanneer registraties verschillen)"
+        },
+        "ticketAmount": {
+          "hint": "Totaal gefactureerd bedrag voor het ticket"
+        },
+        "date": {
+          "label": "Datum"
+        },
+        "entryDate": {
+          "hint": "Datum waarop het werk is uitgevoerd"
+        },
+        "entryTicket": {
+          "hint": "Nummer van het bronticket"
+        },
+        "entryTitle": {
+          "hint": "Tickettitel of taaknaam"
+        },
+        "entryHours": {
+          "hint": "Gefactureerde uren voor de registratie"
+        },
+        "entryRate": {
+          "hint": "Uurtarief voor de registratie"
+        },
+        "entryAmount": {
+          "hint": "Gefactureerd bedrag voor de registratie"
         }
       },
       "sourceBinding": {
@@ -1984,7 +2061,13 @@
       "preview": {
         "sampleNote": "Gegenereerd met representatieve voorbeeldgegevens voor {{type}}.",
         "frameTitle": "Voorbeeld van {{type}}",
-        "empty": "Open dit tabblad om een definitief voorbeeld te genereren."
+        "empty": "Open dit tabblad om een definitief voorbeeld te genereren.",
+        "existingNote": "Gegenereerd op basis van de gekozen verkooporder.",
+        "searchDocuments": "Verkooporders zoeken…",
+        "searchDocumentsHint": "Zoek op nummer of klant…",
+        "noDocumentsFound": "Geen verkooporders gevonden.",
+        "selectDocument": "Verkooporder kiezen",
+        "selectDocumentHint": "Kies een verkooporder voor een gegevensgebonden voorvertoning."
       },
       "errors": {
         "nameRequired": "De naam van het sjabloon is verplicht.",
@@ -2001,5 +2084,71 @@
       "packingSlip": "Pakbon",
       "pickList": "Picklijst"
     }
+  },
+  "errors": {
+    "permissions": {
+      "invoiceUpdate": "Toestemming geweigerd: bijwerkrechten voor facturen vereist",
+      "invoiceDelete": "Toestemming geweigerd: verwijderrechten voor facturen vereist",
+      "invoiceAccess": "Toestemming geweigerd: toegang tot de factuur geweigerd",
+      "otherClientInvoices": "Toestemming geweigerd: facturen van een andere klant zijn niet toegankelijk"
+    },
+    "invoice": {
+      "notFound": "Factuur niet gevonden",
+      "notFoundRefresh": "Factuur niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "notFoundNumbered": "Factuur {{invoiceId}} is niet gevonden.",
+      "clientNotFoundForInvoice": "Geen klant gevonden voor factuur {{invoiceNumber}}.",
+      "numberRequired": "Factuurnummer is verplicht",
+      "dateRequired": "Factuurdatum is verplicht",
+      "dateInvalid": "Factuurdatum is ongeldig",
+      "dueDateInvalid": "Vervaldatum is ongeldig",
+      "onlyDraftEditable": "Alleen conceptfacturen kunnen worden bewerkt",
+      "numberExists": "Het factuurnummer bestaat al. Kies een ander nummer.",
+      "notFinalized": "De factuur is niet definitief gemaakt",
+      "unfinalizeFailed": "De factuur kon niet ongedaan definitief worden gemaakt door een onverwachte gegevensfout. Vernieuw de pagina en probeer het opnieuw.",
+      "paidOrCancelled": "Een betaalde of geannuleerde factuur kan niet worden gewijzigd",
+      "syncedVoidInstead": "Deze factuur is gesynchroniseerd met een boekhoudsysteem — storneer deze in plaats van te verwijderen.",
+      "invalidValue": "Een van de geselecteerde factuurwaarden is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "De geselecteerde factuur, klant, het contract of de factuurregistratie bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een conflicterende factuur. Vernieuw de pagina en probeer het opnieuw.",
+      "missingField": "Er ontbreekt een verplicht factuurveld.",
+      "missingFieldNamed": "Er ontbreekt een verplicht factuurveld: {{field}}."
+    },
+    "billingCycle": {
+      "notFoundRefresh": "Factuurcyclus niet gevonden. Mogelijk is deze bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "invalidDates": "De factuurcyclus bevat ongeldige datums. Controleer de cyclus en probeer het opnieuw."
+    },
+    "jobs": {
+      "selectInvoicesPdf": "Selecteer minstens één factuur om pdf’s te genereren.",
+      "selectInvoicesEmail": "Selecteer minstens één factuur om te e-mailen.",
+      "selectInvoices": "Selecteer minstens één factuur.",
+      "emailNotConfigured": "E-mail is niet geconfigureerd. Configureer de e-mailinstellingen bij Instellingen voordat u facturen verstuurt.",
+      "schedulePdfFailed": "Het genereren van factuur-pdf’s kon niet worden gestart. Probeer het opnieuw.",
+      "scheduleEmailFailed": "Het e-mailen van facturen kon niet worden gestart. Probeer het opnieuw.",
+      "recipientFailed": "De ontvangergegevens voor deze factuur konden niet worden geladen.",
+      "sendFailed": "De factuur kon niet per e-mail worden verzonden. Probeer het opnieuw."
+    },
+    "template": {
+      "selectStandard": "Selecteer een standaardfactuursjabloon voordat u opslaat.",
+      "selectBeforePreview": "Selecteer een factuursjabloon voordat u een voorbeeld bekijkt.",
+      "notFoundRefresh": "Factuursjabloon niet gevonden. Mogelijk is het bijgewerkt of verwijderd. Vernieuw de pagina en probeer het opnieuw.",
+      "missingDesign": "Het factuursjabloon mist de ontwerpinhoud. Kies een ander sjabloon.",
+      "invalidValue": "Een van de geselecteerde waarden van het factuursjabloon is ongeldig. Vernieuw de pagina en probeer het opnieuw.",
+      "referenceMissing": "Het geselecteerde factuursjabloon of de klant bestaat niet meer. Vernieuw de pagina en probeer het opnieuw.",
+      "duplicate": "Er bestaat al een factuursjabloon met deze instellingen.",
+      "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
+      "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}."
+    }
+  },
+  "periodTotal": {
+    "missingContext": "Klant- of serviceconfiguratie ontbreekt voor dit rapport.",
+    "invalidQuantity": "Voer een geheel getal van 0 of hoger in voor het periodeaantal.",
+    "saveError": "Kan het periodeaantal niet opslaan.",
+    "retryError": "Kan het periodeaantal niet opslaan. Dien de opgave opnieuw in.",
+    "correct": "Corrigeer het doorgegeven aantal van {{quantity}} voor {{service}} ({{periodStart}} tot {{periodEnd}})",
+    "report": "Geef een periodeaantal door voor {{service}} ({{periodStart}} tot {{periodEnd}})",
+    "quantityLabel": "Periodeaantal voor {{service}}",
+    "saving": "Opslaan…",
+    "saveCorrection": "Correctie opslaan",
+    "save": "Opslaan"
   }
 }

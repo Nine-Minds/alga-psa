@@ -24,6 +24,7 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithTenant } from '@alga-psa/db';
 import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
+import { localizeActionError } from './localizeActionError';
 
 /**
  * Context provided to authenticated actions
@@ -100,8 +101,12 @@ export function withAuth<TArgs extends unknown[], TResult>(
     };
 
     // Use runWithTenant to set AsyncLocalStorage context
-    // This ensures createTenantKnex() works without explicit tenant argument
-    return runWithTenant(user.tenant, () => action(user, ctx, ...args));
+    // This ensures createTenantKnex() works without explicit tenant argument.
+    // localizeActionError runs inside it because resolving the caller's locale
+    // reads tenant_settings; it is a no-op unless the payload carries a messageKey.
+    return runWithTenant(user.tenant, async () =>
+      localizeActionError(await action(user, ctx, ...args)),
+    );
   };
 }
 
@@ -127,20 +132,27 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
     const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
-      return action(null, null, ...args);
+      // No tenant to run inside; locale resolution falls back to the cookie,
+      // Accept-Language, then the default.
+      return localizeActionError(await action(null, null, ...args));
     }
 
     const ctx: AuthContext = {
       tenant: user.tenant,
     };
 
-    return runWithTenant(user.tenant, () => action(user, ctx, ...args));
+    return runWithTenant(user.tenant, async () =>
+      localizeActionError(await action(user, ctx, ...args)),
+    );
   };
 }
 
 /**
  * Wraps a server action with authentication check only (no tenant context).
  * Use this for actions that don't need database access but need authentication.
+ *
+ * Deliberately not localized: neither caller returns an action-error payload, and
+ * without tenant context there is no `tenant_settings` to resolve a locale from.
  *
  * @example
  * ```typescript

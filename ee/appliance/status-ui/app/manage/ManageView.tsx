@@ -53,9 +53,33 @@ type ManageStatus = {
     available: boolean;
     email: string | null;
   };
+  support: {
+    capability: {
+      eligible: boolean;
+      reason: string | null;
+      edition?: string | null;
+      connected?: boolean;
+      centralConfigured?: boolean;
+      supportAgentAvailable?: boolean;
+    };
+    active: {
+      sessionId: string;
+      state: string;
+      durationHours: number;
+      activatedAt: string;
+      expiresAt: string;
+      operator?: { email?: string | null; subject?: string | null; boundAt?: string | null } | null;
+      connectorState?: string | null;
+      recording?: { bytes?: number; segments?: unknown[] };
+      centralClosePending?: boolean;
+      lastStopReason?: string | null;
+      shareCode?: string | null;
+    } | null;
+    history: Array<{ sessionId: string; state?: string; closedAt?: string; lastStopReason?: string; recording?: { bytes?: number } }>;
+  };
 };
 
-type ManageTab = "updates" | "control-plane" | "license" | "admin-recovery" | "settings";
+type ManageTab = "updates" | "control-plane" | "license" | "support" | "admin-recovery" | "settings";
 
 function apiPath(
   path: string,
@@ -899,6 +923,189 @@ function AdminRecoveryTab({ status }: { status: ManageStatus }) {
   );
 }
 
+function SupportTab({
+  status,
+  onRefresh,
+}: {
+  status: ManageStatus;
+  onRefresh: () => Promise<void>;
+}) {
+  const support = status.support;
+  const [durationHours, setDurationHours] = useState(4);
+  const [confirm, setConfirm] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<string | null>(null);
+  const [recording, setRecording] = useState<{ sessionId: string; metadata: any; playback?: any } | null>(null);
+  const [clock, setClock] = useState(() => Date.now());
+  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  useEffect(() => {
+    if (!support.active) return;
+    const next = ([1, 4, 8] as const).find((hours) => hours > support.active!.durationHours);
+    if (next) setDurationHours(next);
+  }, [support.active?.sessionId, support.active?.durationHours]);
+
+  async function supportRequest(path: string, init: RequestInit = {}) {
+    const response = await fetch(apiPath(path), { ...init, credentials: "same-origin", cache: "no-store" });
+    if (response.status === 401) { window.location.reload(); throw new Error("Sign-in expired."); }
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error || "Remote support operation failed.");
+    return body;
+  }
+
+  async function enableSupport() {
+    setBusy(true); setError(null); setResult(null); setConfirm(false);
+    try {
+      const body = await supportRequest("/api/support-sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ durationHours }),
+      });
+      setResult(body.session?.shareCode ? "Support is ready. Share the one-time code with the authorized support operator." : "Support provisioning started.");
+      await onRefresh();
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  }
+
+  async function revokeSupport() {
+    if (!support.active) return;
+    setBusy(true); setError(null);
+    try { await supportRequest(`/api/support-sessions/${support.active.sessionId}/revoke`, { method: "POST" }); setResult("Support access was revoked locally."); await onRefresh(); }
+    catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  }
+
+  async function extendSupport() {
+    if (!support.active) return;
+    setBusy(true); setError(null);
+    try {
+      await supportRequest(`/api/support-sessions/${support.active.sessionId}/extend`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ durationHours }) });
+      setResult("Support window extended."); await onRefresh();
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  }
+
+  async function inspectRecording(sessionId: string) {
+    setBusy(true); setError(null);
+    try {
+      const metadata = await supportRequest(`/api/support-sessions/${sessionId}/recording/metadata`);
+      const response = await fetch(apiPath(`/api/support-sessions/${sessionId}/recording/playback`), { credentials: "same-origin", cache: "no-store" });
+      const playback = response.ok ? await response.json() : undefined;
+      setRecording({ sessionId, metadata, playback });
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  }
+
+  async function deleteRecording(sessionId: string) {
+    setBusy(true); setError(null);
+    try { await supportRequest(`/api/support-sessions/${sessionId}/recording`, { method: "DELETE" }); setRecording(null); setResult("Recording deleted."); await onRefresh(); }
+    catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
+  }
+
+  const active = support.active;
+  const activeState = active && !["revoked", "expired", "failed"].includes(active.state);
+  const capabilityMessage: Record<string, string> = {
+    pro_required: "Available with Pro.",
+    connected_appliance_required: "Connect this Pro appliance before enabling remote support.",
+    central_service_unavailable: "Remote support is unavailable until the central support service is reachable.",
+    control_plane_update_required: "Update the appliance control plane to an approved support-agent release before enabling support.",
+  };
+
+  return (
+    <div className={styles.manageSection}>
+      <h2>Remote support</h2>
+      <p className={styles.helpText}>Support access is root-equivalent, time-limited, outbound-only, and recorded locally on this appliance.</p>
+      {error ? <div className={styles.alert}>{error}</div> : null}
+      {result ? <p className={styles.manageResult}>{result}</p> : null}
+
+      {!activeState ? (
+        <>
+          {!support.capability.eligible ? (
+            <div className={`${styles.alert} ${styles.alertInfo}`}>
+              {capabilityMessage[support.capability.reason || ""] || "Remote support is not ready on this appliance."}
+              {support.capability.reason === "connected_appliance_required" ? <><br />Use the support bundle for offline troubleshooting.</> : null}
+            </div>
+          ) : (
+            <>
+              <div className={styles.field}>
+                <label htmlFor="manage-support-duration">Support window</label>
+                <select id="manage-support-duration" value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} disabled={busy}>
+                  <option value={1}>1 hour</option>
+                  <option value={4}>4 hours</option>
+                  <option value={8}>8 hours</option>
+                </select>
+              </div>
+              <p className={styles.helpText}>The operator can use one shell during this window. Terminal input and output remain on the appliance for review.</p>
+              <div className={styles.toolbar}>
+                <button id="manage-enable-support" type="button" className={styles.actionButton} disabled={busy} onClick={() => confirm ? enableSupport() : setConfirm(true)}>
+                  {busy ? "Preparing support…" : confirm ? "Confirm root access" : "Enable support mode"}
+                </button>
+                {confirm ? <button id="manage-cancel-support" type="button" disabled={busy} onClick={() => setConfirm(false)}>Cancel</button> : null}
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <dl className={styles.kv}>
+            <div><dt>Status</dt><dd><span className={`${styles.badge} ${active.state === "ready" ? styles.ready : styles.installing}`}>{active.state}</span></dd></div>
+            <div><dt>Window</dt><dd>{active.durationHours} hours, until {new Date(active.expiresAt).toLocaleString()} ({Math.max(0, Math.ceil((new Date(active.expiresAt).getTime() - clock) / 60000))} minutes remaining)</dd></div>
+            <div><dt>Operator</dt><dd>{active.operator?.email || "Not redeemed"}</dd></div>
+            <div><dt>Recording</dt><dd>{active.recording?.bytes || 0} bytes across {active.recording?.segments?.length || 0} segment(s)</dd></div>
+          </dl>
+          {active.centralClosePending ? <p className={styles.alert}>Central revocation is pending retry; local access has been removed.</p> : null}
+          {active.shareCode && active.state === "ready" ? (
+            <div className={styles.manageResult}>
+              <strong>One-time share code</strong>
+              <p><code id="manage-support-code">{active.shareCode}</code></p>
+              <button id="manage-copy-support-code" type="button" onClick={() => navigator.clipboard?.writeText(active.shareCode || "")}>Copy code</button>
+              <p className={styles.helpText}>This code is shown only after the connector and recorder are ready. It is removed after redemption or closure.</p>
+            </div>
+          ) : null}
+          <div className={styles.toolbar}>
+            {!["revoked", "expired", "failed", "closing"].includes(active.state) && active.durationHours < 8 ? <>
+              <label htmlFor="manage-support-extension">Extend to</label>
+              <select id="manage-support-extension" value={durationHours} onChange={(event) => setDurationHours(Number(event.target.value))} disabled={busy}>
+                {([1, 4, 8] as const).filter((hours) => hours > active.durationHours).map((hours) => <option key={hours} value={hours}>{hours} hours</option>)}
+              </select>
+              <button id="manage-extend-support" type="button" disabled={busy} onClick={extendSupport}>Extend</button>
+            </> : null}
+            <button id="manage-revoke-support" type="button" className={styles.actionButton} disabled={busy} onClick={revokeSupport}>Revoke access</button>
+          </div>
+        </>
+      )}
+
+      {support.history.length ? (
+        <>
+          <div className={styles.manageSeparator} />
+          <h3 className={styles.manageSubheading}>Closed recordings</h3>
+          {support.history.map((item, index) => (
+            <div className={styles.event} key={item.sessionId} data-session-id={item.sessionId}>
+              <strong>{item.closedAt ? new Date(item.closedAt).toLocaleString() : item.sessionId}</strong>
+              <span>{item.lastStopReason || item.state || "closed"} · {item.recording?.bytes || 0} bytes</span>
+              <div className={styles.toolbar}>
+                <button id={`manage-review-recording-button-${index + 1}`} type="button" disabled={busy} onClick={() => inspectRecording(item.sessionId)}>Review recording</button>
+                <a id={`manage-download-recording-link-${index + 1}`} href={apiPath(`/api/support-sessions/${item.sessionId}/recording`)} download={`support-${item.sessionId}.cast`}>Download</a>
+                <button id={`manage-delete-recording-button-${index + 1}`} type="button" disabled={busy} onClick={() => deleteRecording(item.sessionId)}>Delete</button>
+              </div>
+            </div>
+          ))}
+        </>
+      ) : null}
+      {recording ? (
+        <div className={styles.event}>
+          <strong>Recording review</strong>
+          {recording.metadata.verified ? null : <p className={styles.alert}>Receipt verification is unavailable or incomplete. Do not treat this recording as verified.</p>}
+          <div className={styles.event}><strong>Finalized terminal playback</strong><span>{recording.playback?.bytes || recording.metadata.bytes || 0} bytes · {recording.playback?.segments?.length || recording.metadata.segments?.length || 0} segments</span></div>
+          <pre>{recording.playback?.text || "No finalized terminal output is available."}</pre>
+          <button id="manage-close-recording-review" type="button" onClick={() => setRecording(null)}>Close review</button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main ManageView
 // ---------------------------------------------------------------------------
@@ -907,6 +1114,7 @@ const manageTabs: Array<{ value: ManageTab; label: string }> = [
   { value: "updates", label: "Updates" },
   { value: "control-plane", label: "Control-plane" },
   { value: "license", label: "License" },
+  { value: "support", label: "Support" },
   { value: "admin-recovery", label: "Admin recovery" },
   { value: "settings", label: "Settings" },
 ];
@@ -1050,6 +1258,15 @@ export function ManageView() {
               aria-labelledby="manage-tab-license"
             >
               <LicenseTab status={manageStatus} onRefresh={loadManageStatus} />
+            </div>
+          ) : null}
+          {activeTab === "support" ? (
+            <div
+              id="manage-panel-support"
+              role="tabpanel"
+              aria-labelledby="manage-tab-support"
+            >
+              <SupportTab status={manageStatus} onRefresh={loadManageStatus} />
             </div>
           ) : null}
           {activeTab === "admin-recovery" ? (

@@ -43,11 +43,16 @@ describe('inboundEmailRuleInputSchema', () => {
   });
 
   it('rejects invalid regex condition values', () => {
-    expect(
-      inboundEmailRuleInputSchema.safeParse(
-        baseRule({ conditions: [{ field: 'subject', operator: 'matches_regex', value: '([unclosed' }] })
-      ).success
-    ).toBe(false);
+    const result = inboundEmailRuleInputSchema.safeParse(
+      baseRule({ conditions: [{ field: 'subject', operator: 'matches_regex', value: '([unclosed' }] })
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0]).toMatchObject({
+        params: { messageKey: 'msp/email-providers:errors.inboundRules.invalidRegex' },
+      });
+    }
   });
 
   it('rejects action_config that does not match the action_type', () => {
@@ -91,11 +96,17 @@ describe('inboundEmailRuleInputSchema', () => {
   });
 
   it('requires a fallback destination id when on_no_match is fallback_destination', () => {
-    expect(
-      inboundEmailRuleInputSchema.safeParse(
-        baseRule({ on_no_match: 'fallback_destination', fallback_inbound_ticket_defaults_id: null })
-      ).success
-    ).toBe(false);
+    const missingFallback = inboundEmailRuleInputSchema.safeParse(
+      baseRule({ on_no_match: 'fallback_destination', fallback_inbound_ticket_defaults_id: null })
+    );
+    expect(missingFallback.success).toBe(false);
+    if (!missingFallback.success) {
+      expect(missingFallback.error.issues[0]).toMatchObject({
+        params: {
+          messageKey: 'msp/email-providers:errors.inboundRules.fallbackDestinationRequired',
+        },
+      });
+    }
     expect(
       inboundEmailRuleInputSchema.safeParse(
         baseRule({ on_no_match: 'fallback_destination', fallback_inbound_ticket_defaults_id: VALID_UUID })

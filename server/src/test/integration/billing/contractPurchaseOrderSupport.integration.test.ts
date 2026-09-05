@@ -10,6 +10,7 @@ import {
   setupClientTaxConfiguration,
 } from '../../../../test-utils/billingTestHelpers';
 import { setupCommonMocks } from '../../../../test-utils/testMocks';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 let db: Knex;
 let tenantId: string;
@@ -525,7 +526,7 @@ describe('Contract Purchase Order Support', () => {
     });
 
     const billingCycleId = uuidv4();
-    await tenantTable(db, tenantId, 'client_billing_cycles').insert({
+    await seedBillingCycle(db, tenantId, {
       billing_cycle_id: billingCycleId,
       tenant: tenantId,
       client_id: clientId,

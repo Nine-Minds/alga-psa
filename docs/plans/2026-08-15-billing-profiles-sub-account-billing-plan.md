@@ -1,0 +1,656 @@
+# Billing Profiles — Sub-Account Billing Within a Client
+
+**Branch:** `feature/billing-profiles-sub-account-billing-within-a-cl`
+**Date:** 2026-08-15
+**Status:** Design settled, awaiting implementation
+
+## Companion ALGA plan
+
+This document is the **design source** — architecture, rationale, and the reasoning
+behind each decision. The execution ledger lives alongside it as an ALGA plan:
+
+| Artifact | Purpose |
+|---|---|
+| [`ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/PRD.md`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/PRD.md) | Product requirements, personas, acceptance criteria |
+| [`.../features.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/features.json) | **142 features**, each atomic and testable, `implemented` flipped as work lands |
+| [`.../tests.json`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/tests.json) | **52 Pareto-selected tests** mapped back to feature IDs |
+| [`.../SCRATCHPAD.md`](../../ee/docs/plans/2026-08-15-billing-profiles-sub-account-billing/SCRATCHPAD.md) | Decisions, code discoveries, gotchas, runbook |
+
+Slice → feature-ID mapping is in §9. The PRD is the scope authority; this document is
+the architectural authority. If they disagree, the disagreement is a bug — fix both.
+
+---
+
+## 1. Problem
+
+An MSP's *operational* customer hierarchy does not always match its *accounts-receivable*
+hierarchy. Today Alga forces them to be the same: one client is one billing identity,
+one invoice per cycle, one card on file.
+
+Three recurring customer shapes break this:
+
+| Shape | Structure | What they need |
+|---|---|---|
+| **A — Multi-site franchise group** | One owner, N sites (growing), one M365 tenant, one contract per site, a *different card per site* | Separate invoice documents, separate bill-to, separate payment methods — but one client relationship for tickets/assets/portal |
+| **B — Shared campus, multiple legal entities** | One physical site, one network, one M365 tenant, N separately-billed entities, one business manager over all of them | Separate invoices per entity; one portal login that shows the whole org *and* which costs belong to which entity |
+| **C — Single legal entity, multiple facilities** | One tax ID, one bank account, one management team, N facilities each an operating/profit centre | *Not* separate invoices — cost visibility per facility, consolidated and drill-down |
+
+The workaround is to split into N clients. That solves billing and breaks everything
+else: fragmented tickets, assets, portal, and aggregate visibility. It trades a
+billing problem for a relationship problem.
+
+**The fix is a billing dimension orthogonal to the client tree.**
+
+### The constraint that shapes the design
+
+A billing profile **must be its own entity, not a property of location**. Shape A is
+N locations mapping 1:1 to N profiles. Shape B is *one* location carrying *N* profiles.
+Any model that hangs billing off location cannot express both. Locations and profiles
+are independent layers that point at each other.
+
+---
+
+## 2. Settled design decisions
+
+These were decided during the design session and are not open for re-litigation
+during implementation.
+
+| # | Decision |
+|---|---|
+| D1 | **One entity, two phases.** `client_billing_profiles` ships in phase 1 as a reporting segment and gains billing powers in phase 2. Not two dimensions to reconcile later. |
+| D2 | **Per-charge resolution.** Every charge resolves its own profile through a chain. Not contract-line granularity. |
+| D3 | **The work item carries the profile, not the time entry.** `tickets.billing_profile_id` / project equivalent, **soft-defaulted** at create, human-overridable. Never hard-required. |
+| D4 | **A contract assigned to a profile always beats the work item.** See §3.2 — this is the property that makes shapes A/B/C fall out of one chain with no mode flag. |
+| D5 | **Billing cycle becomes per-profile.** `client_billing_cycles` gains `billing_profile_id`. `generateInvoice` keeps its shape and simply runs once per profile-cycle. |
+| D6 | **Invisible until a second profile exists.** Every client gets a system-managed default profile at backfill; no UI appears while `count == 1`. |
+| D7 | **Credits, prepayments, aging and statements are profile-scoped**, with client-level rollup for reporting. A credit against one profile cannot pay a sibling profile's invoice. |
+| D8 | **Attribution is explainable.** Every charge records *which chain step won*; every time entry records *how its contract line was picked*. |
+| D9 | **Tax splits in two.** The region chain is unchanged and a profile does not join it. Exemption, exemption certificate, tax ID, and reverse charge become profile-scoped with client fallback. See §6.2. |
+| D10 | **Profiles must ship their own disambiguation remedy, and the catalog-rate fallback gets fixed.** Parallel per-profile contracts make contract-line selection ambiguous, so profile-aware narrowing is mandatory (§4.2). Ambiguous items stop being silently billed at catalog rate (§4.5). This is the sole authorised carve-out to the T013 gate, bounded by T052 (§6.1). |
+
+---
+
+## 3. Data model
+
+### 3.1 New table: `client_billing_profiles`
+
+```
+tenant                    uuid  NOT NULL
+billing_profile_id        uuid  NOT NULL  default gen_random_uuid()
+client_id                 uuid  NOT NULL
+name                      text  NOT NULL
+is_default                bool  NOT NULL default false
+is_system_managed_default bool  NOT NULL default false
+is_active                 bool  NOT NULL default true
+created_at / updated_at   timestamptz
+created_by / updated_by   uuid
+
+PK (tenant, billing_profile_id)
+FK (tenant, client_id) -> clients
+UNIQUE (tenant, client_id) WHERE is_default    -- at most one default per client
+-- + deferred constraint trigger (20260817000000) making zero-default unreachable
+--   for any client that has profiles: exactly one default per client with profiles
+INDEX (tenant, client_id, is_active)
+```
+
+Phase 2 adds to the same table (all nullable, all falling back to the client when unset):
+
+```
+bills_separately          bool NOT NULL default false
+bill_to_name              text
+bill_to_location_id       uuid   -- FK client_locations
+billing_contact_id        uuid   -- invoice recipient
+is_tax_exempt             bool   -- nullable; NULL = inherit client (see §6.2)
+tax_exemption_certificate text
+tax_id_number             text
+po_number / po_required
+invoice_delivery_prefs    jsonb
+billing_cycle_frequency   -- per-profile frequency (falls back to client)
+```
+
+Tax attributes are **nullable booleans/strings, not a `jsonb` blob** — each inherits
+the client value when NULL, which is what makes the single-profile case provably
+identical to today. Reverse-charge applicability stays in `client_tax_settings`, re-keyed
+to include the profile. See §6.2 — the region chain is deliberately untouched.
+
+`is_system_managed_default` follows the precedent set by
+`server/migrations/20260321150000_add_system_managed_default_contract_marker.cjs`.
+
+### 3.2 The resolution chain
+
+Every charge resolves exactly one profile. **First hit wins:**
+
+```
+1.  explicit billing_profile_id on the source record
+2.  contract_lines.billing_profile_id
+3.  client_contracts.billing_profile_id
+4.  work item — tickets.billing_profile_id / projects.billing_profile_id
+5.  client default profile (is_default = true)   -- always terminates
+```
+
+**Why contract beats work item (D4).** A charge cannot land on Profile A's invoice
+when Profile B's contract priced it. So the ordering is a billing-correctness
+requirement, not a preference. It also makes the three customer shapes fall out of a
+single chain:
+
+- **Shape A / B** assign contracts to profiles → resolution stops at step 2/3, the
+  contract governs, invoices split correctly.
+- **Shape C** leaves contracts unassigned (one shared contract) → resolution falls
+  through to step 4, the work item governs, and cost-by-facility reporting is accurate.
+
+No `mode` flag, no per-customer configuration. The assignment *is* the configuration.
+
+**Reachability by charge type** (established by code trace, see §8):
+
+| Charge type | Deepest reachable step | Note |
+|---|---|---|
+| Hourly / time | 4 (work item) | Engine already joins `tickets` at `billingEngine.ts:3739` |
+| Manual / ad-hoc | 1 (caller supplies) | `invoiceService.ts:478` already accepts `location_id` |
+| Fixed / recurring | 3 (contract) | No per-occurrence source record exists |
+| Usage | 3 (contract) | `usage_tracking` has no location/segment field |
+| Bucket | 3 (contract) | `bucket_usage` has no location/segment field |
+| Project schedule | 3 (contract) | `project_billing_schedule_entries` has none |
+
+This is an accepted limitation and must be **stated in the UI**, not discovered: for
+usage/bucket/fixed charges, per-segment attribution requires one contract line per
+segment. The attribution inspector (§4.5) is where that gets communicated.
+
+### 3.3 Assignment columns added
+
+| Table | Column | Phase |
+|---|---|---|
+| `client_contracts` | `billing_profile_id` nullable | 1 |
+| `contract_lines` | `billing_profile_id` nullable | 1 |
+| `client_locations` | `default_billing_profile_id` nullable | 1 |
+| `tickets` | `billing_profile_id` nullable | 1 |
+| `projects` | `billing_profile_id` nullable | 1 |
+| `invoice_charges` | `billing_profile_id` + `billing_profile_source` | 1 |
+| `time_entries` | `contract_line_source` enum | 1 |
+| `client_billing_cycles` | `billing_profile_id` NOT NULL | 2 |
+| `payment_methods` | `billing_profile_id` NOT NULL | 2 |
+| `transactions` / `credit_tracking` / `credit_allocations` | `billing_profile_id` | 2 |
+| `invoices` | `billing_profile_id` | 2 |
+
+---
+
+## 4. Phase 1 — the segment dimension
+
+Phase 1 delivers accurate cost segmentation with **zero change to how invoices are
+produced**. One invoice per client per cycle, exactly as today. Every charge on it
+simply knows which segment it belongs to.
+
+### 4.1 Slice 1 — schema + backfill
+
+**Step 0, before any migration is written (F128).** Stand up the golden-output baseline
+harness and capture a baseline from the existing billing suite. This must happen while
+the tree is still unmodified — once S1 lands, an honest baseline cannot be obtained
+without reverting. Every subsequent slice diffs against it (§6.1).
+
+- Migration creating `client_billing_profiles`.
+- Migration adding the nullable assignment columns from §3.3 (phase-1 rows only).
+- **Backfill**: for every existing client, insert one profile
+  (`is_default = true`, `is_system_managed_default = true`, name derived from the
+  client name). Idempotent, re-runnable.
+- Register the table in `packages/db/src/lib/tenantTableMetadata.ts` (Citus
+  distribution) and in `ee/temporal-workflows/src/activities/tenant-deletion-activities.ts`.
+
+**Exit criteria:** migration up/down clean; every client has exactly one default
+profile; no behavioural change anywhere.
+
+### 4.2 Slice 2 — the resolver
+
+New module, e.g. `packages/billing/src/lib/billing/billingProfileResolution.ts`:
+
+```ts
+resolveChargeProfile(ctx): { billingProfileId, source }
+```
+
+Pure, unit-testable, one function, no side effects. `source` is the enum recording
+which step won.
+
+Wire it into the seven existing `location_id:` stamp sites in
+`packages/billing/src/lib/billing/compute/*.ts`
+(`computeTimeBasedCharges.ts:306`, `computeUsageBasedCharges.ts:229`,
+`computeFixedCharges.ts:411/555/656`, `computeBucketCharges.ts:277`,
+`computeRecurringQuantityCharges.ts:155`), persisting through
+`invoiceService.ts:1038` alongside `location_id`.
+
+For the time path, extend the existing `tickets` join at `billingEngine.ts:3739-3745`
+to select `tickets.billing_profile_id` (currently only `title` is selected), and the
+project path likewise.
+
+Also fill the two attribution gaps found in the trace:
+- `persistProjectScheduleCharges` (`invoiceGeneration.ts:430-446`) sets no
+  `location_id` today — it must set the profile.
+- Sales-order invoicing and `invoiceModification.ts` set neither.
+
+#### Profile-aware contract-line disambiguation (F133–F136) — mandatory, not optional
+
+**This plan is an ambiguity generator, and must ship its own remedy.**
+
+`resolveDeterministicContractLineSelection`
+(`packages/billing/src/lib/contractLineDisambiguation.shared.ts:8-51`) returns null
+whenever more than one line is eligible, unless exactly one carries a bucket overlay:
+
+```ts
+const overlayContractLines = eligibleContractLines.filter(cl => cl.bucket_overlay?.config_id);
+if (overlayContractLines.length === 1) { /* pick it */ }
+return { selectedContractLineId: null, decision: 'ambiguous_or_unresolved', ... };
+```
+
+A multi-profile client holding parallel per-profile contracts — each carrying a line
+for the same service — **is exactly the >1 case**. Without this feature, every such
+client pushes time into catalog-rate billing. The very customers this feature targets
+would get worse billing accuracy than before.
+
+The remedy: pass the work item's resolved billing profile into disambiguation and
+prefer the eligible line whose contract belongs to that profile. Segment attribution
+and contract selection are the same question, so the profile that answers one answers
+the other. Applied at both entry-create (`timeEntryCrudActions.ts:449-491`) and the
+generation-time reconcile path (`billingEngine.ts:2093-2110`). If the profile still
+does not narrow to one, report ambiguity — never pick arbitrarily (F136).
+
+**Exit criteria:** every row written to `invoice_charges` has a non-null
+`billing_profile_id` and a `billing_profile_source`. Existing invoice totals are
+byte-identical (assert this in tests — it is the safety property of phase 1).
+
+### 4.3 Slice 3 — profile CRUD + assignment UI
+
+- Billing profiles section on the client detail page: create / rename / archive,
+  set default. Guard: cannot archive the default; cannot delete a profile with
+  charges (archive instead).
+- Profile picker on: contract, contract line, location (as `default_billing_profile_id`),
+  ticket, project.
+- **D6 gating**: every one of these controls is hidden while the client has one
+  profile. A single `useClientBillingProfiles(clientId)` hook returning
+  `{ profiles, isSegmented }` should be the only place that rule lives.
+- Ticket profile soft-defaults at create: location default → client default.
+  Never blocks ticket creation.
+
+### 4.4 Slice 4 — MSP spend-by-profile reporting
+
+- Spend by profile over a period, with drill-down into the charges behind each number.
+- Sourced from `invoice_charges.billing_profile_id` — no separate rollup table.
+- Comparison across periods; export.
+- Hidden for single-profile clients.
+
+### 4.5 Slice 5 — attribution explainability + unresolved-item correctness
+
+> **Correction to an earlier reading.** Unresolved items are *not* invisible today.
+> `AutomaticInvoices.tsx:354` already renders them as selectable "Unresolved time
+> entry" / "Unresolved usage record" rows, opt-in via
+> `include: selectedNonContractSelections.length > 0` (`invoiceGeneration.ts:1414`).
+> There is a surface and a path to billing them. The defect is narrower and worse than
+> "invisible" — see below.
+
+#### What is actually wrong with unresolved items
+
+1. **They bill at `service_catalog.default_rate`** (`billingEngine.ts:2170-2176`) — no
+   contract rate, no rounding config, no minimums, no overtime, no pricing schedule.
+   The code comment at `billingEngine.ts:2156-2159` acknowledges the missing rounding
+   config outright.
+2. **The reason is computed and then thrown away.** The engine distinguishes
+   `ambiguous` (>1 eligible line) from `no_match` (0 eligible lines) at
+   `billingEngine.ts:2137-2151` — and writes it to `console.info` only. The dashboard
+   says just "Unresolved."
+
+So a biller sees an item, includes it, and silently receives non-contract pricing with
+no indication of why or how to fix it.
+
+#### The fix (F137–F142)
+
+The distinction between the two reasons is the whole design:
+
+| Reason | Meaning | Behaviour |
+|---|---|---|
+| `no_match` — 0 eligible lines | **No contract covers this service.** Catalog rate is honest; there is nothing else to bill at. | **Unchanged.** Bills at catalog rate, now labelled "not covered by any contract" (F140). |
+| `ambiguous` — >1 eligible line | **A contract does cover it.** The customer has a negotiated rate, and billing catalog rate is simply wrong. | **Changed.** Never silently billed at catalog rate. The biller assigns a line inline (F138) and it bills at contract pricing; falling back to catalog rate becomes an explicit per-item choice (F139). |
+
+The behaviour change is therefore narrow and specific: **the current silent default
+becomes an explicit decision.** Nothing becomes unbillable — the biller can still
+choose catalog pricing, but must choose it. Applies symmetrically to usage records
+(F141).
+
+#### Attribution explainability
+
+The chain has five steps. This part makes the machine's reasoning legible.
+
+- `invoice_charges.billing_profile_source` enum:
+  `explicit | contract_line | contract | work_item | client_default`
+- `time_entries.contract_line_source` enum:
+  `explicit | auto_unique_service | auto_bucket_overlay | unresolved | reconciled_at_generation`
+  — set at `packages/scheduling/src/actions/timeEntryCrudActions.ts:449-491` and at
+  `billingEngine.ts:2093-2110` (the reconcile path).
+- **Attribution inspector** on the invoice line and the time entry, rendering a
+  plain-language sentence: *"Billed to «profile» because the contract line is assigned
+  to it"* / *"Billed to «profile» because the ticket is at that site; no contract
+  assignment applies."*
+- **The high-value case is `unresolved`.** Today
+  `resolveDeterministicContractLineSelection`
+  (`packages/billing/src/lib/contractLineDisambiguation.ts`) returns **null silently**
+  when more than one contract line matches a service. The entry may or may not get
+  swept up later by `calculateUnresolvedNonContractCharges`. Surface these as a
+  reviewable queue — this is a pre-existing invisible failure and arguably the single
+  highest-value item in phase 1.
+
+### 4.6 Slice 6 — client portal consolidated + segmented views
+
+- Portal shows org-wide totals, with a segment selector once `isSegmented`.
+- Drill into per-profile spend, invoices, tickets, services.
+- Surfaces under `server/src/app/client-portal/billing` and `.../dashboard`.
+- Access control is **phase 2** — in phase 1 every portal user of the client sees all
+  segments, which matches all three shapes (each has an all-seeing manager).
+
+---
+
+## 5. Phase 2 — billing profiles as a bill-to entity
+
+Phase 2 makes profiles bill separately. Each slice is independently landable.
+
+### 5.1 Slice 7 — profile bill-to identity
+
+Add the phase-2 columns from §3.1. Every field falls back to the client when unset,
+so a profile with nothing filled in behaves exactly like the client does today.
+
+### 5.2 Slice 8 — per-profile billing cycles
+
+The largest slice.
+
+```
+client_billing_cycles
+  + billing_profile_id NOT NULL          (backfilled to the client's default profile)
+  UNIQUE (tenant, client_id, billing_profile_id, period_start)
+```
+
+`generateInvoice(cycleId)` keeps its shape — it just runs once per profile-cycle,
+with charges scoped to the profile and bill-to read from it.
+
+**Blast radius — 11 non-test consumers** to audit:
+
+```
+server/src/lib/api/services/ClientService.ts
+server/src/lib/api/services/InvoiceService.ts
+packages/billing/src/actions/billingCycleActions.ts
+packages/billing/src/actions/billingAndTax.ts
+packages/billing/src/actions/invoiceGeneration.ts
+packages/billing/src/lib/billing/createBillingCycles.ts
+packages/billing/src/lib/billing/billingEngine.ts
+packages/clients/src/actions/clientContractActions.ts
+packages/clients/src/actions/clientActions.ts
+packages/db/src/lib/tenantTableMetadata.ts
+ee/temporal-workflows/src/activities/tenant-deletion-activities.ts
+```
+
+Plus **~59 test files** referencing `client_billing_cycles`. Most need only a default
+profile in their fixtures; a shared test helper should absorb that so the diff stays
+mechanical.
+
+Per-profile billing frequency comes free from this change and should be exposed —
+franchise-shape customers commonly want staggered billing dates per site.
+
+The existing per-client mixed-currency guard moves to per-profile.
+
+### 5.3 Slice 9 — profile-scoped payment methods
+
+`payment_methods` currently keys on tenant + client
+(`server/migrations/20241117193906_create_payment_methods_table.cjs`, index
+`[tenant, company_id, is_deleted]`). Add `billing_profile_id NOT NULL`, backfill
+existing rows to the client's default profile, and move `is_default` uniqueness to
+`(tenant, client_id, billing_profile_id)`.
+
+### 5.4 Slice 10 — profile-scoped AR (D7)
+
+- `billing_profile_id` on `transactions`, `credit_tracking`, `credit_allocations`,
+  `invoices`; backfilled to the default profile.
+- Credit application is constrained to the issuing profile.
+- Aging and statements key on profile; client views sum across profiles.
+- Note `20260728120000_derive_credit_balance_drop_cache_and_reconciliation.cjs` —
+  balance is *derived*, so the derivation query is the thing that becomes
+  profile-aware, not a cache.
+
+### 5.5 Slice 11 — QBO sub-customer mapping
+
+Profiles map onto QuickBooks sub-customers — a genuinely natural fit, since a QBO
+sub-customer is exactly "a separate bill-to under one parent relationship."
+
+- Mappings live in `tenant_external_entity_mappings`
+  (`server/migrations/20250502173321`), keyed by
+  `(tenant_id, integration_type, external_entity_id, external_realm_id)` — extend
+  the Alga-side entity reference to address a profile.
+- Client → QBO parent customer; profile → QBO sub-customer with `ParentRef`.
+- Single-profile clients keep mapping to a plain customer, so existing connections
+  are untouched.
+- Touches `packages/integrations/src/lib/qbo/qboClientService.ts` and the customer
+  mapping/sync routes under
+  `server/src/app/api/v1/integrations/quickbooks/customers/`.
+
+If this slice threatens the timeline it is the cleanest one to split into a
+follow-up card — nothing else depends on it.
+
+### 5.6 Slice 12 — portal access control
+
+Per-user profile restriction: a site manager sees only their own segment; the owner
+sees all. Default remains all-segments so phase-1 behaviour is preserved unless an
+MSP deliberately restricts.
+
+---
+
+## 6. Cross-cutting concerns
+
+### 6.1 Backward compatibility — the T013 gate
+
+> **For any client with exactly one billing profile, every invoice, total, tax figure,
+> credit application, portal view, and accounting export is identical to pre-change
+> output.**
+
+This is the single safety property for the entire effort. Because every client is
+single-profile immediately after the S1 backfill, this property must hold *continuously*
+— not just at the end.
+
+**T013 is a gate, not a slice deliverable.** It runs at the completion of every slice,
+S1 through S12, and a slice is not done until it passes. It is deliberately not listed
+under any one slice in §9 for exactly this reason.
+
+| After | T013 must prove |
+|---|---|
+| **S1** | The backfill alone perturbs nothing. Schema added, one default profile per client, invoice output unchanged. **This is the cheapest possible moment to catch a backfill defect — run it here first.** |
+| **S2** | The resolver stamps a profile on every charge without changing any amount, tax figure, or line. Stamping is additive only. |
+| **S3** | Assignment UI and soft-defaulting change no billing output for a single-profile client. |
+| **S4–S6** | Reporting and portal are read-only over existing data; totals still reconcile to invoices. |
+| **S7** | Profile-level bill-to/tax/PO/delivery fields, all unset, fall back to client values and reproduce prior output exactly. |
+| **S8** | With one profile per client, one cycle per period still produces one identical invoice. **Highest-risk gate in the plan** — this is where invoice production actually changes. |
+| **S9** | Payment method re-keying leaves single-profile collection behaviour unchanged. |
+| **S10** | AR re-keying leaves balances, credit application, aging, and statements unchanged. |
+| **S11** | Single-profile clients still export to a plain customer, not a sub-customer. |
+| **S12** | Unrestricted portal users see exactly what they saw before. |
+
+**Method.** Capture a golden-output baseline from the existing billing suite *before*
+S1 lands, and diff against it after every slice. A diff is a defect until proven
+otherwise — never a baseline to be updated. If a slice genuinely must change output for
+single-profile clients, that is a scope change requiring an explicit decision recorded
+in `SCRATCHPAD.md`, not a quiet baseline refresh.
+
+#### The one authorised carve-out (D10, T052)
+
+Exactly one deliberate exception exists. Fixing the catalog-rate fallback (§4.5, F139)
+changes invoice amounts for **single-profile tenants that have ambiguous items today** —
+so it cannot satisfy T013 as literally stated. This was decided knowingly, not
+discovered late, and it is bounded as follows:
+
+**In scope for the carve-out — the only permitted diffs:**
+- Invoices containing items that resolve as `ambiguous` (>1 eligible contract line)
+  under today's rules.
+
+**Out of scope — must remain byte-identical:**
+- Everything else, without exception. Invoices with fully resolved items. Invoices with
+  `no_match` items, which keep billing at catalog rate (F140). Tax, credits, aging,
+  statements, portal, exports.
+
+**T052 is the boundary test and is itself a gate.** It proves the changed population is
+*exactly* the today-ambiguous set and nothing broader. A diff outside that population
+remains a defect under the ordinary T013 rule.
+
+This carve-out authorises **no other** deviation. Any further pressure to change
+single-profile output is a new decision requiring the same treatment: bounded, tested
+at its boundary, and recorded here before the baseline moves.
+
+### 6.2 Tax — SETTLED
+
+"Profile tax settings" is not one thing. Tax state today decomposes into four
+attributes, all client-scoped, and they do **not** share an answer:
+
+| Attribute | Location | Answers |
+|---|---|---|
+| Region code chain | `compute/*.ts` (a `??` expression per module) | **Where** tax applies |
+| `clients.is_tax_exempt`, `clients.tax_exemption_certificate` | `20241004080400` | **Whether** this entity pays tax at all |
+| `clients.tax_id_number` | `20241004163300` | The entity's registration number |
+| `client_tax_settings.is_reverse_charge_applicable` | PK `(tenant, client_id)` | VAT treatment |
+
+#### The region chain does NOT change
+
+Current chain, resolved identically in every compute module:
+
+```ts
+const effectiveTaxRegion =
+  serviceTaxRegion ??
+  taxPorts.getLocationTaxRegionCode(clientContractLine.location_id) ??
+  taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
+  undefined;
+```
+
+**A billing profile does not participate in this chain.** Considered and rejected:
+profile region could only ever differ from contract-line location region when a
+profile's *bill-to* jurisdiction differs from the *delivery* jurisdiction. In all three
+target customer shapes the two agree by construction — 1:1 site/profile mapping, or a
+single shared site, or a single legal entity. And where they could diverge
+(sites across jurisdictions billed centrally), destination sourcing means the delivery
+location should govern regardless. Adding the rung buys a knob that fires in almost no
+real configuration. F089 exists to hold this chain still.
+
+#### Exemption, tax ID, and reverse charge DO become profile-scoped
+
+This is the load-bearing half. `is_tax_exempt` lives on `clients`, so today:
+
+> **One client cannot express "this entity is exempt, that one is not."**
+
+The one-site-many-legal-entities shape is precisely a mix of exempt and non-exempt
+entities — a religious organisation and its affiliated school and preschool, each with
+its own registration and its own exemption status, at one address in one jurisdiction.
+Region is identical for all of them; exemption is not. Billing that shape correctly
+today requires splitting into separate clients, which is the exact outcome this feature
+exists to prevent. So this is not a refinement — without it the shape stays unbillable.
+
+Moved to the profile with client fallback (F083, F129, F130):
+
+```
+is_tax_exempt
+tax_exemption_certificate
+tax_id_number
+client_tax_settings.is_reverse_charge_applicable
+    PK  (tenant, client_id)  ->  (tenant, client_id, billing_profile_id)
+```
+
+Note this is a **scope change, not a precedence question** — there is no chain to slot
+into. It follows the same fallback pattern as every other profile-level bill-to field.
+
+#### Structural consequence — do not underestimate this (F131, F132)
+
+`loadChargeComputeTaxContext` (`billingEngine.ts:628-690`) currently reads
+`input.client.is_tax_exempt` and builds **one tax context per client**. Once exemption
+is profile-scoped, the context must be built **per resolved profile**, because a single
+invoice can legitimately contain both exempt and non-exempt lines. That changes the
+function's contract, not just a field it reads, and it is the part of this slice most
+likely to be underestimated.
+
+The `createDefaultTaxSettings` provisioning side effect at `billingEngine.ts:668` also
+fires against `client_tax_settings` and must provision for the resolved profile (F132).
+
+#### Phasing
+
+All of this lands in **S7**, unchanged from the original sequencing. Consistent, because
+the shape that needs it needs separate invoices anyway. In phase 1 a multi-profile
+client receives one invoice with client-level exemption applied — no worse than today,
+since today those entities would be one client regardless. **No regression, so the T013
+gate is unaffected.**
+
+### 6.3 Feature flagging
+
+Gate the phase-2 invoice split behind a PostHog flag (see the `alga-feature-flags`
+skill) so per-profile cycle generation can be enabled per tenant. Phase 1 needs no
+flag — D6's `count == 1` rule is a better gate than a flag, because it is
+self-disabling.
+
+### 6.4 Testing
+
+- **Unit:** `resolveChargeProfile` against all five chain steps and all six charge
+  types; the `contract beats work item` property (D4) explicitly.
+- **Fixtures:** the three customer shapes from §1 as named scenarios — N-sites-1:1,
+  one-location-N-entities, one-entity-N-facilities.
+- **Regression:** the §6.1 identity property, run over the existing billing suite.
+- **Integration:** per-profile cycle generation producing N documents with correct
+  bill-to; credit isolation between sibling profiles.
+
+---
+
+## 7. Explicitly out of scope
+
+- Cross-profile credit transfer (deferred; D7 chose strict isolation).
+- Per-segment splitting of a *single* fixed/recurring charge — requires one contract
+  line per segment, which is the documented workaround (§3.2).
+- Merging or splitting existing profiles after charges exist.
+- Any change to the client tree itself — profiles are orthogonal, clients are untouched.
+
+---
+
+## 8. Pre-existing bugs found during the trace (do not fix here)
+
+Surfaced while tracing the time-entry → charge path. Both are real, both are
+unrelated to this feature, and both deserve their own cards:
+
+1. **Per-`user_type` hourly rates are never applied.**
+   `computeTimeBasedCharges.ts:164-175` reads `entry.user_type`, but the production
+   loader never selects it — the `users` join at `billingEngine.ts:3687` contributes
+   no columns to the select list (`billingEngine.ts:3812-3823`). Only unit tests that
+   inject `user_type` directly exercise that branch. The `user_type_rates` table
+   (`20250318200000`) is effectively dead in real billing.
+
+2. **`custom_rate` is read from a column that does not exist.**
+   `computeTimeBasedCharges.ts` reads `entry.custom_rate`; `time_entries` has no such
+   column, and `serviceConfig.config.custom_rate` (loaded at `billingEngine.ts:3634`)
+   is never consulted in rate resolution.
+
+---
+
+## 9. Sequencing summary
+
+| Slice | Scope | Depends on | Features | Tests |
+|---|---|---|---|---|
+| **S0** | golden-output baseline harness ← *must precede S1* | — | F128 | T013 baseline capture |
+| **S1** | schema + backfill | S0 | F001–F015 | T006–T009 |
+| **S2** | resolver + engine wiring + profile-aware disambiguation | S1 | F016–F034, F133–F136 | T001–T005, T010–T017, T047–T048 |
+| **S3** | profile CRUD + assignment UI | S1 | F035–F052 | T018–T021 |
+| **S4** | spend-by-profile reporting | S2 | F053–F060 | T022–T024 |
+| **S5** | attribution explainability + unresolved-item correctness | S2 | F061–F070, F137–F142 | T025–T028, T049–T052 |
+| **S6** | portal consolidated + segmented | S2, S3 | F071–F078 | T029–T031 |
+| **S7** | profile bill-to identity + tax scoping | S3 | F079–F089, F129–F132 | T032–T033, T044–T046 |
+| **S8** | per-profile billing cycles ← *largest* | S7 | F090–F101 | T034–T037 |
+| **S9** | profile-scoped payment methods | S7 | F102–F106 | T038–T039 |
+| **S10** | profile-scoped AR | S8 | F107–F115 | T040–T041 |
+| **S11** | QBO sub-customer mapping ← *splittable* | S7 | F116–F122 | T042 |
+| **S12** | portal access control | S6 | F123–F127 | T043 |
+
+S1–S6 are phase 1 (segment dimension, no invoicing change); S7–S12 are phase 2
+(bill-to entity, invoices split).
+
+**Parallelism:** S3/S4/S5 can run concurrently once S2 lands. S9 and S11 can run
+concurrently once S7 lands. S11 is the clean split point if phase 2 needs to shed
+scope — nothing else depends on it.
+
+> ### ⚠ T013 runs after EVERY slice — it is a gate, not a row in this table
+>
+> The backward-compatibility identity property (**§6.1**) must be re-asserted at the
+> completion of S1 through S12, phase 1 and phase 2 alike. It is the only defence
+> against a silent money bug, and it is why T013 appears in no slice's test column
+> above. **Run it first at S1**, where the backfill is the only thing that could have
+> broken it and the diff is therefore unambiguous. A slice is not complete until T013
+> passes.

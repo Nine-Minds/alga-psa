@@ -26,6 +26,7 @@ import { ProviderSetupWizardDialog } from './ProviderSetupWizardDialog';
 import { InboundTicketDefaultsManager } from './admin/InboundTicketDefaultsManager';
 import { InboundEmailRulesManager } from './admin/InboundEmailRulesManager';
 import { Microsoft365DiagnosticsDialog } from './admin/Microsoft365DiagnosticsDialog';
+import { GmailDiagnosticsDialog } from './admin/GmailDiagnosticsDialog';
 import { DrawerOutlet, DrawerProvider, useDrawer } from '@alga-psa/ui';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -697,7 +698,12 @@ function EmailProviderConfigurationContent({
               microsoftEmailSetup={microsoftEmailSetup}
             />
             <Microsoft365DiagnosticsDialog
-              isOpen={diagnosticsOpen}
+              isOpen={diagnosticsOpen && diagnosticsProvider?.providerType === 'microsoft'}
+              onClose={() => setDiagnosticsOpen(false)}
+              provider={diagnosticsProvider}
+            />
+            <GmailDiagnosticsDialog
+              isOpen={diagnosticsOpen && diagnosticsProvider?.providerType === 'google'}
               onClose={() => setDiagnosticsOpen(false)}
               provider={diagnosticsProvider}
             />

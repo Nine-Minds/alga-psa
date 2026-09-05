@@ -59,7 +59,7 @@ function documentViewUrl(
 ): string {
   if (resolve) return resolve({ document_id: doc.document_id, file_id: doc.file_id });
   return doc.file_id
-    ? `/api/documents/view/${doc.file_id}`
+    ? `/api/documents/view/${doc.document_id}`
     : `/api/documents/download/${doc.document_id}`;
 }
 

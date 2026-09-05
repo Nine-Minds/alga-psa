@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TicketComment } from "../../../api/tickets";
+import type { TicketComment, TicketNotificationSuppressionOptions } from "../../../api/tickets";
 import { addTicketComment, updateTicketStatus } from "../../../api/tickets";
 import { getSecureJson, secureStorage, setSecureJson } from "../../../storage/secureStorage";
 import { getClientMetadataHeaders } from "../../../device/clientMetadata";
@@ -93,6 +93,7 @@ export function useCommentDraft(
       originalIsInternal,
       isResolution,
       closeStatusId,
+      notificationSuppression,
     }: {
       serializedDraft: string;
       text: string;
@@ -101,6 +102,7 @@ export function useCommentDraft(
       originalIsInternal: boolean;
       isResolution?: boolean;
       closeStatusId?: string | null;
+      notificationSuppression?: TicketNotificationSuppressionOptions;
     }): Promise<boolean> => {
       if (!client || !session) return false;
       if (commentSendInFlightRef.current || commentSending) return false;
@@ -197,6 +199,7 @@ export function useCommentDraft(
             ticketId,
             status_id: closeStatusId,
             auditHeaders,
+            notificationSuppression,
           }).catch(() => {});
         }
 
@@ -305,7 +308,7 @@ export function useCommentDraft(
     [client, fetchComments, isOffline, session, showToast, t, ticketId, setComments],
   );
 
-  const sendComment = async () => {
+  const sendComment = async (notificationSuppression?: TicketNotificationSuppressionOptions) => {
     if (!client || !session) return;
     const originalDraft = commentDraft;
     const originalDraftPlainText = commentDraftPlainText;
@@ -323,6 +326,7 @@ export function useCommentDraft(
       originalIsInternal,
       isResolution: commentIsResolution,
       closeStatusId: commentCloseStatusId,
+      notificationSuppression,
     });
     if (sent) {
       setCommentIsResolution(false);

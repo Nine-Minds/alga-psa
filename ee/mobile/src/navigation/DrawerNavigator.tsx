@@ -13,6 +13,7 @@ import { SettingsScreen } from "../screens/SettingsScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useCapabilities } from "../capabilities/CapabilitiesContext";
+import { HeaderTimerChip } from "../features/timer/components/HeaderTimerChip";
 
 const Drawer = createDrawerNavigator<DrawerParamList>();
 
@@ -47,6 +48,7 @@ export function DrawerNavigator() {
         sceneStyle: {
           backgroundColor: theme.colors.background,
         },
+        headerRight: () => <HeaderTimerChip />,
       }}
     >
       <Drawer.Screen

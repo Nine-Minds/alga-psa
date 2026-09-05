@@ -12,8 +12,10 @@ import { createApiClient } from "../api";
 import {
   getOpportunity,
   getOpportunityTimeline,
+  listOpportunitySteps,
   winOpportunity,
   type OpportunityDetail,
+  type OpportunityStep,
   type TimelineItem,
 } from "../api/opportunities";
 import { listContacts, type ContactListItem } from "../api/contacts";
@@ -63,6 +65,7 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
 
   const [deal, setDeal] = useState<OpportunityDetail | null>(null);
   const [timeline, setTimeline] = useState<TimelineItem[]>([]);
+  const [steps, setSteps] = useState<OpportunityStep[]>([]);
   const [clientContacts, setClientContacts] = useState<ContactListItem[]>([]);
   const [clientContactsTotal, setClientContactsTotal] = useState(0);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -86,9 +89,10 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
     abortRef.current = controller;
     setError(null);
 
-    const [dealResult, timelineResult] = await Promise.all([
+    const [dealResult, timelineResult, stepsResult] = await Promise.all([
       getOpportunity(client, { apiKey: session.accessToken, opportunityId, signal: controller.signal }),
       getOpportunityTimeline(client, { apiKey: session.accessToken, opportunityId, signal: controller.signal }),
+      listOpportunitySteps(client, { apiKey: session.accessToken, opportunityId, signal: controller.signal }),
     ]);
 
     if (abortRef.current === controller) abortRef.current = null;
@@ -104,6 +108,9 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
     setDeal(loaded);
     if (timelineResult.ok) {
       setTimeline(timelineResult.data.data);
+    }
+    if (stepsResult.ok) {
+      setSteps(stepsResult.data.data);
     }
 
     // No linked contact — surface the client's contacts so the rep can still reach someone.
@@ -252,6 +259,8 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
   const dueLabel = formatDate(deal.next_action_due);
   const sortedTimeline = [...timeline].sort((a, b) => timelineMs(b) - timelineMs(a));
   const linkedQuotes = deal.linked_quotes ?? [];
+  const currentStep = steps.find((step) => step.status === "current") ?? null;
+  const plannedSteps = steps.filter((step) => step.status === "planned").sort((a, b) => a.sort_order - b.sort_order);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -284,6 +293,28 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
           <ValuesRow theme={theme} deal={deal} t={t} />
           <FactsRow theme={theme} deal={deal} t={t} />
         </SectionCard>
+
+        {currentStep || plannedSteps.length > 0 ? (
+          <SectionCard theme={theme} label={t("detail.plan", "Current plan")}>
+            {currentStep ? (
+              <OpportunityStepRow
+                step={currentStep}
+                theme={theme}
+                statusLabel={t("detail.currentStep", "Current")}
+                onOpenTicket={(ticketId) => navigation.navigate("TicketDetail", { ticketId })}
+              />
+            ) : null}
+            {plannedSteps.slice(0, 5).map((step) => (
+              <OpportunityStepRow
+                key={step.step_id}
+                step={step}
+                theme={theme}
+                statusLabel={t("detail.plannedStep", "Planned")}
+                onOpenTicket={(ticketId) => navigation.navigate("TicketDetail", { ticketId })}
+              />
+            ))}
+          </SectionCard>
+        ) : null}
 
         {/* Next action */}
         <SectionCard theme={theme} label={t("detail.nextAction", "Next action")}>
@@ -492,6 +523,8 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
       <CompleteActionModal
         visible={completeOpen}
         currentAction={deal.next_action}
+        currentStep={currentStep}
+        plannedSteps={plannedSteps}
         client={client}
         apiKey={session.accessToken}
         opportunityId={opportunityId}
@@ -538,6 +571,59 @@ export function OpportunityDetailScreen({ route, navigation }: Props) {
         onConfirm={() => void onConfirmWin()}
         onClose={() => setWinOpen(false)}
       />
+    </View>
+  );
+}
+
+function OpportunityStepRow({
+  step,
+  theme,
+  statusLabel,
+  onOpenTicket,
+}: {
+  step: OpportunityStep;
+  theme: Theme;
+  statusLabel: string;
+  onOpenTicket: (ticketId: string) => void;
+}) {
+  return (
+    <View
+      testID={`opportunity-step-${step.step_id}`}
+      style={{ paddingVertical: theme.spacing.sm, borderBottomWidth: 1, borderBottomColor: theme.colors.borderLight }}
+    >
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+        <Text style={{ ...theme.typography.body, color: theme.colors.text, flex: 1, fontWeight: step.status === "current" ? "700" : "400" }}>
+          {step.title}
+        </Text>
+        <Text style={{ ...theme.typography.caption, color: step.status === "current" ? theme.colors.primary : theme.colors.textSecondary }}>
+          {statusLabel}
+        </Text>
+      </View>
+      {step.due_at ? (
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+          {formatDate(step.due_at)}
+        </Text>
+      ) : null}
+      {step.assigned_to_name ? (
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>{step.assigned_to_name}</Text>
+      ) : null}
+      {step.ticket_id ? (
+        <Pressable
+          testID={`opportunity-step-ticket-${step.step_id}`}
+          onPress={() => onOpenTicket(step.ticket_id!)}
+          accessibilityRole="button"
+          style={{ marginTop: theme.spacing.xs, alignSelf: "flex-start" }}
+        >
+          <Text style={{ ...theme.typography.caption, color: theme.colors.primary }}>
+            {step.ticket_number ?? "Open linked ticket"}
+          </Text>
+        </Pressable>
+      ) : null}
+      {step.project_task_name ? (
+        <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+          {step.project_task_name}
+        </Text>
+      ) : null}
     </View>
   );
 }

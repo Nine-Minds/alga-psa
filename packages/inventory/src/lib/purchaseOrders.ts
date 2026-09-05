@@ -5,6 +5,7 @@ import {
   IStockUnit,
   PurchaseOrderStatus,
 } from '@alga-psa/types';
+import { SharedNumberingService } from '@alga-psa/shared/services/numberingService';
 import { recordStockMovement } from './movements';
 import { assertLocationWritable } from './scope';
 import { resolveTenantCurrency } from './tenantCurrency';
@@ -92,12 +93,7 @@ export async function createPurchaseOrderDraftCore(
   const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
   if (!vendor) throw new Error('Vendor not found');
 
-  const numberResult = await trx.raw(
-    'SELECT generate_next_number(?::uuid, ?) as number',
-    [tenant, 'PURCHASE_ORDER'],
-  );
-  const poNumber: string | undefined = numberResult.rows?.[0]?.number;
-  if (!poNumber) throw new Error('Failed to generate purchase order number');
+  const poNumber = await SharedNumberingService.getNextNumber('PURCHASE_ORDER', { knex: trx, tenant });
 
   const [po] = (await trx('purchase_orders')
     .insert({

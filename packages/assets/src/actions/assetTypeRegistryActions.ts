@@ -46,7 +46,7 @@ export const getAssetTypes = withAuth(async (user, { tenant }): Promise<AssetTyp
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'asset', 'read')) {
-    return permissionError('Permission denied: Cannot read asset types');
+    return permissionError('Permission denied: Cannot read asset types', 'msp/assets:errors.permissions.readAssetTypes');
   }
 
   return listAssetTypes(knex, tenant);
@@ -56,7 +56,7 @@ export const getAssetType = withAuth(async (user, { tenant }, slug: string): Pro
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'asset', 'read')) {
-    return permissionError('Permission denied: Cannot read asset types');
+    return permissionError('Permission denied: Cannot read asset types', 'msp/assets:errors.permissions.readAssetTypes');
   }
 
   return getAssetTypeBySlug(knex, tenant, slug);
@@ -70,7 +70,7 @@ export const createAssetTypeAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   if (!await canManageAssetTypeRegistry(user)) {
-    return permissionError('Permission denied: Cannot manage asset types');
+    return permissionError('Permission denied: Cannot manage asset types', 'msp/assets:errors.permissions.manageAssetTypes');
   }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -87,7 +87,7 @@ export const updateAssetTypeAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   if (!await canManageAssetTypeRegistry(user)) {
-    return permissionError('Permission denied: Cannot manage asset types');
+    return permissionError('Permission denied: Cannot manage asset types', 'msp/assets:errors.permissions.manageAssetTypes');
   }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -103,7 +103,7 @@ export const deleteAssetTypeAction = withAuth(async (
   const { knex } = await createTenantKnex();
 
   if (!await canManageAssetTypeRegistry(user)) {
-    return permissionError('Permission denied: Cannot manage asset types');
+    return permissionError('Permission denied: Cannot manage asset types', 'msp/assets:errors.permissions.manageAssetTypes');
   }
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {

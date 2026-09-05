@@ -7,7 +7,12 @@ const slugSchema = z
   .min(1)
   .max(64)
   .regex(/^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/, 'Slug must use lowercase letters, numbers, and hyphens')
-  .refine((slug) => !isReservedInboundWebhookIntegrationType(slug), 'Slug is reserved for a bundled integration');
+  .refine((slug) => !isReservedInboundWebhookIntegrationType(slug), {
+    message: 'Slug is reserved for a bundled integration',
+    params: {
+      messageKey: 'msp/profile:errors.inboundWebhooks.validation.slugReserved',
+    },
+  });
 
 const hmacAuthConfigSchema = z.object({
   type: z.literal('hmac_sha256'),
@@ -89,6 +94,9 @@ export const inboundWebhookUpsertInputSchema = inboundWebhookUpsertInputBaseSche
         code: z.ZodIssueCode.custom,
         path: ['auth_config', 'type'],
         message: 'Auth config type must match auth_type',
+        params: {
+          messageKey: 'msp/profile:errors.inboundWebhooks.validation.authTypeMismatch',
+        },
       });
     }
 
@@ -97,6 +105,9 @@ export const inboundWebhookUpsertInputSchema = inboundWebhookUpsertInputBaseSche
         code: z.ZodIssueCode.custom,
         path: ['handler_config', 'type'],
         message: 'Handler config type must match handler_type',
+        params: {
+          messageKey: 'msp/profile:errors.inboundWebhooks.validation.handlerTypeMismatch',
+        },
       });
     }
   });
@@ -113,6 +124,9 @@ export const inboundWebhookUpdateInputSchema = inboundWebhookUpsertInputBaseSche
         code: z.ZodIssueCode.custom,
         path: ['auth_config', 'type'],
         message: 'Auth config type must match auth_type',
+        params: {
+          messageKey: 'msp/profile:errors.inboundWebhooks.validation.authTypeMismatch',
+        },
       });
     }
 
@@ -121,6 +135,9 @@ export const inboundWebhookUpdateInputSchema = inboundWebhookUpsertInputBaseSche
         code: z.ZodIssueCode.custom,
         path: ['handler_config', 'type'],
         message: 'Handler config type must match handler_type',
+        params: {
+          messageKey: 'msp/profile:errors.inboundWebhooks.validation.handlerTypeMismatch',
+        },
       });
     }
   });

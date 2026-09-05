@@ -106,7 +106,7 @@ function toneBadgeClasses(tone: Tone): string {
     case "danger":
       return "border-red-200 bg-red-50 text-red-700 dark:border-red-700/60 dark:bg-red-950/40 dark:text-red-300";
     default:
-      return "border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-700))] dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-300))]";
+      return "border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] text-[rgb(var(--color-text-700))] dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-border-100))] dark:text-[rgb(var(--color-text-600))]";
   }
 }
 
@@ -197,9 +197,9 @@ export default function ApplianceAiSection(): React.JSX.Element {
         className="border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]"
       >
         <CardContent className="space-y-4 pt-6">
-          <div className="h-4 w-40 animate-pulse rounded bg-[rgb(var(--color-border-200))]" />
-          <div className="h-8 w-72 animate-pulse rounded bg-[rgb(var(--color-border-200))]" />
-          <div className="h-4 w-full max-w-xl animate-pulse rounded bg-[rgb(var(--color-border-200))]" />
+          <div className="h-4 w-40 animate-pulse rounded skeleton-fill" />
+          <div className="h-8 w-72 animate-pulse rounded skeleton-fill" />
+          <div className="h-4 w-full max-w-xl animate-pulse rounded skeleton-fill" />
         </CardContent>
       </Card>
     );
@@ -219,7 +219,7 @@ export default function ApplianceAiSection(): React.JSX.Element {
         <CardHeader className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))]/70 dark:bg-[rgb(var(--color-border-100))]/40">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex gap-4">
-              <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400)/0.18)] dark:text-[rgb(var(--color-primary-300))]">
+              <div className="chip-primary flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl">
                 <ShieldCheck className="h-6 w-6" aria-hidden="true" />
               </div>
               <div className="space-y-1">
@@ -437,7 +437,7 @@ function BalanceCard({
       <CardHeader className="border-b border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))]/70 dark:bg-[rgb(var(--color-border-100))]/40">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex gap-4">
-            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] dark:bg-[rgb(var(--color-primary-400)/0.18)] dark:text-[rgb(var(--color-primary-300))]">
+            <div className="chip-primary flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-2xl">
               <Sparkles className="h-6 w-6" aria-hidden="true" />
             </div>
             <div className="space-y-1">

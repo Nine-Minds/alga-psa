@@ -45,7 +45,7 @@ The current code confirms the split:
 - Do not commit, attach, or inspect the credential-bearing customer HAR beyond the already-redacted card description.
 - Do not address the separately reported password-reset email/log issue.
 - Do not redesign the client portal, duplicate the dashboard component, broaden accepted return URLs, or change session/OTT security behavior.
-- No `release-v1.5-feature` gate is needed because this is route correction with no new or changed UI.
+- No `release-v1-5-feature` gate is needed because this is route correction with no new or changed UI.
 
 ## Risks and handling
 

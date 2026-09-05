@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { InvoiceService } from '../../../lib/api/services/InvoiceService';
 import { TestContext } from '../../../../test-utils/testContext';
+import { seedBillingCycle } from '../../../../test-utils/billingProfileTestHelpers';
 
 const helpers = TestContext.createHelpers();
 
@@ -225,7 +226,7 @@ describe('InvoiceService recurring coexistence integration', () => {
     const legacyCreatedAt = '2025-01-15T12:00:00.000Z';
     const canonicalCreatedAt = '2025-02-15T12:00:00.000Z';
 
-    await ctx.db('client_billing_cycles').insert({
+    await seedBillingCycle(ctx.db, ctx.tenantId, {
       billing_cycle_id: legacyBillingCycleId,
       tenant: ctx.tenantId,
       client_id: ctx.clientId,

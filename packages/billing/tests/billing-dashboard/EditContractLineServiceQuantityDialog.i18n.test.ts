@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { pseudoPattern } from '../../../../tools/i18n/lib/pseudo-locale.mjs';
 
 function read(relativePath: string): string {
   return fs.readFileSync(path.resolve(__dirname, relativePath), 'utf8');
@@ -53,7 +54,7 @@ describe('EditContractLineServiceQuantityDialog i18n wiring contract', () => {
     ];
 
     for (const key of pseudoKeys) {
-      expect(getLeaf(pseudo, key)).toBe('11111');
+      expect(getLeaf(pseudo, key)).toMatch(pseudoPattern('xx'));
     }
 
     // editQuantityDialog.title contains a {{serviceName}} interpolation, so the pseudo
@@ -61,7 +62,7 @@ describe('EditContractLineServiceQuantityDialog i18n wiring contract', () => {
     // Just verify the key exists, starts with the pseudo marker, and preserves the token.
     const pseudoTitle = getLeaf(pseudo, 'editQuantityDialog.title');
     expect(typeof pseudoTitle).toBe('string');
-    expect(pseudoTitle as string).toContain('11111');
+    expect(pseudoTitle as string).toMatch(pseudoPattern('xx'));
     expect(pseudoTitle as string).toContain('{{serviceName}}');
   });
 });

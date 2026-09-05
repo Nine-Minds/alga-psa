@@ -222,7 +222,21 @@ vi.mock('../../../../../packages/billing/src/actions/billingAndTax', () => ({
 }));
 
 vi.mock('../../../../../packages/billing/src/lib/billing/billingEngine', () => ({
+  // Re-exported from the real module: generation catches this to surface the
+  // unresolved-item block (D10), so a mock without it turns a caught,
+  // explained refusal into an unrelated crash.
+  UnresolvedCatalogPricingError: class UnresolvedCatalogPricingError extends Error {
+    items: Array<{ kind: string; id: string; label: string }>;
+    constructor(message: string, items: Array<{ kind: string; id: string; label: string }> = []) {
+      super(message);
+      this.name = 'UnresolvedCatalogPricingError';
+      this.items = items;
+    }
+  },
   BillingEngine: class {
+    static forTransaction() {
+      return new this();
+    }
     selectDueRecurringServicePeriodsForBillingWindow =
       mocks.selectDueRecurringServicePeriodsForBillingWindow;
     calculateBilling = mocks.calculateBilling;

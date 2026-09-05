@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CreateClientSchema } from './client.schema';
+import { ClientSchema, CreateClientSchema } from './client.schema';
 
 describe('CreateClientSchema', () => {
   it('requires client_name', () => {
@@ -33,3 +33,14 @@ describe('CreateClientSchema', () => {
   });
 });
 
+describe('ClientSchema email representation', () => {
+  const emailField = ClientSchema.pick({ email: true });
+
+  it.each([{}, { email: null }])('accepts an email-less client representation: %o', (value) => {
+    expect(emailField.safeParse(value).success).toBe(true);
+  });
+
+  it('continues to reject a malformed supplied email', () => {
+    expect(emailField.safeParse({ email: 'foo@' }).success).toBe(false);
+  });
+});

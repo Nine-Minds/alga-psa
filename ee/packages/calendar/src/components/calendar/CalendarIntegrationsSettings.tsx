@@ -160,7 +160,13 @@ export function CalendarIntegrationsSettings() {
         // Refresh providers after a short delay to pick up status changes
         setTimeout(() => loadProviders(), 3000);
       } else {
-        const message = result.error || t('calendar.integrations.toasts.syncFailed.fallback', { defaultValue: 'Failed to start sync.' });
+        const message =
+          (result as { errorCode?: string }).errorCode === 'not_authorized'
+            ? t('calendar.integrations.errors.notAuthorized', {
+                defaultValue:
+                  'This calendar provider has not completed OAuth authorization yet. Open its settings and click Authorize, then sync again.',
+              })
+            : result.error || t('calendar.integrations.toasts.syncFailed.fallback', { defaultValue: 'Failed to start sync.' });
         toast({
           title: t('calendar.integrations.toasts.syncFailed.title', { defaultValue: 'Failed to start sync' }),
           description: message,

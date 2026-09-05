@@ -34,7 +34,7 @@ export default function Body({
   }, [pathname, prevPathname]);
 
   return (
-    <div className={`flex-1 flex flex-col bg-gray-100 h-full ${lockBodyScroll ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide'}`}>
+    <div className={`flex-1 flex flex-col app-shell-ground h-full ${lockBodyScroll ? 'overflow-hidden' : 'overflow-y-auto scrollbar-hide'}`}>
       {children}
     </div>
   );

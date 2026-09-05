@@ -28,6 +28,7 @@ import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
   normalizeFieldFormat,
+  resolveCanvasCollectionRows,
   resolveFieldPreviewValue,
   resolveInvoiceBindingRawValue,
   resolveTableItemBindingRawValue,
@@ -590,7 +591,11 @@ const renderTablePreview = (
   const columns = Array.isArray((metadata as { columns?: unknown }).columns)
     ? (metadata as { columns: Array<Record<string, unknown>> }).columns
     : [];
-  const rows = previewData?.items ?? [];
+  const sourceBindingId =
+    asTrimmedString((metadata as { collectionBindingKey?: unknown }).collectionBindingKey) ||
+    asTrimmedString((metadata as { collectionPath?: unknown }).collectionPath) ||
+    'items';
+  const rows = resolveCanvasCollectionRows(previewData, sourceBindingId);
 
   const resolvedColumns =
     columns.length > 0
@@ -644,9 +649,11 @@ const renderTablePreview = (
         <div className="px-2 py-2 text-slate-400 italic">{options.t?.('designer.canvas.noLineItems', { defaultValue: 'No line items' }) ?? 'No line items'}</div>
       ) : (
         <div className="pt-1">
-          {visibleRows.map((item, rowIndex) => (
+          {visibleRows.map((item, rowIndex) => {
+            const rowKey = String(item.id ?? item.key ?? rowIndex);
+            return (
             <div
-              key={item.id}
+              key={rowKey}
                 className={clsx(
                   'grid gap-0',
                   borderConfig.rowDividers &&
@@ -661,7 +668,7 @@ const renderTablePreview = (
                 const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
                 return (
                   <span
-                    key={`${item.id}-${String(column.id ?? key)}`}
+                    key={`${rowKey}-${String(column.id ?? key)}`}
                     className={clsx(
                       'truncate px-1 py-0.5',
                       borderConfig.columnDividers &&
@@ -673,7 +680,8 @@ const renderTablePreview = (
                 );
               })}
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
       {rows.length > 5 && <div className="px-1 pt-1 text-[10px] text-slate-400">{options.t?.('designer.canvas.moreRows', { count: rows.length - 5, defaultValue: '+{{count}} more rows' }) ?? `+${rows.length - 5} more rows`}</div>}

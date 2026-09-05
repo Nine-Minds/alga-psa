@@ -40,6 +40,7 @@ import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useOptionalClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import QuickAddContact from '../contacts/QuickAddContact';
+import QuickAddClient from '../clients/QuickAddClient';
 import MeetingAttendeesPicker, { type MeetingAttendee, type DefaultMeetingAttendee } from './MeetingAttendeesPicker';
 import {
   getErrorMessage,
@@ -52,10 +53,20 @@ import {
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+// Keyed by the capability reason the Teams service returns, so the copy under
+// interactions.quickAdd.teams.reason.* stays greppable despite the dynamic key.
+const TEAMS_UNAVAILABLE_REASON_COPY: Record<string, string> = {
+  ee_disabled: 'Teams integration requires Enterprise Edition.',
+  feature_disabled: 'Microsoft Teams integration is not enabled for this tenant.',
+  not_configured: 'The Teams integration has not been configured.',
+  no_organizer: 'No default meeting organizer is configured in Teams settings.',
+};
+
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
-  entityId: string;
-  entityType: 'contact' | 'client';
+  /** Omit entityId/entityType for a standalone interaction that selects its client/contact in the form. */
+  entityId?: string;
+  entityType?: 'contact' | 'client';
   clientId?: string;
   ticketId?: string; // Links the new interaction to a ticket (create mode only)
   onInteractionAdded: (newInteraction: IInteraction) => void;
@@ -95,6 +106,7 @@ export function QuickAddInteraction({
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [contacts, setContacts] = useState<IContact[]>([]);
   const [isQuickAddContactOpen, setIsQuickAddContactOpen] = useState(false);
+  const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
   const tenant = useTenant()!;
   const { data: session } = useSession();
   const { t } = useTranslation('msp/clients');
@@ -103,7 +115,7 @@ export function QuickAddInteraction({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [endTimeError, setEndTimeError] = useState('');
-  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
+  const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string; sendMeetingInvites?: boolean } | null>(null);
   const [createTeamsMeeting, setCreateTeamsMeeting] = useState(false);
   const [isTeamsCapabilityLoading, setIsTeamsCapabilityLoading] = useState(false);
   const [meetingAttendees, setMeetingAttendees] = useState<MeetingAttendee[]>([]);
@@ -112,12 +124,27 @@ export function QuickAddInteraction({
   const [hasLoadedAttendeeOptions, setHasLoadedAttendeeOptions] = useState(false);
 
   const isEditMode = !!editingInteraction;
+  const isStandaloneCreate = !isEditMode && !entityId;
+
+  const handleClientSelect = (clientId: string | null) => {
+    const nextClientId = clientId || '';
+    if (nextClientId !== selectedClientId) {
+      setSelectedContactId('');
+    }
+    setSelectedClientId(nextClientId);
+  };
 
   // Resolve the client/contact this new interaction is attached to (create mode only).
   const meetingClientId = !isEditMode
-    ? (entityType === 'client' ? entityId : (clientId ?? null))
+    ? (isStandaloneCreate
+        ? (selectedClientId || null)
+        : (entityType === 'client' ? (entityId ?? null) : (clientId ?? null)))
     : null;
-  const meetingContactId = !isEditMode && entityType === 'contact' ? entityId : null;
+  const meetingContactId = !isEditMode
+    ? (isStandaloneCreate
+        ? (selectedContactId || null)
+        : (entityType === 'contact' ? (entityId ?? null) : null))
+    : null;
   const selectedInteractionType = useMemo(
     () => interactionTypes.find((type) => type.type_id === typeId) ?? null,
     [interactionTypes, typeId]
@@ -239,6 +266,8 @@ export function QuickAddInteraction({
   });
 
   useEffect(() => {
+    if (!isOpen) return;
+
     console.log('QuickAddInteraction props:', { isEditMode, editingInteraction, isOpen });
     if (editingInteraction) {
       console.log('Editing interaction ID:', editingInteraction.interaction_id);
@@ -264,8 +293,8 @@ export function QuickAddInteraction({
         }
         setStatuses(statusList);
         
-        // Fetch users, clients, and contacts for edit mode
-        if (isEditMode) {
+        // Edit mode and standalone creation both need entity pickers.
+        if (isEditMode || isStandaloneCreate) {
           const usersList = await getAllUsersBasicAsync();
           setUsers(usersList);
           
@@ -358,7 +387,7 @@ export function QuickAddInteraction({
       setSelectedUserId(session?.user?.id || '');
       setIsNotesContentReady(true); // Mark as ready for new interactions
     }
-  }, [isOpen, isEditMode, editingInteraction]);
+  }, [isOpen, isEditMode, isStandaloneCreate, editingInteraction, session?.user?.id, t]);
 
   // Note: ContactPicker handles client filtering internally, 
   // so we don't need to refetch contacts when client changes
@@ -589,6 +618,11 @@ export function QuickAddInteraction({
     if (!title.trim()) {
       errors.push('Title is required');
     }
+    if (isStandaloneCreate && !selectedClientId) {
+      errors.push(t('interactions.quickAdd.clientRequired', {
+        defaultValue: 'Select a client for this interaction',
+      }));
+    }
     if (startTime && endTime && endTime.getTime() < startTime.getTime()) {
       errors.push('End time must be on or after the start time');
       setEndTimeError('End time must be on or after the start time.');
@@ -626,8 +660,8 @@ export function QuickAddInteraction({
         tenant: tenant
       };
   
-      if (isEditMode) {
-        // In edit mode, use the selected values from pickers
+      if (isEditMode || isStandaloneCreate) {
+        // Edit mode and standalone creation use the selected entity values.
         interactionData.contact_name_id = selectedContactId === '' ? null : selectedContactId;
         interactionData.client_id = selectedClientId === '' ? null : selectedClientId;
       } else {
@@ -665,6 +699,9 @@ export function QuickAddInteraction({
           client_id: interactionData.client_id ?? null,
           contact_name_id: interactionData.contact_name_id ?? null,
           attendees: meetingAttendees,
+          // The scheduled meeting must exist on the AlgaPSA calendar too;
+          // the creator is the default assignee server-side.
+          createScheduleEntry: true,
         });
         if (!scheduleResult.success || !scheduleResult.data?.interaction_id) {
           throw new Error(scheduleResult.error || t('interactions.quickAdd.teams.createFailed', {
@@ -850,15 +887,37 @@ export function QuickAddInteraction({
                           })}
                         />
                         {createTeamsMeeting && (
-                          <MeetingAttendeesPicker
-                            id={`${id}-attendees`}
-                            users={users}
-                            contacts={contacts}
-                            clientId={meetingClientId}
-                            defaultAttendees={defaultAttendees}
-                            getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
-                            onAttendeesChange={setMeetingAttendees}
-                          />
+                          <>
+                            <MeetingAttendeesPicker
+                              id={`${id}-attendees`}
+                              users={users}
+                              contacts={contacts}
+                              clientId={meetingClientId}
+                              defaultAttendees={defaultAttendees}
+                              getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
+                              onAttendeesChange={setMeetingAttendees}
+                            />
+                            <p id={`${id}-meeting-summary`} className="text-xs text-gray-600">
+                              {teamsMeetingCapability?.sendMeetingInvites === false
+                                ? t('interactions.quickAdd.teams.invitesDisabled', {
+                                    defaultValue:
+                                      'Email invites are turned off in Teams integration settings — attendees will not be notified by Microsoft.',
+                                  })
+                                : t('interactions.quickAdd.teams.invitesSummary', {
+                                    defaultValue:
+                                      'Microsoft will email calendar invites to: {{recipients}}.',
+                                    recipients: [
+                                      ...meetingAttendees
+                                        .map((attendee) => attendee.emailAddress)
+                                        .filter(Boolean),
+                                      t('interactions.quickAdd.teams.invitesSummaryYou', { defaultValue: 'you (creator)' }),
+                                    ].join(', '),
+                                  })}{' '}
+                              {t('interactions.quickAdd.teams.scheduleSummary', {
+                                defaultValue: 'A schedule entry will be added to your AlgaPSA calendar.',
+                              })}
+                            </p>
+                          </>
                         )}
                       </>
                     ) : (
@@ -869,9 +928,53 @@ export function QuickAddInteraction({
                             })
                           : t('interactions.quickAdd.teams.unavailable', {
                               defaultValue: 'Teams meeting creation is not available for this tenant.',
-                            })}
+                            }) + (teamsMeetingCapability?.reason
+                              ? ' ' + t(`interactions.quickAdd.teams.reason.${teamsMeetingCapability.reason}`, {
+                                  defaultValue: TEAMS_UNAVAILABLE_REASON_COPY[teamsMeetingCapability.reason] ?? '',
+                                })
+                              : '')}
                       </p>
                     )}
+                  </div>
+                )}
+
+                {isStandaloneCreate && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t('interactions.overall.columns.client', { defaultValue: 'Client' })}
+                      </label>
+                      <ClientPicker
+                        id={`${id}-client-picker`}
+                        clients={clients}
+                        onSelect={handleClientSelect}
+                        selectedClientId={selectedClientId}
+                        filterState={clientFilterState}
+                        onFilterStateChange={setClientFilterState}
+                        clientTypeFilter={clientTypeFilter}
+                        onClientTypeFilterChange={setClientTypeFilter}
+                        fitContent={false}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium">
+                        {t('interactions.overall.columns.contact', { defaultValue: 'Contact' })}
+                      </label>
+                      <ContactPicker
+                        id={`${id}-contact-picker`}
+                        contacts={contacts}
+                        value={selectedContactId}
+                        onValueChange={(value) => setSelectedContactId(value || '')}
+                        clientId={selectedClientId}
+                        placeholder={selectedClientId
+                          ? t('interactions.quickAdd.contactPlaceholder', { defaultValue: 'Select contact' })
+                          : t('interactions.quickAdd.selectClientFirst', { defaultValue: 'Select client first' })}
+                        disabled={!selectedClientId}
+                        buttonWidth="full"
+                        onAddNew={selectedClientId ? () => setIsQuickAddContactOpen(true) : undefined}
+                      />
+                    </div>
                   </div>
                 )}
               
@@ -937,13 +1040,14 @@ export function QuickAddInteraction({
                       <ClientPicker
                         id={`${id}-client-picker`}
                         clients={clients}
-                        onSelect={(clientId) => setSelectedClientId(clientId || '')}
+                        onSelect={handleClientSelect}
                         selectedClientId={selectedClientId}
                         filterState={clientFilterState}
                         onFilterStateChange={setClientFilterState}
                         clientTypeFilter={clientTypeFilter}
                         onClientTypeFilterChange={setClientTypeFilter}
                         fitContent={true}
+                        onAddNew={() => setIsQuickAddClientOpen(true)}
                       />
                     </div>
                     
@@ -983,6 +1087,23 @@ export function QuickAddInteraction({
                 }}
                 clients={clients}
                 selectedClientId={selectedClientId}
+              />
+              <QuickAddClient
+                open={isQuickAddClientOpen}
+                onOpenChange={setIsQuickAddClientOpen}
+                onClientAdded={(newClient) => {
+                  setClients((currentClients) => {
+                    const existingIndex = currentClients.findIndex(
+                      (client) => client.client_id === newClient.client_id,
+                    );
+                    if (existingIndex === -1) return [...currentClients, newClient];
+                    const nextClients = [...currentClients];
+                    nextClients[existingIndex] = newClient;
+                    return nextClients;
+                  });
+                  handleClientSelect(newClient.client_id);
+                }}
+                skipSuccessDialog
               />
               
               {/* Status for non-edit mode - shown for create mode */}

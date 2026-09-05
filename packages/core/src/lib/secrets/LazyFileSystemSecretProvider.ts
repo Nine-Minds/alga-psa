@@ -1,199 +1,112 @@
 import type { ISecretProvider } from './ISecretProvider';
-
-const DOCKER_SECRETS_PATH = '/run/secrets';
-
-interface NodePathModule {
-  basename(path: string): string;
-  isAbsolute(path: string): boolean;
-  join(...paths: string[]): string;
-  resolve(...paths: string[]): string;
-}
-
-interface NodeFsPromisesModule {
-  access(path: string): Promise<void>;
-  mkdir(path: string, options: { recursive: boolean }): Promise<unknown>;
-  readFile(path: string, encoding: BufferEncoding): Promise<string>;
-  unlink(path: string): Promise<void>;
-  writeFile(path: string, data: string, encoding: BufferEncoding): Promise<void>;
-}
-
-const runtimeImport = <TModule,>(specifier: string): Promise<TModule> => {
-  const importer = new Function('specifier', 'return import(specifier)') as <T>(specifier: string) => Promise<T>;
-  return importer<TModule>(specifier);
-};
-
-// Some sandboxed runtimes (e.g. vitest's VM-evaluated forks) provide no
-// dynamic-import callback, so this provider can never load fs there. Treat it
-// as "provider unavailable" once instead of erroring on every secret access.
-// The raw TypeError Node throws ("A dynamic import callback was not
-// specified") does not always carry the ERR_VM code, so match both shapes.
-let warnedDynamicImportUnavailable = false;
-function handleModulesUnavailable(error: unknown): boolean {
-  const err = error as (NodeJS.ErrnoException & { cause?: NodeJS.ErrnoException }) | undefined;
-  const code = err?.code ?? err?.cause?.code;
-  const messages = [err?.message, err?.cause?.message].filter(
-    (m): m is string => typeof m === 'string'
-  );
-  const inMessage = messages.some(
-    (m) =>
-      m.includes('ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING') ||
-      m.includes('A dynamic import callback was not specified')
-  );
-  if (code !== 'ERR_VM_DYNAMIC_IMPORT_CALLBACK_MISSING' && !inMessage) {
-    return false;
-  }
-  if (!warnedDynamicImportUnavailable) {
-    warnedDynamicImportUnavailable = true;
-    console.warn('FileSystemSecretProvider unavailable in this runtime (no dynamic import); falling back to other providers.');
-  }
-  return true;
-}
-
-async function loadNodeFileSystemModules(): Promise<{
-  fs: NodeFsPromisesModule;
-  path: NodePathModule;
-}> {
-  const [fs, path] = await Promise.all([
-    runtimeImport<NodeFsPromisesModule>('node:fs/promises'),
-    runtimeImport<NodePathModule>('node:path'),
-  ]);
-
-  return { fs, path };
-}
+import {
+  appSecretPath,
+  ensureWriteBasePath,
+  readFileContentSafe,
+  resolveBasePath,
+  tenantSecretPath,
+  unlinkTenantSecret,
+  validateSecretComponent,
+  writeTenantSecret,
+} from './fsSecretCore';
 
 /**
- * Filesystem-backed secret provider that keeps Node's fs/path modules out of
- * static Next client graphs. The Node modules are loaded only when an instance
- * actually reads or writes filesystem secrets.
+ * Filesystem-backed secret provider.
+ *
+ * The hardened write path lives in `fsSecretCore`, which is imported statically
+ * so bundlers always include it (a relative dynamic import would fail to
+ * resolve in dist ESM and would be invisible to webpack in source mode).
+ * `fsSecretCore` itself lazily loads Node's `fs`/`path`/`crypto` builtins at
+ * call time, so the `node:` specifiers never enter static Next client graphs
+ * even though this module is part of the bundle.
+ *
+ * Secret storage is hardened:
+ * - tenant directories are `0o700`, secret files are `0o600` regardless of
+ *   umask or volume ownership,
+ * - writes are atomic (exclusive temp file + fsync + rename) so a crash never
+ *   leaves a truncated secret in place of a valid one,
+ * - path components are allowlist-validated and symlinks are rejected on the
+ *   write path,
+ * - the secret root is validated before the first write; writes are refused
+ *   with an actionable operator message when the location cannot be made safe.
  */
 export class FileSystemSecretProvider implements ISecretProvider {
   private readonly serverRoot: string;
   private basePath: string | undefined;
-  private modulesPromise: Promise<{ fs: NodeFsPromisesModule; path: NodePathModule }> | null = null;
+  private writeBasePathPromise: Promise<string> | null = null;
+  private writeRefusalLogged = false;
 
   constructor() {
-    this.serverRoot = typeof process !== 'undefined' ? process.cwd() : '.';
+    this.serverRoot = typeof process !== 'undefined' && typeof process.cwd === 'function'
+      ? process.cwd()
+      : '.';
   }
 
-  private getModules(): Promise<{ fs: NodeFsPromisesModule; path: NodePathModule }> {
-    this.modulesPromise ??= loadNodeFileSystemModules();
-    return this.modulesPromise;
-  }
-
-  private async resolveBasePath(): Promise<string> {
-    const { fs, path } = await this.getModules();
-    const configured = process.env.SECRET_FS_BASE_PATH;
-
-    if (configured && configured.trim() !== '') {
-      return path.isAbsolute(configured) ? configured : path.resolve(this.serverRoot, configured);
-    }
-
-    try {
-      await fs.access(DOCKER_SECRETS_PATH);
-      return DOCKER_SECRETS_PATH;
-    } catch {
-      // Not running in a container / secrets not mounted.
-    }
-
-    const candidates = [
-      path.resolve(this.serverRoot, 'secrets'),
-      path.resolve(this.serverRoot, '../secrets'),
-    ];
-
-    for (const candidate of candidates) {
-      try {
-        await fs.access(candidate);
-        return candidate;
-      } catch {
-        // Keep searching.
-      }
-    }
-
-    return path.resolve(this.serverRoot, '../secrets');
-  }
-
-  async getBasePath(): Promise<string> {
+  private async getBasePath(): Promise<string> {
     if (!this.basePath) {
-      this.basePath = await this.resolveBasePath();
+      this.basePath = await resolveBasePath(this.serverRoot);
     }
-
     return this.basePath;
   }
 
-  private async readFileContent(filePath: string): Promise<string | undefined> {
-    const { fs } = await this.getModules();
-
-    try {
-      const content = await fs.readFile(filePath, 'utf-8');
-      return content.trim();
-    } catch (error: unknown) {
-      const fsError = error as NodeJS.ErrnoException;
-      if (fsError.code !== 'ENOENT') {
-        console.error(`Error reading secret file ${filePath}: ${fsError.message}`);
-      }
-      return undefined;
+  /**
+   * Validates the write location once per instance and returns the resolved
+   * base path. The result is cached; if the location is unsafe, the precise
+   * operator message is logged once and every write is refused.
+   */
+  private async ensureWritableBasePath(): Promise<string> {
+    if (!this.writeBasePathPromise) {
+      this.writeBasePathPromise = (async () => {
+        return ensureWriteBasePath(await this.getBasePath());
+      })();
+      this.writeBasePathPromise.catch((error) => {
+        if (error instanceof Error && !this.writeRefusalLogged) {
+          this.writeRefusalLogged = true;
+          console.error(error.message);
+        }
+      });
     }
+    return this.writeBasePathPromise;
   }
 
   async getAppSecret(name: string): Promise<string | undefined> {
-    let path: NodePathModule;
     try {
-      ({ path } = await this.getModules());
+      validateSecretComponent(name, 'app secret name');
     } catch (error) {
-      if (handleModulesUnavailable(error)) return undefined;
+      if (error instanceof Error && error.name === 'InvalidSecretPathError') {
+        console.warn(`Potential path traversal attempt detected for app secret name: ${name}. Denying access.`);
+        return undefined;
+      }
       throw error;
     }
-    const safeName = path.basename(name);
-
-    if (safeName !== name) {
-      console.warn(`Potential path traversal attempt detected for app secret name: ${name}. Denying access.`);
-      return undefined;
-    }
-
-    return this.readFileContent(path.join(await this.getBasePath(), safeName));
+    const basePath = await this.getBasePath();
+    const filePath = await appSecretPath(basePath, name);
+    return readFileContentSafe(filePath);
   }
 
   async getTenantSecret(tenantId: string, name: string): Promise<string | undefined> {
-    let path: NodePathModule;
     try {
-      ({ path } = await this.getModules());
+      validateSecretComponent(tenantId, 'tenantId');
+      validateSecretComponent(name, 'secret name');
     } catch (error) {
-      if (handleModulesUnavailable(error)) return undefined;
+      if (error instanceof Error && error.name === 'InvalidSecretPathError') {
+        console.warn(`Potential path traversal attempt detected for tenantId: ${tenantId}, name: ${name}. Denying access.`);
+        return undefined;
+      }
       throw error;
     }
-    const safeTenantId = path.basename(tenantId);
-    const safeName = path.basename(name);
-
-    if (safeTenantId !== tenantId || safeName !== name) {
-      console.warn(`Potential path traversal attempt detected for tenantId: ${tenantId}, name: ${name}. Denying access.`);
-      return undefined;
-    }
-
-    const filePath = path.join(await this.getBasePath(), 'tenants', safeTenantId, safeName);
+    const basePath = await this.getBasePath();
+    const filePath = await tenantSecretPath(basePath, tenantId, name);
     console.debug(`Attempting to read tenant secret: ${filePath}`);
-    return this.readFileContent(filePath);
+    return readFileContentSafe(filePath);
   }
 
   async setTenantSecret(tenantId: string, name: string, value: string | null): Promise<void> {
-    let fs: NodeFsPromisesModule;
-    let path: NodePathModule;
-    try {
-      ({ fs, path } = await this.getModules());
-    } catch (error) {
-      // Provider unavailable in this runtime; the write cannot be persisted.
-      if (handleModulesUnavailable(error)) return;
-      throw error;
-    }
-    const safeTenantId = path.basename(tenantId);
-    const safeName = path.basename(name);
+    validateSecretComponent(tenantId, 'tenantId');
+    validateSecretComponent(name, 'secret name');
 
-    if (safeTenantId !== tenantId || safeName !== name) {
-      console.warn(`Potential path traversal attempt detected for setTenantSecret (tenantId: ${tenantId}, name: ${name}). Aborting.`);
-      throw new Error('Invalid tenantId or secret name.');
-    }
-
-    const tenantDirPath = path.join(await this.getBasePath(), 'tenants', safeTenantId);
-    const filePath = path.join(tenantDirPath, safeName);
+    const basePath = await this.ensureWritableBasePath();
+    const filePath = await tenantSecretPath(basePath, tenantId, name);
 
     if (value === null) {
       await this.deleteTenantSecret(tenantId, name);
@@ -201,8 +114,12 @@ export class FileSystemSecretProvider implements ISecretProvider {
     }
 
     try {
-      await fs.mkdir(tenantDirPath, { recursive: true });
-      await fs.writeFile(filePath, value, 'utf-8');
+      // Anchors the root → tenants/ → tenant-dir chain for the duration of the
+      // write, creating any missing directory through the held anchors, and
+      // re-verifies the chain at the write and rename boundaries — so neither
+      // directory preparation nor the write can follow a path component
+      // swapped after the validation above.
+      await writeTenantSecret(basePath, tenantId, name, value);
       console.debug(`Successfully wrote tenant secret: ${filePath}`);
     } catch (error: unknown) {
       const fsError = error as NodeJS.ErrnoException;
@@ -212,36 +129,27 @@ export class FileSystemSecretProvider implements ISecretProvider {
   }
 
   async deleteTenantSecret(tenantId: string, name: string): Promise<void> {
-    let fs: NodeFsPromisesModule;
-    let path: NodePathModule;
-    try {
-      ({ fs, path } = await this.getModules());
-    } catch (error) {
-      // Provider unavailable in this runtime; nothing was persisted to delete.
-      if (handleModulesUnavailable(error)) return;
-      throw error;
-    }
-    const safeTenantId = path.basename(tenantId);
-    const safeName = path.basename(name);
+    validateSecretComponent(tenantId, 'tenantId');
+    validateSecretComponent(name, 'secret name');
 
-    if (safeTenantId !== tenantId || safeName !== name) {
-      console.warn(`Potential path traversal attempt detected for deleteTenantSecret (tenantId: ${tenantId}, name: ${name}). Aborting.`);
-      throw new Error('Invalid tenantId or secret name.');
-    }
-
-    const filePath = path.join(await this.getBasePath(), 'tenants', safeTenantId, safeName);
+    const basePath = await this.getBasePath();
 
     try {
-      await fs.unlink(filePath);
-      console.debug(`Successfully deleted tenant secret file: ${filePath}`);
+      // Validates the whole directory chain (root, tenants/, tenant dir) as
+      // real non-symlink directories immediately before the unlink; a missing
+      // component or file is an idempotent no-op. A symlinked component throws
+      // InvalidSecretPathError (no ENOENT code), so it can never be swallowed
+      // by the already-deleted branch below.
+      await unlinkTenantSecret(basePath, tenantId, name);
+      console.debug(`Successfully deleted tenant secret '${name}' for tenant ${tenantId}`);
     } catch (error: unknown) {
       const fsError = error as NodeJS.ErrnoException;
       if (fsError.code === 'ENOENT') {
-        console.debug(`Tenant secret file not found during delete (already deleted?): ${filePath}`);
+        console.debug(`Tenant secret '${name}' for tenant ${tenantId} not found during delete (already deleted?)`);
         return;
       }
 
-      console.error(`Error deleting tenant secret file ${filePath}: ${fsError.message}`);
+      console.error(`Error deleting tenant secret '${name}' for tenant ${tenantId}: ${fsError.message}`);
       throw new Error(`Failed to delete tenant secret: ${fsError.message}`);
     }
   }

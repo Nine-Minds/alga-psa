@@ -335,6 +335,14 @@ export const getRecentActivity = withAuth(async (
           this.whereNull('ct.is_internal')
             .orWhere('ct.is_internal', false);
         })
+        // Scheduled/canceled comments are an MSP-only draft state and must not
+        // surface their note as a client activity excerpt before publication.
+        // Null-tolerant so tickets without any comment (left join) are kept,
+        // mirroring the getClientTicketDetails conversations filter.
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('comments.publish_state')
+            .orWhere('comments.publish_state', 'published');
+        })
         .modify((queryBuilder: Knex.QueryBuilder) => {
           applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 'tickets.board_id');
         })

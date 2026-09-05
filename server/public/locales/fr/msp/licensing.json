@@ -355,5 +355,9 @@
       "startTrial": "Impossible de démarrer l’essai.",
       "refreshLicense": "Impossible d’actualiser la licence."
     }
+  },
+  "errors": {
+    "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
+    "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
   }
 }

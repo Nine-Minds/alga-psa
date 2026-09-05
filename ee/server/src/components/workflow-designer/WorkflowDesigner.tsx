@@ -5153,7 +5153,7 @@ const WorkflowDesigner: React.FC<WorkflowDesignerProps> = ({
   const workflowStepQuotaCard = (
     <div
       id="workflow-control-quota-summary"
-      className="w-full max-w-sm rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-sm dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-card))]"
+      className="w-full max-w-sm rounded-md border border-gray-200 bg-gray-50 px-4 py-3 text-sm card-elevated dark:border-[rgb(var(--color-border-200))] dark:bg-[rgb(var(--color-card))]"
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 font-medium text-gray-900 dark:text-gray-100">

@@ -24,6 +24,13 @@ export interface NormalizedCompanyContact {
 export interface NormalizedCompanyPayload {
   companyId: string;
   name: string;
+  /**
+   * Set when this record is a separately-billing profile rather than the client
+   * itself. The external system creates it *under* the parent customer — a
+   * QuickBooks sub-customer — so a franchise site's invoices and balance stay
+   * on its own ledger while still rolling up to the client.
+   */
+  parentExternalId?: string | null;
   primaryEmail?: string | null;
   primaryPhone?: string | null;
   billingAddress?: NormalizedCompanyAddress | null;

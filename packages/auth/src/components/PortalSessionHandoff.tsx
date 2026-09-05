@@ -137,7 +137,7 @@ export default function PortalSessionHandoff({
 
   if (state === 'error') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-background-50))] px-6 py-24">
+      <div className="flex min-h-screen items-center justify-center bg-[rgb(var(--color-border-50))] px-6 py-24">
         <div className="max-w-md rounded-lg bg-card p-8 shadow-lg">
           <h1 className="text-2xl font-semibold text-[rgb(var(--color-text-900))]">We couldn’t finalize your login</h1>
           <p className="mt-4 text-[rgb(var(--color-text-600))]">
@@ -158,7 +158,7 @@ export default function PortalSessionHandoff({
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--color-background-50))] px-6 py-24">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-[rgb(var(--color-border-50))] px-6 py-24">
       <div className="flex items-center gap-3 rounded-lg bg-card px-6 py-5 shadow-md">
         <Spinner size="sm" className="text-[rgb(var(--color-primary-500))]" />
         <div>

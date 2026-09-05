@@ -196,7 +196,7 @@ export default function SearchPalette({
       <CommandPalette open={isCommandPaletteOpen} onClose={() => setIsCommandPaletteOpen(false)} />
       <Command shouldFilter={false} className="relative">
         <div className="relative">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-sidebar-icon" aria-hidden="true" />
           <Command.Input
             ref={inputRef}
             id="app-search-input"
@@ -210,7 +210,7 @@ export default function SearchPalette({
             onValueChange={handleQueryChange}
             onKeyDown={handleInputKeyDown}
             placeholder={t('search.placeholder')}
-            className="h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none placeholder:text-gray-400 focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
+            className="app-sidebar-search-input h-10 w-full rounded-md border border-gray-500/70 bg-white/10 py-2 pl-8 pr-3 text-sm text-sidebar-text outline-none focus:border-primary-400 focus:ring-2 focus:ring-primary-500/30"
           />
         </div>
         {isOpen && (

@@ -8,6 +8,7 @@ import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import { Input } from "@alga-psa/ui/components/Input";
 import { Checkbox } from "@alga-psa/ui/components/Checkbox";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
 import { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -21,6 +22,10 @@ import {
   type BillingCycle,
   type PaymentMethod
 } from "@alga-psa/client-portal/actions";
+import {
+  getPortalBillingProfiles,
+  type PortalBillingProfile,
+} from "../../actions/client-portal-actions/client-billing-segments";
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const isReturnedActionError = (
@@ -55,6 +60,13 @@ export default function BillingSection() {
   const [billingCycles, setBillingCycles] = useState<BillingCycle[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [billingProfiles, setBillingProfiles] = useState<PortalBillingProfile[]>([]);
+  // Decision D6: a client with one profile sees no profile surface at all. The
+  // same `> 1` rule the rest of the feature uses, so a card list and a spend
+  // report can never disagree about whether this client is segmented.
+  const isSegmented = billingProfiles.length > 1;
+  const defaultProfileId =
+    billingProfiles.find((profile) => profile.isDefault)?.billingProfileId ?? '';
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAddingPayment, setIsAddingPayment] = useState(false);
@@ -68,18 +80,20 @@ export default function BillingSection() {
     expMonth: '',
     expYear: '',
     cvv: '',
-    setDefault: true
+    setDefault: true,
+    billingProfileId: ''
   });
 
   useEffect(() => {
     const loadBillingData = async () => {
       try {
-        const [invoicesData, cyclesData, methodsData] = await Promise.all([
+        const [invoicesData, cyclesData, methodsData, profilesData] = await Promise.all([
           getInvoices(),
           getBillingCycles(),
-          getPaymentMethods()
+          getPaymentMethods(),
+          getPortalBillingProfiles()
         ]);
-        const expectedError = [invoicesData, cyclesData, methodsData].find(isReturnedActionError);
+        const expectedError = [invoicesData, cyclesData, methodsData, profilesData].find(isReturnedActionError);
         if (expectedError) {
           setError(getErrorMessage(expectedError));
           return;
@@ -87,6 +101,7 @@ export default function BillingSection() {
         setInvoices(invoicesData);
         setBillingCycles(cyclesData);
         setPaymentMethods(methodsData);
+        setBillingProfiles(profilesData as PortalBillingProfile[]);
       } catch (err) {
         console.error('Failed to load billing data:', err);
         setError(tAccountBilling('loadError', 'Failed to load billing data'));
@@ -143,7 +158,10 @@ export default function BillingSection() {
       const result = await addPaymentMethod({
         type: 'credit_card',
         token,
-        setDefault: paymentForm.setDefault
+        setDefault: paymentForm.setDefault,
+        // Omitted for an unsegmented client, where the server files the card
+        // under the client's only profile.
+        billingProfileId: paymentForm.billingProfileId || undefined
       });
       if (isReturnedActionError(result)) {
         setAddPaymentError(getErrorMessage(result));
@@ -164,7 +182,8 @@ export default function BillingSection() {
         expMonth: '',
         expYear: '',
         cvv: '',
-        setDefault: true
+        setDefault: true,
+        billingProfileId: ''
       });
       setIsAddingPayment(false);
     } catch (err) {
@@ -269,6 +288,17 @@ export default function BillingSection() {
                           {method.expMonth && method.expYear && ` (${method.expMonth}/${method.expYear})`}
                           {method.isDefault && ` ${tAccountBilling('labels.defaultTag', '(Default)')}`}
                         </p>
+                        {/* Which entity this card pays for. Shown only when the
+                            client is actually segmented — otherwise it is a
+                            label with one possible value. */}
+                        {isSegmented && method.billingProfileName && (
+                          <p className="text-xs text-gray-500">
+                            {tAccount('account.billing.labels.paysFor', {
+                              defaultValue: 'Pays for {{profile}}',
+                              profile: method.billingProfileName,
+                            }) as string}
+                          </p>
+                        )}
                       </div>
                       <div className="flex space-x-2">
                         {!method.isDefault && (
@@ -400,6 +430,29 @@ export default function BillingSection() {
                 )}
               </div>
             </div>
+
+            {/* Which entity the card belongs to. Only offered when the client
+                actually has more than one (decision D6); an unsegmented client
+                never sees a field with a single choice. */}
+            {isSegmented && (
+              <div>
+                <label htmlFor="payment-billing-profile" className="block text-sm font-medium mb-1">
+                  {tAccountBilling('fields.billingProfile', 'Pays for')}
+                </label>
+                <CustomSelect
+                  id="payment-billing-profile"
+                  value={paymentForm.billingProfileId || defaultProfileId}
+                  onValueChange={(value) => setPaymentForm(prev => ({
+                    ...prev,
+                    billingProfileId: value
+                  }))}
+                  options={billingProfiles.map((profile) => ({
+                    value: profile.billingProfileId,
+                    label: profile.name,
+                  }))}
+                />
+              </div>
+            )}
 
             <div className="flex items-center">
               <Checkbox

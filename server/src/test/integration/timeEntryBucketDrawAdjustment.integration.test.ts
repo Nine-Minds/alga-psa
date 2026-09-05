@@ -145,9 +145,9 @@ async function grantTimeEntryPermissions(connection: Knex, tenant: string, userI
   });
 
   for (const perm of [
-    { resource: 'timeentry', action: 'create' },
-    { resource: 'timeentry', action: 'update' },
-    { resource: 'timeentry', action: 'delete' },
+    { resource: 'time_entry', action: 'create' },
+    { resource: 'time_entry', action: 'update' },
+    { resource: 'time_entry', action: 'delete' },
   ]) {
     const existingPerm = await scopedDb.table('permissions')
       .where({ resource: perm.resource, action: perm.action })

@@ -3,12 +3,15 @@ import type {
   IBillingPeriod,
   IClientContractLine,
   ITimeBasedCharge,
+  InvoiceTimeEntrySnapshot,
 } from "@alga-psa/types";
 import type {
   ChargeComputeClient,
   ChargeComputeTaxPorts,
   ChargeComputeTiming,
+  ChargeProfileAssignments,
 } from "./types";
+import { resolveChargeProfileFor } from "../billingProfileResolution";
 
 /**
  * Time-entry charge math extracted from BillingEngine.calculateTimeBasedCharges.
@@ -35,6 +38,25 @@ export interface TimeEntryComputeRow {
   billable_duration: number;
   project_phase_id?: string | null;
   project_id?: string | null;
+  /**
+   * Work-item billing profile — step 4 of the resolution chain. Selected from
+   * the ticket / project joins the time-entry loader already performs, which is
+   * why time is one of only two charge types that can reach step 4.
+   */
+  work_item_billing_profile_id?: string | null;
+  /**
+   * Work-item identity + customer-visible descriptive fields, selected from
+   * the same ticket / project-task joins. Feed the immutable invoice
+   * snapshot only — they never alter charge math or descriptions. Absent in
+   * callers that predate the snapshot (e.g. the simulator's synthetic rows).
+   */
+  work_item_id?: string | null;
+  work_item_type?: string | null;
+  ticket_number?: string | null;
+  ticket_title?: string | null;
+  /** Customer-visible ticket description (tickets.attributes->>'description'). */
+  ticket_description?: string | null;
+  project_task_name?: string | null;
 }
 
 export interface HourlyServiceConfigEntry {
@@ -77,6 +99,8 @@ export interface TimeBasedChargeComputeInputs {
   serviceConfigMap: Map<string, HourlyServiceConfigEntry>;
   timeEntries: TimeEntryComputeRow[];
   contractCurrency: string;
+  /** Contract-line/contract/client-default profile assignments (F016–F024). */
+  billingProfile?: ChargeProfileAssignments | null;
   /** Project-billing hooks; production wires these to ProjectBillingContext, the simulator passes null. */
   resolvePhaseRateOverride?:
     | ((
@@ -105,6 +129,69 @@ function formatHours(hours: number): string {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(2);
 }
 
+const toIsoDateOrNull = (value: Date | string | null | undefined): string | null => {
+  if (!value) return null;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString().slice(0, 10);
+};
+
+const trimmedOrNull = (value: unknown): string | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+};
+
+/**
+ * Build the immutable work-item snapshot for one billed time entry. Shared by
+ * the contract-line compute path and the engine's unresolved/catalog path so
+ * both persist identical snapshot shapes. All money and duration values are
+ * integers (minor units / whole minutes); customer-visible fields only.
+ */
+export function buildTimeEntryWorkItemSnapshot(
+  entry: Pick<
+    TimeEntryComputeRow,
+    | "start_time"
+    | "work_item_id"
+    | "work_item_type"
+    | "ticket_number"
+    | "ticket_title"
+    | "ticket_description"
+    | "project_task_name"
+  >,
+  billed: {
+    billedMinutes: number;
+    rate: number;
+    netAmount: number;
+    serviceId: string | null;
+    serviceName: string | null;
+  },
+): InvoiceTimeEntrySnapshot {
+  const workItemType: InvoiceTimeEntrySnapshot["workItemType"] =
+    entry.work_item_type === "ticket"
+      ? "ticket"
+      : entry.work_item_type === "project_task"
+        ? "project_task"
+        : "ad_hoc";
+  const isTicket = workItemType === "ticket";
+
+  return {
+    version: 1,
+    workItemType,
+    workItemId: entry.work_item_id ?? null,
+    ticketNumber: isTicket ? trimmedOrNull(entry.ticket_number) : null,
+    title: isTicket
+      ? trimmedOrNull(entry.ticket_title)
+      : trimmedOrNull(entry.project_task_name),
+    description: isTicket ? trimmedOrNull(entry.ticket_description) : null,
+    entryDate: toIsoDateOrNull(entry.start_time),
+    billedMinutes: Math.round(billed.billedMinutes),
+    rate: Math.round(billed.rate),
+    netAmount: Math.round(billed.netAmount),
+    serviceId: billed.serviceId,
+    serviceName: billed.serviceName,
+  };
+}
+
 export function computeTimeBasedCharges(
   inputs: TimeBasedChargeComputeInputs,
   taxPorts: ChargeComputeTaxPorts,
@@ -118,6 +205,7 @@ export function computeTimeBasedCharges(
     serviceConfigMap,
     timeEntries,
     contractCurrency,
+    billingProfile,
     resolvePhaseRateOverride,
     getProjectChargeConfig,
   } = inputs;
@@ -214,6 +302,14 @@ export function computeTimeBasedCharges(
         tax_rate_id: effectiveTaxRateId,
       });
 
+    // Time is one of only two charge types whose source record can carry a
+    // segment, so this is the one place the work-item step of the chain is
+    // reachable from recurring generation. Resolved before tax because
+    // exemption is per profile (F131), not per client.
+    const resolvedProfile = resolveChargeProfileFor(billingProfile, {
+      workItemBillingProfileId: entry.work_item_billing_profile_id,
+    });
+
     let taxAmount = 0;
     let taxRate = 0;
     const effectiveTaxRegion =
@@ -222,7 +318,11 @@ export function computeTimeBasedCharges(
       taxPorts.getClientDefaultTaxRegionCode(client.client_id) ??
       undefined;
 
-    if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
+    if (
+      !taxPorts.isTaxExemptForProfile(resolvedProfile?.billingProfileId) &&
+      isTaxable &&
+      effectiveTaxRegion
+    ) {
       try {
         const taxResult = taxPorts.calculateTax(
           client.client_id,
@@ -231,6 +331,7 @@ export function computeTimeBasedCharges(
           effectiveTaxRegion,
           true,
           clientContractLine.currency_code || "USD",
+          resolvedProfile?.billingProfileId ?? null,
         );
         taxRate = taxResult.taxRate;
         taxAmount = taxResult.taxAmount;
@@ -292,6 +393,13 @@ export function computeTimeBasedCharges(
       rate,
       total,
       type: "time",
+      workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
+        billedMinutes: durationMinutes,
+        rate,
+        netAmount: total,
+        serviceId: effectiveServiceId ?? null,
+        serviceName: (effectiveServiceName as string) ?? null,
+      }),
       tax_amount: taxAmount,
       tax_rate: taxRate,
       tax_region: effectiveTaxRegion,
@@ -304,6 +412,8 @@ export function computeTimeBasedCharges(
       client_contract_id: clientContractLine.client_contract_id || undefined,
       contract_name: clientContractLine.contract_name || undefined,
       location_id: clientContractLine.location_id ?? null,
+      billing_profile_id: resolvedProfile?.billingProfileId ?? null,
+      billing_profile_source: resolvedProfile?.source ?? null,
       ...(projectConfig?.billing_model === "time_and_materials"
         ? {
             project_id: projectConfig.project_id,

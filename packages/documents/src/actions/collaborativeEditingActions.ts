@@ -43,6 +43,15 @@ export const syncCollabSnapshot = withAuth(async (user, { tenant }, documentId: 
     await waitForSync(provider);
 
     const fragment = ydoc.getXmlFragment('prosemirror');
+    if (fragment.length === 0) {
+      // Nothing in the room: it was never seeded from the database, or it was
+      // evicted after the last client left. The Hocuspocus persistence
+      // extension skips empty rooms for the same reason — writing this would
+      // wipe stored content. Report failure so the caller falls back to the
+      // browser's own editor JSON.
+      return { success: false, message: 'Collaborative room is empty; refusing to overwrite stored content.' };
+    }
+
     const json = yXmlFragmentToProsemirrorJSON(fragment);
 
     return await persistCollabSnapshot(tenant, documentId, json);

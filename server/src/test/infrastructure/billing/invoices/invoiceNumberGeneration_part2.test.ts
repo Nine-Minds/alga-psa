@@ -241,7 +241,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Assign plan to client for both periods
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoices that will exceed padding length
@@ -299,7 +299,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+      materializeServicePeriods: true
     });
 
     // Create billing cycle
@@ -312,7 +313,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoice
@@ -431,7 +432,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Assign plan to client for all periods
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // 1. Query for the minimum invoice number.
@@ -555,7 +556,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Assign plan to client for all periods
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoices in sequence
@@ -628,7 +629,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+      materializeServicePeriods: true
     });
 
     // Create billing cycle
@@ -641,7 +643,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoice
@@ -650,6 +652,125 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
 
     // Verify the invoice number format
     expect(invoice!.invoice_number).toBe('你好-000001');
+  });
+
+  describe('prefix_date_format', () => {
+    const sydneyDate = (instant: Date) => new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Australia/Sydney',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(instant);
+
+    async function setInvoiceNumbering(overrides: Record<string, unknown>) {
+      await context.db('next_number').where({
+        tenant: context.tenantId,
+        entity_type: 'INVOICE'
+      }).delete();
+
+      await context.db('next_number').insert({
+        tenant: context.tenantId,
+        entity_type: 'INVOICE',
+        prefix: 'INV-',
+        last_number: 0,
+        initial_value: 1,
+        padding_length: 6,
+        ...overrides
+      });
+    }
+
+    async function setTenantTimezone(timezone: string | null): Promise<void> {
+      const existing = await context.db('tenant_settings')
+        .where({ tenant: context.tenantId })
+        .first();
+      const settings = { ...(existing?.settings ?? {}), timezone };
+      if (existing) {
+        await context.db('tenant_settings')
+          .where({ tenant: context.tenantId })
+          .update({ settings: JSON.stringify(settings) });
+      } else {
+        await context.db('tenant_settings').insert({
+          tenant: context.tenantId,
+          settings: JSON.stringify(settings)
+        });
+      }
+    }
+
+    async function generateOneInvoice() {
+      const planId = await context.createEntity('contract_lines', {
+        contract_line_name: 'Basic Plan',
+        billing_frequency: 'monthly',
+        is_custom: false,
+        contract_line_type: 'Fixed'
+      }, 'contract_line_id');
+
+      const serviceId = await createTestService(context, {
+        service_name: 'Basic Service',
+        billing_method: 'fixed',
+        default_rate: 10000,
+        unit_of_measure: 'unit'
+      });
+
+      await context.db('contract_line_services').insert({
+        contract_line_id: planId,
+        service_id: serviceId,
+        quantity: 1,
+        tenant: context.tenantId
+      });
+
+      await createFixedPlanAssignment(context, serviceId, {
+        planName: 'Basic Plan',
+        billingFrequency: 'monthly',
+        baseRateCents: 10000,
+        startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+        materializeServicePeriods: true
+      });
+
+      const billingCycle = await context.createEntity('client_billing_cycles', {
+        client_id: context.clientId,
+        billing_cycle: 'monthly',
+        effective_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        period_start_date: createTestDateISO({ year: 2023, month: 1, day: 1 }),
+        period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
+      }, 'billing_cycle_id');
+
+      await assignContractLineToClient(context, planId, {
+        startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
+      });
+
+      return await generateInvoice(billingCycle);
+    }
+
+    it('should embed the date in the tenant timezone, keeping the prefix and padding', async () => {
+      await setInvoiceNumbering({ prefix_date_format: '{YYYY}-{MM}-{DD}-' });
+      await setTenantTimezone('Australia/Sydney');
+
+      // The date is stamped at issuance, so bracket the call to stay stable
+      // across a Sydney midnight rollover.
+      const before = sydneyDate(new Date());
+      const invoice = await generateOneInvoice();
+      const after = sydneyDate(new Date());
+
+      expect(invoice).not.toBeNull();
+      expect([`INV-${before}-000001`, `INV-${after}-000001`]).toContain(invoice!.invoice_number);
+      expect(invoice!.invoice_number).toMatch(/^INV-\d{4}-\d{2}-\d{2}-000001$/);
+
+      // The counter is not reset by the date — the sequence stays continuous.
+      const nextNumberRecord = await context.db('next_number')
+        .where({ tenant: context.tenantId, entity_type: 'INVOICE' })
+        .first();
+      expect(parseInt(nextNumberRecord.last_number, 10)).toBe(1);
+    });
+
+    it('should keep the exact pre-change format when no date format is set', async () => {
+      await setInvoiceNumbering({ prefix_date_format: null });
+      await setTenantTimezone('Australia/Sydney');
+
+      const invoice = await generateOneInvoice();
+
+      expect(invoice).not.toBeNull();
+      expect(invoice!.invoice_number).toBe('INV-000001');
+    });
   });
 
   it('should validate empty or whitespace-only prefix handling', async () => {
@@ -694,7 +815,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+      materializeServicePeriods: true
     });
 
     // Create billing cycle
@@ -707,7 +829,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoice
@@ -762,7 +884,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+      materializeServicePeriods: true
     });
 
     // Create billing cycle
@@ -775,7 +898,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoice
@@ -828,7 +951,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+      materializeServicePeriods: true
     });
 
     // Create billing cycle
@@ -841,7 +965,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoice with initial prefix
@@ -864,10 +988,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
-  
-      await assignContractLineToClient(context, planId, {
-        startDate: createTestDateISO({ year: 2023, month: 2, day: 1 })
-      });
+
+      // No second assignment: the line is already assigned, and re-anchoring it
+      // to February retires the January service period this cycle invoices.
 
     // Generate invoice with new prefix
     const invoice2 = await generateInvoice(billingCycle2);
@@ -919,7 +1042,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       planName: 'Basic Plan',
       billingFrequency: 'monthly',
       baseRateCents: 10000,
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 }),
+      materializeServicePeriods: true
     });
 
     // Create billing cycle
@@ -932,7 +1056,7 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
     }, 'billing_cycle_id');
 
     await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 1, day: 1 })
+      startDate: createTestDateISO({ year: 2022, month: 12, day: 1 })
     });
 
     // Generate invoice with initial prefix
@@ -955,10 +1079,9 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
         period_start_date: createTestDateISO({ year: 2023, month: 2, day: 1 }),
         period_end_date: createTestDateISO({ year: 2023, month: 3, day: 1 })
       }, 'billing_cycle_id');
-  
-      await assignContractLineToClient(context, planId, {
-        startDate: createTestDateISO({ year: 2023, month: 2, day: 1 })
-      });      
+
+      // No second assignment: the line is already assigned, and re-anchoring it
+      // to February retires the January service period this cycle invoices.
 
     // Generate invoice with shorter prefix
     const invoice2 = await generateInvoice(billingCycle2);
@@ -981,9 +1104,8 @@ describe('Billing Invoice Generation – Invoice Number Generation (Part 2)', ()
       period_end_date: createTestDateISO({ year: 2023, month: 4, day: 1 })
     }, 'billing_cycle_id');
 
-    await assignContractLineToClient(context, planId, {
-      startDate: createTestDateISO({ year: 2023, month: 3, day: 1 })
-    });
+    // No further assignment: re-anchoring the line to March would retire the
+    // February service period this cycle invoices.
 
     // Generate invoice with longer prefix
     const invoice3 = await generateInvoice(billingCycle3);

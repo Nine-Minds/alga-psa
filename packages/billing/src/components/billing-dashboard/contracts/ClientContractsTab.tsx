@@ -837,7 +837,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
                       setDraftToResume(null);
                       setShowClientWizard(true);
                     }}
-                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                    className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-[rgb(var(--color-primary-600))] text-white hover:from-blue-700 hover:to-[rgb(var(--color-primary-700))]"
                   >
                     <Wand2 className="h-4 w-4" />
                     {t('contractsList.actions.createContract', { defaultValue: 'Create Contract' })}
@@ -863,7 +863,7 @@ const ClientContractsTab: React.FC<ClientContractsTabProps> = ({ onRefreshNeeded
             <TabsContent value="upcoming-renewals">
               <section
                 data-testid="upcoming-renewals-widget"
-                className="mb-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-bg-100))] p-4"
+                className="mb-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-100))] p-4"
               >
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>

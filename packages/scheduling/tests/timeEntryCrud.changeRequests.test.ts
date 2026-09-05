@@ -9,7 +9,13 @@ const computeWorkDateFieldsMock = vi.fn();
 const createTimeEntryChangeRequestRecordMock = vi.fn();
 const fetchTimeEntryChangeRequestsForEntryIdsFromDbMock = vi.fn();
 const markTimeEntryChangeRequestsHandledMock = vi.fn();
-const determineDefaultContractLineMock = vi.fn(async () => null);
+const resolveContractLineSelectionMock = vi.fn(async () => ({
+  selectedContractLineId: null,
+  decision: 'ambiguous_or_unresolved' as const,
+  reason: 'no_match' as const,
+  overlayCount: 0,
+  candidateCount: 0,
+}));
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: any) => fn,
@@ -37,7 +43,7 @@ vi.mock('../src/actions/timeEntryDelegationAuth', () => ({
 }));
 
 vi.mock('../src/lib/contractLineDisambiguation', () => ({
-  determineDefaultContractLine: (...args: any[]) => determineDefaultContractLineMock(...args),
+  resolveContractLineSelection: (...args: any[]) => resolveContractLineSelectionMock(...args),
 }));
 
 vi.mock('@alga-psa/shared/billingClients/bucketUsageService', () => ({
@@ -434,8 +440,7 @@ describe('time entry change-request action integration', () => {
     ];
 
     for (const scenario of scenarios) {
-      determineDefaultContractLineMock.mockClear();
-      determineDefaultContractLineMock.mockResolvedValueOnce(null);
+      resolveContractLineSelectionMock.mockClear();
       const { db } = createDbStub({
         existingEntry: {
           entry_id: `entry-${scenario.label}`,
@@ -483,10 +488,12 @@ describe('time entry change-request action integration', () => {
         },
       );
 
-      expect(determineDefaultContractLineMock).toHaveBeenCalledWith(
+      expect(resolveContractLineSelectionMock).toHaveBeenCalledWith(
         null,
         'service-1',
         scenario.expectedEffectiveDate,
+        // The work item's billing profile narrows a multi-candidate field.
+        { billingProfileId: null },
       );
     }
   });

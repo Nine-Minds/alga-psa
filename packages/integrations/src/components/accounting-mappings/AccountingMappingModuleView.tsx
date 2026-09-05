@@ -24,6 +24,13 @@ import type { ColumnDefinition } from '@alga-psa/types';
 type DisplayMapping = ExternalEntityMapping & {
   algaName?: string;
   externalName?: string;
+  /**
+   * Set only for modules with an externalTarget config: the stored target no
+   * longer exists in the live provider catalog (legacy code that stopped
+   * resolving, archived record). Rendered as an explicit invalid state that
+   * demands a re-selection.
+   */
+  externalTargetMissing?: boolean;
 };
 
 type AccountingMappingModuleViewProps = {
@@ -61,7 +68,12 @@ export function AccountingMappingModuleView({
       setAlgaOptions(result.algaEntities);
       setExternalOptions(result.externalEntities);
 
-      const display = enrichMappings(result.mappings, result.algaEntities, result.externalEntities);
+      const display = enrichMappings(
+        result.mappings,
+        result.algaEntities,
+        result.externalEntities,
+        module
+      );
       setMappings(display);
     } catch (loadError) {
       setError(getErrorMessage(loadError));
@@ -75,23 +87,54 @@ export function AccountingMappingModuleView({
   }, [loadData]);
 
   const handleCreateOrUpdate = useCallback(
-    async (input: {
+    async (rawInput: {
       algaEntityId: string;
       externalEntityId: string;
       metadata?: Record<string, unknown> | null;
       mappingId?: string;
     }) => {
+      // Metadata is tri-state from here down, and each state means something
+      // different to the server: an object sets it, null clears it, undefined
+      // leaves the stored value alone.
+      //
+      // Only the JSON editor can express metadata, and it is seeded from the
+      // stored row, so what it returns is the user's whole intent — including
+      // an emptied editor, which is a real request to clear. Without the editor
+      // the dialog always reports null, and that must NOT be read as "delete
+      // everything": module-owned keys (a service's classId, an invoice's
+      // chargeLineMappings) are written elsewhere and would be lost on any edit.
+      const existingMetadata = rawInput.mappingId
+        ? mappings.find((mapping) => mapping.id === rawInput.mappingId)?.metadata
+        : undefined;
+      const baseMetadata: Record<string, unknown> | null | undefined =
+        module.metadata?.enableJsonEditor
+          ? rawInput.metadata
+          : (rawInput.metadata ?? (existingMetadata as Record<string, unknown> | null | undefined));
+
+      // Persist the selected option's label so the mapping stays readable even
+      // when a later catalog load misses this id (pseudo codes, other realm,
+      // entity deactivated upstream).
+      const externalDisplayName = externalOptions.find(
+        (option) => option.id === rawInput.externalEntityId
+      )?.name;
+
+      const metadataForSave: Record<string, unknown> | null | undefined = externalDisplayName
+        ? { ...(baseMetadata ?? {}), externalDisplayName }
+        : baseMetadata;
+
+      const input = { ...rawInput, metadata: metadataForSave };
+
       if (input.mappingId) {
         if (overrides?.updateMapping) {
           await overrides.updateMapping(context, input.mappingId, {
             alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         } else {
           await module.update(context, input.mappingId, {
             externalEntityId: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         }
       } else {
@@ -102,19 +145,19 @@ export function AccountingMappingModuleView({
             alga_entity_id: input.algaEntityId,
             external_entity_id: input.externalEntityId,
             external_realm_id: context.realmId ?? null,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         } else {
           await module.create(context, {
             algaEntityId: input.algaEntityId,
             externalEntityId: input.externalEntityId,
-            metadata: input.metadata ?? undefined
+            metadata: input.metadata
           });
         }
       }
       await loadData();
     },
-    [context, loadData, module, overrides]
+    [context, externalOptions, loadData, mappings, module, overrides]
   );
 
   const handleDelete = useCallback(async () => {
@@ -144,8 +187,22 @@ export function AccountingMappingModuleView({
       {
         title: module.labels.externalColumn,
         dataIndex: 'externalName',
-        render: (_value: unknown, record: DisplayMapping) =>
-          record.externalName ?? record.external_entity_id ?? t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' })
+        render: (_value: unknown, record: DisplayMapping) => {
+          const name =
+            record.externalName ?? record.external_entity_id ??
+            t('integrations.accounting.moduleView.notAvailable', { defaultValue: 'N/A' });
+          if (record.externalTargetMissing && module.externalTarget) {
+            return (
+              <div className="space-y-1" data-testid={`${module.id}-invalid-target-${record.id}`}>
+                <span>{name}</span>
+                <p className="text-xs text-[rgb(var(--badge-warning-text))]">
+                  {module.externalTarget.invalidNotice}
+                </p>
+              </div>
+            );
+          }
+          return name;
+        }
       },
       {
         title: t('integrations.accounting.moduleView.actionsColumn', { defaultValue: 'Actions' }),
@@ -286,16 +343,37 @@ export function AccountingMappingModuleView({
 function enrichMappings(
   mappings: ExternalEntityMapping[],
   algaEntities: Array<{ id: string; name: string }>,
-  externalEntities: Array<{ id: string; name: string }>
+  externalEntities: Array<{ id: string; name: string }>,
+  module: AccountingMappingModule
 ): DisplayMapping[] {
   const algaLookup = new Map(algaEntities.map((entity) => [entity.id, entity.name]));
   const externalLookup = new Map(externalEntities.map((entity) => [entity.id, entity.name]));
 
-  return mappings.map((mapping) => ({
-    ...mapping,
-    algaName: algaLookup.get(mapping.alga_entity_id),
-    externalName: externalLookup.get(mapping.external_entity_id)
-  }));
+  return mappings.map((mapping) => {
+    // Multi-catalog modules address options by (kind, code) — a bare code is
+    // ambiguous because an Item Code and an Account Code can be equal strings.
+    const lookupId = module.externalTarget
+      ? module.externalTarget.optionIdForMapping(mapping)
+      : mapping.external_entity_id;
+    const liveName = externalLookup.get(lookupId);
+
+    return {
+      ...mapping,
+      algaName: algaLookup.get(mapping.alga_entity_id),
+      // The live catalog wins — it is the current truth. The name captured when
+      // the mapping was saved is the fallback, and it is the only thing standing
+      // between the user and a bare QuickBooks id once the catalog stops carrying
+      // the entity: deactivated tax codes, a realm switch, the AST pseudo codes.
+      externalName: liveName ?? readExternalDisplayName(mapping.metadata),
+      externalTargetMissing: Boolean(module.externalTarget) && liveName === undefined
+    };
+  });
+}
+
+function readExternalDisplayName(metadata: unknown): string | undefined {
+  if (!metadata || typeof metadata !== 'object') return undefined;
+  const value = (metadata as Record<string, unknown>).externalDisplayName;
+  return typeof value === 'string' && value.trim().length > 0 ? value : undefined;
 }
 
 function useOverrides(

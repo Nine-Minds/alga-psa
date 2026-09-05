@@ -6,7 +6,8 @@
     "invoices": "Invoices",
     "overview": "Overview",
     "quotes": "Quotes",
-    "usageMetrics": "Usage Metrics"
+    "usageMetrics": "Usage Metrics",
+    "segments": "By segment"
   },
   "currentContractLine": "Current Contract Line",
   "nextInvoice": "Next Invoice",

@@ -94,7 +94,7 @@ const TicketingSettingsRefactored = (): React.JSX.Element => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
+    <div className="p-6 bg-[rgb(var(--color-app-ground))] min-h-screen">
       <h2 className="text-xl font-bold mb-4 text-gray-800">{t('ticketing.title')}</h2>
       <CustomTabs 
         tabs={tabs} 

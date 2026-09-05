@@ -20,6 +20,12 @@ export {
   type StoredPdfResult,
 } from './pdfGenerationService';
 export {
+  getStoredInvoicePdf,
+  InvoicePdfDeliveryError,
+  type InvoicePdfDeliveryStage,
+  type InvoicePdfDeliveryOptions,
+} from './invoicePdfDeliveryService';
+export {
   buildQuoteConversionPreview,
   convertQuoteToDraftContract,
   convertQuoteToDraftContractAndInvoice,
@@ -114,6 +120,7 @@ export {
 export { WorkflowTaskSyncExceptionService } from './accountingSync/syncExceptionService';
 export {
   enqueueInvoiceAutoExport,
+  enqueueInvoiceVoid,
   enqueueVendorBillAutoExport,
   enqueueVendorBillExportRetry,
   satisfyExportOpsForManualBatch

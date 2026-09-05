@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star } from "lucide-react";
+import { Plus, MoreVertical, HelpCircle, ChevronDown, ArrowLeft, AlertTriangle, CheckCircle2, Settings2, Users, ListChecks, Mail, Zap, Clock, Search, Inbox, Star, LayoutGrid } from "lucide-react";
 import { IBoard, ITeam, CategoryType, PriorityType, IPriority, IUser, DeletionValidationResult, DeletionDependency } from '@alga-psa/types';
 import {
   getAllBoards,
@@ -11,7 +11,10 @@ import {
   createBoard,
   updateBoard,
   deleteBoard,
+  clearBoardDefaultView,
 } from '@alga-psa/tickets/actions/board-actions/boardActions';
+import BoardHeader from '../BoardHeader';
+import { TICKET_COLUMNS, resolveTicketColumnVisibility, type TicketListColumnKey } from '@alga-psa/tickets/lib';
 import {
   getBoardTicketStatuses,
 } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
@@ -205,6 +208,70 @@ function getManagedTicketStatusValidationError(
   return null;
 }
 
+/**
+ * One line describing what a board's stored view actually does, e.g.
+ * "Open only \u00b7 sorted by Due date \u00b7 6 columns \u00b7 density 40".
+ *
+ * The explicit "Inherits tenant defaults" for a NULL document matters: an empty
+ * summary would read as "this board has no view", which is indistinguishable to
+ * a reader from "this board's view is empty". Inheriting is a decision, and the
+ * summary says so.
+ */
+/** i18next `t` with interpolation options, as the rest of this screen uses it. */
+type TranslateWithOptions = (key: string, options?: Record<string, unknown>) => string;
+
+function describeBoardSavedView(
+  // The stored document as it comes off the row: structurally typed and not
+  // catalog-keyed, because a document written by an older (or newer) version
+  // must still be describable rather than un-typeable.
+  view: NonNullable<IBoard['list_view_settings']> | null | undefined,
+  t: TranslateWithOptions,
+  tTickets: TranslateWithOptions
+): string {
+  const inherits = () =>
+    t('ticketing.boards.appearance.inheritsTenant', { defaultValue: 'Inherits tenant defaults' });
+
+  if (!view) {
+    return inherits();
+  }
+
+  const parts: string[] = [];
+  const filters = (view.filters ?? {}) as Record<string, unknown>;
+
+  if (filters.showOpenOnly === true) {
+    parts.push(t('ticketing.boards.appearance.summary.openOnly', { defaultValue: 'Open only' }));
+  }
+  if (typeof filters.sortBy === 'string') {
+    // The stored sort key is a dataIndex ('due_date'), not something to show a
+    // user. Route it through the column catalog so the summary names the column
+    // the way the list header does, in the reader's language.
+    const column = TICKET_COLUMNS.find((c) => c.dataIndex === filters.sortBy);
+    const fieldLabel = column
+      ? tTickets(column.titleKey, { defaultValue: column.titleFallback })
+      : (filters.sortBy as string);
+    const direction = filters.sortDirection === 'asc' ? '\u2191' : '\u2193';
+    parts.push(
+      `${t('ticketing.boards.appearance.summary.sortedBy', { defaultValue: 'sorted by {{field}}', field: fieldLabel })} ${direction}`
+    );
+  }
+  if (view.columnVisibility) {
+    const stored = view.columnVisibility as Partial<Record<TicketListColumnKey, boolean>>;
+    const visible = Object.values(resolveTicketColumnVisibility(stored)).filter(Boolean).length;
+    parts.push(
+      // `columns`, not `count`: `count` is reserved by i18next for plural
+      // resolution, and we have declared no plural forms for this key.
+      t('ticketing.boards.appearance.summary.columns', { defaultValue: '{{columns}} columns', columns: visible })
+    );
+  }
+  if (typeof view.densityLevel === 'number') {
+    parts.push(
+      t('ticketing.boards.appearance.summary.density', { defaultValue: 'density {{level}}', level: view.densityLevel })
+    );
+  }
+
+  return parts.length > 0 ? parts.join(' \u00b7 ') : inherits();
+}
+
 const TICKET_STATUS_VALIDATION_KEYS: Record<ManagedTicketStatusValidationCode, string> = {
   STATUS_REQUIRED: 'ticketing.boards.messages.error.statusRequired',
   DUPLICATE_STATUS_NAME: 'ticketing.boards.messages.error.duplicateStatusName',
@@ -333,6 +400,11 @@ interface BoardsSettingsProps {
 
 const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, getSlaPolicies }) => {
   const { t } = useTranslation('msp/settings');
+  // BoardHeader is a ticket-list component and asks for dashboard.boardHeader.*
+  // and bulk.move.unnamedBoard, which live in features/tickets. Handing it this
+  // screen's msp/settings `t` would resolve nothing and silently render every
+  // label in English in every locale.
+  const { t: tTickets } = useTranslation('features/tickets');
   const createEmptyFormData = () => ({
     board_name: '',
     description: '',
@@ -352,6 +424,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     inbound_reply_reopen_status_id: '',
     inbound_reply_ai_ack_suppression_enabled: false,
     enable_live_ticket_timer: true,
+    is_pinned: true,
     status_seed_mode: 'copy_existing' as TicketStatusSeedMode,
     copy_ticket_statuses_from_board_id: '',
     ticket_statuses: [] as ManagedTicketStatus[],
@@ -654,6 +727,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       inbound_reply_reopen_status_id: board.inbound_reply_reopen_status_id || '',
       inbound_reply_ai_ack_suppression_enabled: board.inbound_reply_ai_ack_suppression_enabled ?? false,
       enable_live_ticket_timer: board.enable_live_ticket_timer ?? true,
+      is_pinned: board.is_pinned ?? false,
       ticket_statuses: [],
     });
     setShowAddEditDialog(true);
@@ -920,6 +994,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: formData.inbound_reply_reopen_status_id || null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          is_pinned: formData.is_pinned,
           ticket_statuses: normalizedTicketStatuses,
         });
         if (isReturnedActionError(updatedBoard)) {
@@ -997,6 +1072,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           inbound_reply_reopen_status_id: null,
           inbound_reply_ai_ack_suppression_enabled: formData.inbound_reply_ai_ack_suppression_enabled,
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
+          // The pin toggle renders during creation too, so it has to be sent:
+          // createBoard defaults is_pinned to true, which would silently ignore
+          // an admin turning it off on the way in.
+          is_pinned: formData.is_pinned,
           copy_ticket_statuses_from_board_id: formData.status_seed_mode === 'copy_existing'
             ? (formData.copy_ticket_statuses_from_board_id || null)
             : null,
@@ -1152,6 +1231,9 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
     display: JSON.stringify({
       enable_live_ticket_timer: formData.enable_live_ticket_timer,
       is_itil_compliant: formData.is_itil_compliant,
+    }),
+    appearance: JSON.stringify({
+      is_pinned: formData.is_pinned,
     }),
   });
 
@@ -1565,7 +1647,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 onCheckedChange={(checked) => setFormData({ ...formData, is_inactive: checked })}
               />
             </div>
-            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50/60 p-3">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-3">
               <div>
                 <Label htmlFor="is_default">{t('ticketing.boards.fields.defaultBoard.label', 'Default board for client portal tickets')}</Label>
                 <p className="text-xs text-muted-foreground mt-1">
@@ -1578,6 +1660,133 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                 onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
               />
             </div>
+          </div>
+          </EditorAccordionSection>
+
+          {/* Appearance & defaults. Deliberately contains NO filter controls:
+              the board's view is arranged on the real ticket list and saved from
+              View, so duplicating the list's filter surface in a settings form
+              would create a second place for the same concept to drift. The
+              weight of this feature belongs in the shared resolver, not here. */}
+          <EditorAccordionSection
+            id="appearance"
+            error={sectionErrors['appearance']}
+            title={t('ticketing.boards.editor.sections.appearance', 'Appearance & defaults')}
+            description={t('ticketing.boards.editor.sections.appearanceHelp', 'Tab pinning and the board\u2019s default list view')}
+            icon={<LayoutGrid className="h-4 w-4" />}
+            open={!collapsedSections.has('appearance')}
+            dirty={isSectionDirty('appearance')}
+            onToggle={() => toggleSection('appearance')}
+            onSave={handleSaveBoard}
+            saveLabel={t('ticketing.boards.editor.saveChanges', 'Save Changes')}
+            unsavedLabel={t('ticketing.boards.editor.unsaved', 'Unsaved')}
+            saveDisabled={saveDisabled}
+          >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4 rounded-md border border-gray-200 bg-gray-50/60 p-3">
+              <div>
+                <Label htmlFor="is_pinned">
+                  {t('ticketing.boards.appearance.pinLabel', 'Pin to the tickets screen')}
+                </Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {t(
+                    'ticketing.boards.appearance.pinHelp',
+                    'Pinned boards get a permanent tab on the tickets screen. Unpinned boards stay reachable from All tickets and the board filter.'
+                  )}
+                </p>
+              </div>
+              <Switch
+                id="is_pinned"
+                checked={formData.is_pinned}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_pinned: checked })}
+              />
+            </div>
+
+            {editingBoard && (
+              <>
+                <div>
+                  <Label>{t('ticketing.boards.appearance.preview', 'Preview')}</Label>
+                  <div className="mt-1 overflow-hidden rounded-md border border-gray-200 bg-white">
+                    {/* Reuses BoardHeader at reduced scale rather than
+                        re-implementing the layout, so the preview cannot drift
+                        from the real header. The rows are placeholder bars, not
+                        live tickets: this is a shape preview, and fetching a
+                        board's tickets inside a settings accordion is not worth
+                        the round trip. */}
+                    <BoardHeader
+                      id="board-appearance-preview"
+                      compact
+                      board={{ ...editingBoard, board_name: formData.board_name, description: formData.description }}
+                      stats={boardStats[editingBoard.board_id!] ?? null}
+                      identity={{
+                        boardId: editingBoard.board_id!,
+                        managerUserId: formData.manager_user_id || null,
+                        managerName: users.find((u) => u.user_id === formData.manager_user_id)
+                          ? `${users.find((u) => u.user_id === formData.manager_user_id)!.first_name ?? ''} ${users.find((u) => u.user_id === formData.manager_user_id)!.last_name ?? ''}`.trim()
+                          : null,
+                        slaPolicyId: formData.sla_policy_id || null,
+                        slaPolicyName:
+                          slaPolicies.find((policy) => policy.sla_policy_id === formData.sla_policy_id)?.policy_name ?? null,
+                      }}
+                      t={tTickets as (key: string, fallback: string) => string}
+                    />
+                    <div className="space-y-1.5 px-3 py-2">
+                      {[0, 1, 2].map((row) => (
+                        <div key={row} className="flex items-center gap-2">
+                          <div className="h-2 flex-1 rounded bg-gray-100" />
+                          <div className="h-2 w-12 rounded bg-gray-100" />
+                          <div className="h-2 w-12 rounded bg-gray-100" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-md border border-gray-200 p-3">
+                  <Label>{t('ticketing.boards.appearance.savedView', 'Saved view')}</Label>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {describeBoardSavedView(
+                      editingBoard.list_view_settings ?? null,
+                      t as TranslateWithOptions,
+                      tTickets as TranslateWithOptions
+                    )}
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t(
+                      'ticketing.boards.appearance.arrangeNote',
+                      "Arrange this board's view on the board itself, then save it from the View menu."
+                    )}
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {/* A real link, not a router.push: this jumps to a different
+                        area of the app, and a link is what lets it be opened in
+                        a new tab, middle-clicked, or copied. */}
+                    <Button id="board-appearance-open" variant="outline" size="sm" asChild>
+                      <a href={`/msp/tickets?boardId=${editingBoard.board_id}`}>
+                        {t('ticketing.boards.appearance.openBoard', 'Open this board')}
+                      </a>
+                    </Button>
+                    <Button
+                      id="board-appearance-reset"
+                      variant="outline"
+                      size="sm"
+                      disabled={!editingBoard.list_view_settings}
+                      onClick={async () => {
+                        const result = await clearBoardDefaultView(editingBoard.board_id!);
+                        if (isReturnedActionError(result)) {
+                          failInSection('appearance', getErrorMessage(result));
+                          return;
+                        }
+                        setEditingBoard({ ...editingBoard, list_view_settings: null });
+                        await fetchBoards();
+                      }}
+                    >
+                      {t('ticketing.boards.appearance.resetToTenant', 'Reset to tenant default')}
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           </EditorAccordionSection>
 
@@ -2150,7 +2359,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             )}
 
             {shouldManageTicketStatuses && (
-              <div className="space-y-3 rounded-md border border-gray-200 p-4 bg-gray-50/50">
+              <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4">
                 <div>
                   <Label>
                     {editingBoard
@@ -2307,7 +2516,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         </div>
 
         {/* Sticky whole-board save bar */}
-        <div className="sticky bottom-0 -mx-6 border-t border-gray-200 bg-white/95 px-6 py-3 backdrop-blur">
+        <div className="sticky bottom-0 -mx-6 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] px-6 py-3">
           <div className="flex items-center justify-between gap-3">
             <p className="flex items-center gap-1.5 text-xs text-gray-500">
               {anyDirty ? (

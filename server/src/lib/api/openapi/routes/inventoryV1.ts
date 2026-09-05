@@ -73,6 +73,8 @@ export function registerInventoryV1Routes(registry: ApiOpenApiRegistry) {
     query?: ZodTypeAny;
     body?: boolean;
     successStatus?: 200 | 201;
+    /** Optional prose for operations whose behavior is not obvious from the summary. */
+    description?: string;
   };
 
   const defs: Def[] = [
@@ -88,6 +90,7 @@ export function registerInventoryV1Routes(registry: ApiOpenApiRegistry) {
     { method: 'get', path: '/api/v1/inventory/counts/{sessionId}', summary: 'Get a cycle count session', resource: 'cycle_count', action: 'read', params: CountParams },
     { method: 'post', path: '/api/v1/inventory/counts/{sessionId}/records', summary: 'Record a cycle count quantity', resource: 'cycle_count', action: 'update', params: CountParams, body: true },
     { method: 'post', path: '/api/v1/inventory/counts/{sessionId}/submit', summary: 'Submit a cycle count session', resource: 'cycle_count', action: 'update', params: CountParams },
+    { method: 'post', path: '/api/v1/inventory/counts/{sessionId}/cancel', summary: 'Cancel a cycle count session', resource: 'cycle_count', action: 'update', params: CountParams, description: 'Cancels an in-progress cycle count and returns the cancelled session. Quantities already recorded against the session stay on it but are never applied to stock levels, since only approval posts them. Cancelling an already-cancelled session returns it unchanged; an approved session cannot be cancelled.' },
     { method: 'get', path: '/api/v1/inventory/purchase-orders', summary: 'List purchase orders', resource: 'purchase_order', action: 'read', query: ListQuery },
     { method: 'get', path: '/api/v1/inventory/purchase-orders/{poId}', summary: 'Get a purchase order', resource: 'purchase_order', action: 'read', params: PurchaseOrderParams },
     { method: 'post', path: '/api/v1/inventory/purchase-orders/{poId}/lines/{lineId}/receive', summary: 'Receive a purchase-order line', resource: 'purchase_order', action: 'update', params: PurchaseOrderLineParams, body: true },
@@ -101,6 +104,7 @@ export function registerInventoryV1Routes(registry: ApiOpenApiRegistry) {
       method: def.method,
       path: def.path,
       summary: def.summary,
+      ...(def.description ? { description: def.description } : {}),
       tags: [tag],
       security: [{ ApiKeyAuth: [] }],
       request: {

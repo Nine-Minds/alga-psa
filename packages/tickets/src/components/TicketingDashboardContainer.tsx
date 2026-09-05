@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
@@ -22,8 +23,27 @@ import {
   shouldApplyOpenOnlyStatusFilter,
   TICKET_STATUS_FILTER_OPEN,
 } from '../lib/ticketStatusFilter';
+import {
+  hasTicketViewFilterParams,
+  shouldApplyBoardDefaultView,
+  type BoardArrivalTrigger,
+  TICKETS_LAST_ACTIVE_BOARD_SETTING,
+} from '../lib/boardTabs';
+import { shouldWriteTicketListUrl, TICKET_LIST_PATHNAME } from '../lib/ticketListUrlSync';
+import {
+  buildBoardArrivalFilters,
+  resolveTicketViewSettings,
+  sanitizeStoredTicketView,
+  validateCapturedFilters,
+  type ResolvedTicketViewSettings,
+  type TicketViewSettings,
+} from '../lib/ticketViewSettings';
+import type { TicketFilterChangeOptions } from '../lib/ticketFilterChange';
 
 const TICKETS_PAGE_SIZE_SETTING = 'tickets_list_page_size';
+
+/** Key for the tenant layer in the just-saved-views map (boards use their id). */
+const TENANT_VIEW_KEY = '__tenant__';
 
 const ALLOWED_DUE_DATE_FILTERS = new Set(['all', 'overdue', 'upcoming', 'today', 'no_due_date', 'before', 'after', 'custom']);
 const ALLOWED_RESPONSE_STATES = new Set(['all', 'awaiting_client', 'awaiting_internal', 'none']);
@@ -173,6 +193,7 @@ export default function TicketingDashboardContainer({
   const filterFetchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAppliedSearchRef = useRef<string>('');
   const isSyncingFromHistoryRef = useRef(false);
+  const navigatingAwayRef = useRef(false);
 
   const defaultSortBy = initialFilters?.sortBy ?? 'entered_at';
   const defaultSortDirection = initialFilters?.sortDirection ?? 'desc';
@@ -243,8 +264,65 @@ export default function TicketingDashboardContainer({
     }
   );
 
+  // Write-only here: the remembered tab is *restored* on the server, before the
+  // first paint (server/src/app/msp/tickets/page.tsx), so this screen never has
+  // to re-write the URL a beat after rendering. This hook only records where the
+  // user went next.
+  const { setValue: setStoredActiveBoard } = useUserPreference<string>(
+    TICKETS_LAST_ACTIVE_BOARD_SETTING,
+    {
+      // '' means the "All tickets" tab — a distinct, storable choice rather than
+      // "unset", so returning to All is remembered like any other tab.
+      defaultValue: '',
+      localStorageKey: TICKETS_LAST_ACTIVE_BOARD_SETTING,
+      debounceMs: 500,
+    }
+  );
+
+  /**
+   * The user has asked to leave the list. Everything that would still write to
+   * history from here on is stale by definition, so the flag is set before the
+   * router.push rather than after it — the whole window that has to be closed
+   * is the one where the push is in flight and window.location has not moved.
+   */
+  const markNavigatingAway = useCallback(() => {
+    navigatingAwayRef.current = true;
+    if (filterFetchTimeoutRef.current) {
+      clearTimeout(filterFetchTimeoutRef.current);
+      filterFetchTimeoutRef.current = null;
+    }
+  }, []);
+
+  // …and lifts again on the way back. Export, Import and every bulk action are
+  // *intercepted* routes: the list stays mounted underneath them, so a flag that
+  // only ever went one way would leave the address bar ignoring filter changes
+  // for the rest of the session once the user had opened one dialog.
+  const pathname = usePathname();
+  useEffect(() => {
+    if (pathname === TICKET_LIST_PATHNAME) {
+      navigatingAwayRef.current = false;
+    }
+  }, [pathname]);
+
   // Function to sync filter state and pagination to URL
-  const updateURLWithFilters = useCallback((filters: Partial<ITicketListFilters>, page?: number, pageSize?: number) => {
+  const updateURLWithFilters = useCallback((
+    filters: Partial<ITicketListFilters>,
+    page?: number,
+    pageSize?: number,
+    historyMode: 'replace' | 'push' = 'replace',
+  ) => {
+    // The list is no longer the page being described: writing here would replace
+    // the history entry the router just pushed for the ticket detail and bounce
+    // the user straight back to the list. lastAppliedSearchRef is deliberately
+    // left untouched — nothing was applied, so a later popstate must still be
+    // able to tell that the URL differs from what this screen last rendered.
+    if (!shouldWriteTicketListUrl({
+      pathname: typeof window === 'undefined' ? null : window.location.pathname,
+      hasNavigatedAway: navigatingAwayRef.current,
+    })) {
+      return;
+    }
+
     const params = new URLSearchParams();
 
     // Add pagination params
@@ -314,9 +392,15 @@ export default function TicketingDashboardContainer({
       params.set('bundleView', filters.bundleView);
     }
 
-    // Update URL without triggering a server-side re-render
+    // Update URL without triggering a server-side re-render. Board-tab moves
+    // push so back/forward walks the tabs; every other filter edit replaces, so
+    // refining a view does not bury the previous page in history.
     const newURL = params.toString() ? `/msp/tickets?${params.toString()}` : '/msp/tickets';
-    window.history.replaceState(null, '', newURL);
+    if (historyMode === 'push') {
+      window.history.pushState(null, '', newURL);
+    } else {
+      window.history.replaceState(null, '', newURL);
+    }
     lastAppliedSearchRef.current = params.toString() ? `?${params.toString()}` : '';
   }, []);
 
@@ -417,6 +501,166 @@ export default function TicketingDashboardContainer({
   const fetchTicketsRef = useRef(fetchTickets);
   fetchTicketsRef.current = fetchTickets;
 
+  // ── Board-level view configuration ──────────────────────────────────────────
+  //
+  // A pinned board tab is a workspace, not a filter preset: arriving at one
+  // applies the board's stored default view. Resolution goes through the single
+  // shared resolver (board document → tenant document → catalog) so this screen,
+  // the board settings preview and the tenant display-settings screen can never
+  // compute a view three different ways.
+  //
+  // The board document is already in hand — boardOptions are full board rows —
+  // so applying a default view costs no extra round trip and, critically, layers
+  // into the *existing* merge path below rather than becoming a second effect
+  // that fires its own fetch. One fetch per navigation is a property the smoke
+  // pass on this branch established and this must not spend.
+  const tenantViewSettings = useMemo(
+    () => sanitizeStoredTicketView(displaySettings?.list) ?? undefined,
+    [displaySettings?.list]
+  );
+
+  const storedBoardViews = useMemo(() => {
+    const map = new Map<string, TicketViewSettings | null>();
+    for (const board of effectiveOptions.boardOptions) {
+      if (board.board_id) {
+        // Sanitized, not cast: the row is a JSONB document that may predate or
+        // postdate this code, and one stale key must not be able to poison the
+        // resolved view (or spread junk into ITicketListFilters).
+        map.set(board.board_id, sanitizeStoredTicketView(board.list_view_settings));
+      }
+    }
+    return map;
+  }, [effectiveOptions.boardOptions]);
+
+  // What a save/reset just wrote, layered over what the (session-cached) board
+  // options say. Real state rather than a mutation of the memo above: the dirty
+  // dot is derived from the saved document, so if saving only mutated a cached
+  // Map the comparison would keep reading the pre-save value and the dot would
+  // never clear. Keyed by board id, with a sentinel for the tenant layer.
+  const [justSavedViews, setJustSavedViews] = useState<Record<string, TicketViewSettings | null>>({});
+
+  const boardViewFor = useCallback((boardId: string | null): TicketViewSettings | null => {
+    const key = boardId ?? TENANT_VIEW_KEY;
+    if (key in justSavedViews) {
+      return justSavedViews[key];
+    }
+    return boardId ? storedBoardViews.get(boardId) ?? null : tenantViewSettings ?? null;
+  }, [justSavedViews, storedBoardViews, tenantViewSettings]);
+
+  // Universes for validate-on-read. A captured id that no longer resolves is
+  // dropped rather than applied — a dead statusId applied verbatim produces an
+  // empty list on a board that has tickets, which reads as a bug rather than as
+  // stale configuration. Same precedent as resolveInitialBoardTab dropping a
+  // stored board that no longer exists.
+  const knownFilterIds = useMemo(() => ({
+    statusIds: effectiveOptions.statusOptions.map(option => option.value),
+    priorityIds: effectiveOptions.priorityOptions.map(option => option.value),
+    categoryIds: effectiveOptions.categories.map((category: { category_id: string }) => category.category_id),
+    clientIds: effectiveOptions.clients.map(client => client.client_id),
+    userIds: effectiveOptions.users.map((user: { user_id: string }) => user.user_id),
+  }), [
+    effectiveOptions.statusOptions,
+    effectiveOptions.priorityOptions,
+    effectiveOptions.categories,
+    effectiveOptions.clients,
+    effectiveOptions.users,
+  ]);
+
+  /** The fully-layered view for a board (null = the All-tickets tab). */
+  const resolveViewForBoard = useCallback((boardId: string | null): ResolvedTicketViewSettings => (
+    resolveTicketViewSettings({
+      board: boardId ? boardViewFor(boardId) : null,
+      tenant: boardViewFor(null),
+    })
+  ), [boardViewFor]);
+
+  // The non-filter half of the view (columns, order, density). It is not URL
+  // state and not a query input, so it lives here rather than in activeFilters,
+  // and it applies on arrival even when the URL carries filter params — a link
+  // expresses which tickets to show, never which columns to show them in.
+  const [viewPresentation, setViewPresentation] = useState<ResolvedTicketViewSettings>(
+    () => resolveViewForBoard(
+      initialFilters?.boardIds?.length === 1 ? initialFilters.boardIds[0] : initialFilters?.boardId ?? null
+    )
+  );
+
+  const applyBoardViewPresentation = useCallback((boardId: string | null) => {
+    setViewPresentation(resolveViewForBoard(boardId));
+  }, [resolveViewForBoard]);
+  // Held in a ref for syncFromUrl: putting it in that callback's deps would
+  // re-create it on every board-options change and churn the popstate listener
+  // the history handling depends on staying attached.
+  const applyBoardViewPresentationRef = useRef(applyBoardViewPresentation);
+  applyBoardViewPresentationRef.current = applyBoardViewPresentation;
+
+  /**
+   * The list's neutral starting state — what a tab looks like before any stored
+   * view is layered on. Shared by arrival and by the dirty-dot comparison, so
+   * "nothing has been changed" means the same thing to both. If they defined it
+   * separately, a pristine board would read as permanently dirty.
+   */
+  const neutralListFilters = useCallback((): Partial<ITicketListFilters> => ({
+    statusId: TICKET_STATUS_FILTER_OPEN,
+    priorityId: 'all',
+    showOpenOnly: true,
+    boardFilterState: 'active',
+    bundleView: activeFiltersRef.current.bundleView ?? 'bundled',
+    searchQuery: '',
+    sortBy: 'entered_at',
+    sortDirection: 'desc',
+  }), []);
+
+  /**
+   * Did the URL the page was *entered* with carry filter params?
+   *
+   * Captured once, at mount, and never re-read — because updateURLWithFilters
+   * writes the live filter state back into the address bar, so from the first
+   * arrival onwards window.location.search reflects the app's own output rather
+   * than anything the user linked to. Re-reading it per click is what made board
+   * default filters stop applying after the first filtered navigation.
+   */
+  const entryUrlHasFilterOpinion = useRef(
+    typeof window !== 'undefined' && hasTicketViewFilterParams(window.location.search)
+  );
+
+  /**
+   * The filters a board tab arrival produces, or null when the board's stored
+   * filters must not apply.
+   *
+   * Precedence: URL filter params → board → tenant → catalog. A shared link that
+   * names filters always wins, which is the only rule under which sending
+   * someone a link means anything.
+   */
+  const boardArrivalFilters = useCallback((
+    boardId: string | null,
+    boardSelection: Partial<ITicketListFilters>,
+    trigger: BoardArrivalTrigger,
+  ): Partial<ITicketListFilters> | null => {
+    if (!shouldApplyBoardDefaultView({
+      trigger,
+      urlHasFilterOpinion: entryUrlHasFilterOpinion.current,
+    })) {
+      return null;
+    }
+    // No early-return for "this board stores no filters". A board that has been
+    // configured with nothing still has a view — the neutral one — and arriving
+    // at it must produce that, not whatever the previous board left behind.
+    // Returning null here made an unconfigured board inherit the filters of
+    // whichever board you came from, which is the same defect as reading the
+    // URL per click, one layer down.
+    const resolved = resolveViewForBoard(boardId);
+    return buildBoardArrivalFilters({
+      baseline: neutralListFilters(),
+      boardSelection,
+      viewFilters: validateCapturedFilters(
+        resolved.filters,
+        knownFilterIds,
+        // Pseudo-filters, not ids: they must survive validation untouched.
+        [TICKET_STATUS_FILTER_OPEN, 'all'],
+      ),
+    });
+  }, [resolveViewForBoard, knownFilterIds, neutralListFilters]);
+
   const syncFromUrl = useCallback(async (search: string) => {
     const normalizedSearch = search || '';
     if (normalizedSearch === lastAppliedSearchRef.current || isSyncingFromHistoryRef.current) {
@@ -425,12 +669,27 @@ export default function TicketingDashboardContainer({
 
     isSyncingFromHistoryRef.current = true;
     try {
+      // A history move supersedes any filter edit still sitting in the debounce
+      // window; letting it fire would refetch (and re-render) the state the user
+      // just navigated away from.
+      if (filterFetchTimeoutRef.current) {
+        clearTimeout(filterFetchTimeoutRef.current);
+        filterFetchTimeoutRef.current = null;
+      }
       const parsed = parseTicketListStateFromSearch(normalizedSearch, allowSlaStatusFilter);
       setCurrentPage(parsed.page);
       setPageSize(parsed.pageSize);
       setSortBy(parsed.sortBy);
       setSortDirection(parsed.sortDirection);
       setActiveFilters(parsed.filters);
+      // Columns and density are not URL state, so a history step has to be told
+      // which board it landed on for them to follow. Presentation only: the
+      // filters come from the URL, which already *is* the state a back step is
+      // restoring, so no board default is re-applied and no second fetch occurs.
+      const restoredBoardId = parsed.filters.boardIds?.length === 1
+        ? parsed.filters.boardIds[0]
+        : parsed.filters.boardId ?? null;
+      applyBoardViewPresentationRef.current(restoredBoardId);
       lastAppliedSearchRef.current = normalizedSearch;
       await fetchTickets(parsed.filters, parsed.page, parsed.pageSize, {
         sortBy: parsed.sortBy,
@@ -499,6 +758,13 @@ export default function TicketingDashboardContainer({
     updateURLWithFilters,
   ]);
 
+  // The last-active board tab used to be restored here, by an effect that fired
+  // once the preference resolved — a second fetch, a visible board jump a beat
+  // after first paint, and a history write that could land after the user had
+  // already clicked into a ticket and bounce them back to the list. It is now
+  // resolved on the server (server/src/app/msp/tickets/page.tsx), so the board
+  // arrives in initialFilters and nothing here re-writes the URL on arrival.
+
   const handlePageChange = useCallback(async (newPage: number) => {
     setCurrentPage(newPage);
     updateURLWithFilters(activeFilters, newPage, pageSize);
@@ -513,7 +779,10 @@ export default function TicketingDashboardContainer({
     await fetchTickets(activeFilters, 1, newPageSize);
   }, [fetchTickets, activeFilters, updateURLWithFilters, setStoredPageSize]);
 
-  const handleFilterChange = useCallback((update: Partial<ITicketListFilters>) => {
+  const handleFilterChange = useCallback((
+    update: Partial<ITicketListFilters>,
+    options?: TicketFilterChangeOptions,
+  ) => {
     // Non-empty update: skip if no values actually differ (guards against
     // controlled components that call onChange on mount to normalize state).
     // Empty update ({}) = force refresh (e.g., after bundling tickets).
@@ -534,7 +803,7 @@ export default function TicketingDashboardContainer({
     }
 
     setCurrentPage(1);
-    const mergedFilters: Partial<ITicketListFilters> = {
+    let mergedFilters: Partial<ITicketListFilters> = {
       ...activeFiltersRef.current,
       ...update,
       sortBy,
@@ -544,10 +813,37 @@ export default function TicketingDashboardContainer({
     if ('statusId' in update) {
       mergedFilters.showOpenOnly = isTicketStatusOpenFilter(update.statusId);
     }
+
+    // A board-tab move is an *arrival*, so the destination board's stored view
+    // replaces the outgoing board's rather than refining it — otherwise a
+    // board's appearance would depend on where you came from, which is the
+    // property the tab strip exists to remove. This layers into the same merge
+    // that was about to happen, so the single debounced fetch below still fires
+    // exactly once; it does not become a second effect with its own fetch.
+    if (options && 'activeBoardTab' in options) {
+      const destinationBoardId = options.activeBoardTab ?? null;
+      applyBoardViewPresentation(destinationBoardId);
+      const arrival = boardArrivalFilters(destinationBoardId, update, 'tab-click');
+      if (arrival) {
+        mergedFilters = { ...arrival, sortBy: arrival.sortBy ?? sortBy, sortDirection: arrival.sortDirection ?? sortDirection };
+        if (mergedFilters.sortBy !== sortBy) setSortBy(mergedFilters.sortBy as string);
+        if (mergedFilters.sortDirection !== sortDirection) {
+          setSortDirection(mergedFilters.sortDirection as 'asc' | 'desc');
+        }
+      }
+    }
+
     setActiveFilters(mergedFilters);
     // Update ref immediately so rapid back-to-back calls merge with fresh state
     activeFiltersRef.current = mergedFilters;
-    updateURLWithFilters(mergedFilters, 1, pageSize);
+    updateURLWithFilters(mergedFilters, 1, pageSize, options?.pushHistory ? 'push' : 'replace');
+
+    // Board tabs are the only navigation-shaped filter change, so they are the
+    // only ones that update "where the user was last". Keyed on presence, not
+    // truthiness: null is the "All tickets" tab, not an absent value.
+    if (options && 'activeBoardTab' in options) {
+      setStoredActiveBoard(options.activeBoardTab ?? '');
+    }
 
     // Debounce the fetch: cancel any pending debounced fetch and schedule a new one.
     // This prevents N concurrent server requests when the user rapidly clicks filters
@@ -565,7 +861,15 @@ export default function TicketingDashboardContainer({
         void fetchTicketsRef.current(mergedFilters, 1, pageSize);
       }, 300);
     }
-  }, [pageSize, updateURLWithFilters, sortBy, sortDirection]);
+  }, [
+    pageSize,
+    updateURLWithFilters,
+    sortBy,
+    sortDirection,
+    setStoredActiveBoard,
+    applyBoardViewPresentation,
+    boardArrivalFilters,
+  ]);
 
   const handleSortChange = useCallback(async (columnId: string, direction: 'asc' | 'desc') => {
     const updatedFilters = {
@@ -580,6 +884,53 @@ export default function TicketingDashboardContainer({
     updateURLWithFilters(updatedFilters, 1, pageSize);
     await fetchTickets(updatedFilters, 1, pageSize, { sortBy: columnId, sortDirection: direction });
   }, [activeFilters, fetchTickets, pageSize, updateURLWithFilters]);
+
+  // Interaction state: columns and density change freely while viewing and are
+  // never persisted per user. They seed from the resolved view and are what
+  // capture reads when an admin saves the board's default.
+  const handleViewPresentationChange = useCallback((update: Partial<ResolvedTicketViewSettings>) => {
+    setViewPresentation(current => ({ ...current, ...update }));
+  }, []);
+
+  const activeBoardIdForView = useMemo(() => (
+    activeFilters.boardIds?.length === 1 ? activeFilters.boardIds[0] : activeFilters.boardId ?? null
+  ), [activeFilters.boardIds, activeFilters.boardId]);
+
+  /**
+   * The baseline the live view is compared against for the dirty dot.
+   *
+   * Deliberately the *resolved* view, not the raw stored document. The dot means
+   * "this differs from what arriving here would give you" — so on a board with
+   * no stored view of its own it must compare against the tenant/catalog result
+   * that a fresh arrival actually produces. Comparing against the raw document
+   * would leave the dot lit permanently on every unconfigured board, which makes
+   * it a decoration rather than a signal.
+   */
+  const savedViewForActiveTab = useMemo<TicketViewSettings>(() => {
+    const resolved = resolveViewForBoard(activeBoardIdForView);
+    return {
+      columnVisibility: resolved.columnVisibility,
+      columnOrder: resolved.columnOrder,
+      tagsInlineUnderTitle: resolved.tagsInlineUnderTitle,
+      densityLevel: resolved.densityLevel,
+      // Stored filters replace the neutral baseline wholesale, exactly as arrival
+      // applies them — so a board that stores no filters compares against the
+      // neutral state the list is actually showing, not against {}.
+      filters: Object.keys(resolved.filters).length > 0
+        ? { ...neutralListFilters(), ...resolved.filters }
+        : neutralListFilters(),
+    };
+  }, [activeBoardIdForView, resolveViewForBoard, neutralListFilters]);
+
+  /** Whether this tab has a stored document of its own, i.e. Reset has work to do. */
+  const hasStoredDefaultForActiveTab = boardViewFor(activeBoardIdForView) !== null;
+
+  const handleSavedViewChanged = useCallback((boardId: string | null, saved: TicketViewSettings | null) => {
+    // Record what was just written so the dirty dot clears immediately and a tab
+    // away-and-back reproduces the saved view now, rather than only once the
+    // session-cached board options expire and refetch.
+    setJustSavedViews(current => ({ ...current, [boardId ?? TENANT_VIEW_KEY]: saved }));
+  }, []);
 
   const mappedAndFilteredBoards = effectiveOptions.boardOptions.map(board => ({
     ...board,
@@ -621,8 +972,14 @@ export default function TicketingDashboardContainer({
       initialTicketTags={ticketMetadata.ticketTags}
       initialTeams={initialTeams}
       canUpdateTickets={canUpdateTickets}
+      onNavigateAway={markNavigatingAway}
         allowSlaStatusFilter={allowSlaStatusFilter}
         useAlgaDeskQuickAddForm={useAlgaDeskQuickAddForm}
+        viewPresentation={viewPresentation}
+        onViewPresentationChange={handleViewPresentationChange}
+        savedViewSettings={savedViewForActiveTab}
+        hasStoredDefaultView={hasStoredDefaultForActiveTab}
+        onSavedViewChanged={handleSavedViewChanged}
       />
   );
 }

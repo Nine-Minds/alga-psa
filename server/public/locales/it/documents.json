@@ -4,6 +4,7 @@
     "amount": "Importo",
     "authorizedBy": "Autorizzato da",
     "billTo": "Fatturare a",
+    "billedTimeByTicket": "Tempo fatturato per ticket",
     "date": "Data",
     "description": "Descrizione",
     "discounts": "Sconti",
@@ -12,6 +13,7 @@
     "from": "Da",
     "fulfilled": "Evaso",
     "fulfillment": "Evasione",
+    "hours": "Ore",
     "invoice": "Fattura",
     "invoiceNumber": "Fattura n.",
     "invoiceTitle": "FATTURA",
@@ -44,6 +46,7 @@
     "quoteTitle": "PREVENTIVO",
     "rate": "Tariffa",
     "recurring": "Ricorrente",
+    "service": "Servizio",
     "shipDate": "Data di spedizione",
     "shipTo": "Spedire a",
     "shipped": "Spedito",
@@ -53,6 +56,7 @@
     "subtotal": "Subtotale",
     "tax": "Imposta",
     "termsAndConditions": "Termini e condizioni",
+    "ticket": "Ticket",
     "total": "Totale",
     "unitPrice": "Prezzo unitario",
     "validUntil": "Valido fino al",
@@ -60,6 +64,7 @@
     "yourPoNumber": "Vostro ordine d'acquisto",
     "emptyState": {
       "noBillableLineItems": "Nessuna voce fatturabile",
+      "noBilledTimeDetail": "Nessun dettaglio del tempo fatturato è disponibile per questa fattura.",
       "noItemsOnOrder": "Nessuna voce in questo ordine",
       "noItemsToPick": "Nessuna voce da prelevare",
       "noLineItems": "Nessuna voce",
@@ -68,9 +73,50 @@
       "noPhasesDefined": "Nessuna fase definita"
     },
     "note": {
+      "billedTimePortalDetail": "Il dettaglio degli inserimenti ore di ogni ticket è disponibile nel portale clienti.",
       "pickedBy": "Prelevato da: ____________________     Data: ____________",
       "preTaxTotals": "I totali indicati sono al netto delle imposte. L'imposta applicabile viene calcolata sulla fattura.",
       "thankYouForOrder": "Grazie per il vostro ordine."
+    }
+  },
+  "errors": {
+    "permissions": {
+      "denied": "Autorizzazione negata",
+      "create": "Autorizzazione negata: impossibile creare documenti",
+      "read": "Autorizzazione negata: impossibile leggere i documenti",
+      "update": "Autorizzazione negata: impossibile aggiornare i documenti",
+      "delete": "Autorizzazione negata: impossibile eliminare i documenti",
+      "associate": "Autorizzazione negata: impossibile associare documenti",
+      "modifyClientDocuments": "Autorizzazione negata: impossibile modificare i documenti del cliente",
+      "accessContractDocuments": "Autorizzazione negata: impossibile accedere ai documenti del contratto",
+      "modifyContractDocuments": "Autorizzazione negata: impossibile modificare i documenti del contratto",
+      "removeAssociations": "Autorizzazione negata: impossibile rimuovere le associazioni dei documenti",
+      "updateAssociations": "Autorizzazione negata: impossibile aggiornare le associazioni dei documenti",
+      "readAssociations": "Autorizzazione negata: impossibile leggere le associazioni dei documenti",
+      "readTypes": "Autorizzazione negata: impossibile leggere i tipi di documento"
+    },
+    "document": {
+      "notFound": "Documento non trovato. Potrebbe essere stato eliminato o spostato. Aggiornare la pagina e riprovare.",
+      "fileUnavailable": "Il file del documento non è più disponibile. Aggiornare la pagina e riprovare.",
+      "invalidValue": "Uno dei valori del documento selezionati non è valido. Aggiornare la pagina e riprovare.",
+      "invalidDate": "Una delle date del documento selezionate non è valida. Controllare il modulo e riprovare.",
+      "referenceMissing": "Il documento, la cartella o il record correlato selezionato non esiste più. Aggiornare la pagina e riprovare.",
+      "duplicateAssociation": "Questo documento è già associato a quel record.",
+      "conflict": "Questa modifica del documento è in conflitto con un record esistente. Aggiornare la pagina e riprovare.",
+      "notAllowed": "Uno dei valori del documento non è consentito. Controllare il modulo e riprovare.",
+      "missingField": "Manca un campo obbligatorio del documento.",
+      "missingFieldNamed": "Manca un campo obbligatorio del documento: {{field}}."
+    },
+    "folder": {
+      "notFound": "Cartella non trovata. Potrebbe essere stata eliminata. Aggiornare la pagina e riprovare.",
+      "emptyDocumentsFirst": "Spostare o eliminare i documenti in questa cartella prima di eliminarla.",
+      "emptySubfoldersFirst": "Eliminare le sottocartelle in questa cartella prima di eliminarla.",
+      "duplicatePath": "Esiste già una cartella con quel percorso."
+    },
+    "upload": {
+      "fileRequired": "Scegliere un file prima di caricarlo.",
+      "typeNotAllowed": "Questo tipo di file non è consentito.",
+      "sessionRequired": "Per caricare documenti è necessaria la sessione. Effettuare di nuovo l’accesso."
     }
   }
 }

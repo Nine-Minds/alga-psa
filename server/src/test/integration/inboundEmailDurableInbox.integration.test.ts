@@ -442,6 +442,66 @@ describeDb('Inbound email durable inbox (integration)', () => {
     if (db) await db.destroy();
   });
 
+  it('dedupes an inbox row only when the source digest matches', async () => {
+    const { upsertInbox, upsertIngress } = await import('@alga-psa/shared/services/email/inboundEmailDurableStore');
+    const providerId = randomUUID();
+    const normalizedMessageId = `rfc822:shared-${randomUUID()}@example.com`;
+    const firstIngress = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'imap',
+      ingress_key: `inbox-digest-a:${normalizedMessageId}`,
+      provider_pointer: { uid: 21 },
+    });
+    const secondIngress = await upsertIngress(db, {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'imap',
+      ingress_key: `inbox-digest-b:${normalizedMessageId}`,
+      provider_pointer: { uid: 22 },
+    });
+    const firstDigest = sha256(Buffer.from('same message id, first MIME'));
+    const secondDigest = sha256(Buffer.from('same message id, second MIME'));
+    const base = {
+      tenant: tenantId,
+      provider_id: providerId,
+      provider_type: 'imap' as const,
+      normalized_message_id: normalizedMessageId,
+      provider_message_id: null,
+      rfc_message_id: normalizedMessageId.slice('rfc822:'.length),
+      source_size_bytes: 1,
+      source_staged_at: new Date(),
+      envelope: {},
+    };
+
+    const first = await upsertInbox(db, {
+      ...base,
+      ingress_id: firstIngress.ingress_id,
+      source_object_key: 'inbound/digest-a.eml',
+      source_sha256: firstDigest,
+    });
+    const differentMime = await upsertInbox(db, {
+      ...base,
+      ingress_id: secondIngress.ingress_id,
+      source_object_key: 'inbound/digest-b.eml',
+      source_sha256: secondDigest,
+    });
+    const exactReplay = await upsertInbox(db, {
+      ...base,
+      ingress_id: firstIngress.ingress_id,
+      source_object_key: 'inbound/digest-a-replay.eml',
+      source_sha256: firstDigest,
+    });
+
+    expect(differentMime.inbox_id).not.toBe(first.inbox_id);
+    expect(exactReplay.inbox_id).toBe(first.inbox_id);
+    const rows = await tenantTable('inbound_email_inbox')
+      .where({ tenant: tenantId, provider_id: providerId, normalized_message_id: normalizedMessageId })
+      .orderBy('source_sha256', 'asc');
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row: any) => row.source_sha256).sort()).toEqual([firstDigest, secondDigest].sort());
+  });
+
   it('crash after inbox claim before core writes: replay creates exactly one ticket + comment', async () => {
     const { providerId } = await setupProvider({ mailbox: 'inbox@example.com', providerType: 'google' });
     const messageId = `crash-${randomUUID()}@example.com`;
@@ -568,13 +628,24 @@ describeDb('Inbound email durable inbox (integration)', () => {
     const ticketId = first.ticketId;
     const commentId = first.commentId;
 
+    // This is the exact same staged MIME/provider identity being delivered a
+    // second time.  Staging resolves it to the existing durable inbox instead
+    // of admitting another durable unit of work.
+    const replayStage = await stageAndUpsertInbox({ providerId, providerType: 'google', rawMime, messageId });
+    expect(replayStage.inboxId).toBe(inboxId);
+
+    const { mirrorTenantTerminalInbox } = await import('@alga-psa/shared/services/email/inboundEmailRecovery');
+    await mirrorTenantTerminalInbox(tenantId);
+
     // Redelivery (e.g. Redis reclaim) reads the terminal inbox and returns the
     // same IDs without any new entity/effect/outbox/artifact rows.
-    const second = await processInbox(inboxId, 'redelivery-worker');
+    const second = await processInbox(replayStage.inboxId, 'redelivery-worker');
     expect(second.disposition).toBe('ack');
     expect(second.ticketId).toBe(ticketId);
     expect(second.commentId).toBe(commentId);
+    await mirrorTenantTerminalInbox(tenantId);
 
+    expect(await countRows('email_processed_messages')).toBe(1);
     expect(await countTicketsByMessageId(messageId)).toBe(1);
     expect(await countCommentsByMessageId(messageId)).toBe(1);
     expect(await countRows('inbound_email_effects')).toBe(2);
@@ -3840,6 +3911,7 @@ describeDb('Inbound email durable inbox (integration)', () => {
       tenant: tenantId,
       provider_id: providerId,
       normalized_message_id: replayIdentity.normalized,
+      source_sha256: sha256(rawMime),
     });
     expect(resolved?.inbox_id).toBe(inboxId);
     expect(resolved?.status).toBe('succeeded');

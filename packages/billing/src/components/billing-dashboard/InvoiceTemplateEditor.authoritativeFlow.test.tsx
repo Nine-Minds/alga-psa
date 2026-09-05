@@ -30,10 +30,11 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
 }));
 
-vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
+vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', async (importOriginal) => ({
+  // sampleScenarios.ts calls enrichWithGroupedItems and buildInvoiceTimeCollections
+  // at module load; keep the real pure helpers so new exports never break this mock.
+  ...(await importOriginal<typeof import('@alga-psa/billing/lib/adapters/invoiceAdapters')>()),
   mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
-  // sampleScenarios.ts calls this at module load; grouping is irrelevant here.
-  enrichWithGroupedItems: (vm: unknown) => vm,
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({

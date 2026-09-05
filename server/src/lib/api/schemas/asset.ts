@@ -299,6 +299,10 @@ export const recordMaintenanceSchema = z.object({
   // schedule_id is required: asset_maintenance_history rows are always tied to a
   // schedule (the tech records a scheduled task as done).
   schedule_id: uuidSchema,
+  // Clients that render an occurrence (desktop/mobile queues) should send its
+  // id.  That makes a retry unambiguously target the same unit of work, rather
+  // than accidentally completing the newly-opened next occurrence.
+  occurrence_id: uuidSchema.optional(),
   maintenance_type: z.enum(['preventive', 'corrective', 'inspection', 'calibration', 'replacement']),
   description: z.string().trim().min(1).optional(),
   // Defaults to the calling user / now when omitted (the common field case).

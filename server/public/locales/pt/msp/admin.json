@@ -628,5 +628,35 @@
       "error": "Erro",
       "metadata": "Metadados"
     }
+  },
+  "gmailDiagnostics": {
+    "title": "Diagnóstico de entrega do Gmail",
+    "description": "Verifica o tópico do Pub/Sub, suas permissões, o endpoint de push e seu público, a observação do Gmail e quando o último push chegou.",
+    "labels": {
+      "provider": "Provedor:",
+      "mailbox": "Caixa de correio:",
+      "overall": "Geral:",
+      "recommendations": "Recomendações",
+      "error": "Erro"
+    },
+    "audienceMismatch": {
+      "title": "O público do push não corresponde a esta instância",
+      "expected": "Esperado:",
+      "actual": "O Google está usando:"
+    },
+    "actions": {
+      "copySupportBundle": "Copiar pacote de suporte",
+      "copied": "Copiado"
+    },
+    "states": {
+      "running": "Executando diagnóstico...",
+      "diagnosticsFailed": "Falha no diagnóstico"
+    },
+    "statuses": {
+      "pass": "Passar",
+      "warn": "Avisar",
+      "fail": "Falhar",
+      "skip": "Pular"
+    }
   }
 }

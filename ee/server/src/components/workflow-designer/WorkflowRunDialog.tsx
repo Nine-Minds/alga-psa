@@ -1523,9 +1523,9 @@ const WorkflowRunDialog: React.FC<WorkflowRunDialogProps> = ({
   const segmentedButtonClass = (active: boolean) =>
     active
       ? 'border-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-500))] text-white hover:bg-[rgb(var(--color-primary-600))]'
-      : 'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
+      : 'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]';
   const utilityButtonClass =
-    'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-background-100))]';
+    'border-[rgb(var(--color-border-300))] bg-white text-[rgb(var(--color-text-700))] hover:bg-[rgb(var(--color-border-100))]';
 
   return (
     <Dialog

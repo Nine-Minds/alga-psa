@@ -31,15 +31,28 @@ describe('invoice inbound webhook actions', () => {
   let trx: ReturnType<typeof vi.fn> & { fn: { now: ReturnType<typeof vi.fn> } };
   let invoicesQuery: {
     where: ReturnType<typeof vi.fn>;
+    forUpdate: ReturnType<typeof vi.fn>;
     first: ReturnType<typeof vi.fn>;
     update: ReturnType<typeof vi.fn>;
     returning: ReturnType<typeof vi.fn>;
+  };
+  // settlePrepaidReplenishmentInvoice() runs after every paid transition and
+  // looks up the replenishment alert bound to the invoice. These invoices are
+  // ordinary (non-replenishment) mappings, so the alert lookup resolves to none
+  // and the settle path is a clean no-op — but the mock still has to answer the
+  // FOR UPDATE alert read instead of throwing on an unexpected table.
+  let alertsQuery: {
+    where: ReturnType<typeof vi.fn>;
+    forUpdate: ReturnType<typeof vi.fn>;
+    first: ReturnType<typeof vi.fn>;
+    update: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     invoicesQuery = {
       where: vi.fn().mockReturnThis(),
+      forUpdate: vi.fn().mockReturnThis(),
       first: vi.fn().mockResolvedValue({
         invoice_id: 'invoice-1',
         status: 'sent',
@@ -55,10 +68,19 @@ describe('invoice inbound webhook actions', () => {
         },
       ]),
     };
+    alertsQuery = {
+      where: vi.fn().mockReturnThis(),
+      forUpdate: vi.fn().mockReturnThis(),
+      first: vi.fn().mockResolvedValue(undefined),
+      update: vi.fn().mockReturnThis(),
+    };
     trx = Object.assign(
       vi.fn((table: string) => {
         if (table === 'invoices') {
           return invoicesQuery;
+        }
+        if (table === 'prepaid_balance_alerts') {
+          return alertsQuery;
         }
         throw new Error(`Unexpected table ${table}`);
       }),

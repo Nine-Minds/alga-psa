@@ -32,34 +32,40 @@ function taxSettingsActionErrorFrom(error: unknown): TaxSettingsActionError | nu
         return actionError(error.message);
       case 'Tenant context is required':
       case 'SYSTEM_ERROR: Tenant context not found':
-        return actionError('No tenant context. Please refresh and try again.');
+        return actionError('No tenant context. Please refresh and try again.', 'msp/billing:errors.context.noTenantContext');
       case 'No active tax rates found in the system to assign as default.':
       case 'Failed to create default tax settings':
-        return actionError('Configure at least one active tax rate before creating default tax settings.');
+        return actionError('Configure at least one active tax rate before creating default tax settings.', 'msp/billing-settings:errors.tax.defaultRequiresActiveRate');
       case 'Tax component not found':
-        return actionError('Tax component not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Tax component not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing-settings:errors.tax.componentNotFound');
       case 'Tax threshold not found':
-        return actionError('Tax bracket not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Tax bracket not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing-settings:errors.tax.bracketNotFound');
       case 'Tax holiday not found':
-        return actionError('Tax holiday not found. It may have been updated or deleted. Please refresh and try again.');
+        return actionError('Tax holiday not found. It may have been updated or deleted. Please refresh and try again.', 'msp/billing-settings:errors.tax.holidayNotFound');
     }
   }
 
   const dbError = error as { code?: string; column?: string };
   if (dbError?.code === '22P02') {
-    return actionError('One of the selected tax records is invalid. Please refresh and try again.');
+    return actionError('One of the selected tax records is invalid. Please refresh and try again.', 'msp/billing-settings:errors.tax.recordInvalid');
   }
   if (dbError?.code === '23502') {
-    return actionError(`Missing required tax field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    return dbError.column
+      ? actionError(
+          `Missing required tax field: ${dbError.column}.`,
+          'msp/billing-settings:errors.tax.missingFieldNamed',
+          { field: dbError.column },
+        )
+      : actionError('Missing required tax field.', 'msp/billing-settings:errors.tax.missingField');
   }
   if (dbError?.code === '23503') {
-    return actionError('One of the selected tax records no longer exists. Please refresh and try again.');
+    return actionError('One of the selected tax records no longer exists. Please refresh and try again.', 'msp/billing-settings:errors.tax.referenceMissing');
   }
   if (dbError?.code === '23505') {
-    return actionError('A tax record with those details already exists.');
+    return actionError('A tax record with those details already exists.', 'msp/billing-settings:errors.tax.duplicate');
   }
   if (dbError?.code === '23514') {
-    return actionError('One of the tax values is not allowed. Please review the form and try again.');
+    return actionError('One of the tax values is not allowed. Please review the form and try again.', 'msp/billing-settings:errors.tax.notAllowed');
   }
 
   return null;
@@ -215,7 +221,7 @@ export const createTaxRegion = withAuth(async (
   }
 ): Promise<ITaxRegion | TaxRegionActionError> => {
   if (!(await hasPermission(user, 'billing', 'create'))) {
-    return permissionError('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required', 'msp/billing:errors.permissions.billingCreate');
   }
   const { knex } = await createTenantKnex();
   const { region_code, region_name, is_active = true } = data; // Default is_active to true
@@ -227,7 +233,7 @@ export const createTaxRegion = withAuth(async (
       .first();
 
     if (existingRegion) {
-      return actionError(`Tax region with code "${region_code}" already exists.`);
+      return actionError(`Tax region with code "${region_code}" already exists.`, 'msp/billing-settings:errors.taxRegion.duplicateCode', { code: region_code });
     }
 
     const [createdRegion] = await tenantScopedTable<ITaxRegion>(knex, tenant, 'tax_regions')
@@ -263,7 +269,7 @@ export const updateTaxRegion = withAuth(async (
 ): Promise<ITaxRegion | TaxRegionActionError> => {
   try {
     if (!(await hasPermission(user, 'billing', 'update'))) {
-      return permissionError('Permission denied: Cannot update tax regions');
+      return permissionError('Permission denied: Cannot update tax regions', 'msp/billing-settings:errors.permissions.updateTaxRegions');
     }
 
     const { knex } = await createTenantKnex();
@@ -286,7 +292,7 @@ export const updateTaxRegion = withAuth(async (
       .where('region_code', region_code)
       .first();
     if (!existingRegion) {
-       return actionError(`Tax region with code "${region_code}" not found.`);
+       return actionError(`Tax region with code "${region_code}" not found.`, 'msp/billing-settings:errors.taxRegion.notFoundCode', { code: region_code });
     }
     return existingRegion;
     // Or: throw new Error('No update data provided.');
@@ -300,7 +306,7 @@ export const updateTaxRegion = withAuth(async (
         .first();
 
       if (existingRegion) {
-        return actionError(`Tax region with code "${data.region_code}" already exists.`);
+        return actionError(`Tax region with code "${data.region_code}" already exists.`, 'msp/billing-settings:errors.taxRegion.duplicateCode', { code: data.region_code });
       }
     }
 
@@ -310,7 +316,7 @@ export const updateTaxRegion = withAuth(async (
       .returning('*');
 
     if (!updatedRegion) {
-      return actionError(`Tax region with code "${region_code}" not found.`);
+      return actionError(`Tax region with code "${region_code}" not found.`, 'msp/billing-settings:errors.taxRegion.notFoundCode', { code: region_code });
     }
 
     return updatedRegion;

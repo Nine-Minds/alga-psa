@@ -377,7 +377,11 @@ describe('QuickAddTicket board-scoped statuses', () => {
       expect(getTicketFormDataMock).toHaveBeenCalled();
     });
 
-    const statusSelect = screen.getByTestId('ticket-quick-add');
+    // Wait for the initial form-data load to resolve so the loading spinner is
+    // replaced by the form itself. getTicketFormDataMock is invoked at the start
+    // of the load effect, before isLoading flips back to false, so querying
+    // synchronously here races the re-render (flaky under heavy parallel CI load).
+    const statusSelect = await screen.findByTestId('ticket-quick-add');
     expect(screen.getByTestId('board-picker-selected')).toHaveTextContent('');
     expect(statusSelect).toBeDisabled();
     expect(statusSelect).toHaveValue('');

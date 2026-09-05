@@ -875,10 +875,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
         {/* Step 1: Upload */}
         {step === 'upload' && (
-          <div className="text-center p-8 border-2 border-dashed border-gray-300 rounded-lg">
-            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <p className="mt-2 text-sm text-gray-600">{importT('uploadIntro', 'Upload a CSV file with phase and task data')}</p>
-            <p className="mt-1 text-xs text-gray-500">
+          <div className="text-center p-8 border-2 border-dashed border-[rgb(var(--color-border-300))] rounded-lg">
+            <Upload className="mx-auto h-12 w-12 text-[rgb(var(--color-text-400))]" />
+            <p className="mt-2 text-sm text-[rgb(var(--color-text-600))]">{importT('uploadIntro', 'Upload a CSV file with phase and task data')}</p>
+            <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
               <strong>{importT('requiredFields', 'Required:')}</strong> {importT('requiredFieldsList', 'task_name')}<br />
               <strong>{importT('optionalFields', 'Optional:')}</strong> {importT('optionalFieldsList', 'phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags')}<br />
               <strong>{importT('noteLabel', 'Note:')}</strong> {importT('defaultPhaseNote', 'Tasks without a phase_name will be grouped into "{{phaseName}}"', { phaseName: DEFAULT_PHASE_NAME })}
@@ -918,11 +918,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         {step === 'mapping' && previewData && (
           <div>
             <h3 className="text-lg font-medium mb-4">{importT('mapFieldsTitle', 'Map Task Fields to CSV Columns')}</h3>
-            <p className="text-sm text-gray-600 mb-4">
+            <p className="text-sm text-[rgb(var(--color-text-600))] mb-4">
               {importT('fieldInstructions', 'Select which CSV column contains the data for each field. Fields marked with * are required.')}
             </p>
             <div className="max-h-[60vh] overflow-y-auto pr-2">
-              <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-gray-700">
+              <div className="mb-2 flex items-center gap-4 text-sm font-semibold text-[rgb(var(--color-text-700))]">
                 <span className="w-1/3">{importT('fieldColumn', 'Field')}</span>
                 <span className="w-2/3">{importT('selectCsvColumn', 'Select CSV Column')}</span>
               </div>
@@ -939,7 +939,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                   return (
                     <div key={fieldKey} className="flex items-center gap-4">
                       <span className="w-1/3 text-sm font-medium">{importFieldLabel(fieldKey, label)}</span>
-                      <span className="text-gray-400">←</span>
+                      <span className="text-[rgb(var(--color-text-400))]">←</span>
                       <CustomSelect
                         options={[
                           { value: 'unassigned', label: importT('notMapped', 'Not mapped') },
@@ -1015,11 +1015,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
             <div className="mb-4">
               <div className="flex items-center justify-between py-3 border-b">
                 <div>
-                  <div className="text-gray-900 font-medium">{importT('skipInvalidRows', 'Skip invalid rows')}</div>
-                  <div className="text-sm text-gray-500">{importT('skipInvalidRowsHelp', 'Continue import even if some rows have validation errors')}</div>
+                  <div className="text-[rgb(var(--color-text-900))] font-medium">{importT('skipInvalidRows', 'Skip invalid rows')}</div>
+                  <div className="text-sm text-[rgb(var(--color-text-500))]">{importT('skipInvalidRowsHelp', 'Continue import even if some rows have validation errors')}</div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-[rgb(var(--color-text-700))]">
                     {importOptions.skipInvalidRows ? importT('yes', 'Yes') : importT('no', 'No')}
                   </span>
                   <Switch
@@ -1036,10 +1036,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               {unphasedRowCount > 0 && (
                 <div className="flex items-center justify-between py-3 border-b">
                   <div>
-                    <div className="text-gray-900 font-medium">
+                    <div className="text-[rgb(var(--color-text-900))] font-medium">
                       {importT('fallbackPhaseLabel', 'Default phase for tasks without phase_name')}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-[rgb(var(--color-text-500))]">
                       {importT('fallbackPhaseHelp', '{{count}} row(s) have no phase. Pick an existing phase or keep the default to create one.', {
                         count: unphasedRowCount,
                       })}
@@ -1067,10 +1067,10 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               {unstatusedRowCount > 0 && fallbackStatusOptions.length > 0 && (
                 <div className="flex items-center justify-between py-3 border-b">
                   <div>
-                    <div className="text-gray-900 font-medium">
+                    <div className="text-[rgb(var(--color-text-900))] font-medium">
                       {importT('fallbackStatusLabel', 'Default status for tasks without status')}
                     </div>
-                    <div className="text-sm text-gray-500">
+                    <div className="text-sm text-[rgb(var(--color-text-500))]">
                       {importT('fallbackStatusHelp', '{{count}} row(s) have no status. The selected status will be assigned to those tasks.', {
                         count: unstatusedRowCount,
                       })}
@@ -1091,31 +1091,31 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
             {/* Grouped Preview */}
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-gray-700 mb-2">{importT('structureTitle', 'Import Structure')}</h4>
+              <h4 className="text-sm font-medium text-[rgb(var(--color-text-700))] mb-2">{importT('structureTitle', 'Import Structure')}</h4>
               <div className="border rounded-lg max-h-64 overflow-y-auto">
                 {groupedPhases.map((phase) => (
                   <div key={phase.phase_name} className="border-b last:border-b-0">
                     <button
                       type="button"
                       onClick={() => togglePhaseExpanded(phase.phase_name)}
-                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-gray-50 text-left"
+                      className="w-full flex items-center gap-2 px-3 py-2 hover:bg-[rgb(var(--color-border-50))] text-left"
                     >
                       {expandedPhases.has(phase.phase_name) ? (
-                        <ChevronDown className="h-4 w-4 text-gray-500" />
+                        <ChevronDown className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
                       ) : (
-                        <ChevronRight className="h-4 w-4 text-gray-500" />
+                        <ChevronRight className="h-4 w-4 text-[rgb(var(--color-text-500))]" />
                       )}
                       <span className="font-medium">{phase.phase_name}</span>
-                      <span className="text-sm text-gray-500">{importT('phaseTaskCount', '({{count}} tasks)', { count: phase.tasks.length })}</span>
+                      <span className="text-sm text-[rgb(var(--color-text-500))]">{importT('phaseTaskCount', '({{count}} tasks)', { count: phase.tasks.length })}</span>
                     </button>
                     {expandedPhases.has(phase.phase_name) && (
                       <div className="pl-9 pb-2">
                         {phase.tasks.map((task, index) => (
                           <div key={`${phase.phase_name}-${index}`} className="flex items-center gap-2 py-1 text-sm">
-                            <span className="text-gray-400">•</span>
+                            <span className="text-[rgb(var(--color-text-400))]">•</span>
                             <span>{task.task_name}</span>
                             {task.estimated_hours && (
-                              <span className="text-gray-500">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: task.estimated_hours })}</span>
+                              <span className="text-[rgb(var(--color-text-500))]">{importT('estimatedHoursSummary', '({{hours}}h)', { hours: task.estimated_hours })}</span>
                             )}
                           </div>
                         ))}
@@ -1128,11 +1128,11 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
 
             {/* Row filter — lets users focus on rows that will be skipped vs. imported */}
             <div className="mb-2 flex items-center justify-between">
-              <h4 className="text-sm font-medium text-gray-700">
+              <h4 className="text-sm font-medium text-[rgb(var(--color-text-700))]">
                 {importT('rowResultsTitle', 'Row Results')}
               </h4>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">{importT('rowFilterLabel', 'Show:')}</span>
+                <span className="text-sm text-[rgb(var(--color-text-500))]">{importT('rowFilterLabel', 'Show:')}</span>
                 <CustomSelect
                   options={[
                     {
@@ -1262,7 +1262,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                       const recordWarnings = (record.warnings || []) as string[];
 
                       if (recordErrors.length === 0 && recordWarnings.length === 0) {
-                        return <span className="text-gray-400">{importT('noIssues', '-')}</span>;
+                        return <span className="text-[rgb(var(--color-text-400))]">{importT('noIssues', '-')}</span>;
                       }
 
                       return (
@@ -1277,7 +1277,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                             </div>
                           )}
                           {recordWarnings.length > 0 && (
-                            <div className="text-gray-500">
+                            <div className="text-[rgb(var(--color-text-500))]">
                               {recordWarnings.map((warning: string, i: number) => (
                                 <div key={`warning-${i}`} className="break-words">
                                   • {warning}
@@ -1385,22 +1385,22 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 return (
                   <div
                     key={agentInfo.agentName}
-                    className="border rounded-lg p-4 bg-gray-50"
+                    className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] p-4"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <span className="font-medium text-gray-900">&quot;{agentInfo.agentName}&quot;</span>
-                        <span className="ml-2 text-sm text-gray-500">
+                        <span className="font-medium text-[rgb(var(--color-text-900))]">&quot;{agentInfo.agentName}&quot;</span>
+                        <span className="ml-2 text-sm text-[rgb(var(--color-text-500))]">
                           {importT('taskCountLabel', '({{count}} tasks)', {
                             count: agentInfo.taskCount,
                           })}
                         </span>
                         {agentInfo.isPrimaryAgent && (
-                          <span className="ml-2 text-xs bg-[rgb(var(--color-primary-100))] dark:bg-[rgb(var(--color-primary-900))] text-[rgb(var(--color-primary-800))] dark:text-[rgb(var(--color-primary-200))] px-2 py-0.5 rounded">
+                          <span className="chip-primary ml-2 text-xs px-2 py-0.5 rounded">
                             {importT('primaryAgent', 'Primary agent')}
                           </span>
                         )}
-                        <div className="text-sm text-gray-500 mt-1">
+                        <div className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
                           {importT('tasksList', 'Tasks: {{tasks}}', { tasks: agentInfo.taskNames.join(', ') })}
                           {agentInfo.taskCount > 3 && importT('andMore', ' and {{count}} more...', { count: agentInfo.taskCount - 3 })}
                         </div>
@@ -1422,7 +1422,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                           </span>
                         </label>
                         {resolution?.action === 'skip' && (
-                          <p className="ml-6 text-xs text-gray-500 mt-1">
+                          <p className="ml-6 text-xs text-[rgb(var(--color-text-500))] mt-1">
                             {agentInfo.isPrimaryAgent
                               ? importT('skipPrimaryAgentHelp', 'Tasks where this is the primary agent will be imported without an assignee.')
                               : importT('skipAdditionalAgentHelp', 'This additional agent will not be added to the affected tasks.')}
@@ -1536,20 +1536,20 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
                 return (
                   <div
                     key={cardKey}
-                    className="border rounded-lg p-4 bg-gray-50"
+                    className="border rounded-lg p-4 bg-[rgb(var(--color-border-50))]"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <span className="font-medium text-gray-900">&quot;{statusInfo.statusName}&quot;</span>
+                        <span className="font-medium text-[rgb(var(--color-text-900))]">&quot;{statusInfo.statusName}&quot;</span>
                         <Badge variant="default-muted" size="sm" className="ml-2">
                           {importT('inPhaseBadge', 'in {{phase}}', { phase: statusInfo.phaseName })}
                         </Badge>
-                        <span className="ml-2 text-sm text-gray-500">
+                        <span className="ml-2 text-sm text-[rgb(var(--color-text-500))]">
                           {importT('taskCountLabel', '({{count}} tasks)', {
                             count: statusInfo.taskCount,
                           })}
                         </span>
-                        <div className="text-sm text-gray-500 mt-1">
+                        <div className="text-sm text-[rgb(var(--color-text-500))] mt-1">
                           {importT('tasksList', 'Tasks: {{tasks}}', { tasks: statusInfo.taskNames.join(', ') })}
                           {statusInfo.taskCount > 3 && importT('andMore', ' and {{count}} more...', { count: statusInfo.taskCount - 3 })}
                         </div>
@@ -1657,7 +1657,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
         {step === 'importing' && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-            <p className="text-gray-600">{importT('processing', 'Importing phases and tasks...')}</p>
+            <p className="text-[rgb(var(--color-text-600))]">{importT('processing', 'Importing phases and tasks...')}</p>
           </div>
         )}
 
@@ -1668,7 +1668,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               <>
                 <Check className="h-12 w-12 text-green-600 mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">{importT('completeTitle', 'Import Complete')}</h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-[rgb(var(--color-text-600))] mb-4">
                   {importT('successSummary', 'Successfully created {{phases}} phases and {{tasks}} tasks', {
                     phases: importResult.phasesCreated,
                     tasks: importResult.tasksCreated,
@@ -1679,7 +1679,7 @@ const PhaseTaskImportDialog: React.FC<PhaseTaskImportDialogProps> = ({
               <>
                 <AlertTriangle className="h-12 w-12 text-primary-500 mx-auto mb-4" />
                 <h3 className="text-lg font-medium mb-2">{importT('completeWithIssuesTitle', 'Import Completed with Issues')}</h3>
-                <p className="text-gray-600 mb-2">
+                <p className="text-[rgb(var(--color-text-600))] mb-2">
                   {importT('createdSummary', 'Created {{phases}} phases and {{tasks}} tasks', {
                     phases: importResult.phasesCreated,
                     tasks: importResult.tasksCreated,

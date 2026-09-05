@@ -68,7 +68,17 @@ program
   .option('--port <id=port...>', 'vendor-surface port override(s), e.g. --port qbo=9601')
   .option('--seed <n>', 'PRNG seed for reproducible runs', '1')
   .option('--scenarios <dir>', 'directory of scenario .yaml files to load')
-  .action(async (opts: { module: string[]; controlPort: string; port?: string[]; seed: string; scenarios?: string }) => {
+  .option('--state-file <path>', 'persist emulator state here so seeds survive a restart')
+  .option('--record-scenario', 'capture control calls into a replayable scenario (GET /control/recording)')
+  .action(async (opts: {
+    module: string[];
+    controlPort: string;
+    port?: string[];
+    seed: string;
+    scenarios?: string;
+    stateFile?: string;
+    recordScenario?: boolean;
+  }) => {
     const ports: Record<string, number> = {};
     for (const entry of opts.port ?? []) {
       const [id, port] = entry.split('=');
@@ -84,6 +94,8 @@ program
       ports,
       seed: Number(opts.seed),
       scenarios: opts.scenarios ? loadScenarioDir(opts.scenarios) : [],
+      stateFile: opts.stateFile ?? process.env.ALGASIM_STATE_FILE,
+      recordScenario: Boolean(opts.recordScenario) || process.env.ALGASIM_RECORD_SCENARIO === 'true',
     });
     await host.start();
     const shutdown = async () => {
@@ -113,6 +125,14 @@ clock
   .option(...urlOption)
   .action((duration: string, opts: { url: string }) =>
     run(async () => printResult(await controlRequest(opts.url, 'POST', '/control/clock/advance', { duration })))(),
+  );
+
+program
+  .command('recording')
+  .description('Print the scenario captured since the host started (requires --record-scenario)')
+  .option(...urlOption)
+  .action((opts: { url: string }) =>
+    run(async () => printResult(await controlRequest(opts.url, 'GET', '/control/recording')))(),
   );
 
 program

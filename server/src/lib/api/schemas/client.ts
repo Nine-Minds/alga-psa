@@ -9,15 +9,32 @@
 import { z } from 'zod';
 import {
   uuidSchema,
-  emailSchema,
-  urlSchema,
-  phoneSchema,
   createListQuerySchema,
   createUpdateSchema,
   baseFilterSchema,
   metadataSchema,
   booleanTransform
 } from './common';
+import {
+  clientCoreFieldsSchema,
+  clientLocationCoreFieldsSchema
+} from '@alga-psa/validation';
+
+// Structural rules for name/email/url/phone come from @alga-psa/validation so the
+// REST API and the server actions accept and reject exactly the same inputs.
+const {
+  client_name: clientNameField,
+  email: clientEmailField,
+  url: clientUrlField,
+  phone_no: clientPhoneField
+} = clientCoreFieldsSchema.shape;
+const {
+  email: locationEmailField,
+  phone: locationPhoneField,
+  fax: locationFaxField,
+  phone_extension: locationPhoneExtensionField,
+  fax_extension: locationFaxExtensionField
+} = clientLocationCoreFieldsSchema.shape;
 
 // Client properties schema
 const clientPropertiesSchema = z.object({
@@ -32,7 +49,7 @@ const clientPropertiesSchema = z.object({
   tax_id: z.string().optional(),
   notes: z.string().optional(),
   payment_terms: z.string().optional(),
-  website: urlSchema,
+  website: clientUrlField,
   parent_client_id: uuidSchema.optional(),
   parent_client_name: z.string().optional(),
   last_contact_date: z.string().datetime().optional(),
@@ -41,10 +58,10 @@ const clientPropertiesSchema = z.object({
 
 // Create client schema
 export const createClientSchema = z.object({
-  client_name: z.string().min(1, 'Client name is required').max(255),
-  phone_no: phoneSchema,
-  email: emailSchema.optional(),
-  url: urlSchema,
+  client_name: clientNameField,
+  phone_no: clientPhoneField,
+  email: clientEmailField,
+  url: clientUrlField,
   address: z.string().optional(),
   client_type: z.enum(['company', 'individual']).optional(),
   tax_id_number: z.string().optional(),
@@ -63,7 +80,7 @@ export const createClientSchema = z.object({
   timezone: z.string().optional(),
   invoice_template_id: uuidSchema.optional(),
   billing_contact_id: uuidSchema.optional(),
-  billing_email: emailSchema.optional(),
+  billing_email: clientEmailField,
   account_manager_id: uuidSchema.optional(),
   is_inactive: z.boolean().optional().default(false),
   tags: z.array(z.string()).optional()
@@ -143,9 +160,11 @@ export const createClientLocationSchema = z.object({
   is_billing_address: z.boolean().optional().default(false),
   is_shipping_address: z.boolean().optional().default(false),
   is_default: z.boolean().optional().default(false),
-  phone: phoneSchema,
-  fax: phoneSchema,
-  email: emailSchema.optional(),
+  phone: locationPhoneField,
+  phone_extension: locationPhoneExtensionField,
+  fax: locationFaxField,
+  fax_extension: locationFaxExtensionField,
+  email: locationEmailField,
   notes: z.string().optional(),
   is_active: z.boolean().optional().default(true)
 });
@@ -169,7 +188,9 @@ export const clientLocationResponseSchema = z.object({
   is_shipping_address: z.boolean(),
   is_default: z.boolean(),
   phone: z.string().nullable(),
+  phone_extension: z.string().nullable().optional(),
   fax: z.string().nullable(),
+  fax_extension: z.string().nullable().optional(),
   email: z.string().nullable(),
   notes: z.string().nullable(),
   is_active: z.boolean(),
