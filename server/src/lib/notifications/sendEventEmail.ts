@@ -396,6 +396,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
       }).first();
       if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return;
+      if (params.replyContext?.commentId && params.replyContext.commentId !== mirror?.child_comment_id) return;
       // Link-only bundles have no child comment. Never persist a master comment
       // under a child's reply token; incoming replies still target that ticket.
       params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };

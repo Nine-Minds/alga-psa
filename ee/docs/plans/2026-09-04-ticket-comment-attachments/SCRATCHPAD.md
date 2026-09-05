@@ -85,3 +85,13 @@
 - Logs: /tmp/comment-bundle-before.log (three failing baseline cases), /tmp/comment-bundle-verification.log (68 passing tests and local SMTP checks), /tmp/comment-bundle-typecheck.log. The initial typecheck exhausted the default Node heap; rerun uses NODE_OPTIONS=--max-old-space-size=12288.
 
 Final server typecheck passed with the larger heap, including a final-source recheck. `git diff --check` passed. The pre-existing package-lock and migration CLI diffs remain byte-identical and are excluded from the repair. Local evidence is summarized in `/tmp/comment-bundle-evidence/result.json`; no service or environment configuration was changed.
+
+### Bundled-child guard and live verification follow-up
+
+- Preflight was already at pushed `dfc618e264`; reproduce the reported `b04f08e62d` through isolated source-module aliases, without swapping files under the live server. Expected two notifications, observed master only.
+- Reject a supplied child reply comment that disagrees with the tenant-scoped mirror. Disabled or restricted mailbox accounts must not fall through to guest child-recipient access. Both guards failed before the follow-up and pass now.
+- The focused fixture-driven live smoke uses the T016 normal Enterprise startup/routing method, but does not reopen its UI acceptance. Exclusive branch consumer, original/replay ACKs, exact PDF MIME, child markers and sent-once source ledgers are recorded in REVIEW.md.
+- Next interprets an absolute-looking NEXT_DIST_DIR under server in this checkout. Use a relative output symlink backed by `/tmp`, with a parent node_modules symlink, to avoid filling the worktree filesystem. Preserve the active `.next/dev` cache and original PID.
+- GreenMail's message-list route has no DELETE operation. Remove only the newly created controlled mailbox after checking every message belongs to this run; archive MIME first.
+- Original port 3653 temporarily stopped responding while its terminal output was paused. `alga-dev terminal-send-keys` with Ctrl-Q on the existing card-service session restored HTTP 200 with PID 122926 unchanged; no restart or environment change.
+- Production webpack separately writes `server/node_modules/.cache/webpack`, regardless of NEXT_DIST_DIR. Its 7.2 GB filled the worktree after successful compilation; move that inactive production cache to `/tmp` too before rerunning. The live Turbopack cache remains untouched.

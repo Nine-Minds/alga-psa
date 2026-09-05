@@ -421,11 +421,18 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     } finally { connection.mockRestore(); publish.mockRestore(); update.mockRestore(); }
   });
   it.each(['same-client', 'other-client', 'no-mirror', 'client-email', 'no-attachment', 'provider-limited', 'failed-retry',
-    'source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant'])('bundled %s notifications preserve source authorization and child reply identity on replay', async mode => {
+    'source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant',
+    'wrong-source-ticket', 'wrong-reply-comment', 'forged-mirror', 'disabled-child', 'blocked-child-board', 'retry-revoked', 'removed-file'])('bundled %s notifications preserve source authorization and child reply identity on replay', async mode => {
     const { TenantEmailService } = await import('@alga-psa/email');
     const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
     const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
-    const pdf = await upload(); await upload('unrelated.pdf');
+    const pdf = await upload(); await upload('unrelated-draft.pdf');
+    const unrelated = await upload('other-comment.pdf');
+    await attach(unrelated.file, await makeComment());
+    const internal = await upload('internal.pdf');
+    await attach(internal.file, await makeComment({ is_internal: true }));
+    const canceled = await upload('canceled.pdf');
+    await table('ticket_comment_attachments').where({ document_id: canceled.document }).update({ state: 'removed' });
     if (mode !== 'no-attachment') await attach(pdf.file);
     const content = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Public bundle update' }] },
       ...(mode === 'no-attachment' ? [] : JSON.parse(note(pdf.file)))]);
@@ -478,7 +485,25 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       const pending = { tenantId: tenant, to: childEmail, subject: 'Pending bundle update', template: 'ticket-comment-added', locale: 'en' as const,
         context: { ticket: { id: 'ATT-CHILD' }, comment: { content } },
         commentSource: { ticketId: ticket, commentId: comment }, replyContext: { ticketId: child } };
-      if (['source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant'].includes(mode)) {
+      if (['source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant', 'wrong-source-ticket', 'wrong-reply-comment', 'forged-mirror', 'disabled-child', 'blocked-child-board', 'retry-revoked'].includes(mode)) {
+        if (mode === 'wrong-source-ticket') pending.commentSource.ticketId = child;
+        if (mode === 'wrong-reply-comment') Object.assign(pending.replyContext, { commentId: comment });
+        if (mode === 'forged-mirror') await table('ticket_bundle_mirrors').where({ source_comment_id: comment, child_ticket_id: child }).update({ child_comment_id: comment });
+        if (mode === 'disabled-child') await table('users').insert({ tenant, user_id: randomUUID(), username: randomUUID(),
+          email: childEmail, hashed_password: 'unused', user_type: 'client', contact_id: childContact.contact_name_id, is_inactive: true });
+        if (mode === 'blocked-child-board') {
+          const group = randomUUID();
+          await table('client_portal_visibility_groups').insert({ tenant, group_id: group, client_id: client, name: 'No boards' });
+          await table('contacts').where({ contact_name_id: childContact.contact_name_id }).update({ portal_visibility_group_id: group });
+        }
+        if (mode === 'retry-revoked') {
+          const reject = vi.spyOn(service, 'sendEmail').mockResolvedValueOnce({ success: false, error: 'Rate limited', providerId: 'bundle-test', providerType: 'smtp',
+            metadata: { retryable: true, definitelyNotSent: true, status: 429 } });
+          try { await expect(sendEventEmail(pending)).rejects.toMatchObject({ isRetryable: true }); }
+          finally { reject.mockRestore(); }
+          await table('comments').where({ comment_id: mirror }).update({ is_internal: true });
+          storage.mockClear();
+        }
         if (mode === 'source-internal') await table('comments').where({ comment_id: comment }).update({ is_internal: true });
         if (mode === 'source-canceled') await table('comments').where({ comment_id: comment }).update({ publish_state: 'canceled' });
         if (mode === 'source-deleted') await table('comments').where({ comment_id: comment }).update({ deleted_at: new Date() });
@@ -493,7 +518,8 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
         }
         await sendEventEmail(pending);
         expect(messages).toHaveLength(0);
-        expect(await table('ticket_comment_email_deliveries')).toHaveLength(0);
+        expect(await table('ticket_comment_email_deliveries')).toHaveLength(mode === 'retry-revoked' ? 1 : 0);
+        if (mode === 'retry-revoked') expect(await table('ticket_comment_email_deliveries').first()).toMatchObject({ state: 'failed', attempts: 1 });
         expect(storage).not.toHaveBeenCalled();
         return;
       }
@@ -504,17 +530,18 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
         finally { reject.mockRestore(); }
         expect((await table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient: childEmail }).first()).state).toBe('failed');
       }
+      if (mode === 'removed-file') await table('ticket_comment_attachments').where({ document_id: pdf.document }).update({ state: 'removed' });
       await ticketEmailSubscriberTestHarness.handleTicketCommentAdded(event);
       expect(messages).toHaveLength(2);
       const masterMail = messages.find(mail => mail.to.value[0].address === recipient);
       const childMail = messages.find(mail => mail.to.value[0].address === childEmail);
-      expect(masterMail.attachments.map((a: any) => a.content)).toEqual(['provider-limited', 'no-attachment'].includes(mode) ? [] : [bytes]);
+      expect(masterMail.attachments.map((a: any) => a.content)).toEqual(['provider-limited', 'no-attachment', 'removed-file'].includes(mode) ? [] : [bytes]);
       expect(childMail.text).toContain('Public bundle update');
       expect(childMail.text).toContain(`ALGA-TICKET-ID:${child}`);
       expect(childMail.text).not.toContain(`ALGA-COMMENT-ID:${comment}`);
       if (mode !== 'no-mirror') expect(childMail.text).toContain(`ALGA-COMMENT-ID:${mirror}`);
       else expect(childMail.text).not.toContain('ALGA-COMMENT-ID:');
-      expect(childMail.attachments.map((a: any) => a.content)).toEqual(['other-client', 'provider-limited', 'no-attachment'].includes(mode) ? [] : [bytes]);
+      expect(childMail.attachments.map((a: any) => a.content)).toEqual(['other-client', 'provider-limited', 'no-attachment', 'removed-file'].includes(mode) ? [] : [bytes]);
       if (mode === 'provider-limited') {
         expect(childMail.text).toContain('email provider limits');
         const token = childMail.text.match(/download\?token=([^\s]+)/)[1];

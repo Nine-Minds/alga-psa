@@ -22,10 +22,13 @@ export async function recipientCanReceiveCommentFiles(db: Knex, tenant: string, 
   const scoped = tenantDb(db, tenant);
   const ticket = await scoped.table('tickets').where({ ticket_id: ticketId }).first();
   if (!ticket) return false;
-  const users = await scoped.table('users').whereRaw('lower(email) = ?', [recipient.toLowerCase()]).where({ is_inactive: false });
+  const users = await scoped.table('users').whereRaw('lower(email) = ?', [recipient.trim().toLowerCase()]);
   for (const user of users) {
-    if (await canAccessAttachmentTicket(db, tenant, user.user_id, ticketId)) return true;
+    if (!user.is_inactive && await canAccessAttachmentTicket(db, tenant, user.user_id, ticketId)) return true;
   }
+  // Existing accounts must satisfy their current access policy, even if the
+  // same mailbox also belongs to a guest contact or default client location.
+  if (users.length) return false;
   const contact = await scoped.table('contacts').where({ client_id: ticket.client_id }).whereRaw('lower(email) = ?', [recipient.toLowerCase()]).first();
   if (contact) {
     if (!contact.portal_visibility_group_id) return true;

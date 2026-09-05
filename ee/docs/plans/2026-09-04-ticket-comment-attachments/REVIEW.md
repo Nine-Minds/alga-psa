@@ -1,5 +1,43 @@
 # Attachment draft revision review
 
+## Bundled-child work-order verification and guard repair (2026-09-05)
+
+**Inspect the child delivery context and persisted attachment-source relationship first**, in `ticketEmailSubscriber.ts` and `sendEventEmail.ts`. Preflight found the existing PR branch already at pushed commit `dfc618e264`, following the reported `b04f08e62d`. The initial repair is retained; this follow-up adds rejection of mismatched supplied child reply-comment IDs and prevents disabled/restricted accounts from falling through to guest contact/location eligibility. No schema, provider, publication, association or ledger changes are needed.
+
+The original regression was reproduced using the actual subscriber and send implementation from `b04f08e62d`, loaded from isolated module copies: the same-client managed-PDF case expected two decoded MIME messages but received only the master message. It passes with the repaired source. Two additional behavioral guards failed against `dfc618e264` before this follow-up: a mismatched explicit reply comment was silently replaced, and an inactive child account received a text notification through guest-contact fallback. Both now reject before storage or delivery claims.
+
+### Authorization model
+
+- The source comment must belong to the source ticket in the same tenant and have a currently published, public comment and thread. The child ticket must currently reference that source ticket through `tickets.master_ticket_id`. This is the persisted relationship authorizing public bundle notification, including link-only bundles that have no child comment.
+- When `ticket_bundle_mirrors` maps this source comment and child ticket, its child comment must actually belong to that child and remain published/public. Reply markers and reply tokens use the verified child comment; link-only bundles omit the comment marker. A supplied reply-comment ID must match the persisted mapping. Neither matching document IDs nor event payload IDs grant permission.
+- Validate the mailbox against the child ticket's current tenant/client/board visibility. Existing accounts must satisfy their account policy; they cannot become guests when disabled or denied. Separately, retain canonical document authorization against the exact master comment attachment source. A cross-client child may receive the public bundle text, but gets no master file bytes or fallback links without source access. Source document downloads/previews retain their existing policy.
+- Select only attached files of the exact source publication. Other comments, unrelated ticket documents, drafts, canceled and removed files are excluded. No child attachment association is manufactured. The source-comment/recipient ledger retains its existing deduplication, retry and indeterminate-outcome behavior. Signed provider-limit links remain bound to the recipient and source and recheck source authorization on redemption.
+
+### New verification
+
+**Behavioral tests:** 138 tests passed across 13 attachment, subscriber, authorization, storage, provider and recovery files, plus two real Redis lease/reconciliation tests. The attachment suite has 54 cases, including 21 bundled variants. These cover master/ordinary delivery, exact child MIME/reply identity, missing/forged/detached relationships, mismatched IDs, tenant/client and board restrictions, disabled accounts, internal/canceled/deleted publications, removed files, unrelated drafts and other comments' files, confirmed failure/retry, revocation before retry, duplicate processing, and provider-limited signed source links. Migrated PostgreSQL queries, subscriber and email authorization are real; permission/session identity, connection binding, provider discovery, storage bytes and signing secrets are controlled test seams. Existing download/preview and guest-code redemption regressions passed. The opt-in PgBoss recovery test additionally used real workers and loopback SMTP, with its existing documented publisher/storage/factory seams.
+
+**Focused live smoke, separate from those tests:** a second normal Enterprise Next startup used exclusive Redis event routing on port 3654 with the original process environment and edition. Committed synthetic master/child tickets, a public source comment, its persisted child mirror, and six real filesystem-backed attachments exercised the actual subscriber → `sendEventEmail` → provider → GreenMail path. This was fixture-driven Redis publication after commit, not a new browser/UI acceptance test; completed T016 remains unchanged. No provider/storage/subscriber mocks or publisher-to-send shortcut were used in this smoke.
+
+The branch's sole consumer was `consumer-713279`; `/proc` cwd plus Redis MONITOR ties its XREADGROUP/XACK to this worktree. Original entry `1788578340600-0` and replay `1788578366013-0` were acknowledged in the exclusive namespace. Master and child each received one `expected.pdf`, 638 bytes, SHA-256 `b9ef4c34b1c23875b13ddbfd92fd77177786077e8a046d0c969635364c97f282`. Decoded MIME confirms exact recipient identity, child ticket/mirror reply markers and absence of all five excluded files. Both source recipient ledgers were `sent`, attempts 1 before and after replay; no duplicate associations or notifications appeared.
+
+Local raw evidence and reproducible fixture/verification scripts: `/tmp/bundle-repair-live` (`startup.json`, `consumer.json`, `redis-consumption.jsonl`, `publish.json`, `replay.json`, `redis.json`, `mime.json`, original `.eml`, `ledger.json`, `email-logs.json`, `cleanup.json`, `mail-cleanup.json`, `redis-cleanup.json`). Reproduction and regression logs are `/tmp/bundle-repair-{original-before,guards-before,after,regressions,redis-regressions}.log`.
+
+All temporary tickets, comments, contacts, documents/storage, reply tokens, delivery rows and email logs were removed. The two smoke mailboxes and this run's separate recovery-test mailbox were removed after MIME capture. The temporary app and MONITOR process were stopped and all 317 exclusive Redis namespace keys removed. No existing ticket assignment, environment file, provider configuration or shared stream routing was changed. The unrelated package-lock and migration CLI edits remain byte-identical.
+
+**Final build and preservation checks:** affected shared/email/db/documents/storage/tickets Nx builds plus 20 dependency tasks passed; server typecheck exited 0 against the final source. The final Enterprise production Next build exited 0, including all 74 static pages. Next skips type validation, so the independent typecheck is the type-safety evidence. Earlier disk-exhaustion attempts are not passing results: final output and the separate production webpack cache were placed under `/tmp`, preserving the active server cache. Existing workflow-import, large-cache and dynamic-rendering warnings remain. Final source SHA-256 checks matched the files tested and used by the smoke. Port 3653 returned HTTP 200 with original PID 122926 after resuming its existing terminal with Ctrl-Q. Temporary build symlinks were removed; environment and unrelated diffs remained byte-identical. Logs: `/tmp/bundle-repair-{packages,typecheck,build-complete}.log`.
+
+Commands from the repository root (the build output symlink points to a dedicated `/tmp` directory with dependency resolution preserved):
+
+```sh
+NX_DAEMON=false NX_SKIP_NX_CACHE=true NODE_OPTIONS=--max-old-space-size=12288 npx nx run-many --target=build --projects=@alga-psa/shared,@alga-psa/email,@alga-psa/db,@alga-psa/documents,@alga-psa/storage,@alga-psa/tickets
+NODE_OPTIONS=--max-old-space-size=12288 npm -w server run typecheck -- --tsBuildInfoFile /tmp/bundle-repair-typecheck.tsbuildinfo
+NODE_OPTIONS=--max-old-space-size=12288 NEXT_DIST_DIR=.next-bundle-build npm -w server run build
+```
+
+No approved full-feature plan was found in `git log main..HEAD --name-only -- docs/plans/` or either plan root. Inbound-email, clipboard-image, threaded-comment and scheduled-publication plans are supporting specifications; this feature's PRD/REVIEW are retrospective work-order records, not design approval. Live Graph/Resend, Temporal and Citus remain unverified. Provider-limit fallback through the repaired bundle context is behavioral coverage, not a new live provider-limit send. Existing indeterminate outcomes still require reconciliation.
+
+
 The work order is the primary specification. No approved full-feature design plan was present in this checkout; PRD.md records that absence. This feature remains separate from mitigation card 4e6f8956-4609-49e9-90a7-6daaf858983b and PDF-link PR #3319. No delivery date is promised.
 
 ## T016 acceptance closure (2026-09-05)
