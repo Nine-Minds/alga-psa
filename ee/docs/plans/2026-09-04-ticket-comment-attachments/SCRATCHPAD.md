@@ -56,3 +56,19 @@
 - Final server typecheck passed after the stop-cache cleanup. Production builds use isolated `.next-queue-review` to preserve the active dev output. The exact reviewer reproducer remains at its supplied /tmp location; only the temporary checkout copy was removed.
 
 - Final production Next build passed after the stop-cache change; temporary output removed. Port 3653 is HTTP 200. Original environment and unrelated changes preserved and excluded from the local repair commit; no push or PR.
+
+## Final work-order validation
+
+- Verified plan history with the required main..HEAD command and both plan roots: no approved full-feature design exists; the existing PRD is retrospective and the work order remains authoritative.
+- Existing unrelated package-lock and migration-CLI changes were fingerprinted before edits. Port 3653 belongs to this worktree; no process/environment or shared infrastructure override was made.
+- Draft withdrawal now matches upload permissions (document:create, ticket:update and ticket access), while retaining tenant/actor/unclaimed-row restrictions. PostgreSQL regressions exercise refusal, successful cancellation and preservation of others' drafts and published documents.
+- Authorization responses now annotate public comment lifecycle separately from the stored document visibility setting. Card/list badges and toggles use that gate, including memoized updates. Portal conversation controls wait for current-user loading.
+- The inert executable was accepted by the existing explicit */* storage default. No approved restrictive file list supersedes that configurable Documents policy. Fixed the dropped asynchronous pre-validation rejection and MIME family prefix boundary; regression tests preserve PDF/video support and explicit unrestricted policy while rejecting unsupported types under a restrictive configuration.
+- New live portal and MSP UI PDFs atomically attached to the correct comments on the original service. Portal cancellation tombstoned its unclaimed file. Both ordinary email events were acknowledged by consumer-209014 from the profile-preferences worktree, without attachment delivery rows. Redis MONITOR maps the ACK socket to that consumer; three other worktrees share the default group. This is reproducible environment routing interference, and this run cannot claim ordinary-stack attachment delivery success. Do not treat the earlier isolated-stream SMTP evidence as resolving it.
+- New evidence: /tmp/alga-smoke-evidence/ticket-comment-attachments-final-20260905. Prior evidence remains supporting history only. Actual PgBoss/SMTP recovery passed in the new 51-test focused run; 108 additional regressions and two real Redis recovery tests passed. Transport/Temporal/storage seams in those tests remain explicitly mocked where documented by REVIEW.md.
+
+- Final audit removed silent 100-ID cancellation truncation. The updated PostgreSQL case withdraws 101 owned drafts while preserving another actor and published rows; all 51 focused tests passed again, including a fresh real PgBoss/SMTP send.
+
+- Follow-up GreenMail inspection confirms both ordinary UI events sent text-only notifications with zero attachments. Their consuming profile-preferences worktree has no attachment preparation in sendEventEmail. Version-mixed routing explains this observed failure; current attachment consumer execution remains unverified.
+
+- Final frozen-source Next production build exited 0 after the cancellation correction. Server/types/storage checks passed; source hashes verified, isolated output removed, dev PID/environment preserved. One scoped follow-up commit updates existing PR #3332; ordinary UI-to-attachment delivery remains pending (T016) because default consumers run mixed code versions.

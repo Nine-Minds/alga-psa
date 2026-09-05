@@ -1,6 +1,6 @@
 'use server'
 
-import { canAccessAttachmentTicket, canReadCommentAttachment, expireCommentAttachmentDrafts } from '@shared/lib/ticketCommentAttachments';
+import { canAccessAttachmentTicket, canReadCommentAttachment, expireCommentAttachmentDrafts, isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -690,7 +690,13 @@ export async function authorizeAndRedactDocuments<T extends IDocument>(
     if (!document || !decision?.allowed) {
       continue;
     }
-    authorizedDocuments.push(applyDocumentRedactions(document, decision.redactedFields));
+    const attachment = await tenantDb(trx, tenant).table('ticket_comment_attachments')
+      .where({ document_id: document.document_id }).first();
+    const annotated = attachment ? { ...document, comment_attachment_is_public:
+      attachment.state === 'attached' && Boolean(attachment.comment_id) &&
+      await isPublicAttachmentComment(trx, tenant, attachment.comment_id, attachment.ticket_id),
+    } : document;
+    authorizedDocuments.push(applyDocumentRedactions(annotated, decision.redactedFields));
   }
 
   return authorizedDocuments;

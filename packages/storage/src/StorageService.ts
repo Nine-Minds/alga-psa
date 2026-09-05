@@ -430,7 +430,7 @@ export class StorageService {
         mime_type: string,
         file_size: number
     ): Promise<void> {
-        validateFileConfig(mime_type, file_size);
+        await validateFileConfig(mime_type, file_size);
     }
 
     static async createDocumentSystemEntry(options: {

@@ -11,3 +11,5 @@ Acceptance: behavioral database tests for claim races, ownership, visibility, li
 Review repair acceptance: recurring discovery reuses successful runner initialization, coalesces concurrent initialization, and retries failures without recreating workers registered before a partial failure. Preserve the factory lifecycle and existing tenant schedule discovery; no schema or attachment API changes.
 
 Concurrent recurring schedule installers must share per-queue worker registration, observe the same failed attempt, and retry without duplicating successful workers.
+
+Final validation corrections retain upload-equivalent permissions for draft withdrawal, show effective comment visibility in Documents controls, gate portal composition on loaded identity, and enforce the existing configured MIME/size policy without asynchronous validation gaps. Shared-stream runtime delivery requires consumers from this implementation; mixed-worktree smoke is not delivery acceptance.

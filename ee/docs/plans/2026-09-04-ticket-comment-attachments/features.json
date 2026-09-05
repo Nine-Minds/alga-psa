@@ -58,5 +58,20 @@
     "id": "F012",
     "description": "Coordinate concurrent PgBoss registrations per queue, sharing failures and retry while preserving successful workers",
     "implemented": true
+  },
+  {
+    "id": "F013",
+    "description": "Draft cancellation enforces document:create, ticket:update, current ticket access and actor ownership",
+    "implemented": true
+  },
+  {
+    "id": "F014",
+    "description": "Document card/list badges reflect public comment lifecycle and portal composition waits for identity",
+    "implemented": true
+  },
+  {
+    "id": "F015",
+    "description": "Storage pre-validation awaits rejection and MIME family wildcards respect the subtype boundary",
+    "implemented": true
   }
 ]

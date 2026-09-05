@@ -78,6 +78,42 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
     await table('comments').where({comment_id:id}).update({note:note(file)});
     await reconcileCommentAttachments(trx, tenant, id, user);
   }
+  it('withdraws only authorized actor-owned drafts and preserves published/shared documents', async () => {
+    const { discardCommentAttachmentDrafts } = await import('@alga-psa/tickets/actions/comment-actions/commentAttachmentDraftActions');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    const draft = await upload(), published = await upload(), other = await upload('other.pdf', 'application/pdf', 12, clientUser);
+    const additionalDrafts = [];
+    for (let index = 0; index < 100; index++) additionalDrafts.push(await upload());
+    await attach(published.file);
+    routeSession.user = { ...await table('users').where({ user_id: actor }).first(), tenant };
+    try {
+      routeSession.permitted = false;
+      await expect(discardCommentAttachmentDrafts({ ticketId: ticket, documentIds: [draft.document] })).rejects.toThrow('Permission denied');
+      expect((await table('ticket_comment_attachments').where({ document_id: draft.document }).first()).state).toBe('draft');
+      routeSession.permitted = true;
+      routeSession.user = { ...await table('users').where({ user_id: otherUser }).first(), tenant };
+      await expect(discardCommentAttachmentDrafts({ ticketId: ticket, documentIds: [draft.document] })).rejects.toThrow('Permission denied');
+      routeSession.user = { ...await table('users').where({ user_id: actor }).first(), tenant };
+      const ownedDraftIds = [draft.document, ...additionalDrafts.map(row => row.document)];
+      const result = await discardCommentAttachmentDrafts({ ticketId: ticket, documentIds: [...ownedDraftIds, published.document, other.document] });
+      expect(new Set(result.deletedDocumentIds)).toEqual(new Set(ownedDraftIds));
+      expect((await table('ticket_comment_attachments').where({ document_id: published.document }).first()).state).toBe('attached');
+      expect((await table('ticket_comment_attachments').where({ document_id: other.document }).first()).state).toBe('draft');
+      expect(await table('documents').where({ document_id: draft.document }).first()).toBeTruthy();
+      expect(await table('document_associations').where({ document_id: draft.document }).first()).toBeTruthy();
+    } finally { routeSession.permitted = true; connection.mockRestore(); }
+  });
+  it('returns effective attachment visibility without changing the document setting', async () => {
+    const { document, file } = await upload();
+    const user = { ...await table('users').where({ user_id: actor }).first(), tenant };
+    routeSession.permitted = true;
+    expect(await getAuthorizedDocumentById(trx, tenant, user, document)).toMatchObject({ is_client_visible: true, comment_attachment_is_public: false });
+    await attach(file);
+    expect(await getAuthorizedDocumentById(trx, tenant, user, document)).toMatchObject({ comment_attachment_is_public: true });
+    await table('comments').where({ comment_id: comment }).update({ is_internal: true });
+    expect(await getAuthorizedDocumentById(trx, tenant, user, document)).toMatchObject({ is_client_visible: true, comment_attachment_is_public: false });
+    expect((await table('documents').where({ document_id: document }).first()).is_client_visible).toBe(true);
+  });
   it('claims a public PDF to the exact comment; ticket Documents association remains', async () => {
     const {document,file} = await upload();
     expect(await canReadCommentAttachment(trx,tenant,clientUser,document)).toBe(false);

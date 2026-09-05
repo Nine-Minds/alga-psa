@@ -2,6 +2,30 @@
 
 The work order is the primary specification. No approved full-feature design plan was present in this checkout; PRD.md records that absence. This feature remains separate from mitigation card 4e6f8956-4609-49e9-90a7-6daaf858983b and PDF-link PR #3319. No delivery date is promised.
 
+## Final work-order follow-up (2026-09-05)
+
+Review `commentAttachmentDraftActions.ts` first: cancellation now requires `document:create`, `ticket:update` and current ticket access, in addition to tenant/actor ownership and unclaimed state. Upload already had those permission gates. The new PostgreSQL cases cover denied cancellation, successful withdrawal of 101 owned drafts, other-user drafts and retained published/shared documents. Silent truncation to 100 IDs was removed so cancellation cannot leave additional tracked uploads claimable.
+
+Next inspect the read-time `comment_attachment_is_public` annotation in document authorization and its use in card/list badges and toggles. It preserves the stored visibility setting while reporting the effective comment restriction. Portal conversation controls now wait for identity loading. Live portal compose/cancel, MSP compose, and internal card/list rendering passed, including light/dark screenshots.
+
+Storage defaults deliberately accept `*/*`; no approved plan establishes a different supported-file list. An inert executable under that explicit policy is not a feature-specific bypass. The actual validation gaps were a missing await (pre-validation returned before MIME/size rejection) and MIME-family prefix matching (`video/*` accepted `videoevil/...`). Both are fixed and behaviorally tested; configured PDF/video support and the existing unrestricted Documents policy are preserved.
+
+**Ordinary-stack delivery remains unverified due to reproduced environment routing interference.** New portal and MSP UI PDF comments committed and dispatched on the original port-3653 process with no stream/edition overrides. Redis MONITOR proved both email-channel messages were acknowledged by `consumer-209014`, belonging to the profile-preferences worktree. Global/internal messages went to two other worktrees. The attachment worktree's consumer was active in the same group but did not consume either email event. Neither new comment acquired an attachment delivery ledger row. GreenMail contains both text-only notifications with zero attachments; the consuming worktree's sendEventEmail lacks attachment preparation. This is concrete version-mixed routing evidence, not proof that the current attachment subscriber failed. The original undelivered shared-stream event remains unresolved; isolated SMTP success must not be presented as ordinary-stack acceptance. A deployment with consumers all running this PR still needs UI-to-SMTP validation.
+
+New validation: **161 distinct passing tests** (51 focused attachment/storage/UI tests, 108 existing recovery/Graph/Temporal/authorization/inline-image regressions, two real Redis lease/reconciliation tests). The focused set includes a real PgBoss-to-GreenMail send and exact PDF MIME/deduplication assertions; its factory, schedule installation, storage and publication-to-send seams are documented below. Graph/Resend transport and Temporal forwarding tests are behavioral mocks, not live provider/cluster coverage. The eight card/list tests also passed after the final memo comparison correction; the eight unchanged upload-hook tests passed again in the final source.
+
+Builds: types/storage package builds, types/storage typechecks, source-package Nx build targets plus 44 dependency tasks, and server typecheck passed. Source-transpiled packages use `nx:noop` build targets; their standalone npm `tsup` script has no input configuration and is not their build contract. Production Next builds passed with isolated `.next-attachment-final`; the final frozen-source build exited 0 after the 101-draft correction. Its source hashes were verified, and only its isolated output was removed. Next skips type validation, so the separate server typecheck is required. Existing workflow import, cache-size and dynamic-rendering warnings remain.
+
+Evidence: `/tmp/alga-smoke-evidence/ticket-comment-attachments-final-20260905`; prior `/tmp/alga-smoke-evidence/ticket-comment-attachments-20260905` is supporting history only. The three new UI documents/files and two comments were removed after evidence capture; original synthetic assignment and theme were restored. No customer records or recipients were used. Live Graph/Resend, EE Temporal and Citus remain unavailable/unverified. No approved full-feature design was found; this is a validation record, not retroactive design approval.
+
+Commands from `server`:
+
+```sh
+COMMENT_RECOVERY_LIVE_SMOKE=1 TEST_DB_NAME=test_comment_attachments_draft DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run src/test/integration/ticketCommentAttachmentsIntegration.test.ts src/test/unit/storageAttachmentValidation.test.ts ../packages/documents/src/components/DocumentStorageCard.visibility.test.tsx ../packages/documents/src/components/DocumentListView.visibility.test.tsx ../packages/tickets/src/components/ticket/useTicketRichTextUploadSession.test.tsx
+NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck
+NODE_OPTIONS=--max-old-space-size=12288 NEXT_DIST_DIR=.next-attachment-final npm run build
+```
+
 ## Inspect first
 
 For the concurrent-queue follow-up, inspect `PgBossJobRunner.registerHandler` first: one promise per queue coordinates overlapping callers, rejects every waiter on failure, and retains successful workers. Then review the same-queue discovery and concurrent failure/retry cases added to `commentRecoveryWorkerRegistration.test.ts`.
@@ -105,3 +129,5 @@ COMMENT_RECOVERY_LIVE_SMOKE=1 TEST_DB_NAME=test_comment_attachments_draft DB_HOS
 ```
 
 Final follow-up checks: server typecheck and production Next build both passed after the stop-cache change. The build used `NODE_OPTIONS=--max-old-space-size=12288 NEXT_DIST_DIR=.next-queue-review npm run build`; isolated output was removed after verification. It reported warnings in unchanged workflow imports and dynamic rendering. Port 3653 returned HTTP 200, the environment file and unrelated package-lock/migration CLI diffs stayed byte-identical, and live-smoke PostgreSQL fixtures/schema were cleaned. The scoped repair is committed locally without a push or PR.
+
+Final follow-up completion: production Next build and server typecheck exited 0, frozen source hashes matched, isolated build output was removed, and original Next PID 122926 still serves port 3653. Environment and unrelated package-lock/migration-CLI diffs remain byte-identical (including the existing CLI mode change). The existing PR branch receives one scoped follow-up commit; ordinary UI attachment delivery remains pending as T016.

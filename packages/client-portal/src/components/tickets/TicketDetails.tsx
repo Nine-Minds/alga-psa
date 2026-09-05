@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { RichTextViewer } from '@alga-psa/ui/editor';
+import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Card } from '@alga-psa/ui/components/Card';
 import { TicketDocumentsSection, TicketConversation, TicketAppointmentRequests, TicketOriginBadge, type ITicketAppointmentRequest } from '@alga-psa/tickets/components';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -854,7 +855,7 @@ export function TicketDetails({
           {/* Comments Section */}
           {ticket.conversations && (
             <div>
-              <TicketConversation
+              {currentUser ? <TicketConversation
                 key={`conv-${conversationVersion}`}
                 ticket={ticket}
                 conversations={ticket.conversations}
@@ -883,7 +884,7 @@ export function TicketDetails({
                 overrides={commentOverrides}
                 onClipboardImageUploaded={refreshTicketDocuments}
                 defaultNewestFirst
-              />
+              /> : <LoadingIndicator text={t('common.loading', 'Loading...')} />}
             </div>
           )}
 

@@ -58,5 +58,25 @@
     "id": "T012",
     "description": "Actual concurrent same-queue discovery, shared scheduler registration failure/retry and replacement handler execution without duplicate workers, and cache invalidation on stop",
     "implemented": true
+  },
+  {
+    "id": "T013",
+    "description": "Database cancellation permission/ownership and effective visibility regressions",
+    "implemented": true
+  },
+  {
+    "id": "T014",
+    "description": "Document card/list behavioral visibility tests and live portal compose/cancel validation",
+    "implemented": true
+  },
+  {
+    "id": "T015",
+    "description": "Behavioral asynchronous size/MIME rejection and configurable wildcard policy coverage",
+    "implemented": true
+  },
+  {
+    "id": "T016",
+    "description": "Ordinary UI-to-email acceptance with all active stream consumers running this implementation; mixed-worktree routing prevented verification",
+    "implemented": false
   }
 ]
