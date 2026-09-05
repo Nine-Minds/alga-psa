@@ -420,6 +420,137 @@ describe.runIf(enabled)('ticket comment attachments (migrated PostgreSQL)', () =
       expect(await addClientTicketComment(ticket, note(reply.file), false, false, root.comment_id)).not.toBe(true);
     } finally { connection.mockRestore(); publish.mockRestore(); update.mockRestore(); }
   });
+  it.each(['same-client', 'other-client', 'no-mirror', 'client-email', 'no-attachment', 'provider-limited', 'failed-retry',
+    'source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant'])('bundled %s notifications preserve source authorization and child reply identity on replay', async mode => {
+    const { TenantEmailService } = await import('@alga-psa/email');
+    const { SMTPEmailProvider } = await import('@alga-psa/email/providers/SMTPEmailProvider');
+    const { ticketEmailSubscriberTestHarness } = await import('@/lib/eventBus/subscribers/ticketEmailSubscriber');
+    const pdf = await upload(); await upload('unrelated.pdf');
+    if (mode !== 'no-attachment') await attach(pdf.file);
+    const content = JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'Public bundle update' }] },
+      ...(mode === 'no-attachment' ? [] : JSON.parse(note(pdf.file)))]);
+    await table('comments').where({ comment_id: comment }).update({ note: content });
+    const primary = await table('contacts').where({ email: recipient }).first();
+    await table('tickets').where({ ticket_id: ticket }).update({ contact_name_id: primary.contact_name_id });
+    const child = randomUUID(), mirror = randomUUID(), thread = randomUUID();
+    const childEmail = mode === 'other-client' ? 'other@example.test' : 'bundle-child@example.test';
+    let childContact = await table('contacts').where({ email: childEmail }).first();
+    if (!childContact) [childContact] = await table('contacts').insert({ tenant, contact_name_id: randomUUID(), client_id: client, full_name: 'Child requester', email: childEmail }).returning('*');
+    await table('tickets').insert({ tenant, ticket_id: child, ticket_number: 'ATT-CHILD', client_id: childContact.client_id,
+      contact_name_id: childContact.contact_name_id, title: 'Child ticket', entered_by: actor, master_ticket_id: ticket });
+    if (mode === 'client-email') {
+      await table('tickets').where({ ticket_id: child }).update({ contact_name_id: null });
+      await table('contacts').where({ contact_name_id: childContact.contact_name_id }).delete();
+      await table('client_locations').insert({ tenant, location_id: randomUUID(), client_id: client, location_name: 'Default',
+        address_line1: '1 Test Street', city: 'Test', country_code: 'US', country_name: 'United States', is_default: true, is_active: true, email: childEmail });
+    }
+    if (mode !== 'no-mirror') {
+      await table('comment_threads').insert({ tenant, thread_id: thread, ticket_id: child, root_comment_id: mirror, is_internal: false, created_by: actor });
+      await table('comments').insert({ tenant, comment_id: mirror, thread_id: thread, ticket_id: child, note: content, is_internal: false, is_resolution: false, is_system_generated: true });
+      await table('ticket_bundle_mirrors').insert({ tenant, source_comment_id: comment, child_ticket_id: child, child_comment_id: mirror });
+    }
+    await table('tenant_email_templates').insert({ tenant, name: 'ticket-comment-added', language_code: 'en', subject: 'Bundle update', html_content: '{{{comment.content}}}', text_content: '{{comment.text}}' });
+    vi.stubEnv('NEXTAUTH_URL', 'http://localhost:3653');
+    const bytes = Buffer.from('%PDF-bundled-notification'), messages: any[] = [];
+    const { sendEventEmail } = await import('@/lib/notifications/sendEventEmail');
+    const { getSecretProviderInstance } = await import('@alga-psa/core/secrets');
+    const secret = vi.spyOn(await getSecretProviderInstance(), 'getAppSecret').mockResolvedValue('bundle-test-secret');
+    const provider = new SMTPEmailProvider('bundle-test');
+    if (mode === 'provider-limited') provider.capabilities.maxAttachmentSize = 1;
+    const stream = nodemailer.createTransport({ streamTransport: true, buffer: true });
+    // Optional local smoke sends only synthetic fixtures to the loopback GreenMail sink.
+    const smtp = process.env.COMMENT_BUNDLE_LIVE_SMOKE === '1'
+      ? nodemailer.createTransport({ host: '127.0.0.1', port: 3025, secure: false, ignoreTLS: true }) : null;
+    (provider as any).initialized = true; (provider as any).config = { from: 'agent@example.test' };
+    (provider as any).transporter = { sendMail: async (mail: any) => {
+      const sent = await stream.sendMail(mail);
+      if (smtp) await smtp.sendMail({ envelope: sent.envelope, raw: sent.message as Buffer });
+      messages.push(await simpleParser(sent.message as Buffer)); return sent;
+    } };
+    const service = TenantEmailService.getInstance(tenant);
+    const snapshot = vi.spyOn(service as any, 'refreshProviderState').mockResolvedValue({ emailProvider: provider, providerInitError: null, fromAddress: 'agent@example.test' });
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(trx);
+    const tenantConnection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant } as any);
+    const storage = vi.spyOn(StorageService, 'downloadFile').mockResolvedValue({ buffer: bytes } as any);
+    const event = { id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', payload: { tenantId: tenant, ticketId: ticket, actorUserId: actor,
+      comment: { id: comment, content, author: 'Agent', isInternal: false } } } as any;
+    try {
+      const pending = { tenantId: tenant, to: childEmail, subject: 'Pending bundle update', template: 'ticket-comment-added', locale: 'en' as const,
+        context: { ticket: { id: 'ATT-CHILD' }, comment: { content } },
+        commentSource: { ticketId: ticket, commentId: comment }, replyContext: { ticketId: child } };
+      if (['source-internal', 'source-canceled', 'source-deleted', 'child-internal', 'child-canceled', 'detached', 'wrong-tenant'].includes(mode)) {
+        if (mode === 'source-internal') await table('comments').where({ comment_id: comment }).update({ is_internal: true });
+        if (mode === 'source-canceled') await table('comments').where({ comment_id: comment }).update({ publish_state: 'canceled' });
+        if (mode === 'source-deleted') await table('comments').where({ comment_id: comment }).update({ deleted_at: new Date() });
+        if (mode === 'child-internal') await table('comment_threads').where({ thread_id: thread }).update({ is_internal: true });
+        if (mode === 'child-canceled') await table('comments').where({ comment_id: mirror }).update({ publish_state: 'canceled' });
+        if (mode === 'detached') await table('tickets').where({ ticket_id: child }).update({ master_ticket_id: null });
+        if (mode === 'wrong-tenant') {
+          const foreignTenant = randomUUID();
+          await tenantDb(trx, foreignTenant).unscoped('tenants', 'create isolated foreign tenant').insert({ tenant: foreignTenant, client_name: 'Other tenant', email: 'foreign@example.test', product_code: 'psa' });
+          await tenantDb(trx, foreignTenant).table('tenant_email_templates').insert({ tenant: foreignTenant, name: 'ticket-comment-added', language_code: 'en', subject: 'Update', html_content: '{{{comment.content}}}', text_content: '{{comment.text}}' });
+          pending.tenantId = foreignTenant;
+        }
+        await sendEventEmail(pending);
+        expect(messages).toHaveLength(0);
+        expect(await table('ticket_comment_email_deliveries')).toHaveLength(0);
+        expect(storage).not.toHaveBeenCalled();
+        return;
+      }
+      if (mode === 'failed-retry') {
+        const reject = vi.spyOn(service, 'sendEmail').mockResolvedValueOnce({ success: false, error: 'Rate limited', providerId: 'bundle-test', providerType: 'smtp',
+          metadata: { retryable: true, definitelyNotSent: true, status: 429 } });
+        try { await expect(sendEventEmail(pending)).rejects.toMatchObject({ isRetryable: true }); }
+        finally { reject.mockRestore(); }
+        expect((await table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient: childEmail }).first()).state).toBe('failed');
+      }
+      await ticketEmailSubscriberTestHarness.handleTicketCommentAdded(event);
+      expect(messages).toHaveLength(2);
+      const masterMail = messages.find(mail => mail.to.value[0].address === recipient);
+      const childMail = messages.find(mail => mail.to.value[0].address === childEmail);
+      expect(masterMail.attachments.map((a: any) => a.content)).toEqual(['provider-limited', 'no-attachment'].includes(mode) ? [] : [bytes]);
+      expect(childMail.text).toContain('Public bundle update');
+      expect(childMail.text).toContain(`ALGA-TICKET-ID:${child}`);
+      expect(childMail.text).not.toContain(`ALGA-COMMENT-ID:${comment}`);
+      if (mode !== 'no-mirror') expect(childMail.text).toContain(`ALGA-COMMENT-ID:${mirror}`);
+      else expect(childMail.text).not.toContain('ALGA-COMMENT-ID:');
+      expect(childMail.attachments.map((a: any) => a.content)).toEqual(['other-client', 'provider-limited', 'no-attachment'].includes(mode) ? [] : [bytes]);
+      if (mode === 'provider-limited') {
+        expect(childMail.text).toContain('email provider limits');
+        const token = childMail.text.match(/download\?token=([^\s]+)/)[1];
+        expect(verifyAttachmentLink(decodeURIComponent(token), 'bundle-test-secret')).toMatchObject({ tenant, ticketId: ticket, commentId: comment, documentId: pdf.document, recipient: childEmail });
+      }
+      if (mode === 'other-client') {
+        expect(childMail.html).not.toContain(pdf.file);
+        expect(childMail.html).not.toContain('/api/ticket-comment-attachments/download');
+        expect(await canReadCommentAttachment(trx, tenant, otherUser, pdf.document)).toBe(false);
+      }
+      const token = await table('email_reply_tokens').where({ ticket_id: child, recipient_email: childEmail }).first();
+      expect(token.comment_id).toBe(mode === 'no-mirror' ? null : mirror);
+      if (mode === 'no-attachment') {
+        expect(await table('ticket_comment_email_deliveries')).toHaveLength(0);
+        expect(storage).not.toHaveBeenCalled();
+        return; // Unmanaged comments retain their existing notification lifecycle.
+      }
+      expect(await table('ticket_comment_attachments').where({ document_id: pdf.document })).toMatchObject([{ ticket_id: ticket, comment_id: comment }]);
+      await ticketEmailSubscriberTestHarness.handleTicketCommentAdded(event);
+      expect(messages).toHaveLength(2);
+      expect((await table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient: childEmail }).first())).toMatchObject({ state: 'sent', attempts: mode === 'failed-retry' ? 2 : 1 });
+      expect((await table('ticket_comment_email_deliveries').where({ comment_id: comment, recipient }).first())).toMatchObject({ state: 'sent', attempts: 1 });
+      if (smtp) {
+        for (const [mailbox, marker, expected] of [[recipient, `ALGA-COMMENT-ID:${comment}`, masterMail], [childEmail, `ALGA-TICKET-ID:${child}`, childMail]] as const) {
+          const response = await fetch(`http://127.0.0.1:8080/api/user/${encodeURIComponent(mailbox)}/messages`);
+          expect(response.ok).toBe(true);
+          const received = await Promise.all((await response.json() as any[]).map(row => simpleParser(row.mimeMessage)));
+          const matching = received.filter(mail => mail.text?.includes(marker));
+          expect(matching).toHaveLength(1);
+          expect(matching[0].attachments.map(a => a.content)).toEqual(expected.attachments.map((a: any) => a.content));
+          expect(matching[0].text).toBe(expected.text);
+        }
+      }
+    } finally { connection.mockRestore(); tenantConnection.mockRestore(); storage.mockRestore(); snapshot.mockRestore(); secret.mockRestore(); stream.close(); smtp?.close(); vi.unstubAllEnvs(); }
+  });
+
   it.each(['resend', 'graph'])('%s recovers confirmed provider non-delivery through the queue without repeating a successful recipient, and exposes ambiguous outcomes', async providerKind => {
     const {TenantEmailService}=await import('@alga-psa/email');
     const {ResendEmailProvider}=await import('@alga-psa/email/providers/ResendEmailProvider');

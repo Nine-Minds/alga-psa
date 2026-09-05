@@ -13,3 +13,5 @@ Review repair acceptance: recurring discovery reuses successful runner initializ
 Concurrent recurring schedule installers must share per-queue worker registration, observe the same failed attempt, and retry without duplicating successful workers.
 
 Final validation corrections retain upload-equivalent permissions for draft withdrawal, show effective comment visibility in Documents controls, gate portal composition on loaded identity, and enforce the existing configured MIME/size policy without asynchronous validation gaps. Shared-stream runtime delivery requires consumers from this implementation; mixed-worktree smoke is not delivery acceptance.
+
+Bundled notification repair: keep the source comment/attachment identity separate from the child ticket reply destination. Resolve any mirrored reply comment from tenant-scoped bundle mappings, and revalidate the bundle and public source/mirror on retry. A bundle never grants access to master documents: existing source document authorization controls bytes and fallback links. Child requesters retain public text notifications even when source files are not authorized. Preserve source-comment recipient deduplication.

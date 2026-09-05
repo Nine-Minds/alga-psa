@@ -32,8 +32,11 @@ export async function recipientCanReceiveCommentFiles(db: Knex, tenant: string, 
     const group = await scoped.table('client_portal_visibility_groups').where({ group_id: contact.portal_visibility_group_id, client_id: ticket.client_id }).first();
     return Boolean(group && await scoped.table('client_portal_visibility_group_boards').where({ group_id: group.group_id, board_id: ticket.board_id }).first());
   }
-  const client = await scoped.table('clients').where({ client_id: ticket.client_id }).first();
-  return typeof client?.email === 'string' && client.email.toLowerCase() === recipient.toLowerCase();
+  // Ticket notifications use the default active location when no contact is set.
+  const location = await scoped.table('client_locations')
+    .where({ client_id: ticket.client_id, is_default: true, is_active: true })
+    .whereRaw('lower(email) = ?', [recipient.toLowerCase()]).first();
+  return Boolean(location);
 }
 
 /** Mailbox recipients receive the same current document policy as a portal principal. */

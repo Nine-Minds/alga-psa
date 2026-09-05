@@ -141,3 +141,22 @@ COMMENT_RECOVERY_LIVE_SMOKE=1 TEST_DB_NAME=test_comment_attachments_draft DB_HOS
 Final follow-up checks: server typecheck and production Next build both passed after the stop-cache change. The build used `NODE_OPTIONS=--max-old-space-size=12288 NEXT_DIST_DIR=.next-queue-review npm run build`; isolated output was removed after verification. It reported warnings in unchanged workflow imports and dynamic rendering. Port 3653 returned HTTP 200, the environment file and unrelated package-lock/migration CLI diffs stayed byte-identical, and live-smoke PostgreSQL fixtures/schema were cleaned. The scoped repair is committed locally without a push or PR.
 
 Final follow-up completion: production Next build and server typecheck exited 0, frozen source hashes matched, isolated build output was removed, and original Next PID 122926 still serves port 3653. Environment and unrelated package-lock/migration-CLI diffs remain byte-identical (including the existing CLI mode change). The existing PR branch receives one scoped follow-up commit; ordinary UI attachment delivery remains pending as T016.
+
+## Bundled child notification repair
+
+A master public comment with a managed attachment suppressed its child notifications because the email paired the child ticket ID with the master comment ID. The subscriber now supplies a separate source publication. `sendEventEmail` validates the tenant-scoped bundle, source publication, destination recipient and any child mirror on each attempt, then uses the child mirror for reply markers. Bundles without a mirror reply to the child ticket without a comment ID.
+
+Files, signed links and the delivery ledger continue to use the source comment. Bundling grants no extra document access: a requester from another client receives public text with the denied file links removed. Authorized recipients receive source files, and the source attachment stays associated only with its original ticket/comment. The default active client location email fallback now matches ticket notification recipient selection.
+
+Validation: **68 behavioral tests passed**, including **14 new bundle cases**. The first three cases failed before the runtime repair. The suite runs actual subscriber → sendEventEmail → TenantEmailService → SMTP provider code and real PostgreSQL queries. Six attachment delivery variants also sent real SMTP to local GreenMail; received MIME matched original PDF bytes and child reply markers, and replay produced no duplicates. Existing source/publication/link/provider-queue tests passed. One unrelated opt-in PgBoss smoke was skipped.
+
+The new checks cover same-client and cross-client recipients, absent mirrors, default location recipients, ordinary text comments, provider-limit signed links, confirmed-failure retry, source/child revocation, detachment and tenant isolation. Fixtures roll back; provider discovery, storage content and signing secrets are controlled test seams. This repair does not claim new browser/Redis/paid-provider validation; prior T016 evidence remains the full feature UI smoke history.
+
+Run from `server`:
+
+```sh
+COMMENT_BUNDLE_LIVE_SMOKE=1 TEST_DB_NAME=test_comment_attachments_draft DB_HOST=127.0.0.1 DB_PORT=5472 npx vitest run src/test/integration/ticketCommentAttachmentsIntegration.test.ts src/test/unit/notifications/ticketCommentInlineImageEmail.test.ts src/lib/eventBus/subscribers/__tests__/ticketEmailSubscriber.suppression.test.ts src/test/unit/notifications/ticketEmailSubscriber.watchers.test.ts
+NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck
+```
+
+Final server typecheck passed with the larger heap, including a final-source recheck. `git diff --check` passed. The pre-existing package-lock and migration CLI diffs remain byte-identical and are excluded from the repair. Local evidence is summarized in `/tmp/comment-bundle-evidence/result.json`; no service or environment configuration was changed.

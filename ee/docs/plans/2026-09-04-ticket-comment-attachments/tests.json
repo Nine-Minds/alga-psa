@@ -78,5 +78,10 @@
     "id": "T016",
     "description": "Actual Enterprise Next startup: MSP public PDF and portal reply through exclusive real Redis routing, subscriber, sendEventEmail, real storage and GreenMail; exact MIME bytes, sent recipient ledger, replay deduplication and internal/canceled exclusion",
     "implemented": true
+  },
+  {
+    "id": "T017",
+    "description": "DB-backed actual subscriber/send path covers bundled child MIME, reply mapping, source file authorization, revocation and replay deduplication",
+    "implemented": true
   }
 ]

@@ -1,4 +1,4 @@
-import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery } from './ticketCommentAttachmentEmail';
+import { prepareCommentAttachmentEmail, claimCommentEmailDelivery, finishCommentEmailDelivery, recipientCanReceiveCommentFiles } from './ticketCommentAttachmentEmail';
 import { isPublicAttachmentComment } from '@shared/lib/ticketCommentAttachments';
 import { randomUUID } from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
@@ -50,6 +50,8 @@ export interface SendEmailParams {
    * Optional notification subtype association (links to notification_subtypes.id).
    */
   notificationSubtypeId?: number;
+  /** Source publication when a bundle notification replies to a different ticket. */
+  commentSource?: { ticketId: string; commentId: string };
   replyContext?: {
     ticketId?: string;
     projectId?: string;
@@ -377,8 +379,27 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
     // correct for the HTML body only.
     const subjectTemplate = Handlebars.compile(emailSubject, { noEscape: true });
 
-    const attachmentCommentId = params.template === 'ticket-comment-added' ? params.replyContext?.commentId : undefined;
-    const attachmentTicketId = params.replyContext?.ticketId;
+    const attachmentCommentId = params.template === 'ticket-comment-added'
+      ? params.commentSource?.commentId || params.replyContext?.commentId : undefined;
+    const attachmentTicketId = params.commentSource?.ticketId || params.replyContext?.ticketId;
+    if (params.template === 'ticket-comment-added' && params.commentSource) {
+      const destinationTicketId = params.replyContext?.ticketId;
+      // Bundling shares public updates, not document permissions. Recheck the
+      // destination and source on every retry before preparing source files.
+      const child = destinationTicketId && await db.table('tickets').where({
+        ticket_id: destinationTicketId, master_ticket_id: attachmentTicketId,
+      }).first();
+      if (!child || !await isPublicAttachmentComment(knex, params.tenantId, attachmentCommentId!, attachmentTicketId!) ||
+        !await recipientCanReceiveCommentFiles(knex, params.tenantId, destinationTicketId!, params.to)) return;
+
+      const mirror = await db.table('ticket_bundle_mirrors').where({
+        source_comment_id: attachmentCommentId!, child_ticket_id: destinationTicketId!,
+      }).first();
+      if (mirror && !await isPublicAttachmentComment(knex, params.tenantId, mirror.child_comment_id, destinationTicketId!)) return;
+      // Link-only bundles have no child comment. Never persist a master comment
+      // under a child's reply token; incoming replies still target that ticket.
+      params = { ...params, replyContext: { ...params.replyContext, commentId: mirror?.child_comment_id } };
+    }
     let managedCommentDelivery = false;
     let attachmentDownloadText = '';
     if (attachmentCommentId && attachmentTicketId) {

@@ -73,5 +73,10 @@
     "id": "F015",
     "description": "Storage pre-validation awaits rejection and MIME family wildcards respect the subtype boundary",
     "implemented": true
+  },
+  {
+    "id": "F016",
+    "description": "Bundled child notifications separate source attachment authorization from child reply context without widening document access",
+    "implemented": true
   }
 ]
