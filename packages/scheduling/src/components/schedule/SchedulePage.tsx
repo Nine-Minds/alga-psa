@@ -9,9 +9,14 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Calendar, Settings } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getAppointmentRequests } from '@alga-psa/scheduling/actions';
-import { getCurrentUserPermissions, getCurrentUser, getReportsToSubordinates } from '@alga-psa/user-composition/actions';
-import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
+import { getAppointmentRequests, getAvailabilitySettingsAccess } from '@alga-psa/scheduling/actions';
+import {
+  isReloadNavigation,
+  readAvailabilityAccessHint,
+  readAvailabilityContext,
+  writeAvailabilityAccessHint,
+  writeAvailabilityContext,
+} from '../../lib/availabilityContext';
 
 export default function SchedulePage() {
   const { t } = useTranslation('msp/schedule');
@@ -33,38 +38,32 @@ export default function SchedulePage() {
     }
   };
 
+  // Transient failures (e.g. action calls interrupted mid-navigation) must not
+  // permanently hide the Configure Availability button, so retry before giving up.
   const checkPermissions = async () => {
-    const permissions = await getCurrentUserPermissions();
-    // User can configure availability if they have 'user:read' permission OR are a team manager
-    const hasUserReadPermission = permissions.includes('user:read');
-
-    if (hasUserReadPermission) {
-      setCanConfigureAvailability(true);
-      return;
-    }
-
-    // Check if user is a team manager
-    try {
-      const currentUser = await getCurrentUser();
-      if (currentUser) {
-        const teams = await getTeams();
-        if (isTeamActionError(teams)) {
-          console.warn('Cannot load teams for availability permission check:', teams);
-          setCanConfigureAvailability(false);
+    const retryDelaysMs = [1000, 2500];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const result = await getAvailabilitySettingsAccess();
+        if (result.success) {
+          const canConfigure = Boolean(
+            result.data?.canReadSystemSettings || result.data?.canManageUserHours
+          );
+          setCanConfigureAvailability(canConfigure);
+          writeAvailabilityAccessHint(canConfigure);
           return;
         }
-        const isManager = teams.some(team => team.manager_id === currentUser.user_id);
-        if (isManager) {
-          setCanConfigureAvailability(true);
-          return;
-        }
-
-        const subordinates = await getReportsToSubordinates(currentUser.user_id);
-        setCanConfigureAvailability(subordinates.length > 0);
+      } catch (error) {
+        console.error('Failed to check availability access:', error);
       }
-    } catch (error) {
-      console.error('Failed to check team manager status:', error);
-      setCanConfigureAvailability(false);
+      if (attempt >= retryDelaysMs.length) {
+        // Only a definitive answer may hide the button. Once the checks are
+        // exhausted we keep this tab's last known-good access rather than
+        // letting a network blip strip a permitted user of the entry point.
+        setCanConfigureAvailability(readAvailabilityAccessHint());
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryDelaysMs[attempt]));
     }
   };
 
@@ -72,6 +71,20 @@ export default function SchedulePage() {
     fetchPendingCount();
     checkPermissions();
   }, [refreshKey]);
+
+  // Paint the button from this tab's remembered answer instead of waiting on the
+  // bootstrap read; checkPermissions overwrites it either way. Applied on mount
+  // rather than in the initial state so server and client markup still agree.
+  useEffect(() => {
+    if (readAvailabilityAccessHint()) {
+      setCanConfigureAvailability(true);
+    }
+    // Reopen only after a refresh; on ordinary navigation the remembered scope
+    // is applied when the reader opens the dialog themselves.
+    if (readAvailabilityContext()?.isOpen && isReloadNavigation()) {
+      setShowAvailabilitySettings(true);
+    }
+  }, []);
 
   // Auto-open requests panel if requestId is in URL
   useEffect(() => {
@@ -92,7 +105,10 @@ export default function SchedulePage() {
             <Button
               id="configure-availability-button"
               variant="outline"
-              onClick={() => setShowAvailabilitySettings(true)}
+              onClick={() => {
+                setShowAvailabilitySettings(true);
+                writeAvailabilityContext({ isOpen: true });
+              }}
             >
               <Settings className="h-4 w-4 mr-2" />
               {t('page.actions.configureAvailability', {
@@ -111,12 +127,14 @@ export default function SchedulePage() {
               defaultValue: 'Appointment Requests',
             })}
             {pendingCount > 0 && (
-              <Badge variant="error" className="ml-2 px-2 py-0.5">
+              <Badge variant="error" className="absolute -top-2 -right-2 px-2 py-0.5">
                 {pendingCount}
               </Badge>
             )}
           </Button>
-          <div ref={setHeaderActionsSlot} className="flex items-center" />
+          {/* The calendar portals a w-9 share menu here after mount; reserving
+              the width keeps the header buttons from shifting mid-click. */}
+          <div ref={setHeaderActionsSlot} className="flex min-w-9 items-center justify-end" />
         </div>
       </div>
       <div className="h-[calc(100vh-120px)]">
@@ -139,7 +157,10 @@ export default function SchedulePage() {
       {canConfigureAvailability && (
         <AvailabilitySettings
           isOpen={showAvailabilitySettings}
-          onClose={() => setShowAvailabilitySettings(false)}
+          onClose={() => {
+            setShowAvailabilitySettings(false);
+            writeAvailabilityContext({ isOpen: false });
+          }}
         />
       )}
     </div>

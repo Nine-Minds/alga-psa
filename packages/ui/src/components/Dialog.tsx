@@ -370,6 +370,15 @@ export function Dialog({
   const handleMouseMove = (e: MouseEvent) => {
     if (!isDragging || !draggable) return;
 
+    // A button released outside the window never delivers mouseup, which used
+    // to glue the dialog to the pointer: it kept moving under every later
+    // mouse move, so no control inside it ever held still long enough to be
+    // clicked. The first move with no button held ends the drag instead.
+    if (e.buttons === 0) {
+      setIsDragging(false);
+      return;
+    }
+
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
 
@@ -382,16 +391,26 @@ export function Dialog({
 
   // Add global mouse event listeners for dragging
   useEffect(() => {
+    // A dialog that is gone cannot be dragged; dropping the listeners with it
+    // keeps a closed dialog from re-rendering on every mouse move.
+    if (isDragging && !isOpen) {
+      setIsDragging(false);
+      return;
+    }
+
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      // Releasing over another window drops the mouseup entirely.
+      window.addEventListener('blur', handleMouseUp);
 
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        window.removeEventListener('blur', handleMouseUp);
       };
     }
-  }, [isDragging, dragStart]);
+  }, [isDragging, dragStart, isOpen]);
 
   const dialogStyle: React.CSSProperties = {
     transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
