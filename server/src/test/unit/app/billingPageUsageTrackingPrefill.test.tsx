@@ -54,7 +54,7 @@ describe('BillingPage usage-tracking deep link', () => {
     getServicesMock.mockResolvedValue([]);
   });
 
-  it('preserves clientId and serviceId in the initialQuery snapshot', async () => {
+  it('preserves clientId, serviceId and the period bounds in the initialQuery snapshot', async () => {
     const mod = await import('@/app/msp/billing/page');
 
     const result = await mod.default({
@@ -62,6 +62,8 @@ describe('BillingPage usage-tracking deep link', () => {
         tab: 'usage-tracking',
         clientId: 'client-emerald',
         serviceId: 'svc-rabbit-tracking',
+        periodStart: '2026-09-01',
+        periodEnd: '2026-10-01',
       }),
     });
     render(result as React.ReactElement);
@@ -72,6 +74,8 @@ describe('BillingPage usage-tracking deep link', () => {
       tab: 'usage-tracking',
       clientId: 'client-emerald',
       serviceId: 'svc-rabbit-tracking',
+      periodStart: '2026-09-01',
+      periodEnd: '2026-10-01',
     });
   });
 
@@ -87,5 +91,7 @@ describe('BillingPage usage-tracking deep link', () => {
     const initialQuery = capturedClientProps[0].initialQuery as Record<string, string | undefined>;
     expect(initialQuery.clientId).toBeUndefined();
     expect(initialQuery.serviceId).toBeUndefined();
+    expect(initialQuery.periodStart).toBeUndefined();
+    expect(initialQuery.periodEnd).toBeUndefined();
   });
 });

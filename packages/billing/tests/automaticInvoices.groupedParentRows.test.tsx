@@ -9,6 +9,7 @@ import '@testing-library/jest-dom/vitest';
 let mockDueWorkResponse: any;
 let mockRecurringInvoiceHistoryResponse: any;
 const mockGetAvailableRecurringDueWork = vi.fn();
+const mockUpsertUsagePeriodTotal = vi.fn();
 const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<{ previewGroupKey: string; selectorInputs: any[] }>) => ({
   success: true,
   invoiceCount: groups.length,
@@ -29,9 +30,13 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<
 }));
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
+vi.mock('../src/actions/usagePeriodTotalActions', () => ({upsertUsagePeriodTotal: mockUpsertUsagePeriodTotal}));
+
+const mockNavigateToUsage = vi.hoisted(() => vi.fn());
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
-    push: vi.fn(),
+    push: mockNavigateToUsage,
     replace: vi.fn(),
   }),
 }));
@@ -173,7 +178,7 @@ vi.mock('@alga-psa/ui/components/Alert', () => ({
   AlertDescription: ({ children }: any) => <div>{children}</div>,
 }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ children }: any) => <div>{children}</div>,
+  Dialog: ({ children, footer, isOpen }: any) => isOpen ? <div>{children}{footer}</div> : null,
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogFooter: ({ children }: any) => <div>{children}</div>,
   DialogDescription: ({ children }: any) => <div>{children}</div>,
@@ -1134,4 +1139,80 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByText('Permission denied: billing read required')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
+  async function openSelectedPreview() {
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const checkbox = await waitFor(() => {
+      const el = document.getElementById('select-parent-group:client-1:2026-03-01:2026-04-01') as HTMLInputElement;
+      expect(el).not.toBeNull(); return el;
+    });
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole('button', {name: 'Preview Selected'}));
+  }
+  const usageStatus = {client_contract_line_id: 'line-1', service_id: 'service-1', service_name: 'Reported seats', config_id: 'config-1',
+    service_period_start: '2026-02-01', service_period_end: '2026-02-28', status: 'unreported', measurement_mode: 'period_total', minimum_usage: 0};
+  it('pure-unreported preview accepts inline entry and previews exactly the same selected obligations', async () => {
+    mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce({success: false, code: 'USAGE_RECORDS_MISSING', error: 'Usage is unreported',
+      params: {periodStart: '2026-02-01', periodEnd: '2026-02-28'}, usageServicePeriodStatuses: [usageStatus]} as any);
+    mockUpsertUsagePeriodTotal.mockResolvedValueOnce({total: {quantity: 12, revision: 1}});
+    await openSelectedPreview();
+    fireEvent.change(await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'}), {target: {value: '12'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save'}));
+    await waitFor(() => expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({
+      client_id: 'client-1', client_contract_line_id: 'line-1', config_id: 'config-1', quantity: 12, request_id: expect.any(String),
+      period_start: '2026-02-01', period_end: '2026-02-28',
+    })));
+    await waitFor(() => expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(2));
+    expect(mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[1][0]).toEqual(mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0]);
+  });
+  it('all-error preview renders actionable calculation context without a usage-entry prompt', async () => {
+    mockPreviewGroupedInvoicesForSelectionInputs.mockResolvedValueOnce({success: false, code: 'USAGE_CALCULATION_ERROR', error: 'Usage could not be priced',
+      usageServicePeriodStatuses: [{...usageStatus, status: 'calculation_error', quantity: 4}]} as any);
+    await openSelectedPreview();
+    expect(await screen.findByTestId('preview-calculation-diagnostics')).toHaveTextContent('Reported seats: 2026-02-01 to 2026-02-28');
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', {name: 'Generate Invoice'})).toBeDisabled();
+  });
+  it.each(['billable', 'explicit_zero', 'minimum_raised_zero'])('corrects a reported %s total with the displayed revision and re-previews', async status => {
+    const original = mockPreviewGroupedInvoicesForSelectionInputs.getMockImplementation()!;
+    mockPreviewGroupedInvoicesForSelectionInputs.mockImplementationOnce(async groups => {
+      const response = await original(groups);
+      return {...response, previews: response.previews.map(preview => ({...preview, usageServicePeriodStatuses: [{...usageStatus, status, revision: 3, quantity: 0}]}))};
+    });
+    mockUpsertUsagePeriodTotal.mockResolvedValueOnce({total: {quantity: 7, revision: 4}});
+    await openSelectedPreview();
+    fireEvent.change(await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'}), {target: {value: '7'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save correction'}));
+    await waitFor(() => expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({quantity: 7, expected_revision: 3, request_id: expect.any(String)})));
+    await waitFor(() => expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(2));
+  });
+  it('navigates with the selected service, line, configuration and full half-open service period', async () => {
+    const original = mockPreviewGroupedInvoicesForSelectionInputs.getMockImplementation()!;
+    mockPreviewGroupedInvoicesForSelectionInputs.mockImplementationOnce(async groups => {
+      const response = await original(groups);
+      return {...response, previews: response.previews.map(preview => ({...preview, usageServicePeriodStatuses: [{...usageStatus, measurement_mode: 'additive'}]}))};
+    });
+    await openSelectedPreview();
+    fireEvent.click(await screen.findByRole('button', {name: /Record usage: Reported seats/}));
+    const url = new URL(mockNavigateToUsage.mock.calls.at(-1)![0], 'http://localhost');
+    expect(Object.fromEntries(url.searchParams)).toMatchObject({clientId: 'client-1', serviceId: 'service-1', contractLineId: 'line-1', configId: 'config-1', periodStart: '2026-02-01', periodEnd: '2026-03-01', returnToPreview: '1'});
+    expect(JSON.parse(sessionStorage.getItem('billing-usage-return-selection')!)[0].selectorInputs).toHaveLength(2);
+  });
+  it('grouped preview submission preserves all selected obligations and their expected report identities', async () => {
+    const expected = [{clientContractLineId: 'line-1', serviceId: 'service-1', periodStart: '2026-02-01', periodEnd: '2026-02-28', revision: 2,
+      periodTotalId: 'report-1', billingInputsHash: 'persisted-inputs', quantity: 12, totalCents: 12000}];
+    const original = mockPreviewGroupedInvoicesForSelectionInputs.getMockImplementation()!;
+    mockPreviewGroupedInvoicesForSelectionInputs.mockImplementationOnce(async groups => {
+      const response = await original(groups);
+      return {...response, previews: response.previews.map(preview => ({...preview, expectedUsagePeriodTotals: expected}))};
+    });
+    await openSelectedPreview();
+    const generate = await screen.findByRole('button', {name: 'Generate Invoice'});
+    await waitFor(() => expect(generate).toBeEnabled());
+    fireEvent.click(generate);
+    await waitFor(() => expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalled());
+    const targets = (mockGenerateGroupedInvoicesAsRecurringBillingRun.mock.calls.at(-1) as any)[0].groupedTargets;
+    expect(targets[0].selectorInputs).toHaveLength(2);
+    expect(targets[0].expectedUsagePeriodTotals).toEqual(expected);
+  });
+
 });

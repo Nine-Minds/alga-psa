@@ -363,7 +363,8 @@
       "errors": {
         "missingConfiguration": "Ta usługa nie ma zapisanej konfiguracji do przekształcenia. Odśwież i spróbuj ponownie.",
         "failed": "Nie udało się zmienić sposobu pomiaru tej usługi."
-      }
+      },
+      "effectiveFrom": "Measurement change effective from"
     }
   },
   "contractDialog": {
@@ -592,7 +593,10 @@
       "typeLabel": "Usługa {{type}}",
       "unitOfMeasure": "Jednostka miary",
       "unitPlaceholder": "jednostka",
-      "unitRate": "Stawka jednostkowa"
+      "unitRate": "Stawka jednostkowa",
+      "effectiveFrom": "Recurring seat changes effective from",
+      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
+      "recurringUnits": "Recurring seats/units"
     },
     "title": "Linie kontraktowe"
   },

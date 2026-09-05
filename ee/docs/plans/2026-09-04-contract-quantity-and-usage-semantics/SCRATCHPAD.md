@@ -102,3 +102,38 @@ Three parallel workstreams landed together; the integrated tree is fully verifie
 ### Reviewer first-stop (this round)
 
 `assertExpectedUsagePeriodTotalsCurrent` + the generation guard ordering in `invoiceGeneration.ts`; the `calculation_error` pre-validation in `billingEngine.ts` (it withholds unpriceable rows instead of throwing); the summary-shape change in `contractReportActions.ts` (totalMRR/totalYTD removed — check downstream consumers outside this repo, if any).
+
+## Failed-review mitigation at 38bcf937 (2026-09-04/05)
+
+Repairs the existing implementation and preserves the task-related changes already uncommitted at takeover. Root/ancestor AGENTS.md was absent; coding standards and this revised plan were read. Earlier round notes above are historical.
+
+### Review first
+
+- `invoiceGeneration.ts`, `usagePeriodTotalIdentity.ts`, recurring run actions and Automatic Invoices: single/grouped expectations preserve every selector and bridge, bind persisted report ID/revision plus billing inputs and priced outcomes, include absent reports, and reject stale finalization. Calculation and consumption share one transaction. `billingMutationLock.ts` and migration 1300 serialize tenant billing mutations; the lock-table write reaches the tenant shard as well as the coordinator.
+- `usagePeriodTotalActions.ts` and migration 1200: durable accepted request history; replay A after B returns current B without writing; changed content conflicts. Replacements require request ID/current revision, DELETE requires current revision, and creation uses ON CONFLICT DO NOTHING rather than querying an aborted transaction. Independent-connection tests observe a concurrent price writer waiting in PostgreSQL until invoice consumption commits.
+- `seatRevisions.ts`, configuration service and both normal service editors: displayed effective boundary, transactional prospective seat writes, historical invoice/period protection, and effective revision reads. Fixed computation retains unit charges alongside legacy bundle allocations. Pricing basis remains per configuration.
+- `usageMeasurementTransitions.ts` and migration 1400: dated measurement/pricing snapshots commit together, the engine resolves mode for the actual period, and affected usage/invoice conflicts reject the transition. Failed validation leaves baseline pricing/revisions unchanged. Overview/configuration reads reflect effective modes and seat revisions; legacy quantities remain audit metadata.
+
+### Other repaired production paths
+
+Server entry validates configuration/membership, effective active client assignment and engine-derived/materialized coverage. Advance/arrears, invalid boundaries and inactive/future/ended assignments have database coverage. Client-owned contract eligibility follows assignment lifecycle, not the reusable header's legacy active flag.
+
+Usage Tracking and the shared period-total form preserve client/line/config/service/period, convert inclusive billing dates once to half-open filters, distinguish create/correction including zero, retain additive retry IDs, and return to the same preview. Missing-only inline entry and all-error diagnostics have rendered component coverage. Shared recurring valuation uses invoice catalog fallback, mixed bundle/unit pricing, Usage-config detection independent of parent type, effective revisions, cadence normalization and separate currencies. New labels use translation keys; untranslated locales receive English fallback and pseudo-locales retain fill markers.
+
+### Verification
+
+- Four infrastructure suites (`contractQuantityUsageSemantics`, `contractRecurringValueReporting`, `usageRecordDrivenBilling`, `usageAddFlowOverlappingBucket`): **63/63 passed**, including production overview reads after effective revisions, single/grouped recurring submission, real concurrent connections, replay, attribution and consumption. PostgreSQL 5472; isolated TEST_DB_NAME=quantity_mitigation_20260904_final; credentials read from secrets without printing them.
+- Billing package: **1,194 passed, 38 skipped** after final translation extraction and locale-schema validation. Server run/page/report suites: **24/24 passed**. Billing/shared/server TypeScript passed; server heap limit 24576 MB. Final production build passed (exit 0), with nonfatal webpack/static-render warnings; independent typechecks were run because the Next build skips type validation.
+- Translation validator: **0 errors, 0 warnings** across nine non-English/pseudo locales.
+
+### Focused live smoke and cleanup
+
+Port 3748 was initially down. A board restart was requested, then the worktree service was started from `server` with PORT=3748 npm run dev against the existing infrastructure. Only missing feature migrations 1100–1400 were applied; no usage backfill or historical charge changes.
+
+Synthetic tenant only: overview showed USD 1,000 fixed plus variable usage. Normal Contract Lines editing saved 12 seats effective October 1 while baseline stayed 10. August preview recorded total 10 then corrected it to 12 (subtotal USD 1,100 to 1,120). Consumption navigation opened August with exact client/line/service/config; additive entry 4 returned to the same grouped preview at USD 1,140. A same-amount minimum change after preview was rejected by live Generate Invoice as stale. Fresh generation created one draft: subtotal 114000, tax 11400, total 125400 minor units; total revision 2 and one additive request consumed, expected billing profile and all three configuration/service-period attributions preserved. Reports showed USD 1,000 Fixed MRR plus variable usage and excluded the draft from billed YTD.
+
+The synthetic tenant and all its tenant-scoped records, including invoice, usage, revisions, settings and permissions, were removed. No Samuel Braun/customer account was changed and no customer invoice was created. Durable workflow facts were recorded throughout.
+
+### Remaining wider-plan work and limits
+
+F003 (full wizard/preset/template authoring), F022 (atomic Usage-to-Fixed source/destination transition), F025 and the broader T009/T010/T012/T014/T015 matrices remain false where their complete text exceeds this verified mitigation. The legacy recurring-seat dialog remains a handoff. Focused live coverage spans configuration, overview, tracking, preview/generation and reports; it does not claim the entire two-period/legacy-transition live matrix. Citus worker deployment was not exercised; local PostgreSQL concurrency is proven. Tenant billing serialization is coarse and has not been load-tested. Request IDs discarded before durable history cannot be reconstructed; no historical data was invented.

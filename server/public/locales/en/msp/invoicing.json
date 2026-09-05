@@ -168,7 +168,9 @@
         "missingUsageHeading": "Usage not recorded for this period",
         "missingUsageService": "{{service}}: no usage records for {{periodStart}} to {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: usage recorded for {{periodStart}} to {{periodEnd}} is excluded until its contract-line attribution is resolved — resolve the attribution instead of recording more usage",
-        "usageCalculationError": "{{service}}: recorded usage for {{periodStart}} to {{periodEnd}} could not be priced — fix the service pricing instead of recording more usage"
+        "usageCalculationError": "{{service}}: recorded usage for {{periodStart}} to {{periodEnd}} could not be priced — fix the service pricing instead of recording more usage",
+        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
       },
       "poOverage": {
         "title": "Purchase Order Limit Overages",
@@ -2085,5 +2087,17 @@
       "missingField": "Missing required invoice template field.",
       "missingFieldNamed": "Missing required invoice template field: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Missing client or service configuration for this report.",
+    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
+    "saveError": "Unable to save the period count.",
+    "retryError": "Unable to save the period count. Retry this submission.",
+    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "quantityLabel": "Period count for {{service}}",
+    "saving": "Saving…",
+    "saveCorrection": "Save correction",
+    "save": "Save"
   }
 }

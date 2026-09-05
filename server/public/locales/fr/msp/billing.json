@@ -211,7 +211,9 @@
       "updateError": "Échec de la mise à jour de l'enregistrement d'utilisation",
       "deleteSuccess": "Enregistrement d'utilisation supprimé avec succès",
       "deleteError": "Échec de la suppression de l'enregistrement d'utilisation"
-    }
+    },
+    "periodReport": "Period usage report",
+    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
   },
   "lineItem": {
     "collapsed": {

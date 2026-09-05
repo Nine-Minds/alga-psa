@@ -21,6 +21,7 @@ export interface IContractLineServiceConfiguration extends TenantEntity {
  * Interface for fixed price service configuration
  */
 export interface IContractLineServiceFixedConfig extends TenantEntity {
+  effective_period_start?: string;
   config_id: string;
   base_rate?: number | null; // Added base_rate field
   /**
@@ -59,6 +60,7 @@ export interface IContractLineServiceHourlyConfig extends TenantEntity {
  * Interface for usage-based service configuration
  */
 export interface IContractLineServiceUsageConfig extends TenantEntity {
+  effective_period_start?: string;
   config_id: string;
   unit_of_measure: string;
   enable_tiered_pricing: boolean;

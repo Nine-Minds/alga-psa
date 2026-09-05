@@ -211,7 +211,9 @@
       "updateError": "No se pudo actualizar el registro de uso",
       "deleteSuccess": "Registro de uso eliminado correctamente",
       "deleteError": "No se pudo eliminar el registro de uso"
-    }
+    },
+    "periodReport": "Period usage report",
+    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
   },
   "lineItem": {
     "collapsed": {

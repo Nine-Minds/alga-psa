@@ -30,6 +30,14 @@ export class ManualInvoiceError extends Error {
     public readonly code: HandledManualInvoiceErrorCode,
     message: string,
     public readonly params: Record<string, string> = {},
+    /**
+     * Structured per-service usage-period diagnoses backing a usage failure
+     * (USAGE_RECORDS_MISSING / USAGE_CALCULATION_ERROR). Lets a failed
+     * preview keep full remediation context — client, line, service,
+     * configuration, and canonical period — instead of flattening it into
+     * string params.
+     */
+    public readonly usageStatuses?: import('@alga-psa/types').IUsageServicePeriodStatus[],
   ) {
     super(message);
     this.name = 'ManualInvoiceError';

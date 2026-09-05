@@ -251,6 +251,7 @@ export interface IUsageServicePeriodStatus {
 }
 
 export interface IBillingResult extends TenantEntity {
+  expectedUsagePeriodTotals?: import('./invoice.interfaces').IExpectedUsagePeriodTotal[];
   charges: IBillingCharge[];
   totalAmount: number;
   discounts: IDiscount[];

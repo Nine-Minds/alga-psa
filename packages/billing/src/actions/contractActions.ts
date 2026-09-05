@@ -1,6 +1,9 @@
 // @alga-psa/billing/actions.ts
 'use server'
 
+import { resolveEffectiveSeatPricing } from '../lib/billing/seatRevisions';
+import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
+
 import Contract from '@alga-psa/billing/models/contract';
 import ContractTemplateModel from '../models/contractTemplate';
 import {
@@ -1196,6 +1199,21 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
           (usageSemantics as any[]).map((row: any) => [row.config_id, row]),
         );
 
+        const asOf = new Date().toISOString().slice(0, 10);
+        for (const config of configs as any[]) {
+          const fixed = fixedSemanticsMap.get(config.config_id);
+          if (fixed?.pricing_basis === 'unit') {
+            const effective = await resolveEffectiveSeatPricing({trx: knex as Knex.Transaction, tenant,
+              contractLineId: line.contract_line_id, serviceId: config.service_id, configId: config.config_id, boundary: asOf});
+            config.quantity = effective.quantity;
+            fixed.base_rate = effective.unitRateCents;
+          }
+          if (config.configuration_type === 'Usage') {
+            const revision = await resolveUsageMeasurementRevision(knex, tenant, config.config_id, asOf);
+            if (revision) usageSemanticsMap.set(config.config_id, revision);
+          }
+        }
+
         contractLines.push({
           contract_line_id: line.contract_line_id,
           contract_line_name: line.contract_line_name,
@@ -1212,9 +1230,9 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
               custom_rate: config?.custom_rate ? Number(config.custom_rate) : null,
               // Usage lines bill recorded usage only; legacy configured
               // quantities are audit metadata and must not read as billable.
-              quantity: line.contract_line_type === 'Usage' ? null : (config?.quantity ?? 1),
+              quantity: config?.configuration_type === 'Usage' ? null : (config?.quantity ?? 1),
               previouslyConfiguredQuantity:
-                line.contract_line_type === 'Usage'
+                config?.configuration_type === 'Usage'
                   ? (config?.quantity ?? null)
                   : null,
               unit_of_measure: svc.unit_of_measure || null,
@@ -1237,7 +1255,7 @@ export const getContractOverview = withAuth(async (user, { tenant }, contractId:
     const serviceCount = contractLines.reduce((acc, line) => acc + line.services.length, 0);
     const hasFixedServices = contractLines.some(line => line.contract_line_type === 'Fixed');
     const hasHourlyServices = contractLines.some(line => line.contract_line_type === 'Hourly');
-    const hasUsageServices = contractLines.some(line => line.contract_line_type === 'Usage');
+    const hasUsageServices = contractLines.some(line => line.contract_line_type === 'Usage' || line.services.some(service => service.measurement_mode != null));
 
     // Calculate estimated monthly value: fixed lines only (mixed contracts
     // show the fixed portion; hourly/usage revenue is variable).

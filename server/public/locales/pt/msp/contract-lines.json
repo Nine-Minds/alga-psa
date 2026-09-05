@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Informações de plano ou serviço ausentes"
       },
       "loading": "Carregando configuração do serviço...",
-      "title": "Editar configuração de serviço"
+      "title": "Editar configuração de serviço",
+      "effectiveFrom": "Quantity or measurement change effective from",
+      "effectiveHelp": "Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement."
     },
     "tierEditor": {
       "actions": {

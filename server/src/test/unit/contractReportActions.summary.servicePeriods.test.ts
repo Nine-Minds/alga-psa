@@ -130,6 +130,7 @@ describe('contractReportActions summary service-period basis', () => {
       if (table === 'contract_line_unit_pricing_revisions as rev') {
         return buildThenableQuery([]);
       }
+      if (table === 'contract_line_service_configuration') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
 

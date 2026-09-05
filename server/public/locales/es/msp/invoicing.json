@@ -168,7 +168,9 @@
         "missingUsageHeading": "No se ha registrado uso para este período",
         "missingUsageService": "{{service}}: sin registros de uso del {{periodStart}} al {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: el uso registrado del {{periodStart}} al {{periodEnd}} queda excluido hasta que se resuelva su atribución a una línea de contrato; resuelva la atribución en lugar de registrar más uso",
-        "usageCalculationError": "{{service}}: el uso registrado del {{periodStart}} al {{periodEnd}} no se pudo tarificar; corrija los precios del servicio en lugar de registrar más uso"
+        "usageCalculationError": "{{service}}: el uso registrado del {{periodStart}} al {{periodEnd}} no se pudo tarificar; corrija los precios del servicio en lugar de registrar más uso",
+        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
       },
       "poOverage": {
         "title": "Excedentes del límite de órdenes de compra",
@@ -2085,5 +2087,17 @@
       "missingField": "Falta un campo obligatorio de la plantilla de factura.",
       "missingFieldNamed": "Falta un campo obligatorio de la plantilla de factura: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Missing client or service configuration for this report.",
+    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
+    "saveError": "Unable to save the period count.",
+    "retryError": "Unable to save the period count. Retry this submission.",
+    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "quantityLabel": "Period count for {{service}}",
+    "saving": "Saving…",
+    "saveCorrection": "Save correction",
+    "save": "Save"
   }
 }

@@ -1,6 +1,12 @@
 'use client';
 
+import { toPlainDate } from '@alga-psa/core';
+import { useRouter } from 'next/navigation';
+import { getUsagePeriodEntryContext } from '../../actions/usagePeriodTotalActions';
+import { UsagePeriodTotalQuickEntry } from './UsagePeriodTotalQuickEntry';
+import type { IUsagePeriodTotal } from '@alga-psa/types';
 import React, { useState, useEffect, useMemo } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader } from '@alga-psa/ui/components/Card';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -52,16 +58,73 @@ interface UsageTrackingProps {
    * route users straight to recording a period's usage for a specific
    * client/service without hunting through filters.
    */
+  initialContractLineId?: string | null;
+  initialConfigId?: string | null;
+  returnToPreview?: boolean;
   initialClientId?: string | null;
   initialServiceId?: string | null;
+  /**
+   * Canonical service-period boundary prefill (`YYYY-MM-DD`, end exclusive)
+   * carried by "Record Usage" deep links so the operator lands scoped to the
+   * exact period that was missing usage. Both bounds must be present for the
+   * period filter to activate.
+   */
+  initialPeriodStart?: string | null;
+  initialPeriodEnd?: string | null;
+}
+
+interface UsagePeriodFilter {
+  /** Plain calendar day (`YYYY-MM-DD`) the period starts on, inclusive. */
+  start: string;
+  /** Plain calendar day (`YYYY-MM-DD`) the period ends on, EXCLUSIVE — usage dated on this day belongs to the next period. */
+  end: string;
+}
+
+/**
+ * getUsageRecords applies `end_date` inclusively (`usage_date <= end_date`),
+ * but a service period is `[start, end)` — usage dated on the period end
+ * belongs to the next period. Anchor the exclusive boundary at the period-end
+ * UTC midnight (the canonical stored form for that calendar day) and step back
+ * 1ms, so every instant inside the period's final day still matches while
+ * period-end entries do not.
+ */
+function periodEndFilterBound(periodEnd: string): string {
+  const endMidnight = usageDateToStored(periodEnd);
+  if (!endMidnight) return '';
+  return new Date(Date.parse(endMidnight) - 1).toISOString();
 }
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
 }
 
-const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialClientId, initialServiceId }) => {
+const UsageTracking: React.FC<UsageTrackingProps> = ({
+  initialServices,
+  initialContractLineId,
+  initialConfigId,
+  returnToPreview,
+  initialClientId,
+  initialServiceId,
+  initialPeriodStart,
+  initialPeriodEnd,
+}) => {
   const { t } = useTranslation('msp/billing');
+  const router = useRouter();
+  const [entryContext, setEntryContext] = useState<{measurement_mode: string | null; total: IUsagePeriodTotal | null} | null>(null);
+  const [contextError, setContextError] = useState<string | null>(null);
+  const [contextVersion, setContextVersion] = useState(0);
+  const afterContextSave = () => {
+    if (returnToPreview) router.push('/msp/billing?tab=invoicing&subtab=generate&resumeUsagePreview=1');
+    else setContextVersion(value => value + 1);
+  };
+  useEffect(() => {
+    if (!initialClientId || !initialContractLineId || !initialServiceId || !initialConfigId || !initialPeriodStart || !initialPeriodEnd) return;
+    let active = true;
+    getUsagePeriodEntryContext({client_id: initialClientId, client_contract_line_id: initialContractLineId, service_id: initialServiceId, config_id: initialConfigId, period_start: initialPeriodStart, period_end: toPlainDate(initialPeriodEnd).subtract({days: 1}).toString()})
+      .then(result => { if (!active) return; if (isReturnedActionError(result)) setContextError(getErrorMessage(result)); else setEntryContext(result); })
+      .catch(error => { if (active) setContextError(getErrorMessage(error)); });
+    return () => { active = false; };
+  }, [initialClientId, initialContractLineId, initialServiceId, initialConfigId, initialPeriodStart, initialPeriodEnd, contextVersion]);
   const { toast } = useToast();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -75,12 +138,36 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
   const [usageToDelete, setUsageToDelete] = useState<string | null>(null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [periodFilter, setPeriodFilter] = useState<UsagePeriodFilter | null>(
+    initialPeriodStart && initialPeriodEnd
+      ? { start: initialPeriodStart, end: initialPeriodEnd }
+      : null,
+  );
   const [newUsage, setNewUsage] = useState<ICreateUsageRecord>({
     client_id: '',
     service_id: '',
     quantity: 0,
     usage_date: usageDateToStored(todayUsageDate()),
   });
+  // Replay key for the additive create: identical retries of the same
+  // submission (double-click, network retry) replay idempotently server-side
+  // instead of recording a second consumption event. Keyed by the form
+  // CONTENT — not object identity — so an untouched resubmission reuses the
+  // id even across incidental state churn, while any edited field issues a
+  // genuinely new request.
+  const createRequestContentKey = JSON.stringify([
+    newUsage.client_id,
+    newUsage.service_id,
+    newUsage.quantity,
+    newUsage.usage_date,
+    newUsage.contract_line_id ?? null,
+    newUsage.comments ?? null,
+  ]);
+  const createRequestRef = React.useRef<{ key: string; id: string } | null>(null);
+  if (!createRequestRef.current || createRequestRef.current.key !== createRequestContentKey) {
+    createRequestRef.current = { key: createRequestContentKey, id: uuidv4() };
+  }
+  const createRequestId = createRequestRef.current.id;
   const [eligibleContractLines, setEligibleContractLines] = useState<Array<{
     client_contract_line_id: string;
     contract_line_name: string;
@@ -150,8 +237,20 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
   }, [initialServiceId]);
 
   useEffect(() => {
+    if (initialPeriodStart && initialPeriodEnd) {
+      // Keep the existing state object when the bounds are unchanged so the
+      // records-load effect (keyed on periodFilter identity) does not refetch.
+      setPeriodFilter(prev =>
+        prev && prev.start === initialPeriodStart && prev.end === initialPeriodEnd
+          ? prev
+          : { start: initialPeriodStart, end: initialPeriodEnd },
+      );
+    }
+  }, [initialPeriodStart, initialPeriodEnd]);
+
+  useEffect(() => {
     loadUsageRecords();
-  }, [selectedClient, selectedService]);
+  }, [selectedClient, selectedService, periodFilter]);
 
   useEffect(() => {
     if (selectedClient && selectedClient !== 'all_clients') {
@@ -273,6 +372,12 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
       const filter: IUsageFilter = {};
       if (selectedClient !== null && selectedClient !== 'all_clients') filter.client_id = selectedClient;
       if (selectedService && selectedService !== 'all_services') filter.service_id = selectedService;
+      if (periodFilter) {
+        const startBound = usageDateToStored(periodFilter.start);
+        const endBound = periodEndFilterBound(periodFilter.end);
+        if (startBound) filter.start_date = startBound;
+        if (endBound) filter.end_date = endBound;
+      }
 
       const records = await getUsageRecords(filter);
       if (isReturnedActionError(records)) {
@@ -299,7 +404,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
   const handleAddUsage = async () => {
     try {
       setIsSaving(true);
-      const result = await createUsageRecord(newUsage);
+      const result = await createUsageRecord({ ...newUsage, request_id: createRequestId });
       if (isReturnedActionError(result)) {
         toast({
           title: t('common.error', { defaultValue: 'Error' }),
@@ -309,6 +414,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
         return;
       }
       setIsAddModalOpen(false);
+      afterContextSave();
       loadUsageRecords();
       toast({
         title: t('common.success', { defaultValue: 'Success' }),
@@ -396,13 +502,24 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
     }
   };
 
+  // Default new entries to today, unless a period filter is active and today
+  // falls outside [start, end) — the operator followed a deep link to backfill
+  // that specific period, so start the date inside it (at the period start).
+  const defaultUsageDate = (): string => {
+    const today = todayUsageDate();
+    if (periodFilter && (today < periodFilter.start || today >= periodFilter.end)) {
+      return periodFilter.start;
+    }
+    return today;
+  };
+
   const resetForm = () => {
     setNewUsage({
-      client_id: '',
-      service_id: '',
+      client_id: initialClientId ?? '',
+      service_id: initialServiceId ?? '',
       quantity: 0,
-      usage_date: usageDateToStored(todayUsageDate()),
-      contract_line_id: undefined,
+      usage_date: usageDateToStored(defaultUsageDate()),
+      contract_line_id: initialContractLineId ?? undefined,
     });
     setEditingUsage(null);
     setEligibleContractLines([]);
@@ -495,6 +612,19 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
 
   return (
     <ReflectionContainer {...containerProps}>
+      {contextError && <p role="alert">{contextError}</p>}
+      {entryContext?.measurement_mode === 'period_total' && initialClientId && initialContractLineId && initialServiceId && initialConfigId && initialPeriodStart && initialPeriodEnd && (
+        <section aria-label={t('usage.periodReport', {defaultValue: 'Period usage report'})} className="mb-4 rounded border p-4">
+          {entryContext.total?.lifecycle_state === 'billed' ? <p>{t('usage.periodAlreadyInvoiced', {defaultValue: 'This period is already invoiced. Correct it through the invoice adjustment process.'})}</p> : (
+            <ul><UsagePeriodTotalQuickEntry clientId={initialClientId} entryId="usage-tracking-context" onSaved={afterContextSave}
+              status={{client_contract_line_id: initialContractLineId, config_id: initialConfigId, service_id: initialServiceId,
+                service_name: initialServices.find(service => service.service_id === initialServiceId)?.service_name ?? null,
+                service_period_start: initialPeriodStart, service_period_end: toPlainDate(initialPeriodEnd).subtract({days: 1}).toString(),
+                measurement_mode: 'period_total', status: entryContext.total ? 'billable' : 'unreported', minimum_usage: 0}}
+              existing={entryContext.total ? {quantity: Number(entryContext.total.quantity), revision: Number(entryContext.total.revision)} : undefined}/></ul>
+          )}
+        </section>
+      )}
       {/* Bucket Usage Overview */}
       {(loadingBuckets || bucketData.length > 0) && (
         <Card className="mb-6">
@@ -585,12 +715,34 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({ initialServices, initialC
                   onClick={() => {
                     setSelectedService('all_services');
                     setSelectedClient('all_clients');
+                    setPeriodFilter(null);
                   }}
                 >
                   {t('usage.actions.resetFilters', { defaultValue: 'Reset' })}
                 </Button>
               </div>
             </div>
+
+            {periodFilter && (
+              <div className="flex items-center justify-between gap-2 rounded-md border border-[rgb(var(--color-border-300))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
+                <span className="flex items-center gap-2">
+                  <Info className="h-4 w-4 shrink-0 text-blue-600" />
+                  {t('usage.periodFilter.notice', {
+                    defaultValue: 'Showing usage for the service period {{start}} to {{end}}',
+                    start: dateFromString(periodFilter.start)?.toLocaleDateString() ?? periodFilter.start,
+                    end: dateFromString(toPlainDate(periodFilter.end).subtract({days: 1}).toString())?.toLocaleDateString() ?? periodFilter.end,
+                  })}
+                </span>
+                <Button
+                  id="usage-period-filter-clear-button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPeriodFilter(null)}
+                >
+                  {t('usage.periodFilter.clear', { defaultValue: 'Clear' })}
+                </Button>
+              </div>
+            )}
 
             {isLoading ? (
               <LoadingIndicator

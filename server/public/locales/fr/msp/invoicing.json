@@ -168,7 +168,9 @@
         "missingUsageHeading": "Aucune utilisation enregistrée pour cette période",
         "missingUsageService": "{{service}} : aucun enregistrement d'utilisation du {{periodStart}} au {{periodEnd}}",
         "usageAttributionExcluded": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} est exclue tant que son rattachement à une ligne de contrat n'est pas résolu — résolvez le rattachement au lieu d'enregistrer davantage d'utilisation",
-        "usageCalculationError": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} n'a pas pu être tarifée — corrigez la tarification du service au lieu d'enregistrer davantage d'utilisation"
+        "usageCalculationError": "{{service}} : l'utilisation enregistrée du {{periodStart}} au {{periodEnd}} n'a pas pu être tarifée — corrigez la tarification du service au lieu d'enregistrer davantage d'utilisation",
+        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
       },
       "poOverage": {
         "title": "Dépassements de la limite des bons de commande",
@@ -2085,5 +2087,17 @@
       "missingField": "Un champ obligatoire du modèle de facture est manquant.",
       "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Missing client or service configuration for this report.",
+    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
+    "saveError": "Unable to save the period count.",
+    "retryError": "Unable to save the period count. Retry this submission.",
+    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "quantityLabel": "Period count for {{service}}",
+    "saving": "Saving…",
+    "saveCorrection": "Save correction",
+    "save": "Save"
   }
 }

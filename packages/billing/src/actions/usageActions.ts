@@ -1,5 +1,8 @@
 'use server';
 
+import { resolveUsageMeasurementRevision } from '../lib/billing/usageMeasurementTransitions';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+
 import { Knex } from 'knex'; // Ensure Knex type is imported
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
@@ -100,6 +103,7 @@ async function rejectAdditiveWriteToPeriodTotalConfig(params: {
   clientId: string;
   serviceId: string;
   contractLineId: string | null | undefined;
+  usageDate: string;
 }): Promise<string | null> {
   const { trx, tenant, serviceId, contractLineId } = params;
   if (!contractLineId) {
@@ -133,7 +137,8 @@ async function rejectAdditiveWriteToPeriodTotalConfig(params: {
   )
     .where({ tenant, config_id: config.config_id })
     .first<{ measurement_mode: string | null }>('measurement_mode');
-  if ((usageConfig?.measurement_mode ?? 'additive') === 'period_total') {
+  const revision = await resolveUsageMeasurementRevision(trx, tenant, config.config_id, params.usageDate);
+  if ((revision?.measurement_mode ?? usageConfig?.measurement_mode ?? 'additive') === 'period_total') {
     return 'This service uses period-total reporting for this contract line: report one count for the whole service period instead of adding dated consumption entries.';
   }
   return null;
@@ -213,6 +218,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     const usageDateISO = toCanonicalUsageDateISO(data.usage_date);
 
     return await knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, tenant);
     // If no contract line ID is provided, try to determine the default one
     let contractLineId = data.contract_line_id;
     let contractLineSource: ContractLineSource | null = data.contract_line_id
@@ -249,6 +255,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
       clientId: data.client_id,
       serviceId: data.service_id,
       contractLineId,
+      usageDate: usageDateISO,
     });
     if (modeGuard) {
       return actionError(modeGuard);
@@ -341,6 +348,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
     const { knex } = await createTenantKnex();
 
     return await knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, tenant);
     // 1. Fetch the original record BEFORE update
     const originalRecord = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .where({ usage_id: data.usage_id })
@@ -405,6 +413,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
         clientId: targetClientForGuard,
         serviceId: targetServiceForGuard,
         contractLineId: finalContractLineId,
+        usageDate: String(data.usage_date ?? originalRecord.usage_date),
       });
       if (modeGuard) {
         return actionError(modeGuard);

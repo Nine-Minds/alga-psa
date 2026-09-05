@@ -211,7 +211,9 @@
       "updateError": "Impossibile aggiornare il record di utilizzo",
       "deleteSuccess": "Record di utilizzo eliminato correttamente",
       "deleteError": "Impossibile eliminare il record di utilizzo"
-    }
+    },
+    "periodReport": "Period usage report",
+    "periodAlreadyInvoiced": "This period is already invoiced. Correct it through the invoice adjustment process."
   },
   "lineItem": {
     "collapsed": {

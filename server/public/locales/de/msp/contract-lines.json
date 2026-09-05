@@ -411,7 +411,9 @@
         "missingPlanOrServiceInformation": "Fehlende Plan- oder Serviceinformationen"
       },
       "loading": "Dienstkonfiguration wird geladen...",
-      "title": "Bearbeiten Sie die Dienstkonfiguration"
+      "title": "Bearbeiten Sie die Dienstkonfiguration",
+      "effectiveFrom": "Quantity or measurement change effective from",
+      "effectiveHelp": "Changes take effect at this service-period boundary. Earlier periods retain their pricing and measurement."
     },
     "tierEditor": {
       "actions": {

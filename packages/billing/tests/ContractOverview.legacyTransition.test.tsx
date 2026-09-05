@@ -26,6 +26,7 @@ vi.mock('@alga-psa/billing/actions/contractActions', () => ({
 
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({
   setUsageMeasurementMode: actionMocks.setUsageMeasurementMode,
+  getNextContractServiceBoundary: vi.fn(async () => "2026-10-01"),
 }));
 
 const translate = (key: string, options?: Record<string, unknown>) => {
@@ -51,11 +52,12 @@ vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
-  Dialog: ({ isOpen, title, children }: any) =>
+  Dialog: ({ isOpen, title, children, footer }: any) =>
     isOpen ? (
       <div role="dialog">
         <h1>{title}</h1>
         {children}
+        {footer}
       </div>
     ) : null,
   DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -162,7 +164,8 @@ describe('contract overview legacy usage transition', () => {
     await renderOverview();
 
     fireEvent.click(document.getElementById('usage-report-period-count-svc-seat')!);
-    fireEvent.click(await screen.findByText('Switch to period counts'));
+    await waitFor(() => expect((screen.getByText('Switch to period counts') as HTMLButtonElement).disabled).toBe(false));
+    fireEvent.click(screen.getByText('Switch to period counts'));
 
     await waitFor(() => {
       expect(actionMocks.setUsageMeasurementMode).toHaveBeenCalledTimes(1);
@@ -172,6 +175,7 @@ describe('contract overview legacy usage transition', () => {
       contract_line_id: 'line-usage',
       service_id: 'svc-seat',
       measurement_mode: 'period_total',
+      effective_period_start: '2026-10-01',
     });
 
     expect((await screen.findByTestId('legacy-transition-error')).textContent).toContain(

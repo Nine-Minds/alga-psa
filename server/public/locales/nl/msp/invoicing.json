@@ -168,7 +168,9 @@
         "missingUsageHeading": "Geen verbruik geregistreerd voor deze periode",
         "missingUsageService": "{{service}}: geen verbruiksrecords voor {{periodStart}} tot {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} is uitgesloten totdat de toewijzing aan een contractregel is opgelost — los de toewijzing op in plaats van meer verbruik te registreren",
-        "usageCalculationError": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} kon niet worden geprijsd — corrigeer de serviceprijzen in plaats van meer verbruik te registreren"
+        "usageCalculationError": "{{service}}: geregistreerd verbruik voor {{periodStart}} tot {{periodEnd}} kon niet worden geprijsd — corrigeer de serviceprijzen in plaats van meer verbruik te registreren",
+        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
       },
       "poOverage": {
         "title": "Overschrijdingen van inkooporderlimieten",
@@ -2085,5 +2087,17 @@
       "missingField": "Er ontbreekt een verplicht veld van het factuursjabloon.",
       "missingFieldNamed": "Er ontbreekt een verplicht veld van het factuursjabloon: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Missing client or service configuration for this report.",
+    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
+    "saveError": "Unable to save the period count.",
+    "retryError": "Unable to save the period count. Retry this submission.",
+    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "quantityLabel": "Period count for {{service}}",
+    "saving": "Saving…",
+    "saveCorrection": "Save correction",
+    "save": "Save"
   }
 }

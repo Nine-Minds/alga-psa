@@ -168,7 +168,9 @@
         "missingUsageHeading": "Nenhuma utilização registada para este período",
         "missingUsageService": "{{service}}: sem registos de utilização de {{periodStart}} a {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: a utilização registada de {{periodStart}} a {{periodEnd}} fica excluída até que a atribuição à linha de contrato seja resolvida — resolva a atribuição em vez de registar mais utilização",
-        "usageCalculationError": "{{service}}: não foi possível calcular o preço da utilização registada de {{periodStart}} a {{periodEnd}} — corrija os preços do serviço em vez de registar mais utilização"
+        "usageCalculationError": "{{service}}: não foi possível calcular o preço da utilização registada de {{periodStart}} a {{periodEnd}} — corrija os preços do serviço em vez de registar mais utilização",
+        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
       },
       "poOverage": {
         "title": "Excedentes do limite do pedido de compra",
@@ -2085,5 +2087,17 @@
       "missingField": "Falta um campo obrigatório do modelo de fatura.",
       "missingFieldNamed": "Falta um campo obrigatório do modelo de fatura: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Missing client or service configuration for this report.",
+    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
+    "saveError": "Unable to save the period count.",
+    "retryError": "Unable to save the period count. Retry this submission.",
+    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "quantityLabel": "Period count for {{service}}",
+    "saving": "Saving…",
+    "saveCorrection": "Save correction",
+    "save": "Save"
   }
 }

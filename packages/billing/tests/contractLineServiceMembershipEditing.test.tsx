@@ -16,10 +16,13 @@ const actionMocks = vi.hoisted(() => ({
   getTemplateLineServicesWithConfigurations: vi.fn(),
   removeContractLine: vi.fn(),
   updateConfiguration: vi.fn(),
+  getConfigurationWithDetails: vi.fn(),
   updateContractLine: vi.fn(),
   updateContractLineAssociation: vi.fn(),
   upsertBucketConfiguration: vi.fn(),
 }));
+
+vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({getNextContractServiceBoundary: vi.fn(async () => '2026-10-01')}));
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
   getServices: actionMocks.getServices,
@@ -47,6 +50,7 @@ vi.mock('@alga-psa/billing/actions/contractActions', () => ({
 
 vi.mock('@alga-psa/billing/actions/contractLineServiceConfigurationActions', () => ({
   updateConfiguration: actionMocks.updateConfiguration,
+  getConfigurationWithDetails: actionMocks.getConfigurationWithDetails,
   upsertPlanServiceBucketConfigurationAction: actionMocks.upsertBucketConfiguration,
 }));
 
@@ -314,6 +318,22 @@ describe('contract line service membership editing', () => {
     expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
   });
 
+  it('ordinary seat edits remain available after billing and submit a prospective boundary without changing line settings', async () => {
+    actionMocks.checkContractHasInvoices.mockResolvedValue(true);
+    const seats = {...existingServiceConfiguration, typeConfig: {base_rate: 10000, pricing_basis: 'unit'}};
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([seats]);
+    actionMocks.getConfigurationWithDetails.mockResolvedValue({baseConfig: {...seats.configuration, quantity: 10}, typeConfig: seats.typeConfig});
+    renderContractLines();
+    fireEvent.click(await screen.findByRole('button', {name: 'Edit'}));
+    await waitFor(() => expect((document.getElementById('quantity-existing-config') as HTMLInputElement)?.value).toBe('10'));
+    expect((document.getElementById('quantity-effective-line-1') as HTMLInputElement).value).toBe('2026-10-01');
+    expect(screen.getByText('Recurring seats/units')).not.toBeNull();
+    fireEvent.change(document.getElementById('quantity-existing-config')!, {target: {value: '0'}});
+    fireEvent.click(screen.getByRole('button', {name: 'Save'}));
+    await waitFor(() => expect(actionMocks.updateConfiguration).toHaveBeenCalledWith('existing-config', expect.objectContaining({quantity: 0}), expect.objectContaining({effective_period_start: '2026-10-01', base_rate: 10000})));
+    expect(actionMocks.updateContractLine).not.toHaveBeenCalled();
+    expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
+  });
   it('persists the complete staged membership change only when the outer editor is saved', async () => {
     renderContractLines();
 

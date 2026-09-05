@@ -689,15 +689,9 @@ export const updateContractLineService = withAuth(async (
         baseUpdates.custom_rate = updates.customRate;
       }
 
-      const updateResult = await planServiceConfigActions.updateConfiguration(
-        config.config_id,
-        Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
-        updates.typeConfig,
-        rateTiers
-      );
-      if (isReturnedActionError(updateResult)) {
-        return updateResult;
-      }
+      const txService = new ContractLineServiceConfigurationService(trx, tenant);
+      await txService.updateConfiguration(config.config_id,
+        Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined, updates.typeConfig, rateTiers);
 
       if (
         config.configuration_type === 'Hourly' &&
@@ -970,7 +964,7 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
 
     result.push({
       service,
-      configuration: configToUse,
+      configuration: {...configToUse, ...configDetails.baseConfig},
       typeConfig: configDetails.typeConfig,
       userTypeRates: userTypeRates,
       bucketConfig: bucketConfigDetails // Add the merged bucket config

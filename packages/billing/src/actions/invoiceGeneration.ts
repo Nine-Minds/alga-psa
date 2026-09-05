@@ -91,6 +91,11 @@ import {
   ManualInvoiceError,
   type HandledManualInvoiceErrorCode,
 } from '../errors/manualInvoiceErrors';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+import {
+  bindUsagePeriodTotalInputs,
+  type IExpectedUsagePeriodTotal,
+} from '../lib/billing/usagePeriodTotalIdentity';
 import type { HandledRecurringFailureCode } from './recurringBillingRunActions.shared';
 import {
   detectRecurringApprovalBlockers,
@@ -602,12 +607,16 @@ function buildPreviewInvoiceFailure(
   error: string,
   code?: HandledRecurringFailureCode,
   params?: Record<string, string>,
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[],
 ): PreviewInvoiceResponse {
   return {
     success: false,
     error,
     ...(code ? { code } : {}),
     ...(params ? { params } : {}),
+    ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
+      ? { usageServicePeriodStatuses }
+      : {}),
     ...buildRecurringWindowErrorContext(selectorInput),
   };
 }
@@ -641,6 +650,7 @@ function buildMissingUsageRecordsError(
       periodStart,
       periodEnd,
     },
+    statuses,
   );
 }
 
@@ -701,32 +711,33 @@ function buildUsageCalculationError(
   const serviceNames = Array.from(
     new Set(statuses.map((status) => status.service_name ?? status.service_id)),
   );
+  const serviceIds = Array.from(new Set(statuses.map((status) => status.service_id)));
   const periodStart = statuses[0].service_period_start;
   const periodEnd = statuses[0].service_period_end;
+  // Per-service diagnostics stay structured so an all-error window still names
+  // every withheld report (service, period, recorded quantity) instead of
+  // collapsing to one sentence.
+  const details = statuses
+    .map(
+      (status) =>
+        `${status.service_name ?? status.service_id} (${status.service_period_start} to ${status.service_period_end}): recorded quantity ${status.quantity ?? 0} could not be priced`,
+    )
+    .join('; ');
   return new ManualInvoiceError(
     'USAGE_CALCULATION_ERROR',
     `Usage for ${serviceNames.join(', ')} in the service period ${periodStart} to ${periodEnd} is recorded but could not be priced. Fix the service pricing (catalog price in the contract currency, a custom rate, or rate tiers), then try again. Do not record replacement usage.`,
     {
       services: serviceNames.join(', '),
+      serviceIds: serviceIds.join(','),
       periodStart,
       periodEnd,
+      details,
     },
+    statuses,
   );
 }
 
-/**
- * The previewed period-total identity a caller passes back to generation so
- * finalization consumes exactly the revision the preview priced. The logical
- * key (line, service, canonical period boundary) matches R3's uniqueness key,
- * so it survives regeneration of recurring-period row ids.
- */
-export interface IExpectedUsagePeriodTotal {
-  clientContractLineId: string;
-  serviceId: string;
-  periodStart: ISO8601String;
-  periodEnd: ISO8601String;
-  revision: number;
-}
+export type { IExpectedUsagePeriodTotal } from '../lib/billing/usagePeriodTotalIdentity';
 
 /**
  * Options accepted by every recurring invoice-generation entry point. All
@@ -753,9 +764,13 @@ export interface IInvoiceGenerationRequestOptions {
 
 /**
  * Enforces preview/generation consistency for period totals: every expected
- * (previewed) total must still be present in the freshly recomputed charges at
- * exactly the previewed revision. Reads the stored totals only to phrase why a
- * mismatch happened (edited / deleted / already invoiced).
+ * (previewed) total must still be present in the freshly recomputed charges
+ * with exactly the previewed identity — same stored row, same revision, same
+ * billable quantity, and same priced amount. Revision alone cannot see a
+ * delete + re-report (revisions restart on the new row) or a pricing or
+ * configuration change that reprices an unchanged report; the content fields
+ * close both gaps. Reads the stored totals only to phrase why a mismatch
+ * happened (edited / replaced / deleted / already invoiced / repriced).
  */
 async function assertExpectedUsagePeriodTotalsCurrent(params: {
   knex: Knex;
@@ -763,6 +778,7 @@ async function assertExpectedUsagePeriodTotalsCurrent(params: {
   clientId: string;
   charges: IBillingCharge[];
   expected: IExpectedUsagePeriodTotal[];
+  statuses?: IUsageServicePeriodStatus[];
 }): Promise<void> {
   const keyOf = (
     lineId: string | undefined,
@@ -771,80 +787,27 @@ async function assertExpectedUsagePeriodTotalsCurrent(params: {
     periodEnd: string | null | undefined,
   ) => `${lineId ?? ''}|${serviceId ?? ''}|${(periodStart ?? '').slice(0, 10)}|${(periodEnd ?? '').slice(0, 10)}`;
 
-  const currentByKey = new Map<string, { revision: number }>();
-  for (const charge of params.charges) {
-    if (charge.type !== 'usage') {
-      continue;
-    }
-    const periodTotalId = (charge as { usagePeriodTotalId?: string | null }).usagePeriodTotalId;
-    if (!periodTotalId) {
-      continue;
-    }
-    currentByKey.set(
-      keyOf(
-        charge.client_contract_line_id,
-        charge.serviceId,
-        charge.servicePeriodStart,
-        charge.servicePeriodEnd,
-      ),
-      {
-        revision: Number(
-          (charge as { usagePeriodTotalRevision?: number | null }).usagePeriodTotalRevision ?? 1,
-        ),
-      },
-    );
-  }
-
+  const identities = await bindUsagePeriodTotalInputs(
+    params.knex, params.tenant, params.clientId, params.charges, params.statuses,
+  );
+  const currentByKey = new Map(identities.map(identity => [keyOf(identity.clientContractLineId, identity.serviceId, identity.periodStart, identity.periodEnd), identity]));
   const staleDescriptions: string[] = [];
   const staleServiceIds: string[] = [];
   for (const expected of params.expected) {
-    const current = currentByKey.get(
-      keyOf(
-        expected.clientContractLineId,
-        expected.serviceId,
-        expected.periodStart,
-        expected.periodEnd,
-      ),
-    );
-    if (current && current.revision === Number(expected.revision)) {
-      continue;
-    }
-
-    // Explain the divergence from the stored total (tenant-scoped read only).
-    // Totals key on the contract line while charges/statuses may carry the
-    // client contract line identity, so prefer a matching line id but accept
-    // an unambiguous single row for the client/service/period.
-    const storedTotals = await tenantDb(params.knex, params.tenant)
-      .table('usage_period_totals')
-      .where({
-        client_id: params.clientId,
-        service_id: expected.serviceId,
-      })
-      .where('period_start', expected.periodStart.slice(0, 10))
-      .where('period_end', expected.periodEnd.slice(0, 10))
-      .select('client_contract_line_id', 'revision', 'lifecycle_state');
-    const storedTotal =
-      storedTotals.find(
-        (row) => row.client_contract_line_id === expected.clientContractLineId,
-      ) ?? (storedTotals.length === 1 ? storedTotals[0] : undefined);
-
-    const serviceLabel = expected.serviceId;
+    const current = currentByKey.get(keyOf(expected.clientContractLineId, expected.serviceId, expected.periodStart, expected.periodEnd));
+    if (current && expected.billingInputsHash && current.billingInputsHash === expected.billingInputsHash
+      && current.periodTotalId === expected.periodTotalId && current.configId === expected.configId
+      && current.revision === Number(expected.revision) && current.quantity === expected.quantity
+      && current.totalCents === expected.totalCents) continue;
     staleServiceIds.push(expected.serviceId);
-    if (!storedTotal) {
-      staleDescriptions.push(
-        `the previewed period total for service ${serviceLabel} (${expected.periodStart} to ${expected.periodEnd}) was deleted`,
-      );
-    } else if (storedTotal.lifecycle_state === 'billed') {
-      staleDescriptions.push(
-        `the previewed period total for service ${serviceLabel} (${expected.periodStart} to ${expected.periodEnd}) was already invoiced`,
-      );
-    } else {
-      staleDescriptions.push(
-        `the previewed period total for service ${serviceLabel} (${expected.periodStart} to ${expected.periodEnd}) changed from revision ${expected.revision} to ${storedTotal.revision}`,
-      );
-    }
+    staleDescriptions.push(`the report or billing inputs for service ${expected.serviceId} (${expected.periodStart} to ${expected.periodEnd}) changed since preview`);
   }
 
+  for (const current of identities) {
+    if (params.expected.some(expected => keyOf(expected.clientContractLineId, expected.serviceId, expected.periodStart, expected.periodEnd) === keyOf(current.clientContractLineId, current.serviceId, current.periodStart, current.periodEnd))) continue;
+    staleServiceIds.push(current.serviceId);
+    staleDescriptions.push(`service ${current.serviceId} (${current.periodStart} to ${current.periodEnd}) was not in the reviewed usage selection`);
+  }
   if (staleDescriptions.length > 0) {
     throw new ManualInvoiceError(
       'USAGE_PERIOD_TOTAL_STALE',
@@ -866,6 +829,7 @@ function previewInvoiceErrorInfo(error: unknown): {
   message: string;
   code?: HandledRecurringFailureCode;
   params?: Record<string, string>;
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 } {
   const message = error instanceof Error ? error.message : '';
 
@@ -911,16 +875,23 @@ function previewInvoiceErrorInfo(error: unknown): {
 
   // A coded billing validation error carries its code/params straight to the UI
   // so preview surfaces the same localized remediation as its sibling flows.
-  // Only the allowlisted NO_BILLING_EMAIL code crosses; unsupported codes take
-  // the generic fallback so raw validation detail never reaches the user.
+  // Only allowlisted codes cross; unsupported codes take the generic fallback
+  // so raw validation detail never reaches the user. USAGE_CALCULATION_ERROR
+  // is allowlisted so an all-error window keeps its structured per-service
+  // diagnostics (serviceIds/details) instead of collapsing to a flat string.
   if (
     error instanceof ManualInvoiceError &&
-    (error.code === 'NO_BILLING_EMAIL' || error.code === 'USAGE_RECORDS_MISSING')
+    (error.code === 'NO_BILLING_EMAIL' ||
+      error.code === 'USAGE_RECORDS_MISSING' ||
+      error.code === 'USAGE_CALCULATION_ERROR')
   ) {
     return {
       message: error.message,
       code: error.code,
       params: error.params,
+      ...(error.usageStatuses && error.usageStatuses.length > 0
+        ? { usageServicePeriodStatuses: error.usageStatuses }
+        : {}),
     };
   }
 
@@ -1850,11 +1821,15 @@ async function calculateBillingWithReconciledAttribution(params: {
         windowEnd: canonicalSelection.windowEnd,
       });
 
+      await lockTenantBilling(trx, params.tenant);
       const billingResult = await calculateBillingForSelectionInputs({
         billingEngine: BillingEngine.forTransaction(trx, params.tenant),
         selectorInputs: params.selectorInputs,
       });
 
+      billingResult.expectedUsagePeriodTotals = await bindUsagePeriodTotalInputs(
+        trx, params.tenant, canonicalSelection.clientId, billingResult.charges, billingResult.usageServicePeriodStatuses,
+      );
       if (params.persistReconciliation && billingResult.error) {
         throw new Error(billingResult.error);
       }
@@ -2171,6 +2146,13 @@ interface BuiltPreviewInvoice {
    * the coded USAGE_RECORDS_MISSING error instead).
    */
   usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+  /**
+   * Full previewed identity (row, revision, quantity, priced amount) of every
+   * period-total-backed usage charge, for the caller to hand back to
+   * generation so finalization refuses when a report or its pricing changed
+   * after the preview.
+   */
+  expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
 }
 
 async function buildPreviewInvoiceForSelectionInputs(params: {
@@ -2246,7 +2228,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         canonicalSelection,
       );
     }
-    throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
+    // Explicit zero, already invoiced, and excluded attribution remain visible evidence.
+    if (usageStatuses.length === 0) throw withRecurringWindowErrorContext(new Error('Nothing to bill'), canonicalSelection);
   }
 
   const client = await getClientDetails(knex, tenant, client_id);
@@ -2446,11 +2429,13 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   );
 
   const usageServicePeriodStatuses = billingResult.usageServicePeriodStatuses;
+  const expectedUsagePeriodTotals = billingResult.expectedUsagePeriodTotals ?? [];
   return {
     viewModel,
     ...(usageServicePeriodStatuses && usageServicePeriodStatuses.length > 0
       ? { usageServicePeriodStatuses }
       : {}),
+    ...(expectedUsagePeriodTotals.length > 0 ? { expectedUsagePeriodTotals } : {}),
   };
 }
 
@@ -2484,6 +2469,11 @@ export type RecurringGroupedPreviewResponse = {
      * charges are never mistaken for "all usage billed".
      */
     usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
+    /**
+     * Full previewed identity of every period-total-backed usage charge, to
+     * pass back through generation as expectedUsagePeriodTotals.
+     */
+    expectedUsagePeriodTotals?: IExpectedUsagePeriodTotal[];
   }>;
 } | {
   success: false;
@@ -2493,6 +2483,11 @@ export type RecurringGroupedPreviewResponse = {
   code?: RecurringInvoiceFailureCode;
   /** Interpolation values for the localized failure copy (e.g. clientName). */
   params?: Record<string, string>;
+  /**
+   * Structured per-service diagnoses for coded usage failures, so an
+   * all-unreported or all-error window still offers inline remediation.
+   */
+  usageServicePeriodStatuses?: IUsageServicePeriodStatus[];
 };
 
 export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
@@ -2540,6 +2535,9 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           ...(preview.usageServicePeriodStatuses
             ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
             : {}),
+          ...(preview.expectedUsagePeriodTotals
+            ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+            : {}),
         };
       }),
     );
@@ -2570,12 +2568,16 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
           previewInfo.message,
           previewInfo.code,
           previewInfo.params,
+          previewInfo.usageServicePeriodStatuses,
         )
       : {
           success: false,
           error: previewInfo.message,
           ...(previewInfo.code ? { code: previewInfo.code } : {}),
           ...(previewInfo.params ? { params: previewInfo.params } : {}),
+          ...(previewInfo.usageServicePeriodStatuses
+            ? { usageServicePeriodStatuses: previewInfo.usageServicePeriodStatuses }
+            : {}),
         };
   }
 });
@@ -2608,6 +2610,9 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       ...(preview.usageServicePeriodStatuses
         ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
         : {}),
+      ...(preview.expectedUsagePeriodTotals
+        ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+        : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2624,6 +2629,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
       previewInfo.message,
       previewInfo.code,
       previewInfo.params,
+      previewInfo.usageServicePeriodStatuses,
     );
   }
 });
@@ -2692,6 +2698,9 @@ export const previewInvoice = withAuth(async (
       ...(preview.usageServicePeriodStatuses
         ? { usageServicePeriodStatuses: preview.usageServicePeriodStatuses }
         : {}),
+      ...(preview.expectedUsagePeriodTotals
+        ? { expectedUsagePeriodTotals: preview.expectedUsagePeriodTotals }
+        : {}),
     };
   } catch (error) {
     logPreviewInvoiceFailure(
@@ -2710,12 +2719,16 @@ export const previewInvoice = withAuth(async (
           previewInfo.message,
           previewInfo.code,
           previewInfo.params,
+          previewInfo.usageServicePeriodStatuses,
         )
       : {
           success: false,
           error: previewInfo.message,
           ...(previewInfo.code ? { code: previewInfo.code } : {}),
           ...(previewInfo.params ? { params: previewInfo.params } : {}),
+          ...(previewInfo.usageServicePeriodStatuses
+            ? { usageServicePeriodStatuses: previewInfo.usageServicePeriodStatuses }
+            : {}),
         };
   }
 });
@@ -3062,6 +3075,13 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   options?: IInvoiceGenerationRequestOptions;
   bridgeMetadata?: RecurringBridgeMetadata;
 }): Promise<InvoiceViewModel | null> {
+  return params.knex.transaction(async (trx) => {
+    await lockTenantBilling(trx, params.tenant);
+    return generateInvoiceForLockedSelectionInputs({ ...params, knex: trx });
+  });
+}
+
+async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof generateInvoiceForNormalizedSelectionInputs>[0]): Promise<InvoiceViewModel | null> {
   const { user, tenant, knex } = params;
   const normalizedSelectorInput = assertSameRecurringSelectionWindow(params.normalizedSelectorInputs);
   const billing_cycle_id = resolveRecurringInvoiceBridgeId(params.bridgeMetadata);
@@ -3138,7 +3158,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
   // automated callers pass nothing and keep the recompute-from-database
   // behavior unchanged.
   const expectedUsagePeriodTotals = params.options?.expectedUsagePeriodTotals ?? [];
-  if (expectedUsagePeriodTotals.length > 0) {
+  if (params.options?.expectedUsagePeriodTotals !== undefined) {
     try {
       await assertExpectedUsagePeriodTotalsCurrent({
         knex,
@@ -3146,6 +3166,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
         clientId: client_id,
         charges: billingResult.charges,
         expected: expectedUsagePeriodTotals,
+        statuses: billingResult.usageServicePeriodStatuses,
       });
     } catch (error) {
       throw error instanceof ManualInvoiceError
@@ -3253,6 +3274,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
       cycleEnd,
       billing_cycle_id,
       user.user_id,
+    { knex },
     );
     if (settings.zero_dollar_invoice_handling === 'finalized') {
       await finalizeInvoiceWithKnex(createdInvoice.invoice_id, knex, tenant, user.user_id);
@@ -3281,6 +3303,7 @@ export async function generateInvoiceForNormalizedSelectionInputs(params: {
     cycleEnd,
     billing_cycle_id,
     user.user_id,
+    { knex },
   );
 
   return Invoice.getFullInvoiceById(knex, tenant, createdInvoice.invoice_id);
@@ -3450,14 +3473,14 @@ export async function createInvoiceFromBillingResultImpl(
   cycleEnd: ISO8601String,
   billing_cycle_id: string | null,
   userId: string,
-  options: { projectId?: string } = {},
+  options: { projectId?: string; knex?: Knex } = {},
 ): Promise<IInvoice> {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
     throw new Error('Permission denied: User ID mismatch');
   }
 
-  const { knex } = await createTenantKnex();
+  const knex = options.knex ?? (await createTenantKnex()).knex;
 
   const client = await getClientDetails(knex, tenant, clientId);
   let region_code = await getClientDefaultTaxRegionCode(knex, tenant, clientId);

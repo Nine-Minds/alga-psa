@@ -2,9 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { setUsageMeasurementMode } from '@alga-psa/billing/actions/contractLineSemanticsActions';
+import { getNextContractServiceBoundary, setUsageMeasurementMode } from '@alga-psa/billing/actions/contractLineSemanticsActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,
@@ -58,14 +59,24 @@ export const UsageLegacyTransitionDialog: React.FC<UsageLegacyTransitionDialogPr
 }) => {
   const { t } = useTranslation('msp/contracts');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [effectiveBoundary, setEffectiveBoundary] = useState('');
+  const [boundaryLoading, setBoundaryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       setError(null);
       setIsSubmitting(false);
+      if (mode === 'period_count') {
+        setBoundaryLoading(true);
+        void getNextContractServiceBoundary(contractLineId).then(result => {
+          if (typeof result === 'string') setEffectiveBoundary(result);
+          else if (result) setError(getErrorMessage(result));
+        }).catch(err => setError(err instanceof Error ? err.message : 'Could not load the effective boundary.'))
+          .finally(() => setBoundaryLoading(false));
+      }
     }
-  }, [isOpen, mode]);
+  }, [isOpen, mode, contractLineId]);
 
   const handleReportPeriodCount = async () => {
     if (!configId) {
@@ -82,6 +93,7 @@ export const UsageLegacyTransitionDialog: React.FC<UsageLegacyTransitionDialogPr
         contract_line_id: contractLineId,
         service_id: serviceId,
         measurement_mode: 'period_total',
+        ...(effectiveBoundary ? {effective_period_start: effectiveBoundary} : {}),
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         setError(getErrorMessage(result));
@@ -111,7 +123,33 @@ export const UsageLegacyTransitionDialog: React.FC<UsageLegacyTransitionDialogPr
       });
 
   return (
-    <Dialog isOpen={isOpen} onClose={onClose} title={title}>
+    <Dialog isOpen={isOpen} onClose={onClose} title={title} footer={(<DialogFooter>
+        <Button
+          id="usage-legacy-transition-cancel"
+          type="button"
+          variant="ghost"
+          onClick={onClose}
+          disabled={isSubmitting || boundaryLoading}
+        >
+          {mode === 'recurring_seats'
+            ? t('contractOverview.legacyTransition.actions.close', { defaultValue: 'Close' })
+            : t('contractOverview.legacyTransition.actions.cancel', { defaultValue: 'Cancel' })}
+        </Button>
+        {mode === 'period_count' && (
+          <Button
+            id="usage-legacy-transition-confirm"
+            type="button"
+            onClick={handleReportPeriodCount}
+            disabled={isSubmitting || boundaryLoading}
+          >
+            {isSubmitting
+              ? t('contractOverview.legacyTransition.actions.switching', { defaultValue: 'Switching…' })
+              : t('contractOverview.legacyTransition.actions.confirmPeriodCount', {
+                  defaultValue: 'Switch to period counts',
+                })}
+          </Button>
+        )}
+      </DialogFooter>)}>
       <DialogContent className="space-y-4">
         <p className="text-sm text-muted-foreground">{serviceName}</p>
 
@@ -164,6 +202,8 @@ export const UsageLegacyTransitionDialog: React.FC<UsageLegacyTransitionDialogPr
           </div>
         ) : (
           <div className="space-y-2 text-sm" data-testid="legacy-transition-period-count">
+            <label htmlFor="usage-legacy-effective-boundary">{t('contractOverview.legacyTransition.effectiveFrom', {defaultValue: 'Measurement change effective from'})}</label>
+            <Input id="usage-legacy-effective-boundary" type="date" value={effectiveBoundary} onChange={event => setEffectiveBoundary(event.target.value)} disabled={boundaryLoading || isSubmitting} />
             <p>
               {t('contractOverview.legacyTransition.periodCount.explanation', {
                 defaultValue:
@@ -185,33 +225,7 @@ export const UsageLegacyTransitionDialog: React.FC<UsageLegacyTransitionDialogPr
           </Alert>
         )}
       </DialogContent>
-      <DialogFooter>
-        <Button
-          id="usage-legacy-transition-cancel"
-          type="button"
-          variant="ghost"
-          onClick={onClose}
-          disabled={isSubmitting}
-        >
-          {mode === 'recurring_seats'
-            ? t('contractOverview.legacyTransition.actions.close', { defaultValue: 'Close' })
-            : t('contractOverview.legacyTransition.actions.cancel', { defaultValue: 'Cancel' })}
-        </Button>
-        {mode === 'period_count' && (
-          <Button
-            id="usage-legacy-transition-confirm"
-            type="button"
-            onClick={handleReportPeriodCount}
-            disabled={isSubmitting}
-          >
-            {isSubmitting
-              ? t('contractOverview.legacyTransition.actions.switching', { defaultValue: 'Switching…' })
-              : t('contractOverview.legacyTransition.actions.confirmPeriodCount', {
-                  defaultValue: 'Switch to period counts',
-                })}
-          </Button>
-        )}
-      </DialogFooter>
+
     </Dialog>
   );
 };

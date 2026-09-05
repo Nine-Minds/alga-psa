@@ -15,6 +15,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { scheduleSeatRevisionInTransaction } from '../lib/billing/seatRevisions';
 
 type UnitPricingActionError = ActionMessageError | ActionPermissionError;
 
@@ -45,71 +46,6 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-async function rejectBilledBoundary(params: {
-  trx: Knex.Transaction;
-  tenant: string;
-  contractLineId: string;
-  effectivePeriodStart: string;
-}): Promise<string | null> {
-  const { trx, tenant, contractLineId, effectivePeriodStart } = params;
-  // A billed/locked period [start, end) that CONTAINS the effective boundary
-  // means the change would rewrite an invoiced or being-finalized period.
-  // Boundaries exactly on a billed period's end are the legal next period.
-  const conflicting = await tenantScopedTable(trx, tenant, 'recurring_service_periods')
-    .where({ tenant, obligation_id: contractLineId })
-    .whereIn('lifecycle_state', ['billed', 'locked'])
-    .where('service_period_start', '<=', effectivePeriodStart)
-    .where('service_period_end', '>', effectivePeriodStart)
-    .first('record_id');
-  if (conflicting) {
-    return 'That effective date falls inside an already-billed or finalizing service period. Choose the next unbilled service-period boundary instead.';
-  }
-  return null;
-}
-
-async function resolveSeatScope(params: {
-  trx: Knex.Transaction;
-  tenant: string;
-  input: IContractLineUnitPricingRevisionInput;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { trx, tenant, input } = params;
-  const fixedConfig = await tenantScopedTable(
-    trx,
-    tenant,
-    'contract_line_service_configuration as clsc',
-  )
-    .where({
-      'clsc.tenant': tenant,
-      'clsc.contract_line_id': input.contract_line_id,
-      'clsc.service_id': input.service_id,
-      'clsc.config_id': input.config_id,
-      'clsc.configuration_type': 'Fixed',
-    })
-    .innerJoin(
-      'contract_line_service_fixed_config as fc',
-      'fc.config_id',
-      'clsc.config_id',
-    )
-    .first<{ pricing_basis: string | null }>('fc.pricing_basis');
-  if (!fixedConfig) {
-    return { ok: false, error: 'The selected service is not a Fixed configuration on that contract line.' };
-  }
-  if (fixedConfig.pricing_basis !== 'unit') {
-    return {
-      ok: false,
-      error:
-        'Only explicitly unit-priced (recurring seats/units) services can carry scheduled quantity/rate changes. This service uses bundle pricing.',
-    };
-  }
-  const line = await tenantScopedTable(trx, tenant, 'contract_lines')
-    .where({ tenant, contract_line_id: input.contract_line_id, contract_line_type: 'Fixed' })
-    .first('contract_line_id');
-  if (!line) {
-    return { ok: false, error: 'The selected contract line is not a Fixed line.' };
-  }
-  return { ok: true };
-}
-
 export const scheduleUnitPricingRevision = withAuth(
   async (
     user,
@@ -135,67 +71,21 @@ export const scheduleUnitPricingRevision = withAuth(
     try {
       const { knex } = await createTenantKnex();
       const result = await knex.transaction(async (trx) => {
-        const scope = await resolveSeatScope({ trx, tenant, input });
-        if (!scope.ok) {
-          return actionError(scope.error);
-        }
-        const boundaryConflict = await rejectBilledBoundary({
+        const scheduled = await scheduleSeatRevisionInTransaction({
           trx,
           tenant,
+          userId: user.user_id ?? null,
           contractLineId: input.contract_line_id,
+          serviceId: input.service_id,
+          configId: input.config_id,
+          quantity,
+          unitRateCents,
           effectivePeriodStart: effective,
         });
-        if (boundaryConflict) {
-          return actionError(boundaryConflict);
+        if (!scheduled.ok) {
+          return actionError(scheduled.error);
         }
-
-        const existing = await tenantScopedTable(
-          trx,
-          tenant,
-          'contract_line_unit_pricing_revisions',
-        )
-          .where({
-            tenant,
-            contract_line_id: input.contract_line_id,
-            service_id: input.service_id,
-            config_id: input.config_id,
-            effective_period_start: effective,
-          })
-          .first<{ revision_id: string }>('revision_id');
-
-        if (existing) {
-          const [updated] = await tenantScopedTable(
-            trx,
-            tenant,
-            'contract_line_unit_pricing_revisions',
-          )
-            .where({ tenant, revision_id: existing.revision_id })
-            .update({
-              quantity,
-              unit_rate_cents: unitRateCents,
-              created_by: user.user_id ?? null,
-            })
-            .returning('*');
-          return updated as unknown as IContractLineUnitPricingRevision;
-        }
-
-        const [inserted] = await tenantScopedTable(
-          trx,
-          tenant,
-          'contract_line_unit_pricing_revisions',
-        )
-          .insert({
-            tenant,
-            contract_line_id: input.contract_line_id,
-            service_id: input.service_id,
-            config_id: input.config_id,
-            quantity,
-            unit_rate_cents: unitRateCents,
-            effective_period_start: effective,
-            created_by: user.user_id ?? null,
-          })
-          .returning('*');
-        return inserted as unknown as IContractLineUnitPricingRevision;
+        return scheduled.revision;
       });
 
       revalidatePath('/msp/billing');

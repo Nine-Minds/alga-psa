@@ -22,6 +22,8 @@ import {
   NO_BILLING_EMAIL_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
+  USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
+  USAGE_CALCULATION_ERROR_MESSAGE_KEY,
 } from './invoiceGeneration.constants';
 import {
   buildRecurringRunSelectionIdentity,
@@ -100,6 +102,22 @@ function handledRecurringFailureFromActionError(error: RecurringBillingRunAction
       params: error.messageParams as Record<string, string> | undefined,
     };
   }
+  // A stale previewed period total refused finalization: the operator must
+  // re-preview, so the coded failure (not a generic string) reaches the UI.
+  if (error.messageKey === USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY) {
+    return {
+      code: 'USAGE_PERIOD_TOTAL_STALE',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
+  // Recorded usage the engine could not price keeps its structured
+  // per-service diagnostics across the run boundary.
+  if (error.messageKey === USAGE_CALCULATION_ERROR_MESSAGE_KEY) {
+    return {
+      code: 'USAGE_CALCULATION_ERROR',
+      params: error.messageParams as Record<string, string> | undefined,
+    };
+  }
   return {};
 }
 
@@ -123,6 +141,8 @@ function normalizeRecurringBillingRunGroupedTargets(params: {
       selectorInputs: (group.selectorInputs ?? []).filter(
         (selectorInput) => Boolean(selectorInput?.executionWindow?.identityKey),
       ),
+      billingCycleId: group.billingCycleId,
+      expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
     }))
     .filter((group) => group.selectorInputs.length > 0);
 }
@@ -298,12 +318,14 @@ export async function generateInvoicesAsRecurringBillingRun(params: {
               {
                 allowPoOverage: params.allowPoOverage,
                 acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+                expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
               },
               { billingCycleId: target.billingCycleId },
             )
           : await generateInvoiceForSelectionInput(selectorInput, {
               allowPoOverage: params.allowPoOverage,
               acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+              expectedUsagePeriodTotals: target.expectedUsagePeriodTotals,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {
@@ -480,12 +502,14 @@ export async function generateGroupedInvoicesAsRecurringBillingRun(params: {
               {
                 allowPoOverage: params.allowPoOverage,
                 acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+                expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
               },
               { billingCycleId: group.billingCycleId },
             )
           : await generateInvoiceForSelectionInputs(group.selectorInputs, {
               allowPoOverage: params.allowPoOverage,
               acknowledgeUnreportedUsage: params.acknowledgeUnreportedUsage,
+              expectedUsagePeriodTotals: group.expectedUsagePeriodTotals,
             });
         if (isRecurringBillingRunActionError(invoice)) {
           if (isDuplicateRecurringInvoiceActionError(invoice)) {

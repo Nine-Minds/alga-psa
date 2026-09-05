@@ -363,7 +363,8 @@
       "errors": {
         "missingConfiguration": "This service has no saved configuration to convert. Refresh and try again.",
         "failed": "Could not change how this service is measured."
-      }
+      },
+      "effectiveFrom": "Measurement change effective from"
     }
   },
   "contractDialog": {
@@ -592,7 +593,10 @@
       "typeLabel": "{{type}} Service",
       "unitOfMeasure": "Unit of Measure",
       "unitPlaceholder": "unit",
-      "unitRate": "Unit Rate"
+      "unitRate": "Unit Rate",
+      "effectiveFrom": "Recurring seat changes effective from",
+      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
+      "recurringUnits": "Recurring seats/units"
     },
     "title": "Contract Lines"
   },

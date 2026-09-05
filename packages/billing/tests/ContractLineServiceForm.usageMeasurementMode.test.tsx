@@ -42,6 +42,7 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceConfigurationActions', () 
 
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({
   setUsageMeasurementMode: actionMocks.setUsageMeasurementMode,
+  getNextContractServiceBoundary: async () => '2026-10-01',
 }));
 
 vi.mock('../src/actions/bucketOverlayActions', () => ({
@@ -214,29 +215,14 @@ describe('usage service configuration measurement mode', () => {
     expect(screen.getByText('Minimum per period report')).toBeTruthy();
   });
 
-  it('persists the selected measurement mode through the guarded semantics action', async () => {
+  it('saves measurement and pricing with the displayed effective boundary in one authoring action', async () => {
     await renderUsageEditor();
-
     fireEvent.click(radio('period_total'));
     fireEvent.click(document.getElementById('save-service-config-button')!);
-
-    await waitFor(() => {
-      expect(actionMocks.setUsageMeasurementMode).toHaveBeenCalledTimes(1);
-    });
-
-    expect(actionMocks.setUsageMeasurementMode.mock.calls[0][0]).toEqual({
-      config_id: 'cfg-1',
-      contract_line_id: 'line-1',
-      service_id: 'svc-1',
-      measurement_mode: 'period_total',
-    });
-
-    await waitFor(() => {
-      expect(actionMocks.updateContractLineService).toHaveBeenCalledTimes(1);
-    });
+    await waitFor(() => expect(actionMocks.updateContractLineService).toHaveBeenCalledTimes(1));
+    expect(actionMocks.setUsageMeasurementMode).not.toHaveBeenCalled();
     const [, , updates] = actionMocks.updateContractLineService.mock.calls[0];
-    expect(updates.typeConfig).not.toHaveProperty('measurement_mode');
-    expect(updates.typeConfig.unit_of_measure).toBe('GB');
+    expect(updates.typeConfig).toMatchObject({measurement_mode: 'period_total', effective_period_start: '2026-10-01', unit_of_measure: 'GB'});
   });
 
   it('does not run the conversion guard when the mode is left unchanged', async () => {
@@ -252,7 +238,7 @@ describe('usage service configuration measurement mode', () => {
   });
 
   it('surfaces a refused conversion and does not save the rest of the configuration', async () => {
-    actionMocks.setUsageMeasurementMode.mockResolvedValue({
+    actionMocks.updateContractLineService.mockResolvedValue({
       actionError: 'This service still has unbilled additive entries on the contract line.',
     });
 
@@ -262,6 +248,6 @@ describe('usage service configuration measurement mode', () => {
     fireEvent.click(document.getElementById('save-service-config-button')!);
 
     await screen.findByText(/still has unbilled additive entries/i);
-    expect(actionMocks.updateContractLineService).not.toHaveBeenCalled();
+    expect(actionMocks.updateContractLineService).toHaveBeenCalledTimes(1);
   });
 });

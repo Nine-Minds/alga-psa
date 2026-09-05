@@ -161,6 +161,22 @@ describe('Canonical recurring-value valuation (R7 / T011)', () => {
       .update({ currency_code: currencyCode });
   }
 
+  it('catalog fallback, mixed service bases and Usage configurations on Fixed lines match their billing semantics', async () => {
+    const {contractLineId, members} = await createUnitPricedFixedLine([
+      {name: 'Catalog-priced seats', quantity: 2, unitRateCents: 1500},
+      {name: 'Legacy bundle allocation', quantity: 4, unitRateCents: 500},
+    ]);
+    await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[0].configId}).update({base_rate: null});
+    await context.db('contract_line_service_fixed_config').where({tenant: context.tenantId, config_id: members[1].configId}).update({pricing_basis: null});
+    await context.db('contract_lines').where({tenant: context.tenantId, contract_line_id: contractLineId}).update({custom_rate: 9000});
+    const usageService = await createTestService(context, {service_name: 'Variable storage', billing_method: 'usage', default_rate: 500});
+    await context.db('contract_line_service_configuration').insert({tenant: context.tenantId, config_id: uuidv4(), contract_line_id: contractLineId,
+      service_id: usageService, configuration_type: 'Usage', quantity: 999});
+    const {clientContractId} = await assignContractLineToClient(context, contractLineId, {startDate: '2023-01-01'});
+    const values = await getContractMonthlyValuesByAssignment(context.db, context.tenantId, [clientContractId], '2023-01-15');
+    expect(values.get(clientContractId)).toMatchObject({monthlyValueCents: 12000, hasVariableUsage: true});
+  });
+
   it('values the 10/9/1 recurring-seat example at 189000 minor units with no usage rows', async () => {
     const { contractLineId } = await createUnitPricedFixedLine([
       { name: 'Standard Seat', quantity: 10, unitRateCents: 10000 },

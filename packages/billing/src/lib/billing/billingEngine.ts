@@ -1,3 +1,4 @@
+import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
 import {
   calculateContractBilling,
@@ -96,7 +97,7 @@ import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
 import {
   resolveFixedPlanLevelBaseRate,
-  isUnitPricedFixedLine,
+  hasUnitPricedFixedMembers,
   filterApplicableDiscounts,
   buildChargeComputeTaxContext,
   type ChargeComputeClient,
@@ -363,10 +364,15 @@ const isFixedLineUnpriceable = (
     return false;
   }
 
-  // A unit-priced (recurring-seat) line prices per member quantity × unit
-  // rate; the bundle plan-level base rate is irrelevant and its absence does
-  // not make the line unpriceable.
-  if (isUnitPricedFixedLine(planServices)) {
+  // Pricing basis is per service: unit-priced (recurring-seat) members price
+  // quantity × unit rate, so the bundle plan-level base rate only matters for
+  // the remaining bundle members. A pure-seats line is never unpriceable for
+  // lack of a bundle rate; a mixed line is unpriceable only when its bundle
+  // members cannot resolve a fee.
+  const bundleMembers = planServices.filter(
+    (service: { pricing_basis?: string | null }) => service.pricing_basis !== "unit",
+  );
+  if (hasUnitPricedFixedMembers(planServices) && bundleMembers.length === 0) {
     return false;
   }
 
@@ -374,7 +380,7 @@ const isFixedLineUnpriceable = (
     resolveFixedPlanLevelBaseRate({
       clientContractLine,
       contractLineDetails,
-      planServices,
+      planServices: bundleMembers.length > 0 ? bundleMembers : planServices,
     }) === null
   );
 };
@@ -4257,7 +4263,7 @@ export class BillingEngine {
     let effectivePlanServices = planServices;
     if (
       planServices.length > 0 &&
-      isUnitPricedFixedLine(planServices)
+      hasUnitPricedFixedMembers(planServices)
     ) {
       const revisionRows = (await db
         .table("contract_line_unit_pricing_revisions")
@@ -5214,6 +5220,36 @@ export class BillingEngine {
     return;
   }
 
+  /** Resolve entry eligibility with the same timing/coverage rules used to bill it. */
+  public async isCanonicalUsagePeriod(clientId: string, lineId: string, start: string, end: string): Promise<boolean> {
+    await this.initKnex();
+    const db = tenantDb(this.knex, this.tenant!);
+    const periods = await db.table('recurring_service_periods')
+      .where('obligation_id', lineId).whereNotIn('lifecycle_state', ['superseded', 'archived'])
+      .select('*');
+    for (const period of periods) {
+      const billingPeriod = { tenant: this.tenant!, startDate: toISODate(toPlainDate(period.invoice_window_start)), endDate: toISODate(toPlainDate(period.invoice_window_end)) };
+      const lines = await this.getClientContractLinesForBillingPeriod(clientId, billingPeriod);
+      if (!lines.some(line => line.contract_line_id === lineId && line.is_active)) continue;
+      const coveredStart = toISODate(toPlainDate(period.activity_window_start ?? period.service_period_start));
+      const coveredEnd = toISODate(toPlainDate(period.activity_window_end ?? period.service_period_end).subtract({days: 1}));
+      if (start === coveredStart && end === coveredEnd) return true;
+    }
+    // Client-cadence windows may not yet have per-line materializations. Derive
+    // their service coverage (including advance/arrears) from persisted cycles.
+    const cycles = await db.table('client_billing_cycles').where({ client_id: clientId })
+      .whereNotNull('period_start_date').whereNotNull('period_end_date').select('*');
+    for (const cycle of cycles) {
+      const billingPeriod = { tenant: this.tenant!, startDate: toISODate(toPlainDate(cycle.period_start_date)), endDate: toISODate(toPlainDate(cycle.period_end_date)) };
+      const lines = await this.getClientContractLinesForBillingPeriod(clientId, billingPeriod);
+      const line = lines.find(candidate => candidate.contract_line_id === lineId && candidate.is_active);
+      if (!line) continue;
+      const timing = this.resolveServiceDrivenChargeTiming(billingPeriod, line, cycle.billing_cycle);
+      if (timing?.servicePeriodStart === start && timing.servicePeriodEnd === end) return true;
+    }
+    return false;
+  }
+
   private async loadUsageBasedObligation(
     clientId: string,
     billingPeriod: IBillingPeriod,
@@ -5318,9 +5354,16 @@ export class BillingEngine {
             : null,
       } as IContractLineServiceConfiguration & IContractLineServiceUsageConfig;
 
+      const measurementRevision = await resolveUsageMeasurementRevision(this.knex, tenant, normalizedConfig.config_id, servicePeriodStart);
+      if (measurementRevision) {
+        Object.assign(normalizedConfig, measurementRevision.pricing?.typeConfig ?? {}, {
+          measurement_mode: measurementRevision.measurement_mode,
+          ...(measurementRevision.pricing?.baseConfig ?? {}),
+        });
+      }
       serviceConfigMap.set(configDetails.serviceId, {
         config: normalizedConfig,
-        rateTiers,
+        rateTiers: measurementRevision?.pricing?.rateTiers ?? rateTiers,
       });
     }
     let configuredServiceIds = Array.from(serviceConfigMap.keys());

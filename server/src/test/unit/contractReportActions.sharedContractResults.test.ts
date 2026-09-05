@@ -173,6 +173,7 @@ describe('contractReportActions shared contract results', () => {
       if (table === 'contract_line_unit_pricing_revisions as rev') {
         return buildThenableQuery([]);
       }
+      if (table === 'contract_line_service_configuration') return buildThenableQuery([]);
       throw new Error(`Unexpected table ${table}`);
     });
     knex.raw = vi.fn((sql: string) => sql);

@@ -363,7 +363,8 @@
       "errors": {
         "missingConfiguration": "Deze dienst heeft geen opgeslagen configuratie om om te zetten. Vernieuw en probeer het opnieuw.",
         "failed": "Kon niet wijzigen hoe deze dienst wordt gemeten."
-      }
+      },
+      "effectiveFrom": "Measurement change effective from"
     }
   },
   "contractDialog": {
@@ -592,7 +593,10 @@
       "typeLabel": "{{type}}-service",
       "unitOfMeasure": "Meeteenheid",
       "unitPlaceholder": "eenheid",
-      "unitRate": "Tarief per eenheid"
+      "unitRate": "Tarief per eenheid",
+      "effectiveFrom": "Recurring seat changes effective from",
+      "prospectiveSeatHelp": "Seats bill quantity × unit rate. Changes apply at this service-period boundary; earlier quantities and pricing are preserved.",
+      "recurringUnits": "Recurring seats/units"
     },
     "title": "Contractregels"
   },

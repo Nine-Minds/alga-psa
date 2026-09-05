@@ -168,7 +168,9 @@
         "missingUsageHeading": "Für diesen Zeitraum wurde kein Verbrauch erfasst",
         "missingUsageService": "{{service}}: keine Verbrauchsdatensätze für {{periodStart}} bis {{periodEnd}}",
         "usageAttributionExcluded": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} ist ausgeschlossen, bis die Zuordnung zur Vertragsposition geklärt ist – kläre die Zuordnung, statt weiteren Verbrauch zu erfassen",
-        "usageCalculationError": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} konnte nicht bepreist werden – korrigiere die Dienstpreise, statt weiteren Verbrauch zu erfassen"
+        "usageCalculationError": "{{service}}: erfasster Verbrauch für {{periodStart}} bis {{periodEnd}} konnte nicht bepreist werden – korrigiere die Dienstpreise, statt weiteren Verbrauch zu erfassen",
+        "recordScopedUsage": "Record usage: {{service}} — {{line}}",
+        "calculationContext": "{{service}}: {{periodStart}} to {{periodEnd}} — recorded usage could not be priced. Review this service’s pricing configuration."
       },
       "poOverage": {
         "title": "Überschreitungen des Bestelllimits",
@@ -2085,5 +2087,17 @@
       "missingField": "Erforderliches Feld der Rechnungsvorlage fehlt.",
       "missingFieldNamed": "Erforderliches Feld der Rechnungsvorlage fehlt: {{field}}."
     }
+  },
+  "periodTotal": {
+    "missingContext": "Missing client or service configuration for this report.",
+    "invalidQuantity": "Enter a whole number of 0 or more for the period count.",
+    "saveError": "Unable to save the period count.",
+    "retryError": "Unable to save the period count. Retry this submission.",
+    "correct": "Correct the reported count of {{quantity}} for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "report": "Report a period count for {{service}} ({{periodStart}} to {{periodEnd}})",
+    "quantityLabel": "Period count for {{service}}",
+    "saving": "Saving…",
+    "saveCorrection": "Save correction",
+    "save": "Save"
   }
 }

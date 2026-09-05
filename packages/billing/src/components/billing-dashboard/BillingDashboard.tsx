@@ -242,6 +242,11 @@ const BillingDashboard: React.FC<BillingDashboardProps> = ({
             initialServices={initialServices}
             initialClientId={searchParams?.get('clientId') ?? null}
             initialServiceId={searchParams?.get('serviceId') ?? null}
+            initialContractLineId={searchParams?.get('contractLineId') ?? null}
+            initialConfigId={searchParams?.get('configId') ?? null}
+            returnToPreview={searchParams?.get('returnToPreview') === '1'}
+            initialPeriodStart={searchParams?.get('periodStart') ?? null}
+            initialPeriodEnd={searchParams?.get('periodEnd') ?? null}
           />
         </Tabs.Content>
 

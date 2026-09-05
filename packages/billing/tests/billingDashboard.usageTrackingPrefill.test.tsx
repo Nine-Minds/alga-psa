@@ -78,7 +78,7 @@ describe('BillingDashboard usage-tracking prefill routing', () => {
 
   it('passes initialQuery prefills to UsageTracking on the pre-hydration render', async () => {
     liveSearchParams.current = new URLSearchParams(
-      'tab=usage-tracking&clientId=client-emerald&serviceId=svc-rabbit-tracking',
+      'tab=usage-tracking&clientId=client-emerald&serviceId=svc-rabbit-tracking&periodStart=2026-09-01&periodEnd=2026-10-01',
     );
 
     render(
@@ -88,6 +88,8 @@ describe('BillingDashboard usage-tracking prefill routing', () => {
           tab: 'usage-tracking',
           clientId: 'client-emerald',
           serviceId: 'svc-rabbit-tracking',
+          periodStart: '2026-09-01',
+          periodEnd: '2026-10-01',
         }}
       />,
     );
@@ -102,17 +104,21 @@ describe('BillingDashboard usage-tracking prefill routing', () => {
     expect(usageTrackingProps[0]).toMatchObject({
       initialClientId: 'client-emerald',
       initialServiceId: 'svc-rabbit-tracking',
+      initialPeriodStart: '2026-09-01',
+      initialPeriodEnd: '2026-10-01',
     });
     // And the post-hydration render keeps them.
     expect(usageTrackingProps[usageTrackingProps.length - 1]).toMatchObject({
       initialClientId: 'client-emerald',
       initialServiceId: 'svc-rabbit-tracking',
+      initialPeriodStart: '2026-09-01',
+      initialPeriodEnd: '2026-10-01',
     });
   });
 
   it('delivers prefills that only exist in the live URL once hydrated', async () => {
     liveSearchParams.current = new URLSearchParams(
-      'tab=usage-tracking&clientId=client-emerald&serviceId=svc-rabbit-tracking',
+      'tab=usage-tracking&clientId=client-emerald&serviceId=svc-rabbit-tracking&periodStart=2026-09-01&periodEnd=2026-10-01',
     );
 
     // Simulates a stale/partial server snapshot: the live URL still wins after
@@ -126,6 +132,8 @@ describe('BillingDashboard usage-tracking prefill routing', () => {
       expect(latest).toMatchObject({
         initialClientId: 'client-emerald',
         initialServiceId: 'svc-rabbit-tracking',
+        initialPeriodStart: '2026-09-01',
+        initialPeriodEnd: '2026-10-01',
       });
     });
   });

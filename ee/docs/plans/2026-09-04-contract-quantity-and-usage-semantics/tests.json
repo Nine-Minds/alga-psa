@@ -128,7 +128,7 @@
   {
     "id": "T013",
     "description": "DB-backed period-total transition: existing additive periods keep their semantics, only a future eligible boundary changes mode, conflicting entries block the change, and no total is created until a separate confirmed report; invalid negative/nonfinite quantity is rejected.",
-    "implemented": false,
+    "implemented": true,
     "featureIds": [
       "F007",
       "F011",

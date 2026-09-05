@@ -467,9 +467,8 @@ describe('recurring billing run actions', () => {
       failedCount: 1,
       failures: [
         {
-          // The grouped-run normalization already drops billingCycleId; client/window
-          // attribution stays exact through executionIdentityKey + executionWindowKind.
-          billingCycleId: null,
+          // Preserve the supplied bridge alongside the execution identity.
+          billingCycleId: 'cycle-no-email',
           executionIdentityKey: target.executionWindow.identityKey,
           executionWindowKind: 'contract_cadence_window',
           code: 'NO_BILLING_EMAIL',
@@ -541,14 +540,14 @@ describe('recurring billing run actions', () => {
     });
     const [known, unknown] = (result as { failures: Array<Record<string, unknown>> }).failures;
     expect(known).toMatchObject({
-      billingCycleId: null,
+      billingCycleId: 'cycle-no-email-mixed',
       executionIdentityKey: noEmailTarget.executionWindow.identityKey,
       executionWindowKind: 'contract_cadence_window',
       code: 'NO_BILLING_EMAIL',
       params: { clientName: 'Client One' },
     });
     expect(unknown).toMatchObject({
-      billingCycleId: null,
+      billingCycleId: 'cycle-unknown-mixed',
       executionIdentityKey: unknownTarget.executionWindow.identityKey,
       executionWindowKind: 'contract_cadence_window',
       errorMessage: 'Failed to generate invoice for this billing cycle.',

@@ -34,7 +34,7 @@
   {
     "id": "F005",
     "description": "Schedule recurring quantity/rate changes at a displayed next unbilled service-period boundary while preserving earlier period prices.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R2 — Recurring unit commitments"
     ]
@@ -90,7 +90,7 @@
   {
     "id": "F012",
     "description": "Record-usage shortcuts open the correct operation with client, assignment, line, service, and affected period populated in the form.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5 — Record usage in the correct period"
     ]
@@ -98,7 +98,7 @@
   {
     "id": "F013",
     "description": "Validate shortcut scope and eligibility on the server, disambiguate same-named lines, and preserve calendar dates and half-open periods.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5 — Record usage in the correct period"
     ]
@@ -106,7 +106,7 @@
   {
     "id": "F014",
     "description": "After recording or replacing usage, return to the same invoice preview selection for verification.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "R5 — Record usage in the correct period"
     ]
