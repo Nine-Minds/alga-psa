@@ -484,6 +484,19 @@ describe('TicketDetails remote live updates', () => {
     vi.useRealTimers();
   });
 
+  it('accepts refreshed document props with unchanged IDs and removed membership', async () => {
+    const internal = { document_id: 'same-id', document_name: 'original.pdf', comment_attachment_is_public: false };
+    const publicDocument = { ...internal, document_name: 'renamed.pdf', comment_attachment_is_public: true };
+    const props = { bootstrap: entryLayoutBootstrap, initialTicket: baseTicket, initialBoard: enabledBoard };
+    const view = render(<TicketDetails {...props} initialDocuments={[internal]} />);
+    await act(async () => {});
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([internal]));
+    await act(async () => { view.rerender(<TicketDetails {...props} initialDocuments={[publicDocument]} />); });
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent(JSON.stringify([publicDocument]));
+    await act(async () => { view.rerender(<TicketDetails {...props} initialDocuments={[]} />); });
+    expect(screen.getByTestId('ticket-documents')).toHaveTextContent('[]');
+  });
+
   it.each(['optimized create', 'create', 'reply', 'edit'])('refreshes same-ID document metadata after successful %s', async (operation) => {
     const draft = { document_id: 'same-id', comment_attachment_is_public: false };
     const claimed = { ...draft, comment_attachment_is_public: true };
