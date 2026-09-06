@@ -42,8 +42,9 @@ function postJson(url, payload, headers = {}) {
   });
 }
 
-test('T003 first-boot smoke: console banner and the token -> password -> session flow', async () => {
+test('T003 first-boot smoke: console banner and the token -> password -> session flow', { timeout: 30000 }, async (t) => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-t003-'));
+  t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
   const tokenFile = path.join(tmp, 'setup-token');
   const staticUiDir = path.join(tmp, 'status-ui');
   const issueFile = path.join(tmp, 'issue');
@@ -110,14 +111,31 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
       ALGA_APPLIANCE_SESSION_SECRET_FILE: path.join(tmp, 'session-secret'),
       ALGA_APPLIANCE_STATE_FILE: path.join(tmp, 'install-state.json'),
       ALGA_APPLIANCE_SETUP_INPUTS_FILE: path.join(tmp, 'setup-inputs.json'),
+      ALGA_APPLIANCE_SUPPORT_STATE_DIR: path.join(tmp, 'support-sessions'),
       ALGA_APPLIANCE_STATUS_UI_DIR: staticUiDir
     },
     stdio: ['ignore', 'pipe', 'pipe']
   });
 
+  let serverOutput = '';
+  let startupError;
+  server.stdout.on('data', chunk => { serverOutput += chunk.toString(); });
+  server.stderr.on('data', chunk => { serverOutput += chunk.toString(); });
+  server.on('error', error => { startupError = error; });
+  const serverClosed = new Promise(resolve => server.once('close', resolve));
   const base = 'http://127.0.0.1:18081';
   try {
-    await new Promise((resolve) => setTimeout(resolve, 350));
+    const deadline = Date.now() + 10000;
+    while (true) {
+      if (startupError) throw startupError;
+      assert.equal(server.exitCode, null, `Host service exited during startup: ${serverOutput}`);
+      try {
+        const response = await httpGet(`${base}/healthz`);
+        if (response.statusCode === 200) break;
+      } catch { /* The child may still be loading its dependencies. */ }
+      assert.ok(Date.now() < deadline, `Host service did not become ready: ${serverOutput}`);
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
 
     const health = await httpGet(`${base}/healthz`);
     assert.equal(health.statusCode, 200);
@@ -213,5 +231,6 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     assert.equal(loginBad.statusCode, 401);
   } finally {
     server.kill('SIGTERM');
+    await serverClosed;
   }
 });

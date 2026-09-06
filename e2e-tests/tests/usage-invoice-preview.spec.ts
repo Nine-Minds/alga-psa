@@ -44,10 +44,16 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   expect(record.comments).toBe(comment);
   expect(record.invoiced).toBe(false);
   await page.reload();
+  const usageTable = page.locator('[data-automation-id="usage-tracking-table"]');
   const usageRow = page.getByRole('row').filter({ has: page.locator(`#usage-actions-menu-${record.usage_id}`) });
   await expect(usageRow).toContainText(service.name);
+  // DataTable hides lower-priority columns at this viewport. Reveal them through
+  // the same control an operator uses before checking the selected line.
+  const showAll = usageTable.getByRole('button', { name: 'Show all', exact: true });
+  if (await showAll.isVisible()) await showAll.click();
   await expect(usageRow).toContainText(usageLine.id.slice(0, 8));
-  await expect(usageRow.getByRole('cell', { name: String(quantity), exact: true })).toBeVisible();
+  const quantityLabel = new RegExp(`^${quantity}(?:\\.0+)?$`);
+  await expect(usageRow.getByRole('cell', { name: quantityLabel })).toBeVisible();
 
   // Reopen the real edit form after reload: saved comments must be visible,
   // and editing them must preserve the measured quantity and selected line.
@@ -66,7 +72,7 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   await page.goto('/msp/billing?tab=invoicing&subtab=generate');
   await page.locator('#filter-clients-input').fill(client.name);
   const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${period.start}T00:00:00Z`));
-  const dueRow = page.locator('#automatic-invoices-table').getByRole('row')
+  const dueRow = page.locator('[data-automation-id="automatic-invoices-table"]').getByRole('row')
     .filter({ hasText: client.name }).filter({ hasText: monthLabel })
     .filter({ has: page.locator('input[type="checkbox"][id^="select-"]:not([id^="select-child-"])') });
   await expect(dueRow).toHaveCount(1);
@@ -76,7 +82,7 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   await expect(preview).toBeVisible();
   await expect(preview.getByTestId('preview-invoice-count-summary')).toContainText('one combined invoice');
   const billedLine = preview.getByRole('row').filter({ hasText: service.name })
-    .filter({ has: page.getByRole('cell', { name: String(quantity), exact: true }) });
+    .filter({ has: page.getByRole('cell', { name: quantityLabel }) });
   await expect(billedLine).toHaveCount(1);
   await expect(billedLine.getByRole('cell', { name: '$10.00', exact: true })).toBeVisible();
   const total = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(expectedAmountCents / 100);

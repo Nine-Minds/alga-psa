@@ -455,3 +455,32 @@
   the known-failing local run after observing that failure (not for a timeout)
   and restarted the corrected full target: /tmp/alga-npm-server-full-after2.log,
   journal /tmp/alga-npm-server-full-progress2.jsonl. CI must verify the final fix.
+
+### Production rerun findings and local unit completion (2026-09-06)
+
+- Full corrected server npm test target completed with exit 0: 1,055 files
+  passed, two skipped; 5,531 assertions passed, four skipped and 22 todo, 542.51
+  seconds. No failed modules. This is the server target used by Nx, not the
+  larger server-plus-workspace coverage command. Existing skips/todos remain
+  separately visible; no additional tests were skipped to repair this target.
+  Log /tmp/alga-npm-server-full-after2.log and its progress2 journal.
+- c3a production CE browser job 101490701262: 12 passed, one failed; EE job
+  101490701240: 13 passed, two failed. Previous comments persistence and QBO item
+  wire errors were passed, revealing the next harness assumptions. Usage's saved
+  row had the correct service/quantity, but DataTable hid the contract-line column
+  and exposed its Show all control. The QBO mapping row was visible in the trace,
+  but the spec searched for an HTML id while DataTable exposes data-automation-id.
+  Correct both table selectors (including the later invoice due-work table), use
+  Show all before asserting the selected line, and accept numeric decimal display
+  of quantity 4.00. Keep DB linkage, saved comment edits and invoice amount checks.
+  These browser edits require real execution; collection alone is not completion.
+  Logs /tmp/alga-{ce,ee}-browser-c3a.log; downloaded EE browser and container
+  artifacts under /tmp/alga-production-c3a-artifacts.
+- Appliance first-boot smoke now captures child startup errors, polls bounded
+  health readiness and waits for cleanup rather than sleeping 350 ms. The actual
+  failure was SupportSessionManager's default write to /var/lib/alga-appliance;
+  pass its existing state-directory override into the disposable fixture. The
+  real token/password/session/setup HTTP scenario passes (one test, 0.50 seconds).
+  The broader appliance lane remains unassigned with other stale assumptions;
+  do not mark it green based on this one repaired scenario.
+- Fresh fetch still resolves origin/main to a90cd88edc, an ancestor of this branch.

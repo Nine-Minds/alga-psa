@@ -66,7 +66,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     await mappingDialog.getByRole('button', { name: 'Save Mapping', exact: true }).click();
     await expect(mappingDialog).toBeHidden();
     await page.reload();
-    await expect(page.locator('#qbo-live-item-mappings-table')).toContainText(service.name);
+    await expect(page.locator('[data-automation-id="qbo-live-item-mappings-table"]')).toContainText(service.name);
     expect(await database('tenant_external_entity_mappings')
       .where({ ...mappingScope, alga_entity_type: 'service', alga_entity_id: service.id })
       .select('external_entity_id')).toEqual([{ external_entity_id: item.Id }]);
