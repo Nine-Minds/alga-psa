@@ -144,7 +144,7 @@
       },
       "reproduction": {
         "cwd": "e2e-tests",
-        "command": "npm test -- tests/time-approval-invoice.spec.ts",
+        "command": "node node_modules/@playwright/test/cli.js test tests/time-approval-invoice.spec.ts",
         "requirements": "Isolated migrated production installation with configured E2E credentials and database, as documented in e2e-tests/README.md. For before behavior use the cited pre-fix image; for after use a newly built fix image."
       },
       "status": "browser-before-verified-focused-after-verified",
