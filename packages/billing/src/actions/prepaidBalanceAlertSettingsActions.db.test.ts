@@ -12,13 +12,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
-vi.mock('@alga-psa/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/core')>();
-  return { ...actual, isFeatureFlagEnabled: vi.fn(async () => true) };
-});
-
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { prepaidBalanceAlertSettingsInputSchema } from '@shared/billingClients/prepaidBalanceAlertSettings';
 import {
   getPrepaidBalanceAlertSettings,
@@ -94,7 +88,6 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await deleteFixtureBillingSettings();
-  (isFeatureFlagEnabled as Mock).mockReset().mockResolvedValue(true);
   (hasPermission as Mock).mockReset().mockResolvedValue(true);
 });
 
@@ -106,23 +99,14 @@ afterAll(async () => {
 });
 
 describe('prepaid balance alert settings actions (DB-backed)', () => {
-  it('read rejects when the feature flag is disabled or the checker is unavailable', async () => {
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(false);
-    const result = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
-    expect(result).toMatchObject({ actionError: expect.any(String) });
-
-    (isFeatureFlagEnabled as Mock).mockRejectedValueOnce(new Error('flag infra down'));
-    const thrown = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
-    expect(thrown).toMatchObject({ actionError: expect.any(String) });
-
+  it('read rejects without billing settings permission', async () => {
     (hasPermission as Mock).mockResolvedValueOnce(false);
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const denied = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
     expect(denied).toMatchObject({ permissionError: expect.any(String) });
   });
 
-  it('update rejects when the feature flag is disabled and leaves policy unchanged', async () => {
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(false);
+  it('update rejects without billing settings permission and leaves policy unchanged', async () => {
+    (hasPermission as Mock).mockResolvedValueOnce(false);
     const result = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       clientId,
       prepaidCreditAlertThreshold: 5000,
@@ -130,14 +114,13 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
       bucketUsageAlertPercent: 80,
       notifyClientOnPrepaidAlert: true,
     });
-    expect(result).toMatchObject({ actionError: expect.any(String) });
+    expect(result).toMatchObject({ permissionError: expect.any(String) });
 
     const row = await db('client_billing_settings').where({ tenant: tenantId, client_id: clientId }).first();
     expect(row).toBeUndefined();
   });
 
   it('read returns nulls plus the client default currency when no policy exists', async () => {
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const result = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
     expect(result).toMatchObject({
       prepaidCreditAlertThreshold: null,
@@ -156,7 +139,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
       credit_expiration_days: 90,
     });
 
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const result = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       clientId,
       prepaidCreditAlertThreshold: 5000,
@@ -177,7 +159,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
     expect(row.enable_credit_expiration).toBe(true);
     expect(Number(row.credit_expiration_days)).toBe(90);
 
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const read = await (getPrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, clientId);
     expect(read).toMatchObject({
       prepaidCreditAlertThreshold: 5000,
@@ -206,7 +187,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
     // Unpaired: amount without currency (schema pairing refinement is
     // authoritative; the DB constraint would also reject, but validation must
     // fire first).
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const unpaired = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       ...base,
       prepaidCreditAlertCurrencyCode: null,
@@ -214,7 +194,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
     expect(unpaired).toMatchObject({ actionError: expect.any(String) });
 
     // Nonpositive amount.
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const nonpositive = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       ...base,
       prepaidCreditAlertThreshold: 0,
@@ -222,7 +201,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
     expect(nonpositive).toMatchObject({ actionError: expect.any(String) });
 
     // Out-of-range percent.
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const badPercent = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       ...base,
       bucketUsageAlertPercent: 101,
@@ -230,7 +208,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
     expect(badPercent).toMatchObject({ actionError: expect.any(String) });
 
     // Lowercase / non-ISO currency.
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const lowercase = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       ...base,
       prepaidCreditAlertCurrencyCode: 'usd',
@@ -252,7 +229,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
       notify_client_on_prepaid_alert: true,
     });
 
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const result = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       clientId,
       prepaidCreditAlertThreshold: null,
@@ -269,7 +245,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
   });
 
   it('rejects updates for clients outside the session tenant', async () => {
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const result = await (updatePrepaidBalanceAlertSettings as any)(user, { tenant: tenantId }, {
       clientId: otherTenantClientId,
       prepaidCreditAlertThreshold: 5000,
@@ -281,7 +256,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
   });
 
   it('rejects reads for cross-tenant and nonexistent client IDs', async () => {
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const crossTenant = await (getPrepaidBalanceAlertSettings as any)(
       user,
       { tenant: tenantId },
@@ -289,7 +263,6 @@ describe('prepaid balance alert settings actions (DB-backed)', () => {
     );
     expect(crossTenant).toMatchObject({ actionError: expect.any(String) });
 
-    (isFeatureFlagEnabled as Mock).mockResolvedValueOnce(true);
     const nonexistent = await (getPrepaidBalanceAlertSettings as any)(
       user,
       { tenant: tenantId },

@@ -26,34 +26,24 @@ jobs:
     if: github.event_name != 'schedule'
     outputs:
       should_run: ${{ steps.filter.outputs.should_run }}
+      full: ${{ steps.filter.outputs.full }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Check for changes that affect DB-backed tests
         id: filter
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          else
-            BASE_SHA="${{ github.event.before }}"
-          fi
-
-          CHANGED_FILES=$(git diff --name-only $BASE_SHA ${{ github.sha }} 2>/dev/null || echo "")
-
-          if echo "$CHANGED_FILES" | grep -qE '^(server/|packages/|shared/|ee/server/|\.github/workflows/integration-tests\.yml)'; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "Relevant changes detected - will run integration tests"
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "No relevant changes - skipping integration tests"
-          fi
+        env:
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          TIER1_HEAD_SHA: ${{ github.sha }}
+        # Manual dispatch has no base, deliberately selecting full coverage.
+        # The same conservative policy drives selection inside the Tier-1 job.
+        run: node scripts/select-integration-tests.mjs
 
   integration-tests:
     name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full integration suite' || 'Tier-1 integration subset' }}
@@ -166,7 +156,7 @@ jobs:
 
       # Manifest floor + every suite whose import graph reaches the diff
       # (scripts/run-tier1-integration.mjs). Schema/harness changes widen this
-      # to the full directory; a missing base falls back to the manifest alone.
+      # to the full directory; unavailable change evidence also requires full coverage.
       - name: Run Tier-1 integration subset
         id: tier1
         if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
@@ -220,7 +210,7 @@ jobs:
   # Non-blocking until it has a green baseline; drop continue-on-error once
   # stable — that is the whole point of collecting the baseline.
   infrastructure-tests:
-    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full infrastructure suite' || 'Tier-1 infrastructure subset' }}
+    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'Full infrastructure suite' || 'Tier-1 infrastructure subset' }}
     needs: check-changes
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
@@ -314,7 +304,7 @@ jobs:
       # step still gets to run.
       - name: Run Tier-1 infrastructure subset
         id: tier1
-        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full' && needs.check-changes.outputs.full != 'true'
         timeout-minutes: 15
         working-directory: ./server
         run: npm run test:infrastructure:tier1
@@ -323,7 +313,7 @@ jobs:
 
       - name: Run full infrastructure suite
         id: full
-        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true'
         timeout-minutes: 35
         working-directory: ./server
         run: npm run test:infrastructure:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-infrastructure.json
@@ -339,3 +329,108 @@ jobs:
           TEST_METRICS_RESULTS: server/test-results-infrastructure.json
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+  workspace-db-tests:
+    name: Workspace database tests
+    needs: check-changes
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      APP_ENV: test
+      NODE_ENV: test
+      REQUIRE_DB: '1'
+      VITEST_SEED: '20260610'
+      REAL_REDIS: '1'
+      REDIS_HOST: localhost
+      REDIS_PORT: '6379'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Cache Nx computation cache
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: nx-cache-${{ runner.os }}-${{ hashFiles('package-lock.json', 'nx.json', 'tsconfig.base.json', '**/project.json') }}
+          restore-keys: |
+            nx-cache-${{ runner.os }}-
+
+      - name: Upgrade npm to version 11
+        run: npm install -g npm@11
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Wait for Postgres to be ready
+        run: |
+          until pg_isready -h localhost -p 5432 -U postgres; do
+            echo "Waiting for postgres..."
+            sleep 2
+          done
+
+      - name: Create secrets files
+        run: |
+          mkdir -p secrets
+          echo -n "test_password" > secrets/postgres_password
+          echo -n "test_password" > secrets/db_password_server
+          chmod 600 secrets/*
+
+      - name: Run and reconcile workspace database tests
+        timeout-minutes: 75
+        run: node scripts/run-workspace-db-tests.mjs
+        env:
+          NODE_OPTIONS: '--max-old-space-size=8192'
+
+      - name: Upload workspace database execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-db-evidence
+          path: test-results/workspace-db/
+          if-no-files-found: error
+          retention-days: 14

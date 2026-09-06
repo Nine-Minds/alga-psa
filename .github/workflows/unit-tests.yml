@@ -21,6 +21,8 @@ jobs:
           # which only exists on Node >= 22.5. Node 20 fails those suites with
           # "node:sqlite is unavailable in this runtime".
           node-version: '22'
+      - name: Verify test selection and execution accounting
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 
