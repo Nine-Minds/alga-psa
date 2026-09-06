@@ -15,6 +15,7 @@ export * from './lib/co-managed-reservation';
 export * from './lib/co-managed-entitlements';
 export * from './lib/co-managed-purchases';
 export * from './lib/co-managed-admission';
+export * from './lib/co-managed-lifecycle';
 export * from './lib/verify-license';
 export * from './lib/license-state';
 export * from './lib/tenant-tier';

@@ -445,6 +445,7 @@ describe('co-managed entitlement reconciliation', () => {
 
   it('ignores delayed older signed licenses after a newer signed reduction', async () => {
     const sponsor = randomUUID();
+    await db('tenants').insert({ tenant: sponsor, product_code: 'psa', plan: 'essentials' });
     const now = Math.floor(Date.now() / 1000);
     await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 2, now - 5));
     expect(await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 10, now - 10)))
@@ -462,6 +463,7 @@ describe('co-managed entitlement reconciliation', () => {
 
   it('applies a signed license and its capacity atomically through the shared appliance writer', async () => {
     const sponsor = randomUUID();
+    await db('tenants').insert({ tenant: sponsor, product_code: 'psa', plan: 'essentials' });
     const token = license(sponsor, 5);
     await upsertLicenseState({ license_token: token }, db);
     expect((await getCoManagedEntitlementState(db, sponsor)).capacity).toBe(5);
@@ -473,6 +475,7 @@ describe('co-managed entitlement reconciliation', () => {
 
   it('starts grace on online revocation and ignores a delayed revocation of an older license', async () => {
     const sponsor = randomUUID();
+    await db('tenants').insert({ tenant: sponsor, product_code: 'psa', plan: 'essentials' });
     const now = Math.floor(Date.now() / 1000);
     const token = license(sponsor, 5, now - 10);
     await reconcileSelfHostCoManagedEntitlement(db, sponsor, token);

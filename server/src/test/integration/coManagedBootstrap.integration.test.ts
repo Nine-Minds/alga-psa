@@ -4,6 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import knex, { type Knex } from 'knex';
 import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManagedCommittedSeats } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite, getCoManagedOperationalState, withCoManagedOperationalTransaction,
+  reconcileHostedCoManagedEntitlement } from '@alga-psa/licensing';
 import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { getSecret } from '../../lib/utils/getSecret';
 import { prepareCoManagedProvisioning } from '../../../../packages/co-managed/src/provisioning';
@@ -418,4 +420,123 @@ it('grows an allocation only from available verified capacity and rejects stale 
   await expect(changeCoManagedAllocation(db, operation.tenant, { ...grow, seats: 4 })).rejects.toMatchObject({ code: 'CO_MANAGED_ALLOCATION_CONFLICT' });
   await sponsor.table('co_managed_purchase_operations').insert({ tenant: operation.tenant, operation_id: randomUUID(), quantity: 4, state: 'preparing' });
   await expect(changeCoManagedAllocation(db, operation.tenant, { ...grow, seats: 4, expectedSeats: 3 })).rejects.toMatchObject({ code: 'CO_MANAGED_ALLOCATION_CONFLICT' });
+});
+
+describe('transactional operational lifecycle admission', () => {
+  const rename = (tenant: string, name: string) => withCoManagedOperationalTransaction(db, tenant,
+    trx => tenantDb(trx, tenant).table('boards').update({ board_name: name }));
+
+  it('requires acceptance even for an administrator with capacity, then permits operational writes', async () => {
+    const { customer, actor, input } = await readyForAcceptance();
+    expect(await getCoManagedOperationalState(db, actor.tenant)).toEqual({ state: 'pending_acceptance', canWrite: false, graceEndsAt: null });
+    await expect(rename(actor.tenant, 'Must not write')).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect((await customer.table('boards').first()).board_name).toBe('Service Desk');
+    await acceptCoManagedRelationship(db, actor, input);
+    await rename(actor.tenant, 'Customer Operations');
+    expect((await customer.table('boards').first()).board_name).toBe('Customer Operations');
+  });
+
+  it('allows existing operations during the fixed grace interval but blocks growth immediately', async () => {
+    const { operation, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const expired = new Date(Date.now() - 86_400_000);
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: expired });
+    const state = await getCoManagedOperationalState(db, actor.tenant);
+    expect(state).toEqual({ state: 'grace', canWrite: true, graceEndsAt: new Date(expired.getTime() + 30 * 86_400_000).toISOString() });
+    await rename(actor.tenant, 'Still operating during grace');
+    await expect(createCustomerTechnician(actor.tenant)).rejects.toMatchObject({ code: 'CO_MANAGED_LICENSE_LAPSED' });
+    expect(await getCoManagedOperationalState(db, actor.tenant)).toEqual(state);
+  });
+
+  it('enforces expiration without a webhook or scheduled job, and permits reads', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const expired = new Date(Date.now() - 31 * 86_400_000);
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: expired });
+    await expect(rename(actor.tenant, 'Forbidden late change')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect((await customer.table('boards').first()).board_name).toBe('Service Desk');
+    expect(await customer.table('users')).toHaveLength(1);
+    expect(await getCoManagedOperationalState(db, actor.tenant)).toEqual({ state: 'read_only', canWrite: false,
+      graceEndsAt: new Date(expired.getTime() + 30 * 86_400_000).toISOString() });
+  });
+
+  it('renews the original relationship without repeating activation or provisioning', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const sponsor = tenantDb(db, operation.tenant);
+    await sponsor.table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe('read_only');
+    const entitlement = await sponsor.table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 86_400_000) }));
+    expect(await getCoManagedOperationalState(db, actor.tenant)).toEqual({ state: 'active', canWrite: true, graceEndsAt: null });
+    await rename(actor.tenant, 'Renewed');
+    expect(await customer.table('co_management_relationship_events')).toHaveLength(1);
+    expect(await customer.table('users')).toHaveLength(1);
+  });
+
+  it('starts a durable grace on loss of sponsor Pro eligibility with a current seat subscription', async () => {
+    const { operation, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const sponsor = tenantDb(db, operation.tenant);
+    await sponsor.table('tenants').update({ plan: 'essentials' });
+    const first = await getCoManagedOperationalState(db, actor.tenant);
+    expect(first).toMatchObject({ state: 'grace', canWrite: true });
+    expect(first.graceEndsAt).not.toBeNull();
+    expect(await getCoManagedOperationalState(db, actor.tenant)).toEqual(first);
+    const lapse = new Date(Date.now() - 31 * 86_400_000);
+    await sponsor.table('co_managed_entitlements').update({ lapse_started_at: lapse,
+      read_only_after: new Date(lapse.getTime() + 30 * 86_400_000) });
+    await expect(rename(actor.tenant, 'Ineligible sponsor')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await sponsor.table('tenants').update({ plan: 'pro' });
+    expect((await getCoManagedOperationalState(db, actor.tenant)).state).toBe('active');
+  });
+
+  it('denies ended trust and never treats a missing active allocation as an independent workspace', async () => {
+    const a = await readyForAcceptance(), b = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, a.actor, a.input); await acceptCoManagedRelationship(db, b.actor, b.input);
+    await a.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    await expect(rename(a.actor.tenant, 'Terminated')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await tenantDb(db, b.operation.tenant).table('co_managed_allocations').update({ state: 'released', released_at: new Date() });
+    await expect(rename(b.actor.tenant, 'No allocation')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect((await getCoManagedOperationalState(db, a.actor.tenant)).state).toBe('terminated');
+    expect((await getCoManagedOperationalState(db, b.actor.tenant)).state).toBe('read_only');
+  });
+
+  it('rechecks committed license state after waiting for the sponsor lock', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const blocker = await db.transaction();
+    await tenantDb(blocker, operation.tenant).table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    let onQuery: (query: { sql: string }) => void;
+    const waiting = new Promise<void>(resolve => {
+      onQuery = query => { if (query.sql.includes('co_managed_entitlements') && query.sql.includes('for update')) resolve(); };
+      db.on('query', onQuery);
+    });
+    const attempt = rename(actor.tenant, 'Stale license').then(() => null, error => error);
+    try {
+      await waiting;
+      await blocker.commit();
+      expect(await attempt).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+      expect((await customer.table('boards').first()).board_name).toBe('Service Desk');
+    } finally {
+      db.removeListener('query', onQuery!);
+      if (!blocker.isCompleted()) await blocker.rollback();
+    }
+  });
+
+  it('keeps a nested caller transaction intact and rolls back its operational changes', async () => {
+    const { customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    await expect(db.transaction(async trx => {
+      await withCoManagedOperationalTransaction(trx, actor.tenant, async same => {
+        expect(same).toBe(trx);
+        await tenantDb(same, actor.tenant).table('boards').update({ board_name: 'Uncommitted' });
+      });
+      throw new Error('Abort outer operation');
+    })).rejects.toThrow('Abort outer operation');
+    expect((await customer.table('boards').first()).board_name).toBe('Service Desk');
+    await expect(assertCoManagedOperationalWrite(db as Knex.Transaction, actor.tenant)).rejects.toThrow('open transaction');
+  });
+
+  it('leaves ordinary PSA operations available and fails closed for nonexistent tenants', async () => {
+    const operation = await prepare();
+    expect(await getCoManagedOperationalState(db, operation.tenant)).toEqual({ state: 'independent', canWrite: true, graceEndsAt: null });
+    await rename(operation.tenant, 'MSP operations');
+    await expect(rename(randomUUID(), 'Unknown tenant')).rejects.toThrow('does not exist');
+  });
 });
