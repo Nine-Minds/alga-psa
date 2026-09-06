@@ -195,7 +195,10 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items
+        .filter((item) => !['/msp/co-managed', '/msp/co-management'].includes(item.href ?? '') ||
+          !item.requiredPermission || userPermissions.includes(item.requiredPermission))
         .filter((item) => item.href !== '/msp/co-managed' || (coManagedEnabled && isPro))
+        .filter((item) => item.href !== '/msp/co-management' || (coManagedEnabled && productCode === 'co_managed'))
         .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .filter((item) => item.name !== 'Passwords' || credentialsVaultEnabled)
         .map((item) => {
@@ -217,7 +220,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(editionSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedEnabled, isPro]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, edition, marketingEnabled, credentialsVaultEnabled, coManagedEnabled, isPro, userPermissions]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const editionSections = filterNavigationSectionsByEdition(settingsNavigationSections, edition);

@@ -23,6 +23,11 @@ export { PRODUCT_CAPABILITIES } from '@alga-psa/types';
 
 export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   {
+    group: 'msp_co_management_policy',
+    staticPrefixes: ['/msp/co-management'],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'allowed' },
+  },
+  {
     group: 'msp_co_management',
     staticPrefixes: ['/msp/co-managed'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'not_found', co_managed: 'not_found' },

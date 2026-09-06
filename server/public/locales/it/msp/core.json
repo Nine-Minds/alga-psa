@@ -101,7 +101,8 @@
       "forms": "Moduli",
       "channels": "Canali"
     },
-    "passwords": "Password"
+    "passwords": "Password",
+    "coManagedAccess": "Accesso cogestito"
   },
   "sidebar": {
     "backToMain": "Torna al principale",

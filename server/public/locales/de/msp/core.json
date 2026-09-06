@@ -101,7 +101,8 @@
       "forms": "Formulare",
       "channels": "Kanäle"
     },
-    "passwords": "Passwörter"
+    "passwords": "Passwörter",
+    "coManagedAccess": "Co-Managed-Zugriff"
   },
   "sidebar": {
     "backToMain": "Zurück zur Hauptansicht",

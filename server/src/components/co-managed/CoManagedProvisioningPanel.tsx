@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import type { CoManagedProvisioningRequest } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -119,6 +120,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
             ? 'coManaged.provisioning.invitationSent' : item.deliveryFailed ? 'coManaged.provisioning.deliveryFailed' : 'coManaged.provisioning.invitationPending')}</p>}
         </TableCell>
         <TableCell><div className="flex gap-2">
+          {status.canManage && item.state === 'active' && <Button id={`co-managed-policy-${item.operationId}`} variant="outline" asChild><Link href={`/msp/co-management?operationId=${encodeURIComponent(item.operationId)}`}>{t('coManaged.policy.manage')}</Link></Button>}
           {status.canManage && item.canChangeSeats && <Button id={`co-managed-resize-${item.operationId}`} variant="outline" disabled={busy}
             onClick={() => { setAllocation(item); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
           {status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}

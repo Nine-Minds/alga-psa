@@ -12,7 +12,9 @@ Controls co-managed UI on hosted and self-hosted installations. The shared
 `CoManagedFeatureBoundary` requires an enabled, resolved flag without an error.
 Disabled, loading, unknown, and error states render no interactive feature content.
 Both customer workspace shells apply it, including direct browser navigation.
-MSP collaboration and provisioning controls must use the same boundary as they land.
+The provisioning page (`/msp/co-managed`) and access editor (`/msp/co-management`)
+use this boundary. Customer access navigation and the MSP workspace access link
+are also hidden while the flag is off. New collaboration controls must use the same boundary.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
 This is a UI-only release switch. Routes remain registered. APIs, server actions,

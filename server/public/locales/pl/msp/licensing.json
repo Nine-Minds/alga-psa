@@ -361,5 +361,39 @@
   "errors": {
     "notSignedIn": "Brak autoryzacji. Zaloguj się, aby zarządzać licencjami.",
     "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Dostęp do współzarządzania",
+      "none": "Nie skonfigurowano dostępu.",
+      "unavailable": "Niedostępny element",
+      "inactive": "Nieaktywny",
+      "view": "Podgląd",
+      "collaborate": "Współpraca",
+      "remove": "Usuń",
+      "search": "Szukaj",
+      "select": "Wybierz element",
+      "add": "Dodaj",
+      "optionsError": "Nie udało się wczytać opcji. Wyszukaj ponownie.",
+      "loadError": "Nie udało się wczytać ustawień dostępu. Odśwież, aby spróbować ponownie.",
+      "saveError": "Nie udało się potwierdzić zapisu. Ponów te same zmiany lub wczytaj bieżący dostęp przed dalszą edycją.",
+      "saved": "Ustawienia dostępu zapisane.",
+      "customerDescription": "Wybierz tablice i projekty dostępne dla Twojego MSP. MSP przypisuje własnych pracowników w tym zakresie.",
+      "sponsorDescription": "Przypisz pracowników do dostępu zatwierdzonego przez tego klienta. Obowiązują również uprawnienia klienta i każdego pracownika.",
+      "readOnly": "Ten obszar roboczy jest tylko do odczytu. Możesz ograniczyć lub usunąć dostęp; rozszerzenie wymaga aktywnej licencji.",
+      "visibilityHint": "Dostęp do tablic umożliwia nadzór. Tryb tylko eskalacji ogranicza widoczność do zgłoszeń jawnie eskalowanych do MSP. Dostęp do projektów jest konfigurowany osobno.",
+      "approvedScope": "Dostęp zatwierdzony przez klienta",
+      "retry": "Ponów zapis",
+      "save": "Zapisz dostęp",
+      "reload": "Wczytaj bieżący dostęp",
+      "manage": "Zarządzaj dostępem",
+      "accessFor": "Dostęp dla {{name}}",
+      "kinds": {
+        "board": "Tablice",
+        "project": "Projekty",
+        "user": "Pracownicy",
+        "team": "Zespoły"
+      }
+    }
   }
 }

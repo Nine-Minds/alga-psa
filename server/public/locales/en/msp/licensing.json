@@ -447,6 +447,38 @@
       "saveAllocation": "Save allocation",
       "resizeDescription": "Move seats between this customer and your purchased co-managed pool. Active technicians and pending invitations must fit within the allocation. At least one seat is required.",
       "resizeError": "Unable to change the allocation. Refresh and check available seats, active technicians, and pending invitations before trying again."
+    },
+    "policy": {
+      "title": "Co-managed access",
+      "none": "No access configured.",
+      "unavailable": "Unavailable item",
+      "inactive": "Inactive",
+      "view": "View",
+      "collaborate": "Collaborate",
+      "remove": "Remove",
+      "search": "Search",
+      "select": "Select an item",
+      "add": "Add",
+      "optionsError": "Could not load options. Try searching again.",
+      "loadError": "Could not load access settings. Reload to try again.",
+      "saveError": "Could not confirm the save. Retry the same changes, or reload current access before editing again.",
+      "saved": "Access settings saved.",
+      "customerDescription": "Choose the boards and projects your MSP can access. Your MSP assigns its own staff within this scope.",
+      "sponsorDescription": "Assign your staff to the access approved by this customer. Customer permissions and each staff member’s own permissions also apply.",
+      "readOnly": "This workspace is read-only. You can reduce or remove access; expanding access requires an active license.",
+      "visibilityHint": "Board access provides oversight. Escalation-only access limits ticket visibility to work explicitly escalated to the MSP. Project access is configured separately.",
+      "approvedScope": "Customer-approved access",
+      "retry": "Retry save",
+      "save": "Save access",
+      "reload": "Reload current access",
+      "manage": "Manage access",
+      "accessFor": "Access for {{name}}",
+      "kinds": {
+        "board": "Boards",
+        "project": "Projects",
+        "user": "Staff",
+        "team": "Teams"
+      }
     }
   }
 }

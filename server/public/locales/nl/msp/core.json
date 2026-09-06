@@ -101,7 +101,8 @@
       "forms": "Formulieren",
       "channels": "Kanalen"
     },
-    "passwords": "Wachtwoorden"
+    "passwords": "Wachtwoorden",
+    "coManagedAccess": "Toegang voor gezamenlijk beheer"
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",

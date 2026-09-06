@@ -359,5 +359,39 @@
   "errors": {
     "notSignedIn": "Non autorizzato. Accedi per gestire le licenze.",
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Accesso cogestito",
+      "none": "Nessun accesso configurato.",
+      "unavailable": "Elemento non disponibile",
+      "inactive": "Inattivo",
+      "view": "Visualizza",
+      "collaborate": "Collabora",
+      "remove": "Rimuovi",
+      "search": "Cerca",
+      "select": "Seleziona un elemento",
+      "add": "Aggiungi",
+      "optionsError": "Impossibile caricare le opzioni. Ripeti la ricerca.",
+      "loadError": "Impossibile caricare le impostazioni di accesso. Ricarica per riprovare.",
+      "saveError": "Impossibile confermare il salvataggio. Riprova con le stesse modifiche oppure ricarica l’accesso attuale prima di modificarlo di nuovo.",
+      "saved": "Impostazioni di accesso salvate.",
+      "customerDescription": "Scegli le bacheche e i progetti accessibili al tuo MSP. Il tuo MSP assegna il proprio personale entro questo ambito.",
+      "sponsorDescription": "Assegna il tuo personale agli accessi approvati da questo cliente. Si applicano anche le autorizzazioni del cliente e di ciascun membro del personale.",
+      "readOnly": "Questo spazio di lavoro è in sola lettura. Puoi ridurre o rimuovere gli accessi; per ampliarli serve una licenza attiva.",
+      "visibilityHint": "L’accesso alle bacheche consente la supervisione. La modalità solo escalation limita la visibilità ai ticket inoltrati esplicitamente al MSP. L’accesso ai progetti si configura separatamente.",
+      "approvedScope": "Accesso approvato dal cliente",
+      "retry": "Riprova il salvataggio",
+      "save": "Salva accesso",
+      "reload": "Ricarica accesso attuale",
+      "manage": "Gestisci accesso",
+      "accessFor": "Accesso per {{name}}",
+      "kinds": {
+        "board": "Bacheche",
+        "project": "Progetti",
+        "user": "Personale",
+        "team": "Team"
+      }
+    }
   }
 }

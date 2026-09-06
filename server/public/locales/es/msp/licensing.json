@@ -359,5 +359,39 @@
   "errors": {
     "notSignedIn": "No autorizado. Inicie sesión para gestionar las licencias.",
     "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Acceso cogestionado",
+      "none": "No hay acceso configurado.",
+      "unavailable": "Elemento no disponible",
+      "inactive": "Inactivo",
+      "view": "Ver",
+      "collaborate": "Colaborar",
+      "remove": "Eliminar",
+      "search": "Buscar",
+      "select": "Seleccionar un elemento",
+      "add": "Añadir",
+      "optionsError": "No se pudieron cargar las opciones. Vuelve a buscar.",
+      "loadError": "No se pudo cargar la configuración de acceso. Recarga para intentarlo de nuevo.",
+      "saveError": "No se pudo confirmar el guardado. Reintenta los mismos cambios o recarga el acceso actual antes de volver a editar.",
+      "saved": "Configuración de acceso guardada.",
+      "customerDescription": "Elige los tableros y proyectos a los que puede acceder tu MSP. Tu MSP asigna a su propio personal dentro de este alcance.",
+      "sponsorDescription": "Asigna a tu personal al acceso aprobado por este cliente. También se aplican los permisos del cliente y los de cada miembro del personal.",
+      "readOnly": "Este espacio de trabajo es de solo lectura. Puedes reducir o eliminar el acceso; ampliarlo requiere una licencia activa.",
+      "visibilityHint": "El acceso a tableros permite la supervisión. El acceso solo por escalación limita la visibilidad a los tickets escalados explícitamente al MSP. El acceso a proyectos se configura por separado.",
+      "approvedScope": "Acceso aprobado por el cliente",
+      "retry": "Reintentar guardado",
+      "save": "Guardar acceso",
+      "reload": "Recargar acceso actual",
+      "manage": "Gestionar acceso",
+      "accessFor": "Acceso para {{name}}",
+      "kinds": {
+        "board": "Tableros",
+        "project": "Proyectos",
+        "user": "Personal",
+        "team": "Equipos"
+      }
+    }
   }
 }

@@ -5,6 +5,13 @@ import {
 } from '../../../lib/productSurfaceRegistry';
 
 describe('co-managed product boundary', () => {
+  it('opens policy administration to customers and sponsors while retaining the sponsor-only provisioning boundary', () => {
+    expect(resolveProductRouteBehavior('co_managed', '/msp/co-management')).toBe('allowed');
+    expect(resolveProductRouteBehavior('psa', '/msp/co-management')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/co-management')).toBe('not_found');
+    expect(resolveProductRouteBehavior('co_managed', '/msp/co-managed')).toBe('not_found');
+  });
+
   it.each(['projects', 'assets', 'credentials', 'documents', 'schedule', 'time-entry', 'workflow-editor'])
   ('allows operational screen %s without changing AlgaDesk availability', (screen) => {
     expect(resolveProductRouteBehavior('co_managed', `/msp/${screen}`)).toBe('allowed');

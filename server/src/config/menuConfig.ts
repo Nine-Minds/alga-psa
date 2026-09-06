@@ -138,7 +138,11 @@ export const navigationSections: NavigationSection[] = [
       },
       {
         name: 'Co-managed IT', translationKey: 'nav.coManaged', icon: Users,
-        href: '/msp/co-managed', requiredPermission: 'account_management:read',
+        href: '/msp/co-managed', requiredPermission: 'co_management:read',
+      },
+      {
+        name: 'Co-managed access', translationKey: 'nav.coManagedAccess', icon: Users,
+        href: '/msp/co-management', requiredPermission: 'co_management:manage',
       },
       {
         name: 'Opportunities',

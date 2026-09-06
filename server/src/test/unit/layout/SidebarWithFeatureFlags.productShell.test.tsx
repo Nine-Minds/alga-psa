@@ -55,11 +55,29 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     useFeatureFlag.mockImplementation((key: string) => key === 'release-v1-6-feature'
       ? { enabled, loading: false, error: null } : { enabled: true, loading: false, error: null });
     useTier.mockReturnValue({ hasFeature: () => true, isPro: true });
-    getCurrentUserPermissions.mockResolvedValue(['account_management:read']);
+    getCurrentUserPermissions.mockResolvedValue(['co_management:read']);
     render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
     await waitFor(() => {
       const props = sidebarPropsSpy.mock.calls.at(-1)?.[0];
       expect(Boolean(props?.menuSections.flatMap((section: NavigationSection) => section.items).some((item: { href?: string }) => item.href === '/msp/co-managed'))).toBe(enabled);
+    });
+  });
+
+  it.each([
+    ['co_managed', true, ['co_management:manage'], true],
+    ['co_managed', false, ['co_management:manage'], false],
+    ['co_managed', true, ['co_management:read'], false],
+    ['psa', true, ['co_management:manage'], false],
+    ['algadesk', true, ['co_management:manage'], false],
+  ])('shows customer access navigation for product=%s flag=%s and live permissions', async (productCode, enabled, permissions, expected) => {
+    useProduct.mockReturnValue({ productCode, edition: 'enterprise' });
+    useFeatureFlag.mockImplementation((key: string) => ({ enabled: key === 'release-v1-6-feature' ? enabled : true, loading: false, error: null }));
+    useTier.mockReturnValue({ hasFeature: () => true, isPro: false });
+    getCurrentUserPermissions.mockResolvedValue(permissions);
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+    await waitFor(() => {
+      const props = sidebarPropsSpy.mock.calls.at(-1)?.[0];
+      expect(Boolean(props?.menuSections.flatMap((section: NavigationSection) => section.items).some((item: { href?: string }) => item.href === '/msp/co-management'))).toBe(expected);
     });
   });
 

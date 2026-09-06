@@ -359,5 +359,39 @@
   "errors": {
     "notSignedIn": "Non autorisé. Connectez-vous pour gérer les licences.",
     "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Accès cogéré",
+      "none": "Aucun accès configuré.",
+      "unavailable": "Élément indisponible",
+      "inactive": "Inactif",
+      "view": "Consulter",
+      "collaborate": "Collaborer",
+      "remove": "Retirer",
+      "search": "Rechercher",
+      "select": "Sélectionner un élément",
+      "add": "Ajouter",
+      "optionsError": "Impossible de charger les options. Relancez la recherche.",
+      "loadError": "Impossible de charger les paramètres d’accès. Rechargez pour réessayer.",
+      "saveError": "L’enregistrement n’a pas pu être confirmé. Réessayez les mêmes modifications ou rechargez l’accès actuel avant de modifier à nouveau.",
+      "saved": "Paramètres d’accès enregistrés.",
+      "customerDescription": "Choisissez les tableaux et projets accessibles à votre MSP. Votre MSP affecte son propre personnel dans ce périmètre.",
+      "sponsorDescription": "Affectez votre personnel aux accès approuvés par ce client. Les autorisations du client et de chaque membre du personnel s’appliquent également.",
+      "readOnly": "Cet espace de travail est en lecture seule. Vous pouvez réduire ou retirer des accès ; leur extension nécessite une licence active.",
+      "visibilityHint": "L’accès aux tableaux permet la supervision. Le mode escalade seule limite la visibilité aux tickets explicitement escaladés au MSP. L’accès aux projets se configure séparément.",
+      "approvedScope": "Accès approuvé par le client",
+      "retry": "Réessayer l’enregistrement",
+      "save": "Enregistrer l’accès",
+      "reload": "Recharger l’accès actuel",
+      "manage": "Gérer l’accès",
+      "accessFor": "Accès pour {{name}}",
+      "kinds": {
+        "board": "Tableaux",
+        "project": "Projets",
+        "user": "Personnel",
+        "team": "Équipes"
+      }
+    }
   }
 }

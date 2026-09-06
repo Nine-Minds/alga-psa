@@ -357,5 +357,39 @@
   "errors": {
     "notSignedIn": "Niet geautoriseerd. Meld u aan om licenties te beheren.",
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Toegang voor gezamenlijk beheer",
+      "none": "Geen toegang ingesteld.",
+      "unavailable": "Niet-beschikbaar item",
+      "inactive": "Inactief",
+      "view": "Bekijken",
+      "collaborate": "Samenwerken",
+      "remove": "Verwijderen",
+      "search": "Zoeken",
+      "select": "Selecteer een item",
+      "add": "Toevoegen",
+      "optionsError": "Opties konden niet worden geladen. Zoek opnieuw.",
+      "loadError": "Toegangsinstellingen konden niet worden geladen. Laad opnieuw om het nogmaals te proberen.",
+      "saveError": "Opslaan kon niet worden bevestigd. Probeer dezelfde wijzigingen opnieuw of laad de huidige toegang voordat je verder bewerkt.",
+      "saved": "Toegangsinstellingen opgeslagen.",
+      "customerDescription": "Kies de borden en projecten waartoe je MSP toegang krijgt. Je MSP wijst binnen dit bereik eigen medewerkers toe.",
+      "sponsorDescription": "Wijs je medewerkers toe aan de toegang die deze klant heeft goedgekeurd. De rechten van de klant en van elke medewerker blijven ook van toepassing.",
+      "readOnly": "Deze werkruimte is alleen-lezen. Je kunt toegang beperken of verwijderen; voor uitbreiding is een actieve licentie vereist.",
+      "visibilityHint": "Toegang tot borden biedt overzicht. Alleen-escalatie beperkt de zichtbaarheid tot tickets die expliciet naar de MSP zijn geëscaleerd. Projecttoegang wordt afzonderlijk ingesteld.",
+      "approvedScope": "Door de klant goedgekeurde toegang",
+      "retry": "Opslaan opnieuw proberen",
+      "save": "Toegang opslaan",
+      "reload": "Huidige toegang opnieuw laden",
+      "manage": "Toegang beheren",
+      "accessFor": "Toegang voor {{name}}",
+      "kinds": {
+        "board": "Borden",
+        "project": "Projecten",
+        "user": "Medewerkers",
+        "team": "Teams"
+      }
+    }
   }
 }

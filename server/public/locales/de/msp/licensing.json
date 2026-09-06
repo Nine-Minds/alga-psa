@@ -357,5 +357,39 @@
   "errors": {
     "notSignedIn": "Nicht autorisiert. Melden Sie sich an, um die Lizenzierung zu verwalten.",
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Co-Managed-Zugriff",
+      "none": "Kein Zugriff konfiguriert.",
+      "unavailable": "Nicht verfügbarer Eintrag",
+      "inactive": "Inaktiv",
+      "view": "Ansehen",
+      "collaborate": "Zusammenarbeiten",
+      "remove": "Entfernen",
+      "search": "Suchen",
+      "select": "Eintrag auswählen",
+      "add": "Hinzufügen",
+      "optionsError": "Optionen konnten nicht geladen werden. Suchen Sie erneut.",
+      "loadError": "Zugriffseinstellungen konnten nicht geladen werden. Laden Sie sie erneut.",
+      "saveError": "Speichern konnte nicht bestätigt werden. Wiederholen Sie dieselben Änderungen oder laden Sie den aktuellen Zugriff vor der weiteren Bearbeitung.",
+      "saved": "Zugriffseinstellungen gespeichert.",
+      "customerDescription": "Wählen Sie die Boards und Projekte, auf die Ihr MSP zugreifen darf. Ihr MSP weist innerhalb dieses Umfangs seine eigenen Mitarbeiter zu.",
+      "sponsorDescription": "Weisen Sie Ihre Mitarbeiter dem vom Kunden genehmigten Zugriff zu. Die Berechtigungen des Kunden und der einzelnen Mitarbeiter gelten ebenfalls.",
+      "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Sie können Zugriff einschränken oder entfernen; eine Erweiterung erfordert eine aktive Lizenz.",
+      "visibilityHint": "Board-Zugriff ermöglicht einen Überblick. Bei ausschließlicher Eskalation sind nur ausdrücklich an den MSP eskalierte Tickets sichtbar. Projektzugriff wird separat konfiguriert.",
+      "approvedScope": "Vom Kunden genehmigter Zugriff",
+      "retry": "Speichern wiederholen",
+      "save": "Zugriff speichern",
+      "reload": "Aktuellen Zugriff neu laden",
+      "manage": "Zugriff verwalten",
+      "accessFor": "Zugriff für {{name}}",
+      "kinds": {
+        "board": "Boards",
+        "project": "Projekte",
+        "user": "Mitarbeiter",
+        "team": "Teams"
+      }
+    }
   }
 }

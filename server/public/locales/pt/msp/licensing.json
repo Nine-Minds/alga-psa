@@ -359,5 +359,39 @@
   "errors": {
     "notSignedIn": "Não autorizado. Faça login para gerenciar o licenciamento.",
     "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
+  },
+  "coManaged": {
+    "policy": {
+      "title": "Acesso cogerido",
+      "none": "Nenhum acesso configurado.",
+      "unavailable": "Item indisponível",
+      "inactive": "Inativo",
+      "view": "Visualizar",
+      "collaborate": "Colaborar",
+      "remove": "Remover",
+      "search": "Pesquisar",
+      "select": "Selecionar um item",
+      "add": "Adicionar",
+      "optionsError": "Não foi possível carregar as opções. Pesquise novamente.",
+      "loadError": "Não foi possível carregar as definições de acesso. Recarregue para tentar novamente.",
+      "saveError": "Não foi possível confirmar a gravação. Repita as mesmas alterações ou recarregue o acesso atual antes de voltar a editar.",
+      "saved": "Definições de acesso guardadas.",
+      "customerDescription": "Escolha os quadros e projetos a que o seu MSP pode aceder. O MSP atribui o seu próprio pessoal dentro deste âmbito.",
+      "sponsorDescription": "Atribua o seu pessoal ao acesso aprovado por este cliente. Também se aplicam as permissões do cliente e de cada membro do pessoal.",
+      "readOnly": "Este espaço de trabalho é só de leitura. Pode reduzir ou remover acessos; a expansão requer uma licença ativa.",
+      "visibilityHint": "O acesso a quadros permite a supervisão. O modo apenas escalamento limita a visibilidade aos tickets explicitamente escalados para o MSP. O acesso a projetos é configurado separadamente.",
+      "approvedScope": "Acesso aprovado pelo cliente",
+      "retry": "Tentar guardar novamente",
+      "save": "Guardar acesso",
+      "reload": "Recarregar acesso atual",
+      "manage": "Gerir acesso",
+      "accessFor": "Acesso para {{name}}",
+      "kinds": {
+        "board": "Quadros",
+        "project": "Projetos",
+        "user": "Pessoal",
+        "team": "Equipas"
+      }
+    }
   }
 }

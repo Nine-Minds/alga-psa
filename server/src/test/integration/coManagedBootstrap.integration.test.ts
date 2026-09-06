@@ -2928,3 +2928,107 @@ describe('co-managed shared-work authorization boundary', () => {
     await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   });
 });
+
+async function withPolicyActionFixture(work: (fixture: Awaited<ReturnType<typeof collaborationPolicyFixture>> & {
+  actions: typeof import('../../lib/actions/coManagedPolicyActions');
+  asActor: <T>(actor: { tenant: string; userId: string }, callback: () => Promise<T>) => Promise<T>;
+}) => Promise<void>) {
+  const fixture = await collaborationPolicyFixture();
+  const dbModule = await import('@alga-psa/db');
+  const auth = await import('@alga-psa/auth');
+  const spy = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: fixture.actor.tenant });
+  const asActor = async <T>(actor: { tenant: string; userId: string }, callback: () => Promise<T>): Promise<T> => {
+    const user = await tenantDb(db, actor.tenant).table('users').where('user_id', actor.userId).first();
+    return auth.runWithApiKeyUser(user, () => runWithTenant(actor.tenant, callback));
+  };
+  try {
+    const actions = await import('../../lib/actions/coManagedPolicyActions');
+    await work({ ...fixture, actions, asActor });
+  } finally { spy.mockRestore(); }
+}
+
+describe('authenticated co-managed policy actions', () => {
+  it('derives targets and principals from home context and exposes only authorized resource options', async () => withPolicyActionFixture(async ({
+    actions, asActor, actor, sponsorActor, operation, customer, sponsor, roleId, permissionId,
+  }) => {
+    const other = await collaborationPolicyFixture();
+    const customerBoard = await customer.table('boards').where('board_id', operation.customer_board_id).first();
+    const unshared = randomUUID();
+    await customer.table('boards').insert({ ...customerBoard, board_id: unshared, board_name: 'Unshared customer board' });
+    const projectId = randomUUID();
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    await customer.table('projects').insert({ tenant: actor.tenant, project_id: projectId, project_name: 'Local project',
+      client_id: operation.customer_client_id, status: status.status_id, project_number: 'POLICY-ACTION-1', wbs_code: '1' });
+    await asActor(actor, async () => {
+      const screen = await actions.getCoManagedPolicyScreen();
+      expect(screen).toMatchObject({ side: 'customer', canExpand: true, policy: { revision: 2 } });
+      expect(screen.labels.board.map(item => item.id)).toEqual([operation.customer_board_id]);
+      expect(screen.labels.user).toEqual([]);
+      const boards = await actions.searchCoManagedPolicyOptions({ kind: 'board' });
+      expect(boards.options.map(item => item.id).sort()).toEqual([operation.customer_board_id, unshared].sort());
+      expect(await actions.searchCoManagedPolicyOptions({ kind: 'project' })).toEqual({ options: [{ id: projectId, name: 'Local project' }], hasMore: false });
+      await expect(actions.searchCoManagedPolicyOptions({ kind: 'user' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.getCoManagedPolicyScreen(operation.operation_id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.saveSponsorCoManagedAssignments({ operationId: operation.operation_id, revision: 2, assignments: [] })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      // Browser-supplied actor/target extras cannot switch the authenticated home.
+      await actions.saveCustomerCoManagedScope({ revision: 2, scope: { visibilityMode: 'board_scope', boards: [], projects: [{ id: projectId, canCollaborate: false }] },
+        tenant: other.actor.tenant, userId: other.actor.userId, customerTenant: other.actor.tenant } as any);
+    });
+    await asActor(sponsorActor, async () => {
+      await expect(actions.getCoManagedPolicyScreen()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.getCoManagedPolicyScreen(other.operation.operation_id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'board' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'project' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.saveCustomerCoManagedScope({ revision: 3, scope: { visibilityMode: 'escalation_only', boards: [], projects: [] } })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      const screen = await actions.getCoManagedPolicyScreen(operation.operation_id);
+      expect(screen).toMatchObject({ side: 'sponsor', policy: { revision: 3 }, labels: { board: [], project: [{ id: projectId, name: 'Local project' }] } });
+      const users = await actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'user' });
+      expect(users.options.map(item => item.id)).toEqual([sponsorActor.userId]);
+      for (const input of [null, { kind: 'credential' }, { kind: 'user', page: -1 }, { kind: 'user', search: 'x'.repeat(201) }]) {
+        await expect(actions.searchCoManagedPolicyOptions(input as any)).rejects.toMatchObject({ code: 'INVALID_POLICY' });
+      }
+      await actions.saveSponsorCoManagedAssignments({ operationId: operation.operation_id, revision: 3,
+        assignments: [{ kind: 'user', principalId: sponsorActor.userId, role: 'viewer' }], actor: other.sponsorActor } as any);
+      expect((await actions.getCoManagedPolicyScreen(operation.operation_id)).labels.user.map(item => item.id)).toEqual([sponsorActor.userId]);
+      await sponsor.table('role_permissions').where({ role_id: roleId, permission_id: permissionId }).del();
+      await expect(actions.getCoManagedPolicyScreen(operation.operation_id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(actions.searchCoManagedPolicyOptions({ operationId: operation.operation_id, kind: 'user' })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+    expect(await other.customer.table('co_management_board_scopes')).toHaveLength(1);
+    expect(await customer.table('users')).toHaveLength(1);
+  }));
+
+  it('paginates home options, excludes inactive staff, and preserves revision retries and read-only revocation', async () => withPolicyActionFixture(async ({
+    actions, asActor, actor, sponsorActor, operation, customer, sponsor,
+  }) => {
+    const template = await sponsor.table('users').where('user_id', sponsorActor.userId).first();
+    const rows = Array.from({ length: 27 }, (_, index) => { const id = randomUUID(); return { ...template, user_id: id,
+      username: `policy-page-${String(index).padStart(2, '0')}`, first_name: 'Page', last_name: String(index), email: `${id}@example.test`, is_inactive: false }; });
+    await sponsor.table('users').insert(rows);
+    const inactiveId = randomUUID();
+    await sponsor.table('users').insert({ ...template, user_id: inactiveId, username: 'policy-page-inactive', email: `${inactiveId}@example.test`, is_inactive: true });
+    await asActor(sponsorActor, async () => {
+      const input = { operationId: operation.operation_id, kind: 'user' as const, search: 'policy-page-' };
+      const first = await actions.searchCoManagedPolicyOptions(input);
+      const next = await actions.searchCoManagedPolicyOptions({ ...input, page: 1 });
+      expect(first.hasMore).toBe(true); expect(first.options.map(item => item.id)).toEqual(rows.slice(0, 25).map(item => item.user_id));
+      expect(next.hasMore).toBe(false); expect(next.options.map(item => item.id)).toEqual(rows.slice(25).map(item => item.user_id));
+      const request = { operationId: operation.operation_id, revision: 2,
+        assignments: [{ kind: 'user' as const, principalId: sponsorActor.userId, role: 'technician' as const }] };
+      expect(await actions.saveSponsorCoManagedAssignments(request)).toEqual({ revision: 3 });
+      expect(await actions.saveSponsorCoManagedAssignments(request)).toEqual({ revision: 3 });
+      await expect(actions.saveSponsorCoManagedAssignments({ ...request, assignments: [] })).rejects.toMatchObject({ code: 'POLICY_CHANGED' });
+      await expireCoManagedEntitlement(operation.tenant);
+      expect((await actions.getCoManagedPolicyScreen(operation.operation_id)).canExpand).toBe(false);
+      await expect(actions.saveSponsorCoManagedAssignments({ ...request, revision: 3,
+        assignments: [...request.assignments, { ...request.assignments[0], principalId: rows[0].user_id }] })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+      expect(await actions.saveSponsorCoManagedAssignments({ ...request, revision: 3, assignments: [] })).toEqual({ revision: 4 });
+    });
+    await asActor(actor, async () => {
+      expect((await actions.getCoManagedPolicyScreen()).canExpand).toBe(false);
+      expect(await actions.saveCustomerCoManagedScope({ revision: 4, scope: { visibilityMode: 'escalation_only', boards: [], projects: [] } })).toEqual({ revision: 5 });
+      expect((await actions.getCoManagedPolicyScreen()).policy.boards).toEqual([]);
+    });
+    expect(await customer.table('co_management_relationship_events').whereIn('event_type', ['customer_scope_changed', 'staff_assignments_changed'])).toHaveLength(3);
+  }));
+});

@@ -86,3 +86,15 @@ it('resizes the existing customer allocation with its expected previous seat cou
   fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.saveAllocation' }));
   await waitFor(() => expect(mocks.resize).toHaveBeenCalledWith({ operationId: 'existing-operation', seats: 2, expectedSeats: 1 }));
 });
+
+
+it.each([true, false])('exposes the active workspace access editor only to an MSP manager: %s', async (canManage) => {
+  mocks.status.mockResolvedValue({ canManage, canCreate: false, hasMore: false, items: [
+    { operationId: 'active-operation', workspaceName: 'Active customer', administratorEmail: 'admin@example.test', seats: 1, state: 'active', canRetry: false },
+    { operationId: 'pending-operation', workspaceName: 'Pending customer', administratorEmail: 'admin@example.test', seats: 1, state: 'pending_acceptance', canRetry: false },
+  ] });
+  panel(); await screen.findByText('Active customer');
+  const links = screen.queryAllByRole('link', { name: 'coManaged.policy.manage' });
+  expect(links).toHaveLength(canManage ? 1 : 0);
+  if (canManage) expect(links[0]).toHaveAttribute('href', '/msp/co-management?operationId=active-operation');
+});
