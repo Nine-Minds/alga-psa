@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CoManagedFeatureBoundary, CoManagedWorkspaceBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
 
 const { useFeatureFlag } = vi.hoisted(() => ({ useFeatureFlag: vi.fn() }));
+vi.mock('../../../components/co-managed/CoManagedAcceptanceBoundary', () => ({ default: ({ children }: { children: React.ReactNode }) => <>{children}</> }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag }));
 afterEach(() => { cleanup(); vi.resetAllMocks(); });
 

@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import type { ProductCode } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import CoManagedAcceptanceBoundary from './CoManagedAcceptanceBoundary';
 
 /** Presentation only. Never use this release flag in backend authorization. */
 export function CoManagedFeatureBoundary({ children }: { children: ReactNode }) {
@@ -11,11 +12,13 @@ export function CoManagedFeatureBoundary({ children }: { children: ReactNode }) 
   return <>{children}</>;
 }
 
-export function CoManagedWorkspaceBoundary({ children, productCode }: {
+export function CoManagedWorkspaceBoundary({ children, productCode, requireAcceptance = false }: {
   children: ReactNode;
   productCode: ProductCode;
+  requireAcceptance?: boolean;
 }) {
   return productCode === 'co_managed'
-    ? <CoManagedFeatureBoundary>{children}</CoManagedFeatureBoundary>
+    ? <CoManagedFeatureBoundary>{requireAcceptance
+      ? <CoManagedAcceptanceBoundary>{children}</CoManagedAcceptanceBoundary> : children}</CoManagedFeatureBoundary>
     : <>{children}</>;
 }

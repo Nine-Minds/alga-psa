@@ -6,6 +6,8 @@ import knex, { type Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { getSecret } from '../../lib/utils/getSecret';
 import { prepareCoManagedProvisioning } from '../../../../packages/co-managed/src/provisioning';
+import { requestCoManagedProvisioningCleanup } from '../../../../packages/co-managed/src/provisioning';
+import { acceptCoManagedRelationship, getCoManagedAcceptanceState } from '../../../../packages/co-managed/src/acceptance';
 import { bootstrapCoManagedWorkspace } from '../../../../ee/temporal-workflows/src/db/co-managed-provisioning-operations';
 import { deliverCoManagedAdministratorInvitation } from '../../../../ee/temporal-workflows/src/activities/co-managed-provisioning-activities';
 import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenant-operations';
@@ -44,7 +46,8 @@ beforeAll(async () => {
   for (const file of ['20260906010000_create_co_management_foundation.cjs',
     '20260906020000_add_co_managed_entitlement_source_version.cjs',
     '20260906030000_create_co_managed_purchase_operations.cjs', '20260906040000_create_co_managed_provisioning.cjs',
-    '20260906050000_allow_system_seeded_priorities.cjs', '20260906060000_create_co_managed_board_scopes.cjs', '20260906070000_add_co_managed_invitation_delivery.cjs']) {
+    '20260906050000_allow_system_seeded_priorities.cjs', '20260906060000_create_co_managed_board_scopes.cjs', '20260906070000_add_co_managed_invitation_delivery.cjs',
+    '20260906080000_create_co_management_relationship_events.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -61,7 +64,7 @@ afterAll(async () => {
   vi.unstubAllEnvs();
 });
 
-async function prepare() {
+async function prepare(visibilityMode: 'board_scope' | 'escalation_only' = 'board_scope') {
   const sponsorTenant = randomUUID(), clientId = randomUUID(), requestedBy = randomUUID(), escalationBoardId = randomUUID();
   const sponsor = tenantDb(db, sponsorTenant);
   await sponsor.table('tenants').insert({ tenant: sponsorTenant, client_name: 'MSP', email: `msp-${sponsorTenant}@example.test`,
@@ -73,7 +76,7 @@ async function prepare() {
   await sponsor.table('co_managed_entitlements').insert({ tenant: sponsorTenant, source: 'hosted', source_reference: randomUUID(),
     capacity: 2, verified_at: new Date(), valid_until: new Date(Date.now() + 3600000) });
   return prepareCoManagedProvisioning(db, { sponsorTenant, clientId, requestedBy, escalationBoardId,
-    operationId: randomUUID(), seats: 2, visibilityMode: 'board_scope', workspaceName: 'Customer IT',
+    operationId: randomUUID(), seats: 2, visibilityMode, workspaceName: 'Customer IT',
     administrator: { firstName: 'Customer', lastName: 'Admin', email: `admin-${randomUUID()}@example.test` } });
 }
 
@@ -156,4 +159,94 @@ describe('co-managed bootstrap against the complete installed schema', () => {
     expect(delivery.send).not.toHaveBeenCalled();
   });
 
+});
+
+async function readyForAcceptance(visibilityMode: 'board_scope' | 'escalation_only' = 'board_scope') {
+  const operation = await prepare(visibilityMode);
+  await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
+  const customer = tenantDb(db, operation.customer_tenant), userId = randomUUID();
+  await customer.table('users').insert({ tenant: operation.customer_tenant, user_id: userId, username: `customer-${userId}`,
+    email: operation.request.administrator.email, first_name: 'Customer', last_name: 'Admin',
+    hashed_password: 'test-not-a-login', user_type: 'internal', is_inactive: false });
+  const role = await customer.table('roles').where({ role_name: 'Admin', msp: true, client: false }).first();
+  await customer.table('user_roles').insert({ tenant: operation.customer_tenant, user_id: userId, role_id: role.role_id });
+  await customer.table('user_invitations').where('invitation_id', operation.administrator_invitation_id).update({ used_at: new Date() });
+  const actor = { tenant: operation.customer_tenant, userId };
+  const review = await getCoManagedAcceptanceState(db, actor);
+  if (review.state !== 'pending_acceptance') throw new Error('Expected pending acceptance');
+  const input = { relationshipId: review.relationshipId, revision: review.revision, scopeFingerprint: review.scopeFingerprint };
+  return { operation, customer, actor, review, input };
+}
+
+describe('customer-owned co-management acceptance', () => {
+  it('atomically activates seats and records the approved scope, including concurrent retries', async () => {
+    const { operation, customer, actor, review, input } = await readyForAcceptance();
+    expect(review.canAccept).toBe(true);
+    expect(review.scope.boards).toEqual([{ id: operation.customer_board_id, name: 'Service Desk', canCollaborate: true }]);
+    await Promise.all([acceptCoManagedRelationship(db, actor, input), acceptCoManagedRelationship(db, actor, input)]);
+    expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'active', accepted_by: actor.userId, revision: 2 });
+    expect(await tenantDb(db, operation.tenant).table('co_managed_allocations').first()).toMatchObject({ state: 'active' });
+    const receipts = await customer.table('co_management_relationship_events');
+    expect(receipts).toHaveLength(1);
+    expect(receipts[0]).toMatchObject({ actor_tenant: actor.tenant, actor_user_id: actor.userId,
+      revision: 2, scope: review.scope, scope_fingerprint: input.scopeFingerprint });
+    expect(await getCoManagedAcceptanceState(db, actor)).toEqual({ state: 'active' });
+    await expect(requestCoManagedProvisioningCleanup(db, operation.tenant, operation.operation_id)).rejects.toMatchObject({ code: 'RELATIONSHIP_ACTIVE' });
+  });
+
+  it('accepts escalation-only access without silently granting board oversight', async () => {
+    const { customer, actor, review, input } = await readyForAcceptance('escalation_only');
+    expect(review.scope).toMatchObject({ visibilityMode: 'escalation_only', boards: [], projects: [], delegatedAdministration: [] });
+    await acceptCoManagedRelationship(db, actor, input);
+    expect(await customer.table('co_management_board_scopes')).toHaveLength(0);
+  });
+
+  it('denies the sponsor, sibling customers, and a guessed relationship identity', async () => {
+    const a = await readyForAcceptance(), b = await readyForAcceptance();
+    await expect(acceptCoManagedRelationship(db, { tenant: a.operation.tenant, userId: a.operation.requested_by }, a.input))
+      .rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(acceptCoManagedRelationship(db, b.actor, a.input)).rejects.toMatchObject({ code: 'NOT_PENDING' });
+    await expect(acceptCoManagedRelationship(db, a.actor, { ...a.input, relationshipId: randomUUID() })).rejects.toMatchObject({ code: 'NOT_PENDING' });
+    expect(await a.customer.table('co_management_relationship_events')).toHaveLength(0);
+  });
+
+  it('rechecks permissions and active internal identity instead of trusting an earlier review', async () => {
+    const { customer, actor, input } = await readyForAcceptance();
+    await customer.table('user_roles').where('user_id', actor.userId).del();
+    expect(await getCoManagedAcceptanceState(db, actor)).toMatchObject({ canAccept: false });
+    await expect(acceptCoManagedRelationship(db, actor, input)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await customer.table('users').where('user_id', actor.userId).update({ is_inactive: true });
+    await expect(getCoManagedAcceptanceState(db, actor)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  });
+
+  it('rejects stale revisions and edited scopes even without a revision advance', async () => {
+    const { customer, actor, input } = await readyForAcceptance();
+    await expect(acceptCoManagedRelationship(db, actor, { ...input, revision: 2 })).rejects.toMatchObject({ code: 'SCOPE_CHANGED' });
+    await customer.table('co_management_board_scopes').update({ can_collaborate: false });
+    await expect(acceptCoManagedRelationship(db, actor, input)).rejects.toMatchObject({ code: 'SCOPE_CHANGED' });
+    const next = await getCoManagedAcceptanceState(db, actor);
+    expect(next).toMatchObject({ scope: { boards: [expect.objectContaining({ canCollaborate: false })] } });
+    if (next.state !== 'pending_acceptance') throw new Error('Expected pending');
+    await acceptCoManagedRelationship(db, actor, { ...input, scopeFingerprint: next.scopeFingerprint });
+  });
+
+  it('leaves seats reserved when activation is denied during a capacity lapse', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance();
+    const sponsor = tenantDb(db, operation.tenant);
+    await sponsor.table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    await expect(acceptCoManagedRelationship(db, actor, input)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
+    expect(await sponsor.table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
+    expect(await customer.table('co_management_relationship_events')).toHaveLength(0);
+  });
+
+  it('serializes acceptance against cancellation so only one may win', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance();
+    const results = await Promise.allSettled([acceptCoManagedRelationship(db, actor, input),
+      requestCoManagedProvisioningCleanup(db, operation.tenant, operation.operation_id)]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    const relationship = await customer.table('co_management_relationships').first();
+    const stored = await tenantDb(db, operation.tenant).table('co_managed_provisioning_operations').first();
+    if (relationship.state === 'active') expect(stored.state).toBe('pending_acceptance');
+    else expect(stored.state).toBe('cleanup_requested');
+  });
 });

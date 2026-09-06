@@ -163,7 +163,7 @@ export function MspLayoutClient({
 
   const content = (
     <AppSessionProvider session={session}>
-      <CoManagedWorkspaceBoundary productCode={productCode}>
+      <CoManagedWorkspaceBoundary productCode={productCode} requireAcceptance>
       {shouldForceOnboarding && !isOnboardingPage ? <OnboardingRedirectFallback /> : (
       <MspBrandingProvider branding={mspBranding}>
       <ProductProvider>

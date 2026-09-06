@@ -382,6 +382,22 @@
     "checkoutExpired": "This checkout expired. Start a new purchase to continue.",
     "grace": "Renew your license or resolve the capacity shortfall before {{date}} to keep customer workspaces writable.",
     "readOnly": "The grace period ended on {{date}}. Restore licensed capacity to resume customer workspace changes.",
-    "cancelPool": "This cancels your co-managed seat subscription. Release all allocated seats before confirming."
+    "cancelPool": "This cancels your co-managed seat subscription. Release all allocated seats before confirming.",
+    "acceptance": {
+      "title": "Review your co-management relationship",
+      "description": "{{sponsor}} has prepared this IT workspace for your organization. Review the proposed access before activating the relationship.",
+      "boardScope": "The MSP can oversee tickets on the following boards, including tickets your team is handling:",
+      "escalationOnly": "The MSP can access tickets when your team escalates them.",
+      "collaborate": "View and collaborate",
+      "readOnly": "View only",
+      "destination": "Escalated tickets go immediately to the MSP’s {{board}} queue.",
+      "initialLimits": "This initial scope includes no shared projects or delegated workspace administration. Organization-private notes stay with their organization.",
+      "control": "Your administrators control the relationship scope and can change or revoke access.",
+      "accept": "Accept and activate workspace",
+      "administratorRequired": "A local workspace administrator must accept this relationship before your team can begin.",
+      "preparing": "Your workspace is still being prepared. Refresh to check its status.",
+      "error": "Unable to activate or load this relationship. Refresh to review the current scope before trying again.",
+      "refresh": "Refresh relationship"
+    }
   }
 }

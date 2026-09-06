@@ -46,6 +46,8 @@ function canonicalResource(resource) {
 }
 
 const ACTIVE_PERMISSIONS = [
+  { resource: 'co_management', action: 'read', msp: true, client: false, description: 'View co-management relationships and scopes', products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
+  { resource: 'co_management', action: 'manage', msp: true, client: false, description: 'Manage co-management provisioning and customer-approved scopes', products: ['psa', 'co_managed'], defaultGrants: { psa: ['msp:Admin'], co_managed: ['msp:Admin'] } },
   { resource: 'account_management', action: 'delete', msp: true, client: false, description: 'Delete account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'read', msp: true, client: false, description: 'Read account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },
   { resource: 'account_management', action: 'update', msp: true, client: false, description: 'Update account and subscription', products: ['algadesk', 'psa'], defaultGrants: { algadesk: ['msp:Admin'], psa: ['msp:Admin'] } },

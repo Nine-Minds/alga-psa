@@ -4,6 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedPage from '../../../app/msp/co-managed/page';
 
+vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 const mocks = vi.hoisted(() => ({ flag: vi.fn(), state: vi.fn(), preview: vi.fn(), purchase: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedBillingState: mocks.state }));
