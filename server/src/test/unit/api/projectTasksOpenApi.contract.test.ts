@@ -11,9 +11,9 @@ describe('project task OpenAPI contracts', () => {
       edition: 'ee',
     });
 
-    expect(document.paths?.['/api/v1/tickets']?.get?.['x-alga-products']).toEqual(['psa', 'algadesk']);
-    expect(document.paths?.['/api/v1/projects']?.get?.['x-alga-products']).toEqual(['psa']);
-    expect(document.paths?.['/api/v1/tickets/{id}/time-entries']?.get?.['x-alga-products']).toEqual(['psa']);
+    expect(document.paths?.['/api/v1/tickets']?.get?.['x-alga-products']).toEqual(['psa', 'algadesk', 'co_managed']);
+    expect(document.paths?.['/api/v1/projects']?.get?.['x-alga-products']).toEqual(['psa', 'co_managed']);
+    expect(document.paths?.['/api/v1/tickets/{id}/time-entries']?.get?.['x-alga-products']).toEqual(['psa', 'co_managed']);
   });
 
   it('documents UUID path parameters for project task routes instead of placeholder backfill metadata', () => {

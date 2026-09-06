@@ -20,5 +20,9 @@ export function getAllowedSettingsTabIds(productCode: ProductCode): Set<string> 
     return new Set(ALGA_DESK_ALLOWED_SETTINGS_TABS);
   }
 
+  if (productCode === 'co_managed') {
+    return new Set([...ALGA_DESK_ALLOWED_SETTINGS_TABS, 'sla', 'notifications']);
+  }
+
   return new Set();
 }

@@ -7,6 +7,11 @@ import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-act
 
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
+const mockUseFeatureFlag = vi.fn();
+
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: (...args: unknown[]) => mockUseFeatureFlag(...args),
+}));
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
@@ -91,6 +96,24 @@ afterEach(() => {
 const mockGetTenantSettings = vi.mocked(getTenantSettings);
 
 describe('MspLayoutClient product shell behavior', () => {
+  it.each([false, true])('gates directly navigated co-managed content with enabled=%s', (enabled) => {
+    mockUseFeatureFlag.mockReturnValue({ enabled, loading: false, error: null });
+    render(<MspLayoutClient session={null} productCode="co_managed" needsOnboarding={false} initialSidebarCollapsed={false}>
+      <button>Customer ticket</button>
+    </MspLayoutClient>);
+    expect(Boolean(screen.queryByRole('button', { name: 'Customer ticket' }))).toBe(enabled);
+  });
+
+  it('still blocks excluded product content when the release flag is enabled', () => {
+    mockUseFeatureFlag.mockReturnValue({ enabled: true, loading: false, error: null });
+    mockUsePathname.mockReturnValue('/msp/billing');
+    render(<MspLayoutClient session={null} productCode="co_managed" needsOnboarding={false} initialSidebarCollapsed={false}>
+      <button>Customer billing</button>
+    </MspLayoutClient>);
+    expect(screen.queryByRole('button', { name: 'Customer billing' })).toBeNull();
+    expect(screen.getByTestId('product-route-boundary')).toBeInTheDocument();
+  });
+
   it('RT006: renders AlgaDesk shell for allowed AlgaDesk MSP routes', () => {
     render(
       <MspLayoutClient

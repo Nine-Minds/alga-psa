@@ -1,6 +1,6 @@
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
-import { resolveProductCode } from '@alga-psa/types';
+import { productHasCapability, resolveProductCode, type ProductCapability } from '@alga-psa/types';
 
 export class ProductAccessError extends Error {
   public readonly status = 403;
@@ -20,7 +20,18 @@ export async function assertPsaOnlyTenantAccess(tenantId: string, capability: st
   const admin = await getAdminConnection();
   const row = await tenantDb(admin, tenantId).table('tenants').select('product_code').first();
   const resolved = resolveProductCode(row?.product_code);
-  if (resolved.isMisconfigured || resolved.productCode !== 'psa') {
+  if (!row || resolved.isMisconfigured || resolved.productCode !== 'psa') {
+    throw new ProductAccessError(capability, row?.product_code ?? null);
+  }
+}
+
+export async function assertTenantProductCapability(
+  tenantId: string,
+  capability: ProductCapability,
+): Promise<void> {
+  const admin = await getAdminConnection();
+  const row = await tenantDb(admin, tenantId).table('tenants').select('product_code').first();
+  if (!row || !productHasCapability(row.product_code, capability)) {
     throw new ProductAccessError(capability, row?.product_code ?? null);
   }
 }

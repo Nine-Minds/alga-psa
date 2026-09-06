@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ProductCode } from '@alga-psa/types';
 import { notFound } from 'next/navigation';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { type ProductRouteBehavior, resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
@@ -9,7 +10,7 @@ interface ResolveServerProductRouteInput {
 }
 
 interface ResolveServerProductRouteResult {
-  productCode: 'psa' | 'algadesk';
+  productCode: ProductCode;
   behavior: ProductRouteBehavior;
 }
 
