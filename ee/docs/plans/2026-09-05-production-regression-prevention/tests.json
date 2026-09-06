@@ -84,7 +84,7 @@
   {
     "id": "T009",
     "description": "Boot CE and EE production builds, log in with real credentials and assert dashboard/edition content; invalid credentials fail. Repeat with isolated users and tenants; force an assertion failure to verify sanitized first-attempt artifacts and that retry-only success remains flaky.",
-    "implemented": false,
+    "implemented": true,
     "kind": "browser",
     "featureIds": [
       "F010",

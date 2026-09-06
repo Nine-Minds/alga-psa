@@ -120,7 +120,7 @@
   {
     "id": "F010",
     "description": "Provide isolated production-build Playwright smoke fixtures using real sign-in and request identity, with maintainable CE dashboard and representative EE smoke coverage.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP3",
     "priority": "P0",
     "prdRefs": [
@@ -215,7 +215,7 @@
   {
     "id": "F017",
     "description": "Retain first-failure diagnostics and report retry-only passes as flaky so they cannot silently satisfy critical release readiness.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP3",
     "priority": "P0",
     "prdRefs": [
