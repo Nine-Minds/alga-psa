@@ -1741,3 +1741,72 @@ it('preserves task configuration and dependencies through lapse and caller rollb
   expect(await customer.table('project_task_dependencies')).toEqual([]);
   expect(await customer.table('custom_task_types').where('type_id', type.type_id).first()).toMatchObject({ is_active: false });
 }));
+
+describe('co-managed project ordering recovery', () => {
+  it('denies all standalone repair and regeneration services before acceptance and after expiry', async () => {
+    const { operation, actor, input } = await readyForAcceptance();
+    const ordering = await import('../../../../packages/projects/src/services/projectOrderingService');
+    const id = randomUUID();
+    const mutations = [
+      () => ordering.regenerateTaskOrderKeys(db, actor.tenant, id, id),
+      () => ordering.repairTaskOrderKeys(db, actor.tenant, id, id),
+      () => ordering.regeneratePhaseOrderKeys(db, actor.tenant, id),
+      () => ordering.repairPhaseOrderKeys(db, actor.tenant, id),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  });
+
+  it('repairs invalid task and phase keys inside the admitted action transaction without recursive actions', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const taskActions = await import('../../../../packages/projects/src/actions/projectTaskActions');
+    const { ProjectTaskModel } = await import('@alga-psa/projects/models');
+    const dbModule = await import('@alga-psa/db');
+    const ordering = await import('../../../../packages/projects/src/services/projectOrderingService');
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await actions.createProject({ tenant: actor.tenant, project_name: 'Ordering recovery',
+      client_id: operation.customer_client_id, status: status.status_id, description: null, start_date: null,
+      end_date: null, is_inactive: false }) as any;
+    const phases: any[] = [];
+    for (const name of ['First', 'Second', 'Moving']) {
+      phases.push(await actions.addProjectPhase({ project_id: project.project_id, phase_name: name, description: null,
+        start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any));
+    }
+    const mapping = await customer.table('project_status_mappings').where('project_id', project.project_id).first();
+    const tasks: any[] = [];
+    for (const [name, key] of [['First', '!'], ['Second', 'a2'], ['Moving', 'a3']]) {
+      tasks.push(await ProjectTaskModel.addTask(db, actor.tenant, phases[0].phase_id, { task_name: name,
+        task_type_key: 'task', project_status_mapping_id: mapping.project_status_mapping_id, order_key: key } as any));
+    }
+    vi.mocked(dbModule.createTenantKnex).mockClear();
+    await taskActions.reorderTask(tasks[2].task_id, tasks[0].task_id, tasks[1].task_id);
+    expect(dbModule.createTenantKnex).toHaveBeenCalledOnce();
+    expect((await customer.table('project_tasks').orderBy('order_key')).map(row => row.task_name)).toEqual(['First', 'Moving', 'Second']);
+    await customer.table('project_phases').where('phase_id', phases[0].phase_id).update({ order_key: '!' });
+    vi.mocked(dbModule.createTenantKnex).mockClear();
+    await actions.reorderPhase(phases[2].phase_id, phases[0].phase_id, phases[1].phase_id);
+    expect(dbModule.createTenantKnex).toHaveBeenCalledOnce();
+    expect((await customer.table('project_phases').orderBy('order_key')).map(row => row.phase_name)).toEqual(['First', 'Moving', 'Second']);
+    // A singleton invalid key was missed by the former adjacent-pair validator.
+    const lone = await ProjectTaskModel.addTask(db, actor.tenant, phases[1].phase_id, { task_name: 'Singleton',
+      task_type_key: 'task', project_status_mapping_id: mapping.project_status_mapping_id, order_key: '!' } as any);
+    await expect(dbModule.withTransaction(db, async trx => {
+      expect(await ordering.repairTaskOrderKeys(trx, actor.tenant, phases[1].phase_id, mapping.project_status_mapping_id)).toBe(true);
+      throw new Error('Caller cancelled');
+    })).rejects.toThrow('Caller cancelled');
+    expect((await customer.table('project_tasks').where('task_id', lone.task_id).first()).order_key).toBe('!');
+    await expect(taskActions.reorderTask(tasks[2].task_id, lone.task_id)).resolves.toMatchObject({ actionError: expect.stringContaining('same phase and status') });
+    const before = await customer.table('project_tasks').orderBy('task_id');
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(taskActions.reorderTask(tasks[2].task_id, tasks[0].task_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await taskActions.cleanupOrderKeysForStatus(phases[1].phase_id, mapping.project_status_mapping_id)).toMatchObject({ success: false });
+    expect(await customer.table('project_tasks').orderBy('task_id')).toEqual(before);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    expect(await taskActions.cleanupOrderKeysForStatus(phases[1].phase_id, mapping.project_status_mapping_id)).toMatchObject({ success: true });
+    expect((await customer.table('project_tasks').where('task_id', lone.task_id).first()).order_key).toBe('a0');
+    expect(await ordering.repairTaskOrderKeys(db, actor.tenant, phases[1].phase_id, mapping.project_status_mapping_id)).toBe(false);
+  }));
+});

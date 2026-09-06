@@ -34,6 +34,7 @@ import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { createProjectSchema, updateProjectSchema, projectPhaseSchema } from '../schemas/project.schemas';
 import { OrderingService } from '../lib/orderingUtils';
+import { regeneratePhaseOrderKeys } from '../services/projectOrderingService';
 import { projectKanbanHiddenStatusesKey } from '../lib/kanbanPreferences';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import {
@@ -1295,12 +1296,7 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             console.error('Error generating order key for phase:', error);
 
             // Try to recover by regenerating all order keys for the project
-            const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
-            const { isProjectOrderKeyActionError } = await import('./projectOrderKeyActionErrors');
-            const regenerationResult = await regenerateOrderKeysForPhases(phase.project_id);
-            if (isProjectOrderKeyActionError(regenerationResult)) {
-                throw regenerationResult;
-            }
+            await regeneratePhaseOrderKeys(trx, tenant, phase.project_id);
 
             // Try again with fresh order keys
             const freshBeforePhase = beforePhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
