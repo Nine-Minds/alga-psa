@@ -1,0 +1,330 @@
+# Co-managed IT implementation plan
+
+## Product outcome
+
+A Pro MSP can purchase customer-technician licenses, create a separate customer IT workspace, and deliver a joined-up service desk from its existing Alga workspace. Customer technicians manage their own operation without access to other customers or the MSP's private commercial data. Tickets and projects remain customer-owned records that both organizations can work on. Escalation changes responsibility without creating another ticket.
+
+The customer workspace can outlast the relationship. The customer can export its data or upgrade to a directly paid AlgaPSA subscription. The MSP retains its own commercial records and historical evidence of shared work it participated in.
+
+## Agreed scope
+
+| Concern | Decision |
+| --- | --- |
+| Deployment | Hosted and self-hosted; both tenants must be in the same installation. |
+| Sponsor | A Pro-tier MSP with sufficient purchased co-managed licenses. |
+| Relationship | One MSP may sponsor many customers; each customer has exactly one sponsoring MSP. No nested co-management. |
+| Onboarding | Create new customer workspaces only, linked to an existing MSP client record. Do not connect existing AlgaDesk or AlgaPSA tenants. |
+| Commercial model | USD 11.49 per customer-technician seat per month, charged to the sponsoring MSP. |
+| Allocation | The MSP buys a pool and assigns per-customer seat limits. Provisioning requires at least one allocated seat for the customer administrator. |
+| Customer administration | Customer administrators manage users, boards, settings, and sharing. MSP administration requires scoped delegation. |
+| Ticket visibility | Default shared service-desk visibility within an agreed scope; an escalation-only mode is available per relationship. Private boards can remain outside scope. |
+| MSP work | An oversight view includes permitted customer work. The normal working queue includes work assigned or escalated to the MSP. |
+| Escalation | Immediate transfer of responsibility to the agreed MSP queue, with a recorded handoff and no acceptance gate. The MSP can return responsibility to customer IT. |
+| Ticket ownership | One authoritative customer-owned ticket, one shared history, collaboration from both workspaces. No mirrored MSP ticket lifecycle. |
+| Notes | Requester-facing replies, shared IT notes, and organization-private notes. Ticket access is required for every audience. |
+| Projects | Customer-owned, explicitly shared per project. Both teams work on the same tasks and history. |
+| Time | Each organization owns its time records. MSP time feeds MSP billing. Customer operational time logging/reporting is included; timesheet submission and approval are optional. |
+| SLAs | Preserve customer end-to-end tracking. MSP response/resolution timing starts at escalation, not at ticket creation or visibility grant. |
+| Integrations | Include customer-owned email and identity/directory connections. Do not assume the customer owns an RMM or expose the entire PSA integration catalog. |
+| Departure | Customer exports its data or upgrades the existing workspace to directly paid AlgaPSA. Live relationship access ends. |
+| Retained history | Customer keeps its data, shared history, and customer-private notes. MSP keeps its time, billing, private notes, and read-only history of shared work it participated in. |
+| License lapse | Immediately block provisioning and seat increases; existing customer workspaces have 30 days to renew, export, or upgrade before becoming read-only. |
+| Release flag | `release-v1-6-feature` protects UI use only. No flag checks on API access, routes, server actions, services, or other backend behavior. |
+
+## Product and license boundaries
+
+Use **Co-managed IT** as the working product name and `co_managed` as the proposed product code. Model this as a product capability set plus sponsorship, independent of the existing Essentials/Solo/Pro tier ordering. A new rank between Essentials and Pro would incorrectly make collaboration permissions depend on tier comparisons.
+
+Customer workspaces use the operational Pro capabilities allowed by their product and valid sponsorship. A co-managed customer cannot sponsor another customer, even if its effective operational tier is Pro. Sponsorship requires the full PSA product, verified Pro eligibility, and a distinct co-managed capacity entitlement.
+
+### Proposed capability matrix
+
+The operational/commercial split below carries forward the broader customer-workspace proposal. The integration and time-entry refinements are explicit decisions above; the remaining detailed surface list is subject to plan approval.
+
+| Surface | Co-managed customer access |
+| --- | --- |
+| Tickets, boards, portal, contacts, email intake | Included. Customer technicians are internal workspace users; requesters remain portal contacts. |
+| KBs, documents, credentials | Included within the customer's own workspace and permissions. Relationship access does not automatically disclose these resources. |
+| Projects, tasks, scheduling | Included, with explicit project sharing and organization-qualified assignments. |
+| Time and effort reports | Included without requiring service contracts, billing rates, or invoice configuration. Optional timesheet approval. |
+| Assets and operational reports | Included for customer IT. No automatic replication from the MSP's RMM. |
+| SLAs and workflows | Included for permitted internal IT operations. Workflow execution obeys the same tenant, audience, and product boundaries as interactive actions. |
+| Email, sign-in, directory connections | Existing supported customer-owned connections are available. Connection setup and stored credentials remain customer-scoped. |
+| Other integrations | Denied unless explicitly included in the co-managed capability registry. Do not build new RMM connectors or a general cross-tenant integration sync in this release. |
+| Sales opportunities, quotes, client contracts, billing, invoices, revenue/accounting tools | Excluded from the customer workspace. MSP commercial activity continues in the MSP tenant. |
+| Existing separately metered add-ons | Keep their current entitlement and consumption rules; this SKU does not implicitly include them. |
+
+Regular MSP seats are not charged again for visiting or working in sponsored customer workspaces. Requester contacts are unmetered. Billing is based on the purchased pool, including unallocated seats, rather than silently increasing charges as customer administrators add users.
+
+Launch with monthly co-managed seats. Do not invent an annual discount. Use configured price identifiers and integer minor units for monetary values; do not hard-code a display string as billing logic.
+
+## UI-only release flag
+
+Gate the co-managed feature's user interface with the exact flag key `release-v1-6-feature`. Reuse `packages/ui/src/hooks/useFeatureFlag.tsx` through the existing UI package exports and a shared client-rendered boundary. Require an enabled, resolved flag before rendering usable feature controls; disabled, loading, unknown, or error states must not flash interactive co-managed UI.
+
+Cover MSP and customer entry points: co-managed navigation, provisioning and seat-purchase/allocation controls, relationship acceptance/settings, delegated administration, consolidated oversight, shared ticket/project access, escalation/handback, collaboration audience controls, and feature-specific export/upgrade flows. Apply the boundary to dedicated feature content as well as navigation so a direct browser URL cannot expose usable co-managed UI. Keep ordinary PSA/AlgaDesk screens and controls working; hide or render an inactive UI fallback for co-managed-only content.
+
+This is a presentation gate only. Routes remain registered and accessible under their normal rules. Do not add middleware, route redirects/404s, API handler checks, server-action checks, service checks, worker/workflow checks, database checks, or subscription/license checks based on this release flag. Backend functionality deploys and executes regardless of the flag. Existing authorization, product capabilities, Pro eligibility, license capacity, and lifecycle rules still apply independently.
+
+Turning the flag off does not suspend a tenant, revoke trust, stop intake, change purchased seats, or interrupt backend billing/SLA processing. Hosted and self-hosted UI use the existing client flag evaluation/override conventions; the flag does not require backend availability to depend on PostHog. Document the key and affected UI in `docs/features/feature-flags.md` during implementation.
+
+## Primary experience
+
+### Provision and connect
+
+1. An authorized MSP administrator opens a client and selects **Enable co-managed IT**.
+2. Show verified eligibility, purchased/allocated/available capacity, customer workspace name, initial administrator, seat allocation, visibility mode, and MSP escalation queue.
+3. Reserve capacity and a new customer tenant identity atomically before starting provisioning. Repeated submission returns the same provisioning operation.
+4. Reuse the existing tenant creation orchestration with co-managed seeds and sponsorship billing. Create the customer's self-organization/contact context; never copy the MSP's full client/contact directory into the new tenant.
+5. Invite the customer administrator. The proposed activation default is that the administrator reviews and accepts the relationship scope at first sign-in. Provisioning prepares an empty workspace; live customer access starts only after activation.
+6. Customer administrators can configure their workspace and change grants. MSP users see only the administrative actions delegated to their own roles or teams.
+
+Show provisioning progress and a retryable failure state. A failed or canceled creation releases its reservation after cleanup; retries cannot create an extra tenant, administrator, subscription, or seat allocation.
+
+### MSP oversight and daily work
+
+Add a Co-managed IT area for relationships and capacity. Extend ticket lists with a customer workspace filter and a clear distinction between **Working queue** and **Customer oversight**. The working queue combines native MSP tickets with shared tickets the MSP is responsible for. Oversight shows currently permitted customer tickets, including customer-handled work.
+
+Opening a shared ticket remains in the MSP application shell. Display customer workspace, original ticket number, canonical status, responsible organization, and customer/MSP SLA indicators. A separate delegated-administration view may open the customer's settings with an explicit workspace banner. Routine ticket/project work must not require tenant switching or impersonation.
+
+Use customer-qualified identifiers throughout routes, list keys, caches, searches, and selections. Two customers may have identical ticket numbers. Filtering, sorting, pagination, total counts, dashboards, and exports must operate on the authorized combined result, not independently paginated lists concatenated in the browser.
+
+### Customer work and escalation
+
+The customer's portal and email intake create tickets in the customer tenant. Customer technicians can triage, assign, respond, track effort, and resolve them. **Escalate to MSP** takes an explanatory shared note, immediately changes responsibility, places the same ticket in the configured MSP queue, and starts MSP SLA tracking.
+
+Sharing and responsibility are separate. A ticket can be visible while still customer-handled. In escalation-only mode, escalation creates the necessary ticket grant. Returning work does not erase the shared history or silently revoke access; customer administrators manage access explicitly.
+
+Keep the ticket's board, statuses, priorities, categories, and requester in its owning customer tenant. MSP queue placement is additional routing metadata. The proposed default is one canonical customer status workflow, editable by permitted MSP staff; do not move the ticket's `board_id` to an MSP-owned board or synchronize two independent status lifecycles.
+
+Only administrators configure allowed escalation destinations. Customer pickers show the agreed destination and permitted collaborators, not the MSP's complete boards, teams, user directory, or other client names. Bulk actions validate every qualified resource and report individual failures without acting on unauthorized selections.
+
+### Projects and time
+
+Sharing a project grants authorized collaboration on its phases/tasks and permitted history. Customer IT can remove the grant. Assignments identify both organization and team/person. Sharing a project does not itself assign every task to the MSP or place all tasks into its working queue.
+
+Customer time is operational effort. It may be logged without a service or contract and must never enter the MSP's invoice candidate set. MSP time uses its own users, services, contracts, billing profiles, approvals, and invoice workflow, with the source work item explicitly identified in the customer tenant.
+
+Proposed time visibility: each organization retains detailed timesheets and private time notes; shared ticket/project views can show attributed effort totals and deliberately shared work notes, without disclosing rates, costs, contract terms, or approval details. Customer and MSP effort must not be double-counted in project totals.
+
+## Authorization and information ownership
+
+Introduce a shared-work authorization service rather than changing the meaning of the session tenant. An authenticated MSP actor has a home tenant; the ticket/project has an owning tenant. These are distinct values throughout command execution.
+
+For each operation, intersect:
+
+1. The actor's current identity, session revocation state, and home-tenant role permissions.
+2. Relationship state and the actor's explicitly assigned MSP relationship role/team.
+3. Customer-approved resource scope or explicit object grant.
+4. The requested action and target resource's policy.
+5. Product/license write eligibility and, for content, its audience.
+
+Customer administrators can change customer-side scope. MSP administrators can assign their staff within the granted scope but cannot enlarge it or override customer-private content. Delegated user management must not let MSP actors impersonate customer administrators, reset their credentials, grant themselves new scope, or convert a private record into a shared one.
+
+Keep `withAuth` bound to the home identity. A dedicated domain boundary resolves an authorized resource context, performs narrowly scoped owner-tenant operations, and preserves the original actor. Do not accept a caller-supplied target tenant and run ordinary actions under it as though the caller were a local administrator. Existing local actions continue using normal tenant isolation.
+
+Use the same service for server actions, API commands, lists, detail reads, document downloads, search, bulk operations, reports, realtime delivery, notifications, email processing, and workflows. Unsupported cross-tenant entry points explicitly reject foreign targets. Native APIs and automation still enforce the customer's product capabilities. An automation or API key cannot acquire greater sharing authority than its configured principal.
+
+Access to a ticket or project does not automatically grant access to a linked credential, KB article, document library, asset, or unrelated contact. Ticket attachments and inline images inherit the parent content's audience. Shared references expose only permitted context; resource-specific grants govern opening underlying records. Existing customer-specific KB publishing can be reused through explicit relationship-aware grants, without sharing the MSP's complete KB.
+
+### Three content audiences
+
+| Audience | Visibility |
+| --- | --- |
+| Requester-facing | Authorized requester/portal readers and authorized technicians in both organizations. |
+| Shared IT | Authorized technicians in both organizations; never requester email or portal content. |
+| Organization-private | Authorized staff in the authoring organization only. Sponsorship and delegated administration do not override this. |
+
+Store shared history in the customer tenant. Store MSP-private content under MSP ownership, referring to the qualified customer resource; customer exports must not contain it. The comment reader/composer presents a unified authorized timeline across these stores. Reuse these audience semantics for shared project-task comments.
+
+Thread replies and attachments inherit the root audience. Audience changes require authorization and explicit disclosure confirmation; editing text must not accidentally widen visibility. Existing non-co-managed internal notes retain their current behavior. Do not migrate legacy internal notes to shared IT visibility by default.
+
+Preserve an organization-qualified actor reference and historical display attribution for foreign contributions. Existing user foreign keys and local-author assumptions must be revised deliberately. Do not create shadow login users in customer tenants to represent MSP technicians or count them as customer seats. Historical attribution survives user deactivation and separation.
+
+## Data model and application boundaries
+
+The names below describe proposed entities. Use existing domain conventions when implementing, while preserving the ownership and uniqueness rules.
+
+| Entity | Ownership and purpose |
+| --- | --- |
+| `co_management_relationships` | Customer-scoped canonical relationship: sponsoring tenant, corresponding MSP client, lifecycle state, visibility mode, acceptance, permission revision, and lifecycle timestamps. At most one non-ended sponsor per customer. |
+| `co_managed_entitlements` | Sponsor-scoped verified purchased capacity, source subscription/license, effective dates, and lapse state. Distinct from regular MSP seats. |
+| `co_managed_allocations` | Sponsor-scoped per-customer allocation and provisioning reservation; sum cannot exceed effective capacity. Stable operation identity handles retries. |
+| Relationship scopes and grants | Customer-owned board/project/object and delegated-action grants; reference qualified MSP principals. Default shared visibility covers an explicit board scope, not all future resources silently. |
+| Shared-work state | Customer-owned qualified ticket/project/task responsibility and handoff version/history. Same authoritative resource, not another ticket. |
+| MSP work references | MSP-owned qualified source reference, local queue/assignee, local client/billing profile, and permitted display/evidence metadata. Unique per source resource and relationship. No separate ticket status lifecycle. |
+| Collaboration actor references | Owner-local reference to original actor tenant/user with stable attribution. Not authenticatable user accounts. |
+| Organization-private contributions | Owned by the contributing organization, linked to a qualified shared resource and appropriate thread. |
+| MSP SLA tracking | MSP-owned policy and timing state for a qualified customer ticket, separate from the customer's ticket SLA fields. |
+| Participation archives | Organization-owned immutable snapshots of authorized historical shared work, attachments, and attribution, available after live grants end. |
+
+Every foreign resource reference carries both tenant and record identity. Keep same-tenant foreign keys where possible. Do not put a foreign tenant's user/board/status ID into a column whose constraints or readers assume local ownership.
+
+Register every table in tenant metadata and apply appropriate tenant isolation. Put global relationship discovery behind an explicit narrow repository API; it must not turn business tables into unrestricted shared data. Enforce the one-sponsor invariant at the customer key and pool allocation under a sponsor lock. Citus uniqueness/distribution must include the appropriate tenant key. Do not invent cross-shard foreign keys that work only on plain PostgreSQL.
+
+Relationship activation, handoff, permission revocation, and seat allocation need transactionally consistent state. Validate necessary cross-tenant transactions on Citus. Emit notifications/workflow signals after commit using the existing after-commit pattern; durable retries use the operation/version identity. A replayed handoff must not reset clocks or send another notification.
+
+For consolidated lists, use authorized qualified work references or batched tenant-scoped reads through the shared-work service. A projection may index permitted metadata for ordering/counts; it is not the authorization authority. Revocation takes effect at read and mutation time, including against stale projections and open browser sessions.
+
+### Product capability enforcement
+
+Add the new product to shared constants, session product mapping, route/API metadata, settings navigation, onboarding seeds, and upgrade handling. Extend existing product checks into explicit capability checks where operational features are currently guarded by `product_code === 'psa'`. Merely allowing new routes would leave valid customer operations blocked in server actions; relaxing all PSA-only checks would expose billing.
+
+Keep invalid/missing entitlement handling explicit. Existing legacy tier fallbacks are not proof that an MSP holds a verified Pro license or purchased co-managed capacity. Use a common entitlement resolver for hosted subscription state and verified self-host license claims, with the same business rules.
+
+## Licensing and provisioning implementation
+
+Hosted subscriptions require a separate identifiable co-managed seat item/subscription. Purchase confirmation and idempotent webhook reconciliation update co-managed capacity only. They must not replace the Pro seat price, change regular `licensed_user_count`, or be misclassified by generic license subscription loaders. Existing annual Pro subscriptions can sponsor monthly co-managed capacity without an invented annual co-managed price.
+
+For self-hosting, extend signed license issuance, verification, refresh/check-in, licensing portal purchase, and local claims with explicit co-managed capacity and sponsor binding. An older license without this claim has zero co-managed capacity, even when its ordinary `seats` claim is absent/unlimited. Offline verification uses the signed entitlement and expiry; it must not require contacting hosted billing for every operation.
+
+Current appliance license state is installation-wide. Refactor effective license resolution to distinguish the sponsoring tenant, sponsored customer allocations, and any independently licensed tenant created by a later upgrade. Do not apply the appliance's generic Pro seat count separately to every customer tenant. Preserve the existing single-tenant appliance path for installations without co-management.
+
+Seat guards cover creation, pending invitations, acceptance, reactivation, bulk imports, directory-driven technician creation, and all API paths. Count active customer technicians and explicit pending reservations within their allocation. Portal contact sync does not consume technician seats. Use locking/constraints to prevent two last-seat requests from both succeeding.
+
+An allocation cannot be reduced below active technicians plus pending reservations. A pool reduction cannot take effect below committed allocations through the normal UI. If an external billing/license change reduces capacity anyway, stop growth and surface the deficit; do not arbitrarily deactivate users or choose customers to evict. Apply the 30-day transition policy and let the MSP correct allocations or renew. The lapse start is durable and is not extended by retries, restarts, or repeated failed check-ins.
+
+After grace expires, enforce read-only access at write boundaries, including API, email, workflow, and background mutation paths. Keep sign-in, read/export, licensing recovery, and paid upgrade available. Expose paused intake and resume it through the existing suspension/intake mechanisms; do not silently discard email. Renewal restores eligible workspaces without duplicate intake or renewed seat charges.
+
+## Billing and effort accounting
+
+Extend the work-item reference/resolver to carry source tenant separately from time-entry owner tenant. MSP time entries remain MSP-owned. Their billing client and profile come from the relationship's MSP client mapping, not from the customer's self-organization IDs.
+
+Provide a common normalized billing-work context for both native and shared work: source reference, display snapshot, local client/profile, applicable MSP contract/contract line and service, and approval state. Adapt existing billing candidate loaders to consume it. Keep contract calculation and invoice generation in the existing billing engine. Do not create hidden tickets or duplicate project trees to satisfy a same-tenant join.
+
+Cover contract-backed, catalog-priced/uncontracted, and non-billable MSP time through existing semantics. Customer project collaboration does not require creating a separate MSP project. Avoid adding a new fixed-price shared-project billing product in this release; ordinary MSP contract billing remains available.
+
+Invoice evidence and posted financial records must continue to resolve after unsharing, departure, customer export, and eventual customer deletion. Snapshot the permitted work description/identity under MSP ownership at the appropriate billing/participation boundary. Never depend on continuing live trust to render a historical invoice.
+
+Customer time logging must bypass invoice/service requirements because of an explicit operational-time capability, not fabricated zero-value contracts. Adapt project actual-hour calculations to report local and authorized shared contributions accurately, including edit/delete/reassignment. Organizational timesheet approval remains separate.
+
+## SLA behavior
+
+Retain the customer's existing ticket lifecycle and SLA policy. Add a separate MSP tracking record resolving policy, priority targets, and business calendar from the MSP's local client/queue configuration. Priority mapping is explicit between customer priority values and MSP SLA targets; missing required routing/policy mappings produce a setup error rather than silently choosing an unrelated priority.
+
+The first actual escalation starts the MSP clock. Oversight reads and scope grants do not. A qualifying MSP response visible to customer IT or the requester can satisfy MSP first response; customer-authored and MSP-private notes cannot. Ordinary resolution closes the applicable timelines with their own outcomes.
+
+Proposed handback default: pause MSP timing while customer IT is responsible, and resume the same unresolved MSP obligation on re-escalation. Preserve prior elapsed time and breaches; repeated handoffs cannot manufacture a fresh deadline. Track each handoff separately for history. A genuine closed/reopened ticket follows the existing reopen policy with distinct tracking identity where required.
+
+Generalize SLA backend inputs and locks to identify which organization's obligation they affect. Reuse existing business-hours, pause, notification, scheduled-job, and Temporal behavior; do not overwrite customer SLA columns with MSP deadlines. Notifications and workflow actions execute with the policy-owning organization and authorized audience.
+
+## Separation, export, and upgrade
+
+Relationship termination and license lapse are distinct. Explicit termination revokes live cross-organization access immediately; the 30-day licensing grace does not preserve a terminated trust. Customer read/export/upgrade remains available through the agreed transition policy.
+
+Before closing live access, finalize permitted historical evidence using a consistent cutoff and operation identity. Retention is limited to shared work the MSP participated in, such as a handoff it received, an assigned shared task, or a contribution it made. Merely appearing in oversight is insufficient. Keep evidence captured while authorized; later unsharing must not let a snapshot worker read newly private or never-shared content.
+
+The MSP archive includes permitted shared history, attachments, its own private notes, and billing/time references. It excludes customer-private notes, unrelated customer resources, connection secrets, and private credential data. Customer export includes customer-owned data, customer-private notes, shared history and attribution, and customer-owned files. It excludes MSP-private notes, commercial records, and integration credentials owned by the MSP.
+
+Build a customer-authorized portable export on top of existing export/provisioning/migration infrastructure. A database dump from the internal exporter is not sufficient. Include schema/version metadata, record relationships, workspace configuration needed for reconstruction, referenced file blobs, and stable author attribution. Use explicit export manifests and audience-aware selection. Do not include platform secrets, session tokens, or signing keys. Handle customer-owned credential-vault content with an encrypted portable representation and the existing secret-management conventions; never export unusable ciphertext tied only to the old installation's key.
+
+Validate a restore into an isolated installation. External OAuth connections must be reauthorized; imported users must not retain active sessions. Preserve ticket/project histories and usable documents/credentials without copying live trust to the old MSP.
+
+Generalize the current AlgaDesk-to-PSA upgrade workflow for a sponsored-to-independent transition. The customer secures its own paid PSA entitlement; seed only missing commercial capabilities and permissions; preserve operational data; detach sponsorship and release its allocation exactly once. Do not swap the MSP's entire subscription or charge the customer for the MSP's other clients.
+
+On self-hosted installations, independent upgrade requires tenant-bound license resolution. An in-place product upgrade does not move hosting or remove the installation operator's infrastructure control. The export/restore path lets a customer leave that installation. Automatic hosted migration or a hosting contract transfer is outside this release.
+
+Read-only status does not delete data. Use existing explicit deletion/retention workflows after export or other authorized deletion; do not introduce automatic purge as part of the 30-day policy. Preserve MSP-owned archives and invoice evidence when deleting customer data.
+
+## Code entry points and current constraints
+
+| Area | Existing entry points and required change |
+| --- | --- |
+| Product/tier | `packages/types/src/constants/productCodes.ts`, `tenantTiers.ts`, `tierFeatures.ts`; product and tier are already separate. Add an explicit customer product and sponsorship checks. |
+| Product enforcement | `server/src/lib/productSurfaceRegistry.ts`, `server/src/lib/settingsProductTabs.ts`, `shared/services/productAccessGuard.ts`, `packages/auth/src/lib/nextAuthOptions.ts`; replace applicable binary PSA-only checks with capabilities and preserve commercial denial. |
+| UI release flag | `packages/ui/src/hooks/useFeatureFlag.tsx`, `packages/ui/src/components/feature-flags/FeatureFlagPageWrapper.tsx`, `docs/features/feature-flags.md`; use client-rendered gates for `release-v1-6-feature`, without adding route or backend flag enforcement. |
+| Identity/policy | `packages/auth/src/lib/withAuth.ts`, `rbac.ts`, `policy/PolicyEngine.ts`, `packages/types/src/interfaces/authorization.interface.ts`; session/home-tenant permissions must remain distinct from foreign-resource scope. |
+| Tenant database | `packages/db/src/lib/tenantDb.ts`, `tenantTableMetadata.ts`, `tenantScopedQuery.ts`; add narrow collaboration repositories without weakening ordinary tenant joins. |
+| Ticket actions/UI | `packages/tickets/src/actions/ticketActions.ts`, `packages/tickets/src/models/comment.ts`, `packages/tickets/src/components/ticket/CommentItem.tsx`, `server/src/lib/api/services/TicketService.ts`; current board/user joins and two-state internal notes assume local identity. |
+| Projects | `packages/projects/src/actions/projectActions.ts`, `projectTaskActions.ts`, `projectTaskCommentActions.ts`; add qualified collaborators and audience filtering. |
+| Time/billing | `packages/scheduling/src/actions/timeEntryCrudActions.ts`, `packages/db/src/services/projectTaskActualHours.ts`, `packages/billing/src/lib/billing/billingEngine.ts`; existing work-item resolution and invoice candidate queries use same-tenant tickets/projects. |
+| SLA | `packages/sla/src/services/slaService.ts`, `slaPauseService.ts`, `slaBackendActions.ts`, `ee/temporal-workflows/src/workflows/sla-ticket-workflow.ts`; current ticket fields and workflow input describe one obligation. |
+| Seats | `packages/users/src/lib/internalUserLicenseGuard.ts`, `packages/licensing/src/lib/license-types.ts`, `license-state.ts`, `ee/server/src/lib/license/userSeatGuard.ts`; generic appliance claims/guards need separate customer capacity and tenant-aware resolution. |
+| Subscription | `ee/server/src/lib/stripe/StripeService.ts`, existing license webhook/lifecycle handlers, `ee/temporal-workflows/src/activities/appliance-license-activities.ts`; ordinary seat subscription selection must distinguish co-managed purchases. |
+| Provisioning | `ee/temporal-workflows/src/workflows/shared/tenant-creation-steps.ts`, `tenant-creation-workflow.ts`, `ee/temporal-workflows/src/db/tenant-operations.ts`, onboarding seed sets; reuse orchestration and add sponsored provisioning. |
+| Upgrade | `ee/temporal-workflows/src/workflows/tenant-product-upgrade-workflow.ts`, `activities/product-upgrade-activities.ts`, `db/product-upgrade-operations.ts`; currently designed around AlgaDesk and a tenant's own Stripe subscription. |
+| Export/lifecycle | `ee/server/src/lib/tenant-management/tenant-export.ts`, `ee/temporal-workflows/src/workflows/tenant-export-workflow.ts`, `tenant-deletion-workflow.ts`, `packages/db/src/lib/tenantSuspension.ts`; internal export needs customer authorization, portable files/configuration, and audience-aware retention. |
+| Integrations/files | `packages/integrations/src/actions/integrations/`, `packages/documents/src/actions/documentActions.ts`; allow only selected customer connections and enforce resource/audience scope on downloads and linked data. |
+
+## Implementation sequence
+
+Complete the following in dependency order. These are implementation checkpoints within the release, not permission to ship an incomplete tenant-switching or ticket-copying substitute.
+
+1. **Capability and identity contracts.** Define product code/capabilities, qualified work/actor references, lifecycle enums, permission scopes, and common hosted/self-host entitlement results. Enumerate affected binary product checks and entry points. Preserve the native PSA/AlgaDesk paths.
+2. **Schema and authorization.** Add relationships, allocations, grants, actor references, private contributions, work references, obligation tracking, and archives. Register metadata; establish transaction/locking boundaries. Implement shared-work policy/query/command services and foreign-actor attribution before exposing cross-tenant reads.
+3. **Commercial capacity.** Implement hosted purchase/reconciliation and self-host signed capacity issuance/refresh. Make seat guards and license resolution tenant-aware. Add allocation controls, race-safe reservations, and lapse/read-only enforcement.
+4. **Provisioning and administration.** Extend creation seeds/orchestration, client-linked creation UI, administrator invitation/activation, relationship grants, delegated settings, and customer product navigation. Establish the shared client-side `release-v1-6-feature` boundary and apply it to this and every later co-managed UI surface; leave routes and backend operations independent of the flag. Test both deployment modes without granting arbitrary tenant provisioning to ordinary users.
+5. **Shared tickets and content.** Add canonical ticket access in both shells, MSP queue references, immediate handoffs/handbacks, qualified assignment pickers, three audiences, attachments, and routing-aware notifications/email. Preserve local board/status semantics and handle denied bulk selections.
+6. **Oversight and projects.** Deliver combined authorized ticket lists/dashboard counts, working/oversight filters, shared project/task collaboration, and scoped search/export. Reuse current UI components and project behavior under the shared-work context.
+7. **Effort, billing, and SLAs.** Add operational customer time, MSP qualified work billing resolution, accurate effort totals, independent MSP SLA tracking, priority mapping, and pause/resume behavior across all existing SLA backends.
+8. **Departure and continuity.** Implement immediate trust revocation, authorized historical snapshots, portable customer backup/restore, independent PSA upgrade for hosted and self-hosted tenants, allocation release, and archive-safe deletion behavior.
+9. **Validation and product finish.** Complete the behavioral suite below, permission/locale/error copy, dark/light UI checks, and CE/EE build checks. Verify UI flag coverage and document `release-v1-6-feature`. Resolve all price/license configuration dependencies before enabling purchase or provisioning.
+
+All new user-facing controls need stable unique IDs, shared UI primitives, translations, and existing theme tokens. Errors distinguish insufficient capacity, missing Pro entitlement, expired grace, provisioning failure, missing mapping, and revoked access without revealing unauthorized record contents.
+
+## Behavioral coverage
+
+Use real migrated PostgreSQL/Citus queries for tenancy, concurrency, and billing. Source-string tests alone cannot prove these behaviors. Reuse existing integration/Temporal/UI harnesses; this plan does not require running the future feature tests before implementation.
+
+| Test | Required evidence |
+| --- | --- |
+| T01 Product matrix | Customer can use agreed operational features through UI/API/actions; billing, sales, unsupported integrations, and nested sponsorship are denied. PSA/AlgaDesk behavior remains intact. |
+| T02 Purchase separation | Confirmed monthly purchase increases only co-managed capacity. Duplicate/out-of-order webhook reconciliation, regular Pro seat changes, and annual Pro sponsorship preserve the correct quantities/prices. |
+| T03 Self-host claims | Pro with explicit capacity works offline within signed validity; old/unbound-to-sponsor/missing-capacity/invalid licenses cannot provision. Customer allocations do not consume regular MSP seats or inherit another tenant's independent license. |
+| T04 Allocation concurrency | Concurrent last-seat allocation, invitation, acceptance, import, and reactivation cannot oversubscribe. Failed/retried provisioning releases or reuses reservations without duplicate tenants/users. |
+| T05 Topology/provisioning | New customer is linked to the intended local client, has one sponsor and correct seeds, and requires configured activation. Existing-tenant attachment, second sponsor, nested relationship, and different-installation targets fail. |
+| T06 Isolation matrix | Two MSPs, multiple customers, requester, customer technician/admin, and differently scoped MSP roles exercise list/detail/mutation/API/search/count/report/download/realtime paths. Denied siblings, private boards, foreign IDs, and stale grants expose no contents or counts. |
+| T07 Delegated administration | MSP delegates can perform only granted settings/user operations; they cannot expand scope, impersonate customer admins, reset their credentials, reveal private notes, or turn ordinary users into privileged proxies. |
+| T08 Shared ticket lifecycle | Customer creates one ticket; oversight sees it without working-queue placement or MSP SLA. Escalation adds immediate MSP responsibility, queue placement, one handoff, and one SLA start. Retry, handback, re-escalation, close, reopen, and bulk operations preserve one authoritative ticket. |
+| T09 Content audiences | Both organizations and portal users see exactly their permitted notes/threads/attachments. Foreign authors retain attribution. Email previews, notifications, search, exports, and shared project comments never disclose organization-private content. |
+| T10 Canonical routing | Different customer/MSP board/status/priority sets and identical ticket numbers remain unambiguous. MSP edits use customer-valid statuses; local queue placement cannot corrupt owner-tenant FKs or silently remap priority targets. |
+| T11 Consolidated views | Mixed native/shared tickets sort, paginate, count, filter, and export correctly; unauthorized/stale projection rows cannot leak or create false totals. Routine shared ticket/project actions do not switch sessions. |
+| T12 Project collaboration | Explicit sharing permits both teams to assign and work on the same tasks; unshared projects remain private. Shared grants do not assign all work automatically. Revocation closes live access. |
+| T13 Time and billing | Customer can log time without service/contract setup. MSP logs time on the same customer work and invoices only its own approved effort using its local client/profile/contract. Include contract-backed and catalog-priced time, edits, approvals, and double-invoice prevention. Native billing remains correct. |
+| T14 Effort totals | Customer/MSP task contributions, time edits/deletes/moves, private timesheet fields, and optional approvals produce accurate organization-separated and permitted combined effort views. |
+| T15 SLA independence | Customer work before escalation never consumes MSP time. Different calendars/priorities, qualifying response authors/audiences, handback pauses, re-escalation resumes, breaches, retries, closure, and both backend implementations maintain independent obligations. |
+| T16 Revocation race | An open page, cached search result, queued email/notification, workflow, or concurrent command cannot continue using revoked grants. Only already-authorized historical evidence remains available. |
+| T17 Lapse/recovery | Durable 30-day deadline blocks growth immediately and writes after expiry across interactive/API/background intake. Renewal recovers without extending an old lapse improperly, losing email, or duplicating processing. Reduced external capacity does not arbitrarily delete users. |
+| T18 Archive/export/restore | MSP archive contains only participated-in shared work and its own private/commercial data; customer export excludes it. Restore customer records, attribution, files, configuration, and encrypted business credentials in isolation. OAuth/session secrets and old live trust do not carry over. |
+| T19 Independent upgrade | Hosted customer buys its own PSA subscription or self-hosted customer obtains its own license; data remains, commercial capabilities initialize once, sponsorship ends, capacity releases once, and MSP billing/other customers stay unchanged. Failed payment/seed retry leaves recoverable state. |
+| T20 Deletion and migration | Customer deletion after departure leaves MSP invoices/archive usable. Fresh install and upgrade migrations pass PostgreSQL and Citus constraints; local actor/audience backfills do not widen existing access. |
+| T21 UI release boundary | On both deployment modes, disabled/loading/unknown/error flag states expose no usable co-managed entry points or content, including direct browser navigation. Enabled `release-v1-6-feature` reveals the permitted feature UI. Ordinary PSA/AlgaDesk UI remains usable. |
+| T22 Backend flag independence | With `release-v1-6-feature` off, authorized direct API/server-action operations and route access still work under normal product/license rules. Existing provisioning, email intake, workflows, billing, and SLA processing remain functional. Unauthorized operations remain denied for their ordinary authorization reasons, independent of flag state. |
+
+Run focused package tests and affected integration/Temporal suites, typechecks for changed packages, and both CE/EE builds. Use a browser smoke journey with one MSP and two customer workspaces to validate provisioning, isolation, escalation, collaboration, invoicing, and departure. Test light/dark layouts and localized labels in the affected screens. Do not add a large set of duplicated source-contract tests as a substitute for these journeys.
+
+## Dependencies and explicit non-goals
+
+- Production purchase requires a configured USD 11.49 monthly price and self-host signed-license issuer/portal support for co-managed capacity. Add fixture contracts in this repository and identify any external service changes; do not silently ship self-host provisioning with an unsigned local seat counter.
+- The first release has no nested relationships, multiple sponsors, connections between installations, or attachment of existing tenants.
+- There is no separate mirrored ticket lifecycle, automatic RMM replication, new directory connector, fixed-price shared-project billing product, or general integration synchronization framework.
+- The customer backup is portable and restorable; automated transfer between hosting providers is not included.
+- The working name and product code are sufficient for implementation. Marketing naming, annual pricing, and partner discounts are separate decisions.
+
+## Defaults presented for plan approval
+
+The interview settled the main scope and commercial model. These concrete defaults complete the design and are included in approval of this plan:
+
+1. The detailed operational capability matrix above, with monthly-only launch pricing and existing separately metered add-ons retaining their rules.
+2. Initial customer-admin acceptance of the prepared relationship scope; explicit MSP role/team assignment within that scope.
+3. One customer-owned board/status workflow, with separate MSP queue metadata and explicit SLA priority mapping.
+4. Shared effort totals with organization-private timesheet details, and the same three note audiences on project tasks.
+5. Handback pauses and re-escalation resumes the unresolved MSP SLA obligation without resetting elapsed time or breaches.
+6. Normal capacity reductions cannot strand current allocations; external deficits use the same 30-day transition policy. Explicit trust termination still revokes live access immediately.
+7. Self-host independence can be licensed in place, while export/restore provides an exit from MSP-operated infrastructure. No automatic hosting transfer is promised.
+
+## Competitive evidence
+
+These sources informed the separation of visibility, responsibility, licensing, and workspace ownership. They do not establish unverified current competitor seat prices.
+
+- [StreamlineIT feature sheet](https://university.connectwise.com/content/documents/StreamlineIT-FeatureSheet.pdf): historical internal-first support, escalation, and MSP resale/bundling model.
+- [Autotask co-managed associations](https://autotask.net/help/developerhelp/Content/APIs/REST/Entities/ComanagedAssociationsEntity.htm) and [ticket fields](https://ww1.autotask.net/help/developerhelp/content/apis/REST/Entities/TicketsEntity.htm): permitted company associations and separate co-managed visibility/assignment.
+- [Autotask Taskfire](https://www.autotask.net/help/content/4_Admin/5ExtensionsIntegrations/CPPortalTaskfire/CPTASKFIRELANDING.htm): a customer internal help desk integrated with the provider's operation.
+- [Halo co-managed setup](https://usehalo.com/halopsa/guides/1948/): roles, customer restrictions, teams, and escalation actions.
+- [Halo instance synchronization](https://www.usehalo.com/guides/2455?Use-Case=CSM): separate-instance collaboration requires explicit ticket/action/field mappings.
+- [Dataverse security concepts](https://learn.microsoft.com/en-us/power-platform/admin/wp-security-cds): business-unit scope participates in record authorization, beyond view configuration.
+- [Published Alga pricing](https://www.nineminds.com/plans): the USD 7.99 AlgaDesk and USD 14.99 AlgaPSA monthly prices used to choose the approved USD 11.49 midpoint, checked during design on 2026-09-06.
+
+## Completion criteria
+
+A licensed Pro MSP on either deployment model can provision customer workspaces within purchased capacity and work across them without tenant switching. Customers remain isolated and administer their own operational capabilities. One customer ticket/project supports both organizations, appropriate private/shared communication, independent responsibility and SLA tracking, and correct MSP billing. Customers can leave with a usable backup or an independent PSA workspace, while each organization retains only its authorized history. The behavioral suite proves these outcomes against real schema and preserves existing PSA/AlgaDesk operation. The `release-v1-6-feature` flag controls UI use only; routes, APIs, and backend behavior remain independent of it.
