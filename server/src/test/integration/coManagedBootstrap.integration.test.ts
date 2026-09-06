@@ -2563,3 +2563,74 @@ describe('co-managed KB import staging', () => {
     await expect(migration.down(db)).rejects.toThrow('while tracked imports exist');
   }));
 });
+
+describe('co-managed KB import recovery', () => {
+  it('exposes pauses without file failures and resumes the retained identities once after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const core = await import('@alga-psa/core');
+    const dbModule = await import('@alga-psa/db');
+    const enqueue = vi.spyOn(core, 'enqueueImmediateJob').mockResolvedValue({ jobId: randomUUID(), scheduledJobId: null });
+    const batchId = randomUUID(), fileId = randomUUID();
+    await customer.table('kb_import_files').insert({ tenant: actor.tenant, import_file_id: fileId, job_id: batchId,
+      filename: 'retained.md', status: 'pending', content: '# Retained guide', created_at: new Date(Date.now() - 40 * 86400000) });
+    expect(await actions.getArticleImportStatus(batchId)).toMatchObject({ status: 'paused', total: 1, failed: [] });
+    expect(await actions.getUnfinishedArticleImports()).toMatchObject({ canResume: false, hasMore: false,
+      imports: [{ jobId: batchId, filename: 'retained.md', pending: 1, total: 1 }] });
+    await expect(actions.resumeArticleImport(batchId)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    expect(await actions.getArticleImportStatus(batchId)).toMatchObject({ status: 'paused', failed: [] });
+    await expect(actions.resumeArticleImport(batchId)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(enqueue).not.toHaveBeenCalled();
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    expect(await actions.getArticleImportStatus(batchId)).toMatchObject({ status: 'retry_required', failed: [] });
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      expect(await actions.resumeArticleImport(batchId)).toMatchObject({ jobId: batchId });
+      expect(enqueue).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled resume');
+    })).rejects.toThrow('Caller cancelled resume');
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(await customer.table('kb_import_files').first()).toMatchObject({ batch_id: null, content: '# Retained guide' });
+    expect(await actions.resumeArticleImport(batchId)).toEqual({ jobId: batchId, total: 1 });
+    expect(await actions.resumeArticleImport(batchId)).toEqual({ jobId: batchId, total: 1 });
+    expect(enqueue).toHaveBeenCalledTimes(2);
+    for (const [name, data] of enqueue.mock.calls) expect([name, data]).toEqual(['kb-article-import', expect.objectContaining({
+      tenantId: actor.tenant, userId: actor.userId, fileIds: [fileId],
+    })]);
+    expect(await customer.table('kb_import_files').first()).toMatchObject({ batch_id: batchId, import_file_id: fileId });
+    const { kbArticleImportHandler } = await import('../../../../packages/jobs/src/lib/handlers/kbArticleImportHandler');
+    const payload = enqueue.mock.calls[0][1] as any;
+    await Promise.all([kbArticleImportHandler(randomUUID(), payload), kbArticleImportHandler(randomUUID(), payload)]);
+    expect(await customer.table('kb_articles')).toHaveLength(1);
+    expect(await actions.getArticleImportStatus(batchId)).toMatchObject({ status: 'completed', imported: 1, failed: [] });
+    expect(await actions.getUnfinishedArticleImports()).toEqual({ canResume: true, hasMore: false, imports: [] });
+    enqueue.mockClear();
+    await actions.resumeArticleImport(batchId);
+    expect(enqueue).not.toHaveBeenCalled();
+  }));
+
+  it('keeps discovery and recovery tenant-qualified and paginates without exposing file content', async () => withProjectActionsFixture(async ({ actor, input, customer }) => {
+    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    await acceptCoManagedRelationship(db, actor, input);
+    const other = await readyForAcceptance();
+    const foreignBatchId = randomUUID();
+    await other.customer.table('kb_import_files').insert({ tenant: other.actor.tenant, job_id: foreignBatchId,
+      batch_id: foreignBatchId, filename: 'other-tenant-secret.md', content: 'Secret content', status: 'pending' });
+    for (let i = 0; i < 21; i++) await customer.table('kb_import_files').insert({ tenant: actor.tenant, job_id: randomUUID(),
+      filename: `guide-${i}.md`, status: 'pending', content: 'Private source' });
+    const first = await actions.getUnfinishedArticleImports() as any;
+    expect(first).toMatchObject({ canResume: true, hasMore: true });
+    expect(first.imports).toHaveLength(20);
+    const second = await actions.getUnfinishedArticleImports(20) as any;
+    expect(second.imports).toHaveLength(1); expect(second.hasMore).toBe(false);
+    const all = [...first.imports, ...second.imports];
+    expect(new Set(all.map(batch => batch.jobId)).size).toBe(21);
+    expect(JSON.stringify(all)).not.toContain('content'); expect(JSON.stringify(all)).not.toContain('other-tenant');
+    await expect(actions.getArticleImportStatus(foreignBatchId)).rejects.toThrow('Import batch not found');
+    await expect(actions.resumeArticleImport(foreignBatchId)).rejects.toThrow('Import batch not found');
+    await expect(actions.getUnfinishedArticleImports(-1)).rejects.toThrow('Invalid import offset');
+    expect(await other.customer.table('kb_import_files').first()).toMatchObject({ batch_id: foreignBatchId, content: 'Secret content' });
+  }));
+});

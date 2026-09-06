@@ -325,6 +325,18 @@
     "results": {
       "summary": "{{imported}} sur {{total}} article(s) importé(s)",
       "failedCount": "{{count}} a échoué :"
+    },
+    "recovery": {
+      "title": "Importations inachevées",
+      "refresh": "Actualiser",
+      "paused": "Les importations sont en pause pour cet espace de travail. Vos fichiers sont enregistrés.",
+      "retry": "Vos fichiers sont enregistrés. Reprenez l’importation sans les téléverser à nouveau.",
+      "resume": "Reprendre l’importation",
+      "remaining": "{{pending}} fichiers restants sur {{total}}",
+      "open": "Voir la progression",
+      "previous": "Précédent",
+      "next": "Suivant",
+      "loadError": "Impossible de charger les importations inachevées"
     }
   },
   "staleness": {

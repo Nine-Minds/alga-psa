@@ -325,6 +325,18 @@
     "results": {
       "summary": "{{imported}} di {{total}} articolo/i importato/i",
       "failedCount": "{{count}} non riuscito:"
+    },
+    "recovery": {
+      "title": "Importazioni incomplete",
+      "refresh": "Aggiorna",
+      "paused": "Le importazioni sono in pausa per questo spazio di lavoro. I file sono salvati.",
+      "retry": "I file sono salvati. Riprendi l’importazione senza caricarli di nuovo.",
+      "resume": "Riprendi importazione",
+      "remaining": "{{pending}} file rimanenti su {{total}}",
+      "open": "Visualizza avanzamento",
+      "previous": "Precedente",
+      "next": "Successivo",
+      "loadError": "Impossibile caricare le importazioni incomplete"
     }
   },
   "staleness": {

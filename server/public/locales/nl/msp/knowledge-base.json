@@ -325,6 +325,18 @@
     "results": {
       "summary": "{{imported}} van {{total}} artikel(en) geïmporteerd",
       "failedCount": "{{count}} mislukt:"
+    },
+    "recovery": {
+      "title": "Onvoltooide imports",
+      "refresh": "Vernieuwen",
+      "paused": "Imports zijn gepauzeerd voor deze werkruimte. Je bestanden zijn opgeslagen.",
+      "retry": "Je bestanden zijn opgeslagen. Hervat de import zonder ze opnieuw te uploaden.",
+      "resume": "Import hervatten",
+      "remaining": "{{pending}} van {{total}} bestanden resterend",
+      "open": "Voortgang bekijken",
+      "previous": "Vorige",
+      "next": "Volgende",
+      "loadError": "Onvoltooide imports konden niet worden geladen"
     }
   },
   "staleness": {

@@ -98,6 +98,7 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/licensing/lifecycle', () => ({
+  getCoManagedOperationalState: async () => ({ canWrite: true, state: 'independent' }),
   withCoManagedOperationalTransaction: async (_db: unknown, _tenant: string, fn: any) => {
     const result = await fn({});
     for (const hook of afterCommit.splice(0)) {
@@ -128,7 +129,7 @@ vi.mock('@alga-psa/core', () => ({
   enqueueImmediateJob: (...args: unknown[]) => enqueueMock(...(args as [])),
 }));
 
-import { getArticleImportStatus, startArticleImport } from '../src/actions/kbArticleActions';
+import { getArticleImportStatus, startArticleImport, getUnfinishedArticleImports, resumeArticleImport } from '../src/actions/kbArticleActions';
 import {
   KB_IMPORT_MAX_FILES,
   KB_IMPORT_MAX_FILE_BYTES,
@@ -280,6 +281,13 @@ describe('startArticleImport', () => {
     ]);
   });
 
+  it('denies recovery discovery and resumption without document create permission', async () => {
+    hasPermissionMock.mockImplementation(async () => false);
+    expect(await getUnfinishedArticleImports()).toMatchObject({ _type: 'permission-error' });
+    expect(await resumeArticleImport('batch-1')).toMatchObject({ _type: 'permission-error' });
+    expect(enqueueMock).not.toHaveBeenCalled();
+  });
+
   it('refuses callers without document create permission', async () => {
     hasPermissionMock.mockImplementationOnce(async () => false);
 
@@ -339,7 +347,7 @@ describe('getArticleImportStatus', () => {
     });
   });
 
-  it('surfaces a failed job even when rows never reached a terminal state', async () => {
+  it('offers retry without treating retained pending files as failures', async () => {
     tables.jobs = [{ tenant: 'tenant-1', job_id: 'job-1', status: 'failed' }];
     tables.kb_import_files = [
       { tenant: 'tenant-1', job_id: 'job-1', filename: 'a.md', status: 'pending', error: null },
@@ -348,10 +356,10 @@ describe('getArticleImportStatus', () => {
     const status = (await getArticleImportStatus('job-1')) as any;
 
     expect(status).toEqual({
-      status: 'failed',
+      status: 'retry_required',
       total: 1,
       imported: 0,
-      failed: [{ filename: 'a.md', error: 'Failed to import article' }],
+      failed: [],
     });
   });
 });

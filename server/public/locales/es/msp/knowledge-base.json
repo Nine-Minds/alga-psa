@@ -325,6 +325,18 @@
     "results": {
       "summary": "{{imported}} de {{total}} artículo(s) importado(s)",
       "failedCount": "{{count}} falló:"
+    },
+    "recovery": {
+      "title": "Importaciones pendientes",
+      "refresh": "Actualizar",
+      "paused": "Las importaciones están en pausa para este espacio de trabajo. Tus archivos están guardados.",
+      "retry": "Tus archivos están guardados. Reanuda la importación sin volver a subirlos.",
+      "resume": "Reanudar importación",
+      "remaining": "Quedan {{pending}} de {{total}} archivos",
+      "open": "Ver progreso",
+      "previous": "Anterior",
+      "next": "Siguiente",
+      "loadError": "No se pudieron cargar las importaciones pendientes"
     }
   },
   "staleness": {

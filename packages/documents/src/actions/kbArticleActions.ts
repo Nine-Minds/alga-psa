@@ -1,7 +1,7 @@
 'use server';
 
 import { randomUUID } from 'crypto';
-import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
+import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction, getCoManagedOperationalState, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -1115,7 +1115,7 @@ export interface IImportResult {
   failed: Array<{ filename: string; error: string }>;
 }
 
-export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ImportJobStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'paused' | 'retry_required';
 
 export interface IStartArticleImportResult {
   jobId: string;
@@ -1129,13 +1129,87 @@ export interface IArticleImportStatus extends IImportResult {
 /** Job name is inlined: a vertical package must not import @alga-psa/jobs. */
 const KB_ARTICLE_IMPORT_JOB = 'kb-article-import';
 
-/** How long an unconsumed staging row may keep its file content. */
+/** Retention after a staged file settles; pending source is retained. */
 const KB_IMPORT_STAGING_TTL_MS = 24 * 60 * 60 * 1000;
 
 function importFileExtension(filename: string): string {
   const match = /\.[^.]+$/.exec(filename.trim().toLowerCase());
   return match ? match[0] : '';
 }
+
+function queueKbImportAfterCommit(
+  trx: Knex.Transaction, tenant: string, userId: string, batchId: string, fileIds: string[],
+): void {
+  registerAfterCommit(trx, async () => {
+    const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
+      tenantId: tenant, userId, fileIds,
+      metadata: { user_id: userId, tenantId: tenant, fileCount: fileIds.length },
+    });
+    // Scheduling bookkeeping may finish after admission expires. The worker
+    // separately admits each article write; use a fresh connection after commit.
+    const { knex } = await createTenantKnex(tenant);
+    await tenantScopedTable(knex, 'kb_import_files', tenant)
+      .where({ batch_id: batchId })
+      .update({ job_id: jobId, updated_at: new Date() });
+  }, `KB_ARTICLE_IMPORT batch=${batchId}`);
+}
+
+export interface IUnfinishedArticleImport {
+  jobId: string;
+  filename: string;
+  total: number;
+  pending: number;
+  createdAt: string;
+}
+
+/** Discover retained batches without exposing their source content. */
+export const getUnfinishedArticleImports = withAuth(async (user, { tenant }, offset: number = 0): Promise<{
+  imports: IUnfinishedArticleImport[]; hasMore: boolean; canResume: boolean;
+} | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'document', 'create'))) {
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
+  }
+  if (!Number.isSafeInteger(offset) || offset < 0) throw new Error('Invalid import offset');
+  const rows = await tenantScopedTable(knex, 'kb_import_files', tenant)
+    .select(knex.raw('COALESCE(batch_id, job_id) AS batch_id'))
+    .min('filename as filename').min('created_at as created_at')
+    .select(knex.raw("COUNT(*)::int AS total, COUNT(*) FILTER (WHERE status = 'pending')::int AS pending"))
+    .groupByRaw('COALESCE(batch_id, job_id)')
+    .havingRaw("COUNT(*) FILTER (WHERE status = 'pending') > 0")
+    .orderBy('created_at', 'desc').orderBy('batch_id').offset(offset).limit(21);
+  const lifecycle = await getCoManagedOperationalState(knex, tenant);
+  return {
+    imports: rows.slice(0, 20).map(row => ({ jobId: row.batch_id, filename: row.filename,
+      total: Number(row.total), pending: Number(row.pending), createdAt: new Date(row.created_at).toISOString() })),
+    hasMore: rows.length > 20,
+    canResume: lifecycle.canWrite,
+  };
+});
+
+/** Reuses retained file identities; overlapping workers cannot duplicate articles. */
+export const resumeArticleImport = withAuth(async (user, { tenant }, jobId: string): Promise<IStartArticleImportResult | ActionPermissionError> => {
+  const { knex } = await createTenantKnex();
+  if (!(await hasPermission(user, 'document', 'create'))) {
+    return permissionError('Permission denied', 'documents:errors.permissions.denied');
+  }
+  if (!jobId) throw new Error('jobId is required');
+  return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+    const rows = await tenantScopedTable(trx, 'kb_import_files', tenant)
+      .where(query => query.where({ batch_id: jobId }).orWhere({ job_id: jobId }))
+      .orderBy('import_file_id').forUpdate();
+    if (!rows.length) throw new Error('Import batch not found');
+    const batchId = rows[0].batch_id || jobId;
+    const pending = rows.filter(row => row.status === 'pending');
+    if (pending.length) {
+      await tenantScopedTable(trx, 'kb_import_files', tenant)
+        .whereIn('import_file_id', rows.map(row => row.import_file_id))
+        .update({ batch_id: batchId });
+      queueKbImportAfterCommit(trx, tenant, user.user_id, batchId, pending.map(row => row.import_file_id));
+    }
+    return { jobId: batchId, total: rows.length };
+  });
+});
 
 /**
  * Stages uploaded markdown/HTML files and hands the parsing to the
@@ -1216,22 +1290,7 @@ export const startArticleImport = withAuth(
         .del();
       await tenantScopedTable(trx, 'kb_import_files', tenant).insert(rows);
 
-      registerAfterCommit(trx, async () => {
-        const fileIds = rows.map(row => row.import_file_id);
-        const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
-          tenantId: tenant,
-          userId: user.user_id,
-          fileIds,
-          metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
-        });
-        // Scheduling bookkeeping is allowed after admission expires. The
-        // worker separately admits each article write. Never reuse a completed
-        // caller transaction here or change the stable identity used by polls.
-        const { knex: committedDb } = await createTenantKnex(tenant);
-        await tenantScopedTable(committedDb, 'kb_import_files', tenant)
-          .where({ batch_id: importBatchId })
-          .update({ job_id: jobId, updated_at: new Date() });
-      }, `KB_ARTICLE_IMPORT batch=${importBatchId}`);
+      queueKbImportAfterCommit(trx, tenant, user.user_id, importBatchId, rows.map(row => row.import_file_id));
 
       return { jobId: importBatchId, total: rows.length };
     });
@@ -1267,21 +1326,17 @@ export const getArticleImportStatus = withAuth(
       .where({ job_id: rows[0]?.job_id || jobId })
       .first('status');
 
-    const imported = rows.filter((row) => row.status === 'imported').length;
-    const failed = rows
-      .filter(
-        (row) => row.status === 'failed' || (job?.status === 'failed' && row.status !== 'imported'),
-      )
-      .map((row) => ({ filename: row.filename, error: row.error || 'Failed to import article' }));
-    const settled = imported + failed.length === rows.length && rows.length > 0;
-
-    let status: ImportJobStatus = 'processing';
-    if (job?.status === 'failed') {
-      status = 'failed';
-    } else if (settled || job?.status === 'completed') {
-      status = 'completed';
-    } else if (job?.status === 'pending' && imported + failed.length === 0) {
-      status = 'pending';
+    if (!rows.length) throw new Error('Import batch not found');
+    const imported = rows.filter(row => row.status === 'imported').length;
+    const failed = rows.filter(row => row.status === 'failed')
+      .map(row => ({ filename: row.filename, error: row.error || 'Failed to import article' }));
+    const pending = rows.length - imported - failed.length;
+    let status: ImportJobStatus = 'completed';
+    if (pending) {
+      const lifecycle = await getCoManagedOperationalState(knex, tenant);
+      if (!lifecycle.canWrite) status = 'paused';
+      else if (!job || job.status === 'failed' || job.status === 'completed') status = 'retry_required';
+      else status = job.status === 'pending' ? 'pending' : 'processing';
     }
 
     return { status, total: rows.length, imported, failed };
