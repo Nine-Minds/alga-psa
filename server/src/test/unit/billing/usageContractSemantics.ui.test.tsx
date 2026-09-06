@@ -28,6 +28,10 @@ const stableT = (key: string, options?: Record<string, unknown>) => {
   return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
     String(options?.[name] ?? `{{${name}}}`));
 };
+// UsageTracking navigates back to the invoice preview via the app router,
+// which is not mounted under jsdom.
+vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   useTranslation: () => ({ t: stableT, i18n: { language: 'en' } }),

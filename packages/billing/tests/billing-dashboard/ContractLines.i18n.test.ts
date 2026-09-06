@@ -88,8 +88,6 @@ describe('ContractLines i18n wiring contract', () => {
       'contractLines.services.hourlyRate',
       'contractLines.services.unitRate',
       'contractLines.services.rateTaxAllocation',
-      'contractLines.services.unitOfMeasure',
-      'contractLines.services.unitPlaceholder',
       'contractLines.bucket.enableTracking',
       'contractLines.bucket.title',
       'contractLines.bucket.included',

@@ -233,11 +233,22 @@ global.ResizeObserver = class ResizeObserver {
 };
 
 // Mock UI reflection hooks
+// Keep the DOM contract the real hook provides: a component that passes an
+// `id` still renders `id` / `data-automation-id`, so tests can address it
+// with getElementById. Only the UI-reflection registration is stubbed out.
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
-  useAutomationIdAndRegister: () => ({
-    automationIdProps: {},
-    updateMetadata: vi.fn(),
-  }),
+  useAutomationIdAndRegister: (
+    component: { id?: string; type?: string } = {},
+    _actions?: unknown,
+    overrideId?: string,
+  ) => {
+    const id = overrideId || component.id;
+    return {
+      automationIdProps: id ? { id, 'data-automation-id': id } : {},
+      updateMetadata: vi.fn(),
+      updateActions: vi.fn(),
+    };
+  },
 }));
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({

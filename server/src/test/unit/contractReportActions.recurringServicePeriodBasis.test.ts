@@ -80,7 +80,7 @@ function buildReportKnex(params: {
     if (table === 'contract_lines as cln') {
       return buildThenableQuery(contractLines);
     }
-    if (table === 'contract_line_service_configuration as clsc') {
+    if (table === 'contract_line_service_configuration as clsc' || table === 'contract_line_service_configuration') {
       return buildThenableQuery([]);
     }
     if (table === 'contract_line_unit_pricing_revisions as rev') {
@@ -167,7 +167,7 @@ describe('contractReportActions recurring service-period basis', () => {
       if (table === 'contract_lines as cln') {
         return buildThenableQuery(contractLines);
       }
-      if (table === 'contract_line_service_configuration as clsc') {
+      if (table === 'contract_line_service_configuration as clsc' || table === 'contract_line_service_configuration') {
         return buildThenableQuery([]);
       }
       if (table === 'contract_line_unit_pricing_revisions as rev') {

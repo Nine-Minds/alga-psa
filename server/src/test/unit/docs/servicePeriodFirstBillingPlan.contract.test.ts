@@ -120,6 +120,10 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   'server/src/test/integration/contractLineBucketsMigration.integration.test.ts',
   'shared/workflow/runtime/actions/__tests__/businessOperations.time.db.test.ts',
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
+  // Explicit recurring-seat (pricing_basis unit) authoring in the custom
+  // contract line dialog and service form landed after the pass-0 snapshot.
+  'packages/billing/src/components/billing-dashboard/contracts/CreateCustomContractLineDialog.tsx',
+  'packages/billing/tests/ContractLineServiceForm.fixedPricingBasis.test.tsx',
 ]);
 
 // Files whose billing_cycle_alignment references were removed after the pass-0
@@ -256,6 +260,16 @@ const servicePeriodPostInventoryRefs = new Set([
   // snapshot; its baseline fixtures assert persisted service-period columns.
   'server/src/test/integration/billing/goldenOutput/baseline.json',
   'server/src/test/integration/billing/goldenOutput/goldenOutputBaseline.integration.test.ts',
+  // Usage period-total and recurring-seat semantics (explicit measurement
+  // mode, seat revisions, period-total identity, quick entry) read persisted
+  // service-period boundaries; they landed after the pass-0 snapshot.
+  'packages/billing/src/actions/contractLineUnitPricingActions.ts',
+  'packages/billing/src/components/billing-dashboard/UsagePeriodTotalQuickEntry.tsx',
+  'packages/billing/src/components/billing-dashboard/UsageTracking.tsx',
+  'packages/billing/src/lib/billing/seatRevisions.ts',
+  'packages/billing/src/lib/billing/usagePeriodTotalIdentity.ts',
+  'packages/billing/tests/automaticInvoices.duplicateIdentityDedupe.test.tsx',
+  'server/src/test/infrastructure/billing/invoices/contractQuantityUsageSemantics.test.ts',
 ]);
 
 // Files whose persisted service-period field references were removed after the
