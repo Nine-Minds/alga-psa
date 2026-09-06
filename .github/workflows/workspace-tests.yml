@@ -10,6 +10,61 @@ permissions:
   contents: read
 
 jobs:
+  enterprise-integration:
+    name: Enterprise integration execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: ankane/pgvector:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_USER_ADMIN: postgres
+      DB_PASSWORD_ADMIN: test_password
+      DB_USER_SERVER: app_user
+      DB_PASSWORD_SERVER: test_password
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: '6379'
+      NODE_OPTIONS: '--max-old-space-size=8192'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Collect and execute EE integration tests against combined migrations
+        run: node scripts/run-additional-workspace-tests.mjs enterprise-integration
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enterprise-integration-${{ github.sha }}
+          path: test-results/enterprise-integration/
+          if-no-files-found: error
+          retention-days: 30
+
   ai-gateway:
     name: AI gateway execution complete
     runs-on: ubuntu-latest

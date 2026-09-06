@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,11 +12,12 @@ for (const [suite, directory, include] of [
   ['workspace-unit', 'sdk', '../sdk'],
   ['server-colocated', 'server/src/lib', 'src/lib'],
   ['enterprise-unit', 'ee/server/src/__tests__/unit', 'src/__tests__/unit'],
+  ['enterprise-integration', 'ee/server/src/__tests__/integration', 'src/__tests__/integration'],
   ['ai-gateway', 'services/ai-gateway/src/test', 'src/test'],
 ]) test(`${suite} runner rejects omitted files, skipped assertions, failures and empty collection`, { timeout: 60000 }, (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-workspace-runner-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
-  for (const dir of ['scripts/lib', 'server', directory]) mkdirSync(path.join(root, dir), { recursive: true });
+  for (const dir of ['scripts/lib', 'server/migrations', 'ee/server/migrations', directory]) mkdirSync(path.join(root, dir), { recursive: true });
   for (const file of [
     'scripts/run-additional-workspace-tests.mjs',
     'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs',
@@ -24,11 +25,33 @@ for (const [suite, directory, include] of [
   ]) cpSync(path.join(repository, file), path.join(root, file));
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
-  const configure = (include) => writeFileSync(path.join(root, suite === 'enterprise-unit' ? 'ee/server/vitest.unit.config.ts' : suite === 'ai-gateway' ? 'services/ai-gateway/vitest.config.ts' : `server/vitest.${suite}.config.ts`),
+  const configure = (include) => writeFileSync(path.join(root,
+    suite.startsWith('enterprise-') ? `ee/server/vitest.${suite.slice('enterprise-'.length)}.config.ts`
+      : suite === 'ai-gateway' ? 'services/ai-gateway/vitest.config.ts' : `server/vitest.${suite}.config.ts`),
     `export default ${JSON.stringify({ test: { include, globals: true, environment: 'node', pool: 'forks', fileParallelism: false, maxWorkers: 1 } })};`);
   configure([`${include}/**/*.test.ts`]);
   const example = path.join(root, directory, 'example.test.ts');
   writeFileSync(example, "test('saves the result', () => expect(2 + 2).toBe(4));\n");
+  if (suite === 'enterprise-integration') {
+    writeFileSync(path.join(root, 'server/migration-helper.cjs'), 'module.exports = (amount) => amount * 2;');
+    writeFileSync(path.join(root, 'server/migrations/shared.cjs'), 'module.exports = () => 1;');
+    writeFileSync(path.join(root, 'server/migrations/ce.cjs'), 'module.exports = () => 3;');
+    writeFileSync(path.join(root, 'ee/server/migrations/shared.cjs'), "module.exports = () => require('../migration-helper.cjs')(4);");
+    writeFileSync(path.join(root, 'ee/server/migrations/ee.cjs'), 'module.exports = () => 5;');
+    writeFileSync(example, `
+      import { createRequire } from 'node:module';
+      const require = createRequire(import.meta.url);
+      test('executes the combined migration overlay with relative dependencies', () => {
+        const directory = process.env.TEST_MIGRATIONS_DIR;
+        expect(require(directory + '/ce.cjs')()).toBe(3);
+        expect(require(directory + '/ee.cjs')()).toBe(5);
+        expect(require(directory + '/shared.cjs')()).toBe(8);
+        expect(new URL(process.env.DATABASE_URL).pathname).toBe('/alga_ee_integration_test');
+        expect(process.env.REQUIRE_DB).toBe('1');
+        expect(process.env.SKIP_DB_TESTS).toBe('');
+      });
+    `);
+  }
   const git = (...args) => execFileSync('git', args, { cwd: root, stdio: 'pipe' });
   git('init');
   git('add', '.');
@@ -36,9 +59,14 @@ for (const [suite, directory, include] of [
   const run = (overrides = {}) => {
     const result = spawnSync(process.execPath, [path.join(root, 'scripts/run-additional-workspace-tests.mjs'), suite], {
       cwd: root, encoding: 'utf8', timeout: 10000,
-      env: { ...process.env, CI: '1', AI_GATEWAY_TEST_DATABASE_URL: 'postgresql://fixture:fixture@127.0.0.1:1/gateway_test', ...overrides },
+      env: { ...process.env, CI: '1', AI_GATEWAY_TEST_DATABASE_URL: 'postgresql://fixture:fixture@127.0.0.1:1/gateway_test',
+        DB_HOST: '127.0.0.1', DB_PORT: '1', DB_USER_ADMIN: 'fixture', DB_PASSWORD_ADMIN: 'fixture',
+        DB_USER_SERVER: 'fixture', DB_PASSWORD_SERVER: 'fixture', ...overrides },
     });
     assert.equal(result.error, undefined, result.error?.message);
+    if (suite === 'enterprise-integration') {
+      assert.deepEqual(readdirSync(path.join(root, 'server')).filter(name => name.startsWith('.ee-combined-migrations-')), []);
+    }
     const evidence = JSON.parse(readFileSync(path.join(root, `test-results/${suite}/evidence.json`), 'utf8'));
     return { result, evidence };
   };
@@ -48,6 +76,11 @@ for (const [suite, directory, include] of [
       assert.equal(invalid.result.status, 1);
       assert.ok(invalid.evidence.failures.some(message => message.includes('dedicated PostgreSQL database')));
     }
+  }
+  if (suite === 'enterprise-integration') {
+    const invalid = run({ DB_PASSWORD_ADMIN: undefined });
+    assert.equal(invalid.result.status, 1);
+    assert.ok(invalid.evidence.failures.some(message => message.includes('requires explicit')));
   }
   let current = run();
   assert.equal(current.result.status, 0, current.result.stderr);

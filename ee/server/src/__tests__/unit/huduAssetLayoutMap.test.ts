@@ -58,7 +58,7 @@ vi.mock('@ee/lib/integrations/hudu/huduIntegrationRepository', () => ({
 }));
 
 vi.mock('@ee/lib/integrations/hudu/huduClient', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@ee/lib/integrations/hudu/huduClient')>(),
+  ...(await importOriginal() as typeof import('@ee/lib/integrations/hudu/huduClient')),
   createHuduClient: createHuduClientMock,
 }));
 

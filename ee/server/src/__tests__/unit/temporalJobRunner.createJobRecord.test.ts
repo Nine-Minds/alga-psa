@@ -23,7 +23,7 @@ vi.mock('@temporalio/client', () => {
 });
 
 vi.mock('@alga-psa/db', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  const actual = await importOriginal() as typeof import('@alga-psa/db');
   const runWithTenant = vi.fn(async (_tenantId: string, cb: () => Promise<unknown>) => cb());
 
   const createTenantKnex = vi.fn(async () => {

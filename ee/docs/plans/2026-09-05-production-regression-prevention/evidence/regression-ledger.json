@@ -287,6 +287,40 @@
         "This is component interaction coverage; workflow execution is a separate boundary.",
         "Latest candidate CI verification remains pending."
       ]
+    },
+    {
+      "id": "simulator-hourly-bucket-double-charge",
+      "classification": "discovered-during-test-inventory-activation",
+      "incident": null,
+      "journey": "Compare a contract simulation with its generated invoice when hourly work is covered by a bucket",
+      "missingBoundary": "Simulation obligation selection versus production persisted invoice charges",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "ee/server/src/__tests__/integration/contractSimulator.integration.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml",
+        "suite": "enterprise-integration"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "After fixing the obsolete recurring-period fixture identity, simulation contained an extra Engineering hourly charge of 5000 cents plus 500 cents tax for an hour fully covered by the bucket. The production invoice had no such charge.",
+        "localEvidence": "/tmp/alga-enterprise-integration-repaired.log"
+      },
+      "after": {
+        "status": "local-tests-passed",
+        "assertion": "The persisted-invoice parity assertion passes. Three assumed hours with one included hour produce only 2000 cents bucket overage; removing the overlay restores a 15000-cent hourly charge. All eight contract simulator integration cases pass.",
+        "localEvidence": "/tmp/alga-ee-integration-focused-v3.log"
+      },
+      "reproduction": {
+        "command": "node scripts/run-additional-workspace-tests.mjs enterprise-integration contractSimulator.integration.test.ts",
+        "requirements": "Locked dependencies, explicit disposable PostgreSQL admin/application DB_* credentials and REDIS_* endpoint. CI uses Node 22."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "This verifies the represented per-service hourly/bucket overlay. It does not establish every shared-pool, weighted-burn or cadence combination.",
+        "New candidate CI verification remains pending."
+      ]
     }
   ]
 }

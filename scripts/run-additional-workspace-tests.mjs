@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
@@ -11,8 +11,16 @@ import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const suite = process.argv[2];
-const cwd = path.join(root, suite === 'enterprise-unit' ? 'ee/server' : suite === 'ai-gateway' ? 'services/ai-gateway' : 'server');
-if (!['workspace-unit', 'workspace-runtime', 'server-colocated', 'enterprise-unit', 'ai-gateway'].includes(suite)) throw new Error('Usage: node scripts/run-additional-workspace-tests.mjs workspace-unit|workspace-runtime|server-colocated|enterprise-unit|ai-gateway [file filters]');
+const settings = {
+  'workspace-unit': { directory: 'server', config: 'vitest.workspace-unit.config.ts' },
+  'workspace-runtime': { directory: 'server', config: 'vitest.workspace-runtime.config.ts' },
+  'server-colocated': { directory: 'server', config: 'vitest.server-colocated.config.ts' },
+  'enterprise-unit': { directory: 'ee/server', config: 'vitest.unit.config.ts' },
+  'enterprise-integration': { directory: 'ee/server', config: 'vitest.integration.config.ts' },
+  'ai-gateway': { directory: 'services/ai-gateway', config: 'vitest.config.ts' },
+}[suite];
+if (!settings) throw new Error('Unknown workspace suite');
+const cwd = path.join(root, settings.directory);
 const shardIndex = Number(process.env.WORKSPACE_SHARD_INDEX || '1');
 const shardTotal = Number(process.env.WORKSPACE_SHARD_TOTAL || '1');
 const output = path.join(root, 'test-results', suite, ...(shardTotal > 1 ? [`shard-${shardIndex}`] : []));
@@ -26,20 +34,44 @@ const discoveryPath = path.join(output, 'discovery.json');
 for (const file of [collectedPath, testsPath, reportPath, evidencePath, discoveryPath, path.join(output, 'progress.jsonl')]) writeFileSync(file, 'null\n');
 const env = {
   ...process.env,
-  SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '',
+  ...(suite === 'enterprise-integration'
+    ? { REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1', APP_ENV: 'test',
+        TEST_DB_NAME: 'alga_ee_integration_test', DB_NAME_SERVER: 'alga_ee_integration_test',
+        HUDU_TEST_DB_NAME: 'alga_ee_integration_test' }
+    : { SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '' }),
   TEST_PROGRESS_PATH: path.join(output, 'progress.jsonl'),
 };
 const filters = process.argv.slice(3);
 if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
-let args = ['--config', suite === 'enterprise-unit' ? 'vitest.unit.config.ts' : suite === 'ai-gateway' ? 'vitest.config.ts' : `vitest.${suite}.config.ts`, ...filters];
+let args = ['--config', settings.config, ...filters];
 const run = (args) => spawnSync(process.execPath, [path.join(root, 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let allFiles = [];
 let before;
 let evidence;
+let mergedMigrations;
 let phase = 'Revision inspection';
 try {
   if (filters.length && shardTotal > 1) throw new Error('Sharded execution cannot use file filters');
   before = testRevision(root);
+  if (suite === 'enterprise-integration') {
+    phase = 'Enterprise database configuration';
+    if (['DB_HOST', 'DB_PORT', 'DB_USER_ADMIN', 'DB_PASSWORD_ADMIN', 'DB_USER_SERVER', 'DB_PASSWORD_SERVER']
+      .some(key => !env[key]?.trim())) {
+      throw new Error('Enterprise integration requires explicit DB_HOST, DB_PORT and admin/application DB credentials');
+    }
+    const databaseUrl = new URL(`postgresql://${env.DB_HOST}:${env.DB_PORT}/${env.TEST_DB_NAME}`);
+    databaseUrl.username = env.DB_USER_SERVER;
+    databaseUrl.password = env.DB_PASSWORD_SERVER;
+    env.DATABASE_URL = databaseUrl.href;
+    env.TEST_DATABASE_URL = databaseUrl.href;
+    phase = 'Enterprise migration workspace';
+    // Match setup/entrypoint.sh: EE files overlay CE collisions. Keep the
+    // directory under server/ so migration-relative helpers and resources work.
+    mergedMigrations = mkdtempSync(path.join(root, 'server/.ee-combined-migrations-'));
+    cpSync(path.join(root, 'server/migrations'), mergedMigrations, { recursive: true });
+    cpSync(path.join(root, 'ee/server/migrations'), mergedMigrations, { recursive: true, force: true });
+    env.TEST_MIGRATIONS_DIR = mergedMigrations;
+  }
   if (suite === 'ai-gateway') {
     phase = 'Service database configuration';
     let database;
@@ -85,6 +117,8 @@ try {
   evidence = reconcileExecution({ collected, collectedTests, report, root, suite, revision: before.revision, exitCode: result.status });
 } catch (error) {
   evidence = { schemaVersion: 1, suite, revision: before?.revision, status: 'failed', failures: [`${phase}: ${error.message}`] };
+} finally {
+  if (mergedMigrations) rmSync(mergedMigrations, { recursive: true, force: true });
 }
 evidence.selection = { mode: filters.length ? 'filtered' : 'full', filters, allFiles, shard: { index: shardIndex, total: shardTotal } };
 try {

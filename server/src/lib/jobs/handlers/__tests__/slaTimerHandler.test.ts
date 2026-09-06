@@ -9,7 +9,7 @@ const loggerInfoMock = vi.fn();
 const loggerErrorMock = vi.fn();
 
 vi.mock('@alga-psa/db', async () => ({
-  ...(await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db')),
+  ...(await vi.importActual('@alga-psa/db') as typeof import('@alga-psa/db')),
   runWithTenant: runWithTenantMock,
   createTenantKnex: createTenantKnexMock,
   withTransaction: withTransactionMock,

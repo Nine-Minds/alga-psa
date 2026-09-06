@@ -211,6 +211,29 @@ The existing `workspace-unit` and `workspace-runtime` lanes cover other roots
 defined in `scripts/lib/test-discovery.mjs`. These scoped inventories are not
 a repository-wide assignment guarantee.
 
+The `enterprise-integration` lane collects non-Playwright test/spec files under
+`ee/server/src/__tests__/integration/`. It uses the EE module aliases and a
+dedicated `alga_ee_integration_test` database. Supply explicit `DB_HOST`,
+`DB_PORT`, `DB_USER_ADMIN`, `DB_PASSWORD_ADMIN`, `DB_USER_SERVER` and
+`DB_PASSWORD_SERVER`, plus the isolated Redis endpoint in `REDIS_HOST` and
+`REDIS_PORT`:
+
+```sh
+CI=1 node scripts/run-additional-workspace-tests.mjs enterprise-integration
+```
+
+The runner combines CE and EE migrations using the production setup overlay
+order. Every database recreation uses that combined schema. Files run serially;
+do not run another process against this database concurrently. Local environment
+files must not override the explicit test connection. Collection/execution
+artifacts are under `test-results/enterprise-integration/`. Action-level tests
+may control authentication or vendor boundaries; they do not establish browser
+sign-in or live-provider compatibility.
+
+Browser tests must use the `.playwright.test.ts` suffix expected by the EE
+Playwright config. Collection with `--list` establishes runner assignment only;
+successful browser execution needs its own application environment and evidence.
+
 The `ai-gateway` lane runs all tests under `services/ai-gateway/src/test/`,
 including the actual HTTP API, credit ledger and signed webhook integration
 tests. It uses the service's own migrations in a separate PostgreSQL database:
@@ -229,7 +252,7 @@ Git inventory. Adding a test within the lane's scope cannot silently omit it
 from that lane. File filters are available for investigation, but their evidence
 is marked `filtered` and cannot satisfy a complete sharded run.
 
-CI runs enterprise tests in three partitions:
+CI runs enterprise unit tests in three partitions:
 
 ```sh
 WORKSPACE_SHARD_INDEX=1 WORKSPACE_SHARD_TOTAL=3 node scripts/run-additional-workspace-tests.mjs enterprise-unit

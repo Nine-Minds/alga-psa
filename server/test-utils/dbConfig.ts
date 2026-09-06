@@ -79,7 +79,9 @@ export async function createTestDbConnection(
   options: CreateTestDbConnectionOptions = {}
 ): Promise<Knex> {
   const databaseName = options.databaseName || TEST_DB_NAME;
-  const migrationsDir = options.migrationsDir || path.join(serverRoot, 'migrations');
+  // The EE integration runner supplies a disposable CE+EE overlay. Every
+  // per-file recreate must use it, not revert the database to CE-only schema.
+  const migrationsDir = options.migrationsDir || process.env.TEST_MIGRATIONS_DIR || path.join(serverRoot, 'migrations');
   const seedsDir = options.seedsDir || path.join(serverRoot, 'seeds', 'dev');
   const runSeeds = options.runSeeds ?? true;
 

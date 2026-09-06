@@ -18,7 +18,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock('@alga-psa/db', async (importOriginal) => ({
-  ...await importOriginal<typeof import('@alga-psa/db')>(),
+  ...(await importOriginal() as typeof import('@alga-psa/db')),
   createTenantKnex: state.createTenantKnex,
   withTransaction: state.withTransaction,
 }));

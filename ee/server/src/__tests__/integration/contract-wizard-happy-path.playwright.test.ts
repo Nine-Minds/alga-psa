@@ -9,7 +9,7 @@
  */
 
 import { expect, Page, test } from '@playwright/test';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db/tenantDb';
 import type { Knex } from 'knex';
 import { knex as createKnex } from 'knex';
 import path from 'node:path';
