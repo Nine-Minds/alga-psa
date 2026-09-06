@@ -15,7 +15,7 @@ export function repositoryTestFiles(root) {
 // DB tests need the same positive assignment as colocated package DB tests.
 // Integration/infrastructure directories retain their own database lanes.
 export function isWorkspaceDbTest(file) {
-  return /^(packages|shared|ee\/packages|server\/src\/test\/unit)\//.test(file)
+  return /^(packages|shared|ee\/packages|ee\/server\/src\/__tests__\/unit|server\/src\/test\/unit)\//.test(file)
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
 }
 

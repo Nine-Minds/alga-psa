@@ -225,6 +225,68 @@
         "Harness fixtures verify test infrastructure, not application behavior.",
         "Latest committed revision CI verification remains pending."
       ]
+    },
+    {
+      "id": "solo-flat-price-checkout",
+      "classification": "discovered-during-test-inventory-activation",
+      "incident": null,
+      "journey": "Solo tenant starts a trial checkout",
+      "missingBoundary": "Tier pricing selection to Stripe checkout line items",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "ee/server/src/__tests__/unit/stripeService.tierPricing.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Solo checkout threw Per-seat pricing not configured for solo tier (month), despite its configured flat base price."
+      },
+      "after": {
+        "status": "local-tests-passed",
+        "assertion": "The existing tier line-item builder restores Solo flat pricing; all 20 pricing assertions pass, including Pro per-seat and add-on cases."
+      },
+      "reproduction": {
+        "command": "node scripts/run-additional-workspace-tests.mjs enterprise-unit stripeService.tierPricing.test.ts",
+        "requirements": "Install locked dependencies. Node 25 local runs require NODE_OPTIONS=--no-experimental-webstorage; CI uses Node 22."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Stripe and persistence are mocked here; this does not prove a real Stripe checkout or webhook.",
+        "Latest candidate CI verification remains pending."
+      ]
+    },
+    {
+      "id": "workflow-empty-until-picker",
+      "classification": "discovered-during-test-inventory-activation",
+      "incident": null,
+      "journey": "Author selects a fixed date for a workflow time wait",
+      "missingBoundary": "Empty Until configuration reflected by parent to authoring mode",
+      "ownerRole": "Workflow maintainers",
+      "testFiles": [
+        "ee/server/src/components/workflow-designer/__tests__/WorkflowWaitEditors.test.tsx"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Selecting Until with an empty config reset the date picker to expression mode, so the picker interaction failed."
+      },
+      "after": {
+        "status": "local-tests-passed",
+        "assertion": "Blank Until expressions retain fixed mode; the existing component date-picker round trip passes. Dynamic expression editing also passes."
+      },
+      "reproduction": {
+        "command": "node scripts/run-additional-workspace-tests.mjs enterprise-unit WorkflowWaitEditors.test.tsx",
+        "requirements": "Install locked dependencies. Node 25 local runs require NODE_OPTIONS=--no-experimental-webstorage; CI uses Node 22."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "This is component interaction coverage; workflow execution is a separate boundary.",
+        "Latest candidate CI verification remains pending."
+      ]
     }
   ]
 }

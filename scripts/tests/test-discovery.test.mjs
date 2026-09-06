@@ -55,6 +55,7 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
     'packages/billing/tests/eligibility.db.test.ts',
     'shared/workflow/tests/identity.db.test.ts',
     'ee/packages/calendar/tests/provider.db.test.tsx',
+    'ee/server/src/__tests__/unit/huduAssetMappingActions.db.test.ts',
   ]) assert.equal(isWorkspaceDbTest(file), true, file);
   for (const file of [
     'server/src/test/integration/rollback.db.test.ts',

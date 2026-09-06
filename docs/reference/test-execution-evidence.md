@@ -31,7 +31,8 @@ unfiltered command to verify the complete workspace database lane.
 ## Add a database regression
 
 Place colocated `*.db.test.ts` or `*.db.test.tsx` tests under `packages/`,
-`shared/` or `ee/packages/`. The runner config also supports JavaScript and
+`shared/`, `ee/packages/`, `ee/server/src/__tests__/unit/`, or
+`server/src/test/unit/`. The runner config also supports JavaScript and
 CommonJS/ESM filename variants. Use migrated schema and the existing database
 helpers. Assert persisted outcomes and rejected operations across the boundary
 that failed. Demonstrate the regression fails with the defect restored before
@@ -139,8 +140,8 @@ and moved or empty manifest entries.
 ## Current enforcement scope
 
 The workspace database and infrastructure lanes have verified CI execution
-evidence. Additional server and enterprise unit lanes are being activated in
-the containing PR; enterprise failures remain under investigation. Production
+evidence. Additional server and enterprise unit lanes pass locally and are being
+activated in the containing PR; their current revision still requires CI verification. Production
 browser verification is tracked separately. This does not yet establish
 repository-wide discovery, complete evidence for the unit/integration lanes,
 a required aggregate release gate, or release image provenance. Track those deliverables in the

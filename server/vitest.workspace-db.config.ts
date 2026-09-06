@@ -17,6 +17,7 @@ export default defineConfig({
       '../packages/**/*.db.test.?(c|m)[jt]s?(x)',
       '../shared/**/*.db.test.?(c|m)[jt]s?(x)',
       '../ee/packages/**/*.db.test.?(c|m)[jt]s?(x)',
+      '../ee/server/src/__tests__/unit/**/*.db.test.?(c|m)[jt]s?(x)',
     ],
     exclude: ['**/node_modules/**'],
     coverage: { enabled: false },

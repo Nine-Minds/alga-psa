@@ -58,7 +58,8 @@ vi.mock('@ee/lib/integrations/hudu/huduIntegrationRepository', () => ({
   upsertHuduIntegration: upsertHuduIntegrationMock,
 }));
 
-vi.mock('@ee/lib/integrations/hudu/huduClient', () => ({
+vi.mock('@ee/lib/integrations/hudu/huduClient', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@ee/lib/integrations/hudu/huduClient')>(),
   createHuduClient: createHuduClientMock,
 }));
 
@@ -151,12 +152,13 @@ describe('T040: syncHuduCompanies', () => {
   });
 
   it('returns a failure envelope when the Hudu fetch fails', async () => {
-    getCompaniesMock.mockRejectedValue(new Error('Hudu rate limit exceeded (429).'));
+    const { HuduRequestError } = await import('@ee/lib/integrations/hudu/huduClient');
+    getCompaniesMock.mockRejectedValue(new HuduRequestError({ kind: 'rate_limited', status: 429, message: 'Rate limited' }));
     const { syncHuduCompanies } = await importActions();
 
     const result = await syncHuduCompanies();
 
-    expect(result).toEqual({ success: false, error: 'Hudu rate limit exceeded (429).' });
+    expect(result).toEqual({ success: false, error: 'Hudu rate limit exceeded. Please try again later.' });
     expect(upsertHuduIntegrationMock).not.toHaveBeenCalled();
   });
 });
