@@ -113,6 +113,35 @@ for (const { name, Adapter, authUrl } of [
       expect((await adapter.getEvent(created.id)).title).toBe(example.title);
     });
 
+    it('follows delta pages, retains the cursor and recovers from invalid sync state', async () => {
+      const { adapter } = await connected();
+      const start = new Date(Date.now() + 86400000).toISOString();
+      const end = new Date(Date.now() + 90000000).toISOString();
+      // More than the emulator's 100-event page ensures this calls nextLink.
+      const created = await Promise.all(Array.from({ length: 101 }, (_, index) => adapter.createEvent({
+        ...example, title: `Calendar sync ${index}`, start: { dateTime: start, timeZone: 'UTC' }, end: { dateTime: end, timeZone: 'UTC' },
+      })));
+      const first = await adapter.fetchDeltaChanges();
+      expect(first.resetRequired).toBeUndefined();
+      expect(new Set(first.changes.map(change => change.id))).toEqual(new Set(created.map(event => event.id)));
+      expect(first.changes).toHaveLength(101);
+      expect(first.changes.every(change => change.changeType === 'updated')).toBe(true);
+      expect(new URL(first.deltaLink!).origin).toBe(base);
+      expect((await adapter.fetchDeltaChanges(first.deltaLink)).changes).toEqual([]);
+      await adapter.updateEvent(created[0].id, { title: 'Changed during next sync' });
+      await adapter.deleteEvent(created[1].id);
+      const next = await adapter.fetchDeltaChanges(first.deltaLink);
+      expect(next.changes).toEqual([
+        { id: created[0].id, changeType: 'updated' },
+        { id: created[1].id, changeType: 'deleted' },
+      ]);
+      expect(await adapter.fetchDeltaChanges(`${base}/v1.0/me/calendarView/delta?$deltatoken=expired`))
+        .toEqual({ changes: [], resetRequired: true });
+      const recovered = await adapter.fetchDeltaChanges();
+      expect(recovered.changes).toHaveLength(100);
+      expect(recovered.changes.map(change => change.id)).not.toContain(created[1].id);
+    });
+
     it.each([403, 429, 503])('surfaces HTTP %s without creating an event, then permits a deliberate retry', async status => {
       const { adapter } = await connected();
       await controlPost('faults/operation-fault/arm', { operation: 'POST /me/calendar/events', status, body: { error: { code: `Model${status}`, message: 'Injected provider failure' } }, remaining: 1 });

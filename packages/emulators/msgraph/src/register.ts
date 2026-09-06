@@ -3,6 +3,7 @@ import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { MsGraphCore } from './core';
 import {
   deliverCallRecordNotifications,
+  deliverCalendarNotifications,
   deliverInboundBotActivity,
   deliverMeetingArtifactNotifications,
   deliverNotifications,
@@ -24,6 +25,24 @@ const directoryUserParams = {
 };
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
+  reg.action({
+    name: 'calendar-change',
+    description: 'Create, update or delete a vendor calendar event and deliver matching change notifications',
+    params: z.object({
+      changeType: z.enum(['created', 'updated', 'deleted']),
+      eventId: z.string().optional(),
+      organizerUserId: z.string().default('emulated-user'),
+      event: z.record(z.string(), z.unknown()).default({}),
+    }),
+    run: async ({ changeType, eventId, organizerUserId, event: input }) => {
+      if (changeType !== 'created' && !eventId) throw new Error('eventId is required for updates and deletions');
+      const event = changeType === 'created' ? core.createCalendarEvent(organizerUserId, input)
+        : changeType === 'updated' ? core.updateCalendarEvent(eventId!, input) : core.getCalendarEvent(eventId!);
+      if (changeType === 'deleted') core.deleteCalendarEvent(event.id);
+      const deliveries = await deliverCalendarNotifications(core, event, changeType, core.env);
+      return { event, deliveries };
+    },
+  });
   reg.seeder({
     name: 'client',
     description:

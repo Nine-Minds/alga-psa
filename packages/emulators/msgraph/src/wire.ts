@@ -5,7 +5,7 @@ import type { HostEnv } from '@alga-psa/emulator-host';
 import { GraphApiError, publicEvent, publicOnlineMeeting, publicSubscription, publicTeam } from './core';
 import type { MsGraphCore } from './core';
 import { BOT_FRAMEWORK_ISSUER, botFrameworkJwks } from './botFramework';
-import { deliverNotifications, validateNotificationUrl } from './notifier';
+import { deliverCalendarNotifications, deliverNotifications, validateNotificationUrl } from './notifier';
 
 interface Authed {
   clientId: string;
@@ -243,6 +243,30 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const primaryCalendar = { id: 'calendar', name: 'Calendar', isDefaultCalendar: true };
   graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
   graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
+  graph.get('/me/calendarView/delta', (req, res) => {
+    const allowed = new Set(['startDateTime', 'endDateTime', '$deltatoken', '$skiptoken']);
+    const token = req.query.$deltatoken || req.query.$skiptoken;
+    if (Object.keys(req.query).some(key => !allowed.has(key)) ||
+        (req.query.$deltatoken && req.query.$skiptoken) ||
+        (token && (req.query.startDateTime || req.query.endDateTime))) {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    const prefer = req.get('prefer') ?? '';
+    if (prefer && !/^odata\.maxpagesize=\d+$/.test(prefer)) {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    const result = core.calendarDelta(authed(res).clientId, mailboxUser.id, {
+      start: req.query.startDateTime ? String(req.query.startDateTime) : undefined,
+      end: req.query.endDateTime ? String(req.query.endDateTime) : undefined,
+      deltaToken: req.query.$deltatoken ? String(req.query.$deltatoken) : undefined,
+      skipToken: req.query.$skiptoken ? String(req.query.$skiptoken) : undefined,
+      pageSize: prefer ? Number(prefer.split('=')[1]) : undefined,
+    });
+    const next = new URL(`${req.protocol}://${req.get('host')}/v1.0/me/calendarView/delta`);
+    next.searchParams.set(result.skipToken ? '$skiptoken' : '$deltatoken', result.skipToken ?? result.deltaToken!);
+    res.json({ value: result.value.map(event => '@removed' in event ? event : publicEvent(event)),
+      [result.skipToken ? '@odata.nextLink' : '@odata.deltaLink']: next.toString() });
+  });
   const ownedEvent = (id: string) => {
     const event = core.getCalendarEvent(id);
     if (event.organizerUserId !== mailboxUser.id) {
@@ -275,19 +299,24 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     events.sort((a, b) => String((a.start as any)?.dateTime).localeCompare(String((b.start as any)?.dateTime)));
     res.json({ value: events.map(publicEvent) });
   });
-  graph.post('/me/calendar/events', (req, res) => {
-    res.status(201).json(publicEvent(core.createCalendarEvent(mailboxUser.id, req.body ?? {})));
-  });
+  graph.post('/me/calendar/events', route(async (req, res) => {
+    const event = core.createCalendarEvent(mailboxUser.id, req.body ?? {});
+    await deliverCalendarNotifications(core, event, 'created', env);
+    res.status(201).json(publicEvent(event));
+  }));
   graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
-  graph.patch('/me/calendar/events/:eventId', (req, res) => {
+  graph.patch('/me/calendar/events/:eventId', route(async (req, res) => {
     ownedEvent(String(req.params.eventId));
-    res.json(publicEvent(core.updateCalendarEvent(String(req.params.eventId), req.body ?? {})));
-  });
-  graph.delete('/me/calendar/events/:eventId', (req, res) => {
-    ownedEvent(String(req.params.eventId));
+    const event = core.updateCalendarEvent(String(req.params.eventId), req.body ?? {});
+    await deliverCalendarNotifications(core, event, 'updated', env);
+    res.json(publicEvent(event));
+  }));
+  graph.delete('/me/calendar/events/:eventId', route(async (req, res) => {
+    const event = ownedEvent(String(req.params.eventId));
     core.deleteCalendarEvent(String(req.params.eventId));
+    await deliverCalendarNotifications(core, event, 'deleted', env);
     res.status(204).end();
-  });
+  }));
 
   // Meetings surface: calendar events that carry a Teams meeting, onlineMeetings
   // (creation probe, join-URL resolution), and recording/transcript artifacts.

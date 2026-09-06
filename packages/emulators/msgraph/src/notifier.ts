@@ -2,6 +2,7 @@ import type { HostEnv } from '@alga-psa/emulator-host';
 import { signBotFrameworkJwt } from './botFramework';
 import type {
   GraphCallRecord,
+  GraphCalendarEvent,
   GraphMeetingArtifact,
   GraphMessage,
   GraphSubscription,
@@ -47,7 +48,7 @@ export async function deliverNotifications(core: MsGraphCore, message: GraphMess
   // resource.
   await Promise.all(
     core.activeSubscriptions()
-      .filter((subscription) => !SCOPED_SUBSCRIPTION_RESOURCES.has(subscription.resource))
+      .filter((subscription) => !SCOPED_SUBSCRIPTION_RESOURCES.has(subscription.resource) && /\/messages$/i.test(subscription.resource))
       .map((subscription) => deliverOne(subscription, message, env)),
   );
 }
@@ -58,6 +59,37 @@ export interface ArtifactNotificationDelivery {
   delivered: boolean;
   status: number | null;
   error?: string;
+}
+
+/** Deliver only matching calendar resources/change types, never mailbox events. */
+export async function deliverCalendarNotifications(
+  core: MsGraphCore, event: GraphCalendarEvent, changeType: 'created' | 'updated' | 'deleted', env: HostEnv,
+): Promise<ArtifactNotificationDelivery[]> {
+  const resources = new Set([`users/${event.organizerUserId}/events`, `users/${event.organizerUserId}/calendar/events`]);
+  if (event.organizerUserId === 'emulated-user') {
+    resources.add('me/events');
+    resources.add('me/calendar/events');
+  }
+  const subscriptions = core.activeSubscriptions().filter(subscription =>
+    resources.has(subscription.resource.replace(/^\//, '')) &&
+    subscription.changeType.split(',').map(value => value.trim()).includes(changeType)
+  );
+  return Promise.all(subscriptions.map(async subscription => {
+    const resource = `${subscription.resource.replace(/^\//, '')}/${event.id}`;
+    try {
+      const response = await fetch(subscription.notificationUrl, {
+        method: 'POST', redirect: 'manual', signal: AbortSignal.timeout(10000),
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ value: [{ subscriptionId: subscription.id, clientState: subscription.clientState,
+          changeType, resource, resourceData: { id: event.id, '@odata.type': '#Microsoft.Graph.Event', '@odata.id': resource } }] }),
+      });
+      return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: response.ok, status: response.status };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      env.log('msgraph calendar notification delivery failed', { subscriptionId: subscription.id, error: message });
+      return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: false, status: null, error: message };
+    }
+  }));
 }
 
 /**

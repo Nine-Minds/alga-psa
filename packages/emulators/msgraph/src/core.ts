@@ -123,7 +123,24 @@ export interface GraphCalendarEvent {
   isAllDay?: unknown;
   singleValueExtendedProperties?: unknown;
   lastModifiedDateTime?: string;
+  recurrence?: unknown;
 }
+
+type CalendarDeltaItem = GraphCalendarEvent | { id: string; '@removed': { reason: 'deleted' } };
+type CalendarDeltaSnapshot = {
+  clientId: string;
+  organizerUserId: string;
+  start: number;
+  end: number;
+  fingerprints: Map<string, string>;
+};
+type CalendarDeltaPage = {
+  clientId: string;
+  items: CalendarDeltaItem[];
+  offset: number;
+  pageSize: number;
+  deltaToken: string;
+};
 
 export type MeetingArtifactKind = 'recording' | 'transcript';
 
@@ -393,6 +410,8 @@ export class MsGraphCore implements EmulatorCore {
   readonly chats = new Map<string, GraphChat>();
   readonly chatMessages = new Map<string, GraphChatMessage[]>();
   readonly calendarEvents = new Map<string, GraphCalendarEvent>();
+  private readonly calendarDeltaSnapshots = new Map<string, CalendarDeltaSnapshot>();
+  private readonly calendarDeltaPages = new Map<string, CalendarDeltaPage>();
   readonly onlineMeetings = new Map<string, GraphOnlineMeeting>();
   /** Keyed by meeting id; holds both recordings and transcripts. */
   readonly meetingArtifacts = new Map<string, GraphMeetingArtifact[]>();
@@ -431,6 +450,8 @@ export class MsGraphCore implements EmulatorCore {
     this.chats.clear();
     this.chatMessages.clear();
     this.calendarEvents.clear();
+    this.calendarDeltaSnapshots.clear();
+    this.calendarDeltaPages.clear();
     this.onlineMeetings.clear();
     this.meetingArtifacts.clear();
     this.callRecords.clear();
@@ -953,6 +974,7 @@ export class MsGraphCore implements EmulatorCore {
       sensitivity: body.sensitivity,
       isAllDay: body.isAllDay,
       singleValueExtendedProperties: body.singleValueExtendedProperties,
+      recurrence: body.recurrence,
       lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
     };
@@ -975,7 +997,7 @@ export class MsGraphCore implements EmulatorCore {
     if (patch.end !== undefined) event.end = patch.end;
     if (patch.body !== undefined) event.body = patch.body;
     if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
-    for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties'] as const) {
+    for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties', 'recurrence'] as const) {
       if (patch[key] !== undefined) event[key] = patch[key];
     }
     event.lastModifiedDateTime = this.env.clock.now().toISOString();
@@ -989,6 +1011,68 @@ export class MsGraphCore implements EmulatorCore {
       this.onlineMeetings.delete(event.onlineMeetingId);
       this.meetingArtifacts.delete(event.onlineMeetingId);
     }
+  }
+
+  /** Primary-calendar, single-instance UTC delta model. Tokens are per-run and
+   * client-bound; pages freeze one sync round while later writes await the next.
+   * Recurrence expansion and non-UTC zone conversion are explicitly unsupported.
+   */
+  calendarDelta(clientId: string, organizerUserId: string, input: {
+    start?: string; end?: string; deltaToken?: string; skipToken?: string; pageSize?: number;
+  }): { value: CalendarDeltaItem[]; deltaToken?: string; skipToken?: string } {
+    const invalidToken = () => new GraphApiError(410, { error: { code: 'SyncStateNotFound', message: 'Restart calendar synchronization' } });
+    const page = (state: CalendarDeltaPage) => {
+      const value = structuredClone(state.items.slice(state.offset, state.offset + state.pageSize));
+      const offset = state.offset + state.pageSize;
+      if (offset < state.items.length) {
+        const skipToken = this.newId('calendar-page');
+        this.calendarDeltaPages.set(skipToken, { ...state, offset });
+        return { value, skipToken };
+      }
+      return { value, deltaToken: state.deltaToken };
+    };
+    if (input.skipToken) {
+      const state = this.calendarDeltaPages.get(input.skipToken);
+      if (!state || state.clientId !== clientId) throw invalidToken();
+      return page(state);
+    }
+    const previous = input.deltaToken ? this.calendarDeltaSnapshots.get(input.deltaToken) : undefined;
+    if (input.deltaToken && (!previous || previous.clientId !== clientId || previous.organizerUserId !== organizerUserId)) throw invalidToken();
+    const parseWindow = (value = '') => Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(value) ? value : `${value}Z`);
+    const start = previous?.start ?? parseWindow(input.start);
+    const end = previous?.end ?? parseWindow(input.end);
+    const pageSize = input.pageSize ?? 100;
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start >= end || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 1000) {
+      throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Provide an ordered date window and page size from 1 to 1000' } });
+    }
+    const utcTime = (value: unknown) => {
+      const date = value as { dateTime?: string; timeZone?: string } | null;
+      if (date?.timeZone && date.timeZone !== 'UTC') {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Non-UTC calendar delta is not modeled' } });
+      }
+      const dateTime = date?.dateTime ?? '';
+      const time = Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}Z`);
+      if (!Number.isFinite(time)) throw new GraphApiError(400, { error: { code: 'InvalidArgument', message: 'Invalid event date' } });
+      return time;
+    };
+    const fingerprints = new Map<string, string>();
+    const items: CalendarDeltaItem[] = [];
+    for (const event of this.calendarEvents.values()) {
+      if (event.organizerUserId !== organizerUserId) continue;
+      if (event.recurrence) throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Recurring calendar delta is not modeled' } });
+      // calendarView includes events overlapping its window, not only those
+      // entirely contained in it.
+      if (utcTime(event.start) >= end || utcTime(event.end) <= start) continue;
+      const fingerprint = JSON.stringify(event);
+      fingerprints.set(event.id, fingerprint);
+      if (previous?.fingerprints.get(event.id) !== fingerprint) items.push(structuredClone(event));
+    }
+    for (const id of previous?.fingerprints.keys() ?? []) {
+      if (!fingerprints.has(id)) items.push({ id, '@removed': { reason: 'deleted' } });
+    }
+    const deltaToken = this.newId('calendar-delta');
+    this.calendarDeltaSnapshots.set(deltaToken, { clientId, organizerUserId, start, end, fingerprints });
+    return page({ clientId, items, offset: 0, pageSize, deltaToken });
   }
 
   addMeetingArtifact(
@@ -1270,6 +1354,8 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   restore(state: unknown): void {
+    this.calendarDeltaSnapshots.clear();
+    this.calendarDeltaPages.clear();
     const snapshot = (state ?? {}) as Record<string, any>;
     const load = <V>(target: Map<string, V>, rows: unknown, key: (row: any) => string) => {
       target.clear();

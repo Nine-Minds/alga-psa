@@ -203,6 +203,38 @@ linked. For local testing, plant the link directly — one row in
 `user_auth_accounts` (`provider='microsoft'`, `provider_account_id=<the
 teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
 
+### Primary calendar synchronization
+
+Shared and enterprise calendar adapters use `MICROSOFT_GRAPH_BASE_URL` and
+`MICROSOFT_LOGIN_BASE_URL`, including token refresh and the enterprise OAuth
+callback. The emulator serves primary-calendar metadata and event CRUD at
+`/me/calendar/events`, plus `/me/calendarView/delta` for incremental sync.
+Delta rounds preserve the initial date window, return opaque next/delta links,
+freeze paginated results, and report event updates, deletions and window exits.
+`Prefer: odata.maxpagesize=N` controls page size (default 100). Resetting or
+restoring the emulator invalidates prior sync tokens with `410 SyncStateNotFound`.
+
+Use the `calendar-change` control action to create/update/delete vendor events;
+it returns the event and each matching webhook delivery's HTTP status. Supply
+`changeType`, an `event` object for creation/update, and `eventId` for update/delete.
+The default organizer is `emulated-user`, the single delegated mailbox.
+Primary-calendar HTTP mutations also deliver notifications. Subscription resource,
+change type and expiry determine delivery; mail and calendar notifications are
+separate. Failed callbacks remain visible in control results and redirects are
+not followed. The emulator does not automatically retry failed deliveries.
+
+This delta model handles single-instance UTC events. It rejects recurrence
+expansion, non-UTC timezone conversion and unsupported query options explicitly.
+It reports deletions for previously tracked events; it does not reproduce Graph's
+optional tombstones for unrelated changes outside the window. Tokens are bound
+to the OAuth client, but the single-mailbox model does not establish Entra user
+or permission parity. Named calendars are not implemented. Alga's calendar
+subscription code still requires HTTPS: provide a trusted test callback endpoint
+instead of disabling that check. Browser configuration, callback persistence and
+worker synchronization require their own full application journey.
+
+Protocol reference: [Microsoft calendar-view delta](https://learn.microsoft.com/en-us/graph/api/event-delta?view=graph-rest-1.0).
+
 ### Teams meetings and recordings
 
 The msgraph emulator also serves the meetings surface the Teams integration uses:
