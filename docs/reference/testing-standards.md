@@ -426,7 +426,6 @@ npm run runner:down
 ```
 
 Use `.env.runner` (see `.env.runner.example`) to point the runner container at your bundle storage (MinIO/S3) and registry endpoints when validating the compose stack.
-```
 
 ### Vitest Configuration
 
@@ -435,8 +434,40 @@ Tests use Vitest as the primary test runner, configured in `server/vitest.config
 - **Environment:** Node (default), jsdom (for React components)
 - **Setup files:** `./src/test/setup.ts`
 - **Global setup:** `./vitest.globalSetup.js`
-- **Execution:** Single fork mode (for database isolation)
+- **Execution:** Serial files; server unit commands use a fresh worker per file, while DB suites retain their configured isolation
 - **Timeout:** 20 seconds default
+
+### Node tooling execution integrity
+
+Run `node scripts/run-node-tooling-tests.mjs` from a checkout with Node 22 and
+dependencies installed through `npm ci`. The `Node tooling execution complete`
+job runs this command on every PR. It covers Node tests under `scripts/tests`,
+the workflow and translation tooling, Microsoft Graph endpoint validation,
+the browser emulator-control helper, the Graph emulator harness and the custom
+ESLint rule. It needs localhost listeners for emulator tests; it does not need
+vendor credentials or a production environment.
+The launcher rebuilds the host and Stripe emulator packages from the checkout
+before running their wire-level control tests.
+
+The launcher discovers tracked and new test files, executes them serially, and
+compares actual Node file summaries, registered cases and terminal results. Empty
+files, missing completion, failed or cancelled cases, skips and todos reject the
+lane even when Node itself exits zero. Node registers dynamic subtests during
+execution, so the evidence labels those registrations accordingly; it does not
+claim a separate static collection enumerated them in advance.
+
+`test-results/node-tooling/` contains `events.jsonl`, `runner.log`, `discovery.json`
+and `evidence.json`. CI retains them on success and failure. The evidence includes
+revision, local dirty state, observed test identities and the complete selection.
+Direct `node --test <file>` remains useful for diagnosis but does not establish
+that the complete lane ran.
+
+Manual exclusions live in `scripts/node-test-exclusions.json` and require a reason,
+owner, tracking link and future review deadline. The optional local translation
+baseline comparison is currently excluded because its baselines are gitignored
+and CI uses explicit translation gates instead. It is not counted as passing
+coverage. New roots and other test frameworks still need their own execution
+assignment; this tooling lane alone is not the repository-wide test inventory.
 
 ## Test File Templates
 

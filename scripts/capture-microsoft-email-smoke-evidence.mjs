@@ -75,7 +75,7 @@ import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import { parse as parseDotenv } from 'dotenv';
 import pg from 'pg';
@@ -1343,7 +1343,7 @@ export {
 };
 
 const invokedAsScript = process.argv[1]
-  && import.meta.url === pathToFileURL(process.argv[1]).href;
+  && fs.realpathSync(fileURLToPath(import.meta.url)) === fs.realpathSync(process.argv[1]);
 
 if (invokedAsScript) {
   try {

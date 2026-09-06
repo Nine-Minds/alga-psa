@@ -1,0 +1,35 @@
+name: Node tooling tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node-tooling:
+    name: Node tooling execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - uses: ./.github/actions/install-ripgrep
+      - name: Run every required tooling test and reconcile execution
+        run: node scripts/run-node-tooling-tests.mjs
+      - name: Preserve execution evidence and failure diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: node-tooling-${{ github.sha }}
+          path: test-results/node-tooling/
+          if-no-files-found: error
+          retention-days: 30

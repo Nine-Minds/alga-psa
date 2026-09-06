@@ -19,6 +19,11 @@ export function isWorkspaceDbTest(file) {
     && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
 }
 
+export function isNodeToolingTest(file) {
+  return /^(scripts\/tests|tools\/i18n\/tests|tools\/workflow-harness\/tests|tools\/microsoft-graph|e2e-tests\/harness|test-harness\/graph-emulator|eslint-plugin-custom-rules)\//.test(file)
+    && /\.(test|spec)\.[cm]?js$/.test(file);
+}
+
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {

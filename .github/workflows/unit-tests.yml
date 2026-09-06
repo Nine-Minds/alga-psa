@@ -127,11 +127,22 @@ jobs:
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
-        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
+        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=stream --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
+          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/affected-server/progress.jsonl
+
+      - name: Preserve affected-server failure progress
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: affected-server-progress-${{ github.sha }}
+          path: test-results/affected-server/
+          # An unrelated change may legitimately leave server:test unselected.
+          if-no-files-found: warn
+          retention-days: 30
 
   # Coverage report for the full server unit suite. This is the only gate that
   # runs the entire server suite, so it fails loudly on PRs and protected-branch

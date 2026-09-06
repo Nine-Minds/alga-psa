@@ -26,8 +26,11 @@ const env = {
   HOUR_BLOCK_DB_TESTS: '1',
   HOUR_BLOCK_DB_HOST: process.env.DB_HOST || '127.0.0.1',
   HOUR_BLOCK_DB_PORT: process.env.DB_PORT || '5432',
-  HOUR_BLOCK_DB_USER: process.env.DB_USER_SERVER || 'app_user',
-  HOUR_BLOCK_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
+  // Migration up/down creates and drops its marker table, so use the same
+  // schema owner as the migration runner. Application credentials intentionally
+  // lack CREATE on public in CI; normal action tests still use app_user.
+  HOUR_BLOCK_DB_USER: process.env.DB_USER_ADMIN || 'postgres',
+  HOUR_BLOCK_DB_PASSWORD: process.env.DB_PASSWORD_ADMIN || '',
   HOUR_BLOCK_DB_NAME: 'test_database',
   TEST_DB_NAME: 'test_database',
   DB_NAME_SERVER: 'test_database',

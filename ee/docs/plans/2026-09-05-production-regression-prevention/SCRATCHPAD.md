@@ -370,3 +370,88 @@
   browser collection remains 15 EE cases across seven files; these are collection
   results, not a claim the repaired usage/QBO journeys have executed successfully.
   `origin/main` remains `a90cd88edc` and an ancestor after a fresh fetch.
+
+### Node runner discovery and CI repairs (2026-09-06)
+
+- F004 remains incomplete: the global inventory must still reconcile all Vitest,
+  Playwright, Node and specialized suites. Added a concrete mandatory Node tooling
+  lane rather than treating Vitest collection of a Node file as execution proof.
+  `scripts/run-node-tooling-tests.mjs` inventories tracked/untracked candidates,
+  captures actual Node registrations/results/file summaries, rejects missing,
+  empty, failed, skipped, todo and cancelled execution, and retains evidence in
+  `test-results/node-tooling`. Node's dynamic subtests are explicitly labeled as
+  registrations observed during execution, not a fictitious static collection.
+- Verified the real protocol on Node 22.23.2 (matching current CI runtime) and
+  Node 25.5.0. Reference: https://nodejs.org/api/test.html#event-testsummary.
+  Self-tests execute real child runners with nested/dynamic cases, omitted files,
+  lost result events, empty files, skips, todos, premature process.exit(0), load
+  failures and cancellation. The cancellation fixture uses an explicit abort:
+  Node 25 waits for unawaited children where Node 22 cancels them, so that old
+  implicit-parent fixture was not portable evidence of cancellation.
+- One documented manual exclusion: tools/i18n/tests/baseline.test.mjs depends on
+  optional gitignored baseline files. Existing validate-translations.yml already
+  excludes it in favor of zero-regression gates. Record reason/owner/tracking and
+  review by 2026-12-06; do not count its seven skipped cases as executed coverage.
+- Full local Node 22 lane passed 33 files / 417 tests, no skips/todos/cancellations,
+  47.50 seconds. Evidence: test-results/node-tooling/{events.jsonl,evidence.json,
+  discovery.json,runner.log}; console log /tmp/alga-node-tooling-full2.log. This is
+  local dirty-worktree evidence; the new workflow still requires candidate CI.
+- Failures exposed by this lane and repaired without deleting behavior:
+  * ESLint 9 RuleTester needs languageOptions; wire describe/it to node:test so
+    the 14 rule cases appear as cases rather than a single passing file wrapper.
+  * Template evidence tests hardcoded a different checkout; derive repo root
+    from import.meta.url. All 78 existing checks now execute here.
+  * Microsoft capture/verifier entrypoint detection compared canonical module
+    paths with uncanonicalized argv paths. A symlinked parent silently returned
+    exit 0 without invoking the CLI. New two-case subprocess regression failed
+    before the fix; realpath comparison repairs both commands. Existing bundle
+    sealing and tamper-verification suites pass with the fix.
+  * Eight workflow fixtures referenced tenant SQL helpers from ./_lib rather
+    than ../_lib; three had the same error for email settings. Existing golden
+    harness scenarios now pass all 16 cases.
+  * The 139-entry catalog had been converted to notification/callWorkflow
+    fixtures but its tests still stubbed an event-only scaffold. Model observed
+    notification results, verify event identity, branching, repeated dedupe keys,
+    child publishing and cleanup; explicitly label these harness unit tests, not
+    workflow-engine execution. All 139 plus three failure-injection checks pass.
+  * runner-stubbed.test.cjs accidentally declared five tests inside T005 while
+    T005's own harness body was below them. Move that body back into T005 and
+    keep all seven cases top-level. Node 22 no longer cancels the nested cases.
+- Broader Node probe found 47 appliance files: 239 tests, 231 passed and 8 failed,
+  no skips. This is not yet an assigned/green CI lane. Diagnostics are in
+  /tmp/alga-appliance-node-events.jsonl and /tmp/alga-appliance-failure-detail.log.
+- Published c3a candidate CI: workspace-unit, workspace-runtime, mutation and
+  Citus migration lanes passed. Workspace DB failed its newly included five
+  hour-block migration cases because the app role could not CREATE on public.
+  Change only that migration connection to DB_USER_ADMIN/DB_PASSWORD_ADMIN;
+  application action suites retain the app role. CI log:
+  /tmp/alga-workspace-db-c3a.log (job 101487801847).
+- Nx affected libraries passed, but server:test terminated incomplete without a
+  useful terminal failure report (job 101487744561). Apply the same fresh-worker
+  override already used by the full-coverage lane to the server npm test target,
+  stream the Nx app log, and preserve its progress journal as a CI artifact.
+  Effectiveness requires full execution; do not call this fixed from collection
+  or the earlier small PID proof. Full local npm test is running with journal
+  /tmp/alga-npm-server-full-progress.jsonl and log /tmp/alga-npm-server-full-after.log.
+- One local DB rerun omitted CI=1 and was redirected by wireLocalTestDbEnv to
+  127.0.0.1:5472; it failed. The documented CI environment prevents that local
+  override. Current full DB rerun uses the disposable 55432/56379 services and
+  /tmp/alga-workspace-db-c3a-repair2.log; wait for its actual final result.
+
+- Full DB rerun completed successfully: 30 files / 230 assertions, no skips or
+  missing identities, 236.06 seconds. All five hour-block migration checks passed
+  using migration credentials. Evidence: test-results/workspace-db/evidence.json.
+
+- Final Node command now rebuilds emulator-host and emulator-stripe before tests;
+  these packages export ignored dist files, so npm ci alone would not prove
+  candidate-source behavior. Rebuilt-source full run is recorded at
+  /tmp/alga-node-tooling-full3.log.
+- Local full server target provided a concrete additional Nx failure cause:
+  src/test/unit/migrations/usageComments.db.test.ts entered the database-free
+  npm unit command because only coverage CI previously set SKIP_DB_TESTS=1.
+  Its beforeAll requires real database credentials and failed as intended. The
+  dedicated workspace DB lane already executed it successfully. Set SKIP_DB_TESTS=1
+  in the server unit command, retaining the independent DB assignment. Stopped
+  the known-failing local run after observing that failure (not for a timeout)
+  and restarted the corrected full target: /tmp/alga-npm-server-full-after2.log,
+  journal /tmp/alga-npm-server-full-progress2.jsonl. CI must verify the final fix.

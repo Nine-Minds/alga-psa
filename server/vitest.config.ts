@@ -20,6 +20,9 @@ export default defineConfig({
   },
   test: {
     globals: true,
+    reporters: process.env.TEST_PROGRESS_PATH
+      ? ['default', path.resolve(__dirname, '../scripts/lib/vitest-progress-reporter.mjs')]
+      : ['default'],
     environment: 'node',
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
