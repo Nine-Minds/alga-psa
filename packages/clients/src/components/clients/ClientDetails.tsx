@@ -215,6 +215,7 @@ const TextDetailItem: React.FC<{
 };
 
 interface ClientDetailsProps {
+  headerActions?: React.ReactNode;
   id?: string;
   client: IClient;
   documents?: IDocument[];
@@ -234,6 +235,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   quickView = false,
   surveySummary = null,
   isAlgaDeskMode = false,
+  headerActions,
 }) => {
   const { t } = useTranslation('msp/clients');
   // Field messages live under common:clients.validation.*, not this page's namespace.
@@ -1820,6 +1822,7 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
           )}
 
           <div className="flex items-center gap-2 mr-8" data-print-hide>
+            {headerActions}
             {showEntraSyncAction && (
               <div className="flex flex-col items-end gap-1">
                 <Button

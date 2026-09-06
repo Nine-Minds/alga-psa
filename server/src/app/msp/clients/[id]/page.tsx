@@ -9,6 +9,7 @@ import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
+import CoManagedClientAction from '@/components/co-managed/CoManagedClientAction';
 
 const getCachedClient = cache((id: string) => getClientById(id));
 
@@ -28,7 +29,8 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const isAlgaDesk = (await getCurrentTenantProduct()) === 'algadesk';
+  const product = await getCurrentTenantProduct();
+  const isAlgaDesk = product === 'algadesk';
 
   try {
     // First check if client exists (uses React.cache — deduped with generateMetadata)
@@ -71,6 +73,7 @@ const ClientPage = async ({ params }: { params: Promise<{ id: string }> }) => {
             isInDrawer={false}
             surveySummary={surveySummary}
             isAlgaDeskMode={isAlgaDesk}
+            headerActions={product === 'psa' ? <CoManagedClientAction clientId={id} /> : undefined}
           />
         </div>
       </AIChatContextBoundary>

@@ -11,8 +11,9 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import CoManagedCheckout from '@enterprise/components/co-managed/CoManagedCheckout';
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
 import { getCoManagedBillingState } from '@/lib/actions/coManagedActions';
+import CoManagedProvisioningPanel from './CoManagedProvisioningPanel';
 
-export default function CoManagedOverview() {
+export default function CoManagedOverview({ initialClientId }: { initialClientId?: string }) {
   const { t } = useTranslation('msp/licensing');
   const { formatCurrency, formatDate } = useFormatters();
   const [state, setState] = useState<Awaited<ReturnType<typeof getCoManagedBillingState>> | null>(null);
@@ -84,6 +85,8 @@ export default function CoManagedOverview() {
             </Button>
           </div> : null}
       </CardContent></Card>
+      {state.canReadRelationships && <CoManagedProvisioningPanel available={state.available} canGrow={state.isPro && state.canGrow}
+        initialClientId={initialClientId} onChanged={reload} />}
     </>}
     <Dialog id="co-managed-purchase-review" isOpen={preview !== null} onClose={() => { if (!busy) setPreview(null); }} title={t('coManaged.confirmTitle')}>
       {preview && <div className="space-y-4">

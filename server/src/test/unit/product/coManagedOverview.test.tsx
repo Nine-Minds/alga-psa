@@ -31,15 +31,15 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('co-managed seat purchase UI', () => {
-  it('does not mount or fetch the feature on a disabled direct browser path', () => {
+  it('does not mount or fetch the feature on a disabled direct browser path', async () => {
     mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null });
-    render(<CoManagedPage />);
+    render(await CoManagedPage({}));
     expect(mocks.state).not.toHaveBeenCalled();
     expect(screen.queryByRole('heading')).toBeNull();
   });
 
   it('requires charge review before submitting a purchase', async () => {
-    render(<CoManagedPage />);
+    render(await CoManagedPage({}));
     const quantity = await screen.findByLabelText('coManaged.quantity');
     fireEvent.change(quantity, { target: { value: '6' } });
     fireEvent.click(screen.getByRole('button', { name: 'coManaged.reviewPurchase' }));
@@ -52,7 +52,7 @@ describe('co-managed seat purchase UI', () => {
 
   it('resumes the immutable pending operation after a lost response', async () => {
     mocks.state.mockResolvedValue({ ...billing, pending: { operation_id: 'old-operation', quantity: 6, state: 'preparing' } });
-    render(<CoManagedPage />);
+    render(await CoManagedPage({}));
     fireEvent.click(await screen.findByRole('button', { name: 'coManaged.resumePurchase' }));
     await waitFor(() => expect(mocks.purchase).toHaveBeenCalledWith({ quantity: 6, operationId: 'old-operation' }));
     expect(mocks.preview).not.toHaveBeenCalled();
@@ -60,14 +60,14 @@ describe('co-managed seat purchase UI', () => {
 
   it('routes self-hosted capacity management to the license screen', async () => {
     mocks.state.mockResolvedValue({ ...billing, selfHosted: true, canPurchase: false });
-    render(<CoManagedPage />);
+    render(await CoManagedPage({}));
     expect(await screen.findByRole('link', { name: 'coManaged.manageLicense' })).toHaveAttribute('href', '/msp/licenses');
     expect(screen.queryByRole('button', { name: 'coManaged.reviewPurchase' })).toBeNull();
   });
 
   it('does not offer purchases to a caller without billing update permission', async () => {
     mocks.state.mockResolvedValue({ ...billing, canPurchase: false });
-    render(<CoManagedPage />);
+    render(await CoManagedPage({}));
     await screen.findByText('coManaged.seatPool');
     expect(screen.queryByRole('button', { name: 'coManaged.reviewPurchase' })).toBeNull();
   });

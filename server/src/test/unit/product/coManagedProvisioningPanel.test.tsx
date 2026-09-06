@@ -1,0 +1,76 @@
+/** @vitest-environment jsdom */
+import React from 'react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import CoManagedProvisioningPanel from '../../../components/co-managed/CoManagedProvisioningPanel';
+import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), status: vi.fn(), options: vi.fn(), provision: vi.fn(), retry: vi.fn(), changed: vi.fn() }));
+vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
+vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
+vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedProvisioningStatus: mocks.status, getCoManagedProvisioningOptions: mocks.options }));
+vi.mock('@enterprise/lib/actions/coManagedProvisioningActions', () => ({ provisionCoManagedWorkspaceAction: mocks.provision, retryCoManagedProvisioningAction: mocks.retry }));
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) =>
+  <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
+    <option value="">Choose</option>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}
+  </select></label> }));
+const translate = (key: string) => key;
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: translate }), useOptionalI18n: () => null }));
+beforeEach(() => { vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null });
+  mocks.status.mockResolvedValue({ items: [], hasMore: false, canManage: true, canCreate: true });
+  mocks.options.mockResolvedValue({ clients: [{ id: 'client', name: 'Customer' }], boards: [{ id: 'board', name: 'MSP escalations' }] });
+  mocks.provision.mockResolvedValue({ operationId: 'operation', enqueued: true }); mocks.retry.mockResolvedValue({ enqueued: true }); });
+afterEach(cleanup);
+const panel = (canGrow = true) => render(<CoManagedFeatureBoundary><CoManagedProvisioningPanel available={2} canGrow={canGrow} onChanged={mocks.changed} /></CoManagedFeatureBoundary>);
+async function fillForm() {
+  fireEvent.click(await screen.findByRole('button', { name: 'coManaged.provisioning.create' }));
+  await screen.findByRole('option', { name: 'Customer' });
+  fireEvent.change(screen.getByLabelText('coManaged.provisioning.client'), { target: { value: 'client' } });
+  for (const field of ['firstName', 'lastName', 'email']) fireEvent.change(screen.getByLabelText(`coManaged.provisioning.${field}`),
+    { target: { value: field === 'email' ? 'admin@example.test' : 'Customer' } });
+  fireEvent.change(screen.getByLabelText('coManaged.provisioning.destination'), { target: { value: 'board' } });
+}
+describe('co-managed provisioning UI', () => {
+  it('does not fetch or mount provisioning controls with the release flag off', () => {
+    mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null }); panel();
+    expect(mocks.status).not.toHaveBeenCalled(); expect(mocks.options).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+  it('requires available capacity and explicit submission of the customer details', async () => {
+    panel(); await fillForm(); expect(mocks.provision).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    await waitFor(() => expect(mocks.provision).toHaveBeenCalledWith(expect.objectContaining({
+      clientId: 'client', workspaceName: 'Customer', seats: 1, visibilityMode: 'board_scope', escalationBoardId: 'board',
+      administrator: { firstName: 'Customer', lastName: 'Customer', email: 'admin@example.test' }, operationId: expect.any(String),
+    })));
+    await waitFor(() => expect(mocks.changed).toHaveBeenCalledOnce());
+  });
+  it('reuses an unchanged operation after an ambiguous failed response', async () => {
+    mocks.provision.mockRejectedValueOnce(new Error('Connection lost')); panel(); await fillForm();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    const retry = await screen.findByRole('button', { name: 'coManaged.provisioning.retry' });
+    expect(screen.getByLabelText('coManaged.provisioning.email')).toBeDisabled();
+    const first = mocks.provision.mock.calls[0][0]; fireEvent.click(retry);
+    await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
+    expect(mocks.provision.mock.calls[1][0]).toEqual(first);
+  });
+  it('lets an acknowledged rejected request be corrected without changing its operation identity', async () => {
+    mocks.provision.mockResolvedValueOnce({ operationId: 'operation', rejected: true, errorCode: 'INVALID_REQUEST' }); panel(); await fillForm();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    await waitFor(() => expect(screen.getByLabelText('coManaged.provisioning.email')).not.toBeDisabled());
+    const first = mocks.provision.mock.calls[0][0];
+    fireEvent.change(screen.getByLabelText('coManaged.provisioning.email'), { target: { value: 'corrected@example.test' } });
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.submit' }));
+    await waitFor(() => expect(mocks.provision).toHaveBeenCalledTimes(2));
+    expect(mocks.provision.mock.calls[1][0].operationId).toBe(first.operationId);
+  });
+  it('disables new provisioning during lapse while keeping the progress list available', async () => {
+    panel(false); expect(await screen.findByRole('button', { name: 'coManaged.provisioning.create' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'coManaged.provisioning.refresh' })).toBeEnabled();
+  });
+  it('retries the existing operation from its progress row', async () => {
+    mocks.status.mockResolvedValue({ canManage: true, canCreate: false, hasMore: false,
+      items: [{ operationId: 'operation', workspaceName: 'Customer', administratorEmail: 'admin@example.test', seats: 1, state: 'failed', canRetry: true }] });
+    panel(); fireEvent.click(await screen.findByRole('button', { name: 'coManaged.provisioning.retry' }));
+    await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith('operation')); expect(mocks.provision).not.toHaveBeenCalled();
+  });
+});
