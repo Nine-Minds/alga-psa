@@ -396,6 +396,13 @@ from the new history. Reset does not cancel application jobs or outstanding
 vendor operations; stop or drain those before reusing a provider for another
 scenario. Request history is not restored from persisted provider snapshots.
 
+To exercise duplicate Stripe callback handling, use
+`algasim action stripe redeliver-event -p '{"eventId":"evt_..."}'` with an ID
+from the `events` state view. It sends the stored event again without creating
+another payment intent or event. Each delivery receives a fresh signature
+timestamp, independent of the event's creation time and virtual clock, and its
+per-event/per-target attempt number appears in `webhook-deliveries`.
+
 ### Faults
 
 Three tiers, so most failure modes cost nothing to support:

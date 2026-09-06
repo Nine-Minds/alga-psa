@@ -109,6 +109,18 @@ count as completed integration coverage.
 Verify control behavior with built emulator dependencies from the repository
 root: `node --test e2e-tests/harness/emulator-control.test.mjs`.
 
+The Stripe specs collect three EE journeys: successful hosted payment with
+signed webhook redelivery, decline/cancellation without settlement, and
+Checkout creation failure followed by explicit fault removal and UI retry.
+They use fresh tenant identities and a transactionally seeded finalized invoice
+per scenario, avoiding stale customer mappings after an emulator reset. The
+successful case checks the persisted invoice balance, single payment and ledger
+entry, processed webhook identity, provider records and the reloaded success UI.
+CE instead collects a named API assertion that the enterprise payment webhook
+is unavailable. This distinction is visible in runner-derived case identities;
+neither edition uses a skipped Stripe test to satisfy its required collection.
+These specs still require successful production execution before F032 is done.
+
 ## Diagnose failures
 
 Reports are written to `playwright-report/` and `test-results/`. Traces,
