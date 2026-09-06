@@ -9,7 +9,7 @@
     "test:harness": "node harness/check-retry-policy.mjs"
   },
   "engines": {
-    "node": ">=22 <27"
+    "node": ">=22.13 <27"
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",

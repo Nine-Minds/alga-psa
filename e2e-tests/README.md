@@ -8,7 +8,7 @@ credentials, and runs the tracked specs here. It installs dependencies from this
 ## Run locally
 
 Start an isolated production installation first. Set `E2E_USER_EMAIL` and
-`E2E_USER_PASSWORD` to its credentials, then use Node 22–26. The tenant fixtures
+`E2E_USER_PASSWORD` to its credentials, then use Node 22.13 or later (through Node 26). The tenant fixtures
 also require `E2E_DATABASE_ISOLATED=true`, `E2E_DB_NAME`, and `E2E_DB_PASSWORD`.
 Set `E2E_DB_HOST`, `E2E_DB_PORT`, and `E2E_DB_USER` when they differ from
 `127.0.0.1`, `5432`, and `postgres`:
@@ -50,6 +50,28 @@ persisted client/contact/default assignment, adds public and internal technician
 comments, and verifies the public reply after reload. Separate client and tenant
 sessions must be denied access to the ticket. New journeys require successful
 production execution before their plan items can be marked complete.
+
+Extend fixtures by business domain so later journeys can reuse identities,
+contracts, invoices and provider controls. Keep each scenario's preconditions
+isolated. A useful journey checks three boundaries: what the user can do, what
+Alga persists, and what the external service receives. For financial operations,
+replay the actual authenticated request and verify that invoice, charge and
+transaction rows do not duplicate or change unexpectedly. For permissions,
+send that request under the denied user's own session and verify unchanged data.
+
+`fixtures/usage.ts` supplies overlapping usage/bucket contracts for Add Usage
+and invoice generation. `fixtures/invoice-document.ts` parses the PDF downloaded
+by the product and checks its invoice number, client, service and total. A
+rendered HTML preview alone does not establish that document download works.
+The invoice generation cases cover recurring usage and manually entered invoice
+numbers; their complete production execution remains pending at the time of this
+addition. See the plan's evidence and checklist for verified scope.
+
+When a new journey exposes a defect, retain its intended before-fix assertion
+failure and the successful after-fix execution. Record the missing boundary,
+owning suite and reproduction command in the
+[regression evidence ledger](../ee/docs/plans/2026-09-05-production-regression-prevention/evidence/regression-ledger.json).
+Distinguish a product assertion failure from a test setup or runner failure.
 
 The worker fixture creates two tenants, each with an administrator, technician,
 and two portal users linked to different clients. Each tenant has a support
@@ -119,7 +141,9 @@ entry, processed webhook identity, provider records and the reloaded success UI.
 CE instead collects a named API assertion that the enterprise payment webhook
 is unavailable. This distinction is visible in runner-derived case identities;
 neither edition uses a skipped Stripe test to satisfy its required collection.
-These specs still require successful production execution before F032 is done.
+These three EE journeys and the CE availability assertion have passed production
+execution; F032 records that completed scope. Provider parity and release
+promotion are tracked separately and remain required for broader readiness.
 
 ## Diagnose failures
 

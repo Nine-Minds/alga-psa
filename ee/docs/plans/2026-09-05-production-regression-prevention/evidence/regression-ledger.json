@@ -1,0 +1,118 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-09-06",
+  "purpose": "Track proven regression boundaries and verification limits; null incident identifiers must not be counted as production escapes.",
+  "records": [
+    {
+      "id": "month-end-postgres-date-hydration",
+      "classification": "behavioral-defect-replay",
+      "incident": null,
+      "journey": "Generate eligible tenant-calendar month-end invoices",
+      "missingBoundary": "PostgreSQL hydrated dates to canonical billing window",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "evidence": "month-end-hydration-replay.json",
+      "reproduction": {
+        "command": "node scripts/run-workspace-db-tests.mjs calendarMonthEndCloseActions.db.test.ts",
+        "defect": "In a disposable checkout, narrowly restore String(row.<column>).slice(0, 10) for the three date mappings described in the linked replay evidence. Restore the correct implementation before the after run."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Replay proves real migrated PostgreSQL hydration and eligibility; invoice creation and authentication are mocked.",
+        "No production incident identifier was supplied; this is not an attributed incident count."
+      ]
+    },
+    {
+      "id": "manual-invoice-optional-sales-order-permission",
+      "classification": "discovered-during-production-build-testing",
+      "incident": null,
+      "journey": "Finance user creates a manual invoice without sales-order permission",
+      "missingBoundary": "Optional sales-order authorization failure to required billing form options",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.test.tsx",
+        "e2e-tests/tests/invoice-generation.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml",
+        "browserJob": "Production browser (community/enterprise)"
+      },
+      "baseRevision": "77a9f465f8",
+      "fixRevision": "ecf91e46a3",
+      "reproduction": {
+        "cwd": "server",
+        "command": "node node_modules/vitest/vitest.mjs run ../packages/billing/src/components/billing-dashboard/invoicing/GenerateTab.test.tsx",
+        "defect": "On a disposable checkout of the base revision, copy the permanent test from the fix revision and execute it against the unchanged GenerateTab implementation."
+      },
+      "before": {
+        "status": "assertion-failed",
+        "failures": 3,
+        "assertion": "Authorized Client A and Support options are missing when optional sources reject; a successful refresh retains an old load error.",
+        "browserObservation": "Finance sign-in succeeds, but the manual client picker has no options and displays Failed to load data; production server logs sales_order read permission denial."
+      },
+      "after": {
+        "status": "focused-tests-passed",
+        "passed": 4,
+        "assertion": "Required options remain available with a scoped warning, successful refresh clears the warning, and required client-loading failure remains fatal."
+      },
+      "status": "focused-fix-verified-browser-after-pending",
+      "limits": [
+        "Focused component tests mock action responses and the child form.",
+        "The real browser after-fix journey must run against the fix image; collection is not execution.",
+        "This newly discovered issue has no supplied production incident identifier."
+      ]
+    },
+    {
+      "id": "manual-invoice-entered-number",
+      "classification": "discovered-during-regression-expansion",
+      "incident": null,
+      "journey": "Create and retry a manually numbered invoice",
+      "missingBoundary": "Entered invoice number through UI request to stored invoice and uniqueness rollback",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "server/src/test/unit/billing/manualInvoiceActions.errors.test.ts",
+        "server/src/test/infrastructure/billing/invoices/manualInvoice.test.ts",
+        "e2e-tests/tests/invoice-generation.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage",
+        "databaseWorkflow": ".github/workflows/integration-tests.yml",
+        "databaseJob": "Infrastructure shards",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "baseRevision": "77a9f465f8",
+      "fixRevision": "ecf91e46a3",
+      "reproduction": {
+        "cwd": "server",
+        "command": "node node_modules/vitest/vitest.mjs run src/test/unit/billing/manualInvoiceActions.errors.test.ts",
+        "defect": "On a disposable checkout of the base revision, copy the permanent test from the fix revision and execute it against the unchanged manual invoice action."
+      },
+      "before": {
+        "status": "assertion-failed",
+        "failures": 1,
+        "assertion": "The action allocates an automatic number instead of persisting the supplied trimmed number."
+      },
+      "after": {
+        "status": "focused-and-database-tests-passed",
+        "focusedSuitePassed": 13,
+        "databaseSuitePassed": 16,
+        "assertion": "Custom number persists, blank input still allocates, duplicate-number retry returns INVOICE_NUMBER_CONFLICT and rolls back with identical invoice, charge and transaction rows."
+      },
+      "status": "focused-fix-verified-browser-after-pending",
+      "limits": [
+        "The before action test uses a database mock; the after duplicate retry additionally uses real migrated PostgreSQL.",
+        "The complete UI-to-PDF after-fix journey is pending native production CI.",
+        "This newly discovered issue has no supplied production incident identifier."
+      ]
+    }
+  ]
+}
