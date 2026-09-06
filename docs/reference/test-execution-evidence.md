@@ -1,7 +1,7 @@
 # Test discovery and execution evidence
 
-The workspace database lane verifies that each expected test was collected and
-executed. It rejects a successful runner exit when files or assertions are
+The execution lanes verify that each expected test was collected and
+executed. They reject a successful runner exit when files or assertions are
 missing, skipped, pending or marked todo.
 
 ## Run workspace database tests
@@ -138,9 +138,10 @@ and moved or empty manifest entries.
 
 ## Current enforcement scope
 
-The workspace database lane has verified CI execution evidence. Infrastructure
-and production-browser adapters are being added in the containing PR; their
-CI verification remains tracked separately. This does not yet establish
+The workspace database and infrastructure lanes have verified CI execution
+evidence. Additional server and enterprise unit lanes are being activated in
+the containing PR; enterprise failures remain under investigation. Production
+browser verification is tracked separately. This does not yet establish
 repository-wide discovery, complete evidence for the unit/integration lanes,
 a required aggregate release gate, or release image provenance. Track those deliverables in the
 [production regression prevention plan](../../ee/docs/plans/2026-09-05-production-regression-prevention/PRD.md).
@@ -167,7 +168,9 @@ installed Vitest's `--list --filesOnly` does not apply `--shard`.
 CI uploads each partition as `infrastructure-shard-N`. The aggregate downloads
 them into separate directories and runs `scripts/verify-infrastructure-shards.mjs`.
 It rejects absent, failed, stale or overlapping partitions and recomputes
-assertion evidence from the raw reports. The combined report preserves one
+assertion evidence from the raw reports. Manifest file identities, individual
+test identities and counts must match those reports; a passing report from
+another partition cannot substantiate the manifest. The combined report preserves one
 full-suite metrics row; incomplete partition coverage explicitly reports
 `executionCompleteness: incomplete`, which suppresses a misleading pass
 percentage. Raw passing counts remain visible.
@@ -180,7 +183,73 @@ node --test scripts/tests/test-sharding.test.mjs scripts/tests/infrastructure-ru
 
 The installed-runner check executes disposable Vitest fixtures through all
 three partitions, validates the aggregate, rejects stale/missing results,
-executes the Tier-1 floor and detects a newly unmatched test.
+rejects reports substituted from another partition, executes the Tier-1 floor
+and detects a newly unmatched test.
+
+## Additional server and enterprise tests
+
+The server's main unit command selects `src/test/unit`. Colocated route,
+component and service tests need a separate invocation. Run these commands
+from the repository root after installing locked dependencies:
+
+```sh
+node scripts/run-additional-workspace-tests.mjs server-colocated
+node scripts/run-additional-workspace-tests.mjs enterprise-unit
+```
+
+`server-colocated` covers conventional test/spec files beneath
+`server/src/{app,components,lib,services}` and directly inside `server/src/test`.
+`enterprise-unit` covers `ee/server/src/__tests__/{unit,services}` and
+`ee/server/src/components`. Both exclude explicitly named `.db`, `.integration`
+and `.playwright` tests, whose service requirements need separate lanes.
+The existing `workspace-unit` and `workspace-runtime` lanes cover other roots
+defined in `scripts/lib/test-discovery.mjs`. These scoped inventories are not
+a repository-wide assignment guarantee.
+
+Each full invocation checks actual Vitest collection against an independent
+Git inventory. Adding a test within the lane's scope cannot silently omit it
+from that lane. File filters are available for investigation, but their evidence
+is marked `filtered` and cannot satisfy a complete sharded run.
+
+CI runs enterprise tests in three partitions:
+
+```sh
+WORKSPACE_SHARD_INDEX=1 WORKSPACE_SHARD_TOTAL=3 node scripts/run-additional-workspace-tests.mjs enterprise-unit
+```
+
+Repeat with indexes 2 and 3. Each writes to its own
+`test-results/enterprise-unit/shard-N` directory. After all processes finish,
+verify local evidence with:
+
+```sh
+WORKSPACE_JOB_RESULT=success WORKSPACE_SHARD_TOTAL=3 node scripts/verify-enterprise-unit-shards.mjs test-results/enterprise-unit
+```
+
+Only set the local job result to `success` when every process succeeded. CI
+supplies the actual matrix result. The verifier rejects missing, failed,
+cancelled, skipped, overlapping or stale partitions and mismatched raw reports.
+It produces `test-results/enterprise-unit/aggregate.json`.
+
+Some inherited enterprise tests use public OIDC discovery or bind a disposable
+local HTTP server. They require network access. A sandbox denial is an
+environment failure, not a passing test or a reason to silently skip it.
+Use CI's Node 22 runtime for parity. When investigating locally on Node 25,
+`NODE_OPTIONS=--no-experimental-webstorage` lets jsdom supply browser storage.
+Do not change application storage behavior to accommodate Node's experimental
+global implementation.
+
+Validate the runner and aggregator themselves with actual disposable Vitest
+fixtures:
+
+```sh
+node --test scripts/tests/additional-workspace-runner.test.mjs
+```
+
+Add new product coverage at the boundary that failed: runtime assertions for
+logic, migrated database assertions for persistence and tenant isolation, and
+Playwright journeys for user interactions through real application services.
+Existing source-text contract tests are structural checks; their passing
+counts do not establish those behavioral guarantees.
 
 ## Production browser evidence
 

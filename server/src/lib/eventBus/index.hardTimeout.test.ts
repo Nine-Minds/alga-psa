@@ -1,6 +1,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 
+vi.mock('../utils/getSecret', () => ({ getSecret: vi.fn(async () => undefined) }));
+
 type FakeRedisClient = EventEmitter & {
   connect: () => Promise<void>;
   disconnect: () => void;
@@ -77,6 +79,9 @@ describe('EventBus Redis consumer hard-timeout', () => {
     // Default hard timeout: max(blockingTimeout + 10000, 15000) => 15000ms (blockingTimeout=5000).
     // Add 1000ms to allow the loop to detect the first subscription before calling xReadGroup.
     await vi.advanceTimersByTimeAsync(16000);
+    expect(createdClients[0].disconnect).toHaveBeenCalled();
+    // The reset schedules reconnection for the next timer turn.
+    await vi.advanceTimersByTimeAsync(1);
 
     expect(createdClients.length).toBeGreaterThanOrEqual(2);
     expect(createdClients[0].disconnect).toHaveBeenCalled();

@@ -33,6 +33,19 @@ export function isApplianceNodeTest(file) {
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
+  if (lane === 'enterprise-unit') {
+    return /^ee\/server\/src\/(__tests__\/(unit|services)|components)\//.test(file)
+      && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
+      && !/(^|\/)(node_modules|dist)\//.test(file)
+      && !/\.(integration|db|playwright)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  }
+  if (lane === 'server-colocated') {
+    return (/^server\/src\/(app|components|lib|services)\//.test(file)
+      || /^server\/src\/test\/[^/]+$/.test(file))
+      && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
+      && !/(^|\/)(node_modules|dist)\//.test(file)
+      && !/\.(integration|db|playwright)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  }
   if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib)\//.test(file)
     || !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
     || /(^|\/)(node_modules|dist)\//.test(file)) return false;

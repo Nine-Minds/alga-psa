@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [workspace-unit, workspace-runtime]
+        suite: [workspace-unit, workspace-runtime, server-colocated]
     env:
       VITEST_SEED: '20260610'
       STORAGE_S3_ENDPOINT: http://127.0.0.1:59000
@@ -65,3 +65,63 @@ jobs:
       - name: Stop disposable object storage
         if: always() && matrix.suite == 'workspace-runtime'
         run: docker rm -f workspace-test-minio
+
+  enterprise-unit:
+    name: Enterprise unit shard ${{ matrix.shard }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      WORKSPACE_SHARD_INDEX: ${{ matrix.shard }}
+      WORKSPACE_SHARD_TOTAL: '3'
+      NODE_OPTIONS: '--max-old-space-size=8192'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Collect, execute and reconcile assigned EE unit tests
+        run: node scripts/run-additional-workspace-tests.mjs enterprise-unit
+      - name: Retain EE unit execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: enterprise-unit-shard-${{ matrix.shard }}
+          path: test-results/enterprise-unit/shard-${{ matrix.shard }}/
+          if-no-files-found: error
+          retention-days: 30
+
+  enterprise-unit-complete:
+    name: Enterprise unit execution complete
+    needs: enterprise-unit
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      WORKSPACE_SHARD_TOTAL: '3'
+      WORKSPACE_JOB_RESULT: ${{ needs.enterprise-unit.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: enterprise-unit-shard-*
+          path: test-results/enterprise-unit-shards
+      - name: Verify every EE unit partition and assertion
+        if: always()
+        run: node scripts/verify-enterprise-unit-shards.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: enterprise-unit-execution-evidence
+          path: test-results/enterprise-unit/aggregate.json
+          if-no-files-found: error
+          retention-days: 30

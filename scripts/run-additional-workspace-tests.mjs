@@ -6,12 +6,16 @@ import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { isAdditionalWorkspaceTest, reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
+import { partitionTestFiles } from './lib/test-sharding.mjs';
+import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const cwd = path.join(root, 'server');
 const suite = process.argv[2];
-if (!['workspace-unit', 'workspace-runtime'].includes(suite)) throw new Error('Usage: node scripts/run-additional-workspace-tests.mjs workspace-unit|workspace-runtime [file filters]');
-const output = path.join(root, 'test-results', suite);
+const cwd = path.join(root, suite === 'enterprise-unit' ? 'ee/server' : 'server');
+if (!['workspace-unit', 'workspace-runtime', 'server-colocated', 'enterprise-unit'].includes(suite)) throw new Error('Usage: node scripts/run-additional-workspace-tests.mjs workspace-unit|workspace-runtime|server-colocated|enterprise-unit [file filters]');
+const shardIndex = Number(process.env.WORKSPACE_SHARD_INDEX || '1');
+const shardTotal = Number(process.env.WORKSPACE_SHARD_TOTAL || '1');
+const output = path.join(root, 'test-results', suite, ...(shardTotal > 1 ? [`shard-${shardIndex}`] : []));
 mkdirSync(output, { recursive: true });
 const collectedPath = path.join(output, 'collected.json');
 const reportPath = path.join(output, 'results.json');
@@ -27,17 +31,19 @@ const env = {
 };
 const filters = process.argv.slice(3);
 if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
-const args = ['--config', `vitest.${suite}.config.ts`, ...filters];
-const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+let args = ['--config', suite === 'enterprise-unit' ? 'vitest.unit.config.ts' : `vitest.${suite}.config.ts`, ...filters];
+const run = (args) => spawnSync(process.execPath, [path.join(root, 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+let allFiles = [];
 let before;
 let evidence;
 let phase = 'Revision inspection';
 try {
+  if (filters.length && shardTotal > 1) throw new Error('Sharded execution cannot use file filters');
   before = testRevision(root);
   phase = 'File collection';
   const collection = run(['list', ...args, '--filesOnly', `--json=${collectedPath}`]);
   if (collection.status !== 0) throw new Error(`Collection failed (exit ${collection.status})`);
-  const collected = JSON.parse(readFileSync(collectedPath, 'utf8'));
+  let collected = JSON.parse(readFileSync(collectedPath, 'utf8'));
   if (!Array.isArray(collected) || !collected.length) throw new Error(`${suite} suite collected no files`);
   // A full invocation checks the repository independently of the runner's
   // globs. A developer's explicit file filter is recorded as partial coverage.
@@ -48,20 +54,30 @@ try {
   const discovery = reconcileDiscovery({ root, candidates, collections: [{ runner: suite, status: 'passed', files: collected }] });
   writeFileSync(discoveryPath, JSON.stringify(discovery, null, 2) + '\n');
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
+  allFiles = collected.map(entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root)).sort();
+  const assigned = partitionTestFiles(allFiles, shardIndex, shardTotal);
+  if (shardTotal > 1) {
+    args = [...args.slice(0, 2), ...assigned.map(file => path.join(root, file))];
+    const shardCollection = run(['list', ...args, '--filesOnly', `--json=${collectedPath}`]);
+    if (shardCollection.status !== 0) throw new Error('Shard file collection failed');
+    collected = JSON.parse(readFileSync(collectedPath, 'utf8'));
+    const actual = collected.map(entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root)).sort();
+    if (JSON.stringify(actual) !== JSON.stringify(assigned)) throw new Error('Shard collection differs from its assigned partition');
+  }
   phase = 'Test collection';
   const testCollection = run(['list', ...args, `--json=${testsPath}`]);
   if (testCollection.status !== 0) throw new Error(`Test collection failed (exit ${testCollection.status})`);
   const collectedTests = JSON.parse(readFileSync(testsPath, 'utf8'));
   console.log(`${suite} suite: ${collected.length} required files`);
   phase = 'Execution';
-  const result = run(['run', ...args, '--reporter=default', '--reporter=json', '--reporter=../scripts/lib/vitest-progress-reporter.mjs', `--outputFile.json=${reportPath}`]);
+  const result = run(['run', ...args, '--reporter=default', '--reporter=json', `--reporter=${path.join(root, 'scripts/lib/vitest-progress-reporter.mjs')}`, `--outputFile.json=${reportPath}`]);
   let report;
   try { report = JSON.parse(readFileSync(reportPath, 'utf8')); } catch { report = null; }
   evidence = reconcileExecution({ collected, collectedTests, report, root, suite, revision: before.revision, exitCode: result.status });
 } catch (error) {
   evidence = { schemaVersion: 1, suite, revision: before?.revision, status: 'failed', failures: [`${phase}: ${error.message}`] };
 }
-evidence.selection = { mode: filters.length ? 'filtered' : 'full', filters };
+evidence.selection = { mode: filters.length ? 'filtered' : 'full', filters, allFiles, shard: { index: shardIndex, total: shardTotal } };
 try {
   const after = testRevision(root);
   evidence.source = { before, after };

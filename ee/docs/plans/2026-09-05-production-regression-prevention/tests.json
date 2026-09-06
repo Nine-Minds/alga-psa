@@ -115,7 +115,7 @@
   {
     "id": "T012",
     "description": "Log and submit ticket time, prove invoicing rejects unapproved time, approve and generate the invoice, and verify hours, rate, total and billed state; repeating generation does not bill that time twice.",
-    "implemented": false,
+    "implemented": true,
     "kind": "browser-db",
     "featureIds": [
       "F014"
@@ -124,7 +124,7 @@
   {
     "id": "T013",
     "description": "Generate and finalize representative recurring and manual invoices from seeded business data, download the actual PDF and verify invoice identity and expected amounts; reload shows consistent status and repeating the request creates no unintended duplicate.",
-    "implemented": false,
+    "implemented": true,
     "kind": "browser-db",
     "featureIds": [
       "F015"

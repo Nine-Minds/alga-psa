@@ -112,7 +112,6 @@ describe('EE integrations wave 2 tenant facade contract', () => {
     const files = [
       'packages/integrations/src/actions/integrations/teamsActions.ts',
       'packages/integrations/src/actions/integrations/teamsPackageActions.ts',
-      'packages/integrations/src/lib/teamsAvailability.ts',
       'ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions.ts',
       'ee/packages/microsoft-teams/src/lib/actions/integrations/teamsPackageActions.ts',
       'ee/packages/microsoft-teams/src/lib/actions/integrations/teamsDiagnosticsActions.ts',
@@ -121,7 +120,6 @@ describe('EE integrations wave 2 tenant facade contract', () => {
       'ee/packages/microsoft-teams/src/lib/meetings/artifactSubscriptions.ts',
       'ee/packages/microsoft-teams/src/lib/meetings/meetingConfig.ts',
       'ee/packages/microsoft-teams/src/lib/notifications/teamsNotificationDelivery.ts',
-      'ee/packages/microsoft-teams/src/lib/teams/teamsAvailability.ts',
       'ee/packages/microsoft-teams/src/lib/teams/teamsPsaData.ts',
     ];
     const combined = files.map(read).join('\n');

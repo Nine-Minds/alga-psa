@@ -5,7 +5,7 @@ const { handleTeamsBotActivityRequestMock } = vi.hoisted(() => ({
   handleTeamsBotActivityRequestMock: vi.fn(),
 }));
 
-vi.mock('../../../../../../../ee/server/src/lib/teams/bot/teamsBotHandler', () => ({
+vi.mock('@alga-psa/ee-microsoft-teams/lib/teams/bot/teamsBotHandler', () => ({
   handleTeamsBotActivityRequest: handleTeamsBotActivityRequestMock,
 }));
 

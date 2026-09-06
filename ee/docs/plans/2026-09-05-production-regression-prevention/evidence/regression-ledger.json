@@ -140,18 +140,90 @@
         "status": "focused-tests-passed",
         "passed": 47,
         "files": 4,
-        "assertion": "Generation returns the typed approval key/count; grouped execution preserves its code and identity; UI translation receives a numeric plural count; existing preview cases pass."
+        "assertion": "Generation returns the typed approval key/count; grouped execution preserves its code and identity; UI translation receives a numeric plural count; existing preview cases pass.",
+        "browser": {
+          "status": "passed",
+          "pullRequestHead": "48412024729db14b7f40fc6828f4d8c90c538e44",
+          "runId": 34044016832,
+          "communityJobId": 101521391434,
+          "enterpriseJobId": 101521391417,
+          "assertion": "Both production editions pass rejection before approval, approved billing amounts and persistence, and duplicate generation prevention."
+        }
       },
       "reproduction": {
         "cwd": "e2e-tests",
         "command": "node node_modules/@playwright/test/cli.js test tests/time-approval-invoice.spec.ts",
         "requirements": "Isolated migrated production installation with configured E2E credentials and database, as documented in e2e-tests/README.md. For before behavior use the cited pre-fix image; for after use a newly built fix image."
       },
-      "status": "browser-before-verified-focused-after-verified",
+      "status": "browser-before-and-after-verified",
       "limits": [
-        "Current-image complete browser after-fix execution is pending.",
         "Focused tests use mocked action/database boundaries; the pre-fix browser submits real ticket time and receives the real server response.",
         "No production incident identifier was supplied."
+      ]
+    },
+    {
+      "id": "sales-order-tenant-tax-reference-validation",
+      "classification": "discovered-during-database-test-activation",
+      "incident": null,
+      "journey": "Create a sales order, add a line, or change its tax rate",
+      "missingBoundary": "Application action validation for tenant tax references where Citus deliberately omits a database foreign key",
+      "ownerRole": "Inventory maintainers",
+      "testFiles": [
+        "packages/inventory/src/actions/salesOrderGuards.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "fixRevision": "7e11ffc7ba",
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Create/add/update accepted missing or foreign-tenant tax rates."
+      },
+      "after": {
+        "status": "local-database-tests-passed",
+        "assertion": "Six invalid-reference cases reject without persisting changes; three valid-reference cases accept a tenant rate and allow clearing it. Complete workspace database run: 48 files, 347 passing assertions, zero skipped."
+      },
+      "reproduction": {
+        "command": "node scripts/run-workspace-db-tests.mjs salesOrderGuards.db.test.ts",
+        "requirements": "Owned disposable PostgreSQL test database and Redis; use packages/inventory/TESTING.md."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "No production incident identifier was supplied.",
+        "Latest committed revision CI verification remains pending."
+      ]
+    },
+    {
+      "id": "shard-manifest-raw-report-mismatch",
+      "classification": "test-infrastructure-defect",
+      "incident": null,
+      "journey": "Aggregate required test shards into a complete execution result",
+      "missingBoundary": "Manifest partition claims were not compared with independently recomputed raw report identities",
+      "ownerRole": "Test infrastructure maintainers",
+      "testFiles": [
+        "scripts/tests/infrastructure-runner.vitest.test.mjs",
+        "scripts/tests/additional-workspace-runner.test.mjs"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/workspace-tests.yml"
+      },
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "Replacing shard 1 raw reports with internally consistent passing shard 2 reports still returned exit zero and complete execution."
+      },
+      "after": {
+        "status": "local-harness-tests-passed",
+        "assertion": "Infrastructure and enterprise aggregation reject mismatched file/test identities and counts; valid reports pass. Eight framework harness tests pass."
+      },
+      "reproduction": {
+        "command": "node --test scripts/tests/infrastructure-runner.vitest.test.mjs scripts/tests/additional-workspace-runner.test.mjs scripts/tests/test-sharding.test.mjs",
+        "requirements": "Install repository dependencies; harnesses create isolated temporary repositories and execute actual Vitest processes."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Harness fixtures verify test infrastructure, not application behavior.",
+        "Latest committed revision CI verification remains pending."
       ]
     }
   ]

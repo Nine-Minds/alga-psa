@@ -17,6 +17,20 @@ export function normalizeTestFile(file, root) {
   return relative.split(path.sep).join('/');
 }
 
+// Bind a manifest's partition and assertion claims to independently recomputed
+// raw report evidence. A passing report alone does not identify its partition.
+export function compareExecutionEvidence(evidence, verified, label = 'Execution') {
+  const failures = [];
+  const canonical = values => JSON.stringify((values || []).map(value => JSON.stringify(value)).sort());
+  for (const key of ['expectedFiles', 'executedFiles', 'expectedTests', 'executedTests']) {
+    if (canonical(evidence[key]) !== canonical(verified[key])) failures.push(`${label} ${key} disagrees with its raw report`);
+  }
+  for (const [key, count] of Object.entries(verified.counts)) {
+    if (evidence.counts?.[key] !== count) failures.push(`${label} ${key} count disagrees with its raw report`);
+  }
+  return failures;
+}
+
 export function reconcileExecution({ collected, report, root, suite, revision, exitCode, collectedTests }) {
   const failures = [];
   const expected = collected.map((entry) => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root));

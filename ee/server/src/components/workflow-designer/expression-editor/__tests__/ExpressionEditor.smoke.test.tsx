@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React, { createRef } from 'react';
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type * as monaco from 'monaco-editor';
 import type { ExpressionEditorHandle } from '../ExpressionEditor';
@@ -108,18 +108,19 @@ import { ExpressionEditor } from '../ExpressionEditor';
 describe('ExpressionEditor smoke', () => {
   it('renders and accepts an inserted workflow binding path', async () => {
     const ref = createRef<ExpressionEditorHandle>();
+    const onChange = vi.fn();
 
     render(
       <ExpressionEditor
         ref={ref}
         value=""
-        onChange={() => undefined}
+        onChange={onChange}
         ariaLabel="Workflow expression editor"
       />
     );
 
     await waitFor(() => {
-      expect(document.querySelector('[data-automation-id="workflow-expression-editor-mock"]')).not.toBeNull();
+      expect(screen.getByRole('textbox', { name: 'Workflow expression editor' })).toBeTruthy();
       expect(ref.current).not.toBeNull();
     });
 
@@ -127,10 +128,6 @@ describe('ExpressionEditor smoke', () => {
       ref.current?.insertAtCursor('payload.customer.name');
     });
 
-    expect(insertTextIntoMonacoEditorMock).toHaveBeenCalledWith(
-      fakeEditor,
-      'payload.customer.name',
-      expect.objectContaining({ source: 'expression-editor', requireFocus: false }),
-    );
+    expect(onChange).toHaveBeenCalledWith('payload.customer.name');
   });
 });

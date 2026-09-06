@@ -1,3 +1,4 @@
+import knexFactory from 'knex';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
@@ -13,9 +14,11 @@ const state = vi.hoisted(() => ({
   getFormRegistry: vi.fn(),
   revalidatePath: vi.fn(),
   trx: {} as any,
+  execute: vi.fn(),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/db')>(),
   createTenantKnex: state.createTenantKnex,
   withTransaction: state.withTransaction,
 }));
@@ -64,7 +67,11 @@ const { dismissTask, getUserTasks, submitTaskForm } = await import(
 
 describe('workflow task inbox actions', () => {
   beforeEach(() => {
-    state.trx = {};
+    state.trx = knexFactory({ client: 'pg' });
+    state.execute.mockReset();
+    vi.spyOn(state.trx.client, 'runner').mockImplementation((builder: any) => ({
+      run: () => state.execute(builder.toSQL()),
+    }) as any);
     state.createTenantKnex.mockReset();
     state.withTransaction.mockReset();
     state.getTaskById.mockReset();
@@ -75,7 +82,7 @@ describe('workflow task inbox actions', () => {
     state.getFormRegistry.mockReset();
     state.revalidatePath.mockReset();
 
-    state.createTenantKnex.mockResolvedValue({ knex: state.trx, tenant: state.tenantId });
+    state.createTenantKnex.mockImplementation(async () => ({ knex: state.trx, tenant: state.tenantId }));
     state.withTransaction.mockImplementation(async (_knex: unknown, callback: (trx: unknown) => Promise<unknown>) => callback(state.trx));
   });
 
@@ -87,19 +94,7 @@ describe('workflow task inbox actions', () => {
       task_definition_id: 'tenant-definition-1',
       form_id: 'tenant-form-1',
     };
-    state.trx = Object.assign(
-      vi.fn((table: string) => {
-        if (table === 'workflow_task_definitions') {
-          return {
-            where: vi.fn(() => ({
-              first: vi.fn(async () => taskDefinition),
-            })),
-          };
-        }
-        throw new Error(`Unexpected table lookup: ${table}`);
-      }),
-      { fn: { now: () => new Date('2026-03-13T12:00:00.000Z') } }
-    );
+    state.execute.mockResolvedValue(taskDefinition);
     state.getTaskById.mockResolvedValue({
       task_id: 'task-1',
       task_definition_type: 'tenant',
@@ -138,8 +133,8 @@ describe('workflow task inbox actions', () => {
     );
   });
 
-  it('combines direct and role-assigned tasks without duplicates and paginates the sorted inbox view', async () => {
-    state.getTasksAssignedToUser.mockResolvedValue([
+  it('sorts and paginates the active inbox query while binding tenant and assignment identities', async () => {
+    const directlyAssigned = [
       {
         task_id: 'task-a',
         execution_id: 'exec-a',
@@ -168,22 +163,8 @@ describe('workflow task inbox actions', () => {
         created_at: '2026-03-13T09:00:00.000Z',
         created_by: 'creator-b',
       },
-    ]);
-    state.getTasksAssignedToRoles.mockResolvedValue([
-      {
-        task_id: 'task-a',
-        execution_id: 'exec-a',
-        title: 'Task A duplicate',
-        description: 'role duplicate',
-        status: 'pending',
-        priority: 'medium',
-        due_date: '2026-03-16T00:00:00.000Z',
-        assigned_roles: ['role-1'],
-        assigned_users: [state.userId],
-        context_data: { source: 'role' },
-        created_at: '2026-03-12T10:00:00.000Z',
-        created_by: 'creator-a',
-      },
+    ];
+    const roleAssigned = [
       {
         task_id: 'task-c',
         execution_id: 'exec-c',
@@ -198,22 +179,17 @@ describe('workflow task inbox actions', () => {
         created_at: '2026-03-11T12:00:00.000Z',
         created_by: 'creator-c',
       },
-    ]);
+    ];
+    // The current inbox uses a single query, so a task matching two assignment
+    // predicates is returned once by PostgreSQL. Exercise result projection here.
+    state.execute.mockResolvedValue([...directlyAssigned, roleAssigned[0]]);
 
     const result = await getUserTasks({ page: 1, pageSize: 2 });
 
-    expect(state.getTasksAssignedToUser).toHaveBeenCalledWith(
-      state.trx,
-      state.tenantId,
-      state.userId,
-      ['pending', 'claimed']
-    );
-    expect(state.getTasksAssignedToRoles).toHaveBeenCalledWith(
-      state.trx,
-      state.tenantId,
-      ['role-1'],
-      ['pending', 'claimed']
-    );
+    expect(state.execute).toHaveBeenCalledOnce();
+    expect(state.execute.mock.calls[0][0].bindings).toEqual(expect.arrayContaining([
+      state.tenantId, false, 'pending', 'claimed', JSON.stringify([state.userId]), JSON.stringify(['role-1']),
+    ]));
     expect(result.total).toBe(3);
     expect(result.totalPages).toBe(2);
     expect(result.tasks.map((task) => task.taskId)).toEqual(['task-c', 'task-a']);

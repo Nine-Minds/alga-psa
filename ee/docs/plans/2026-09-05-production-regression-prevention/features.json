@@ -173,7 +173,7 @@
   {
     "id": "F014",
     "description": "Verify time logging, submission and approval through invoicing, including refusal to bill unapproved time.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP3",
     "priority": "P0",
     "prdRefs": [
@@ -186,7 +186,7 @@
   {
     "id": "F015",
     "description": "Verify invoice generation and finalization through download with expected invoice identity and amounts, including month-end real-DB hydration.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP3",
     "priority": "P0",
     "prdRefs": [
@@ -200,7 +200,7 @@
   {
     "id": "F016",
     "description": "Verify ordinary technician, portal-client and cross-tenant access boundaries through real authenticated requests for critical journey data.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP3",
     "priority": "P0",
     "prdRefs": [

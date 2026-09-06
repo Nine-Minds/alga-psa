@@ -46,6 +46,18 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, 5);
   assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'complete');
 
+  const rawFiles = ['collected', 'collected-tests', 'results'];
+  const originals = rawFiles.map(file => read(`test-results/infrastructure-shards/shard-1/${file}.json`));
+  // A passing report for shard 2 must not substantiate shard 1's manifest.
+  for (const file of rawFiles) {
+    cpSync(path.join(root, `test-results/infrastructure-shards/shard-2/${file}.json`),
+      path.join(root, `test-results/infrastructure-shards/shard-1/${file}.json`));
+  }
+  assert.equal(run('verify-infrastructure-shards.mjs').status, 1);
+  assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'incomplete');
+  rawFiles.forEach((file, index) => write(`test-results/infrastructure-shards/shard-1/${file}.json`, JSON.stringify(originals[index])));
+  assert.equal(run('verify-infrastructure-shards.mjs').status, 0);
+
   const last = 'test-results/infrastructure-shards/shard-3/evidence.json';
   const original = read(last);
   write(last, JSON.stringify({ ...original, revision: 'different-revision' }));

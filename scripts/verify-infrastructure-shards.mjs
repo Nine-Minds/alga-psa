@@ -2,7 +2,7 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { reconcileExecution } from './lib/test-execution-evidence.mjs';
+import { compareExecutionEvidence, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileTestShards } from './lib/test-sharding.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
@@ -18,6 +18,7 @@ const shards = [];
 const reports = [];
 const failures = [];
 const verifiedReports = [];
+let reportsMatchEvidence = true;
 try {
   for (const directory of readdirSync(input, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
     try {
@@ -28,6 +29,9 @@ try {
       const verified = reconcileExecution({ root, suite: 'infrastructure', revision,
         collected: read('collected'), collectedTests: read('collected-tests'), report, exitCode: evidence.status === 'passed' ? 0 : 1 });
       if (verified.status !== 'passed') failures.push(...verified.failures);
+      const mismatches = compareExecutionEvidence(evidence, verified, `Shard ${directory.name}`);
+      if (mismatches.length) reportsMatchEvidence = false;
+      failures.push(...mismatches);
       verifiedReports.push(verified);
       shards.push(evidence);
       reports.push(report);
@@ -40,7 +44,7 @@ aggregate.status = aggregate.failures.length ? 'failed' : 'passed';
 writeFileSync(path.join(output, 'aggregate.json'), JSON.stringify(aggregate, null, 2) + '\n');
 // Preserve the existing full-suite scorecard as one row rather than three partial rows.
 const identities = entries => JSON.stringify((entries || []).map(entry => JSON.stringify(entry)).sort());
-const complete = jobResult === 'success' && shards.length === total && new Set(shards.map(shard => shard.selection?.shard?.index)).size === total
+const complete = reportsMatchEvidence && jobResult === 'success' && shards.length === total && new Set(shards.map(shard => shard.selection?.shard?.index)).size === total
   && aggregate.expectedFiles.length > 0
   && identities(aggregate.expectedFiles) === identities(aggregate.executedFiles)
   && shards.every(shard => shard.revision === revision && shard.source?.before?.revision === revision && shard.source?.after?.revision === revision
