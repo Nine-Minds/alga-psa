@@ -809,7 +809,8 @@ async function persistFixedInvoiceCharges(
   client: any,
   session: Session,
   tenant: string,
-  requireRecurringServicePeriodLinkage: boolean
+  requireRecurringServicePeriodLinkage: boolean,
+  claimedServicePeriodRecordIds: Set<string>,
 ): Promise<number> {
   let fixedSubtotal = 0;
   const now = Temporal.Now.instant().toString();
@@ -1001,7 +1002,6 @@ async function persistFixedInvoiceCharges(
 
   // Iterate using clientContractLineId as the key
   for (const [fixedPlanGroupKey, planEntry] of fixedPlanDetailsMap.entries()) {
-    const linkedServicePeriodRecordIds = new Set<string>();
     const planInfo = planInfoMap.get(planEntry.sourceClientContractLineId);
     if (!planInfo) {
         console.error(`Could not find plan info for clientContractLineId: ${planEntry.sourceClientContractLineId}`);
@@ -1128,7 +1128,7 @@ async function persistFixedInvoiceCharges(
       if (
         requireRecurringServicePeriodLinkage
         && isRecurringFixedCharge(detail)
-        && !linkedServicePeriodRecordIds.has(detail.servicePeriodRecordId ?? '')
+        && !claimedServicePeriodRecordIds.has(detail.servicePeriodRecordId ?? '')
       ) {
         const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
           tx,
@@ -1152,7 +1152,7 @@ async function persistFixedInvoiceCharges(
           invoiceChargeDetailId: detailId,
           servicePeriodRecordId: detail.servicePeriodRecordId ?? null,
         });
-        linkedServicePeriodRecordIds.add(detail.servicePeriodRecordId ?? '');
+        claimedServicePeriodRecordIds.add(detail.servicePeriodRecordId ?? '');
       }
     }
 
@@ -1192,13 +1192,11 @@ export async function persistInvoiceCharges(
   let otherSubtotal = 0;
   const now = Temporal.Now.instant().toString();
 
-  // Non-fixed recurring charges may legitimately share one recurring service
-  // period (e.g. several hourly time entries under one obligation). Each
-  // charge must still persist its own invoice charge, detail row, source
-  // mapping, subtotal, and tax contribution, but the recurring period row is
-  // claimed exactly once per invoice. The fixed path keeps its own set because
-  // a persisted fixed period has a single charge family and cannot cross paths.
-  const claimedNonFixedServicePeriodRecordIds = new Set<string>();
+  // One line period may produce fixed charges, multiple hourly/usage items,
+  // and bucket overage. Persist every detail, but claim the period once across
+  // all charge families on this invoice. A prior invoice still fails the DB
+  // lifecycle/linkage guard because this set is local to this invocation.
+  const claimedServicePeriodRecordIds = new Set<string>();
 
   // Separate fixed charges from others
   const fixedCharges: IFixedPriceCharge[] = [];
@@ -1222,7 +1220,8 @@ export async function persistInvoiceCharges(
     client,
     session,
     tenant,
-    requireRecurringServicePeriodLinkage
+    requireRecurringServicePeriodLinkage,
+    claimedServicePeriodRecordIds,
   );
 
   // --- Handle Other Billing Charge Types (Usage, Hourly, Product, License etc.) ---
@@ -1323,7 +1322,7 @@ export async function persistInvoiceCharges(
         const servicePeriodRecordId = charge.servicePeriodRecordId ?? null;
         const alreadyClaimed =
           servicePeriodRecordId !== null
-          && claimedNonFixedServicePeriodRecordIds.has(servicePeriodRecordId);
+          && claimedServicePeriodRecordIds.has(servicePeriodRecordId);
         if (!alreadyClaimed) {
           const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
             tx,
@@ -1348,7 +1347,7 @@ export async function persistInvoiceCharges(
             servicePeriodRecordId,
           });
           if (servicePeriodRecordId !== null) {
-            claimedNonFixedServicePeriodRecordIds.add(servicePeriodRecordId);
+            claimedServicePeriodRecordIds.add(servicePeriodRecordId);
           }
         }
       }

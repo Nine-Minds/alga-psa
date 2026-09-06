@@ -498,6 +498,7 @@ export function calculateNormalizedContractCharge(
         taxContext,
         inputs: {
           billingPeriod: facts.billingPeriod!,
+          timing: facts.timing,
           clientContractLine,
           client,
           config: {

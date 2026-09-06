@@ -706,6 +706,25 @@ describe("computeUsageBasedCharges", () => {
 });
 
 describe("computeBucketCharges", () => {
+  it("carries selected period identity and refuses to claim unrelated bucket usage", () => {
+    const input = {
+      billingPeriod: PERIOD,
+      clientContractLine: line({ contract_line_type: "Hourly" }),
+      client: CLIENT,
+      timing: timing({ servicePeriodRecordId: "period-august" }),
+      config: { config_id: "pool", service_id: "service", service_name: "Hours", total_minutes: 600, overage_rate: 15000 },
+      usageRecords: [{ period_start: "2026-08-01", period_end: "2026-08-31", minutes_used: 660 }],
+      contractCurrency: "USD",
+    };
+    expect(computeBucketCharges(input, TEN_PERCENT_PORTS).charges).toEqual([
+      expect.objectContaining({ servicePeriodRecordId: "period-august", total: 15000 }),
+    ]);
+    expect(() => computeBucketCharges({
+      ...input,
+      usageRecords: [{ period_start: "2026-07-01", period_end: "2026-07-31", minutes_used: 660 }],
+    }, TEN_PERCENT_PORTS)).toThrow("does not match the selected recurring service period");
+  });
+
   it("threads one-period rollover through a deterministic state chain", () => {
     const first = computeBucketPeriodState({
       includedQuantity: 600,

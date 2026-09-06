@@ -308,11 +308,11 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
   });
 
   describe('Bucket Contract Lines', () => {
-    it('should handle overage charges correctly', async () => {
+    it.each([0, 10000])('should invoice hourly bucket overage alongside a %i-cent fixed fee', async (baseRateCents) => {
       // Arrange - Create service for bucket overlay contract line
       const serviceId = await createTestService(context, {
         service_name: 'Consulting Hours',
-        billing_method: 'usage',
+        billing_method: 'hourly',
         default_rate: 7500, // $75.00 per hour overage
         unit_of_measure: 'hour',
         tax_region: 'US-NY'
@@ -320,8 +320,8 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
 
       const { contractLineId } = await createFixedPlanAssignment(context, serviceId, {
         planName: 'Bucket Contract Line',
-        baseRateCents: 0,
-        detailBaseRateCents: 0,
+        baseRateCents,
+        detailBaseRateCents: baseRateCents,
         billingFrequency: 'monthly',
         startDate: createTestDateISO({ year: 2023, month: 1, day: 1 }),
         billingTiming: 'advance',
@@ -363,9 +363,9 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
       expect(result).not.toBeNull();
 
       // Assert - Verify invoice totals including tax
-      const expectedSubtotal = 37500; // 5 hours * $75.00 = $375.00
-      const expectedTax = 3750; // 10% of $375.00 = $37.50
-      const expectedTotal = 41250; // $375.00 + $37.50 = $412.50
+      const expectedSubtotal = 37500 + baseRateCents; // 5 hours * $75.00 = $375.00
+      const expectedTax = 3750 + baseRateCents / 10; // 10% of $375.00 = $37.50
+      const expectedTotal = expectedSubtotal + expectedTax; // $375.00 + $37.50 = $412.50
 
       expect(result).toMatchObject({
         subtotal: expectedSubtotal,
@@ -381,11 +381,23 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
 
       const billableItems = invoiceItems.filter((item) => Number(item.net_amount ?? 0) !== 0 || Number(item.total_price ?? 0) !== 0);
 
-      expect(billableItems).toHaveLength(1);
-      expect(billableItems[0].description).toContain('Consulting Hours');
-      expect(Number(billableItems[0].unit_price)).toBe(7500);
-      expect(Number(billableItems[0].net_amount)).toBe(37500);
-      expect(Number(billableItems[0].tax_amount)).toBe(3750);
+      expect(billableItems).toHaveLength(baseRateCents === 0 ? 1 : 2);
+      const overage = billableItems.find((item) => item.description.includes('Consulting Hours'))!;
+      expect(overage.description).toContain('Consulting Hours');
+      expect(Number(overage.unit_price)).toBe(7500);
+      expect(Number(overage.net_amount)).toBe(37500);
+      expect(Number(overage.tax_amount)).toBe(3750);
+
+      const billedPeriods = await context.db('recurring_service_periods')
+        .where({ tenant: context.tenantId, invoice_id: result!.invoice_id });
+      expect(billedPeriods).toHaveLength(1);
+      expect(billedPeriods[0].lifecycle_state).toBe('billed');
+      expect(billedPeriods[0].invoice_charge_detail_id).toBeTruthy();
+      const linkedDetail = await context.db('invoice_charge_details')
+        .where({ tenant: context.tenantId, item_detail_id: billedPeriods[0].invoice_charge_detail_id })
+        .first();
+      expect(linkedDetail).toBeTruthy();
+      expect(invoiceItems.map((item) => item.item_id)).toContain(linkedDetail.item_id);
     });
   });
 

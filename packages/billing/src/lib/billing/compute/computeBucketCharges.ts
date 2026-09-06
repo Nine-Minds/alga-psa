@@ -7,6 +7,7 @@ import type {
 } from "@alga-psa/types";
 import type {
   ChargeComputeClient,
+  ChargeComputeTiming,
   ChargeComputeTaxPorts,
   ChargeProfileAssignments,
 } from "./types";
@@ -125,6 +126,8 @@ export function computeBucketPeriodState(
 }
 
 export interface BucketChargeComputeInputs {
+  /** The line period selected for this invoice also owns its bucket overlay. */
+  timing?: ChargeComputeTiming;
   billingPeriod: IBillingPeriod;
   clientContractLine: IClientContractLine;
   client: ChargeComputeClient;
@@ -314,6 +317,12 @@ export function computeBucketCharges(
   );
 
   for (const period of aggregateUsagePeriods(usageRecords, billingPeriod)) {
+    if (inputs.timing?.servicePeriodRecordId && (
+      period.periodStart !== inputs.timing.servicePeriodStart.slice(0, 10)
+      || period.periodEnd !== inputs.timing.servicePeriodEnd.slice(0, 10)
+    )) {
+      throw new Error(`Bucket usage period ${period.periodStart} through ${period.periodEnd} does not match the selected recurring service period`);
+    }
     const state = computeBucketPeriodState({
       includedQuantity,
       consumedQuantity: period.consumedQuantity,
@@ -462,6 +471,7 @@ export function computeBucketCharges(
         config_id: config.config_id,
         tax_amount: taxAmount,
         is_taxable: isTaxable,
+        servicePeriodRecordId: inputs.timing?.servicePeriodRecordId ?? null,
         servicePeriodStart: period.periodStart,
         servicePeriodEnd: period.periodEnd,
         billingTiming: "arrears",

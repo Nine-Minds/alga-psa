@@ -1848,6 +1848,7 @@ export class BillingEngine {
               billingPeriod,
               clientContractLine,
               familyObligationSinks[3],
+              recurringTimingSelections[clientContractLine.client_contract_line_id],
             ),
         options.projectTarget
           ? Promise.resolve()
@@ -6454,6 +6455,7 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod,
     contractLine: IClientContractLine,
     obligationSink: ContractObligationSink,
+    timing?: ResolvedRecurringChargeTiming,
   ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
@@ -6500,8 +6502,8 @@ export class BillingEngine {
             client_id: clientId,
             bucket_id: pool.bucket_id,
           })
-          .where("period_start", ">=", billingPeriod.startDate)
-          .where("period_end", "<=", billingPeriod.endDate)
+          .where("period_start", ">=", timing?.servicePeriodStart ?? billingPeriod.startDate)
+          .where("period_end", "<=", timing?.servicePeriodEnd ?? billingPeriod.endDate)
           .select("*");
 
         if (usageRecords.length === 0) return [];
@@ -6679,6 +6681,7 @@ export class BillingEngine {
           executionMode: "live",
           inputs: {
             billingPeriod,
+            timing,
             clientContractLine: contractLine,
             client,
             config: {
