@@ -117,6 +117,12 @@ export interface GraphCalendarEvent {
   body: unknown;
   attendees: unknown[];
   createdDateTime: string;
+  location?: unknown;
+  showAs?: unknown;
+  sensitivity?: unknown;
+  isAllDay?: unknown;
+  singleValueExtendedProperties?: unknown;
+  lastModifiedDateTime?: string;
 }
 
 export type MeetingArtifactKind = 'recording' | 'transcript';
@@ -942,6 +948,12 @@ export class MsGraphCore implements EmulatorCore {
       onlineMeetingId: meeting?.id ?? null,
       body: body.body ?? null,
       attendees: Array.isArray(body.attendees) ? body.attendees : [],
+      location: body.location,
+      showAs: body.showAs,
+      sensitivity: body.sensitivity,
+      isAllDay: body.isAllDay,
+      singleValueExtendedProperties: body.singleValueExtendedProperties,
+      lastModifiedDateTime: this.env.clock.now().toISOString(),
       createdDateTime: this.env.clock.now().toISOString(),
     };
     this.calendarEvents.set(event.id, event);
@@ -963,6 +975,10 @@ export class MsGraphCore implements EmulatorCore {
     if (patch.end !== undefined) event.end = patch.end;
     if (patch.body !== undefined) event.body = patch.body;
     if (Array.isArray(patch.attendees)) event.attendees = patch.attendees;
+    for (const key of ['location', 'showAs', 'sensitivity', 'isAllDay', 'singleValueExtendedProperties'] as const) {
+      if (patch[key] !== undefined) event[key] = patch[key];
+    }
+    event.lastModifiedDateTime = this.env.clock.now().toISOString();
     return event;
   }
 

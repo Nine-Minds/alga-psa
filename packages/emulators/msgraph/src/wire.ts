@@ -238,6 +238,57 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: core.listChatMessages(String(req.params.chatId)) });
   });
 
+  // Delegated primary-calendar surface used by CalendarAdapter. The emulator
+  // currently has one delegated mailbox; this is not Entra user isolation.
+  const primaryCalendar = { id: 'calendar', name: 'Calendar', isDefaultCalendar: true };
+  graph.get('/me/calendar', (_req, res) => res.json(primaryCalendar));
+  graph.get('/me/calendars', (_req, res) => res.json({ value: [primaryCalendar] }));
+  const ownedEvent = (id: string) => {
+    const event = core.getCalendarEvent(id);
+    if (event.organizerUserId !== mailboxUser.id) {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound' } });
+    }
+    return event;
+  };
+  graph.get('/me/calendar/events', (req, res) => {
+    let events = [...core.calendarEvents.values()].filter(event => event.organizerUserId === mailboxUser.id);
+    if (req.query.$filter) {
+      const range = String(req.query.$filter).match(/^start\/dateTime ge '([^']+)' and end\/dateTime le '([^']+)'$/);
+      if (!range || !Number.isFinite(Date.parse(range[1])) || !Number.isFinite(Date.parse(range[2]))) {
+        throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Only adapter UTC date-range filters are modeled' } });
+      }
+      const utcTime = (value: unknown) => {
+        const date = value as { dateTime?: string; timeZone?: string } | null;
+        if (date?.timeZone && date.timeZone !== 'UTC') {
+          throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery', message: 'Non-UTC calendar filtering is not modeled' } });
+        }
+        const dateTime = date?.dateTime ?? '';
+        // Graph dateTimeTimeZone commonly carries a wall-clock value without
+        // an offset. An explicitly UTC event must not use the host timezone.
+        return Date.parse(/(?:Z|[+-]\d{2}:\d{2})$/i.test(dateTime) ? dateTime : `${dateTime}Z`);
+      };
+      events = events.filter(event => utcTime(event.start) >= Date.parse(range[1]) && utcTime(event.end) <= Date.parse(range[2]));
+    }
+    if (req.query.$orderby && req.query.$orderby !== 'start/dateTime') {
+      throw new GraphApiError(400, { error: { code: 'Request_UnsupportedQuery' } });
+    }
+    events.sort((a, b) => String((a.start as any)?.dateTime).localeCompare(String((b.start as any)?.dateTime)));
+    res.json({ value: events.map(publicEvent) });
+  });
+  graph.post('/me/calendar/events', (req, res) => {
+    res.status(201).json(publicEvent(core.createCalendarEvent(mailboxUser.id, req.body ?? {})));
+  });
+  graph.get('/me/calendar/events/:eventId', (req, res) => res.json(publicEvent(ownedEvent(String(req.params.eventId)))));
+  graph.patch('/me/calendar/events/:eventId', (req, res) => {
+    ownedEvent(String(req.params.eventId));
+    res.json(publicEvent(core.updateCalendarEvent(String(req.params.eventId), req.body ?? {})));
+  });
+  graph.delete('/me/calendar/events/:eventId', (req, res) => {
+    ownedEvent(String(req.params.eventId));
+    core.deleteCalendarEvent(String(req.params.eventId));
+    res.status(204).end();
+  });
+
   // Meetings surface: calendar events that carry a Teams meeting, onlineMeetings
   // (creation probe, join-URL resolution), and recording/transcript artifacts.
   graph.post('/users/:userId/events', (req, res) => {

@@ -1,6 +1,7 @@
 // @ts-nocheck
 // TODO: Implicit any type on response
 import axios, { AxiosInstance } from 'axios';
+import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { BaseCalendarAdapter } from './base/BaseCalendarAdapter';
 import type { CalendarProviderConfig, ExternalCalendarEvent } from '@alga-psa/types';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
@@ -14,7 +15,7 @@ import { getWebhookBaseUrl } from '../../../utils/email/webhookHelpers';
  */
 export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
   private httpClient: AxiosInstance;
-  private baseUrl = 'https://graph.microsoft.com/v1.0';
+  private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined;
   private calendarId: string;
 
@@ -136,7 +137,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       }
 
       // Always use 'common' for multi-tenant Azure AD apps
-      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
+      const tokenUrl = getMicrosoftTokenUrl('common');
 
       const params = new URLSearchParams({
         client_id: clientId,
@@ -386,7 +387,7 @@ export class MicrosoftCalendarAdapter extends BaseCalendarAdapter {
       const response = await this.httpClient.get(`${calendarBase}/events/${eventId}`);
 
       return this.mapMicrosoftEventToExternal(response.data);
-    } catch {
+    } catch (error: any) {
       // Handle 404 quietly - this is expected when events are deleted
       const status = error?.response?.status;
       const code = error?.response?.data?.error?.code;
