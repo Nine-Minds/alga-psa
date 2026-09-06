@@ -484,6 +484,32 @@ Tests use Vitest as the primary test runner, configured in `server/vitest.config
 - **Execution:** Serial files; server unit commands use a fresh worker per file, while DB suites retain their configured isolation
 - **Timeout:** 20 seconds default
 
+### Workspace execution gate
+
+The **Workspace execution gate** in `workspace-tests.yml` combines the eight
+additional workspace suites, including all three enterprise unit partitions.
+It runs after every prerequisite reaches an outcome, including failure or
+cancellation, and retains `test-results/workspace-gate/aggregate.json`.
+
+The verifier reads the raw file/assertion collections and execution reports,
+recomputes their results, and compares them with both the manifests and the
+repository's candidate files. Every job must succeed; every required partition
+must be present, complete, unfiltered and from the candidate revision with a
+clean before/after source state. Missing or malformed artifacts, stale reports,
+unmatched tests, unexpected skips and retrying only part of a suite cannot
+satisfy the gate. An individual suite's result remains distinct from a failed
+sibling in the same matrix.
+
+Run the gate's behavioral and command-line checks with:
+
+```bash
+node --test scripts/tests/workspace-execution-gate.test.mjs
+```
+
+This check covers the additional-workspace workflow. It does not yet aggregate
+the separate server unit, integration, infrastructure, browser and deployment
+workflows, or establish effective GitHub branch protection by itself.
+
 ### Node tooling execution integrity
 
 Run `node scripts/run-node-tooling-tests.mjs` from a checkout with Node 22 and

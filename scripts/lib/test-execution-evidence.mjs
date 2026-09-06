@@ -33,7 +33,15 @@ export function compareExecutionEvidence(evidence, verified, label = 'Execution'
 
 export function reconcileExecution({ collected, report, root, suite, revision, exitCode, collectedTests }) {
   const failures = [];
-  const expected = collected.map((entry) => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root));
+  // A large suite references each file in many assertion identities. Resolve
+  // each path once per report instead of repeating filesystem calls for every
+  // file/assertion comparison. The cache never survives this reconciliation.
+  const paths = new Map();
+  const normalize = file => {
+    if (!paths.has(file)) paths.set(file, normalizeTestFile(file, root));
+    return paths.get(file);
+  };
+  const expected = collected.map((entry) => normalize(typeof entry === 'string' ? entry : entry.file));
   if (!expected.length) failures.push('Required collection is empty');
   if (new Set(expected).size !== expected.length) failures.push('Duplicate collected file identities');
   if (exitCode !== 0) failures.push(`Runner exited with ${exitCode ?? 'no exit code'}`);
@@ -41,7 +49,7 @@ export function reconcileExecution({ collected, report, root, suite, revision, e
   if (report?.success !== true) failures.push('Runner did not report success');
   const expectedTests = new Map();
   const executedTests = new Map();
-  const identity = (file, name) => JSON.stringify([normalizeTestFile(file, root), name]);
+  const identity = (file, name) => JSON.stringify([normalize(file), name]);
   if (collectedTests !== undefined) {
     if (!Array.isArray(collectedTests) || !collectedTests.length) failures.push('Required test collection is empty');
     for (const entry of collectedTests ?? []) {
@@ -53,7 +61,7 @@ export function reconcileExecution({ collected, report, root, suite, revision, e
       expectedTests.set(key, (expectedTests.get(key) ?? 0) + 1);
     }
     for (const file of expected) {
-      if (!(collectedTests ?? []).some((entry) => normalizeTestFile(entry.file, root) === file)) {
+      if (!(collectedTests ?? []).some((entry) => normalize(entry.file) === file)) {
         failures.push(`No collected tests in required file: ${file}`);
       }
     }
@@ -61,7 +69,7 @@ export function reconcileExecution({ collected, report, root, suite, revision, e
   const actual = new Map();
   const counts = { passed: 0, failed: 0, skipped: 0, todo: 0, pending: 0 };
   for (const file of report?.testResults ?? []) {
-    const name = normalizeTestFile(file.name, root);
+    const name = normalize(file.name);
     if (actual.has(name)) failures.push(`Duplicate executed file: ${name}`);
     actual.set(name, file);
     if (!expected.includes(name)) failures.push(`Unexpected executed file: ${name}`);
