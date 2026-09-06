@@ -7,6 +7,8 @@ services:
       EDITION: enterprise
       APP_EDITION: enterprise
       NEXT_PUBLIC_EDITION: enterprise
+    secrets:
+      - credential_encryption_key
   setup:
     environment:
       EDITION: enterprise

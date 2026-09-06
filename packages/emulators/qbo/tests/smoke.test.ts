@@ -416,6 +416,12 @@ describe('qbo emulator', { shuffle: false }, () => {
     await controlPost('/control/qbo/seed/realm', { realmId: 'realm-one' });
     await controlPost('/control/qbo/seed/realm', { realmId: 'realm-two' });
 
+    for (const realm of ['realm-one', 'realm-two']) {
+      const response = await fetch(realmApi(realm, `/companyinfo/${realm}`), { headers: twoRealmAuthed });
+      expect(response.status).toBe(200);
+      expect((await response.json()).CompanyInfo.Id).toBe(realm);
+    }
+
     const customerA = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-one' })).result;
     const customerB = (await controlPost('/control/qbo/seed/customer', { name: 'Twin Co', realmId: 'realm-two' })).result;
     expect(customerA.Id).toBe(customerB.Id);

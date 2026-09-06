@@ -100,8 +100,8 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
   company.get('/companyinfo/:companyId', (req, res) => {
     res.json({
       CompanyInfo: {
-        Id: core.realmId,
-        CompanyName: core.sim.options.companyName,
+        Id: simOf(res).options.realmId,
+        CompanyName: simOf(res).options.companyName,
         Country: 'US',
         CompanyStartDate: '2020-01-01',
       },

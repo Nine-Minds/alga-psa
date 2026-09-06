@@ -38,15 +38,16 @@ test('portal request reaches its technician and receives a persisted public repl
     expect(await readSession(staff.request)).toMatchObject({ id: tenant.technician.userId, tenant: tenant.tenantId, user_type: 'internal' });
     await staffPage.goto(`/msp/tickets/${ticket.ticket_id}`);
     await expect(staffPage.getByText(description, { exact: true })).toBeVisible();
-    const conversation = staffPage.locator('[data-automation-id="ticket-details-conversation"]');
+    const conversation = staffPage.locator('#ticket-details-bento-timeline-tile');
     for (const [text, isInternal] of [[reply, false], [internal, true]] as const) {
-      await conversation.locator('[data-automation-id="ticket-details-conversation-show-comment-editor-btn"]').click();
-      const toggle = conversation.getByRole('switch', { name: /Mark(?:ed)? as Internal/i });
-      if ((await toggle.getAttribute('aria-checked')) !== String(isInternal)) await toggle.click();
-      await expect(toggle).toHaveAttribute('aria-checked', String(isInternal));
+      await conversation.getByRole('button', { name: 'Add Comment', exact: true }).click();
+      const visibility = conversation.getByRole('group', { name: 'Reply visibility' });
+      const lane = visibility.getByRole('button', { name: isInternal ? 'Internal' : 'Client', exact: true });
+      await lane.click();
+      await expect(lane).toHaveAttribute('aria-pressed', 'true');
       await conversation.locator('[contenteditable="true"]:visible').fill(text);
-      await conversation.locator('[data-automation-id="ticket-details-conversation-add-comment-btn"]').click();
-      await expect(conversation.locator('[data-automation-id="ticket-details-conversation-show-comment-editor-btn"]')).toBeVisible();
+      await conversation.getByRole('button', { name: 'Send', exact: true }).click();
+      await expect(conversation.getByRole('button', { name: 'Add Comment', exact: true })).toBeVisible();
       await expect(conversation.getByText(text, { exact: true })).toBeVisible();
     }
     await staffPage.reload();
