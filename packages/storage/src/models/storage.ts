@@ -2,6 +2,7 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 
 import { requireTenantId, tenantDb } from '@alga-psa/db';
+import { withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import type { FileStore } from '../types/storage';
 
 export class FileStoreModel {
@@ -13,22 +14,25 @@ export class FileStoreModel {
     >
   ): Promise<FileStore> {
     const tenant = await requireTenantId(knexOrTrx);
-    const file_id = data.fileId || uuidv4();
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      const file_id = data.fileId || uuidv4();
 
-    const [file] = await tenantDb(knexOrTrx, tenant).table<FileStore>('external_files')
-      .insert({
-        file_id,
-        file_name: data.file_name,
-        original_name: data.original_name,
-        mime_type: data.mime_type,
-        file_size: data.file_size,
-        storage_path: data.storage_path,
-        uploaded_by_id: data.uploaded_by_id,
-        tenant,
-      })
-      .returning('*');
+      const [file] = await tenantDb(trx, tenant).table<FileStore>('external_files')
+        .insert({
+          file_id,
+          file_name: data.file_name,
+          original_name: data.original_name,
+          mime_type: data.mime_type,
+          file_size: data.file_size,
+          storage_path: data.storage_path,
+          uploaded_by_id: data.uploaded_by_id,
+          metadata: data.metadata,
+          tenant,
+        })
+        .returning('*');
 
-    return file;
+      return file;
+    });
   }
 
   static async updateMetadata(
@@ -37,8 +41,9 @@ export class FileStoreModel {
     metadata: Record<string, unknown>
   ): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
-
-    await tenantDb(knexOrTrx, tenant).table('external_files').where({ file_id: fileId }).update({ metadata });
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      await tenantDb(trx, tenant).table('external_files').where({ file_id: fileId }).update({ metadata });
+    });
   }
 
   static async findById(knexOrTrx: Knex | Knex.Transaction, file_id: string): Promise<FileStore | null> {
@@ -57,17 +62,18 @@ export class FileStoreModel {
     deleted_by_id: string
   ): Promise<FileStore> {
     const tenant = await requireTenantId(knexOrTrx);
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      const [file] = await tenantDb(trx, tenant).table<FileStore>('external_files')
+        .where({ file_id })
+        .update({
+          is_deleted: true,
+          deleted_at: new Date().toISOString(),
+          deleted_by_id,
+        })
+        .returning('*');
 
-    const [file] = await tenantDb(knexOrTrx, tenant).table<FileStore>('external_files')
-      .where({ file_id })
-      .update({
-        is_deleted: true,
-        deleted_at: new Date().toISOString(),
-        deleted_by_id,
-      })
-      .returning('*');
-
-    return file;
+      return file;
+    });
   }
 
   static async list(knexOrTrx: Knex | Knex.Transaction): Promise<FileStore[]> {
@@ -84,12 +90,14 @@ export class FileStoreModel {
     }
   ): Promise<void> {
     const tenant = await requireTenantId(knexOrTrx);
-    await tenantDb(knexOrTrx, tenant).table('document_system_entries').insert({
-      tenant,
-      file_id: options.fileId,
-      category: options.category,
-      metadata: options.metadata,
-      created_at: new Date().toISOString(),
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      await tenantDb(trx, tenant).table('document_system_entries').insert({
+        tenant,
+        file_id: options.fileId,
+        category: options.category,
+        metadata: options.metadata,
+        created_at: new Date().toISOString(),
+      });
     });
   }
 }

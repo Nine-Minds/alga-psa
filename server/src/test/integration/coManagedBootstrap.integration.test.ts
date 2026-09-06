@@ -18,7 +18,12 @@ import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenan
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
-const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn() }));
+const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn() }));
+vi.mock('@alga-psa/storage/config/storage', () => ({
+  validateFileUpload: async () => {},
+  getStorageConfig: async () => ({ defaultProvider: 'local' }),
+  getProviderConfig: async () => ({ type: 'local' }),
+}));
 vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
   StorageProviderFactory: { createProvider: async () => artifactStorage },
   generateStoragePath: (tenant: string, _base: string, name: string) => `${tenant}/${randomUUID()}/${name}`,
@@ -69,7 +74,8 @@ beforeAll(async () => {
     '20260906020000_add_co_managed_entitlement_source_version.cjs',
     '20260906030000_create_co_managed_purchase_operations.cjs', '20260906040000_create_co_managed_provisioning.cjs',
     '20260906050000_allow_system_seeded_priorities.cjs', '20260906060000_create_co_managed_board_scopes.cjs', '20260906070000_add_co_managed_invitation_delivery.cjs',
-    '20260906080000_create_co_management_relationship_events.cjs']) {
+    '20260906080000_create_co_management_relationship_events.cjs',
+    '20260906100000_add_external_file_metadata.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -1092,3 +1098,150 @@ describe('canonical material lifecycle admission', () => {
     expect(await customer.table('stock_movements')).toHaveLength(3);
   });
 });
+
+async function withStorageFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
+  storage: typeof import('../../../../packages/storage/src/StorageService').StorageService;
+  files: typeof import('../../../../packages/storage/src/models/storage').FileStoreModel;
+  publish: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  const fixture = await readyForAcceptance();
+  const database = await import('@alga-psa/db');
+  const events = await import('@alga-psa/event-bus/publishers');
+  const connection = vi.spyOn(database, 'createTenantKnex').mockImplementation(async tenant => ({ knex: db, tenant: tenant ?? fixture.actor.tenant }));
+  const publish = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
+  const { StorageService: storage } = await import('../../../../packages/storage/src/StorageService');
+  const { FileStoreModel: files } = await import('../../../../packages/storage/src/models/storage');
+  artifactStorage.upload.mockReset().mockImplementation(async (buffer, path) => ({ path, size: buffer.length, mime_type: 'text/plain' }));
+  artifactStorage.delete.mockReset().mockResolvedValue(undefined);
+  artifactStorage.download.mockReset().mockResolvedValue(Buffer.from('saved'));
+  try { await runWithTenant(fixture.actor.tenant, () => work({ ...fixture, storage, files, publish })); }
+  finally { connection.mockRestore(); publish.mockRestore(); }
+}
+
+function storageFileData(userId: string) {
+  return { file_name: 'saved.txt', original_name: 'saved.txt', mime_type: 'text/plain', file_size: 5,
+    storage_path: `fixture/${randomUUID()}`, uploaded_by_id: userId };
+}
+
+describe('co-managed storage lifecycle admission', () => {
+  it('guards file metadata entry points while preserving read access after expiry', async () => withStorageFixture(async ({ operation, actor, input, customer, storage, files }) => {
+    const id = randomUUID();
+    const mutations = [
+      () => files.create(db, storageFileData(actor.userId)),
+      () => files.updateMetadata(db, id, { changed: true }),
+      () => files.softDelete(db, id, actor.userId),
+      () => files.createDocumentSystemEntry(db, { fileId: id, category: 'fixture', metadata: {} }),
+      () => storage.uploadFile(actor.tenant, Buffer.from('saved'), 'saved.txt', { uploaded_by_id: actor.userId }),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(artifactStorage.upload).not.toHaveBeenCalled();
+    await acceptCoManagedRelationship(db, actor, input);
+    const file = await files.create(db, storageFileData(actor.userId));
+    await files.updateMetadata(db, file.file_id, { retained: true });
+    const migration = require('../../../migrations/20260906100000_add_external_file_metadata.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('while stored values exist');
+    await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(storage.updateFileMetadata(file.file_id, { changed: true })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(storage.createDocumentSystemEntry({ fileId: file.file_id, category: 'fixture', metadata: {} }))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(storage.deleteFile(file.file_id, actor.userId)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await files.findById(db, file.file_id)).toMatchObject({ metadata: { retained: true }, is_deleted: false });
+    expect(await files.list(db)).toHaveLength(1);
+    expect(await storage.downloadFile(file.file_id)).toMatchObject({ buffer: Buffer.from('saved') });
+    expect(artifactStorage.delete).not.toHaveBeenCalled();
+    expect(await customer.table('document_system_entries')).toEqual([]);
+  }));
+
+  it('cleans rejected buffer/stream uploads and retains no file records or workflow events when expiry wins during transport', async () => withStorageFixture(async ({ operation, actor, input, customer, storage, publish }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { Readable } = await import('node:stream');
+    for (const upload of [
+      () => storage.uploadFile(actor.tenant, Buffer.from('saved'), 'saved.txt', { uploaded_by_id: actor.userId }),
+      () => storage.uploadStream(actor.tenant, Readable.from(Buffer.from('saved')), 'saved.txt', { uploaded_by_id: actor.userId, size: 5, metadata: { kept: true } }),
+    ]) {
+      artifactStorage.upload.mockImplementationOnce(async (_data, path) => {
+        await expireCoManagedEntitlement(operation.tenant);
+        return { path, size: 5, mime_type: 'text/plain' };
+      });
+      await expect(upload()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+      expect(await customer.table('external_files')).toEqual([]);
+      expect(publish).not.toHaveBeenCalled();
+      const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+      await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+        async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    }
+    expect(artifactStorage.delete).toHaveBeenCalledTimes(2);
+    const file = await storage.uploadFile(actor.tenant, Buffer.from('saved'), 'saved.txt', {
+      uploaded_by_id: actor.userId, metadata: { source: 'buffer' },
+    });
+    expect(await customer.table('external_files')).toEqual([expect.objectContaining({ file_id: file.file_id, metadata: { source: 'buffer' } })]);
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'FILE_UPLOADED' }));
+    artifactStorage.upload.mockImplementationOnce(async (_data, path) => ({ path, size: 5, mime_type: 'text/plain' }));
+    const streamed = await storage.uploadStream(actor.tenant, Readable.from(Buffer.from('saved')), 'streamed.txt', {
+      uploaded_by_id: actor.userId, size: 5, metadata: { source: 'stream' },
+    });
+    expect(await customer.table('external_files').where('file_id', streamed.file_id).first()).toMatchObject({ metadata: { source: 'stream' } });
+  }));
+
+  it('holds admission through physical deletion, rolls back metadata on provider failure, and publishes only after commit', async () => withStorageFixture(async ({ operation, actor, input, customer, storage, files, publish }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const file = await files.create(db, storageFileData(actor.userId));
+    artifactStorage.delete.mockRejectedValueOnce(new Error('Provider unavailable'));
+    await expect(storage.deleteFile(file.file_id, actor.userId)).rejects.toThrow('Provider unavailable');
+    expect(await files.findById(db, file.file_id)).toMatchObject({ is_deleted: false });
+    expect(publish).not.toHaveBeenCalled();
+    artifactStorage.delete.mockImplementationOnce(async () => {
+      expect(await files.findById(db, file.file_id)).toMatchObject({ is_deleted: false });
+      await expect(db.transaction(async trx => {
+        await trx.raw("SET LOCAL lock_timeout = '50ms'");
+        await tenantDb(trx, operation.tenant).table('co_managed_entitlements').update({ valid_until: new Date(0) });
+      })).rejects.toMatchObject({ code: '55P03' });
+    });
+    let publishedAfterCommit = false;
+    publish.mockImplementation(async () => {
+      publishedAfterCommit = (await customer.table('external_files').where('file_id', file.file_id).first()).is_deleted;
+    });
+    await storage.deleteFile(file.file_id, actor.userId);
+    expect(await files.findById(db, file.file_id)).toBeNull();
+    expect(publishedAfterCommit).toBe(true);
+    expect(publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'DOCUMENT_DELETED' }));
+  }));
+});
+
+it('commits ticket upload records together and publishes only after the attachment is available', async () => withStorageFixture(async ({ operation, actor, input, customer, publish }) => {
+  await acceptCoManagedRelationship(db, actor, input);
+  const { service } = await ticketServiceForTest(), context = { tenant: actor.tenant, userId: actor.userId };
+  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+  const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+  const ticket = await service.create({ title: 'Atomic attachment', description: '', client_id: operation.customer_client_id,
+    board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id }, context);
+  await customer.table('document_types').insert({ tenant: actor.tenant, type_id: randomUUID(), type_name: 'text/plain' });
+  const file = new File(['saved'], 'saved.txt', { type: 'text/plain' });
+  artifactStorage.upload.mockImplementationOnce(async (_buffer, path) => {
+    await expireCoManagedEntitlement(operation.tenant);
+    return { path, size: 5, mime_type: 'text/plain' };
+  });
+  await expect(service.uploadTicketDocument(ticket.ticket_id, file, context)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  for (const table of ['external_files', 'documents', 'document_associations']) expect(await customer.table(table)).toEqual([]);
+  expect(publish).not.toHaveBeenCalled();
+  const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+    async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+  const observedAttachments: number[] = [];
+  publish.mockImplementation(async () => {
+    const associations = await customer.table('document_associations').where({ entity_id: ticket.ticket_id, entity_type: 'ticket' });
+    observedAttachments.push(associations.length);
+  });
+  const document = await service.uploadTicketDocument(ticket.ticket_id, file, context);
+  expect(await customer.table('external_files')).toHaveLength(1);
+  expect(await customer.table('documents')).toEqual([expect.objectContaining({ document_id: document.document_id, file_id: document.file_id })]);
+  expect(observedAttachments.length).toBeGreaterThan(0);
+  expect(observedAttachments.every(count => count === 1)).toBe(true);
+  await expireCoManagedEntitlement(operation.tenant);
+  const uploads = artifactStorage.upload.mock.calls.length;
+  await expect(service.uploadTicketDocument(ticket.ticket_id, file, context)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
+  expect(await service.downloadTicketDocument(ticket.ticket_id, document.document_id, context)).toMatchObject({ buffer: Buffer.from('saved') });
+}));

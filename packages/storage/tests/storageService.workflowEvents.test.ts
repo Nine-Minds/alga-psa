@@ -2,6 +2,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(),
+  runWithTenant: (_tenant: string, work: () => Promise<unknown>) => work(),
+}));
+
+vi.mock('@alga-psa/licensing', () => ({
+  CoManagedLifecycleError: class extends Error {},
+  getCoManagedOperationalState: async () => ({ state: 'independent', canWrite: true, graceEndsAt: null }),
+  withCoManagedOperationalTransaction: (db: unknown, _tenant: string, work: (trx: unknown) => Promise<unknown>) => work(db),
 }));
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
@@ -137,13 +144,12 @@ describe('StorageService.uploadFile workflow events', () => {
         storage_path: 'tenant-1/files/sample.txt',
         uploaded_by_id: 'a836a8b5-3df5-47b1-b49b-9a78f2b1a8a0',
         created_at: '2026-01-24T12:00:00.000Z',
-      } as any)
-      .mockResolvedValueOnce({
-        file_id: '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
-        deleted_at: '2026-01-24T12:30:00.000Z',
       } as any);
 
-    fileSoftDeleteMock.mockResolvedValue(undefined as any);
+    fileSoftDeleteMock.mockResolvedValue({
+      file_id: '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',
+      deleted_at: '2026-01-24T12:30:00.000Z',
+    } as any);
 
     await StorageService.deleteFile(
       '14f1fbf4-17d6-4bdc-8d4b-0b2a2ff8f26a',

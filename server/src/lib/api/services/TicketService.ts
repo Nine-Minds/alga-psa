@@ -1062,11 +1062,6 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
-      mime_type: mimeType,
-      uploaded_by_id: context.userId,
-    });
-
     const folderRecord = await tenantScopedTable(knex, 'document_folders', context.tenant)
       .where({
         entity_id: ticketId,
@@ -1078,52 +1073,57 @@ export class TicketService extends BaseService<ITicket> {
 
     const typeResult = await this.getDocumentTypeIdForMime(knex, context.tenant, mimeType);
     const documentId = uuidv4();
-    const document: IDocument = {
-      document_id: documentId,
-      document_name: file.name,
-      type_id: typeResult.isShared ? null : typeResult.typeId,
-      shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
-      user_id: context.userId,
-      order_number: 0,
-      created_by: context.userId,
-      tenant: context.tenant,
-      file_id: uploadResult.file_id,
-      storage_path: uploadResult.storage_path,
+    await StorageService.uploadFile(context.tenant, buffer, file.name, {
       mime_type: mimeType,
-      file_size: file.size,
-      folder_path: folderRecord?.folder_path,
-    };
-
-    await withTransaction(knex, async (trx) => {
-      await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
-      await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
-        association_id: uuidv4(),
-        document_id: documentId,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        tenant: context.tenant,
-      });
-
-      // Activity-timeline entry for the document attachment. Stored inside
-      // the same transaction so the timeline row never appears unless the
-      // document and its association were also persisted.
-      await writeTicketActivity(trx, {
-        tenant: context.tenant,
-        ticketId,
-        eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
-        entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
-        entityId: documentId,
-        actor: {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: context.userId,
-        },
-        source: TICKET_ACTIVITY_SOURCE.API,
-        details: {
+      uploaded_by_id: context.userId,
+      persistRelatedRecords: async (trx, uploadResult) => {
+        const document: IDocument = {
+          document_id: documentId,
           document_name: file.name,
+          type_id: typeResult.isShared ? null : typeResult.typeId,
+          shared_type_id: typeResult.isShared ? typeResult.typeId : undefined,
+          user_id: context.userId,
+          order_number: 0,
+          created_by: context.userId,
+          tenant: context.tenant,
+          file_id: uploadResult.file_id,
+          storage_path: uploadResult.storage_path,
           mime_type: mimeType,
           file_size: file.size,
-        },
-      });
+          folder_path: folderRecord?.folder_path,
+        };
+
+        await assertCoManagedOperationalWrite(trx, context.tenant);
+        await tenantScopedTable(trx, 'documents', context.tenant).insert(document);
+        await tenantScopedTable(trx, 'document_associations', context.tenant).insert({
+          association_id: uuidv4(),
+          document_id: documentId,
+          entity_id: ticketId,
+          entity_type: 'ticket',
+          tenant: context.tenant,
+        });
+
+        // Activity-timeline entry for the document attachment. Stored inside
+        // the same transaction so the timeline row never appears unless the
+        // document and its association were also persisted.
+        await writeTicketActivity(trx, {
+          tenant: context.tenant,
+          ticketId,
+          eventType: TICKET_ACTIVITY_EVENT.DOCUMENT_ATTACHED,
+          entityType: TICKET_ACTIVITY_ENTITY.DOCUMENT,
+          entityId: documentId,
+          actor: {
+            actorType: TICKET_ACTIVITY_ACTOR.USER,
+            userId: context.userId,
+          },
+          source: TICKET_ACTIVITY_SOURCE.API,
+          details: {
+            document_name: file.name,
+            mime_type: mimeType,
+            file_size: file.size,
+          },
+        });
+      },
     });
 
     const createdDocument = await this.getDocumentById(documentId, context);
