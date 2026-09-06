@@ -3449,10 +3449,11 @@ export async function createInvoiceFromBillingResultImpl(
     invoiceDate?: string;
     /**
      * The recurring execution windows this invoice was generated for. When
-     * present, every recurring service period those windows represent is
+     * present, each fulfilled recurring service period those windows represent is
      * claimed for the invoice atomically with charge persistence — including
      * periods whose lines produced no charges (zero-dollar usage/bucket) and
      * would otherwise stay unclaimed, blind to the duplicate detector.
+     * Unreported usage deliberately omitted from the invoice remains due.
      */
     recurringSelectorInputs?: IRecurringDueSelectionInput[];
   } = {},
@@ -3650,10 +3651,10 @@ export async function createInvoiceFromBillingResultImpl(
     const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
 
     // Recurring windows must end this transaction fully claimed: every
-    // recurring service period the selection represents is linked to this
-    // invoice (charge-backed rows already are; zero-dollar leftovers are swept
-    // here) or the whole generation aborts. This is what arms the duplicate
-    // guard for grouped zero-dollar windows.
+    // fulfilled recurring service period is linked to this invoice (including
+    // zero-dollar leftovers). Deliberately omitted, unreported usage stays due
+    // so a later report can be billed. This still arms the duplicate guard for
+    // grouped zero-dollar windows whose obligations have been fulfilled.
     if (options.recurringSelectorInputs?.length && !options.projectId) {
       await claimRecurringServicePeriodsForSelectionInputs({
         tx: trx,
@@ -3661,6 +3662,7 @@ export async function createInvoiceFromBillingResultImpl(
         invoiceId: newInvoice!.invoice_id,
         selectorInputs: options.recurringSelectorInputs,
         linkedAt: Temporal.Now.instant().toString(),
+        omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
       });
     }
 

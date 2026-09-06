@@ -9,7 +9,7 @@ import type { IBillingCharge, IFixedPriceCharge, IService, TransactionType, Recu
 import type { IClientWithLocation } from '@alga-psa/types';
 import { Knex } from 'knex';
 import { Session } from 'next-auth';
-import type { ISO8601String, IRecurringDueSelectionInput } from '@alga-psa/types';
+import type { ISO8601String, IRecurringDueSelectionInput, IUsageServicePeriodStatus } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode } from '@alga-psa/shared/billingClients';
 import { POST_DROP_RECURRING_OBLIGATION_TYPES } from '@alga-psa/shared/billingClients/postDropRecurringObligationIdentity';
 import { getClientDefaultBillingProfileId } from '../lib/billing/billingProfileLookup';
@@ -124,7 +124,7 @@ function toRecurringWindowDate(value: string): string {
 }
 
 /**
- * Claims every recurring service period represented by the generated
+ * Claims each fulfilled recurring service period represented by the generated
  * selection's execution windows for `invoiceId` — atomically with charge
  * persistence, inside the same transaction.
  *
@@ -137,6 +137,7 @@ function toRecurringWindowDate(value: string): string {
  * aborts the whole transaction if a row was concurrently claimed by another
  * invoice), making the created invoice the window's single owner.
  *
+ * Explicitly omitted, unreported usage remains due for a later invoice.
  * Swept rows keep `invoice_charge_detail_id` NULL — honestly recording that
  * no charge line backs them — while `lifecycle_state='billed'` + `invoice_id`
  * removes them from due-work listings and arms the duplicate guard.
@@ -147,8 +148,21 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
   invoiceId: string;
   selectorInputs: IRecurringDueSelectionInput[];
   linkedAt: string;
+  /** Unreported usage deliberately omitted from this invoice remains due. */
+  omittedUsagePeriods?: Pick<IUsageServicePeriodStatus, 'client_contract_line_id' | 'service_period_start' | 'service_period_end'>[];
 }): Promise<void> {
   const { tx, tenant, invoiceId, selectorInputs, linkedAt } = params;
+  // Usage diagnoses expose inclusive ends; recurring period storage uses
+  // half-open boundaries. Match the complete line/period identity so another
+  // service period for the same line is still claimed when it was billed.
+  const omitted = new Set((params.omittedUsagePeriods ?? []).map((period) => JSON.stringify([
+    period.client_contract_line_id,
+    toRecurringWindowDate(period.service_period_start),
+    Temporal.PlainDate.from(toRecurringWindowDate(period.service_period_end)).add({ days: 1 }).toString(),
+  ])));
+  const storedDate = (value: string | Date) => value instanceof Date
+    ? value.toISOString().slice(0, 10)
+    : toRecurringWindowDate(value);
 
   for (const selectorInput of selectorInputs) {
     const executionWindow = selectorInput.executionWindow;
@@ -185,9 +199,16 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
       continue;
     }
 
-    const rows = await query.select<{ record_id: string; invoice_id: string | null }[]>(
+    const rows = await query.select<{
+      record_id: string; invoice_id: string | null; obligation_id: string;
+      charge_family: string; service_period_start: string | Date; service_period_end: string | Date;
+    }[]>(
       'record_id',
       'invoice_id',
+      'obligation_id',
+      'charge_family',
+      'service_period_start',
+      'service_period_end',
     );
 
     if (rows.length === 0) {
@@ -197,6 +218,11 @@ export async function claimRecurringServicePeriodsForSelectionInputs(params: {
     }
 
     for (const row of rows) {
+      if (row.charge_family === 'usage' && omitted.has(JSON.stringify([
+        row.obligation_id, storedDate(row.service_period_start), storedDate(row.service_period_end),
+      ]))) {
+        continue;
+      }
       if (row.invoice_id === invoiceId) {
         continue; // Already linked through one of this invoice's charges.
       }

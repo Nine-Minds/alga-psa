@@ -423,6 +423,7 @@ describe('invoice generation zero-dollar recurring handling', () => {
         windowEnd: '2025-03-01',
       })],
       linkedAt: expect.any(String),
+      omittedUsagePeriods: [],
     });
     expect(mocks.finalizeInvoiceWithKnex).toHaveBeenCalledWith(
       'invoice-created',
