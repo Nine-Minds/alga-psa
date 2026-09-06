@@ -1412,6 +1412,14 @@
       "modern-invoice-complete": {
         "label": "Modern factuursjabloon",
         "description": "Volledige lay-out met kop, factureringsinfo, regelstabel en voettekst."
+      },
+      "billed-time-entries": {
+        "label": "Specificatie van gefactureerde tijdregistraties",
+        "description": "Voeg een informatietabel toe met datums, werkitems, uren, tarieven en bedragen."
+      },
+      "billed-time-by-ticket": {
+        "label": "Gefactureerde tijd per ticket",
+        "description": "Herhaal voor elk ticket of elke taak een kop en de bijbehorende tabel met tijdregistraties."
       }
     },
     "schema": {

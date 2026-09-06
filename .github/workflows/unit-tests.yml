@@ -29,8 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     # A microtask-spinning test starves vitest's own timeout timer entirely
     # (see billing's RenewalAutomationSettings hang), so the job needs its own
-    # backstop instead of the 6h default.
-    timeout-minutes: 30
+    # backstop instead of the 6h default. The measured full affected run takes
+    # about 30 minutes including setup and cache cleanup (the server tests alone
+    # take 18 minutes). Allow bounded headroom so successful cleanup can finish.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -111,8 +113,10 @@ jobs:
       # each package's own `npm run test` -> vitest — not the broken
       # @nx/vite:test executor). A red step here is a real test failure; fix the
       # cause, never re-add continue-on-error.
+      # Stream output so a failed task cannot lose its final diagnostics when
+      # Nx exits after printing a large buffered test log.
       - name: Nx affected tests (libraries, parallel)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
+        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=stream --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -120,12 +124,12 @@ jobs:
           VITEST_SEED: '20260610'
 
       # sebastian-ee's inferred test target is a bare `vitest` over its full
-      # 209-file suite (~50 minutes serial — far past this job's 30-minute
+      # 209-file suite (~50 minutes serial — past this job's 45-minute
       # backstop, which it blew via WorkflowAiSchemaSection's render-loop hang
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
+        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=stream --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'

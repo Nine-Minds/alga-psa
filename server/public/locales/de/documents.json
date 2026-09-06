@@ -130,6 +130,8 @@
     "quantityHours": "Menge / Stunden",
     "breakdown": "Wenden Sie sich für eine Aufschlüsselung der abgerechneten Zeit an Ihren Dienstleister.",
     "detail": "Zeitdetails — in den obigen Leistungen enthalten",
-    "incompleteDetail": "Die Zeitdetails sind möglicherweise unvollständig."
+    "incompleteDetail": "Die Zeitdetails sind möglicherweise unvollständig.",
+    "detailPartial": "Diese Detailansicht enthält nur verfügbare abgerechnete Zeiteinträge.",
+    "detailUnavailable": "Für diese Rechnung sind keine Details zu abgerechneten Zeiteinträgen verfügbar."
   }
 }

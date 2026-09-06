@@ -26,6 +26,11 @@ const actionMocks = vi.hoisted(() => ({
   deleteBucketOverlay: vi.fn(),
 }));
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
   getContractLineById: actionMocks.getContractLineById,
   updateContractLineFixedConfig: actionMocks.updateContractLineFixedConfig,
@@ -165,6 +170,7 @@ const basisRadio = (value: string): HTMLInputElement =>
 
 describe('fixed service configuration pricing basis', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     vi.clearAllMocks();
     actionMocks.getContractLineById.mockResolvedValue({
       contract_line_id: 'line-1',
@@ -227,4 +233,21 @@ describe('fixed service configuration pricing basis', () => {
     expect(updates.quantity).toBe(10);
     expect(updates.typeConfig).toMatchObject({ pricing_basis: 'unit', base_rate: 10000 });
   });
+// New options are hidden without changing the loaded legacy configuration.
+it('hides new billing modes when the release flag is off', async () => {
+  releaseFlag.enabled = false;
+  await renderFixedEditor();
+  expect(screen.queryByTestId('fixed-pricing-basis')).toBeNull();
+});
+
+  it('keeps an existing unit configuration visible with the flag off', async () => {
+    releaseFlag.enabled = false;
+    const details = await actionMocks.getConfigurationWithDetails();
+    details.typeConfig.pricing_basis = 'unit';
+    actionMocks.getConfigurationWithDetails.mockResolvedValue(details);
+    await renderFixedEditor();
+    expect(screen.getByTestId('fixed-pricing-basis')).toBeTruthy();
+    expect((document.querySelector('input[value="unit"]') as HTMLInputElement).checked).toBe(true);
+  });
+
 });

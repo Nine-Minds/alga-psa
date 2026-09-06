@@ -1412,6 +1412,14 @@
       "modern-invoice-complete": {
         "label": "Moderne Rechnungsvorlage",
         "description": "Vollständiges Layout mit Kopf, Rechnungsinfo, Positionstabelle und Fuß."
+      },
+      "billed-time-entries": {
+        "label": "Details zu abgerechneten Zeiteinträgen",
+        "description": "Eine informative Tabelle mit Datum, Arbeitselementen, Stunden, Sätzen und Beträgen hinzufügen."
+      },
+      "billed-time-by-ticket": {
+        "label": "Abgerechnete Zeit nach Ticket",
+        "description": "Für jedes Ticket oder jede Aufgabe eine Überschrift und die zugehörige Tabelle der Zeiteinträge wiederholen."
       }
     },
     "schema": {

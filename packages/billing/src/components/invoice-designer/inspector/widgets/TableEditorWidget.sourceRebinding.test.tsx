@@ -18,6 +18,11 @@ import React from 'react';
 import { cleanup, fireEvent, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? key,
@@ -114,7 +119,22 @@ afterEach(() => {
 
 describe('TableEditorWidget source rebinding', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     useInvoiceDesignerStore.getState().resetWorkspace();
+  });
+
+  it('hides new billed-time sources while keeping the current saved source usable', () => {
+    releaseFlag.enabled = false;
+    loadAstIntoStore(buildSavedLayoutAst());
+    const { container } = render(<TableEditorHarness />);
+    const select = container.querySelector('#designer-table-source-binding') as HTMLSelectElement;
+    const values = Array.from(select.options, option => option.value);
+    expect(values).toContain('timeEntries');
+    expect(values).toContain('items');
+    expect(values).not.toContain('ticketGroups');
+    expect(values).not.toContain('ticketPresentationRows');
+    expect(select.value).toBe('timeEntries');
+    expect(getExportedTable(exportSavedAst()).repeat.sourceBinding.bindingId).toBe('timeEntries');
   });
 
   it('persists a newly selected collection binding on an imported layout', () => {

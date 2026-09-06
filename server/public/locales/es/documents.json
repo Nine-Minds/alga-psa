@@ -130,6 +130,8 @@
     "quantityHours": "Cant. / Horas",
     "breakdown": "Contacte con su proveedor para obtener un desglose del tiempo facturado.",
     "detail": "Detalle del tiempo facturado — incluido en los cargos anteriores",
-    "incompleteDetail": "El detalle del tiempo facturado puede estar incompleto."
+    "incompleteDetail": "El detalle del tiempo facturado puede estar incompleto.",
+    "detailPartial": "Este detalle solo incluye las entradas de tiempo facturado disponibles.",
+    "detailUnavailable": "El detalle de las entradas de tiempo facturado no está disponible para esta factura."
   }
 }

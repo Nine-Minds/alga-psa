@@ -1462,6 +1462,14 @@
       "modern-invoice-complete": {
         "label": "Nowoczesny szablon faktury",
         "description": "Pełny układ z nagłówkiem, informacjami rozliczeniowymi, tabelą pozycji i stopką."
+      },
+      "billed-time-entries": {
+        "label": "Szczegóły wpisów rozliczonego czasu",
+        "description": "Dodaj tabelę informacyjną z datami, elementami pracy, godzinami, stawkami i kwotami."
+      },
+      "billed-time-by-ticket": {
+        "label": "Szczegóły rozliczonego czasu według zgłoszeń",
+        "description": "Powtórz nagłówek i tabelę powiązanych wpisów dla każdego zgłoszenia lub zadania."
       }
     },
     "schema": {
