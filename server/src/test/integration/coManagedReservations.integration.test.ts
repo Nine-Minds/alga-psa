@@ -7,6 +7,8 @@ import { reserveCoManagedWorkspace } from '../../../../packages/licensing/src/li
 import { getCoManagedEntitlementState, reconcileHostedCoManagedEntitlement, reconcileSelfHostCoManagedEntitlement, recordSelfHostCoManagedRevocation } from '../../../../packages/licensing/src/lib/co-managed-entitlements';
 import { upsertLicenseState } from '../../../../packages/licensing/src/lib/license-state';
 import { runCoManagedPurchase } from '../../../../packages/licensing/src/lib/co-managed-purchases';
+import { prepareCoManagedProvisioning, runCoManagedProvisioningStep, recordCoManagedProvisioningFailure,
+  requestCoManagedProvisioningCleanup, completeCoManagedProvisioningCleanup } from '../../../../packages/co-managed/src/provisioning';
 import { tenantDb } from '@alga-psa/db';
 
 const fixtureKeys = vi.hoisted(() => ({ fixture: '' }));
@@ -18,6 +20,7 @@ const migration = require('../../../migrations/20260906010000_create_co_manageme
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
 const sourceVersionMigration = require('../../../migrations/20260906020000_add_co_managed_entitlement_source_version.cjs');
 const purchaseMigration = require('../../../migrations/20260906030000_create_co_managed_purchase_operations.cjs');
+const provisioningMigration = require('../../../migrations/20260906040000_create_co_managed_provisioning.cjs');
 
 // Never bootstrap the running app or another suite's database. The fixture uses
 // the existing tenant/client key shapes; full-install migration coverage is separate.
@@ -46,6 +49,19 @@ beforeAll(async () => {
     table.uuid('tenant').notNullable();
     table.uuid('client_id').notNullable();
     table.primary(['tenant', 'client_id']);
+  });
+  await db.schema.createTable('users', table => {
+    table.uuid('tenant').notNullable();
+    table.uuid('user_id').notNullable();
+    table.text('user_type').notNullable();
+    table.boolean('is_inactive').notNullable().defaultTo(false);
+    table.primary(['tenant', 'user_id']);
+  });
+  await db.schema.createTable('boards', table => {
+    table.uuid('tenant').notNullable();
+    table.uuid('board_id').notNullable();
+    table.boolean('is_inactive').notNullable().defaultTo(false);
+    table.primary(['tenant', 'board_id']);
   });
   await db.schema.createTable('roles', (table) => {
     table.uuid('tenant').notNullable();
@@ -95,7 +111,7 @@ beforeAll(async () => {
   if (process.env.CO_MANAGED_TEST_CITUS === '1') {
     await db.raw("SELECT create_distributed_table('tenants', 'tenant')");
     await db.raw("SELECT create_distributed_table('clients', 'tenant', colocate_with => 'tenants')");
-    for (const table of ['roles', 'permissions', 'role_permissions', 'document_default_folders']) {
+    for (const table of ['users', 'boards', 'roles', 'permissions', 'role_permissions', 'document_default_folders']) {
       await db.raw("SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'tenants')", [table]);
     }
   }
@@ -108,6 +124,8 @@ beforeAll(async () => {
   await sourceVersionMigration.up(db);
   await purchaseMigration.up(db);
   await purchaseMigration.up(db);
+  await provisioningMigration.up(db);
+  await provisioningMigration.up(db);
 }, 60_000);
 
 afterAll(async () => {
@@ -531,5 +549,146 @@ describe('co-managed purchase persistence', () => {
     await expect(runCoManagedPurchase(db, { sponsorTenant: customer.sponsorTenant, quantity: 2, operationId }, provider))
       .rejects.toMatchObject({ code: 'SPONSOR_NOT_ELIGIBLE' });
     expect(provider).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('co-managed provisioning request and worker lifecycle', () => {
+  async function requestFixture() {
+    const reservation = await sponsorFixture(2);
+    const requestedBy = randomUUID(), escalationBoardId = randomUUID();
+    const sponsor = tenantDb(db, reservation.sponsorTenant);
+    await sponsor.table('users').insert({ tenant: reservation.sponsorTenant, user_id: requestedBy, user_type: 'internal' });
+    await sponsor.table('boards').insert({ tenant: reservation.sponsorTenant, board_id: escalationBoardId });
+    return { ...reservation, requestedBy, escalationBoardId, workspaceName: 'Customer IT',
+      administrator: { firstName: 'Customer', lastName: 'Admin', email: 'customer@example.test' } };
+  }
+
+  it('reserves the full immutable request and identities before any worker or login exists', async () => {
+    const input = await requestFixture();
+    const [one, two] = await Promise.all([prepareCoManagedProvisioning(db, input), prepareCoManagedProvisioning(db, input)]);
+    expect(one).toEqual(two);
+    expect(one).toMatchObject({ state: 'queued', requested_by: input.requestedBy, escalation_board_id: input.escalationBoardId });
+    expect(one.customer_board_id).not.toBe(input.escalationBoardId);
+    expect(await tenantDb(db, one.customer_tenant).table('users')).toHaveLength(0);
+    expect(await tenantDb(db, one.customer_tenant).table('tenants').first()).toBeUndefined();
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations')).toHaveLength(1);
+  });
+
+  it('rejects changes to administrator, name, or destination while retaining the original reservation', async () => {
+    const input = await requestFixture();
+    await prepareCoManagedProvisioning(db, input);
+    for (const changes of [{ workspaceName: 'Different' }, { escalationBoardId: randomUUID() },
+      { administrator: { ...input.administrator, email: 'another@example.test' } }]) {
+      await expect(prepareCoManagedProvisioning(db, { ...input, ...changes })).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+    }
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations')).toHaveLength(1);
+  });
+
+  it('normalizes harmless whitespace and email case on retries', async () => {
+    const input = await requestFixture();
+    const original = await prepareCoManagedProvisioning(db, input);
+    expect(await prepareCoManagedProvisioning(db, { ...input, workspaceName: ' Customer IT ',
+      administrator: { ...input.administrator, email: ' Customer@Example.test ' } })).toEqual(original);
+  });
+
+  it('rolls back reservation and relationship when an actor or destination is foreign', async () => {
+    const input = await requestFixture(), other = await requestFixture();
+    await expect(prepareCoManagedProvisioning(db, { ...input, requestedBy: other.requestedBy })).rejects.toMatchObject({ code: 'ACTOR_NOT_FOUND' });
+    await expect(prepareCoManagedProvisioning(db, { ...input, escalationBoardId: other.escalationBoardId })).rejects.toMatchObject({ code: 'DESTINATION_NOT_FOUND' });
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations')).toHaveLength(0);
+    expect(await db('co_management_relationships').where('sponsor_tenant', input.sponsorTenant)).toHaveLength(0);
+  });
+
+  it('rolls back a failed database step and preserves capacity for recovery', async () => {
+    const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
+    await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', async trx => {
+      await tenantDb(trx, operation.customer_tenant).table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
+      throw new Error('simulated worker crash');
+    })).rejects.toThrow('simulated worker crash');
+    expect(await tenantDb(db, operation.customer_tenant).table('tenants').first()).toBeUndefined();
+    await recordCoManagedProvisioningFailure(db, input.sponsorTenant, input.operationId);
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
+    await runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', async trx => {
+      await tenantDb(trx, operation.customer_tenant).table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
+    });
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_provisioning_operations').first()).toMatchObject({ state: 'provisioning', step: 'tenant', error_code: null });
+  });
+
+  it('does not provision a queued reservation after license lapse', async () => {
+    const input = await requestFixture(); await prepareCoManagedProvisioning(db, input);
+    await tenantDb(db, input.sponsorTenant).table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    const work = vi.fn();
+    await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', work)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
+    expect(work).not.toHaveBeenCalled();
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations').first()).toMatchObject({ state: 'reserved' });
+  });
+
+  it('serializes duplicate worker deliveries and never replays a committed database step', async () => {
+    const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
+    const work = vi.fn(async (trx: Knex.Transaction) => {
+      await tenantDb(trx, operation.customer_tenant).table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
+    });
+    const results = await Promise.all([
+      runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', work),
+      runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', work),
+    ]);
+    expect(results.filter(result => result.skipped)).toHaveLength(1);
+    expect(work).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires predecessor steps before creating the administrator invitation', async () => {
+    const input = await requestFixture(); await prepareCoManagedProvisioning(db, input);
+    const work = vi.fn();
+    await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'administrator_invitation', work))
+      .rejects.toMatchObject({ code: 'OPERATION_CLOSED' });
+    expect(work).not.toHaveBeenCalled();
+  });
+
+  it('serializes cancellation with an in-flight worker step', async () => {
+    const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    const running = runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', async trx => {
+      entered(); await gate;
+      await tenantDb(trx, operation.customer_tenant).table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
+    });
+    await started;
+    const cancellation = requestCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
+    release();
+    await Promise.all([running, cancellation]);
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_provisioning_operations').first()).toMatchObject({ state: 'cleanup_requested' });
+    await expect(completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'CLEANUP_INCOMPLETE' });
+  });
+
+  it('blocks later steps on cancellation and releases capacity only after complete database cleanup', async () => {
+    const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
+    const customer = tenantDb(db, operation.customer_tenant);
+    await customer.table('tenants').insert({ tenant: operation.customer_tenant, product_code: 'co_managed' });
+    await customer.table('users').insert({ tenant: operation.customer_tenant, user_id: randomUUID(), user_type: 'internal' });
+    await requestCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
+    await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'seeds', vi.fn())).rejects.toMatchObject({ code: 'OPERATION_CLOSED' });
+    await expect(completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'CLEANUP_INCOMPLETE' });
+    await customer.table('tenants').del();
+    await expect(completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'CLEANUP_INCOMPLETE' });
+    await customer.table('users').del();
+    await completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
+    await completeCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId);
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations').first()).toMatchObject({ state: 'released' });
+    expect(await customer.table('co_management_relationships').first()).toMatchObject({ state: 'terminated' });
+    expect((await getCoManagedEntitlementState(db, input.sponsorTenant)).available).toBe(2);
+  });
+
+  it('does not cancel or modify an accepted customer through the provisioning cleanup path', async () => {
+    const input = await requestFixture(), operation = await prepareCoManagedProvisioning(db, input);
+    await tenantDb(db, operation.customer_tenant).table('co_management_relationships').update({ state: 'active', accepted_at: new Date(), accepted_by: randomUUID() });
+    await expect(requestCoManagedProvisioningCleanup(db, input.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'RELATIONSHIP_ACTIVE' });
+    await expect(runCoManagedProvisioningStep(db, input.sponsorTenant, input.operationId, 'tenant', vi.fn())).rejects.toMatchObject({ code: 'RELATIONSHIP_ACTIVE' });
+  });
+
+  it('does not expose or operate on another sponsor’s operation', async () => {
+    const input = await requestFixture(), other = await requestFixture();
+    await prepareCoManagedProvisioning(db, input);
+    await expect(requestCoManagedProvisioningCleanup(db, other.sponsorTenant, input.operationId)).rejects.toMatchObject({ code: 'OPERATION_NOT_FOUND' });
   });
 });
