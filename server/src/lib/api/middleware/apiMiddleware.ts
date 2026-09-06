@@ -192,6 +192,8 @@ export function createServerActionErrorResponse(error: ServerActionErrorResult):
 }
 
 const APPLICATION_ERROR_STATUS: Record<string, number> = {
+  CO_MANAGED_NOT_ACTIVE: 409,
+  CO_MANAGED_READ_ONLY: 423,
   QBO_AUTH_ERROR: 401,
   QBO_CONFIG_MISSING: 400,
   QBO_INVALID_INPUT: 400,

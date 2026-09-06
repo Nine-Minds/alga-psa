@@ -17,6 +17,12 @@ import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenan
 
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send }));
+vi.mock('@alga-psa/analytics', () => ({ ServerAnalyticsTracker: class {
+  async trackTicketCreated() {}
+  async trackTicketUpdated() {}
+  async trackCommentCreated() {}
+  async trackFeatureUsage() {}
+} }));
 // Every worker connection in this suite resolves to the disposable database.
 vi.mock('@alga-psa/db/admin.js', () => ({
   getAdminConnection: async () => db,
@@ -538,5 +544,70 @@ describe('transactional operational lifecycle admission', () => {
     expect(await getCoManagedOperationalState(db, operation.tenant)).toEqual({ state: 'independent', canWrite: true, graceEndsAt: null });
     await rename(operation.tenant, 'MSP operations');
     await expect(rename(randomUUID(), 'Unknown tenant')).rejects.toThrow('does not exist');
+  });
+});
+
+async function ticketServiceForTest() {
+  const { TicketService } = await import('../../lib/api/services/TicketService');
+  const service = new TicketService();
+  vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+  const publish = vi.spyOn(service as any, 'safePublishEvent').mockResolvedValue(undefined);
+  return { service, publish };
+}
+
+describe('ticket API lifecycle admission against PostgreSQL', () => {
+  it('denies direct ticket, assignment, comment, and bundle mutations before acceptance and after grace', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance();
+    const { service, publish } = await ticketServiceForTest();
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    const ticketId = randomUUID(), secondId = randomUUID();
+    const data = { title: 'Direct API ticket', client_id: operation.customer_client_id,
+      board_id: operation.customer_board_id, status_id: randomUUID(), priority_id: randomUUID() };
+    const operations = [
+      () => service.create(data, context),
+      () => service.update(ticketId, { title: 'Changed' }, context),
+      () => service.createFromAsset({ ...data, asset_id: secondId, description: '' }, context),
+      () => service.addTicketAgent(ticketId, { user_id: secondId }, context),
+      () => service.removeTicketAgent(ticketId, secondId, context),
+      () => service.assignTeam(ticketId, { team_id: secondId }, context),
+      () => service.removeTeam(ticketId, { mode: 'remove_all' }, context),
+      () => service.addComment(ticketId, { comment_text: 'Should not write' }, context),
+      () => service.updateComment(ticketId, secondId, { comment_text: 'Should not edit' }, context),
+      () => service.bundleTickets(context, { masterTicketId: ticketId, childTicketIds: [secondId], mode: 'sync_updates' }),
+      () => service.addBundleChildren(context, { masterTicketId: ticketId, childTicketIds: [secondId] }),
+      () => service.promoteBundleMaster(context, { oldMasterTicketId: ticketId, newMasterTicketId: secondId }),
+      () => service.updateBundleSettings(context, { masterTicketId: ticketId, reopenOnChildReply: true }),
+      () => service.removeBundleChild(context, { childTicketId: ticketId }),
+      () => service.unbundleMaster(context, { masterTicketId: ticketId }),
+    ];
+    for (const mutate of operations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input);
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    for (const mutate of operations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('tickets')).toHaveLength(0);
+    expect(await customer.table('comments')).toHaveLength(0);
+    expect(await customer.table('ticket_bundle_settings')).toHaveLength(0);
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it('creates and edits a canonical ticket during active/grace states, preserves reads after expiry, and returns actionable API errors', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const { service } = await ticketServiceForTest(), context = { tenant: actor.tenant, userId: actor.userId };
+    const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+    const ticket = await service.create({ title: 'Working ticket', description: 'Customer work', client_id: operation.customer_client_id,
+      board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id }, context);
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: new Date(Date.now() - 86_400_000) });
+    await service.update(ticket.ticket_id, { title: 'Edited during grace' }, context);
+    const lapse = new Date(Date.now() - 31 * 86_400_000);
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: lapse, lapse_started_at: lapse,
+      read_only_after: new Date(lapse.getTime() + 30 * 86_400_000) });
+    const { handleApiError } = await import('../../lib/api/middleware/apiMiddleware');
+    const error = await service.update(ticket.ticket_id, { title: 'Forbidden change' }, context).then(() => null, error => error);
+    const response = handleApiError(error);
+    expect(response.status).toBe(423);
+    expect(await response.json()).toMatchObject({ error: { code: 'CO_MANAGED_READ_ONLY' } });
+    expect((await customer.table('tickets').where('ticket_id', ticket.ticket_id).first()).title).toBe('Edited during grace');
+    expect(await service.getTicketAgents(ticket.ticket_id, context)).toMatchObject({ ticket_id: ticket.ticket_id });
   });
 });

@@ -4,6 +4,7 @@
  */
 
 import { Knex } from 'knex';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import {
   BaseService, ServiceContext, ListResult, withTransaction, tenantDb } from '@alga-psa/db';
 import { applyVisibilityBoardFilter, type ContactVisibilityContext } from '@alga-psa/tickets/lib';
@@ -825,6 +826,7 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { response, event } = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
         .where({ user_id: data.user_id })
         .first();
@@ -877,6 +879,7 @@ export class TicketService extends BaseService<ITicket> {
     this.assertValidTicketId(ticketId);
 
     await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const resource = await tenantScopedTable(trx, 'ticket_resources', context.tenant)
         .where({ ticket_id: ticketId, additional_user_id: userId })
         .first();
@@ -899,6 +902,7 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const { ticket, assignedTo } = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       let resolvedAssignedTo: string;
       try {
         resolvedAssignedTo = await assignTeamToTicketCore(
@@ -944,6 +948,7 @@ export class TicketService extends BaseService<ITicket> {
     };
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       try {
         await removeTeamFromTicketCore(trx, context.tenant, context.userId, ticketId, options);
       } catch (error) {
@@ -1425,6 +1430,7 @@ export class TicketService extends BaseService<ITicket> {
       const { knex } = await this.getKnex();
   
       const fullTicket = await withTransaction(knex, async (trx) => {
+        await assertCoManagedOperationalWrite(trx, context.tenant);
         // Validate status belongs to the specified board before proceeding
         const statusBelongsToBoard = await TicketModel.validateStatusBelongsToBoard(
           data.status_id,
@@ -1542,6 +1548,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       // Get current ticket for event comparison
       const currentTicket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
@@ -1812,6 +1819,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     const fullTicket = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       // Verify asset exists
       const asset = await tenantScopedTable(trx, 'assets', context.tenant)
         .where({ asset_id: data.asset_id })
@@ -2044,6 +2052,7 @@ export class TicketService extends BaseService<ITicket> {
     const notificationSuppression = resolveTicketNotificationSuppression(data);
 
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       // Verify ticket exists
       const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: ticketId })
@@ -2226,6 +2235,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const comment = await tenantScopedTable(trx, 'comments', context.tenant)
         .where({ comment_id: commentId, ticket_id: ticketId })
         .first();
@@ -2766,6 +2776,7 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const tickets = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'ticket_number', 'master_ticket_id')
         .whereIn('ticket_id', [params.masterTicketId, ...uniqueChildIds]);
@@ -2843,6 +2854,7 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.masterTicketId })
@@ -2900,6 +2912,7 @@ export class TicketService extends BaseService<ITicket> {
 
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const oldMaster = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.oldMasterTicketId })
@@ -2969,6 +2982,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const existing = await tenantScopedTable(trx, 'ticket_bundle_settings', context.tenant)
         .where({ master_ticket_id: params.masterTicketId })
         .first();
@@ -3001,6 +3015,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketId: string; remainingChildren: number }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const child = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.childTicketId })
@@ -3044,6 +3059,7 @@ export class TicketService extends BaseService<ITicket> {
   ): Promise<{ masterTicketId: string; childTicketIds: string[] }> {
     const { knex } = await this.getKnex();
     const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
       const master = await tenantScopedTable(trx, 'tickets', context.tenant)
         .select('ticket_id', 'master_ticket_id')
         .where({ ticket_id: params.masterTicketId })
