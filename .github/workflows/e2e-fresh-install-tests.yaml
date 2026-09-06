@@ -71,6 +71,11 @@ jobs:
             image: alga-e2e-test_server_ee_local:latest
             artifact: fresh-install-server-enterprise
             cache: false
+          - service: algasim
+            context: ./packages/emulators
+            dockerfile: packages/emulators/Dockerfile
+            image: alga-e2e-test-algasim:latest
+            cache: true
           - service: setup
             dockerfile: setup/Dockerfile.ubuntu
             image: alga-setup:ubuntu
@@ -102,6 +107,22 @@ jobs:
             sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup
           fi
           df -h /
+
+      - name: Set up emulator build runtime
+        if: matrix.service == 'algasim'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Compile candidate emulator packages and verify controls
+        if: matrix.service == 'algasim'
+        run: |
+          npm install -g npm@11
+          npm ci
+          packages/emulators/build-image.sh --stage-only
+          npm test --workspace=@alga-psa/emulator-host
+          node --test e2e-tests/harness/emulator-control.test.mjs
 
       - uses: docker/setup-buildx-action@v3
 
@@ -165,7 +186,7 @@ jobs:
             server_archive: server-ee
             compose_suffix: ':docker-compose.e2e-ee.yaml'
     env:
-      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml${{ matrix.compose_suffix }}
+      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml:docker-compose.e2e-emulators.yaml${{ matrix.compose_suffix }}
     steps:
       - name: Check build results
         env:
@@ -318,7 +339,7 @@ jobs:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
           SERVER_ARCHIVE: ${{ matrix.server_archive }}
         run: |
-          for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer; do
+          for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
             docker load --input "$archive"
             rm "$archive"
@@ -326,10 +347,19 @@ jobs:
           # Resolve explicit and Compose-generated tags so a configuration change cannot
           # accidentally run an old/pulled image instead of this run's build.
           docker-compose -p alga-e2e-test config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
-          for service in server setup email-service hocuspocus redis pgbouncer; do
+          for service in server setup email-service hocuspocus redis pgbouncer algasim; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
             docker image inspect "$image" > /dev/null
           done
+
+      - name: Start and verify candidate service emulators
+        if: steps.install_docker_compose.outcome == 'success'
+        run: |
+          echo '127.0.0.1 algasim.test' | sudo tee -a /etc/hosts
+          docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
+          curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
+          jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
+          docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"
 
       - name: Start foundational services (postgres and redis)
         if: steps.install_docker_compose.outcome == 'success'
@@ -555,6 +585,14 @@ jobs:
           echo "Server service is healthy at $HEALTH_CHECK_URL."
         shell: bash
 
+      - name: Verify provider routing from running Alga processes
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        run: |
+          test "$(docker network inspect alga-e2e-test_app-network --format '{{.Internal}}')" = true
+          for service in server email-service; do
+            docker-compose -p alga-e2e-test exec -T "$service" node --input-type=module < e2e-tests/harness/check-provider-routing.mjs
+          done
+
       - name: Trigger Login Page to Generate Credentials
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
@@ -719,6 +757,10 @@ jobs:
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
           E2E_DATABASE_ISOLATED: 'true'
+          E2E_EMULATORS_ISOLATED: 'true'
+          ALGASIM_CONTROL_URL: http://127.0.0.1:9500
+          ALGASIM_PUBLIC_STRIPE_URL: http://localhost:4050
+          ALGASIM_CALLBACK_BASE_URL: http://server:3000
           E2E_DB_HOST: 127.0.0.1
           E2E_DB_PORT: '5432'
           E2E_DB_NAME: server
@@ -810,6 +852,8 @@ jobs:
             e2e-tests/test-results/
             e2e-tests/harness-results/
             e2e-tests/execution-evidence/
+            ${{ runner.temp }}/algasim-catalog.json
+            ${{ runner.temp }}/algasim-image-id.txt
           retention-days: 7
 
       - name: Cleanup Docker Compose

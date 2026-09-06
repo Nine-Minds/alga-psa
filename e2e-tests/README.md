@@ -63,6 +63,52 @@ Each worker/retry has a fresh run identity. Dispose of the entire database after
 the run; the fixture deliberately retains failed-run data until that cleanup.
 CI owns this database and removes its Docker volumes in the cleanup step.
 
+## Provider fixtures
+
+CI builds algasim from the candidate checkout with
+`packages/emulators/build-image.sh --stage-only`, tests its controls, and exports
+the resulting image alongside the application images. Each edition gets its
+own instance without a persisted state volume. The browser artifact includes
+the emulator catalog and local image ID; this does not establish release digest
+promotion provenance.
+
+For local production stacks, add `docker-compose.e2e-emulators.yaml` to the
+Compose files and build `alga-e2e-test-algasim:latest` using
+`packages/emulators/build-image.sh alga-e2e-test-algasim:latest`. Add
+`127.0.0.1 algasim.test` to the browser host's hosts file for Microsoft login.
+The same name resolves through a Docker alias for server-side token exchange.
+QBO/Xero browser authorization uses localhost; token/API calls use the algasim
+container. Seed Stripe's `hostedBaseUrl` with `ALGASIM_PUBLIC_STRIPE_URL` and its
+webhook target with `ALGASIM_CALLBACK_BASE_URL` plus the actual webhook path.
+Do not use a browser-facing localhost address for a container callback.
+
+The override applies provider endpoints to the server, email-service, and
+workflow-worker. It makes the application network internal so containers cannot
+fall back to live vendor endpoints. A TCP ingress publishes only fixed Alga,
+PostgreSQL and emulator destinations for the host browser/test runner. The
+current smoke job starts the server and
+email-service; workflow/Temporal journeys must explicitly start their workers.
+Teams' production override restriction and unsupported SSO behavior remain
+coverage gaps; this fixture does not bypass those guards.
+
+Import `test` from `fixtures/emulators.ts` and select providers with
+`test.use({ emulatorProviders: ['stripe'] })`. Set
+`E2E_EMULATORS_ISOLATED=true` and `ALGASIM_CONTROL_URL` to the disposable
+instance. The fixture requires one worker, resets selected providers before
+each scenario, and attaches request/fault-operation evidence afterward. Use
+`emulators.seed`, `arm`, `disarm`, `action`, and `state` to control or inspect
+external services. Perform the Alga operation through the actual product.
+
+Await application jobs and the expected provider effects before finishing a
+scenario. Reset refuses observable in-flight vendor requests, but cannot detect
+future requests from an application job that is still queued. The default
+attachment omits seed parameters, headers, and bodies; explicitly select and
+redact any provider state attached by a journey. Unused provider fixtures do not
+count as completed integration coverage.
+
+Verify control behavior with built emulator dependencies from the repository
+root: `node --test e2e-tests/harness/emulator-control.test.mjs`.
+
 ## Diagnose failures
 
 Reports are written to `playwright-report/` and `test-results/`. Traces,

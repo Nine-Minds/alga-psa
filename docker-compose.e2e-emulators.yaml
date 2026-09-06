@@ -1,0 +1,66 @@
+# Disposable provider infrastructure for the production browser stack. No
+# persistent state volume: each edition/job owns this emulator instance.
+x-provider-environment: &provider-environment
+  # The login base is used for both browser authorization and server token
+  # exchange. CI maps this name on the host; Docker resolves the network alias.
+  MICROSOFT_LOGIN_BASE_URL: http://algasim.test:4010
+  MICROSOFT_GRAPH_BASE_URL: http://algasim:4010/v1.0
+  QBO_OAUTH_AUTHORIZE_URL: http://localhost:4020/connect/oauth2
+  QBO_OAUTH_TOKEN_URL: http://algasim:4020/oauth2/v1/tokens/bearer
+  QBO_API_BASE_URL: http://algasim:4020/v3/company
+  XERO_OAUTH_AUTHORIZE_URL: http://localhost:4060/identity/connect/authorize
+  XERO_OAUTH_TOKEN_URL: http://algasim:4060/connect/token
+  XERO_CONNECTIONS_URL: http://algasim:4060/connections
+  XERO_API_BASE_URL: http://algasim:4060/api.xro/2.0
+  STRIPE_API_BASE_URL: http://algasim:4050
+  STRIPE_SECRET_KEY: sk_test_algasim
+  STRIPE_PAYMENT_WEBHOOK_SECRET: whsec_algasim
+  NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_algasim
+
+services:
+  algasim:
+    image: alga-e2e-test-algasim:latest
+    init: true
+    environment:
+      ALGASIM_SEED: '20260906'
+    networks:
+      app-network:
+        aliases:
+          - algasim.test
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:9500/control/catalog']
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  test-ingress:
+    image: alga-e2e-test-algasim:latest
+    init: true
+    entrypoint: ['node', '/provider-ingress.mjs']
+    volumes:
+      - ./e2e-tests/harness/provider-ingress.mjs:/provider-ingress.mjs:ro
+    ports:
+      - '127.0.0.1:3000:3000'
+      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:4010:4010'
+      - '127.0.0.1:4020:4020'
+      - '127.0.0.1:4030:4030'
+      - '127.0.0.1:4040:4040'
+      - '127.0.0.1:4050:4050'
+      - '127.0.0.1:4060:4060'
+      - '127.0.0.1:9500:9500'
+    networks:
+      - app-network
+      - test-ingress-network
+  server:
+    environment: *provider-environment
+  email-service:
+    environment: *provider-environment
+  workflow-worker:
+    environment: *provider-environment
+
+# Provider clients cannot fall back to live vendor endpoints. Only test-ingress
+# has a routable network; it forwards published ports to fixed internal targets.
+networks:
+  app-network:
+    internal: true
+  test-ingress-network: {}
