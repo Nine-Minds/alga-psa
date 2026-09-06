@@ -406,6 +406,31 @@ npm run test:watch         # Run tests in watch mode
 
 # Local with config
 npm run test:local         # Run with local config
+```
+
+### Collaboration integration tests
+
+Install the collaboration service's locked dependencies from the repository
+root with `npm ci --prefix hocuspocus --ignore-scripts`. With the isolated test
+database configuration described above, run from `server/`:
+
+```bash
+CI=true REQUIRE_DB=1 REAL_REDIS=1 npx vitest run --config vitest.config.ts \
+  src/test/integration/collaborativeEditing.integration.test.ts
+```
+
+The suite recreates its test database and owns ephemeral WebSocket and HTTP
+ports. It does not require `RUN_HOCUSPOCUS_TESTS` or a developer's running
+Hocuspocus instance. CI installs the same service lockfile before integration
+execution. Do not run migration bootstraps concurrently on one PostgreSQL
+instance, even with separate databases: role settings are shared.
+
+The live cases use the actual Hocuspocus server, room validator, persistence
+extension, persistence route and snapshot action. They verify two-client edits,
+awareness, rejected tenant access, durable content after room eviction, and
+HTTP authorization and tenant isolation. Browser authentication and database
+routing are fixture seams; this suite does not prove browser UI behavior,
+Redis fanout or the built collaboration container.
 
 ### Runner backend smoke tests
 

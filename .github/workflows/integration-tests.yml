@@ -128,6 +128,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install locked collaboration server for integration tests
+        run: npm ci --prefix hocuspocus --ignore-scripts
+
       # Same step as unit-tests.yml: vitest aliases @alga-psa/* to src for test
       # files, but code loaded natively at runtime resolves package "exports" ->
       # dist. The onboarding seeds (ee/server/seeds/onboarding/psa/*.cjs) do
