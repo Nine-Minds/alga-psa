@@ -78,7 +78,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     await page.locator('#accounting-export-client-search').fill(tenant.clients.primary.name);
     await page.locator('#accounting-export-statuses').fill('sent');
     await page.locator('#accounting-export-create-submit').click();
-    const detail = page.locator('#accounting-exports-detail');
+    const detail = page.getByRole('dialog', { name: 'Accounting Export Batch', exact: true });
     await expect(detail).toBeVisible();
     const batches = await database('accounting_export_batches').where({ ...scope, adapter_type: 'quickbooks_online' });
     expect(batches).toHaveLength(1);
