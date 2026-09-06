@@ -1283,7 +1283,9 @@ export function registerTimeActions(): void {
       await requirePermission(ctx, tx, { resource: 'time_entry', action: 'update' });
 
       try {
-        const updateInput: WorkflowTimeUpdateEntryInput = {
+        // The domain distinguishes omitted fields from explicit null/false.
+        // Preserve that patch contract when adapting the action input.
+        const updateInput = Object.fromEntries(Object.entries({
           entry_id: input.entry_id,
           start: input.start,
           end: input.end,
@@ -1297,7 +1299,7 @@ export function registerTimeActions(): void {
           notes: input.notes,
           time_sheet_id: input.time_sheet_id,
           attach_to_timesheet: input.attach_to_timesheet,
-        };
+        }).filter(([, value]) => value !== undefined)) as WorkflowTimeUpdateEntryInput;
 
         const updated = await updateWorkflowTimeEntry({
           trx: tx.trx,

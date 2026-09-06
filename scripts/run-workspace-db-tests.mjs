@@ -11,9 +11,10 @@ const output = path.join(root, 'test-results/workspace-db');
 mkdirSync(output, { recursive: true });
 const collectedPath = path.join(output, 'collected.json');
 const reportPath = path.join(output, 'results.json');
+const testsPath = path.join(output, 'collected-tests.json');
 const evidencePath = path.join(output, 'evidence.json');
 // Remove stale evidence even if the next process cannot start.
-for (const file of [collectedPath, reportPath, evidencePath]) writeFileSync(file, 'null\n');
+for (const file of [collectedPath, testsPath, reportPath, evidencePath]) writeFileSync(file, 'null\n');
 const env = {
   ...process.env,
   REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1',
@@ -44,11 +45,18 @@ if (collection.status !== 0) {
 }
 const collected = JSON.parse(readFileSync(collectedPath, 'utf8'));
 if (!Array.isArray(collected) || !collected.length) throw new Error('Workspace DB suite collected no files');
+const testCollection = run(['list', ...args, `--json=${testsPath}`]);
+if (testCollection.status !== 0) {
+  writeFileSync(evidencePath, JSON.stringify({ schemaVersion: 1, suite: 'workspace-db', revision, status: 'failed', failures: ['Test collection failed'] }, null, 2));
+  process.exit(testCollection.status || 1);
+}
+const collectedTests = JSON.parse(readFileSync(testsPath, 'utf8'));
 console.log(`Workspace DB suite: ${collected.length} required files`);
 const result = run(['run', ...args, '--reporter=default', '--reporter=json', `--outputFile.json=${reportPath}`]);
 let report;
 try { report = JSON.parse(readFileSync(reportPath, 'utf8')); } catch { report = null; }
-const evidence = reconcileExecution({ collected, report, root, suite: 'workspace-db', revision, exitCode: result.status });
+const evidence = reconcileExecution({ collected, collectedTests, report, root, suite: 'workspace-db', revision, exitCode: result.status });
+evidence.workingTreeDirty = Boolean(spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout?.trim());
 writeFileSync(evidencePath, JSON.stringify(evidence, null, 2) + '\n');
 for (const failure of evidence.failures) console.error(failure);
 process.exit(evidence.status === 'passed' ? 0 : 1);
