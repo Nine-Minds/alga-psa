@@ -1,6 +1,8 @@
 'use server'
 
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
+import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 
 import type {
   ITicket,
@@ -2463,9 +2465,11 @@ export async function updateTicketInTransaction(
   id: string,
   data: Partial<ITicket>,
   options?: UpdateTicketInTransactionOptions,
+  collaboration?: TicketMutationCollaborationContext,
 ): Promise<'success'> {
     try {
       // Validate update data
+      const requestedFields = Object.keys(data);
       const validatedData = validateData(ticketUpdateSchema, data);
       const suppressContactNotifications = options?.suppressContactNotifications === true;
       const suppressInternalNotifications = options?.suppressInternalNotifications === true;
@@ -2476,6 +2480,26 @@ export async function updateTicketInTransaction(
 
     // Admit every caller, including bulk/automation paths, before operational locks.
     await assertCoManagedOperationalWrite(trx, tenant);
+    const isSystemActor = options?.systemActor === true;
+    if (collaboration && (isSystemActor || options?.overrideCloseRules || options?.bypassCloseRules ||
+        suppressContactNotifications || suppressInternalNotifications)) {
+      throw new Error('Shared ticket edits cannot override closure or notification policy');
+    }
+    if (!collaboration && !isSystemActor && user.tenant !== tenant) {
+      throw new Error('A foreign ticket actor requires a collaboration context');
+    }
+    const collaborator = collaboration ? await resolveTicketMutationCollaborator(trx, tenant, user, collaboration) : null;
+    const actorInfo = isSystemActor
+      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
+      : collaborator
+        ? { actorType: TICKET_ACTIVITY_ACTOR.USER, actorReferenceId: collaborator.referenceId }
+        : { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user.user_id, displayName: formatLiveUpdateDisplayName(user) };
+    if (collaboration) {
+      // LEVERAGE: friction qualified-ticket-mutation — routing/assignment and bundle fan-out need their own qualified authority before joining this core.
+      const allowed = new Set(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state']);
+      if (requestedFields.some(key => !allowed.has(key))) throw new Error('Unsupported shared ticket edit fields');
+      await collaboration.assertWriteAuthority(trx);
+    }
 
     // Get current ticket state before update
     const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
@@ -2497,8 +2521,20 @@ export async function updateTicketInTransaction(
       }
     }
 
+    // A bundle edit must not fan out beyond the ticket admitted by the caller.
+    // Until per-child authority is connected, reject propagating shared edits.
+    if (collaboration && Object.keys(validatedData).some(key => lockedFields.has(key))) {
+      const settings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
+        .where({ master_ticket_id: id }).forShare().first();
+      if (settings?.mode === 'sync_updates') throw new Error('Shared bundle workflow edits require authority for every child ticket');
+    }
+
     // Clean up the data before update
     const updateData = { ...validatedData };
+    if (collaborator) {
+      updateData.updated_by = null;
+      updateData.updated_at = new Date().toISOString();
+    }
 
     // Handle null values for category and subcategory
     if ('category_id' in updateData && !updateData.category_id) {
@@ -2595,8 +2631,6 @@ export async function updateTicketInTransaction(
       : oldStatus;
     const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
-    const isSystemActor = options?.systemActor === true;
-
     // Pre-close validation gates: when this update flips the ticket from an
     // open to a closed status, enforce the board's close rules before any
     // writes. Throws TicketCloseValidationError (aborting the transaction)
@@ -2618,13 +2652,7 @@ export async function updateTicketInTransaction(
             ? { requested: true, reason: options?.overrideCloseRulesReason ?? null, user }
             : undefined,
           bypass: options?.bypassCloseRules,
-          actor: isSystemActor
-            ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
-            : {
-                actorType: TICKET_ACTIVITY_ACTOR.USER,
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
+          actor: actorInfo,
           source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         });
       }
@@ -2642,6 +2670,7 @@ export async function updateTicketInTransaction(
     const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
 
     // Retained locks prevent revocation; the wall-clock deadline still advances.
+    if (collaboration) await collaboration.assertWriteAuthority(trx);
     await assertCoManagedOperationalWrite(trx, tenant);
 
     let updatedTicket;
@@ -2720,7 +2749,9 @@ export async function updateTicketInTransaction(
       tenantId: tenant,
       actor: isSystemActor
         ? { actorType: 'SYSTEM' as const }
-        : { actorType: 'USER' as const, actorUserId: user.user_id },
+        : collaborator
+          ? { actorType: 'COLLABORATOR' as const, actorReference: collaborator }
+          : { actorType: 'USER' as const, actorUserId: user.user_id },
       occurredAt,
     };
 
@@ -2743,7 +2774,7 @@ export async function updateTicketInTransaction(
       },
       ctx: {
         occurredAt,
-        actorUserId: user.user_id,
+        actorUserId: collaborator || isSystemActor ? undefined : user.user_id,
         previousStatusIsClosed: !!oldStatus?.is_closed,
         newStatusIsClosed: !!newStatus?.is_closed,
       },
@@ -2832,7 +2863,7 @@ export async function updateTicketInTransaction(
     // System closes (auto-close engine) leave closed_by null — attribution
     // lives in the audit row instead.
     if (newStatus?.is_closed && !oldStatus?.is_closed) {
-      const closedBy = isSystemActor ? null : user.user_id;
+      const closedBy = isSystemActor || collaborator ? null : user.user_id;
       await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
         .update({ closed_at: occurredAt, closed_by: closedBy });
@@ -2864,17 +2895,18 @@ export async function updateTicketInTransaction(
         }, isSystemActor
           ? undefined
           : {
-              actor: {
-                actorType: TICKET_ACTIVITY_ACTOR.USER,
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
+              actor: actorInfo,
               source: TICKET_ACTIVITY_SOURCE.UI,
             });
       } catch (error) {
+        if (collaboration) throw error;
         console.error('Failed to auto-apply checklist templates:', error);
       }
     }
+
+    // Domain events use previous/new; legacy local producers keep their contract.
+    const eventChanges = collaborator ? Object.fromEntries(Object.entries(structuredChanges)
+      .map(([key, value]) => [key, { previous: value.old, new: value.new }])) : structuredChanges;
 
     // Publish appropriate event based on the update — after the save
     // transaction commits, so subscribers never contend with our row locks.
@@ -2887,11 +2919,11 @@ export async function updateTicketInTransaction(
           eventType: 'TICKET_CLOSED',
           payload: {
             ticketId: id,
-            ...(isSystemActor
+            ...(isSystemActor || collaborator
               ? {}
               : { userId: user.user_id, closedByUserId: user.user_id }),
             closedAt: occurredAt,
-            changes: structuredChanges,
+            changes: eventChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
           },
@@ -2935,7 +2967,7 @@ export async function updateTicketInTransaction(
             newAssigneeId: updateData.assigned_to,
             newAssigneeType: 'user',
             assignedAt: occurredAt,
-            changes: structuredChanges,
+            changes: eventChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
           },
@@ -2951,9 +2983,8 @@ export async function updateTicketInTransaction(
           eventType: 'TICKET_UPDATED',
           payload: {
             ticketId: id,
-            userId: user.user_id,
-            updatedByUserId: user.user_id,
-            changes: structuredChanges,
+            ...(collaborator ? {} : { userId: user.user_id, updatedByUserId: user.user_id }),
+            changes: eventChanges,
             suppressContactNotifications,
             suppressInternalNotifications,
           },
@@ -2971,10 +3002,9 @@ export async function updateTicketInTransaction(
           tenantId: tenant,
           ticketId: id,
           updatedFields,
-          updatedBy: {
-            userId: user.user_id,
-            displayName: formatLiveUpdateDisplayName(user),
-          },
+          updatedBy: collaborator
+            ? { userId: null, displayName: formatCollaborationActorName(collaborator), actorReference: collaborator }
+            : { userId: user.user_id, displayName: formatLiveUpdateDisplayName(user) },
           updatedAt: toIsoTimestamp(updatedTicket.updated_at, occurredAt),
         }),
         `ticket-live-update ticket=${id}`
@@ -2986,13 +3016,6 @@ export async function updateTicketInTransaction(
     // line ("Morgan changed status from New to In Progress") rather than a
     // generic "ticket updated" entry. The curated diff includes resolved
     // labels for IDs where possible.
-    const actorInfo = isSystemActor
-      ? { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM }
-      : {
-          actorType: TICKET_ACTIVITY_ACTOR.USER,
-          userId: user.user_id,
-          displayName: formatLiveUpdateDisplayName(user),
-        };
     const notificationSuppressionDetails = suppressContactNotifications
       ? {
           notification_suppression: {
@@ -3055,8 +3078,9 @@ export async function updateTicketInTransaction(
           payload: {
             tenantId: tenant,
             occurredAt,
+            ...(collaborator ? { actorType: 'COLLABORATOR' as const, actorReference: collaborator } : {}),
             ticketId: id,
-            userId: user.user_id,
+            userId: collaborator ? null : user.user_id,
             previousResponseState: currentTicket.response_state || null,
             newResponseState: updateData.response_state || null,
             previousState: currentTicket.response_state || null,
@@ -3082,6 +3106,7 @@ export async function updateTicketInTransaction(
       }
 
       if (Object.keys(propagateFields).length > 0) {
+        if (collaboration) throw new Error('Shared bundle workflow edits require authority for every child ticket');
         const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
           .where({ master_ticket_id: id })
           .select(['ticket_id', ...Object.keys(propagateFields)]);

@@ -1,11 +1,12 @@
 import { z } from 'zod';
+import { collaborationActorReferenceSchema } from '../collaborationActorSchemas';
 
 export const tenantIdSchema = z.string().min(1).describe('Tenant ID');
 export const occurredAtSchema = z.string().datetime().describe('Timestamp when the event occurred (ISO 8601)');
 
 export const uuidSchema = (label: string) => z.string().uuid().describe(label);
 
-export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM']).describe('Actor type');
+export const actorTypeSchema = z.enum(['USER', 'CONTACT', 'SYSTEM', 'COLLABORATOR']).describe('Actor type');
 
 export const BaseDomainEventPayloadSchema = z.object({
   tenantId: tenantIdSchema,
@@ -13,6 +14,7 @@ export const BaseDomainEventPayloadSchema = z.object({
   actorUserId: uuidSchema('Actor User ID').optional(),
   actorContactId: uuidSchema('Actor Contact ID').optional(),
   actorType: actorTypeSchema.optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
 });
 
 export const updatedFieldsSchema = z.array(z.string()).describe('Dot-paths of updated fields').optional();

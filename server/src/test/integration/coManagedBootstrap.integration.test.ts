@@ -3698,3 +3698,178 @@ it('distinguishes equal user UUIDs across organizations and retains foreign attr
     actor_user_id: null, actor_reference_id: reference.actor_reference_id, actor_display_name: 'External Technician' });
   await expect(withCoManagedSharedWork(db, collision, resource, 'update', ensureCoManagedActorReference)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 });
+
+async function withSharedTicketMutationFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & {
+  user: any; closedStatusId: string;
+  mutate: (patch: Record<string, unknown>, options?: Record<string, unknown>, after?: (trx: Knex.Transaction) => Promise<void>) => Promise<void>;
+  workflow: ReturnType<typeof vi.spyOn>; publish: ReturnType<typeof vi.spyOn>; live: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  const fixture = await ticketHandoffFixture();
+  const { principal, customerPrincipal, resource, customer, sponsor, operation } = fixture;
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { assertCoManagedSessionUnexpired } = await import('../../../../packages/co-managed/src/sharedWorkIdentity');
+  await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Begin shared work.' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Morgan', last_name: 'Provider' });
+  const user = await sponsor.table('users').where('user_id', principal.userId).first();
+  const closedStatusId = (await customer.table('statuses').where({ board_id: operation.customer_board_id, is_closed: true }).first()).status_id;
+  const events = await import('@alga-psa/event-bus/publishers');
+  const updates = await import('../../../../packages/tickets/src/lib/liveUpdates');
+  const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
+  const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+  const live = vi.spyOn(updates, 'publishTicketUpdate').mockResolvedValue(undefined);
+  try {
+    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const mutate = async (patch: Record<string, unknown>, options?: Record<string, unknown>, after?: (trx: Knex.Transaction) => Promise<void>) => {
+      await withCoManagedSharedWork(db, principal, resource, 'update', async context => {
+        const actorReferenceId = await ensureCoManagedActorReference(context);
+        await updateTicketInTransaction(context.trx, user, resource.tenant, resource.id, patch, options, {
+          actorReferenceId, assertWriteAuthority: trx => assertCoManagedSessionUnexpired(trx, principal),
+        });
+        if (after) await after(context.trx);
+      });
+    };
+    await work({ ...fixture, user, closedStatusId, mutate, workflow, publish, live });
+  } finally { live.mockRestore(); publish.mockRestore(); workflow.mockRestore(); }
+}
+
+it('uses the canonical close and reopen paths with qualified audit, event and live attribution for MSP actors', async () => withSharedTicketMutationFixture(async ({
+  customer, resource, actor, principal, closedStatusId, mutate, workflow, publish, live,
+}) => {
+  const { EventSchemas, buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+  const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
+  await customer.table('tickets').where('ticket_id', resource.id).update({ updated_by: actor.userId, response_state: 'awaiting_client' });
+  await mutate({ title: 'Jointly resolved', status_id: closedStatusId });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ title: 'Jointly resolved',
+    status_id: closedStatusId, is_closed: true, closed_by: null, updated_by: null, response_state: null });
+  const reference = await customer.table('collaboration_actor_references').first();
+  const audit = await customer.table('ticket_audit_logs').where('ticket_id', resource.id).first();
+  expect(audit).toMatchObject({ actor_user_id: null, actor_contact_id: null, actor_reference_id: reference.actor_reference_id,
+    actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP', event_type: 'TICKET_CLOSED' });
+  expect(await customer.table('users')).toHaveLength(1);
+  expect(workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_CLOSED')).toBe(true);
+  for (const [event] of workflow.mock.calls as any[]) {
+    const payload = buildWorkflowPayload(event.payload, event.ctx);
+    const parsed = EventSchemas[event.eventType as keyof typeof EventSchemas].parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: event.eventType, payload });
+    expect(parsed.payload).toMatchObject({ actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant,
+      userId: principal.userId, ownerTenantId: resource.tenant, referenceId: reference.actor_reference_id } });
+    expect(parsed.payload).not.toHaveProperty('actorUserId');
+    expect(parsed.payload).not.toHaveProperty('userId');
+  }
+  const responseEvent = publish.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_RESPONSE_STATE_CHANGED')![0] as any;
+  expect(EventSchemas.TICKET_RESPONSE_STATE_CHANGED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...responseEvent }).payload)
+    .toMatchObject({ actorReference: { referenceId: reference.actor_reference_id }, userId: null, newState: null, trigger: 'close' });
+  expect(live).toHaveBeenCalledWith(expect.objectContaining({ tenantId: resource.tenant, ticketId: resource.id,
+    updatedBy: expect.objectContaining({ userId: null, displayName: 'Morgan Provider (MSP)', actorReference: expect.objectContaining({ referenceId: reference.actor_reference_id }) }) }));
+  await mutate({ status_id: baseline.status_id });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+  expect(await customer.table('ticket_audit_logs').where({ ticket_id: resource.id, event_type: 'TICKET_REOPENED' }).first())
+    .toMatchObject({ actor_reference_id: reference.actor_reference_id, actor_user_id: null });
+}));
+
+it('retains close gates and rolls back foreign ticket edits, references, audit and queued publication together', async () => withSharedTicketMutationFixture(async ({
+  customer, resource, operation, closedStatusId, mutate, workflow, publish, live,
+}) => {
+  await customer.table('board_close_rules').insert({ tenant: resource.tenant, board_id: operation.customer_board_id, require_resolution_comment: true });
+  await expect(mutate({ status_id: closedStatusId })).rejects.toMatchObject({ name: 'TicketCloseValidationError' });
+  for (const options of [{ overrideCloseRules: true }, { bypassCloseRules: 'auto_close' }, { systemActor: true }, { suppressContactNotifications: true }]) {
+    await expect(mutate({ status_id: closedStatusId }, options)).rejects.toThrow('cannot override closure or notification policy');
+  }
+  await customer.table('board_close_rules').delete();
+  const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
+  await expect(mutate({ status_id: closedStatusId }, undefined, async trx => {
+    expect(await tenantDb(trx, resource.tenant).table('ticket_audit_logs').where('ticket_id', resource.id)).toHaveLength(1);
+    expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+    throw new Error('Owning command cancelled');
+  })).rejects.toThrow('Owning command cancelled');
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(baseline);
+  expect(await customer.table('collaboration_actor_references')).toEqual([]);
+  expect(await customer.table('ticket_audit_logs').where('ticket_id', resource.id)).toEqual([]);
+  expect(workflow).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+}));
+
+it('attributes automatically applied checklist templates to the same MSP reference', async () => withSharedTicketMutationFixture(async ({ customer, resource, mutate }) => {
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const priority = await customer.table('priorities').where('item_type', 'ticket').whereNot('priority_id', ticket.priority_id).first();
+  const templateId = randomUUID();
+  await customer.table('checklist_templates').insert({ tenant: resource.tenant, template_id: templateId, name: 'Joint verification' });
+  await customer.table('checklist_template_items').insert({ tenant: resource.tenant, template_id: templateId, item_name: 'Verify recovery', order_number: 0, is_required: true });
+  await customer.table('checklist_template_apply_rules').insert({ tenant: resource.tenant, template_id: templateId, priority_id: priority.priority_id });
+  await mutate({ priority_id: priority.priority_id });
+  const reference = await customer.table('collaboration_actor_references').first();
+  expect(await customer.table('ticket_checklist_items').where('ticket_id', resource.id))
+    .toEqual([expect.objectContaining({ template_id: templateId, created_by: null, completed_by: null })]);
+  const audit = await customer.table('ticket_audit_logs').where('ticket_id', resource.id);
+  expect(audit).toHaveLength(2);
+  expect(audit.map(row => row.event_type)).toContain('TICKET_CHECKLIST_TEMPLATE_APPLIED');
+  expect(audit.every(row => row.actor_reference_id === reference.actor_reference_id && row.actor_user_id === null)).toBe(true);
+}));
+
+it('rejects unsupported foreign routing and bundle propagation without modifying sibling tickets', async () => withSharedTicketMutationFixture(async ({
+  customer, resource, user, closedStatusId, mutate, workflow, live,
+}) => {
+  const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
+  for (const patch of [{ assigned_to: user.user_id }, { board_id: baseline.board_id }, { updated_by: user.user_id }, { closed_by: user.user_id }]) {
+    await expect(mutate(patch)).rejects.toThrow('Unsupported shared ticket edit fields');
+  }
+  const childId = randomUUID();
+  const { title_index: _generatedTitleIndex, ...storedBaseline } = baseline;
+  await customer.table('tickets').insert({ ...storedBaseline, ticket_id: childId, ticket_number: 'UNSHARED-CHILD', master_ticket_id: resource.id });
+  await customer.table('ticket_bundle_settings').insert({ tenant: resource.tenant, master_ticket_id: resource.id, mode: 'sync_updates' });
+  await expect(mutate({ status_id: closedStatusId })).rejects.toThrow('authority for every child ticket');
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(baseline);
+  expect(await customer.table('tickets').where('ticket_id', childId).first()).toMatchObject({ status_id: baseline.status_id, closed_at: null });
+  expect(await customer.table('ticket_audit_logs')).toEqual([]);
+  expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+  await mutate({ title: 'Only the admitted master title' });
+  expect(await customer.table('tickets').where('ticket_id', childId).first()).toMatchObject({ title: baseline.title });
+}));
+
+it('does not let an actor reference substitute another source user or a missing collaboration context', async () => withSharedTicketMutationFixture(async ({
+  customer, resource, user, actor, principal, workflow, live,
+}) => {
+  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  const { assertCoManagedSessionUnexpired } = await import('../../../../packages/co-managed/src/sharedWorkIdentity');
+  await expect(withCoManagedSharedWork(db, principal, resource, 'update', context =>
+    updateTicketInTransaction(context.trx, user, resource.tenant, resource.id, { title: 'Invalid local attribution' })))
+    .rejects.toThrow('requires a collaboration context');
+  await expect(withCoManagedSharedWork(db, principal, resource, 'update', async context => {
+    const actorReferenceId = await ensureCoManagedActorReference(context);
+    await updateTicketInTransaction(context.trx, { ...user, user_id: actor.userId }, resource.tenant, resource.id, { title: 'Invalid source attribution' }, undefined,
+      { actorReferenceId, assertWriteAuthority: trx => assertCoManagedSessionUnexpired(trx, principal) });
+  })).rejects.toThrow('Collaboration actor reference not found');
+  expect(await customer.table('collaboration_actor_references')).toEqual([]);
+  expect(await customer.table('ticket_audit_logs')).toEqual([]);
+  expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+}));
+
+it('rechecks the MSP session deadline after waiting for the actor-reference lock before a canonical mutation', async () => withSharedTicketMutationFixture(async ({
+  customer, sponsor, principal, resource, mutate, workflow, live,
+}) => {
+  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const referenceId = await withCoManagedSharedWork(db, principal, resource, 'update', ensureCoManagedActorReference);
+  const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const blocker = await db.transaction();
+  let markWaiting!: () => void;
+  const waiting = new Promise<void>(resolve => { markWaiting = resolve; });
+  const onQuery = (query: any) => {
+    if (query.sql?.includes('insert into "collaboration_actor_references"') && query.bindings?.includes(principal.userId)) markWaiting();
+  };
+  try {
+    await tenantDb(blocker, resource.tenant).table('collaboration_actor_references').where('actor_reference_id', referenceId).forUpdate().first();
+    await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+    db.on('query', onQuery);
+    const attempt = mutate({ title: 'Must not save after session expiry' }).then(() => null, error => error);
+    await Promise.race([waiting, attempt.then(result => { throw new Error(`Mutation did not wait for reference lock: ${result?.message}`); })]);
+    await db.raw('select pg_sleep(1.1)');
+    await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(baseline);
+    expect(await customer.table('ticket_audit_logs')).toEqual([]);
+    expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));

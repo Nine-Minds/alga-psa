@@ -1,7 +1,10 @@
+import { collaborationActorPayloadIssue, type CollaborationActorReference } from './collaborationActorSchemas';
+
 export type WorkflowActor =
   | { actorType: 'USER'; actorUserId: string }
   | { actorType: 'CONTACT'; actorContactId: string }
-  | { actorType: 'SYSTEM' };
+  | { actorType: 'SYSTEM' }
+  | { actorType: 'COLLABORATOR'; actorReference: CollaborationActorReference };
 
 export type WorkflowEventPublishContext = {
   tenantId: string;
@@ -23,7 +26,8 @@ export function buildWorkflowPayload<TPayload extends Record<string, unknown>>(
 ): TPayload & {
   tenantId: string;
   occurredAt: string;
-  actorType?: 'USER' | 'CONTACT' | 'SYSTEM';
+  actorType?: 'USER' | 'CONTACT' | 'SYSTEM' | 'COLLABORATOR';
+  actorReference?: CollaborationActorReference;
   actorUserId?: string;
   actorContactId?: string;
   idempotencyKey?: string;
@@ -37,15 +41,21 @@ export function buildWorkflowPayload<TPayload extends Record<string, unknown>>(
   } else if (ctx.actor?.actorType === 'CONTACT') {
     actorFields.actorType = 'CONTACT';
     actorFields.actorContactId = ctx.actor.actorContactId;
+  } else if (ctx.actor?.actorType === 'COLLABORATOR') {
+    actorFields.actorType = 'COLLABORATOR';
+    actorFields.actorReference = { ...ctx.actor.actorReference };
   } else if (ctx.actor?.actorType === 'SYSTEM') {
     actorFields.actorType = 'SYSTEM';
   }
 
-  return {
+  const result = {
     ...payload,
     ...actorFields,
     tenantId: ctx.tenantId,
     occurredAt,
     ...(ctx.idempotencyKey ? { idempotencyKey: ctx.idempotencyKey } : {}),
   };
+  const issue = collaborationActorPayloadIssue(result);
+  if (issue) throw new Error(issue);
+  return result;
 }

@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { collaborationActorPayloadIssue, collaborationActorReferenceSchema } from './collaborationActorSchemas';
+import { actorTypeSchema } from './domain/commonEventPayloadSchemas';
 import {
   emailProviderConnectedEventPayloadSchema,
   emailProviderDisconnectedEventPayloadSchema,
@@ -531,6 +533,8 @@ export type EventType = z.infer<typeof EventTypeEnum>;
 
 // Base payload schema with tenant information
 export const BasePayloadSchema = z.object({
+  actorType: actorTypeSchema.optional(),
+  actorReference: collaborationActorReferenceSchema.optional(),
   tenantId: z.string().uuid(),
 });
 
@@ -1527,10 +1531,13 @@ if (missingPayloadSchemas.length > 0) {
 export const EventSchemas = Object.entries(EventPayloadSchemas).reduce(
   (schemas, [eventType, payloadSchema]) => ({
     ...schemas,
-    [eventType]: BaseEventSchema.extend({
+    [eventType]: BaseEventSchema.superRefine((event, context) => {
+      const issue = collaborationActorPayloadIssue(event.payload);
+      if (issue) context.addIssue({ code: z.ZodIssueCode.custom, path: ['payload', 'actorReference'], message: issue });
+    }).pipe(BaseEventSchema.extend({
       eventType: z.literal(eventType as EventType),
       payload: payloadSchema,
-    }),
+    })),
   }),
   {} as Record<EventType, z.ZodType>
 );

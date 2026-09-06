@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { HocuspocusProvider } from '@hocuspocus/provider';
 import type * as Y from 'yjs';
 import { createYjsProvider } from '@alga-psa/ui/editor';
+import { parseTicketLiveUpdateActor, type TicketLiveUpdateActor } from '../lib/ticketLiveUpdateActor';
 
 export type TicketLiveConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'unavailable';
 
@@ -17,10 +18,7 @@ export interface TicketLivePresenceUser {
 
 export interface TicketLiveRemoteUpdate {
   updatedFields: string[];
-  updatedBy: {
-    userId: string;
-    displayName: string;
-  };
+  updatedBy: TicketLiveUpdateActor;
   updatedAt: string;
 }
 
@@ -109,20 +107,18 @@ async function fetchLiveToken(ticketId: string): Promise<LiveTokenData> {
   };
 }
 
-function parseRemoteUpdate(payload: string): TicketLiveRemoteUpdate | null {
+function parseRemoteUpdate(payload: string, ownerTenantId?: string): TicketLiveRemoteUpdate | null {
   try {
     const parsed = JSON.parse(payload) as Partial<TicketLiveRemoteUpdate>;
 
-    if (!Array.isArray(parsed.updatedFields) || !parsed.updatedBy?.userId || !parsed.updatedBy.displayName || !parsed.updatedAt) {
+    const updatedBy = parseTicketLiveUpdateActor(parsed.updatedBy, ownerTenantId);
+    if (!Array.isArray(parsed.updatedFields) || !updatedBy || typeof parsed.updatedAt !== 'string' || !parsed.updatedAt) {
       return null;
     }
 
     return {
       updatedFields: parsed.updatedFields.filter((field): field is string => typeof field === 'string'),
-      updatedBy: {
-        userId: parsed.updatedBy.userId,
-        displayName: parsed.updatedBy.displayName,
-      },
+      updatedBy,
       updatedAt: parsed.updatedAt,
     };
   } catch (error) {
@@ -298,7 +294,7 @@ export function useTicketLive({
       };
 
       const handleStateless = ({ payload }: { payload: string }) => {
-        const update = parseRemoteUpdate(payload);
+        const update = parseRemoteUpdate(payload, tenantId);
         if (update) {
           onRemoteUpdate?.(update);
         }
@@ -373,6 +369,7 @@ export function useTicketLive({
     onRemoteUpdate,
     roomName,
     scheduleTokenRefresh,
+    tenantId,
     ticketId,
   ]);
 

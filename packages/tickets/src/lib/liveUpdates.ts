@@ -1,7 +1,5 @@
-export interface TicketLiveUpdateActor {
-  userId: string;
-  displayName: string;
-}
+import { parseTicketLiveUpdateActor, type TicketLiveUpdateActor } from './ticketLiveUpdateActor';
+export type { TicketLiveUpdateActor } from './ticketLiveUpdateActor';
 
 export interface PublishTicketUpdateParams {
   tenantId: string;
@@ -121,13 +119,16 @@ export async function publishTicketUpdate(params: PublishTicketUpdateParams): Pr
     return;
   }
 
+  const updatedBy = parseTicketLiveUpdateActor(params.updatedBy, params.tenantId);
+  if (!updatedBy) throw new Error('Invalid ticket live update actor');
+
   try {
     const client = await getTicketUpdatePublisherClient();
     await client.publish(
       getTicketUpdateChannel(params.tenantId, params.ticketId),
       JSON.stringify({
         updatedFields: params.updatedFields,
-        updatedBy: params.updatedBy,
+        updatedBy,
         updatedAt: params.updatedAt,
       })
     );
