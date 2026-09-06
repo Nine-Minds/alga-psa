@@ -432,6 +432,28 @@ HTTP authorization and tenant isolation. Browser authentication and database
 routing are fixture seams; this suite does not prove browser UI behavior,
 Redis fanout or the built collaboration container.
 
+### RMM schedules with Temporal
+
+`server/src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts` runs both
+PgBoss and Temporal coverage in the normal integration lane. The Temporal
+fixture uses the installed `@temporalio/testing` SDK to launch its own local
+server on an available port, with CLI release `v1.5.1` pinned. The SDK downloads
+and caches that executable; a download or startup failure fails the suite.
+No developer broker or `TEMPORAL_HOST` setting is required.
+
+With the same isolated database configuration, run from `server/`:
+
+```bash
+CI=true REQUIRE_DB=1 REAL_REDIS=1 npx vitest run --config vitest.config.ts \
+  src/test/integration/rmm/rmmDeviceSyncSchedule.db.test.ts
+```
+
+The Temporal cases verify schedule payload, reconciliation without duplicate
+schedules, and cancellation when sync is disabled. They do not run a Temporal
+worker or contact an RMM provider. PgBoss delivery and forwarded handler
+dispatch have separate cases in the same suite. Fixture teardown closes the
+runner connection and the owned Temporal server.
+
 ### Runner backend smoke tests
 
 ```bash
