@@ -321,6 +321,52 @@
         "This verifies the represented per-service hourly/bucket overlay. It does not establish every shared-pool, weighted-burn or cadence combination.",
         "New candidate CI verification remains pending."
       ]
+    },
+    {
+      "id": "credit-application-ignores-cash-payments",
+      "classification": "discovered-by-real-database-state-model",
+      "incident": null,
+      "journey": "Apply available credit to a partially paid invoice",
+      "missingBoundary": "Credit eligibility and persisted cash payment ledger reconciliation",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/tests/financialStateModel.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests"
+      },
+      "evidence": "financial-state-model.json",
+      "before": {
+        "status": "assertion-failed",
+        "assertion": "A 10000-cent invoice with 6000 cents paid accepted 10000 cents of credit instead of 4000."
+      },
+      "after": {
+        "status": "local-full-lanes-passed",
+        "workspaceDatabase": {
+          "files": 59,
+          "assertions": 425,
+          "skips": 0
+        },
+        "creditInfrastructure": {
+          "files": 17,
+          "assertions": 78,
+          "skips": 0
+        },
+        "assertion": "Credit is capped at unpaid balance under the invoice lock; generated sequences, saved replay, policy/lifecycle cases and concurrent cash/credit checks pass."
+      },
+      "reproduction": {
+        "cwd": "server",
+        "command": "../node_modules/.bin/vitest run --config vitest.workspace-db.config.ts ../packages/billing/tests/financialStateModel.db.test.ts",
+        "defect": "Run the permanent test against the pre-fix credit cap; preserve real migrated database and payment ledger."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "USD manual invoices with unrestricted eligible charges and direct credit grants; this pilot does not exhaust every billing policy or currency.",
+        "Each model example rolls back a real transaction. The separate concurrency suites exercise competing committed connections.",
+        "Authentication, external event delivery and remote notifications are fixture seams.",
+        "No production incident identifier supplied. Native candidate execution remains required."
+      ]
     }
   ]
 }

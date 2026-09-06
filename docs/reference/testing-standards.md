@@ -921,3 +921,23 @@ runners retain their existing process configuration. The real-Vitest check in
 `scripts/tests/vitest-worker-isolation.test.mjs` verifies the override with worker
 PIDs. Inspect `module-queued` without `module-started` in the progress journal as
 an import/setup stall, not a completed test or an assertion timeout.
+
+### Financial state-model regression
+
+`packages/billing/tests/financialStateModel.db.test.ts` runs in the workspace database lane. It creates two isolated tenants per example and drives real finalization, credit grants/application, payment ingestion through the mapping ledger, payment replay/reversal, and voiding. Expected cash and credit balances are calculated independently of production balance helpers. Both tenants are checked after every operation, including rejected requests.
+
+The default property seed is `20260906`, with 100 generated sequences of up to 25 operations. Fast-check reports the seed and shrinking path on failure; the runner JSON preserves that failure output. Retain useful minimized examples under `packages/billing/tests/fixtures`, then execute them as permanent deterministic cases. The saved payment-credit counterexample proves that prior cash must reduce the credit cap.
+
+Run the complete mandatory lane from the repository root with the isolated test database environment configured:
+
+```sh
+node scripts/run-workspace-db-tests.mjs
+```
+
+For a focused local replay, from `server` with the same database environment:
+
+```sh
+FINANCIAL_MODEL_SEED=20260906 FINANCIAL_MODEL_PATH='0:0:2:0:2:3:8:7:7:7:7:7:7:9:7:8:8:8:5:5:5' ../node_modules/.bin/vitest run --config vitest.workspace-db.config.ts ../packages/billing/tests/financialStateModel.db.test.ts -t 'generated two-tenant'
+```
+
+The workspace configuration bootstraps a disposable database: use only the owned test database, and serialize local DB suites. The model preserves real transactions but wraps each example in a rollback transaction; it does not prove concurrent commit behavior. The separate `creditDrawdownConcurrentApply` and `invoiceCreditReversalConcurrency` infrastructure suites exercise real competing connections. Authentication and external event/provider delivery are explicit seams covered by their respective browser/service suites.
