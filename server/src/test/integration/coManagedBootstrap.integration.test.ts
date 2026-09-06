@@ -16,6 +16,11 @@ import { deliverCoManagedAdministratorInvitation } from '../../../../ee/temporal
 import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenant-operations';
 
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
+const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn() }));
+vi.mock('../../../../shared/services/email/inboundEmailSourceStager', () => ({
+  readStagedSourceMime: intake.read, parseStagedMimeIntoEmailDetails: intake.parse,
+}));
+vi.mock('../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
 vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send }));
 vi.mock('@alga-psa/analytics', () => ({ ServerAnalyticsTracker: class {
   async trackTicketCreated() {}
@@ -609,5 +614,121 @@ describe('ticket API lifecycle admission against PostgreSQL', () => {
     expect(await response.json()).toMatchObject({ error: { code: 'CO_MANAGED_READ_ONLY' } });
     expect((await customer.table('tickets').where('ticket_id', ticket.ticket_id).first()).title).toBe('Edited during grace');
     expect(await service.getTicketAgents(ticket.ticket_id, context)).toMatchObject({ ticket_id: ticket.ticket_id });
+  });
+});
+
+async function stagedCoManagedInbox(tenant: string) {
+  const { upsertInbox, upsertIngress } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const provider = randomUUID(), identity = randomUUID();
+  await tenantDb(db, tenant).table('email_providers').insert({ tenant, id: provider, provider_type: 'google',
+    provider_name: 'Customer Mail', mailbox: 'helpdesk@example.test', is_active: true, status: 'connected' });
+  const ingress = await upsertIngress(db, { tenant, provider_id: provider, provider_type: 'google',
+    ingress_key: identity, provider_pointer: { messageId: identity } });
+  return upsertInbox(db, { tenant, ingress_id: ingress.ingress_id, provider_id: provider, provider_type: 'google',
+    normalized_message_id: identity, provider_message_id: identity, rfc_message_id: `<${identity}@example.test>`,
+    source_object_key: `test/${identity}.eml`, source_sha256: 'a'.repeat(64), source_size_bytes: 40,
+    source_staged_at: new Date(), envelope: { subject: 'Retained customer request' } });
+}
+
+async function runCoManagedInbox(tenantId: string, inboxId: string) {
+  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+  return processInboundInbox({ tenantId, inboxId, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce' });
+}
+
+describe('durable co-managed email intake pauses', () => {
+  it('retains pending and expired-workspace mail without source fetches, processing attempts, or terminal acknowledgements', async () => {
+    const { operation, actor, customer, input } = await readyForAcceptance();
+    const inbox = await stagedCoManagedInbox(actor.tenant);
+    intake.read.mockReset(); intake.process.mockReset();
+    for (let i = 0; i < 7; i++) {
+      expect(await runCoManagedInbox(actor.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'defer', reason: 'co_managed_pending_acceptance' });
+    }
+    let row = await customer.table('inbound_email_inbox').first();
+    expect(row).toMatchObject({ status: 'received', attempt_count: 0, source_object_key: inbox.source_object_key,
+      source_sha256: inbox.source_sha256, completed_at: null, error_details: { co_managed_lifecycle: { state: 'pending_acceptance' } } });
+    const { findDueInbox, claimInbox } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    expect(await findDueInbox(db, { tenant: actor.tenant })).toHaveLength(0);
+    expect(await claimInbox(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, owner: 'not-due', leaseTtlMs: 30_000 }))
+      .toEqual({ claimed: false, reason: 'not_due' });
+    await acceptCoManagedRelationship(db, actor, input);
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    expect(await runCoManagedInbox(actor.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'defer', reason: 'co_managed_read_only' });
+    row = await customer.table('inbound_email_inbox').first();
+    expect(row).toMatchObject({ status: 'received', attempt_count: 0, completed_at: null });
+    expect(intake.read).not.toHaveBeenCalled(); expect(intake.process).not.toHaveBeenCalled();
+    expect(await customer.table('inbound_email_effects')).toHaveLength(0);
+  });
+
+  it('refunds the claim when grace expires during source fetch and resumes the same inbox exactly once after renewal', async () => {
+    const { operation, actor, customer, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const inbox = await stagedCoManagedInbox(actor.tenant), sponsor = tenantDb(db, operation.tenant);
+    intake.process.mockReset(); intake.parse.mockReset(); intake.read.mockReset();
+    intake.read.mockImplementationOnce(async () => {
+      await sponsor.table('co_managed_entitlements').update({ valid_until: new Date(0) });
+      return Buffer.from('retained source');
+    });
+    intake.parse.mockResolvedValue({ emailData: { id: inbox.provider_message_id, tenant: actor.tenant,
+      subject: 'Retained request', body: { text: 'Please help' }, attachments: [] } });
+    expect(await runCoManagedInbox(actor.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'defer', reason: 'co_managed_read_only' });
+    expect(await customer.table('inbound_email_inbox').first()).toMatchObject({ status: 'received', attempt_count: 0,
+      lease_owner: null, lease_token: null, completed_at: null });
+    expect(intake.process).not.toHaveBeenCalled();
+    const entitlement = await sponsor.table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    // Advance only this disposable record's scheduled wakeup, without sleeping.
+    await customer.table('inbound_email_inbox').update({ next_attempt_at: new Date(0) });
+    intake.read.mockResolvedValue(Buffer.from('same retained source'));
+    let ticketId: string, commentId: string;
+    // Substitute only sender/routing policy. Canonical ticket/comment writes,
+    // transactional outbox, effects, and terminal inbox state all remain real.
+    intake.process.mockImplementationOnce(async (_input, options) => {
+      const trx = options.durableExecution.trx;
+      const { TicketModel } = await import('../../../../shared/models/ticketModel');
+      const scoped = tenantDb(trx, actor.tenant);
+      const status = await scoped.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+      const priority = await scoped.table('priorities').where({ item_type: 'ticket' }).first();
+      const ticket = await TicketModel.createTicket({ title: 'Retained request', description: 'Please help', source: 'email',
+        client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id,
+        priority_id: priority.priority_id, entered_by: actor.userId }, actor.tenant, trx, {},
+        options.durableExecution.eventPublishers.ticket, undefined, actor.userId);
+      const comment = await TicketModel.createComment({ ticket_id: ticket.ticket_id, content: 'Please help',
+        author_type: 'internal', author_id: actor.userId }, actor.tenant, trx,
+        options.durableExecution.eventPublishers.comment, undefined, actor.userId);
+      ticketId = ticket.ticket_id; commentId = comment.comment_id;
+      return { outcome: 'created', ticketId, commentId };
+    });
+    const processed = await runCoManagedInbox(actor.tenant, inbox.inbox_id);
+    expect(processed).toMatchObject({ disposition: 'ack', outcome: 'created', ticketId: ticketId!, commentId: commentId! });
+    expect(await customer.table('inbound_email_inbox').first()).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+    expect(await customer.table('inbound_email_effects')).toHaveLength(2);
+    expect(await customer.table('tickets')).toEqual([expect.objectContaining({ ticket_id: ticketId!, title: 'Retained request' })]);
+    expect(await customer.table('comments')).toEqual([expect.objectContaining({ comment_id: commentId!, ticket_id: ticketId! })]);
+    const outbox = await customer.table('inbound_email_outbox');
+    expect(outbox.length).toBeGreaterThan(0);
+    // Another lapse cannot make a completed message execute again.
+    await sponsor.table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    expect(await runCoManagedInbox(actor.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'ack', reason: 'terminal_replay' });
+    expect(intake.process).toHaveBeenCalledTimes(1);
+    expect(await customer.table('tickets')).toHaveLength(1);
+    expect(await customer.table('comments')).toHaveLength(1);
+    expect(await customer.table('inbound_email_outbox')).toHaveLength(outbox.length);
+  });
+
+  it('does not release another worker lease or refund a reclaimed attempt, and preserves prior error provenance', async () => {
+    const { actor, customer } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
+    const { claimInbox, reclaimInbox, deferInboxForCoManagedLifecycle } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    const initial = await claimInbox(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, owner: 'first', leaseTtlMs: 30000 });
+    if (!initial.claimed) throw new Error('Expected first claim');
+    await customer.table('inbound_email_inbox').update({ lease_expires_at: new Date(0), last_error: 'earlier source failure', error_details: { diagnostic: 'preserve' } });
+    const reclaimed = await reclaimInbox(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, owner: 'second', leaseTtlMs: 30000 });
+    if (!reclaimed.claimed) throw new Error('Expected reclaim');
+    const pause = { tenant: actor.tenant, inboxId: inbox.inbox_id, state: 'pending_acceptance' as const, until: new Date(Date.now() + 60000) };
+    expect(await deferInboxForCoManagedLifecycle(db, { ...pause, claim: { owner: 'first', token: initial.row.lease_token!,
+      version: initial.row.lease_version, refundAttempt: true } })).toBe(false);
+    expect(await deferInboxForCoManagedLifecycle(db, { ...pause, claim: { owner: 'second', token: reclaimed.row.lease_token!,
+      version: reclaimed.row.lease_version, refundAttempt: false } })).toBe(true);
+    expect(await customer.table('inbound_email_inbox').first()).toMatchObject({ status: 'received', attempt_count: 1,
+      last_error: 'earlier source failure', error_details: { diagnostic: 'preserve', co_managed_lifecycle: { state: 'pending_acceptance' } } });
   });
 });

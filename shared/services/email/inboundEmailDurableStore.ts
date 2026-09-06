@@ -601,6 +601,7 @@ export async function claimInbox(db: DurableDb, params: {
   const now = new Date();
   const patch = {
     status: 'processing',
+    error_details: db.raw("error_details - 'co_managed_lifecycle'"),
     attempt_count: db.raw('attempt_count + 1'),
     lease_owner: lease.lease_owner,
     lease_token: lease.lease_token,
@@ -612,6 +613,7 @@ export async function claimInbox(db: DurableDb, params: {
 
   let updated = await tenantDb(db, params.tenant).table('inbound_email_inbox')
     .where({ tenant: params.tenant, inbox_id: params.inbox_id, status: 'received' })
+    .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
     .update(patch)
     .returning('*');
   if (updated.length === 0 && params.allowRetryable) {
@@ -629,6 +631,9 @@ export async function claimInbox(db: DurableDb, params: {
   if (!current) return { claimed: false, reason: 'missing' };
   if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
+  }
+  if (current.status === 'received' && !isDue(current.next_attempt_at, now)) {
+    return { claimed: false, reason: 'not_due' };
   }
   if (current.status === 'retryable_failed') {
     // Over-cap due retryable rows are dead-lettered into a queryable terminal
@@ -762,6 +767,37 @@ export async function releaseInboxClaim(db: DurableDb, params: {
       updated_at: db.fn.now(),
     });
   return updated > 0;
+}
+
+/** Park durable work without terminalizing it or spending a processing attempt.
+ * Unclaimed work keeps its existing failure provenance and status. A claimed
+ * message can only be released by its exact lease owner; reclaims did not spend
+ * a new attempt and must not refund an earlier worker's attempt. */
+export async function deferInboxForCoManagedLifecycle(db: DurableDb, params: {
+  tenant: string;
+  inboxId: string;
+  state: 'pending_acceptance' | 'terminated' | 'read_only';
+  until: Date;
+  claim?: { owner: string; token: string; version: number; refundAttempt: boolean };
+}): Promise<boolean> {
+  const query = tenantDb(db, params.tenant).table('inbound_email_inbox')
+    .where({ inbox_id: params.inboxId });
+  const patch: Record<string, unknown> = {
+    next_attempt_at: params.until,
+    updated_at: db.fn.now(),
+    error_details: db.raw("COALESCE(error_details, '{}'::jsonb) || ?::jsonb", [JSON.stringify({
+      co_managed_lifecycle: { state: params.state, resumeCheckAt: params.until.toISOString() },
+    })]),
+  };
+  if (params.claim) {
+    query.where({ status: 'processing', lease_owner: params.claim.owner,
+      lease_token: params.claim.token, lease_version: params.claim.version });
+    Object.assign(patch, { status: 'received', lease_owner: null, lease_token: null, lease_expires_at: null });
+    if (params.claim.refundAttempt) patch.attempt_count = db.raw('GREATEST(0, attempt_count - 1)');
+  } else {
+    query.whereIn('status', ['received', 'retryable_failed']);
+  }
+  return await query.update(patch) > 0;
 }
 
 /**
@@ -1778,9 +1814,8 @@ export async function findDueInbox(db: DurableDb, options: DueScanOptions): Prom
   const rows = await tenantDb(db, options.tenant).table('inbound_email_inbox')
     .where({ tenant: options.tenant })
     .andWhere(function (this: any) {
-      this.where({ status: 'received' })
-        .orWhere((inner: any) => {
-          inner.where({ status: 'retryable_failed' })
+      this.where((inner: any) => {
+          inner.whereIn('status', ['received', 'retryable_failed'])
             .where(function (due: any) {
               due.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', now.toISOString());
             });

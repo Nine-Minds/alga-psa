@@ -2,8 +2,9 @@
  * Fenced core orchestrator for the durable inbound email pipeline.
  *
  * The worker performs expensive source work (object read, digest verification,
- * MIME parsing) OUTSIDE any Postgres transaction. A single short tenant-colocated
- * transaction then:
+ * MIME parsing) OUTSIDE any Postgres transaction. A short transaction first
+ * admits the tenant's lifecycle (including its sponsor when co-managed), then
+ * performs the customer-colocated operations:
  *
  *   1. locks the inbox row FOR UPDATE and verifies the fencing token/version;
  *   2. re-reads effect rows and returns the stored outcome when already terminal;
@@ -20,12 +21,14 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite, CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import type {
   InboundEmailInboxRecord,
   UnifiedInboundEmailQueueJobV2,
 } from '../../interfaces/inbound-email.interfaces';
 import {
   claimInbox,
+  deferInboxForCoManagedLifecycle,
   getDurableMaxAttempts,
   getInbox,
   getEffectsForInbox,
@@ -69,6 +72,19 @@ export async function processInboundInbox(
   params: ProcessInboundInboxParams
 ): Promise<InboundInboxDisposition> {
   const db = await (await import('@alga-psa/db/admin')).getAdminConnection();
+
+  // A completed message can be acknowledged during a pause; unfinished source
+  // remains durable. Probe before claiming so a long pause never burns attempts.
+  const existing = await getInbox(db, params.tenantId, params.inboxId);
+  if (existing && TERMINAL_STATUSES.has(existing.status)) return storedOutcomeDisposition(existing);
+  if (!existing) return { disposition: 'retry', error: 'inbox_row_unclaimable' };
+  const lifecycle = await getCoManagedOperationalState(db, params.tenantId);
+  if (!lifecycle.canWrite) {
+    const until = new Date(Date.now() + 60_000);
+    await deferInboxForCoManagedLifecycle(db, { tenant: params.tenantId, inboxId: params.inboxId,
+      state: lifecycle.state, until });
+    return { disposition: 'defer', untilIso: until.toISOString(), reason: `co_managed_${lifecycle.state}` };
+  }
 
   // --- Claim / reconcile the Postgres inbox row before any source work. -----
   const claimResult = await claimInbox(db, {
@@ -114,12 +130,12 @@ export async function processInboundInbox(
         return { disposition: 'retry', error: `inbox_reclaim_failed:${reclaim.reason}` };
       }
       inbox = reclaim.row;
-    } else if (current?.status === 'retryable_failed') {
+    } else if (current?.status === 'retryable_failed' || current?.status === 'received') {
       const next = current.next_attempt_at ? new Date(current.next_attempt_at).getTime() : Date.now();
       return {
         disposition: 'defer',
         untilIso: new Date(Math.max(Date.now(), next)).toISOString(),
-        reason: 'retryable_failed_not_due',
+        reason: `${current.status}_not_due`,
       };
     } else {
       // No row / unknown state: never ack success; surface for recovery/DLQ.
@@ -211,6 +227,9 @@ export async function processInboundInbox(
   let commitResult: CoreCommitResult;
   try {
     commitResult = await withAdminTransaction(async (trx: Knex.Transaction) => {
+      // Acquire lifecycle locks before the inbox/operational rows. A license
+      // or relationship change during source fetch cannot slip into this commit.
+      await assertCoManagedOperationalWrite(trx, params.tenantId);
       const locked = await lockInboxForUpdate(trx, {
         tenant: params.tenantId,
         inbox_id: params.inboxId,
@@ -239,6 +258,15 @@ export async function processInboundInbox(
       return { terminalReplay: false as const, ...result };
     });
   } catch (error: any) {
+    if (error instanceof CoManagedLifecycleError && !error.lifecycle.canWrite) {
+      const until = new Date(Date.now() + 60_000);
+      const released = await deferInboxForCoManagedLifecycle(db, {
+        tenant: params.tenantId, inboxId: params.inboxId, state: error.lifecycle.state, until,
+        claim: { owner: params.owner, token: leaseToken, version: leaseVersion, refundAttempt: claimResult.claimed },
+      });
+      return { disposition: 'defer', untilIso: until.toISOString(),
+        reason: released ? `co_managed_${error.lifecycle.state}` : 'lifecycle_pause_ownership_lost' };
+    }
     const message = error?.message || String(error);
     if (message === 'inbox_fence_superseded') {
       // A competing reclaim owns the row now. Stop without ACKing success or
