@@ -365,12 +365,36 @@ POST /control/:emulator/actions/:name        body = params
 POST /control/:emulator/faults/:name/arm     body = params
 POST /control/:emulator/faults/:name/disarm
 GET  /control/:emulator/state/:view
+GET  /control/:emulator/requests
 POST /control/:emulator/seed/:name           body = params
 POST /control/:emulator/reset
 POST /control/clock/advance                  {"duration":"32d"}
 POST /control/scenario                       body = scenario JSON
 POST /control/scenarios/:name/run
 ```
+
+### Request evidence
+
+`GET /control/:emulator/requests` returns `{ ok: true, result: ... }` with
+completed HTTP vendor requests, including injected transport failures. Records
+contain a sequence number assigned on arrival, method, path, start time,
+elapsed milliseconds, HTTP status, and whether the connection aborted. Query
+strings, headers, and bodies are excluded. Use provider state views to verify
+business effects such as created invoices or captured email.
+
+History is in memory, in completion order, and retains the latest 1,000
+completed requests by default (`EmulatorHost.requestHistoryLimit`, 1–10,000).
+`dropped` reports evicted records; `inFlight` reports unfinished requests in
+the current generation. `complete` is false while requests are in flight,
+after truncation, or for non-HTTP protocols such as SMTP (`supported: false`).
+A complete snapshot describes only traffic observed so far: tests must also
+await the expected application outcome and assert the expected requests.
+
+Reset clears history and increments `generation`, alongside resetting provider
+state and faults. Responses from requests started before reset are excluded
+from the new history. Reset does not cancel application jobs or outstanding
+vendor operations; stop or drain those before reusing a provider for another
+scenario. Request history is not restored from persisted provider snapshots.
 
 ### Faults
 

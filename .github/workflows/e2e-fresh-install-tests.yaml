@@ -105,6 +105,19 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
+      - name: Provide memory headroom for production compilation
+        if: matrix.service == 'server' || matrix.service == 'server-ee'
+        run: |
+          # EE's webpack build exceeded runner RAM and was killed by the OS.
+          # Keep the actual production build and its bounded Node heap; provide
+          # backing space for transient native/webpack allocation peaks.
+          free -h
+          sudo fallocate -l 8G /swapfile-alga-production-build
+          sudo chmod 600 /swapfile-alga-production-build
+          sudo mkswap /swapfile-alga-production-build
+          sudo swapon /swapfile-alga-production-build
+          free -h
+
       - name: Build and export ${{ matrix.service }}
         uses: docker/build-push-action@v6
         with:
@@ -406,7 +419,7 @@ jobs:
           if [ -z "$SETUP_CONTAINER_ID" ]; then
             echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
             docker-compose -p alga-e2e-test logs setup
-            echo "status=failure" >> $GITHUB_OUTPUT
+            echo "status=failure" >> "$GITHUB_OUTPUT"
             exit 1
           fi
           echo "Monitoring Setup Container ID: $SETUP_CONTAINER_ID"
@@ -435,12 +448,12 @@ jobs:
               echo "Reported Setup Exit Code: $SETUP_EXIT_CODE"
               if [ "$SETUP_EXIT_CODE" -eq 0 ]; then
                 echo "Setup service completed successfully."
-                echo "status=success" >> $GITHUB_OUTPUT
+                echo "status=success" >> "$GITHUB_OUTPUT"
                 exit 0
               else
                 echo "Setup service failed with exit code $SETUP_EXIT_CODE."
                 docker-compose -p alga-e2e-test logs setup
-                echo "status=failure" >> $GITHUB_OUTPUT
+                echo "status=failure" >> "$GITHUB_OUTPUT"
                 exit 1
               fi
             fi
@@ -461,12 +474,12 @@ jobs:
 
                     if [ "$SETUP_EXIT_CODE_LOG_CHECK" -eq 0 ]; then
                         echo "Setup service completed successfully after log check (Exit Code: $SETUP_EXIT_CODE_LOG_CHECK)."
-                        echo "status=success" >> $GITHUB_OUTPUT
+                        echo "status=success" >> "$GITHUB_OUTPUT"
                         exit 0 # Successful exit from the script
                     else
                         echo "Setup service showed completion log but exited with code $SETUP_EXIT_CODE_LOG_CHECK."
                         docker-compose -p alga-e2e-test logs setup
-                        echo "status=failure" >> $GITHUB_OUTPUT
+                        echo "status=failure" >> "$GITHUB_OUTPUT"
                         exit 1 # Failed exit from the script
                     fi
                 fi
@@ -478,7 +491,7 @@ jobs:
           done
           echo "Timeout: Setup service did not complete within the allocated time."
           docker-compose -p alga-e2e-test logs
-          echo "status=failure" >> $GITHUB_OUTPUT
+          echo "status=failure" >> "$GITHUB_OUTPUT"
           exit 1
         shell: bash
 
@@ -519,7 +532,7 @@ jobs:
           # Fallback if /api/health is not standard, try base URL
           # HEALTH_CHECK_URL="http://localhost:${APP_PORT_VALUE}/"
 
-          until curl --output /dev/null --silent --head --fail $HEALTH_CHECK_URL; do
+          until curl --output /dev/null --silent --head --fail "$HEALTH_CHECK_URL"; do
             if [ $ATTEMPT_NUM -ge $MAX_ATTEMPTS ]; then
               echo "Timeout: Server service did not become healthy at $HEALTH_CHECK_URL within the allocated time."
               echo "=== FINAL SERVER LOGS ==="
@@ -578,12 +591,14 @@ jobs:
           fi
 
           echo "Successfully extracted credentials."
-          echo "e2e_user_email=$USER_EMAIL" >> $GITHUB_OUTPUT
+          echo "e2e_user_email=$USER_EMAIL" >> "$GITHUB_OUTPUT"
           # Use a delimiter to safely pass passwords with special characters
           EOF_DELIM=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          echo "e2e_user_password<<$EOF_DELIM" >> $GITHUB_OUTPUT
-          echo "$USER_PASSWORD" >> $GITHUB_OUTPUT
-          echo "$EOF_DELIM" >> $GITHUB_OUTPUT
+          {
+            echo "e2e_user_password<<$EOF_DELIM"
+            echo "$USER_PASSWORD"
+            echo "$EOF_DELIM"
+          } >> "$GITHUB_OUTPUT"
           # Mask the password in logs
           echo "::add-mask::$USER_PASSWORD"
         shell: bash
@@ -629,7 +644,7 @@ jobs:
         working-directory: ./e2e-tests
         run: |
           PLAYWRIGHT_VERSION=$(npx playwright --version | awk '{print $2}')
-          echo "version=$PLAYWRIGHT_VERSION" >> $GITHUB_OUTPUT
+          echo "version=$PLAYWRIGHT_VERSION" >> "$GITHUB_OUTPUT"
           echo "Playwright version: $PLAYWRIGHT_VERSION"
         shell: bash
 
@@ -745,7 +760,7 @@ jobs:
           echo -e "\n=== DIRECT DOCKER LOGS ==="
           for container in $(docker ps -a --filter "name=alga-e2e-test" --format "{{.Names}}"); do
             echo "--- Direct logs for $container ---"
-            docker logs $container --tail=100 2>/dev/null || echo "Could not get logs for $container"
+            docker logs "$container" --tail=100 2>/dev/null || echo "Could not get logs for $container"
           done
         shell: bash
 

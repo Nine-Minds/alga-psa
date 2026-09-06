@@ -12,12 +12,14 @@ import {
   type SnapshotCapableCore,
 } from './statePersistence';
 import type { EmulatorCore, EmulatorPackage, EmulatorServer, HostEnv } from './types';
+import { VendorRequestHistory } from './requestHistory';
 
 export interface EmulatorInstance {
   pkg: EmulatorPackage;
   core: EmulatorCore;
   controls: EmulatorControls;
   transport: TransportFaultState;
+  requests: VendorRequestHistory;
   /** Actual bound port of the vendor surface (known after start()). */
   port: number;
 }
@@ -36,6 +38,8 @@ export interface HostOptions {
   stateFile?: string;
   /** Capture control calls into a replayable scenario document. */
   recordScenario?: boolean;
+  /** Maximum completed HTTP requests retained per provider; default 1000. */
+  requestHistoryLimit?: number;
   log?: HostEnv['log'];
 }
 
@@ -108,7 +112,8 @@ export class EmulatorHost {
         registerTransportFaults(controls, transport);
       }
       pkg.register(controls, core);
-      this.instances.set(pkg.id, { pkg, core, controls, transport, port: 0 });
+      const requests = new VendorRequestHistory(Boolean(pkg.wire), options.requestHistoryLimit);
+      this.instances.set(pkg.id, { pkg, core, controls, transport, requests, port: 0 });
     }
     for (const scenario of options.scenarios ?? []) {
       if (this.scenarios.has(scenario.name)) {
@@ -200,6 +205,7 @@ export class EmulatorHost {
     await instance.controls.disarmAll();
     instance.transport.clear();
     instance.core.reset();
+    instance.requests.reset();
   }
 
   async start(): Promise<{ controlPort: number; ports: Record<string, number> }> {
@@ -211,6 +217,7 @@ export class EmulatorHost {
       const requestedPort = this.options.ports?.[instance.pkg.id] ?? instance.pkg.defaultPort;
       if (instance.pkg.wire) {
         const app = express();
+        app.use(instance.requests.middleware(this.clock));
         app.use(transportFaultMiddleware(instance.transport, this.env.rng));
         const router = express.Router();
         instance.pkg.wire(router, instance.core, this.env);
