@@ -480,7 +480,6 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
       id: serviceTypeId,
       tenant: tenantId,
       name: 'Workflow Time Service Type',
-      billing_method: 'hourly',
       is_active: true,
       order_number: 1,
     });
@@ -495,8 +494,7 @@ async function createService(db: Knex, tenantId: string): Promise<string> {
     custom_service_type_id: serviceTypeId,
     item_kind: 'service',
     default_rate: 10000,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    unit_of_measure: 'hour',
   });
 
   return serviceId;
