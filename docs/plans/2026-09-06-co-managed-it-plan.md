@@ -327,4 +327,8 @@ These sources informed the separation of visibility, responsibility, licensing, 
 
 ## Completion criteria
 
+### Implementation progress
+
+- 2026-09-06: Added signed, sponsor-bound `co_managed_seats` capacity independent of MSP seats. Corrected signature verification to preserve the existing tenant audience claim, with malformed-claim rejection and cached-expiry checks for capacity. Licensing tests pass (39 tests across four files), as does the licensing package typecheck. Provisioning and capacity allocation are not connected yet.
+
 A licensed Pro MSP on either deployment model can provision customer workspaces within purchased capacity and work across them without tenant switching. Customers remain isolated and administer their own operational capabilities. One customer ticket/project supports both organizations, appropriate private/shared communication, independent responsibility and SLA tracking, and correct MSP billing. Customers can leave with a usable backup or an independent PSA workspace, while each organization retains only its authorized history. The behavioral suite proves these outcomes against real schema and preserves existing PSA/AlgaDesk operation. The `release-v1-6-feature` flag controls UI use only; routes, APIs, and backend behavior remain independent of it.
