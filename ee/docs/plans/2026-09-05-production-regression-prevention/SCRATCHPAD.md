@@ -307,3 +307,66 @@
   images have completed successfully; the CE server image remained live at the
   last readback. Preserve this run to obtain the first complete evidence for the
   latest usage/QBO/Stripe/extended-ticket candidate before pushing the new lanes.
+
+
+### 2026-09-06 — Production browser findings and unit import isolation
+
+- PR head `12c880cccc` production run 34020091589 is terminal failure, so it is now
+  safe to publish the queued workspace-lane commit. All eight candidate images
+  built successfully. Actual browser evidence: CE 12 passed/1 failed; EE 13
+  passed/2 failed, no skipped or flaky cases. CE and EE both failed the usage
+  comments assertion; EE also failed saving a QBO item mapping.
+- The three Stripe scenarios passed on their first attempt in the production EE
+  build: hosted Checkout plus signed webhook/redelivery, decline/cancellation
+  without payment, and creation-failure retry. Extended ticket/portal assignment,
+  resolution and reopen also passed. F032/T026 now have actual browser evidence;
+  F031/T025 concurrency coverage and the other provider journeys remain incomplete.
+- Usage comments were accepted by the form and create/update interfaces but absent
+  from the database schema and action writes; the edit form also did not preload
+  them. Added nullable text migration `20260906123000_add_usage_comments.cjs`,
+  create/update/read typing, comment-aware request replay validation, and controlled
+  Add/Edit form values. Browser regression retains its original persistence
+  assertion and now reopens/edits saved comments after reload before invoice preview.
+- Expanded the real-DB overlapping usage/bucket test: comment creation, identical
+  replay, changed-comment rejection without a duplicate, unrelated quantity edit,
+  explicit comment edit and clear. Before fix: original preview test passed and
+  new regression failed on `undefined` comments. After fix: both passed against
+  fresh migrations. Existing related usage unit/UI suites: 13 assertions passed.
+  Evidence: `/tmp/alga-usage-comments-before.json`,
+  `/tmp/alga-usage-comments-after.json`, `/tmp/alga-usage-unit-after.json`.
+- Verified the exact migration on disposable PostgreSQL and Citus 12.1 schemas,
+  including a preexisting row distributed by tenant before upgrade, nullable
+  legacy readback, comment write/read, rollback and reapplication. Added a durable
+  `.db.test.ts` regression to the workspace DB lane; it also distributes its
+  isolated fixture when Citus is installed. No production database was changed.
+- QBO UI error was `SIM_UNSUPPORTED` for GET `/v3/company/<realm>/item/<id>` while
+  validating a newly selected service mapping. Added the already-modeled Item
+  store to the wire endpoint map. New HTTP regression proves two companies with
+  colliding item IDs return their own item, missing ID yields code 610, and an
+  unsupported entity still fails explicitly. Before fix: 8 passed/1 failed (400
+  instead of 200). After fix: all 9 emulator protocol tests passed. Evidence:
+  `/tmp/alga-qbo-item-before.json`, `/tmp/alga-qbo-item-after.json`.
+- Intuit reference for this protocol boundary:
+  https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/item
+  and the Intuit-owned Postman Accounting API collection's Item-ReadById operation.
+  Live provider parity remains a separate work item; this is a targeted endpoint fix.
+- Full unit job 101450948845 was cancelled by its 60-minute deadline. The durable
+  journal stopped at 08:10:03Z while queuing InvoicePreviewPanel.test.tsx, before
+  module-started/test-ready, after ~20 minutes of successful work. Individual and
+  immediate-predecessor replays both passed; no product defect in that component
+  has been established. Replace shared-process reuse in this CI lane with Vitest's
+  per-file worker recycling, keeping serial execution, all existing filters and
+  coverage, and the existing deadline. A real-runner PID test proves the override
+  creates distinct workers. A 40-file surrounding-scope probe with coverage passed
+  152 assertions in 49.36 seconds. Full-candidate CI must still establish the
+  mitigation's effectiveness and total runtime; do not claim the unit gate fixed
+  from the subset. Diagnostics: `/tmp/alga-unit-12c-artifacts/test-progress.jsonl`,
+  `/tmp/alga-unit-isolation-results.json`, `/tmp/alga-unit-isolation-progress.jsonl`.
+
+- Final pre-publication verification: the permanent migration test passed through
+  the workspace DB launcher on PostgreSQL and directly on local Citus (one
+  assertion scenario each, no skips). QBO's own Vitest 4 package command also
+  passed all nine protocol tests, alongside the server Vitest 3 run. Production
+  browser collection remains 15 EE cases across seven files; these are collection
+  results, not a claim the repaired usage/QBO journeys have executed successfully.
+  `origin/main` remains `a90cd88edc` and an ancestor after a fresh fetch.

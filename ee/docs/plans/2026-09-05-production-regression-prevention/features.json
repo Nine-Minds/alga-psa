@@ -425,7 +425,7 @@
   {
     "id": "F032",
     "description": "Verify invoice payment through simulated Stripe hosted Checkout and signed real webhook processing with persisted balances and duplicate-payment protection.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4E",
     "priority": "P1",
     "prdRefs": [

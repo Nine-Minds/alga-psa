@@ -49,6 +49,20 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   await expect(usageRow).toContainText(usageLine.id.slice(0, 8));
   await expect(usageRow.getByRole('cell', { name: String(quantity), exact: true })).toBeVisible();
 
+  // Reopen the real edit form after reload: saved comments must be visible,
+  // and editing them must preserve the measured quantity and selected line.
+  await page.locator(`#usage-actions-menu-${record.usage_id}`).click();
+  await page.locator(`#edit-usage-${record.usage_id}`).click();
+  const editDialog = page.getByRole('dialog', { name: 'Edit Usage Record', exact: true });
+  await expect(editDialog.locator('#comments-input')).toHaveValue(comment);
+  const editedComment = `${comment} — confirmed`;
+  await editDialog.locator('#comments-input').fill(editedComment);
+  await editDialog.locator('#submit-usage-button').click();
+  await expect(editDialog).toBeHidden();
+  await expect.poll(async () => (await records())[0]?.comments).toBe(editedComment);
+  expect(Number((await records())[0].quantity)).toBe(quantity);
+  expect((await records())[0].contract_line_id).toBe(usageLine.id);
+
   await page.goto('/msp/billing?tab=invoicing&subtab=generate');
   await page.locator('#filter-clients-input').fill(client.name);
   const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${period.start}T00:00:00Z`));

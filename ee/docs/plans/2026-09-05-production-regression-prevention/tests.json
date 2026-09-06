@@ -244,7 +244,7 @@
   {
     "id": "T026",
     "description": "Complete invoice payment via simulated hosted Checkout and signed webhook, then reload and verify balance and vendor session; decline/cancellation leaves balance unpaid and replaying the same webhook cannot apply a second payment.",
-    "implemented": false,
+    "implemented": true,
     "kind": "provider-wire-browser",
     "featureIds": [
       "F032",

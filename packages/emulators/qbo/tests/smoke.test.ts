@@ -385,6 +385,30 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(((await unmodeled.json()) as any).Fault.Error[0].code).toBe('SIM_UNSUPPORTED');
   });
 
+  it('reads catalog items by ID through the vendor endpoint with realm isolation and missing-object faults', async () => {
+    for (const realmId of ['catalog-one', 'catalog-two']) {
+      await controlPost('/control/qbo/seed/realm', { realmId });
+    }
+    const first = (await controlPost('/control/qbo/seed/item', {
+      realmId: 'catalog-one', name: 'Managed Desktop', type: 'Service', unitPrice: 275,
+    })).result;
+    const second = (await controlPost('/control/qbo/seed/item', {
+      realmId: 'catalog-two', name: 'Different service', type: 'Service', unitPrice: 99,
+    })).result;
+    expect(first.Id).toBe(second.Id);
+    for (const [realm, item] of [['catalog-one', first], ['catalog-two', second]] as const) {
+      const response = await fetch(`${base}/v3/company/${realm}/item/${item.Id}`, { headers: authed });
+      expect(response.status).toBe(200);
+      expect(await response.json()).toEqual({ Item: item });
+    }
+    const missing = await fetch(`${base}/v3/company/catalog-one/item/missing`, { headers: authed });
+    expect(missing.status).toBe(400);
+    expect((await missing.json()).Fault.Error[0].code).toBe('610');
+    const unsupported = await fetch(`${base}/v3/company/catalog-one/unmodeled/1`, { headers: authed });
+    expect(unsupported.status).toBe(400);
+    expect((await unsupported.json()).Fault.Error[0].code).toBe('SIM_UNSUPPORTED');
+  });
+
   it('rejects wrong realms and expired tokens (and refresh recovers)', async () => {
     const wrongRealm = await fetch(`${base}/v3/company/other-realm/customer/1`, { headers: authed });
     expect(wrongRealm.status).toBe(403);

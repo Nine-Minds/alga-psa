@@ -590,6 +590,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
                   quantity: record.quantity,
                   usage_date: usageDateToStored(usageDateFromStored(record.usage_date)),
                   contract_line_id: record.contract_line_id,
+                  comments: record.comments ?? '',
                 });
                 setIsAddModalOpen(true);
               }}
@@ -769,6 +770,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
                     quantity: record.quantity,
                     usage_date: usageDateToStored(usageDateFromStored(record.usage_date)),
                     contract_line_id: record.contract_line_id,
+                    comments: record.comments ?? '',
                   });
                   setIsAddModalOpen(true);
                 }}
@@ -865,6 +867,7 @@ const UsageTracking: React.FC<UsageTrackingProps> = ({
               <Input
                 id="comments-input"
                 type="text"
+                value={newUsage.comments ?? ''}
                 onChange={(e) => setNewUsage({ ...newUsage, comments: e.target.value })}
               />
             </div>

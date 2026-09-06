@@ -8,6 +8,7 @@ import type { QboEmulatorCore } from './core';
 
 const ENTITY_PATHS: Record<string, string> = {
   customer: 'Customer',
+  item: 'Item',
   invoice: 'Invoice',
   creditmemo: 'CreditMemo',
   payment: 'Payment',

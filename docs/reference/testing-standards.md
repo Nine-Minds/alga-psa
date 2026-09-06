@@ -792,3 +792,12 @@ These lanes close specific collection gaps. They do not constitute the complete
 repository-wide test inventory: remaining runners and manual exclusions still
 need explicit reconciliation. Likewise a passing job becomes a merge gate only
 when its check is registered in the effective repository rules.
+
+
+The full unit coverage CI command overrides `poolOptions.forks.singleFork=false`
+with `maxWorkers=1`. Files still run serially, but each gets a fresh process. This
+avoids carrying worker state across thousands of files; the ordinary database
+runners retain their existing process configuration. The real-Vitest check in
+`scripts/tests/vitest-worker-isolation.test.mjs` verifies the override with worker
+PIDs. Inspect `module-queued` without `module-started` in the progress journal as
+an import/setup stall, not a completed test or an assertion timeout.
