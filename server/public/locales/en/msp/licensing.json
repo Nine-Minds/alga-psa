@@ -516,6 +516,37 @@
       "back": "Back to co-managed access",
       "description": "Review explicit ticket grants created through escalation. Revoking one does not remove separately approved board access.",
       "empty": "No active individual ticket grants on this page."
+    },
+    "editor": {
+      "title": "Ticket details",
+      "readOnly": "These fields are read-only for your current access.",
+      "loadError": "This shared ticket is no longer available. Reload to check your access.",
+      "save": "Save changes",
+      "reload": "Discard changes and reload",
+      "searchOptions": "Find {{field}}",
+      "optionsError": "Could not load choices. Try again.",
+      "none": "None",
+      "fields": {
+        "title": "Title",
+        "status_id": "Status",
+        "priority_id": "Priority",
+        "due_date": "Due date",
+        "response_state": "Response state",
+        "url": "Reference URL"
+      },
+      "states": {
+        "awaiting_client": "Awaiting requester",
+        "awaiting_internal": "Awaiting IT"
+      },
+      "errors": {
+        "invalid": "Some values are not valid. Check your changes and try again.",
+        "conflict": "This ticket changed. Reload it before saving your changes.",
+        "operationConflict": "This save request was already used for a different edit. Reload the ticket.",
+        "forbidden": "Your access to this ticket changed. Reload to continue.",
+        "readOnly": "This workspace is read-only. Reload to see its current state.",
+        "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload."
+      }
     }
   }
 }

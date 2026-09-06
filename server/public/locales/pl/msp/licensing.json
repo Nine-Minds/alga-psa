@@ -431,6 +431,37 @@
       "back": "Powrót do dostępu współzarządzanego",
       "description": "Sprawdź indywidualne dostępy nadane przez eskalację. Ich cofnięcie nie usuwa osobno zatwierdzonego dostępu do tablicy.",
       "empty": "Brak aktywnych indywidualnych dostępów na tej stronie."
+    },
+    "editor": {
+      "title": "Szczegóły zgłoszenia",
+      "readOnly": "Przy obecnych uprawnieniach te pola są tylko do odczytu.",
+      "loadError": "To udostępnione zgłoszenie nie jest już dostępne. Odśwież, aby sprawdzić dostęp.",
+      "save": "Zapisz zmiany",
+      "reload": "Odrzuć zmiany i odśwież",
+      "searchOptions": "Znajdź: {{field}}",
+      "optionsError": "Nie udało się wczytać opcji. Spróbuj ponownie.",
+      "none": "Brak",
+      "fields": {
+        "title": "Tytuł",
+        "status_id": "Status",
+        "priority_id": "Priorytet",
+        "due_date": "Termin",
+        "response_state": "Stan odpowiedzi",
+        "url": "Adres URL odniesienia"
+      },
+      "states": {
+        "awaiting_client": "Oczekiwanie na zgłaszającego",
+        "awaiting_internal": "Oczekiwanie na IT"
+      },
+      "errors": {
+        "invalid": "Niektóre wartości są nieprawidłowe. Sprawdź zmiany i spróbuj ponownie.",
+        "conflict": "To zgłoszenie zostało zmienione. Odśwież je przed zapisaniem zmian.",
+        "operationConflict": "To żądanie zapisu zostało już użyte do innej zmiany. Odśwież zgłoszenie.",
+        "forbidden": "Twój dostęp do tego zgłoszenia uległ zmianie. Odśwież, aby kontynuować.",
+        "readOnly": "Ten obszar jest tylko do odczytu. Odśwież, aby zobaczyć jego obecny stan.",
+        "closeRules": "Przed zamknięciem zgłoszenie musi spełnić wymagania zamknięcia określone na jego tablicy.",
+        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież."
+      }
     }
   }
 }

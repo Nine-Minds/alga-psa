@@ -427,6 +427,37 @@
       "back": "Terug naar co-managed toegang",
       "description": "Bekijk individuele tickettoegang die door escalatie is verleend. Intrekken verwijdert geen afzonderlijk goedgekeurde bordtoegang.",
       "empty": "Geen actieve individuele tickettoegang op deze pagina."
+    },
+    "editor": {
+      "title": "Ticketgegevens",
+      "readOnly": "Met uw huidige rechten kunt u deze velden alleen lezen.",
+      "loadError": "Dit gedeelde ticket is niet meer beschikbaar. Vernieuw om uw toegang te controleren.",
+      "save": "Wijzigingen opslaan",
+      "reload": "Wijzigingen verwerpen en vernieuwen",
+      "searchOptions": "{{field}} zoeken",
+      "optionsError": "De keuzes konden niet worden geladen. Probeer het opnieuw.",
+      "none": "Geen",
+      "fields": {
+        "title": "Titel",
+        "status_id": "Status",
+        "priority_id": "Prioriteit",
+        "due_date": "Vervaldatum",
+        "response_state": "Reactiestatus",
+        "url": "Referentie-URL"
+      },
+      "states": {
+        "awaiting_client": "Wacht op aanvrager",
+        "awaiting_internal": "Wacht op IT"
+      },
+      "errors": {
+        "invalid": "Sommige waarden zijn ongeldig. Controleer uw wijzigingen en probeer het opnieuw.",
+        "conflict": "Dit ticket is gewijzigd. Vernieuw het voordat u uw wijzigingen opslaat.",
+        "operationConflict": "Dit opslagverzoek is al voor een andere wijziging gebruikt. Vernieuw het ticket.",
+        "forbidden": "Uw toegang tot dit ticket is gewijzigd. Vernieuw om verder te gaan.",
+        "readOnly": "Deze werkruimte is alleen-lezen. Vernieuw om de huidige status te bekijken.",
+        "closeRules": "Het ticket moet voldoen aan de sluitingsvereisten van het bord voordat het kan worden gesloten.",
+        "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw."
+      }
     }
   }
 }

@@ -427,6 +427,37 @@
       "back": "Zurück zum Co-Managed-Zugriff",
       "description": "Prüfen Sie individuelle Ticketfreigaben durch Eskalation. Ein Entzug entfernt keinen separat genehmigten Board-Zugriff.",
       "empty": "Keine aktiven individuellen Ticketfreigaben auf dieser Seite."
+    },
+    "editor": {
+      "title": "Ticketdetails",
+      "readOnly": "Diese Felder können mit Ihren aktuellen Berechtigungen nur gelesen werden.",
+      "loadError": "Dieses geteilte Ticket ist nicht mehr verfügbar. Laden Sie es neu, um Ihren Zugriff zu prüfen.",
+      "save": "Änderungen speichern",
+      "reload": "Änderungen verwerfen und neu laden",
+      "searchOptions": "{{field}} suchen",
+      "optionsError": "Die Auswahl konnte nicht geladen werden. Versuchen Sie es erneut.",
+      "none": "Keine",
+      "fields": {
+        "title": "Titel",
+        "status_id": "Status",
+        "priority_id": "Priorität",
+        "due_date": "Fällig am",
+        "response_state": "Antwortstatus",
+        "url": "Referenz-URL"
+      },
+      "states": {
+        "awaiting_client": "Wartet auf anfragende Person",
+        "awaiting_internal": "Wartet auf IT"
+      },
+      "errors": {
+        "invalid": "Einige Werte sind ungültig. Prüfen Sie Ihre Änderungen und versuchen Sie es erneut.",
+        "conflict": "Dieses Ticket wurde geändert. Laden Sie es vor dem Speichern neu.",
+        "operationConflict": "Diese Speicheranfrage wurde bereits für eine andere Änderung verwendet. Laden Sie das Ticket neu.",
+        "forbidden": "Ihr Zugriff auf dieses Ticket hat sich geändert. Laden Sie es neu.",
+        "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Laden Sie den aktuellen Stand neu.",
+        "closeRules": "Das Ticket muss die Abschlussbedingungen seines Boards erfüllen, bevor es geschlossen werden kann.",
+        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu."
+      }
     }
   }
 }

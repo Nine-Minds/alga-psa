@@ -429,6 +429,37 @@
       "back": "Torna agli accessi cogestiti",
       "description": "Esamina gli accessi individuali concessi tramite inoltro. La revoca non rimuove gli accessi alla bacheca approvati separatamente.",
       "empty": "Nessun accesso individuale attivo in questa pagina."
+    },
+    "editor": {
+      "title": "Dettagli del ticket",
+      "readOnly": "Con le autorizzazioni attuali, questi campi sono di sola lettura.",
+      "loadError": "Questo ticket condiviso non è più disponibile. Ricarica per verificare il tuo accesso.",
+      "save": "Salva modifiche",
+      "reload": "Scarta modifiche e ricarica",
+      "searchOptions": "Cerca {{field}}",
+      "optionsError": "Impossibile caricare le opzioni. Riprova.",
+      "none": "Nessuno",
+      "fields": {
+        "title": "Titolo",
+        "status_id": "Stato",
+        "priority_id": "Priorità",
+        "due_date": "Scadenza",
+        "response_state": "Stato della risposta",
+        "url": "URL di riferimento"
+      },
+      "states": {
+        "awaiting_client": "In attesa del richiedente",
+        "awaiting_internal": "In attesa del reparto IT"
+      },
+      "errors": {
+        "invalid": "Alcuni valori non sono validi. Controlla le modifiche e riprova.",
+        "conflict": "Questo ticket è stato modificato. Ricaricalo prima di salvare le tue modifiche.",
+        "operationConflict": "Questa richiesta di salvataggio è già stata usata per un’altra modifica. Ricarica il ticket.",
+        "forbidden": "Il tuo accesso a questo ticket è cambiato. Ricarica per continuare.",
+        "readOnly": "Questo spazio è di sola lettura. Ricarica per visualizzarne lo stato attuale.",
+        "closeRules": "Il ticket deve soddisfare i requisiti di chiusura della sua bacheca prima di poter essere chiuso.",
+        "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica."
+      }
     }
   }
 }

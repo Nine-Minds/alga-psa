@@ -429,6 +429,37 @@
       "back": "Retour aux accès cogérés",
       "description": "Examinez les accès individuels accordés lors des transferts. Leur révocation ne supprime pas les accès au tableau approuvés séparément.",
       "empty": "Aucun accès individuel actif sur cette page."
+    },
+    "editor": {
+      "title": "Détails du ticket",
+      "readOnly": "Vos droits actuels permettent uniquement de consulter ces champs.",
+      "loadError": "Ce ticket partagé n’est plus disponible. Rechargez pour vérifier votre accès.",
+      "save": "Enregistrer les modifications",
+      "reload": "Abandonner les modifications et recharger",
+      "searchOptions": "Rechercher : {{field}}",
+      "optionsError": "Impossible de charger les choix. Réessayez.",
+      "none": "Aucun",
+      "fields": {
+        "title": "Titre",
+        "status_id": "Statut",
+        "priority_id": "Priorité",
+        "due_date": "Échéance",
+        "response_state": "État de réponse",
+        "url": "URL de référence"
+      },
+      "states": {
+        "awaiting_client": "En attente du demandeur",
+        "awaiting_internal": "En attente du service informatique"
+      },
+      "errors": {
+        "invalid": "Certaines valeurs ne sont pas valides. Vérifiez vos modifications et réessayez.",
+        "conflict": "Ce ticket a été modifié. Rechargez-le avant d’enregistrer vos modifications.",
+        "operationConflict": "Cette demande d’enregistrement a déjà servi à une autre modification. Rechargez le ticket.",
+        "forbidden": "Votre accès à ce ticket a changé. Rechargez pour continuer.",
+        "readOnly": "Cet espace est en lecture seule. Rechargez pour consulter son état actuel.",
+        "closeRules": "Le ticket doit satisfaire aux conditions de clôture de son tableau avant de pouvoir être fermé.",
+        "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez."
+      }
     }
   }
 }

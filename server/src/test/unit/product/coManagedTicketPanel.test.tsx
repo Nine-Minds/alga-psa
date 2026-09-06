@@ -6,6 +6,7 @@ import CoManagedTicketPanel from '../../../components/co-managed/CoManagedTicket
 import CoManagedExplicitTicketGrantsPanel from '../../../components/co-managed/CoManagedExplicitTicketGrantsPanel';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
 const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), history: vi.fn(), grants: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn() }));
+vi.mock('../../../components/co-managed/CoManagedTicketEditor', () => ({ default: () => null }));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));

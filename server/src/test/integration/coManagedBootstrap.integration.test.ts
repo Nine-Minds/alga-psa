@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -3971,4 +3971,232 @@ it('carries foreign due-date and response-state changes to notification events w
   const update = workflow.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_UPDATED')![0] as any;
   expect(update.payload.changes).toEqual({ due_date: { previous: null, new: dueDate }, response_state: { previous: null, new: 'awaiting_internal' } });
   expect(update.ctx.actor.actorReference.ownerTenantId).toBe(resource.tenant);
+}));
+
+async function withSharedTicketEditorFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & {
+  user: any; closedStatusId: string; workflow: ReturnType<typeof vi.spyOn>; live: ReturnType<typeof vi.spyOn>;
+  editing: typeof import('../../../../packages/co-managed/src/ticketEditing');
+  save: (request: import('../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditRequest,
+    resource?: import('../../../../packages/co-managed/src/sharedWork').CoManagedSharedResource, connection?: Knex) => Promise<import('../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditReceipt>;
+}) => Promise<void>) {
+  await withSharedTicketMutationFixture(async fixture => {
+    const editing = await import('../../../../packages/co-managed/src/ticketEditing');
+    const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const save = (request: import('../../../../packages/co-managed/src/ticketEditing').CoManagedTicketEditRequest, resource = fixture.resource, connection = db) =>
+      editing.editCoManagedTicket(connection, fixture.principal, resource, request, async (context, patch) => {
+        await updateTicketInTransaction(context.trx, fixture.user, context.resource.tenant, context.resource.id, patch, undefined, {
+          actorReferenceId: context.actorReferenceId, assertWriteAuthority: context.assertWriteAuthority,
+        });
+      });
+    await work({ ...fixture, editing, save });
+  });
+}
+
+it('edits the canonical shared ticket and returns the same receipt for exact and concurrent retries', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, workflow, live,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  expect(state.editableFields).toEqual(['title', 'url', 'status_id', 'priority_id', 'due_date', 'response_state']);
+  expect(state.values).toMatchObject({ title: expect.any(String), url: null, due_date: null, response_state: null });
+  expect(state.selectedOptions.status_id?.id).toBe(state.values.status_id);
+  const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Edited from the MSP workspace' } };
+  const results = await Promise.all(Array.from({ length: 3 }, () => save(request)));
+  expect(results.every(result => JSON.stringify(result) === JSON.stringify(results[0]))).toBe(true);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ title: request.patch.title, updated_by: null });
+  expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+  expect(await customer.table('ticket_audit_logs')).toHaveLength(1);
+  expect(await customer.table('collaboration_actor_references')).toHaveLength(1);
+  expect(workflow.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_UPDATED')).toHaveLength(1);
+  expect(live).toHaveBeenCalledTimes(1);
+  await expect(save({ ...request, patch: { title: 'Different operation content' } })).rejects.toMatchObject({ code: 'TICKET_EDIT_OPERATION_CONFLICT' });
+  const migration = require('../../../migrations/20260906150000_create_co_management_command_receipts.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained co-management command receipts');
+}));
+
+it('rejects conflicting shared field baselines while preserving independent customer edits and snapshotting request inputs', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'MSP draft' } };
+  await customer.table('tickets').where('ticket_id', resource.id).update({ title: 'Customer changed the title', url: 'https://example.test/customer' });
+  await expect(save(request)).rejects.toMatchObject({ code: 'TICKET_EDIT_CONFLICT' });
+  expect(await customer.table('co_management_command_receipts')).toEqual([]);
+  expect(await customer.table('collaboration_actor_references')).toEqual([]);
+  const fresh = { ...request, expected: { title: 'Customer changed the title' } };
+  const pending = save(fresh);
+  fresh.patch.title = 'Mutated after submission'; fresh.expected.title = 'Forged baseline';
+  await pending;
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first())
+    .toMatchObject({ title: 'MSP draft', url: 'https://example.test/customer' });
+}));
+
+it('admits only one of two conflicting shared edits based on the same field baseline', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, workflow,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const results = await Promise.allSettled(['First draft', 'Second draft'].map(title => save({ operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title } })));
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TICKET_EDIT_CONFLICT' } });
+  expect(await customer.table('ticket_audit_logs')).toHaveLength(1);
+  expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+  expect(workflow.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_UPDATED')).toHaveLength(1);
+}));
+
+it('rolls back the shared edit receipt and canonical effects with its owning transaction', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, workflow, live,
+}) => {
+  const { withTransaction } = await import('@alga-psa/db');
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  await expect(withTransaction(db, async trx => {
+    await save({ operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Cancelled change' } }, resource, trx);
+    expect(await tenantDb(trx, resource.tenant).table('co_management_command_receipts')).toHaveLength(1);
+    expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+    throw new Error('Outer command cancelled');
+  })).rejects.toThrow('Outer command cancelled');
+  expect(await customer.table('co_management_command_receipts')).toEqual([]);
+  expect(await customer.table('ticket_audit_logs')).toEqual([]);
+  expect(await customer.table('collaboration_actor_references')).toEqual([]);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual({ title: state.values.title });
+  expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+}));
+
+it('rejects foreign status/priority choices, incomplete baselines and unsupported edit fields', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, sponsor, actor,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  for (const request of [
+    { operationId: randomUUID(), expected: {}, patch: { title: 'Missing baseline' } },
+    { operationId: randomUUID(), expected: { title: state.values.title, url: null }, patch: { title: 'Extra baseline' } },
+    { operationId: randomUUID(), expected: { assigned_to: actor.userId }, patch: { assigned_to: principal.userId } },
+    { operationId: randomUUID(), expected: { title: state.values.title }, patch: { title: '' } },
+    { operationId: randomUUID(), expected: { due_date: null }, patch: { due_date: 'not-a-date' } },
+    { operationId: randomUUID(), expected: { title: state.values.title }, patch: { title: 'Forged options' }, systemActor: true },
+  ]) await expect(save(request as any)).rejects.toMatchObject({ code: 'INVALID_TICKET_EDIT' });
+  const otherBoard = randomUUID(), otherStatus = randomUUID();
+  await customer.table('boards').insert({ tenant: resource.tenant, board_id: otherBoard, board_name: 'Private board' });
+  const baseStatus = await customer.table('statuses').where('status_id', state.values.status_id).first();
+  await customer.table('statuses').insert({ ...baseStatus, status_id: otherStatus, board_id: otherBoard, name: 'Private status', is_default: false });
+  await expect(save({ operationId: randomUUID(), expected: { status_id: state.values.status_id! }, patch: { status_id: otherStatus } }))
+    .rejects.toMatchObject({ code: 'INVALID_TICKET_EDIT' });
+  const foreignPriority = randomUUID();
+  const basePriority = await customer.table('priorities').where('priority_id', state.values.priority_id).first();
+  await sponsor.table('priorities').insert({ ...basePriority, tenant: principal.tenant, priority_id: foreignPriority, created_by: null });
+  await expect(save({ operationId: randomUUID(), expected: { priority_id: state.values.priority_id! }, patch: { priority_id: foreignPriority } }))
+    .rejects.toMatchObject({ code: 'INVALID_TICKET_EDIT' });
+  expect(await customer.table('co_management_command_receipts')).toEqual([]);
+  expect(await customer.table('ticket_audit_logs')).toEqual([]);
+}));
+
+it('keeps viewer and lapsed editor reads available while denying edits and choice expansion', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, sponsorActor, target, operation,
+}) => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Not allowed' } };
+  await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+  expect(await editing.getCoManagedTicketEditor(db, principal, resource)).toMatchObject({ values: state.values, editableFields: [] });
+  await expect(save(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 5, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+  await expireCoManagedEntitlement(operation.tenant);
+  expect(await editing.getCoManagedTicketEditor(db, principal, resource)).toMatchObject({ values: state.values, editableFields: [] });
+  await expect(save(request)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  await expect(editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'priority_id' })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  expect(await customer.table('co_management_command_receipts')).toEqual([]);
+}));
+
+it('paginates customer-valid ticket choices and treats search wildcards literally', async () => withSharedTicketEditorFixture(async ({
+  editing, principal, resource, customer,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const base = await customer.table('statuses').where('status_id', state.values.status_id).first();
+  await customer.table('statuses').insert(Array.from({ length: 28 }, (_, index) => ({ ...base, status_id: randomUUID(), is_default: false, name: `Choice ${index}`, order_number: 100 + index })));
+  await customer.table('statuses').insert([{ ...base, status_id: randomUUID(), is_default: false, name: 'Literal 100% choice', order_number: 200 },
+    { ...base, status_id: randomUUID(), is_default: false, name: 'Literal 100X choice', order_number: 201 }]);
+  const first = await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id' });
+  expect(first.options).toHaveLength(25); expect(first.nextAfterId).not.toBeNull();
+  const second = await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id', afterId: first.nextAfterId! });
+  const ids = [...first.options, ...second.options].map(option => option.id);
+  expect(new Set(ids).size).toBe(ids.length);
+  expect(ids).toContain(state.values.status_id);
+  expect((await editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id', search: '100%' })).options.map(option => option.name))
+    .toEqual(['Literal 100% choice']);
+}));
+
+it('loads shared ticket panels and editor capability hints concurrently without lock upgrades', async () => withSharedTicketEditorFixture(async ({
+  editing, principal, resource, customerPrincipal,
+}) => {
+  const { getCoManagedTicketScreen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const results = await Promise.all(Array.from({ length: 6 }, (_, index) => index % 3 === 0
+    ? editing.getCoManagedTicketEditor(db, principal, resource) : getCoManagedTicketScreen(db, index % 3 === 1 ? principal : customerPrincipal, resource)));
+  expect(results).toHaveLength(6);
+  expect(results[0]).toMatchObject({ resource, editableFields: expect.arrayContaining(['title', 'status_id']) });
+}));
+
+it('requires both read and update field authority for shared edits and their picklists', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, sponsor, operation,
+}) => {
+  const original = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Editor field restrictions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['title', 'tickets.status_id', 'fields.priority.name'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const hidden = await editing.getCoManagedTicketEditor(db, principal, resource);
+  for (const field of ['title', 'status_id', 'priority_id']) {
+    expect(hidden.values).not.toHaveProperty(field); expect(hidden.editableFields).not.toContain(field);
+  }
+  expect(hidden.selectedOptions).toEqual({});
+  const request = { operationId: randomUUID(), expected: { title: original.values.title! }, patch: { title: 'Blind overwrite' } };
+  await expect(save(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'priority_id' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ action: 'update' });
+  const readOnlyFields = await editing.getCoManagedTicketEditor(db, principal, resource);
+  expect(readOnlyFields.values).toEqual(original.values);
+  expect(readOnlyFields.editableFields).not.toContain('title');
+  expect(readOnlyFields.editableFields).not.toContain('status_id');
+  await expect(save(request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await save({ operationId: randomUUID(), expected: { url: null }, patch: { url: 'https://example.test/allowed' } });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('title', 'url'))
+    .toEqual({ title: original.values.title, url: 'https://example.test/allowed' });
+}));
+
+it('denies stale editor reads, choices and receipt replay after the customer revokes its explicit grant', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, customerPrincipal,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Previously admitted edit' } };
+  await save(request);
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Stop sharing this ticket.' });
+  for (const read of [() => editing.getCoManagedTicketEditor(db, principal, resource),
+    () => editing.searchCoManagedTicketEditOptions(db, principal, resource, { field: 'status_id' }), () => save(request)]) {
+    await expect(read()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual({ title: request.patch.title });
+}));
+
+it('binds edit receipts to the qualified ticket and disables workflow editing for bundle masters', async () => withSharedTicketEditorFixture(async ({
+  editing, save, principal, resource, customer, customerPrincipal,
+}) => {
+  const state = await editing.getCoManagedTicketEditor(db, principal, resource);
+  const request = { operationId: randomUUID(), expected: { title: state.values.title! }, patch: { title: 'Original ticket edit' } };
+  await save(request);
+  const original = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const { title_index: _generated, ...stored } = original;
+  const other = { ...resource, id: randomUUID() };
+  await customer.table('tickets').insert({ ...stored, ticket_id: other.id, ticket_number: 'EDIT-SECOND', title: state.values.title });
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, customerPrincipal, other, { operationId: randomUUID(), expectedRevision: 0, note: 'Share another ticket.' });
+  await expect(save(request, other)).rejects.toMatchObject({ code: 'TICKET_EDIT_OPERATION_CONFLICT' });
+  expect(await customer.table('tickets').where('ticket_id', other.id).first('title')).toEqual({ title: state.values.title });
+  await customer.table('ticket_bundle_settings').insert({ tenant: resource.tenant, master_ticket_id: resource.id, mode: 'sync_updates' });
+  const bundled = await editing.getCoManagedTicketEditor(db, principal, resource);
+  expect(bundled.editableFields).toContain('title');
+  expect(bundled.editableFields).not.toContain('status_id'); expect(bundled.editableFields).not.toContain('priority_id');
+  await expect(save({ operationId: randomUUID(), expected: { priority_id: state.values.priority_id! }, patch: { priority_id: null } }))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));

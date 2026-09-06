@@ -429,6 +429,37 @@
       "back": "Voltar ao acesso cogerenciado",
       "description": "Revise os acessos individuais concedidos por escalonamento. Revogá-los não remove o acesso ao quadro aprovado separadamente.",
       "empty": "Nenhum acesso individual ativo nesta página."
+    },
+    "editor": {
+      "title": "Detalhes do chamado",
+      "readOnly": "Com seu acesso atual, estes campos são somente leitura.",
+      "loadError": "Este chamado compartilhado não está mais disponível. Recarregue para verificar seu acesso.",
+      "save": "Salvar alterações",
+      "reload": "Descartar alterações e recarregar",
+      "searchOptions": "Buscar {{field}}",
+      "optionsError": "Não foi possível carregar as opções. Tente novamente.",
+      "none": "Nenhum",
+      "fields": {
+        "title": "Título",
+        "status_id": "Status",
+        "priority_id": "Prioridade",
+        "due_date": "Prazo",
+        "response_state": "Estado da resposta",
+        "url": "URL de referência"
+      },
+      "states": {
+        "awaiting_client": "Aguardando solicitante",
+        "awaiting_internal": "Aguardando TI"
+      },
+      "errors": {
+        "invalid": "Alguns valores são inválidos. Confira as alterações e tente novamente.",
+        "conflict": "Este chamado foi alterado. Recarregue antes de salvar suas alterações.",
+        "operationConflict": "Esta solicitação de salvamento já foi usada para outra alteração. Recarregue o chamado.",
+        "forbidden": "Seu acesso a este chamado mudou. Recarregue para continuar.",
+        "readOnly": "Este espaço está em modo somente leitura. Recarregue para ver o estado atual.",
+        "closeRules": "O chamado deve atender aos requisitos de encerramento do seu quadro antes de ser encerrado.",
+        "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente com a mesma solicitação ou descarte as alterações e recarregue."
+      }
     }
   }
 }

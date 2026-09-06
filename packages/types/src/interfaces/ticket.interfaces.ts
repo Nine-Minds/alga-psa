@@ -52,9 +52,9 @@ export interface ITicket extends TenantEntity, ITaggable {
   entered_at: string | null; // Changed from Date to string
   updated_at: string | null; // Changed from Date to string
   closed_at: string | null;  // Changed from Date to string
-  due_date?: string;         // Optional due date for the ticket
+  due_date?: string | null;         // Optional due date for the ticket
   attributes: Record<string, unknown> | null; // Changed from any to unknown
-  priority_id?: string; // Used for both custom and ITIL priorities (unified system)
+  priority_id?: string | null; // Used for both custom and ITIL priorities (unified system)
   estimated_hours?: number;
   location?: IClientLocation; // For populated location data
   // ITIL-specific fields (for priority calculation)

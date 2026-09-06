@@ -7,3 +7,5 @@ export * from './ticketHandoffs';
 export * from './ticketCollaboration';
 
 export * from './actorReferences';
+
+export * from './ticketEditing';

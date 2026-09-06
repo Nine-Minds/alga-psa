@@ -27,6 +27,17 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
   const actor = snapshotCoManagedSessionActor(inputActor);
   ticketOnly(inputResource);
   return withTransaction(db, async trx => {
+    // Capability probes acquire UPDATE before the summary's SHARE lock. Two
+    // concurrent screen loads must not both attempt a SHARE-to-UPDATE upgrade.
+    let canUpdate = false;
+    try {
+      const allow = async () => true;
+      canUpdate = actor.tenant === inputResource.tenant
+        ? await withCoManagedCustomerTicket(trx, actor, inputResource, 'update', allow)
+        : await withCoManagedSharedWork(trx, actor, inputResource, 'update', allow);
+    } catch (error) {
+      if (!(error instanceof CoManagedLifecycleError) && !(error instanceof CoManagedSharedWorkError)) throw error;
+    }
     const summary = await getCoManagedSharedWorkSummary(trx, actor, inputResource);
     const resource = summary.resource, customer = tenantDb(trx, resource.tenant);
     const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
@@ -35,22 +46,13 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
     const customerName = (await customer.table('tenants').first('client_name')).client_name as string;
     const sponsorName = (await sponsor.table('tenants').first('client_name')).client_name as string;
     const destination = await sponsor.table('boards').where({ board_id: relationship.escalation_board_id, is_inactive: false }).first('board_name');
-    let canWrite = (await getCoManagedOperationalState(trx, resource.tenant)).canWrite;
-    let canUpdate = false;
-    if (canWrite) try {
-      const allow = async () => true;
-      canUpdate = side === 'customer' ? await withCoManagedCustomerTicket(trx, actor, resource, 'update', allow)
-        : await withCoManagedSharedWork(trx, actor, resource, 'update', allow);
-    } catch (error) {
-      if (error instanceof CoManagedLifecycleError) canWrite = false;
-      else if (!(error instanceof CoManagedSharedWorkError)) throw error;
-    }
+    const canWrite = (await getCoManagedOperationalState(trx, resource.tenant)).canWrite;
     const workRevisionVisible = typeof summary.fields.work_revision === 'number';
     const canManage = side === 'customer' && await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true);
     await assertCoManagedSessionUnexpired(trx, actor);
     return { summary, side, customerName, sponsorName, destinationName: ('board' in summary.fields ? destination?.board_name : undefined) as string | undefined, canWrite,
-      canEscalate: side === 'customer' && canUpdate && workRevisionVisible && summary.fields.responsibility === 'customer' && Boolean(destination),
-      canHandBack: canUpdate && workRevisionVisible && summary.fields.responsibility === 'msp',
+      canEscalate: side === 'customer' && canWrite && canUpdate && workRevisionVisible && summary.fields.responsibility === 'customer' && Boolean(destination),
+      canHandBack: canWrite && canUpdate && workRevisionVisible && summary.fields.responsibility === 'msp',
       canRevoke: canManage && workRevisionVisible && summary.fields.explicit_grant_active === true };
   });
 }
