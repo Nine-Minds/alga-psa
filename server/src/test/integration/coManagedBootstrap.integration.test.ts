@@ -83,7 +83,8 @@ beforeAll(async () => {
     '20260906030000_create_co_managed_purchase_operations.cjs', '20260906040000_create_co_managed_provisioning.cjs',
     '20260906050000_allow_system_seeded_priorities.cjs', '20260906060000_create_co_managed_board_scopes.cjs', '20260906070000_add_co_managed_invitation_delivery.cjs',
     '20260906080000_create_co_management_relationship_events.cjs',
-    '20260906100000_add_external_file_metadata.cjs']) {
+    '20260906100000_add_external_file_metadata.cjs',
+    '20260906110000_add_kb_import_batch_identity.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -2499,5 +2500,66 @@ describe('co-managed KB UI mutation lifecycle', () => {
     await actions.deleteArticle(article.article_id);
     for (const table of ['kb_articles', 'documents', 'kb_article_reviewers']) expect(await customer.table(table)).toEqual([]);
     expect(publish).toHaveBeenCalledOnce();
+  }));
+});
+
+describe('co-managed KB import staging', () => {
+  it('admits staging atomically, retains paused source, and only schedules committed batches with stable polling identities', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const dbModule = await import('@alga-psa/db');
+    const core = await import('@alga-psa/core');
+    const enqueue = vi.spyOn(core, 'enqueueImmediateJob');
+    const old = new Date(Date.now() - 40 * 86400000);
+    const oldBatch = randomUUID();
+    const row = (filename: string, status: string, updatedAt = old) => ({ tenant: actor.tenant, import_file_id: randomUUID(),
+      job_id: oldBatch, filename, status, content: status === 'pending' ? 'Retained source' : null, created_at: old, updated_at: updatedAt });
+    await customer.table('kb_import_files').insert([
+      row('paused.md', 'pending'), row('completed.md', 'imported'), row('failed.md', 'failed'), row('just-completed.md', 'imported', new Date()),
+    ]);
+    const upload = { files: [{ filename: 'new.md', content: '# New guide' }] };
+    await expect(actions.startArticleImport(upload)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(await customer.table('kb_import_files')).toHaveLength(4);
+    expect(enqueue).not.toHaveBeenCalled();
+    await acceptCoManagedRelationship(db, actor, input);
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      const result = await actions.startArticleImport(upload) as any;
+      expect(await tenantDb(trx, actor.tenant).table('kb_import_files').where('batch_id', result.jobId)).toHaveLength(1);
+      expect(enqueue).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled staging');
+    })).rejects.toThrow('Caller cancelled staging');
+    expect(await customer.table('kb_import_files')).toHaveLength(4);
+    expect(enqueue).not.toHaveBeenCalled();
+    const jobId = randomUUID();
+    enqueue.mockImplementationOnce(async (_name, data: any) => {
+      const committed = await customer.table('kb_import_files').whereIn('import_file_id', data.fileIds);
+      expect(committed).toHaveLength(1);
+      expect(committed[0]).toMatchObject({ filename: 'new.md', content: '# New guide', batch_id: expect.any(String) });
+      await customer.table('jobs').insert({ tenant: actor.tenant, job_id: jobId, user_id: actor.userId,
+        type: 'kb-article-import', status: 'processing' });
+      return { jobId, scheduledJobId: null };
+    });
+    const started = await actions.startArticleImport(upload) as any;
+    expect(started.jobId).not.toBe(jobId);
+    expect((await customer.table('kb_import_files')).map(r => r.filename).sort()).toEqual(['just-completed.md', 'new.md', 'paused.md']);
+    expect(await customer.table('kb_import_files').where('batch_id', started.jobId).first()).toMatchObject({ job_id: jobId });
+    expect(await actions.getArticleImportStatus(started.jobId)).toMatchObject({ status: 'processing', total: 1, imported: 0 });
+    expect(await actions.getArticleImportStatus(jobId)).toMatchObject({ status: 'processing', total: 1, imported: 0 });
+    await expireCoManagedEntitlement(operation.tenant);
+    enqueue.mockClear();
+    await expect(actions.startArticleImport(upload)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(enqueue).not.toHaveBeenCalled();
+    expect(await customer.table('kb_import_files').where('filename', 'paused.md').first()).toMatchObject({ content: 'Retained source' });
+    expect(await actions.getArticleImportStatus(started.jobId)).toMatchObject({ total: 1 });
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    enqueue.mockRejectedValueOnce(new Error('Scheduling acknowledgement lost'));
+    const uncertain = await actions.startArticleImport(upload) as any;
+    expect(await customer.table('kb_import_files').where('batch_id', uncertain.jobId).first()).toMatchObject({ status: 'pending', content: '# New guide' });
+    expect(await actions.getArticleImportStatus(uncertain.jobId)).toMatchObject({ total: 1, imported: 0, failed: [] });
+    const migration = require('../../../migrations/20260906110000_add_kb_import_batch_identity.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('while tracked imports exist');
   }));
 });

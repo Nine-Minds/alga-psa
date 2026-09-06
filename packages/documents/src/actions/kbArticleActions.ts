@@ -1188,25 +1188,14 @@ export const startArticleImport = withAuth(
       }
     }
 
-    // Swept opportunistically, whatever the row's status. Pending rows the
-    // handler never consumed — a crash between the insert and the enqueue below
-    // — would otherwise keep their file content forever, and settled rows would
-    // pile up one per imported file for the life of the tenant. The job itself
-    // finishes in minutes and nothing polls a batch after that, so a day is far
-    // past the point where any row is still of interest.
-    await tenantScopedTable(knex, 'kb_import_files', tenant)
-      .where('created_at', '<', new Date(Date.now() - KB_IMPORT_STAGING_TTL_MS))
-      .del()
-      .catch(() => {});
-
-    // Rows are written before the job is enqueued so the handler can never win
-    // the race and find nothing to import. The batch id is replaced by the job
-    // record id below, which is what the status action polls on.
+    // The batch identity survives job scheduling/retries, including an enqueue
+    // that starts a worker but loses its acknowledgement.
     const importBatchId = randomUUID();
     const now = new Date();
     const rows = files.map((file) => ({
       tenant,
       import_file_id: randomUUID(),
+      batch_id: importBatchId,
       job_id: importBatchId,
       filename: file.filename,
       content: file.content,
@@ -1218,42 +1207,34 @@ export const startArticleImport = withAuth(
       updated_at: now,
     }));
 
-    await tenantScopedTable(knex, 'kb_import_files', tenant).insert(rows);
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      // Pending source may be waiting through the entire license grace period
+      // and beyond. Only discard settled rows after their retention window.
+      await tenantScopedTable(trx, 'kb_import_files', tenant)
+        .whereIn('status', ['imported', 'failed'])
+        .where('updated_at', '<', new Date(Date.now() - KB_IMPORT_STAGING_TTL_MS))
+        .del();
+      await tenantScopedTable(trx, 'kb_import_files', tenant).insert(rows);
 
-    const fileIds = rows.map((row) => row.import_file_id);
+      registerAfterCommit(trx, async () => {
+        const fileIds = rows.map(row => row.import_file_id);
+        const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
+          tenantId: tenant,
+          userId: user.user_id,
+          fileIds,
+          metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
+        });
+        // Scheduling bookkeeping is allowed after admission expires. The
+        // worker separately admits each article write. Never reuse a completed
+        // caller transaction here or change the stable identity used by polls.
+        const { knex: committedDb } = await createTenantKnex(tenant);
+        await tenantScopedTable(committedDb, 'kb_import_files', tenant)
+          .where({ batch_id: importBatchId })
+          .update({ job_id: jobId, updated_at: new Date() });
+      }, `KB_ARTICLE_IMPORT batch=${importBatchId}`);
 
-    // A failure here leaves the staged rows behind on purpose. On EE the enqueue
-    // can throw after the workflow has already started, and deleting the rows
-    // would pull the file content out from under a handler mid-import; the sweep
-    // above collects them a day later instead.
-    const { jobId } = await enqueueImmediateJob(KB_ARTICLE_IMPORT_JOB, {
-      tenantId: tenant,
-      userId: user.user_id,
-      fileIds,
-      metadata: { user_id: user.user_id, tenantId: tenant, fileCount: fileIds.length },
+      return { jobId: importBatchId, total: rows.length };
     });
-
-    // The rows were written under a batch id because the job record id does not
-    // exist until the job is enqueued. Re-key them so the status action can also
-    // see the job row — but never fail the import over it. The job is already
-    // running, and reporting failure would earn a retry that imports the whole
-    // batch a second time. Polling falls back to the batch id, which the rows
-    // still carry, and which the status action reads the same way.
-    let pollId = jobId;
-    try {
-      await tenantScopedTable(knex, 'kb_import_files', tenant)
-        .where({ job_id: importBatchId })
-        .update({ job_id: jobId, updated_at: new Date() });
-    } catch (error) {
-      pollId = importBatchId;
-      console.warn('[kbArticleImport] Could not re-key staged rows to the job id', {
-        jobId,
-        importBatchId,
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    return { jobId: pollId, total: rows.length };
   }
 );
 
@@ -1276,14 +1257,14 @@ export const getArticleImportStatus = withAuth(
       throw new Error('jobId is required');
     }
 
-    const rows: Array<{ filename: string; status: string; error: string | null }> =
+    const rows: Array<{ filename: string; status: string; error: string | null; job_id: string }> =
       await tenantScopedTable(knex, 'kb_import_files', tenant)
-        .where({ job_id: jobId })
-        .select(['filename', 'status', 'error'])
+        .where(query => query.where({ batch_id: jobId }).orWhere({ job_id: jobId }))
+        .select(['filename', 'status', 'error', 'job_id'])
         .orderBy('created_at', 'asc');
 
     const job = await tenantScopedTable(knex, 'jobs', tenant)
-      .where({ job_id: jobId })
+      .where({ job_id: rows[0]?.job_id || jobId })
       .first('status');
 
     const imported = rows.filter((row) => row.status === 'imported').length;
