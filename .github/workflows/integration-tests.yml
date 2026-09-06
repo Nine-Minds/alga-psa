@@ -400,6 +400,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify discovery against the installed Vitest runner
+        run: node --test scripts/tests/test-discovery.vitest.test.mjs
+
       - name: Build shared libraries
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
         env:

@@ -23,7 +23,7 @@
   {
     "id": "T003",
     "description": "Run workspace DB suites from clean migrated databases; unavailable DB credentials fail clearly rather than skip; repeated execution and any configured parallel isolation do not leak or overwrite another suite data.",
-    "implemented": false,
+    "implemented": true,
     "kind": "harness-behavior",
     "featureIds": [
       "F003"

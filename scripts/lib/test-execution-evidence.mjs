@@ -1,8 +1,20 @@
 import path from 'node:path';
+import { realpathSync } from 'node:fs';
+
+function canonicalPath(file) {
+  try { return realpathSync(file); } catch (error) {
+    if (error.code !== 'ENOENT' && error.code !== 'ENOTDIR') throw error;
+    return path.resolve(file);
+  }
+}
 
 export function normalizeTestFile(file, root) {
   if (typeof file !== 'string' || !file) throw new Error('Missing test file identity');
-  return path.relative(root, path.resolve(root, file)).split(path.sep).join('/');
+  const relative = path.relative(canonicalPath(root), canonicalPath(path.resolve(root, file)));
+  if (!relative || relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`Test identity is outside the repository: ${file}`);
+  }
+  return relative.split(path.sep).join('/');
 }
 
 export function reconcileExecution({ collected, report, root, suite, revision, exitCode, collectedTests }) {

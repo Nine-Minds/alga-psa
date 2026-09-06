@@ -728,6 +728,7 @@ describe('Companies API E2E Tests', () => {
 
 ## Additional Resources
 
+- [Test discovery and execution evidence](./test-execution-evidence.md) - Run and extend the reconciled workspace database lane
 - [Vitest Documentation](https://vitest.dev/)
 - [Testing Library Documentation](https://testing-library.com/)
 - [Contact API E2E Test Plan](../archive/contact-api-e2e-test-plan.md) - Example E2E test implementation

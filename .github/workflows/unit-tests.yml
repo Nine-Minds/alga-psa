@@ -22,7 +22,7 @@ jobs:
           # "node:sqlite is unavailable in this runtime".
           node-version: '22'
       - name: Verify test selection and execution accounting
-        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs
+        run: node --test scripts/tests/integration-selection.test.mjs scripts/tests/test-execution-evidence.test.mjs scripts/tests/test-discovery.test.mjs
       - name: Check skip budget
         run: node scripts/check-skip-budget.mjs
 

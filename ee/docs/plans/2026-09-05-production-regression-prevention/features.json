@@ -26,7 +26,7 @@
   {
     "id": "F003",
     "description": "Run colocated workspace DB suites, including calendarMonthEndCloseActions.db.test.ts, in CI against migrated schema with required DB availability and deterministic isolation.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP1",
     "priority": "P0",
     "prdRefs": [
