@@ -27,7 +27,7 @@ describe('KB article remaining roots tenant-scoped query contract', () => {
     expect(tagsSection).toContain("tenantScopedTable(knex, 'tag_definitions as td', tenant)");
     expect(tagsSection).not.toContain('WHERE td.tenant = ?');
     expect(tagsSection).not.toContain('await knex.raw(');
-    expect(tailSection).toContain("tenantScopedTable(knex, 'kb_articles', tenant)");
+    expect(tailSection).toContain("tenantScopedTable(trx, 'kb_articles', tenant)");
     expect(tailSection).toContain("tenantScopedTable(knex, 'kb_article_templates', tenant)");
     expect(tailSection).toContain("tenantScopedTable(knex, 'tickets', tenant)");
     expect(tailSection).not.toContain('.where({ tenant, article_id: articleId');

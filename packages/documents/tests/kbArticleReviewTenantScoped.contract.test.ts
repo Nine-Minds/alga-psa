@@ -21,9 +21,9 @@ describe('KB article review tenant-scoped query contract', () => {
       '/**\n * Gets available categories',
     );
 
-    expect(reviewSection).toContain("tenantScopedTable(knex, 'kb_articles', tenant)");
-    expect(reviewSection).toContain("tenantScopedTable(knex, 'users', tenant)");
-    expect(reviewSection).toContain("tenantScopedTable(knex, 'kb_article_reviewers', tenant)");
+    expect(reviewSection).toContain("tenantScopedTable(trx, 'kb_articles', tenant)");
+    expect(reviewSection).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(reviewSection).toContain("tenantScopedTable(trx, 'kb_article_reviewers', tenant)");
     expect(reviewSection).not.toContain('.where({ tenant, article_id: articleId');
     expect(reviewSection).not.toContain(".where('tenant', tenant)");
     expect(reviewSection).not.toContain('tenant,\n        article_id: articleId');

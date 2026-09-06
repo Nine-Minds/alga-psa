@@ -1,6 +1,7 @@
 'use server';
 
 import { randomUUID } from 'crypto';
+import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -163,8 +164,10 @@ export const updateArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -227,20 +230,28 @@ export const updateArticle = withAuth(
         .where({ article_id: articleId })
         .update(updates);
 
+      if (input.audience !== undefined || input.status !== undefined) {
+        const audience = input.audience ?? existing.audience;
+        const status = input.status ?? existing.status;
+        await tenantScopedTable(trx, 'documents', tenant)
+          .where({ document_id: existing.document_id })
+          .update({ is_client_visible: status === 'published' && (audience === 'client' || audience === 'public'), updated_at: trx.fn.now() });
+      }
+
       const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
         .where({ article_id: articleId })
         .first();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+        documentId: article.document_id,
+        userId: user.user_id,
+        changedFields: Object.keys(input),
+        status: article.status,
+      }), 'KB_ARTICLE_UPDATED');
       return article as unknown as IKBArticle;
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: Object.keys(input),
-      status: article.status,
-    });
     return article;
   }
 );
@@ -266,8 +277,10 @@ export const publishArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -285,30 +298,24 @@ export const publishArticle = withAuth(
           updated_by: user.user_id,
         });
 
-      // Auto-set is_client_visible for client/public audience
-      if (existing.audience === 'client' || existing.audience === 'public') {
-        await tenantScopedTable(trx, 'documents', tenant)
-          .where({ document_id: existing.document_id })
-          .update({
-            is_client_visible: true,
-            updated_at: trx.fn.now(),
-          });
-      }
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where({ document_id: existing.document_id })
+        .update({ is_client_visible: existing.audience === 'client' || existing.audience === 'public', updated_at: trx.fn.now() });
 
       const article = await tenantScopedTable(trx, 'kb_articles', tenant)
         .select(KB_ARTICLE_SELECT_COLUMNS)
         .where({ article_id: articleId })
         .first();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+        documentId: article.document_id,
+        userId: user.user_id,
+        changedFields: ['status', 'published_at', 'is_client_visible'],
+        status: article.status,
+      }), 'KB_ARTICLE_UPDATED');
       return article as unknown as IKBArticle;
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: ['status', 'published_at', 'is_client_visible'],
-      status: article.status,
-    });
     return article;
   }
 );
@@ -334,8 +341,10 @@ export const archiveArticle = withAuth(
     }
 
     const article = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -364,15 +373,15 @@ export const archiveArticle = withAuth(
         .where({ article_id: articleId })
         .first();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
+        documentId: article.document_id,
+        userId: user.user_id,
+        changedFields: ['status', 'is_client_visible'],
+        status: article.status,
+      }), 'KB_ARTICLE_UPDATED');
       return article as unknown as IKBArticle;
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, article.article_id, {
-      documentId: article.document_id,
-      userId: user.user_id,
-      changedFields: ['status', 'is_client_visible'],
-      status: article.status,
-    });
     return article;
   }
 );
@@ -399,9 +408,11 @@ export const deleteArticle = withAuth(
       throw new Error('articleId is required');
     }
 
-    const deleted = await withTransaction(knex, async (trx) => {
+    await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
         .where({ article_id: articleId })
+        .forUpdate()
         .first();
 
       if (!existing) {
@@ -428,16 +439,16 @@ export const deleteArticle = withAuth(
         .where({ document_id: existing.document_id })
         .del();
 
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_DELETED', tenant, articleId, {
+        documentId: existing.document_id,
+        userId: user.user_id,
+      }), 'KB_ARTICLE_DELETED');
       return {
         success: true as const,
         documentId: existing.document_id as string,
       };
     });
 
-    await publishKbArticleSearchEvent('KB_ARTICLE_DELETED', tenant, articleId, {
-      documentId: deleted.documentId,
-      userId: user.user_id,
-    });
     return { success: true };
   }
 );
@@ -467,50 +478,68 @@ export const submitForReview = withAuth(
       throw new Error('At least one reviewer is required');
     }
 
-    const existing = await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .first();
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      const existing = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .forUpdate()
+        .first();
 
-    if (!existing) {
-      throw new Error('Article not found');
-    }
+      if (!existing) {
+        throw new Error('Article not found');
+      }
 
-    // Update article status to review
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .update({
-        status: 'review',
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
+      // Update article status to review
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .update({
+          status: 'review',
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
 
-    // Validate all reviewer user IDs belong to this tenant
-    const validUsers = await tenantScopedTable(knex, 'users', tenant)
-      .select('user_id')
-      .whereIn('user_id', reviewerUserIds);
-    const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
-    const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
-    if (invalidIds.length > 0) {
-      throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
-    }
+      await tenantScopedTable(trx, 'documents', tenant)
+        .where({ document_id: existing.document_id })
+        .update({ is_client_visible: false, updated_at: trx.fn.now() });
 
-    // Create reviewer assignments (remove existing pending ones first)
-    await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
-      .where({ article_id: articleId, review_status: 'pending' })
-      .del();
+      reviewerUserIds = [...new Set(reviewerUserIds)];
+      // Validate all reviewer user IDs belong to this tenant
+      const validUsers = await tenantScopedTable(trx, 'users', tenant)
+        .select('user_id')
+        .whereIn('user_id', reviewerUserIds);
+      const validUserIds = new Set(validUsers.map((u: { user_id: string }) => u.user_id));
+      const invalidIds = reviewerUserIds.filter((id) => !validUserIds.has(id));
+      if (invalidIds.length > 0) {
+        throw new Error(`Invalid reviewer user IDs: ${invalidIds.join(', ')}`);
+      }
 
-    const reviewerRecords = reviewerUserIds.map((userId) => ({
-      tenant,
-      reviewer_id: randomUUID(),
-      article_id: articleId,
-      user_id: userId,
-      review_status: 'pending',
-      assigned_by: user.user_id,
-    }));
+      // Retain selected assignments and remove deselected pending reviewers.
+      await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .where({ article_id: articleId, review_status: 'pending' })
+        .whereNotIn('user_id', reviewerUserIds)
+        .del();
 
-    await tenantScopedTable(knex, 'kb_article_reviewers', tenant).insert(reviewerRecords);
+      const reviewerRecords = reviewerUserIds.map((userId) => ({
+        tenant,
+        reviewer_id: randomUUID(),
+        article_id: articleId,
+        user_id: userId,
+        review_status: 'pending',
+        assigned_by: user.user_id,
+        assigned_at: trx.fn.now(),
+        reviewed_at: null,
+        review_notes: null,
+      }));
 
-    return true;
+      await tenantScopedTable(trx, 'kb_article_reviewers', tenant).insert(reviewerRecords)
+        .onConflict(['tenant', 'article_id', 'user_id'])
+        .merge(['review_status', 'assigned_by', 'assigned_at', 'reviewed_at', 'review_notes']);
+
+      registerAfterCommit(trx, () => publishKbArticleSearchEvent('KB_ARTICLE_UPDATED', tenant, articleId, {
+        documentId: existing.document_id, userId: user.user_id, changedFields: ['status', 'is_client_visible'], status: 'review',
+      }), 'KB_ARTICLE_UPDATED');
+
+      return true;
+    });
   }
 );
 
@@ -536,33 +565,40 @@ export const completeReview = withAuth(
       throw new Error('articleId is required');
     }
 
-    // Update the reviewer record
-    const updated = await tenantScopedTable(knex, 'kb_article_reviewers', tenant)
-      .where({
-        article_id: articleId,
-        user_id: user.user_id,
-      })
-      .update({
-        review_status: status,
-        review_notes: notes || null,
-        reviewed_at: knex.fn.now(),
-      });
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      // Match submission's article-before-reviewer lock order.
+      const article = await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId }).forUpdate().first();
+      if (!article) throw new Error('Article not found');
 
-    if (updated === 0) {
-      throw new Error('You are not assigned as a reviewer for this article');
-    }
+      // Update the reviewer record
+      const updated = await tenantScopedTable(trx, 'kb_article_reviewers', tenant)
+        .where({
+          article_id: articleId,
+          user_id: user.user_id,
+        })
+        .update({
+          review_status: status,
+          review_notes: notes || null,
+          reviewed_at: trx.fn.now(),
+        });
 
-    // Update article's last_reviewed metadata
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .update({
-        last_reviewed_at: knex.fn.now(),
-        last_reviewed_by: user.user_id,
-        updated_at: knex.fn.now(),
-        updated_by: user.user_id,
-      });
+      if (updated === 0) {
+        throw new Error('You are not assigned as a reviewer for this article');
+      }
 
-    return true;
+      // Update article's last_reviewed metadata
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .update({
+          last_reviewed_at: trx.fn.now(),
+          last_reviewed_by: user.user_id,
+          updated_at: trx.fn.now(),
+          updated_by: user.user_id,
+        });
+
+      return true;
+    });
   }
 );
 
@@ -982,11 +1018,16 @@ export const recordArticleView = withAuth(
       return false;
     }
 
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .increment('view_count', 1);
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .increment('view_count', 1);
 
-    return true;
+      return true;
+    }).catch(error => {
+      if (error instanceof CoManagedLifecycleError) return false;
+      throw error;
+    });
   }
 );
 
@@ -1008,13 +1049,15 @@ export const recordArticleFeedback = withAuth(
       return false;
     }
 
-    const column = helpful ? 'helpful_count' : 'not_helpful_count';
+    return withCoManagedOperationalTransaction(knex, tenant, async trx => {
+      const column = helpful ? 'helpful_count' : 'not_helpful_count';
 
-    await tenantScopedTable(knex, 'kb_articles', tenant)
-      .where({ article_id: articleId })
-      .increment(column, 1);
+      await tenantScopedTable(trx, 'kb_articles', tenant)
+        .where({ article_id: articleId })
+        .increment(column, 1);
 
-    return true;
+      return true;
+    });
   }
 );
 

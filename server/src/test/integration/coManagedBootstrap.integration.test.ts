@@ -2414,3 +2414,90 @@ describe('co-managed shared KB creation and worker admission', () => {
     expect(await customer.table('kb_articles')).toHaveLength(1); expect(publish).toHaveBeenCalledOnce();
   }));
 });
+
+describe('co-managed KB UI mutation lifecycle', () => {
+  it('denies edits, publication, deletion, review and feedback while view recording becomes a read-only no-op', async () => withProjectActionsFixture(async ({ operation, actor, input, publish }) => {
+    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const id = randomUUID();
+    const mutations = [
+      () => actions.updateArticle(id, { title: 'Denied' }),
+      () => actions.publishArticle(id),
+      () => actions.archiveArticle(id),
+      () => actions.deleteArticle(id),
+      () => actions.submitForReview(id, [actor.userId]),
+      () => actions.completeReview(id, 'approved'),
+      () => actions.recordArticleFeedback(id, true),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(await actions.recordArticleView(id)).toBe(false);
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await actions.recordArticleView(id)).toBe(false);
+    expect(publish).not.toHaveBeenCalled();
+  }));
+
+  it('keeps visibility, review cycles, and publication atomic across rollback and renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const dbModule = await import('@alga-psa/db');
+    const article = await actions.createArticle({ title: 'Customer runbook', audience: 'client' }) as any;
+    const readDocument = () => customer.table('documents').where('document_id', article.document_id).first();
+    const readArticle = () => customer.table('kb_articles').where('article_id', article.article_id).first();
+    publish.mockClear();
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      await actions.publishArticle(article.article_id);
+      expect(publish).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled publication');
+    })).rejects.toThrow('Caller cancelled publication');
+    expect((await readArticle()).status).toBe('draft'); expect((await readDocument()).is_client_visible).toBe(false);
+    expect(publish).not.toHaveBeenCalled();
+    const snapshots: any[] = [];
+    publish.mockImplementation(async () => { snapshots.push({ article: await readArticle(), document: await readDocument() }); });
+    await actions.publishArticle(article.article_id);
+    expect(snapshots).toEqual([{ article: expect.objectContaining({ status: 'published' }), document: expect.objectContaining({ is_client_visible: true }) }]);
+    await actions.updateArticle(article.article_id, { audience: 'internal' });
+    expect((await readDocument()).is_client_visible).toBe(false);
+    await actions.publishArticle(article.article_id);
+    expect((await readDocument()).is_client_visible).toBe(false);
+    await actions.updateArticle(article.article_id, { audience: 'client' });
+    expect((await readDocument()).is_client_visible).toBe(true);
+    publish.mockClear();
+    await expect(actions.submitForReview(article.article_id, [randomUUID()])).rejects.toThrow('Invalid reviewer user IDs');
+    expect((await readArticle()).status).toBe('published'); expect((await readDocument()).is_client_visible).toBe(true);
+    expect(await customer.table('kb_article_reviewers')).toEqual([]); expect(publish).not.toHaveBeenCalled();
+    expect(await actions.submitForReview(article.article_id, [actor.userId, actor.userId])).toBe(true);
+    expect((await readDocument()).is_client_visible).toBe(false);
+    const review = await customer.table('kb_article_reviewers').first();
+    expect(await customer.table('kb_article_reviewers')).toHaveLength(1);
+    await actions.completeReview(article.article_id, 'approved', 'Reviewed');
+    expect(await customer.table('kb_article_reviewers').first()).toMatchObject({ review_status: 'approved', review_notes: 'Reviewed' });
+    await actions.submitForReview(article.article_id, [actor.userId]);
+    expect(await customer.table('kb_article_reviewers').first()).toMatchObject({ reviewer_id: review.reviewer_id, review_status: 'pending', reviewed_at: null, review_notes: null });
+    await actions.recordArticleView(article.article_id); await actions.recordArticleFeedback(article.article_id, true);
+    expect(await readArticle()).toMatchObject({ view_count: 1, helpful_count: 1 });
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await actions.getArticle(article.article_id)).toMatchObject({ article_id: article.article_id });
+    expect(await actions.recordArticleView(article.article_id)).toBe(false);
+    expect(await readArticle()).toMatchObject({ view_count: 1 });
+    await expect(actions.completeReview(article.article_id, 'approved')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    await actions.completeReview(article.article_id, 'approved');
+    await actions.archiveArticle(article.article_id);
+    expect((await readDocument()).is_client_visible).toBe(false);
+    publish.mockClear();
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      await actions.deleteArticle(article.article_id);
+      expect(publish).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled deletion');
+    })).rejects.toThrow('Caller cancelled deletion');
+    expect(await readArticle()).toMatchObject({ article_id: article.article_id });
+    expect(await customer.table('kb_article_reviewers')).toHaveLength(1);
+    await actions.deleteArticle(article.article_id);
+    for (const table of ['kb_articles', 'documents', 'kb_article_reviewers']) expect(await customer.table(table)).toEqual([]);
+    expect(publish).toHaveBeenCalledOnce();
+  }));
+});
