@@ -93,11 +93,11 @@ jobs:
         shell: bash
         run: |
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> $GITHUB_ENV
-            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> $GITHUB_ENV
+            echo "NX_BASE=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_ENV"
+            echo "NX_HEAD=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_ENV"
           else
-            echo "NX_BASE=${{ github.event.before }}" >> $GITHUB_ENV
-            echo "NX_HEAD=${{ github.sha }}" >> $GITHUB_ENV
+            echo "NX_BASE=${{ github.event.before }}" >> "$GITHUB_ENV"
+            echo "NX_HEAD=${{ github.sha }}" >> "$GITHUB_ENV"
           fi
 
       # Same two-pass split as typecheck.yml: the server app's vitest config inlines
@@ -114,7 +114,7 @@ jobs:
       # @nx/vite:test executor). A red step here is a real test failure; fix the
       # cause, never re-add continue-on-error.
       - name: Nx affected tests (libraries, parallel)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
+        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=4096'
@@ -127,7 +127,7 @@ jobs:
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
+        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'
@@ -179,8 +179,9 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
         env:
+          TEST_PROGRESS_PATH: ./test-progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=14336'
           # This job has no database; *.db.test.* suites are DB-backed
           # integration tests (see the exclude block in server/vitest.config.ts).
@@ -200,6 +201,16 @@ jobs:
         with:
           name: server-unit-coverage
           path: server/coverage/lcov.info
+          retention-days: 30
+      - name: Upload unit execution diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-execution
+          path: |
+            server/test-progress.jsonl
+            server/test-results.json
+            server/coverage/coverage-summary.json
           retention-days: 30
       # Appends pass/coverage numbers to the shared metrics sheet
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.

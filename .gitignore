@@ -255,3 +255,7 @@ server/src/test/integration/billing/goldenOutput/baseline.actual.json
 # Scoped mutation pilot's generated sandboxes and reports.
 .stryker-tmp/
 reports/mutation/
+
+# Per-process diagnostic journals; final execution evidence is uploaded by CI.
+/server/test-progress*.jsonl
+/test-progress*.jsonl

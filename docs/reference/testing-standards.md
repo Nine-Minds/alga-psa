@@ -726,6 +726,39 @@ describe('Companies API E2E Tests', () => {
 - Refer to billing `contract lines` and `contracts` instead of the legacy `plans` and `bundles`.
 - When bringing in legacy helpers (e.g., `createFixedPlanAssignment`), alias them to the new naming in your test files so intent stays aligned with the schema.
 
+## Diagnosing interrupted unit and integration runs
+
+The full server unit and Tier-1/full integration jobs retain a JSONL progress
+journal alongside the final JSON test results. Download `server-unit-execution`
+or `server-integration-execution` from the workflow's artifacts. A journal without
+`run-finished` is incomplete. Even a `run-finished` event is only diagnostic:
+release readiness still requires successful process exit and reconciled final
+execution results.
+
+To capture the same evidence locally from `server/`, add the reporter to the
+normal Vitest command:
+
+```sh
+TEST_PROGRESS_PATH=/tmp/alga-test-progress.jsonl npx vitest run <test-paths> \
+  --reporter=default --reporter=../scripts/lib/vitest-progress-reporter.mjs
+```
+
+Each event records a run ID, sequence, timestamp and module/test identity. Find
+modules with `module-queued` and no corresponding `module-finished`; collection
+or setup may have stalled before the first assertion. Within those modules,
+`test-ready` without `test-finished` narrows the investigation further. Readiness
+also occurs for skipped tests and does not prove that assertions executed.
+Worker events can be buffered, so the last completed test is not necessarily
+the cause of a hang. Preserve the original job and its logs while reproducing
+the unfinished module with the same shuffle seed and environment.
+
+Each process must use its own output path. Starting a new run replaces the old
+journal to prevent stale completion from being mistaken for current evidence.
+The reporter excludes test console output, error payloads and environment dumps.
+Its regression tests run the installed Vitest 3 and 4 binaries, exercise passing,
+failing and skipped cases, then deliberately kill a worker stuck during import
+and verify that partial evidence survives without a fabricated completion.
+
 ## Additional Resources
 
 - [Test discovery and execution evidence](./test-execution-evidence.md) - Run and extend the reconciled workspace database lane

@@ -161,8 +161,9 @@ jobs:
         id: tier1
         if: github.event_name != 'schedule' && github.event.inputs.suite != 'full' && needs.check-changes.outputs.full != 'true'
         working-directory: ./server
-        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
+        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
+          TEST_PROGRESS_PATH: ./test-progress-integration.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
@@ -172,10 +173,21 @@ jobs:
         working-directory: ./server
         # Use the same runner as Tier-1 so the mandatory floor is validated
         # against actual collection even when the entire directory is selected.
-        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
+        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
+          TEST_PROGRESS_PATH: ./test-progress-integration.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ''
+
+      - name: Upload integration execution diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-integration-execution
+          path: |
+            server/test-progress-integration.jsonl
+            server/test-results-integration.json
+          retention-days: 30
 
       # Append this run's numbers to the shared metrics sheet
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
@@ -437,7 +449,7 @@ jobs:
         run: npm ci
 
       - name: Verify discovery and selection against the installed Vitest runner
-        run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs scripts/tests/infrastructure-runner.vitest.test.mjs
+        run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs scripts/tests/infrastructure-runner.vitest.test.mjs scripts/tests/vitest-progress-reporter.test.mjs
 
       - name: Build shared libraries
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
