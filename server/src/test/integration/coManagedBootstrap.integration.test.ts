@@ -1608,3 +1608,136 @@ describe('co-managed project action lifecycle admission', () => {
     expect((await customer.table('project_phases').where('phase_id', phase.phase_id).first()).completed_at).toBeNull();
   }));
 });
+
+describe('co-managed task model lifecycle admission', () => {
+  it('denies every task, checklist, resource, ticket-link, type, and dependency mutation before acceptance and after expiry', async () => {
+    const { operation, actor, input, customer } = await readyForAcceptance();
+    const { ProjectTaskModel: model, TaskTypeModel: types, TaskDependencyModel: dependencies } = await import('@alga-psa/projects/models');
+    const tenant = actor.tenant, id = randomUUID();
+    const mutations = [
+      () => model.addTask(db, tenant, id, {} as any),
+      () => model.updateTask(db, tenant, id, {}),
+      () => model.updateTaskStatus(db, tenant, id, id),
+      () => model.deleteTask(db, tenant, id),
+      () => model.reorderTasksInStatus(db, tenant, [{ taskId: id, newWbsCode: '1.1.9' }]),
+      () => model.addChecklistItem(db, tenant, id, {} as any),
+      () => model.updateChecklistItem(db, tenant, id, {}),
+      () => model.deleteChecklistItem(db, tenant, id),
+      () => model.deleteChecklistItems(db, tenant, id),
+      () => model.addTaskResource(db, tenant, id, actor.userId),
+      () => model.removeTaskResource(db, tenant, id),
+      () => model.addTaskTicketLink(db, tenant, id, id, id, id),
+      () => model.updateTaskTicketLink(db, tenant, id, { project_id: id, phase_id: id }),
+      () => model.deleteTaskTicketLink(db, tenant, id),
+      () => model.deleteTaskTicketLinksByTicketId(db, tenant, id),
+      () => types.createCustomTaskType(db, tenant, {} as any),
+      () => types.updateCustomTaskType(db, tenant, id, {}),
+      () => types.deleteCustomTaskType(db, tenant, id),
+      () => dependencies.addDependency(db, tenant, id, randomUUID(), 'blocks'),
+      () => dependencies.updateDependency(db, tenant, id, {}),
+      () => dependencies.removeDependency(db, tenant, id),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    for (const table of ['project_tasks', 'task_checklist_items', 'task_resources', 'project_ticket_links']) expect(await customer.table(table)).toEqual([]);
+  });
+
+  it('preserves related records and reads during lapse, rolls back a caller transaction, and resumes mutations after renewal', async () => withProjectFixture(async ({ operation, actor, input, customer, service }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { ProjectModel, ProjectTaskModel: model } = await import('@alga-psa/projects/models');
+    const { withTransaction } = await import('@alga-psa/db');
+    const tenant = actor.tenant, context = { tenant, userId: actor.userId };
+    const project = await service.create({ project_name: 'Task model rollout', client_id: operation.customer_client_id }, context);
+    const phase = await service.createPhase(project.project_id, { phase_name: 'Discovery' } as any, context);
+    const status = await customer.table('statuses').where({ status_type: 'project_task', is_default: true }).first();
+    const mapping = await ProjectModel.addProjectStatusMapping(db, tenant, project.project_id, {
+      status_id: status.status_id, is_standard: false, custom_name: null, display_order: 1, is_visible: true });
+    const task = await model.addTask(db, tenant, phase.phase_id, { task_name: 'Inventory devices',
+      project_status_mapping_id: mapping.project_status_mapping_id, task_type_key: 'task', assigned_to: actor.userId } as any);
+    const checklist = await model.addChecklistItem(db, tenant, task.task_id, { item_name: 'Check inventory', completed: false,
+      order_number: 1, description: null, assigned_to: null, due_date: null });
+    const additionalUserId = randomUUID();
+    await customer.table('users').insert({ tenant, user_id: additionalUserId, username: `tech-${additionalUserId}`,
+      email: `tech-${additionalUserId}@example.test`, first_name: 'Additional', last_name: 'Technician',
+      hashed_password: 'test-not-a-login', user_type: 'internal', is_inactive: false });
+    await model.addTaskResource(db, tenant, task.task_id, additionalUserId, 'Reviewer');
+    const resource = (await model.getTaskResources(db, tenant, task.task_id))[0];
+    const ticketId = randomUUID();
+    const ticketStatus = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+    await customer.table('tickets').insert({ tenant, ticket_id: ticketId, ticket_number: 'MODEL-1', title: 'Rollout request',
+      client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: ticketStatus.status_id,
+      priority_id: priority.priority_id, entered_by: actor.userId });
+    const link = await model.addTaskTicketLink(db, tenant, project.project_id, task.task_id, ticketId, phase.phase_id);
+    await expect(withTransaction(db, async trx => {
+      await model.updateTask(trx, tenant, task.task_id, { task_name: 'Rolled back' });
+      await model.updateChecklistItem(trx, tenant, checklist.checklist_item_id, { completed: true });
+      await model.removeTaskResource(trx, tenant, resource.assignment_id);
+      await model.deleteTaskTicketLink(trx, tenant, link.link_id);
+      throw new Error('Caller cancelled');
+    })).rejects.toThrow('Caller cancelled');
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await model.getTaskById(db, tenant, task.task_id)).toMatchObject({ task_name: 'Inventory devices' });
+    expect(await model.getChecklistItems(db, tenant, task.task_id)).toEqual([expect.objectContaining({ completed: false })]);
+    expect(await model.getTaskResources(db, tenant, task.task_id)).toHaveLength(1);
+    expect(await model.getTaskTicketLinks(db, tenant, task.task_id)).toHaveLength(1);
+    await expect(model.deleteTask(db, tenant, task.task_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    for (const table of ['project_tasks', 'task_checklist_items', 'task_resources', 'project_ticket_links']) expect(await customer.table(table)).toHaveLength(1);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    await model.updateTask(db, tenant, task.task_id, { task_name: 'Verified' });
+    await model.updateTaskStatus(db, tenant, task.task_id, mapping.project_status_mapping_id);
+    await model.reorderTasksInStatus(db, tenant, [{ taskId: task.task_id, newWbsCode: '1.1.9' }]);
+    expect(await model.getTaskById(db, tenant, task.task_id)).toMatchObject({ task_name: 'Verified', wbs_code: '1.1.9' });
+    await model.updateChecklistItem(db, tenant, checklist.checklist_item_id, { completed: true });
+    expect((await model.getChecklistItems(db, tenant, task.task_id))[0].completed).toBe(true);
+    await model.updateTaskTicketLink(db, tenant, link.link_id, { project_id: project.project_id, phase_id: phase.phase_id });
+    await model.deleteTaskTicketLinksByTicketId(db, tenant, ticketId);
+    await model.deleteTask(db, tenant, task.task_id);
+    for (const table of ['project_tasks', 'task_checklist_items', 'task_resources', 'project_ticket_links']) expect(await customer.table(table)).toEqual([]);
+  }));
+});
+
+it('preserves task configuration and dependencies through lapse and caller rollback, then permits renewal edits', async () => withProjectFixture(async ({ operation, actor, input, customer, service }) => {
+  await acceptCoManagedRelationship(db, actor, input);
+  const { ProjectModel, ProjectTaskModel, TaskTypeModel: types, TaskDependencyModel: dependencies } = await import('@alga-psa/projects/models');
+  const { withTransaction } = await import('@alga-psa/db');
+  const tenant = actor.tenant, context = { tenant, userId: actor.userId };
+  const type = await types.createCustomTaskType(db, tenant, { type_key: 'customer_review', type_name: 'Customer review',
+    display_order: 100, is_active: true });
+  const project = await service.create({ project_name: 'Dependency rollout', client_id: operation.customer_client_id }, context);
+  const phase = await service.createPhase(project.project_id, { phase_name: 'Discovery' } as any, context);
+  const status = await customer.table('statuses').where({ status_type: 'project_task', is_default: true }).first();
+  const mapping = await ProjectModel.addProjectStatusMapping(db, tenant, project.project_id, {
+    status_id: status.status_id, is_standard: false, custom_name: null, display_order: 1, is_visible: true });
+  const first = await ProjectTaskModel.addTask(db, tenant, phase.phase_id, { task_name: 'Prepare',
+    task_type_key: type.type_key, project_status_mapping_id: mapping.project_status_mapping_id } as any);
+  const second = await ProjectTaskModel.addTask(db, tenant, phase.phase_id, { task_name: 'Review',
+    task_type_key: type.type_key, project_status_mapping_id: mapping.project_status_mapping_id } as any);
+  const dependency = await dependencies.addDependency(db, tenant, first.task_id, second.task_id, 'blocks', 1, 'Await preparation');
+  await expect(dependencies.addDependency(db, tenant, second.task_id, first.task_id, 'blocks')).rejects.toThrow(/circular|cycle/i);
+  await expect(withTransaction(db, async trx => {
+    await types.updateCustomTaskType(trx, tenant, type.type_id, { type_name: 'Rolled back' });
+    await dependencies.updateDependency(trx, tenant, dependency.dependency_id, { notes: 'Rolled back' });
+    throw new Error('Caller cancelled');
+  })).rejects.toThrow('Caller cancelled');
+  await expireCoManagedEntitlement(operation.tenant);
+  expect(await types.getTaskTypeByKey(db, tenant, type.type_key)).toMatchObject({ type_name: 'Customer review' });
+  expect((await dependencies.getTaskDependencies(db, tenant, first.task_id)).successors)
+    .toEqual([expect.objectContaining({ notes: 'Await preparation', lead_lag_days: 1 })]);
+  await expect(types.deleteCustomTaskType(db, tenant, type.type_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  await expect(dependencies.removeDependency(db, tenant, dependency.dependency_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+    async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+  await types.updateCustomTaskType(db, tenant, type.type_id, { type_name: 'Approval' });
+  await dependencies.updateDependency(db, tenant, dependency.dependency_id, { notes: 'Approved', lead_lag_days: 2 });
+  expect(await types.getTaskTypeByKey(db, tenant, type.type_key)).toMatchObject({ type_name: 'Approval' });
+  expect((await dependencies.getTaskDependencies(db, tenant, first.task_id)).successors[0]).toMatchObject({ notes: 'Approved', lead_lag_days: 2 });
+  await dependencies.removeDependency(db, tenant, dependency.dependency_id);
+  await types.deleteCustomTaskType(db, tenant, type.type_id);
+  expect(await customer.table('project_task_dependencies')).toEqual([]);
+  expect(await customer.table('custom_task_types').where('type_id', type.type_id).first()).toMatchObject({ is_active: false });
+}));
