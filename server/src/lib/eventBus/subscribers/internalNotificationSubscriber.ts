@@ -1,3 +1,4 @@
+import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getEventBus } from '../index';
@@ -766,7 +767,7 @@ async function handleProjectTaskAdditionalAgentAssigned(
  */
 async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
   const { payload } = event;
-  const { tenantId, ticketId, userId, changes } = payload;
+  const { tenantId, ticketId, changes } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   try {
@@ -782,20 +783,18 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       return;
     }
 
-    // Get user who made the change
-    const performedByUser = await tenantScopedTable(db, 'users', tenantId)
-      .select('user_id', 'first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
-
-    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+    const actor = readTicketNotificationActor(payload, tenantId,
+      payload.updatedByUserId || payload.actorUserId || payload.userId);
+    const userId = actor.userId;
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Build metadata with change details
     const metadata: Record<string, any> = {
       ticketId: ticket.ticket_number || 'New Ticket',
       ticketTitle: ticket.title,
       performedByName,
-      performedById: userId
+      performedById: userId || null,
+      ...(actor.actorReference ? { performedByActorReference: actor.actorReference } : {})
     };
 
     // Process changes to get human-readable names
@@ -806,7 +805,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       if (changes.status_id && typeof changes.status_id === 'object') {
         const oldStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
-          .where('status_id', changes.status_id.old)
+          .where('status_id', previousTicketChangeValue(changes.status_id) ?? null)
           .first();
         const newStatus = await tenantScopedTable(db, 'statuses', tenantId)
           .select('name')
@@ -827,7 +826,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
       if (changes.priority_id && typeof changes.priority_id === 'object') {
         const oldPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
-          .where('priority_id', changes.priority_id.old)
+          .where('priority_id', previousTicketChangeValue(changes.priority_id) ?? null)
           .first();
         const newPriority = await tenantScopedTable(db, 'priorities', tenantId)
           .select('priority_name', 'color')
@@ -850,9 +849,10 @@ async function handleTicketUpdated(event: TicketUpdatedEvent, opts?: InternalNot
 
       // Handle assignment change
       if (changes.assigned_to && typeof changes.assigned_to === 'object') {
-        const oldAssignee = changes.assigned_to.old ? await tenantScopedTable(db, 'users', tenantId)
+        const previousAssignee = previousTicketChangeValue(changes.assigned_to);
+        const oldAssignee = previousAssignee ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
-          .where('user_id', changes.assigned_to.old)
+          .where('user_id', previousAssignee)
           .first() : null;
         const newAssignee = changes.assigned_to.new ? await tenantScopedTable(db, 'users', tenantId)
           .select('first_name', 'last_name')
@@ -984,16 +984,10 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
       return;
     }
 
-    // Get user who closed the ticket
-    const userId = payload.userId || '';
-
-    // Get user who closed it for the notification
-    const performedByUser = userId ? await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first() : null;
-
-    const performedByName = performedByUser ? `${performedByUser.first_name} ${performedByUser.last_name}` : 'Someone';
+    const actor = readTicketNotificationActor(payload, tenantId,
+      payload.closedByUserId || payload.actorUserId || payload.userId);
+    const userId = actor.userId;
+    const [performedByName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Resolve links for both MSP and client portal
     const { internalUrl, portalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -1024,7 +1018,8 @@ async function handleTicketClosed(event: TicketClosedEvent, opts?: InternalNotif
             data: {
               ticketId: ticket.ticket_number || 'New Ticket',
               ticketTitle: ticket.title,
-              closedByName: performedByName
+              closedByName: performedByName,
+              ...(actor.actorReference ? { closedByActorReference: actor.actorReference } : {})
             }
           });
           notifiedUserIds.add(assigneeId);

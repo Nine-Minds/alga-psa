@@ -1,14 +1,14 @@
 import { getRedisClient, getRedisConfig } from '../../config/redisConfig';
 import logger from '@alga-psa/core/logger';
 import type { RedisClientType } from 'redis';
+import type { TicketNotificationActor } from './ticketNotificationContext';
 
 /**
  * Accumulated change record for a ticket update
  */
-export interface AccumulatedChange {
+export interface AccumulatedChange extends TicketNotificationActor {
   timestamp: string;
-  userId: string;
-  changes: Record<string, { old?: unknown; new?: unknown }>;
+  changes: Record<string, { old?: unknown; previous?: unknown; new?: unknown }>;
 }
 
 export type AccumulatedTicketEventType = 'TICKET_UPDATED' | 'TICKET_ASSIGNED';

@@ -3873,3 +3873,102 @@ it('rechecks the MSP session deadline after waiting for the actor-reference lock
     expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
   } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));
+
+it('keeps historical MSP notification actors separate from a customer user with the same UUID', async () => withSharedTicketMutationFixture(async ({ customer, actor, principal, resource }) => {
+  const { readTicketNotificationActor, resolveTicketNotificationActorNames } = await import('../../lib/notifications/ticketNotificationContext');
+  const customerUser = await customer.table('users').where('user_id', actor.userId).first();
+  const actorReference = { ownerTenantId: resource.tenant, referenceId: randomUUID(), tenantId: principal.tenant, userId: actor.userId,
+    displayName: 'Former technician', organizationName: 'Historical MSP' };
+  const payload = { tenantId: resource.tenant, actorType: 'COLLABORATOR', actorReference };
+  const foreign = readTicketNotificationActor(payload, resource.tenant, actor.userId);
+  expect(foreign.userId).toBe('');
+  expect(await resolveTicketNotificationActorNames(db, resource.tenant, [foreign, { userId: actor.userId }, foreign, { userId: '' }]))
+    .toEqual(['Former technician (Historical MSP)', `${customerUser.first_name} ${customerUser.last_name}`, 'Former technician (Historical MSP)', 'System']);
+  // A foreign-only batch needs no live source or customer directory at all.
+  expect(await resolveTicketNotificationActorNames({} as Knex, resource.tenant, [foreign])).toEqual(['Former technician (Historical MSP)']);
+  expect(() => readTicketNotificationActor({ ...payload, userId: actor.userId }, resource.tenant)).toThrow('tenant-local actor');
+  expect(() => readTicketNotificationActor(payload, principal.tenant)).toThrow('another owning tenant');
+  await expect(resolveTicketNotificationActorNames(db, resource.tenant, [{ ...foreign, userId: actor.userId }])).rejects.toThrow('Invalid notification actor');
+}));
+
+it('renders qualified ticket edit/close attribution in immediate email, accumulated email and in-app notifications', async () => withSharedTicketMutationFixture(async ({
+  customer, actor, principal, resource, closedStatusId, mutate, workflow,
+}) => {
+  const dbModule = await import('@alga-psa/db');
+  const serverDb = await import('../../lib/db');
+  const adminDb = await import('@alga-psa/db/admin');
+  const notifications = await import('@alga-psa/notifications/actions');
+  const mail = await import('../../lib/notifications/sendEventEmail');
+  const { NotificationAccumulator } = await import('../../lib/notifications/NotificationAccumulator');
+  const accumulator = NotificationAccumulator.getInstance();
+  const ready = vi.spyOn(accumulator, 'isReady').mockReturnValue(false);
+  const accumulate = vi.spyOn(accumulator, 'accumulate').mockResolvedValue(undefined);
+  const send = vi.spyOn(mail, 'sendEventEmail').mockResolvedValue(undefined);
+  const notify = vi.spyOn(notifications, 'createNotificationFromTemplateInternal').mockResolvedValue({} as any);
+  const spies = [
+    vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db),
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant }),
+    vi.spyOn(serverDb, 'createTenantKnex').mockResolvedValue({ knex: db }),
+    vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db),
+    ready, accumulate,
+  ];
+  try {
+    const { buildWorkflowPayload, EventSchemas } = await import('@alga-psa/event-schemas');
+    const { ticketEmailSubscriberTestHarness: email, handleAccumulatedTicketUpdates } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber');
+    const { internalNotificationSubscriberTestHarness: internal } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+    await customer.table('tickets').where('ticket_id', resource.id).update({ assigned_to: actor.userId });
+    const baseline = await customer.table('tickets').where('ticket_id', resource.id).first();
+    const priority = await customer.table('priorities').where('item_type', 'ticket').whereNot('priority_id', baseline.priority_id).first();
+    await mutate({ title: 'Resolved together', priority_id: priority.priority_id });
+    const update = workflow.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_UPDATED')![0] as any;
+    const event = EventSchemas.TICKET_UPDATED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: update.eventType,
+      payload: buildWorkflowPayload(update.payload, update.ctx) });
+    await email.handleTicketUpdated(event as any);
+    expect(send.mock.calls.length).toBeGreaterThan(0);
+    const immediateContext = (send.mock.calls[0][0].context as any).ticket;
+    expect(immediateContext.updatedBy).toBe('Morgan Provider (MSP)');
+    expect(immediateContext.changes).toContain(baseline.title);
+    expect(immediateContext.changes).toContain('Resolved together');
+    ready.mockReturnValue(true);
+    await email.handleTicketUpdated(event as any);
+    expect(accumulate).toHaveBeenCalledWith(expect.objectContaining({ tenantId: resource.tenant, userId: '', payload: event.payload }));
+    const queuedPayload = JSON.parse(JSON.stringify(accumulate.mock.calls[0][0].payload));
+    ready.mockReturnValue(false);
+    await internal.handleTicketUpdated(event as any, { db, propagateErrors: true });
+    expect(notify.mock.calls.length).toBeGreaterThan(0);
+    const updateNotification = notify.mock.calls.find(([, input]: any[]) => input.user_id === actor.userId)![1] as any;
+    expect(updateNotification.data).toMatchObject({ performedByName: 'Morgan Provider (MSP)', performedById: null,
+      performedByActorReference: { tenantId: principal.tenant, userId: principal.userId }, newPriority: priority.priority_name });
+    expect(updateNotification.data.oldPriority).not.toBe('None');
+    send.mockClear();
+    const localUser = await customer.table('users').where('user_id', actor.userId).first();
+    await handleAccumulatedTicketUpdates({ tenantId: resource.tenant, ticketId: resource.id, eventType: 'TICKET_UPDATED',
+      createdAt: event.timestamp, retryCount: 0, accumulatedEvents: [
+        { timestamp: event.timestamp, userId: '', eventType: 'TICKET_UPDATED', payload: queuedPayload },
+        { timestamp: event.timestamp, userId: actor.userId, eventType: 'TICKET_UPDATED', payload: { changes: { title: { old: 'Local before', new: 'Local after' } } } },
+      ] });
+    expect(send.mock.calls.length).toBeGreaterThan(0);
+    const accumulated = (send.mock.calls[0][0].context as any).ticket;
+    expect(accumulated.updatedBy).toBe(`Morgan Provider (MSP), ${localUser.first_name} ${localUser.last_name}`);
+    for (const value of ['Morgan Provider (MSP)', baseline.title, 'Resolved together', 'Local before', 'Local after']) expect(accumulated.changes).toContain(value);
+    send.mockClear(); notify.mockClear();
+    await mutate({ status_id: closedStatusId });
+    const close = workflow.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_CLOSED')![0] as any;
+    const closed = EventSchemas.TICKET_CLOSED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: close.eventType,
+      payload: buildWorkflowPayload(close.payload, close.ctx) });
+    await email.handleTicketClosed(closed as any);
+    expect(send.mock.calls.length).toBeGreaterThan(0);
+    expect((send.mock.calls[0][0].context as any).ticket.closedBy).toBe('Morgan Provider (MSP)');
+    await internal.handleTicketClosed(closed as any, { db, propagateErrors: true });
+    expect(notify.mock.calls.length).toBeGreaterThan(0);
+    expect((notify.mock.calls[0][1] as any).data).toMatchObject({ closedByName: 'Morgan Provider (MSP)', closedByActorReference: { tenantId: principal.tenant } });
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); notify.mockRestore(); send.mockRestore(); }
+}));
+
+it('carries foreign due-date and response-state changes to notification events without actor bookkeeping fields', async () => withSharedTicketMutationFixture(async ({ resource, mutate, workflow }) => {
+  const dueDate = '2026-10-01T12:00:00.000Z';
+  await mutate({ due_date: dueDate, response_state: 'awaiting_internal' });
+  const update = workflow.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_UPDATED')![0] as any;
+  expect(update.payload.changes).toEqual({ due_date: { previous: null, new: dueDate }, response_state: { previous: null, new: 'awaiting_internal' } });
+  expect(update.ctx.actor.actorReference.ownerTenantId).toBe(resource.tenant);
+}));

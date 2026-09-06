@@ -2905,8 +2905,9 @@ export async function updateTicketInTransaction(
     }
 
     // Domain events use previous/new; legacy local producers keep their contract.
-    const eventChanges = collaborator ? Object.fromEntries(Object.entries(structuredChanges)
-      .map(([key, value]) => [key, { previous: value.old, new: value.new }])) : structuredChanges;
+    const eventChanges = collaborator ? Object.fromEntries(updatedFields
+      .filter(key => key !== 'updated_by' && key !== 'updated_at')
+      .map(key => [key, { previous: currentTicket[key], new: (updateData as Record<string, unknown>)[key] }])) : structuredChanges;
 
     // Publish appropriate event based on the update — after the save
     // transaction commits, so subscribers never contend with our row locks.
