@@ -19,6 +19,9 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
+// Real lifecycle admission and lock waits are exercised in the PostgreSQL suite.
+vi.mock('@alga-psa/licensing', () => ({ assertCoManagedOperationalWrite: vi.fn(async () => {}) }));
+
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
     action(currentUser, { tenant: currentUser.tenant }, ...args),
@@ -198,6 +201,7 @@ function buildTrx(params: {
     where(whereArgs: Record<string, unknown>) {
       if ('ticket_id' in whereArgs) {
         return {
+          forUpdate() { return this; },
           first: vi.fn(async () => currentTicket),
           update: vi.fn((data: Record<string, unknown>) => {
             ticketUpdates.push(data);

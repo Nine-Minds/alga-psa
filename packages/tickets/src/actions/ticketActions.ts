@@ -1,5 +1,7 @@
 'use server'
 
+import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
+
 import type {
   ITicket,
   ITicketListItem,
@@ -680,7 +682,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     const {knex: db} = await createTenantKnex();
 
-    const result = await db.transaction(async (trx) => {
+    const result = await withCoManagedOperationalTransaction(db, tenant, async (trx) => {
       if (!await hasPermission(user, 'ticket', 'update', trx)) {
         throw new Error('Permission denied: Cannot update ticket');
       }
@@ -688,6 +690,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Get current ticket state before update
       const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
+        .forUpdate()
         .first();
 
       if (!currentTicket) {
@@ -862,6 +865,9 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }
       }
 
+      // Recheck the durable deadline after waiting for ticket/status locks.
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // Changing assigned_to needs the ticket_resources rows keyed to the old
       // assignee cleared first, then re-keyed to the new one.
       const finalizeResourceReassignment = isChangingAssignment
@@ -931,14 +937,14 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       });
 
       for (const ev of transitionEvents) {
-        await publishWorkflowEvent({
+        registerAfterCommit(trx, () => publishWorkflowEvent({
           eventType: ev.eventType,
           payload: ev.payload,
           ctx: workflowCtx,
           eventName: ev.workflow?.eventName,
           fromState: ev.workflow?.fromState,
           toState: ev.workflow?.toState,
-        });
+        }), `ticket-update ticket=${id}`);
       }
 
       // Build structured changes object with old/new values
@@ -1080,20 +1086,20 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
       // Publish response state change event if needed
       if (responseStateChanged) {
         const newResponseState = updatedTicket.response_state as TicketResponseState;
-        await publishResponseStateChangedEvent(
+        registerAfterCommit(trx, () => publishResponseStateChangedEvent(
           tenant,
           id,
           user.user_id,
           previousResponseState,
           newResponseState,
           responseTrigger
-        );
+        ), `ticket-update ticket=${id}`);
       }
 
       // Publish appropriate event based on the update
       if (newStatus?.is_closed && !oldStatus?.is_closed) {
         // Ticket was closed
-        await publishWorkflowEvent({
+        registerAfterCommit(trx, () => publishWorkflowEvent({
           eventType: 'TICKET_CLOSED',
           payload: {
             ticketId: id,
@@ -1108,7 +1114,7 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           eventName: 'Ticket Closed',
           fromState: currentTicket.status_id,
           toState: updatedTicket.status_id,
-        });
+        }), `ticket-update ticket=${id}`);
 
         const slaCompletionEvent = buildTicketResolutionSlaStageCompletionEvent({
           tenantId: tenant,
@@ -1118,25 +1124,25 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           closedAt: occurredAt,
         });
         if (slaCompletionEvent) {
-          await publishWorkflowEvent({
+          registerAfterCommit(trx, () => publishWorkflowEvent({
             eventType: slaCompletionEvent.eventType,
             payload: slaCompletionEvent.payload,
             ctx: workflowCtx,
             idempotencyKey: slaCompletionEvent.idempotencyKey,
-          });
+          }), `ticket-update ticket=${id}`);
         }
 
         // Track ticket resolved analytics
-        captureAnalytics('ticket_resolved', {
+        registerAfterCommit(trx, () => captureAnalytics('ticket_resolved', {
           time_to_resolution: currentTicket.entered_at ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
           priority_id: updatedTicket.priority_id,
           category_id: updatedTicket.category_id,
           had_assignment: !!updatedTicket.assigned_to,
-        }, user.user_id);
+        }, user.user_id), `ticket-update ticket=${id}`);
       } else if (updateData.assigned_to && updateData.assigned_to !== currentTicket.assigned_to) {
         // Ticket was assigned - userId should be the user being assigned, not the one making the update
-        await publishWorkflowEvent({
+        registerAfterCommit(trx, () => publishWorkflowEvent({
           eventType: 'TICKET_ASSIGNED',
           payload: {
             ticketId: id,
@@ -1153,17 +1159,17 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           },
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
-        });
+        }), `ticket-update ticket=${id}`);
 
         // Track ticket assignment analytics
-        captureAnalytics('ticket_assigned', {
+        registerAfterCommit(trx, () => captureAnalytics('ticket_assigned', {
           was_reassignment: !!currentTicket.assigned_to,
           time_to_assignment: currentTicket.entered_at && !currentTicket.assigned_to ?
             Math.round((Date.now() - new Date(currentTicket.entered_at).getTime()) / 1000 / 60) : 0, // minutes
-        }, user.user_id);
+        }, user.user_id), `ticket-update ticket=${id}`);
       } else {
         // Regular update
-        await publishWorkflowEvent({
+        registerAfterCommit(trx, () => publishWorkflowEvent({
           eventType: 'TICKET_UPDATED',
           payload: {
             ticketId: id,
@@ -1175,17 +1181,17 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           },
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
-        });
+        }), `ticket-update ticket=${id}`);
       }
 
       // Track general ticket update analytics
-      captureAnalytics('ticket_updated', {
+      registerAfterCommit(trx, () => captureAnalytics('ticket_updated', {
         fields_updated: Object.keys(updateData),
         updated_priority: 'priority_id' in updateData,
         updated_status: 'status_id' in updateData,
         updated_category: 'category_id' in updateData || 'subcategory_id' in updateData,
         updated_assignment: 'assigned_to' in updateData,
-      }, user.user_id);
+      }, user.user_id), `ticket-update ticket=${id}`);
 
       return updatedTicket;
     });

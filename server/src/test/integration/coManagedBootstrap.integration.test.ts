@@ -3448,3 +3448,139 @@ it('paginates explicit grants by stable customer ticket identity without countin
   expect([...first.items, ...last.items].every(item => item.resource.tenant === resource.tenant && item.resource.relationshipId === resource.relationshipId)).toBe(true);
   await expect(grants(db, customerPrincipal, 'invalid')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 });
+
+async function withTicketUpdateFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
+  user: any; ticketId: string; openStatusId: string; closedStatusId: string;
+  legacy: typeof import('../../../../packages/tickets/src/actions/ticketActions');
+  optimized: typeof import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  publish: ReturnType<typeof vi.spyOn>; workflow: ReturnType<typeof vi.spyOn>; live: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  await withProjectActionsFixture(async fixture => {
+    const { customer, actor, operation } = fixture;
+    const user = await customer.table('users').where('user_id', actor.userId).first();
+    const statuses = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' });
+    const open = statuses.find(row => !row.is_closed)!;
+    const closed = statuses.find(row => row.is_closed)!;
+    const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+    const ticketId = randomUUID();
+    await customer.table('tickets').insert({ tenant: actor.tenant, ticket_id: ticketId, ticket_number: 'EDIT-1', title: 'Original issue',
+      client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: open.status_id,
+      priority_id: priority.priority_id, entered_by: actor.userId });
+    const updates = await import('../../../../packages/tickets/src/lib/liveUpdates');
+    const live = vi.spyOn(updates, 'publishTicketUpdate').mockResolvedValue(undefined);
+    try {
+      const legacy = await import('../../../../packages/tickets/src/actions/ticketActions');
+      const optimized = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+      await work({ ...fixture, user, ticketId, openStatusId: open.status_id, closedStatusId: closed.status_id, legacy, optimized, live });
+    } finally { live.mockRestore(); }
+  });
+}
+
+it('admits both ticket update actions and the shared transaction core only during operational write eligibility', async () => withTicketUpdateFixture(async ({
+  actor, input, customer, operation, user, ticketId, legacy, optimized, publish, workflow, live,
+}) => {
+  const { withTransaction } = await import('@alga-psa/db');
+  const edits = [() => legacy.updateTicket(ticketId, { title: 'Legacy edit' }),
+    () => optimized.updateTicketWithCache(ticketId, { title: 'Cached edit' }),
+    () => withTransaction(db, trx => optimized.updateTicketInTransaction(trx, user, actor.tenant, ticketId, { title: 'Core edit' }))];
+  for (const edit of edits) await expect(edit()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+  expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ title: 'Original issue' });
+  expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+  await acceptCoManagedRelationship(db, actor, input);
+  for (const edit of edits) expect(await edit()).toBe('success');
+  expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ title: 'Core edit' });
+  expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toHaveLength(2);
+  const eventCounts = [publish.mock.calls.length, workflow.mock.calls.length, live.mock.calls.length];
+  await expireCoManagedEntitlement(operation.tenant);
+  for (const edit of edits) await expect(edit()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  expect(await legacy.getTicketById(ticketId)).toMatchObject({ ticket_id: ticketId, title: 'Core edit' });
+  expect([publish.mock.calls.length, workflow.mock.calls.length, live.mock.calls.length]).toEqual(eventCounts);
+  const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+    async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+  expect(await optimized.updateTicketWithCache(ticketId, { title: 'Renewed edit' })).toBe('success');
+}));
+
+it('publishes ticket transitions only after the owning commit and rolls back close state and audit history together', async () => withTicketUpdateFixture(async ({
+  actor, input, customer, ticketId, openStatusId, closedStatusId, legacy, optimized, publish, workflow, live,
+}) => {
+  await acceptCoManagedRelationship(db, actor, input);
+  const dbModule = await import('@alga-psa/db');
+  for (const action of [legacy.updateTicket, optimized.updateTicketWithCache]) {
+    publish.mockClear(); workflow.mockClear(); live.mockClear();
+    await expect(dbModule.withTransaction(db, async trx => {
+      const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: trx, tenant: actor.tenant });
+      try {
+        expect(await action(ticketId, { status_id: closedStatusId })).toBe('success');
+        expect(await tenantDb(trx, actor.tenant).table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ is_closed: true, closed_by: actor.userId });
+        expect(workflow).not.toHaveBeenCalled(); expect(publish).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+        throw new Error('Caller cancelled ticket edit');
+      } finally { connection.mockRestore(); }
+    })).rejects.toThrow('Caller cancelled ticket edit');
+    expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ status_id: openStatusId, is_closed: false, closed_at: null });
+    expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toEqual([]);
+    expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+  }
+  const observed: boolean[] = [];
+  workflow.mockImplementation(async () => {
+    observed.push(Boolean((await customer.table('tickets').where('ticket_id', ticketId).first()).is_closed));
+  });
+  await optimized.updateTicketWithCache(ticketId, { status_id: closedStatusId });
+  expect(observed.length).toBeGreaterThan(1); expect(observed.every(Boolean)).toBe(true);
+  expect(workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_STATUS_CHANGED')).toBe(true);
+  expect(workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_CLOSED')).toBe(true);
+  expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toHaveLength(1);
+  workflow.mockResolvedValue(undefined);
+  await legacy.updateTicket(ticketId, { status_id: openStatusId });
+  expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+  expect(workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_REOPENED')).toBe(true);
+}));
+
+it.each(['legacy', 'optimized'] as const)('rejects the %s ticket edit if its grace deadline passes while waiting for the ticket lock', async path => withTicketUpdateFixture(async ({
+  actor, input, operation, customer, ticketId, legacy, optimized, workflow, live,
+}) => {
+  await acceptCoManagedRelationship(db, actor, input);
+  const lapse = new Date(Date.now() - 30 * 86_400_000 + 1000);
+  await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: lapse, lapse_started_at: lapse,
+    read_only_after: new Date(lapse.getTime() + 30 * 86_400_000) });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, actor.tenant).table('tickets').where('ticket_id', ticketId).forUpdate().first();
+  let onQuery!: (query: { sql: string; bindings?: unknown[] }) => void;
+  const waiting = new Promise<void>(resolve => { onQuery = query => {
+    if (query.sql.includes('"tickets"') && query.sql.includes('for update') && query.bindings?.includes(ticketId)) resolve();
+  }; db.on('query', onQuery); });
+  const action = path === 'legacy' ? legacy.updateTicket : optimized.updateTicketWithCache;
+  const attempt = action(ticketId, { title: 'Must not write after grace' }).then(result => result, error => error);
+  try {
+    await Promise.race([waiting, attempt.then(result => { throw new Error(`Edit ended before ticket lock: ${result?.code ?? result}`); })]);
+    await db.raw('SELECT pg_sleep(1.1)');
+    await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ title: 'Original issue' });
+    expect(await customer.table('ticket_audit_logs').where('ticket_id', ticketId)).toEqual([]);
+    expect(workflow).not.toHaveBeenCalled(); expect(live).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));
+
+it('admits the auto-close transaction before creating its resolution comment and retains system closure behavior', async () => withTicketUpdateFixture(async ({
+  actor, input, operation, customer, ticketId, openStatusId, closedStatusId, workflow,
+}) => {
+  await acceptCoManagedRelationship(db, actor, input);
+  await customer.table('tickets').where('ticket_id', ticketId).update({ entered_at: new Date(Date.now() - 10 * 86_400_000) });
+  await customer.table('board_auto_close_rules').insert({ tenant: actor.tenant, rule_id: randomUUID(), board_id: operation.customer_board_id,
+    trigger_status_id: openStatusId, close_to_status_id: closedStatusId, inactivity_days: 5, warning_days_before: null, is_enabled: true });
+  const queries: Array<{ sql: string; bindings?: unknown[] }> = [];
+  const onQuery = (query: { sql: string; bindings?: unknown[] }) => queries.push(query);
+  db.on('query', onQuery);
+  try {
+    const { autoCloseTicketsHandler } = await import('../../../../packages/jobs/src/lib/handlers/autoCloseTicketsHandler');
+    await autoCloseTicketsHandler({ tenantId: actor.tenant });
+  } finally { db.removeListener('query', onQuery); }
+  const comment = queries.findIndex(query => query.sql.startsWith('insert into "comments"'));
+  const admission = queries.findIndex(query => query.sql.includes('"co_managed_entitlements"') && query.sql.includes('for update'));
+  expect(admission).toBeGreaterThanOrEqual(0); expect(comment).toBeGreaterThan(admission);
+  expect(await customer.table('tickets').where('ticket_id', ticketId).first()).toMatchObject({ is_closed: true, closed_by: null });
+  expect(await customer.table('comments').where('ticket_id', ticketId)).toHaveLength(1);
+  expect(await customer.table('ticket_auto_close_state').where('ticket_id', ticketId)).toEqual([]);
+  expect(workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_CLOSED')).toBe(true);
+}));

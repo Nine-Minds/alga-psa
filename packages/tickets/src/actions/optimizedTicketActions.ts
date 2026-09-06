@@ -1,5 +1,7 @@
 'use server'
 
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+
 import type {
   ITicket,
   ITicketListItem,
@@ -2472,9 +2474,13 @@ export async function updateTicketInTransaction(
         throw new Error('suppressInternalNotifications requires suppressContactNotifications');
       }
 
+    // Admit every caller, including bulk/automation paths, before operational locks.
+    await assertCoManagedOperationalWrite(trx, tenant);
+
     // Get current ticket state before update
     const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({ ticket_id: id })
+      .forUpdate()
       .first();
 
     if (!currentTicket) {
@@ -2635,6 +2641,9 @@ export async function updateTicketInTransaction(
     }
     const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
 
+    // Retained locks prevent revocation; the wall-clock deadline still advances.
+    await assertCoManagedOperationalWrite(trx, tenant);
+
     let updatedTicket;
     
     // If we're changing the assigned_to field, we need to handle the ticket_resources table
@@ -2741,14 +2750,14 @@ export async function updateTicketInTransaction(
     });
 
     for (const ev of transitionEvents) {
-      await publishWorkflowEvent({
+      registerAfterCommit(trx, () => publishWorkflowEvent({
         eventType: ev.eventType,
         payload: ev.payload,
         ctx: workflowCtx,
         eventName: ev.workflow?.eventName,
         fromState: ev.workflow?.fromState,
         toState: ev.workflow?.toState,
-      });
+      }), `ticket-update ticket=${id}`);
     }
 
     // Build structured changes object with old/new values
@@ -3116,8 +3125,8 @@ export async function updateTicketInTransaction(
     }
 
     // Revalidate paths to update UI
-    revalidatePath(`/msp/tickets/${id}`);
-    revalidatePath('/msp/tickets');
+    registerAfterCommit(trx, () => revalidatePath(`/msp/tickets/${id}`), `ticket-update ticket=${id}`);
+    registerAfterCommit(trx, () => revalidatePath('/msp/tickets'), `ticket-update ticket=${id}`);
 
     return 'success';
     } catch (error) {
