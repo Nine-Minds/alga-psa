@@ -1,0 +1,12 @@
+# Layer over the isolated fresh-install stack to test the actual EE image and
+# migrated EE schema. Temporal/runner/provider journeys need their own services.
+services:
+  server:
+    image: alga-e2e-test_server_ee_local:latest
+    environment:
+      EDITION: enterprise
+      APP_EDITION: enterprise
+      NEXT_PUBLIC_EDITION: enterprise
+  setup:
+    environment:
+      EDITION: enterprise

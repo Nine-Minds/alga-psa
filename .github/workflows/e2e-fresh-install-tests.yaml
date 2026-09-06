@@ -64,6 +64,12 @@ jobs:
           - service: server
             dockerfile: Dockerfile.build
             image: alga-e2e-test_server_ce_local:latest
+            artifact: fresh-install-server-community
+            cache: false
+          - service: server-ee
+            dockerfile: ee/server/Dockerfile.build
+            image: alga-e2e-test_server_ee_local:latest
+            artifact: fresh-install-server-enterprise
             cache: false
           - service: setup
             dockerfile: setup/Dockerfile.ubuntu
@@ -123,21 +129,30 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: fresh-install-image-${{ matrix.service }}
+          name: ${{ matrix.artifact || format('fresh-install-image-{0}', matrix.service) }}
           path: ${{ runner.temp }}/${{ matrix.service }}.tar.gz
           compression-level: 0
           retention-days: 1
           if-no-files-found: error
 
-  # Keep the existing required check name. Failed/cancelled build dependencies
-  # must fail this check rather than silently skip the installation job.
-  fresh-install-e2e:
+  production-browser:
+    name: Production browser (${{ matrix.edition }})
     needs: [changes, build-images]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - edition: community
+            server_archive: server
+            compose_suffix: ''
+          - edition: enterprise
+            server_archive: server-ee
+            compose_suffix: ':docker-compose.e2e-ee.yaml'
     env:
-      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml
+      COMPOSE_FILE: docker-compose.base.yaml:docker-compose.ce.yaml:docker-compose.prod.yaml:docker-compose.setup-ubuntu.override.yaml:docker-compose.imap-test.yaml${{ matrix.compose_suffix }}
     steps:
       - name: Check build results
         env:
@@ -192,7 +207,8 @@ jobs:
           APP_ENV=production
           APP_HOST=0.0.0.0
           APP_PORT=3000
-          APP_EDITION=community
+          APP_EDITION=${{ matrix.edition }}
+          NEXT_PUBLIC_EDITION=${{ matrix.edition }}
 
           # Database Configuration (will be overridden by docker-compose services but good to have)
           DB_TYPE=postgres
@@ -276,12 +292,20 @@ jobs:
           path: ${{ runner.temp }}/fresh-install-images
           merge-multiple: true
 
+      - name: Download production server for this edition
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: fresh-install-server-${{ matrix.edition }}
+          path: ${{ runner.temp }}/fresh-install-images
+
       - name: Load and verify images
         if: steps.install_docker_compose.outcome == 'success'
         env:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
+          SERVER_ARCHIVE: ${{ matrix.server_archive }}
         run: |
-          for service in server setup email-service hocuspocus redis pgbouncer; do
+          for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
             docker load --input "$archive"
             rm "$archive"
@@ -298,7 +322,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting foundational services: postgres and redis"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --no-build -d postgres redis
+          docker-compose -p alga-e2e-test up --no-build -d postgres redis
         shell: bash
 
       - name: Wait for postgres to be ready
@@ -327,7 +351,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Starting pgbouncer service"
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml up --no-build -d pgbouncer
+          docker-compose -p alga-e2e-test up --no-build -d pgbouncer
         shell: bash
 
       - name: Wait for pgbouncer to be ready
@@ -366,10 +390,6 @@ jobs:
           DB_HOST_ADMIN=postgres \
           DB_PORT_ADMIN=5432 \
           docker-compose -p alga-e2e-test \
-            -f docker-compose.base.yaml \
-            -f docker-compose.ce.yaml \
-            -f docker-compose.prod.yaml \
-            -f docker-compose.setup-ubuntu.override.yaml \
             up --no-build -d setup
         shell: bash
 
@@ -382,10 +402,10 @@ jobs:
           ATTEMPT_NUM=1
           
           # Get the container ID before the loop, it might be gone after exit
-          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps -q setup)
+          SETUP_CONTAINER_ID=$(docker-compose -p alga-e2e-test ps -q setup)
           if [ -z "$SETUP_CONTAINER_ID" ]; then
             echo "Critical: Could not get initial container ID for setup service. Assuming it failed to start."
-            docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
+            docker-compose -p alga-e2e-test logs setup
             echo "status=failure" >> $GITHUB_OUTPUT
             exit 1
           fi
@@ -393,7 +413,7 @@ jobs:
 
           while [ $ATTEMPT_NUM -le $MAX_ATTEMPTS ]; do
             # Check if the setup container is still running
-            if ! docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps setup | grep -q "Up"; then
+            if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
               # Container has exited, check its exit code using the stored ID
               echo "Setup container (ID: $SETUP_CONTAINER_ID) is no longer 'Up'. Checking exit code."
               # Use the stored SETUP_CONTAINER_ID
@@ -419,18 +439,18 @@ jobs:
                 exit 0
               else
                 echo "Setup service failed with exit code $SETUP_EXIT_CODE."
-                docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup
+                docker-compose -p alga-e2e-test logs setup
                 echo "status=failure" >> $GITHUB_OUTPUT
                 exit 1
               fi
             fi
 
             # Check logs for completion message as a secondary check (optional, primary is exit code)
-            if docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml logs setup | grep -q "Setup completed!"; then
+            if docker-compose -p alga-e2e-test logs setup | grep -q "Setup completed!"; then
                echo "Setup completion message found in logs. Waiting a bit for container to exit."
                sleep 5 # Give it a moment to exit gracefully
                # Re-check exit status using the stored ID
-                if ! docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.setup-ubuntu.override.yaml ps setup | grep -q "Up"; then
+                if ! docker-compose -p alga-e2e-test ps setup | grep -q "Up"; then
                     # Use the stored SETUP_CONTAINER_ID
                     INSPECT_OUTPUT_LOG_CHECK=$(docker inspect -f '{{.State.ExitCode}}' "$SETUP_CONTAINER_ID" 2>/dev/null)
                     SETUP_EXIT_CODE_LOG_CHECK=$(echo "$INSPECT_OUTPUT_LOG_CHECK" | awk '{print $1}')
@@ -466,10 +486,10 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "Setup completed successfully. Starting remaining services..."
-          # Start CE services needed for e2e tests (images already built earlier)
+          # Start the selected edition and shared services using this run's images
           # Use --no-recreate to avoid restarting setup which already completed
           # Use --no-deps to avoid waiting on setup dependency again
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml -f docker-compose.imap-test.yaml up -d \
+          docker-compose -p alga-e2e-test up -d \
             --no-build --no-recreate --no-deps \
             server email-service imap-test-server hocuspocus
         shell: bash
@@ -478,10 +498,10 @@ jobs:
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
           echo "=== CONTAINER STATUS ==="
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
+          docker-compose -p alga-e2e-test ps
           
           echo -e "\n=== ALL CONTAINER LOGS ==="
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml logs --tail=100
+          docker-compose -p alga-e2e-test logs --tail=100
           
           echo -e "\n=== SERVER LOGS (detailed) ==="
           docker-compose -p alga-e2e-test logs server --tail=200
@@ -505,7 +525,7 @@ jobs:
               echo "=== FINAL SERVER LOGS ==="
               docker-compose -p alga-e2e-test logs server --tail=500
               echo "=== ALL CONTAINER STATUS ==="
-              docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps
+              docker-compose -p alga-e2e-test ps
               exit 1
             fi
             echo "Attempt $ATTEMPT_NUM/$MAX_ATTEMPTS: Server not yet healthy at $HEALTH_CHECK_URL. Waiting 10 seconds..."
@@ -666,21 +686,30 @@ jobs:
         shell: bash
 
       - name: Verify browser retry and first-failure diagnostics policy
+        id: browser_policy
         if: steps.wait_for_setup.outputs.status == 'success'
         working-directory: ./e2e-tests
         timeout-minutes: 7
         run: xvfb-run --auto-servernum npm run test:harness
 
       - name: Run Playwright E2E tests
-        if: steps.wait_for_setup.outputs.status == 'success'
+        # A diagnostic-policy failure must still fail the job, but should not
+        # prevent collecting independent customer-journey evidence.
+        if: ${{ !cancelled() && (steps.browser_policy.outcome == 'success' || steps.browser_policy.outcome == 'failure') }}
         working-directory: ./e2e-tests
         env:
           E2E_BASE_URL: http://localhost:3000
-          E2E_EDITION: community
+          E2E_EDITION: ${{ matrix.edition }}
           E2E_REVISION: ${{ github.sha }}
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
-        timeout-minutes: 8
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: server
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+        timeout-minutes: 15
         run: xvfb-run --auto-servernum npm test
         shell: bash
 
@@ -691,7 +720,7 @@ jobs:
           echo "=== COLLECTING ALL LOGS DUE TO FAILURE ==="
 
           echo "=== CONTAINER STATUS ==="
-          timeout 60 docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps || echo "Could not get container status"
+          timeout 60 docker-compose -p alga-e2e-test ps || echo "Could not get container status"
 
           echo -e "\n=== DOCKER SYSTEM INFO ==="
           # `docker system df` can hang for minutes against a disk-full/wedged
@@ -739,7 +768,7 @@ jobs:
           docker-compose -p alga-e2e-test logs --no-color > "logs/all-services.log" 2>/dev/null || echo "Could not save combined logs"
           
           # Save container status
-          docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml ps > "logs/container-status.txt" 2>/dev/null || echo "Could not save container status"
+          docker-compose -p alga-e2e-test ps > "logs/container-status.txt" 2>/dev/null || echo "Could not save container status"
           
           # Save environment info
           echo "Environment variables:" > logs/environment.txt
@@ -752,7 +781,7 @@ jobs:
         if: always() && steps.install_docker_compose.outcome == 'success' && github.actor != 'nektos/act'
         uses: actions/upload-artifact@v4
         with:
-          name: container-logs
+          name: container-logs-${{ matrix.edition }}
           path: logs/
           retention-days: 7
 
@@ -760,7 +789,7 @@ jobs:
         if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
         uses: actions/upload-artifact@v4
         with:
-          name: fresh-install-playwright
+          name: fresh-install-playwright-${{ matrix.edition }}
           path: |
             e2e-tests/playwright-report/
             e2e-tests/test-results/
@@ -774,7 +803,7 @@ jobs:
           echo "Cleaning up Docker Compose environment..."
           # Check if docker-compose command is available before trying to use it
           if command -v docker-compose &> /dev/null; then
-            docker-compose -p alga-e2e-test -f docker-compose.base.yaml -f docker-compose.ce.yaml -f docker-compose.prod.yaml down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
+            docker-compose -p alga-e2e-test down -v --remove-orphans || echo "Docker Compose cleanup failed, but continuing."
           else
             echo "docker-compose command not found, skipping cleanup."
           fi
@@ -788,3 +817,29 @@ jobs:
             sudo mv docker-compose.yaml.ignored docker-compose.yaml
           fi
         shell: bash
+
+  # Preserve the required check name while requiring both edition jobs and builds.
+  fresh-install-e2e:
+    needs: [changes, build-images, production-browser]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require complete production browser validation
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
+          BUILD_RESULT: ${{ needs.build-images.result }}
+          BROWSER_RESULT: ${{ needs.production-browser.result }}
+        run: |
+          test "$CHANGES_RESULT" = success
+          test "$BROWSER_RESULT" = success
+          if [ "$RUN_TESTS" = true ]; then
+            test "$BUILD_RESULT" = success
+          elif [ "$RUN_TESTS" = false ]; then
+            test "$BUILD_RESULT" = skipped
+            echo "Known documentation-only change: production validation is not applicable."
+          else
+            echo "Missing production validation selection."
+            exit 1
+          fi

@@ -44,7 +44,8 @@ function execute(label) {
   const invoke = (args, reportPath) => spawnSync(process.execPath, [require.resolve('@playwright/test/cli'),
     'test', '--config', join(temporary, 'playwright.config.ts'), ...args], {
     cwd: root,
-    env: { ...process.env, CI: '1', PLAYWRIGHT_JSON_OUTPUT_FILE: reportPath },
+    env: { ...process.env, CI: '1', PLAYWRIGHT_JSON_OUTPUT_FILE: reportPath,
+      DEBUG: process.env.DEBUG || 'pw:browser' },
     encoding: 'utf8',
     timeout: 180_000,
   });
