@@ -33,6 +33,31 @@ its actual checkout SHA. This metadata does not prove image digest provenance.
 
 ## Add a journey
 
+The raw email journey additionally requires `E2E_EMAIL_TRANSPORT_ISOLATED=true`,
+GreenMail 2.1.8, the built email-service image, and the SMTP sink from the
+candidate emulator build. `docker-compose.e2e-emulators.yaml` shares tenant
+secrets and attachment files between server and email-service. It exposes SMTP
+and Redis through the fixed ingress proxy; the application network remains
+internal. Set `E2E_SMTP_HOST`/`E2E_SMTP_PORT` and
+`E2E_REDIS_HOST`/`E2E_REDIS_PORT` when they differ from localhost ports 3025 and
+6379, and set `E2E_REDIS_PASSWORD` for an authenticated test Redis.
+
+`inbound-email.spec.ts` creates its IMAP provider through real sign-in and the
+settings form. It sends raw MIME through SMTP, waits for the built IMAP/queue
+consumer to create a ticket, checks inline quotation preservation, downloads
+the actual attachment, sends an agent reply through the UI, and checks the SMTP
+sink's threading headers. A customer reply must become a comment on the same
+ticket with old quoted history removed. Replaying the original IMAP pointers
+through the shipped webhook must drain from the queue without dead letters or
+duplicate tickets, comments, documents, processed-message rows, or agent mail.
+
+GreenMail creates distinct disposable mailboxes with authentication disabled
+inside the test network. The fixture supplies synthetic provider authentication
+results; this journey does not validate Internet SPF, DKIM, DMARC, or live
+provider authentication. Duplicate coverage means redelivery of the same
+provider UID and MIME bytes. A fresh SMTP delivery changes its provider UID and
+Received headers and is a different source message.
+
 Add `tests/*.spec.ts` and import `test`, `expect` and `signIn` from
 `fixtures/auth.ts`. Sign-in submits the product form and uses the resulting
 browser session. New fixtures can seed preconditions, but the operation under

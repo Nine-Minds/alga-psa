@@ -13,8 +13,11 @@
   },
   "devDependencies": {
     "@playwright/test": "1.57.0",
+    "@types/nodemailer": "6.4.23",
     "knex": "3.1.0",
+    "nodemailer": "9.0.3",
     "pdfjs-dist": "6.3.289",
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "redis": "4.7.1"
   }
 }

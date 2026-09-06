@@ -762,6 +762,8 @@ jobs:
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
           E2E_DATABASE_ISOLATED: 'true'
           E2E_EMULATORS_ISOLATED: 'true'
+          E2E_EMAIL_TRANSPORT_ISOLATED: 'true'
+          E2E_REDIS_PASSWORD: placeholder-password
           ALGASIM_CONTROL_URL: http://127.0.0.1:9500
           ALGASIM_PUBLIC_STRIPE_URL: http://localhost:4050
           ALGASIM_CALLBACK_BASE_URL: http://server:3000

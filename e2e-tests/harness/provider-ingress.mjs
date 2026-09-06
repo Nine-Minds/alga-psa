@@ -5,6 +5,8 @@ import net from 'node:net';
 const destinations = [
   [3000, 'server', 3000],
   [5432, 'postgres', 5432],
+  [3025, 'imap-test-server', 3025],
+  [6379, 'redis', 6379],
   ...[4010, 4020, 4030, 4040, 4050, 4060, 9500].map(port => [port, 'algasim', port]),
 ];
 

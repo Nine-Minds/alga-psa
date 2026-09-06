@@ -43,6 +43,8 @@ services:
     ports:
       - '127.0.0.1:3000:3000'
       - '127.0.0.1:5432:5432'
+      - '127.0.0.1:3025:3025'
+      - '127.0.0.1:6379:6379'
       - '127.0.0.1:4010:4010'
       - '127.0.0.1:4020:4020'
       - '127.0.0.1:4030:4030'
@@ -54,9 +56,40 @@ services:
       - app-network
       - test-ingress-network
   server:
-    environment: *provider-environment
+    ports: !reset []
+    environment:
+      <<: *provider-environment
+      IMAP_WEBHOOK_SECRET: regression-imap-only
+      SECRET_FS_BASE_PATH: /run/secrets
+      STORAGE_LOCAL_BASE_PATH: /data/files
+    volumes:
+      - email_test_tenant_secrets:/run/secrets/tenants
   email-service:
-    environment: *provider-environment
+    environment:
+      <<: *provider-environment
+      IMAP_WEBHOOK_SECRET: regression-imap-only
+      IMAP_WEBHOOK_URL: http://server:3000/api/email/webhooks/imap
+      IMAP_PROVIDER_REFRESH_MS: '1000'
+      IMAP_POLL_INTERVAL_MS: '1000'
+      SECRET_FS_BASE_PATH: /run/secrets
+      STORAGE_LOCAL_BASE_PATH: /data/files
+    volumes:
+      - email_test_tenant_secrets:/run/secrets/tenants
+      - files_data:/data/files
+  imap-test-server:
+    image: greenmail/standalone:2.1.8
+    # The runner reaches SMTP through the fixed ingress proxy. Each scenario
+    # gets a distinct mailbox; the emulator creates it at first authentication.
+    ports: !reset []
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.all
+        -Dgreenmail.hostname=0.0.0.0
+        -Dgreenmail.auth.disabled
+  redis:
+    ports: !reset []
+  postgres:
+    ports: !reset []
   workflow-worker:
     environment: *provider-environment
 
@@ -66,3 +99,6 @@ networks:
   app-network:
     internal: true
   test-ingress-network: {}
+
+volumes:
+  email_test_tenant_secrets:
