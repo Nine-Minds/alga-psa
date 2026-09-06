@@ -246,6 +246,18 @@ export function normalizeResolvedContractCharge(input: {
           allowRollover: charge.inputs.config.allow_rollover,
           weighted: charge.inputs.config.isWeighted,
         },
+        periodContributions: charge.inputs.serviceContributions?.map((period) => ({
+          start: period.periodStart,
+          end: period.periodEnd,
+          services: period.services.map((service) => ({
+            serviceId: service.service_id,
+            serviceName: service.service_name,
+            taxRateId: service.tax_rate_id,
+            unitOfMeasure: service.unit_of_measure,
+            billingMethod: service.billing_method,
+            weightedMinutes: service.weightedMinutes,
+          })),
+        })),
         periods: charge.inputs.usageRecords.map((period) => ({
           start:
             period.period_start instanceof Date
@@ -514,6 +526,18 @@ export function calculateNormalizedContractCharge(
             allow_rollover: facts.configuration.allowRollover,
             isWeighted: facts.configuration.weighted,
           },
+          serviceContributions: facts.periodContributions?.map((period) => ({
+            periodStart: period.start,
+            periodEnd: period.end,
+            services: period.services.map((service) => ({
+              service_id: service.serviceId,
+              service_name: service.serviceName,
+              tax_rate_id: service.taxRateId,
+              unit_of_measure: service.unitOfMeasure,
+              billing_method: service.billingMethod,
+              weightedMinutes: service.weightedMinutes,
+            })),
+          })),
           usageRecords: facts.periods.map((period) => ({
             period_start: period.start,
             period_end: period.end,

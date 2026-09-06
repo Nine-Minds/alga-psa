@@ -346,6 +346,30 @@ describe('Billing Invoice Generation – Usage, Bucket Contract Lines, and Final
         period_end_date: createTestDateISO({ year: 2023, month: 2, day: 1 })
       }, 'billing_cycle_id');
 
+      // Seed the underlying service contributions as well as the allowance
+      // aggregate: invoice tax and attribution come from actual burned work.
+      const ticketId = await context.createEntity('tickets', {
+        client_id: context.clientId,
+        ticket_number: `BUCKET-${uuidv4()}`,
+        title: 'Consulting work',
+      }, 'ticket_id');
+      for (const day of ['02', '03', '04', '05', '06']) {
+        await context.createEntity('time_entries', {
+          user_id: context.userId,
+          service_id: serviceId,
+          contract_line_id: contractLineId,
+          work_item_id: ticketId,
+          work_item_type: 'ticket',
+          start_time: `2023-01-${day}T09:00:00Z`,
+          end_time: `2023-01-${day}T18:00:00Z`,
+          work_date: `2023-01-${day}`,
+          work_timezone: 'UTC',
+          billable_duration: 9 * 60,
+          approval_status: 'APPROVED',
+          invoiced: false,
+        }, 'entry_id');
+      }
+
       // Record bucket usage for the period (45 hours consumed, 5 hours overage)
       await createBucketUsageRecord(context, {
         contractLineId,

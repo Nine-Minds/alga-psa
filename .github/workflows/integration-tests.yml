@@ -46,7 +46,7 @@ jobs:
         run: node scripts/select-integration-tests.mjs
 
   integration-tests:
-    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full') && 'Full integration suite' || 'Tier-1 integration subset' }}
+    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'Full integration suite' || 'Tier-1 integration subset' }}
     needs: check-changes
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
@@ -159,7 +159,7 @@ jobs:
       # to the full directory; unavailable change evidence also requires full coverage.
       - name: Run Tier-1 integration subset
         id: tier1
-        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full' && needs.check-changes.outputs.full != 'true'
         working-directory: ./server
         run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
         env:
@@ -168,7 +168,7 @@ jobs:
 
       - name: Run full integration suite
         id: full
-        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true'
         working-directory: ./server
         run: npm run test:integration:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
         env:

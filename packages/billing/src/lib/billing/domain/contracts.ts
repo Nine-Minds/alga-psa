@@ -186,6 +186,18 @@ export type ResolvedContractBillingChargeFacts =
         allowRollover?: boolean | null;
         weighted?: boolean | null;
       };
+      periodContributions?: Array<{
+        start: string;
+        end: string;
+        services: Array<{
+          serviceId: string;
+          serviceName?: string;
+          taxRateId?: string | null;
+          unitOfMeasure?: string | null;
+          billingMethod?: string | null;
+          weightedMinutes: number;
+        }>;
+      }>;
       periods: Array<{
         start?: string | null;
         end?: string | null;
