@@ -26,6 +26,15 @@ const directoryUserParams = {
 
 export function register(reg: ControlRegistry, core: MsGraphCore): void {
   reg.action({
+    name: 'deliver-message',
+    description: 'Redeliver an existing mailbox message notification and report each callback outcome without creating another message',
+    params: z.object({ messageId: z.string() }),
+    run: async ({ messageId }) => {
+      const message = core.getMessage(messageId);
+      return { message, deliveries: await deliverNotifications(core, message, core.env) };
+    },
+  });
+  reg.action({
     name: 'calendar-change',
     description: 'Create, update or delete a vendor calendar event and deliver matching change notifications',
     params: z.object({

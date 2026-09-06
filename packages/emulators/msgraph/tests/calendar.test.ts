@@ -43,6 +43,7 @@ beforeAll(async () => {
     const chunks: Buffer[] = [];
     for await (const chunk of req) chunks.push(Buffer.from(chunk));
     notifications.push({ path: url.pathname, body: JSON.parse(Buffer.concat(chunks).toString()) });
+    if (url.pathname === '/disconnect') { res.destroy(); return; }
     if (url.pathname === '/redirect') res.writeHead(302, { location: `${callback}/followed` }).end();
     else res.writeHead(url.pathname === '/reject' ? 503 : 202).end();
   }).listen(0, '127.0.0.1');
@@ -241,4 +242,37 @@ it('injects vendor-side changes through controls and exposes callback failures w
   await controlPost('actions/calendar-change', { changeType: 'deleted', eventId: created.event.id });
   expect((await delta(sync['@odata.deltaLink'])).value).toEqual([{ id: created.event.id, '@removed': { reason: 'deleted' } }]);
   expect(notifications.filter(x => x.path === '/calendar').map(x => x.body.value[0].changeType)).toEqual(['created', 'updated', 'deleted']);
+});
+
+it('delivers new mail only to unexpired subscriptions requesting created changes', async () => {
+  await subscribe('/mail', '/me/mailFolders/inbox/messages', 'created');
+  await subscribe('/updated', '/me/mailFolders/inbox/messages', 'updated,deleted');
+  await subscribe('/expired', '/me/mailFolders/inbox/messages', 'created', true);
+  await controlPost('seed/message', { subject: 'Scoped mailbox creation' });
+  expect(notifications.map(notification => notification.path)).toEqual(['/mail']);
+});
+
+it('replays the same mailbox notification with visible HTTP failures and no redirect or message duplication', async () => {
+  const message = await controlPost('seed/message', { subject: 'Replay original provider identity' });
+  await subscribe('/mail', '/me/mailFolders/inbox/messages', 'created');
+  await subscribe('/reject', '/me/mailFolders/inbox/messages', 'created');
+  await subscribe('/redirect', '/me/mailFolders/inbox/messages', 'created');
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const replay = await controlPost('actions/deliver-message', { messageId: message.id });
+    expect(replay.message).toEqual(message);
+    expect(replay.deliveries.map((delivery: any) => [delivery.status, delivery.delivered]))
+      .toEqual([[202, true], [503, false], [302, false]]);
+  }
+  expect(notifications.map(notification => notification.path).sort())
+    .toEqual(['/mail', '/mail', '/redirect', '/redirect', '/reject', '/reject']);
+  expect(notifications.every(notification => notification.body.value[0].resourceData.id === message.id)).toBe(true);
+  expect((await (await graph('/me/mailFolders/inbox/messages')).json()).value).toEqual([message]);
+});
+
+it('reports mailbox callback connection failures without losing the message', async () => {
+  const message = await controlPost('seed/message', { subject: 'Recoverable callback outage' });
+  await subscribe('/disconnect', '/me/mailFolders/inbox/messages', 'created');
+  const replay = await controlPost('actions/deliver-message', { messageId: message.id });
+  expect(replay.deliveries).toEqual([expect.objectContaining({ delivered: false, status: null, error: expect.any(String) })]);
+  expect((await (await graph(`/me/messages/${message.id}`)).json()).id).toBe(message.id);
 });

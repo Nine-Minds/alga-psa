@@ -42,13 +42,14 @@ export async function validateNotificationUrl(notificationUrl: string, validatio
   }
 }
 
-export async function deliverNotifications(core: MsGraphCore, message: GraphMessage, env: HostEnv): Promise<void> {
+export async function deliverNotifications(core: MsGraphCore, message: GraphMessage, env: HostEnv): Promise<ArtifactNotificationDelivery[]> {
   // Mail notifications must not reach meeting-artifact or call-record
   // subscriptions: real Graph scopes change notifications to the subscribed
   // resource.
-  await Promise.all(
+  return Promise.all(
     core.activeSubscriptions()
-      .filter((subscription) => !SCOPED_SUBSCRIPTION_RESOURCES.has(subscription.resource) && /\/messages$/i.test(subscription.resource))
+      .filter((subscription) => !SCOPED_SUBSCRIPTION_RESOURCES.has(subscription.resource) && /\/messages$/i.test(subscription.resource) &&
+        subscription.changeType.split(',').some(change => change.trim() === 'created'))
       .map((subscription) => deliverOne(subscription, message, env)),
   );
 }
@@ -211,11 +212,12 @@ export async function deliverCallRecordNotifications(
   }));
 }
 
-async function deliverOne(subscription: GraphSubscription, message: GraphMessage, env: HostEnv): Promise<void> {
+async function deliverOne(subscription: GraphSubscription, message: GraphMessage, env: HostEnv): Promise<ArtifactNotificationDelivery> {
   try {
-    await fetch(subscription.notificationUrl, {
+    const response = await fetch(subscription.notificationUrl, {
       method: 'POST',
       redirect: 'manual',
+      signal: AbortSignal.timeout(10000),
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         value: [
@@ -229,11 +231,14 @@ async function deliverOne(subscription: GraphSubscription, message: GraphMessage
         ],
       }),
     });
+    return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: response.ok, status: response.status };
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     env.log('msgraph notification delivery failed', {
       subscriptionId: subscription.id,
-      error: error instanceof Error ? error.message : String(error),
+      error: message,
     });
+    return { subscriptionId: subscription.id, notificationUrl: subscription.notificationUrl, delivered: false, status: null, error: message };
   }
 }
 

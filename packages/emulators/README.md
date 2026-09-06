@@ -214,6 +214,14 @@ freeze paginated results, and report event updates, deletions and window exits.
 `Prefer: odata.maxpagesize=N` controls page size (default 100). Resetting or
 restoring the emulator invalidates prior sync tokens with `410 SyncStateNotFound`.
 
+For mailbox replay, `deliver-message` takes an existing `messageId`, sends its
+created notification again, and returns `{ message, deliveries }`. Each delivery
+includes the subscription ID, HTTP status and success flag; connection failures
+also include an error. It preserves the message identity and does not add another
+mailbox message. Only unexpired mail subscriptions requesting `created` receive
+it. Delivery has a ten-second timeout and does not follow redirects. The existing
+`message` seeder still creates a message and sends its initial notification.
+
 Use the `calendar-change` control action to create/update/delete vendor events;
 it returns the event and each matching webhook delivery's HTTP status. Supply
 `changeType`, an `event` object for creation/update, and `eventId` for update/delete.
