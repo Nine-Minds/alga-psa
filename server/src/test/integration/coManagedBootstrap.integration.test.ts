@@ -2173,3 +2173,56 @@ describe('co-managed project templates and import', () => {
       .toMatchObject({ mapping: { status_id: status.status_id }, unresolvedStatusMappingCount: 0 });
   }));
 });
+
+it('keeps client portal task uploads atomic when expiry wins during transport and preserves document reads', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects, workflow }) => {
+  await acceptCoManagedRelationship(db, actor, input);
+  const auth = await import('@alga-psa/auth');
+  const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-project-details');
+  const { ProjectTaskModel } = await import('@alga-psa/projects/models');
+  const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+  const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Portal upload', client_id: operation.customer_client_id,
+    status: status.status_id, description: null, start_date: null, end_date: null, is_inactive: false }) as any;
+  await customer.table('projects').where('project_id', project.project_id).update({ client_portal_config: {
+    show_tasks: true, visible_task_fields: ['task_name', 'document_uploads'],
+  } });
+  const phase = await projects.addProjectPhase({ project_id: project.project_id, phase_name: 'Discovery', description: null,
+    start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any) as any;
+  const mapping = await customer.table('project_status_mappings').where('project_id', project.project_id).first();
+  const task = await ProjectTaskModel.addTask(db, actor.tenant, phase.phase_id, { task_name: 'Attach inventory', task_type_key: 'task',
+    project_status_mapping_id: mapping.project_status_mapping_id } as any);
+  const contact = await customer.table('contacts').where('client_id', operation.customer_client_id).first();
+  const [requester] = await customer.table('users').insert({ tenant: actor.tenant, user_id: randomUUID(), username: `portal-${randomUUID()}`,
+    email: 'portal@example.test', first_name: 'Portal', last_name: 'Requester', hashed_password: 'not-a-login',
+    user_type: 'client', contact_id: contact.contact_name_id, is_inactive: false }).returning('*');
+  const form = new FormData(); form.set('file', new File(['saved'], 'saved.txt', { type: 'text/plain' }));
+  const upload = () => auth.runWithApiKeyUser(requester, () => portal.uploadClientTaskDocument(task.task_id, form));
+  artifactStorage.upload.mockReset().mockImplementation(async (buffer, path) => ({ path, size: buffer.length, mime_type: 'text/plain' }));
+  artifactStorage.delete.mockReset().mockResolvedValue(undefined);
+  workflow.mockClear();
+  artifactStorage.upload.mockImplementationOnce(async (_buffer, path) => {
+    await expireCoManagedEntitlement(operation.tenant);
+    return { path, size: 5, mime_type: 'text/plain' };
+  });
+  expect(await upload()).toMatchObject({ success: false });
+  for (const table of ['external_files', 'documents', 'document_associations']) expect(await customer.table(table)).toEqual([]);
+  expect(artifactStorage.delete).toHaveBeenCalledOnce();
+  expect(workflow).not.toHaveBeenCalled();
+  const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+    async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+  const observed: number[] = [];
+  workflow.mockImplementation(async () => {
+    observed.push((await customer.table('document_associations').where({ entity_type: 'project_task', entity_id: task.task_id })).length);
+  });
+  const result = await upload();
+  expect(result).toMatchObject({ success: true, documentId: expect.any(String) });
+  expect(observed.length).toBeGreaterThan(0); expect(observed.every(count => count === 1)).toBe(true);
+  expect(await customer.table('external_files')).toHaveLength(1);
+  expect(await customer.table('documents')).toEqual([expect.objectContaining({ created_by: requester.user_id, is_client_visible: true })]);
+  await expireCoManagedEntitlement(operation.tenant);
+  const uploads = artifactStorage.upload.mock.calls.length;
+  expect(await upload()).toMatchObject({ success: false });
+  expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
+  expect(await auth.runWithApiKeyUser(requester, () => portal.getClientTaskDocuments(task.task_id)))
+    .toMatchObject({ success: true, documents: [expect.objectContaining({ document_name: 'saved.txt' })] });
+}));
