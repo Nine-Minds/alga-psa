@@ -18,7 +18,7 @@ describe('product bootstrap resolver', () => {
     });
   });
 
-  it('resolves PSA and Algadesk product seed directories', () => {
+  it('resolves each product to its own seed directory', () => {
     const root = '/tmp/onboarding-seeds';
 
     expect(resolveProductSeedDirectory({ onboardingSeedsRoot: root, productCode: 'psa' })).toBe(
@@ -27,6 +27,19 @@ describe('product bootstrap resolver', () => {
     expect(resolveProductSeedDirectory({ onboardingSeedsRoot: root, productCode: 'algadesk' })).toBe(
       path.join(root, 'algadesk'),
     );
+    expect(resolveProductSeedDirectory({ onboardingSeedsRoot: root, productCode: 'co_managed' })).toBe(
+      path.join(root, 'co_managed'),
+    );
+  });
+
+  it('selects the operational co-managed seed manifest without commercial bootstrap', async () => {
+    const root = path.resolve(__dirname, '../../../../server/seeds/onboarding');
+    const files = await listProductSeedFiles({ onboardingSeedsRoot: root, productCode: 'co_managed' });
+    expect(files).toEqual([
+      '01_roles.cjs', '02_permissions.cjs', '03_role_permissions.cjs',
+      '06_project_task_statuses.cjs', '07_ad_to_m365_project_template.cjs',
+      '08_document_folder_templates.cjs', '09_asset_type_registry.cjs',
+    ]);
   });
 
   it('fails clearly for unsupported product codes', () => {

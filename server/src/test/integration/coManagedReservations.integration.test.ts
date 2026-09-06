@@ -47,6 +47,46 @@ beforeAll(async () => {
     table.uuid('client_id').notNullable();
     table.primary(['tenant', 'client_id']);
   });
+  await db.schema.createTable('roles', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('role_id').notNullable().defaultTo(db.raw('gen_random_uuid()'));
+    table.text('role_name').notNullable();
+    table.text('description');
+    table.boolean('msp').notNullable();
+    table.boolean('client').notNullable();
+    table.primary(['tenant', 'role_id']);
+  });
+  await db.schema.createTable('permissions', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('permission_id').notNullable().defaultTo(db.raw('gen_random_uuid()'));
+    table.text('resource').notNullable();
+    table.text('action').notNullable();
+    table.text('description');
+    table.boolean('msp').notNullable();
+    table.boolean('client').notNullable();
+    table.primary(['tenant', 'permission_id']);
+    table.unique(['tenant', 'resource', 'action', 'msp', 'client']);
+  });
+  await db.schema.createTable('role_permissions', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('role_id').notNullable();
+    table.uuid('permission_id').notNullable();
+    table.primary(['tenant', 'role_id', 'permission_id']);
+  });
+  await db.schema.createTable('document_default_folders', (table) => {
+    table.uuid('tenant').notNullable();
+    table.uuid('default_folder_id').notNullable();
+    table.text('entity_type');
+    table.text('folder_path');
+    table.text('folder_name');
+    table.integer('sort_order');
+    table.boolean('is_client_visible');
+    table.timestamp('created_at');
+    table.timestamp('updated_at');
+    table.uuid('created_by');
+    table.uuid('updated_by');
+    table.primary(['tenant', 'default_folder_id']);
+  });
   await db.schema.createTable('license_state', (table) => {
     table.increments('id').primary();
     table.text('license_token');
@@ -55,6 +95,9 @@ beforeAll(async () => {
   if (process.env.CO_MANAGED_TEST_CITUS === '1') {
     await db.raw("SELECT create_distributed_table('tenants', 'tenant')");
     await db.raw("SELECT create_distributed_table('clients', 'tenant', colocate_with => 'tenants')");
+    for (const table of ['roles', 'permissions', 'role_permissions', 'document_default_folders']) {
+      await db.raw("SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'tenants')", [table]);
+    }
   }
   await previousProductMigration.up(db);
   await migration.up(db);
@@ -94,6 +137,62 @@ function license(aud: string, seats: number, issuedAt?: number) {
   const signingInput = `${header}.${payload}`;
   return `${signingInput}.${sign('sha256', Buffer.from(signingInput), { key: keys.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
 }
+
+describe('co-managed onboarding seeds', () => {
+  const seedRoot = '../../../../ee/server/seeds/onboarding/co_managed/';
+  const rolesSeed = require(seedRoot + '01_roles.cjs');
+  const permissionsSeed = require(seedRoot + '02_permissions.cjs');
+  const grantsSeed = require(seedRoot + '03_role_permissions.cjs');
+  const foldersSeed = require(seedRoot + '08_document_folder_templates.cjs');
+
+  it('creates operational roles and permissions without granting commercial capabilities', async () => {
+    const customer = await sponsorFixture(0, 'co_managed');
+    const scoped = tenantDb(db, customer.sponsorTenant);
+    await rolesSeed.seed(db, customer.sponsorTenant);
+    await permissionsSeed.seed(db, customer.sponsorTenant);
+    await grantsSeed.seed(db, customer.sponsorTenant);
+    const roles = await scoped.table('roles');
+    expect(roles.map(role => role.role_name)).not.toContain('Finance');
+    expect(roles).toHaveLength(6);
+    const admin = roles.find(role => role.role_name === 'Admin' && role.msp);
+    const grants = await scoped.table('role_permissions').where('role_id', admin.role_id);
+    const permissions = await scoped.table('permissions').whereIn('permission_id', grants.map(grant => grant.permission_id));
+    const resources = new Set(permissions.map(permission => permission.resource));
+    for (const resource of ['ticket', 'project', 'project_task', 'time_entry', 'time_sheet', 'user_schedule', 'asset', 'sla_policy', 'workflow', 'credential', 'document']) {
+      expect(resources.has(resource), resource).toBe(true);
+    }
+    for (const resource of ['billing', 'invoice', 'financial', 'accounting_integrations', 'opportunities', 'quotes', 'rmm', 'extension', 'tax', 'account_management']) {
+      expect(resources.has(resource), resource).toBe(false);
+    }
+  });
+
+  it('replays defaults without replacing custom roles, grants, or folder settings', async () => {
+    const customer = await sponsorFixture(0, 'co_managed');
+    const scoped = tenantDb(db, customer.sponsorTenant);
+    for (const seed of [rolesSeed, permissionsSeed, grantsSeed, foldersSeed]) await seed.seed(db, customer.sponsorTenant);
+    const role = (await scoped.table('roles').insert({ tenant: customer.sponsorTenant, role_name: 'Local support', msp: true, client: false }).returning('*'))[0];
+    const permission = await scoped.table('permissions').where({ resource: 'ticket', action: 'read', msp: true }).first();
+    await scoped.table('role_permissions').insert({ tenant: customer.sponsorTenant, role_id: role.role_id, permission_id: permission.permission_id });
+    await scoped.table('document_default_folders').where('folder_path', '/Tickets').update({ folder_name: 'Our ticket files' });
+    const before = await scoped.table('role_permissions').count('* as total').first();
+    for (const seed of [rolesSeed, permissionsSeed, grantsSeed, foldersSeed]) await seed.seed(db, customer.sponsorTenant);
+    expect(await scoped.table('role_permissions').count('* as total').first()).toEqual(before);
+    expect(await scoped.table('roles').where('role_id', role.role_id).first()).toMatchObject({ role_name: 'Local support' });
+    expect(await scoped.table('document_default_folders').where('folder_path', '/Tickets').first()).toMatchObject({ folder_name: 'Our ticket files' });
+    const folders = await scoped.table('document_default_folders');
+    expect(folders.some(folder => folder.entity_type === 'contract' || /Invoices|Sales Orders|Contracts/.test(folder.folder_path))).toBe(false);
+  });
+
+  it('does not apply co-managed defaults to a PSA or sibling workspace', async () => {
+    const msp = await sponsorFixture();
+    const customer = await sponsorFixture(0, 'co_managed');
+    await expect(rolesSeed.seed(db, msp.sponsorTenant)).rejects.toThrow('co-managed customer workspace');
+    await foldersSeed.seed(db);
+    expect(await tenantDb(db, msp.sponsorTenant).table('document_default_folders')).toHaveLength(0);
+    expect((await tenantDb(db, customer.sponsorTenant).table('document_default_folders')).length).toBeGreaterThan(0);
+    expect(await tenantDb(db, msp.sponsorTenant).table('roles')).toHaveLength(0);
+  });
+});
 
 describe('co-managed reservation persistence', () => {
   it('atomically reserves a new customer identity without activating trust or creating a login', async () => {

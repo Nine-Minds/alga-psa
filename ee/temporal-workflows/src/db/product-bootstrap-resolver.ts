@@ -1,14 +1,14 @@
 import * as path from 'path';
 import * as fs from 'fs/promises';
 
-export type ProductCode = 'psa' | 'algadesk';
+export type ProductCode = 'psa' | 'algadesk' | 'co_managed';
 
 export interface ProductBootstrapPlan {
   productCode: ProductCode;
   seedDirectoryName: ProductCode;
 }
 
-const SUPPORTED_PRODUCT_CODES: ProductCode[] = ['psa', 'algadesk'];
+const SUPPORTED_PRODUCT_CODES: ProductCode[] = ['psa', 'algadesk', 'co_managed'];
 
 export function normalizeProductCode(productCode?: string | null): ProductCode {
   if (!productCode) {
