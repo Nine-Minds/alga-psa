@@ -163,11 +163,18 @@ async function getClient() {
 
 // Helper to check connection status (for external monitoring)
 export function isEventBusConnected(): boolean {
-  return isConnected && !eventBusDisabled;
+  return eventBusRegistry[EVENT_BUS_KEY]?.isConnected() ?? false;
 }
 
+// Next's main and EE graphs can bundle this module independently. All
+// subscribers in the process must share one consumer: separate consumers in
+// the same Redis group compete for messages and ACK each other's work.
+const EVENT_BUS_KEY = Symbol.for('alga.eventBus.v1');
+const eventBusRegistry = globalThis as typeof globalThis & {
+  [EVENT_BUS_KEY]?: EventBus;
+};
+
 export class EventBus {
-  private static instance: EventBus;
   private static createdConsumerGroups: Set<string> = new Set<string>();
   // Map<EventType, Map<Channel, Handlers>> so channel-specific consumers do not step on each other.
   private handlers: Map<EventType, Map<string, Set<EventHandler>>>;
@@ -179,6 +186,7 @@ export class EventBus {
   private consumerName: string;
   private processingEvents: boolean = false;
   private defaultChannel: string;
+  private closed = false;
 
   private constructor() {
     this.handlers = new Map();
@@ -187,10 +195,14 @@ export class EventBus {
   }
 
   public static getInstance(): EventBus {
-    if (!EventBus.instance) {
-      EventBus.instance = new EventBus();
+    if (!eventBusRegistry[EVENT_BUS_KEY]) {
+      eventBusRegistry[EVENT_BUS_KEY] = new EventBus();
     }
-    return EventBus.instance;
+    return eventBusRegistry[EVENT_BUS_KEY];
+  }
+
+  public isConnected(): boolean {
+    return !this.closed && isConnected && !eventBusDisabled;
   }
 
   private getStreamKey(eventType: EventType, channel: string): string {
@@ -275,6 +287,7 @@ export class EventBus {
   }
 
   public async initialize() {
+    if (this.closed) throw new Error('Event bus is closed; obtain a new instance with getEventBus()');
     if (!this.initialized) {
       console.log('[EventBus] Initializing event bus');
       await getClient();
@@ -389,6 +402,10 @@ export class EventBus {
         });
 
         const streamEntries = await Promise.race([readPromise, hardTimeoutPromise]);
+
+        // A read may settle after close. It must not reset the replacement
+        // instance's connection or deliver through the old subscriptions.
+        if (!this.processingEvents) return;
 
         if (didHardTimeout) {
           // Prevent an eventual rejection from becoming unhandled if we timed out first.
@@ -896,22 +913,26 @@ export class EventBus {
   }
 
   public async close(): Promise<void> {
+    if (this.closed) return;
+    this.closed = true;
     this.processingEvents = false;
-    const currentClient = await getClient();
-    if (currentClient) {
-      await currentClient.quit();
+    const currentClient = client;
+    try {
+      if (currentClient) await currentClient.quit();
+    } finally {
       client = null;
+      clientPromise = null;
+      isConnected = false;
+      isReconnecting = false;
+      this.initialized = false;
+      this.handlers.clear();
+      EventBus.createdConsumerGroups.clear();
+      if (eventBusRegistry[EVENT_BUS_KEY] === this) delete eventBusRegistry[EVENT_BUS_KEY];
     }
-    this.initialized = false;
   }
 }
 
 // Defer instance creation until explicitly requested
-let eventBusInstance: EventBus | null = null;
-
 export function getEventBus(): EventBus {
-  if (!eventBusInstance) {
-    eventBusInstance = EventBus.getInstance();
-  }
-  return eventBusInstance;
+  return EventBus.getInstance();
 }

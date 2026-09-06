@@ -28,6 +28,7 @@ import EntryPopup from './EntryPopup';
 import { CalendarStyleProvider } from './CalendarStyleProvider';
 import TechnicianSidebar from './TechnicianSidebar';
 import WeeklyScheduleEvent from './WeeklyScheduleEvent';
+import { ScheduleCalendarEventContext, ScheduleCalendarEventRenderer } from './ScheduleCalendarEventRenderer';
 import { getScheduleEntries, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getAppointmentRequestById, IAppointmentRequest } from '@alga-psa/scheduling/actions';
 import { IEditScope, IScheduleEntry, DeletionValidationResult } from '@alga-psa/types';
 import { produce } from 'immer';
@@ -1075,8 +1076,9 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     document.addEventListener('mouseup', handleResizeEnd);
   }, [focusedTechnicianId, events, updateEventLocally, updateScheduleEntry]);
 
-  // Event component for the calendar
-  const EventComponent = useCallback(({ event }: { event: any }) => {
+  // State changes refresh event content through context without replacing the
+  // component react-big-calendar uses for an in-progress click or drag.
+  const renderEvent = useCallback(({ event }: { event: IScheduleEntry }) => {
     const scheduleEvent = event as IScheduleEntry;
     const isPrimary = focusedTechnicianId !== null &&
                      scheduleEvent.assigned_user_ids?.includes(focusedTechnicianId);
@@ -1292,71 +1294,73 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
             scrollToTime.setHours(8, 0, 0, 0);
             return (
               <Suspense fallback={<CalendarSkeleton height="100%" view={view === 'agenda' ? 'week' : view as 'month' | 'week' | 'day'} showSidebar={false} />}>
-                <DynamicBigCalendar
-                  localizer={localizer}
-                  events={events}
-                  startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
-                  endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
-                  allDayAccessor={(event: object) => {
-                    const scheduleEvent = event as IScheduleEntry;
-                    const start = new Date(scheduleEvent.scheduled_start);
-                    const end = new Date(scheduleEvent.scheduled_end);
+                <ScheduleCalendarEventContext.Provider value={renderEvent}>
+                  <DynamicBigCalendar
+                    localizer={localizer}
+                    events={events}
+                    startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
+                    endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
+                    allDayAccessor={(event: object) => {
+                      const scheduleEvent = event as IScheduleEntry;
+                      const start = new Date(scheduleEvent.scheduled_start);
+                      const end = new Date(scheduleEvent.scheduled_end);
 
-                    // Check if event spans multiple days
-                    const isMultiDay = start.toDateString() !== end.toDateString();
+                      // Check if event spans multiple days
+                      const isMultiDay = start.toDateString() !== end.toDateString();
 
-                    // Place multi-day events in the all-day section
-                    // They will maintain their visual height of 30px via CSS
-                    return isMultiDay;
-                  }}
-                  eventPropGetter={() => ({
-                    style: {
-                      backgroundColor: 'transparent',
-                      border: 'none',
-                      borderRadius: '0px',
-                      padding: '0px',
-                      boxShadow: 'none',
-                      color: 'inherit',
-                    }
-                  })}
-                  style={{ height: '100%' }}
-                  view={view}
-                  date={date}
-                  scrollToTime={scrollToTime}
-                  onView={(newView) => {
-                    setView(newView);
-                  }}
-                  onNavigate={handleNavigate}
-                  selectable
-                  onSelectSlot={handleSelectSlot}
-                  onSelectEvent={handleSelectEvent}
-                  resizableAccessor={(event: object) => {
-                    const scheduleEvent = event as IScheduleEntry;
-                    // Source-owned entries (deal steps) mirror another record;
-                    // resizing here would diverge from it until the next sync.
-                    return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
-                          focusedTechnicianId !== null &&
-                          scheduleEvent?.assigned_user_ids &&
-                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                  }}
-                  draggableAccessor={(event: object) => {
-                    const scheduleEvent = event as IScheduleEntry;
-                    return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
-                          focusedTechnicianId !== null &&
-                          scheduleEvent?.assigned_user_ids &&
-                          scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
-                  }}
-                  onEventResize={handleEventResize}
-                  onEventDrop={handleEventDrop}
-                  step={15}
-                  timeslots={4}
-                  components={{
-                    toolbar: CustomToolbar,
-                    event: EventComponent
-                  }}
-                  defaultView="week"
-                  views={['month', 'week', 'day']}
-                />
+                      // Place multi-day events in the all-day section
+                      // They will maintain their visual height of 30px via CSS
+                      return isMultiDay;
+                    }}
+                    eventPropGetter={() => ({
+                      style: {
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        borderRadius: '0px',
+                        padding: '0px',
+                        boxShadow: 'none',
+                        color: 'inherit',
+                      }
+                    })}
+                    style={{ height: '100%' }}
+                    view={view}
+                    date={date}
+                    scrollToTime={scrollToTime}
+                    onView={(newView) => {
+                      setView(newView);
+                    }}
+                    onNavigate={handleNavigate}
+                    selectable
+                    onSelectSlot={handleSelectSlot}
+                    onSelectEvent={handleSelectEvent}
+                    resizableAccessor={(event: object) => {
+                      const scheduleEvent = event as IScheduleEntry;
+                      // Source-owned entries (deal steps) mirror another record;
+                      // resizing here would diverge from it until the next sync.
+                      return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
+                            focusedTechnicianId !== null &&
+                            scheduleEvent?.assigned_user_ids &&
+                            scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                    }}
+                    draggableAccessor={(event: object) => {
+                      const scheduleEvent = event as IScheduleEntry;
+                      return !isSourceOwnedWorkItemType(scheduleEvent?.work_item_type) &&
+                            focusedTechnicianId !== null &&
+                            scheduleEvent?.assigned_user_ids &&
+                            scheduleEvent.assigned_user_ids.includes(focusedTechnicianId);
+                    }}
+                    onEventResize={handleEventResize}
+                    onEventDrop={handleEventDrop}
+                    step={15}
+                    timeslots={4}
+                    components={{
+                      toolbar: CustomToolbar,
+                      event: ScheduleCalendarEventRenderer
+                    }}
+                    defaultView="week"
+                    views={['month', 'week', 'day']}
+                  />
+                </ScheduleCalendarEventContext.Provider>
               </Suspense>
             );
           })()}
