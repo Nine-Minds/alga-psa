@@ -1968,3 +1968,83 @@ describe('co-managed project status action lifecycle', () => {
     expect(await customer.table('statuses').where('status_id', custom.status_id)).toEqual([]);
   }));
 });
+
+describe('co-managed task comments and reactions', () => {
+  it('denies comment and reaction mutations before acceptance and after expiry', async () => withProjectActionsFixture(async ({ operation, actor, input, publish }) => {
+    const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
+    const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
+    const id = randomUUID();
+    const mutations = [
+      () => comments.createTaskComment({ taskId: id, note: 'Denied' }),
+      () => comments.updateTaskComment(id, { note: 'Denied' }),
+      () => comments.deleteTaskComment(id),
+      () => reactions.toggleTaskCommentReaction(id, '👍'),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(publish).not.toHaveBeenCalled();
+  }));
+
+  it('keeps threaded comments and reactions atomic, publishes after commit, and resumes after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects, publish }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
+    const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
+    const dbModule = await import('@alga-psa/db');
+    const { ProjectTaskModel } = await import('@alga-psa/projects/models');
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Comment rollout', client_id: operation.customer_client_id,
+      status: status.status_id, description: null, start_date: null, end_date: null, is_inactive: false }) as any;
+    const phase = await projects.addProjectPhase({ project_id: project.project_id, phase_name: 'Discovery', description: null,
+      start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any) as any;
+    const mapping = await customer.table('project_status_mappings').where('project_id', project.project_id).first();
+    const task = await ProjectTaskModel.addTask(db, actor.tenant, phase.phase_id, { task_name: 'Discuss rollout', task_type_key: 'task',
+      project_status_mapping_id: mapping.project_status_mapping_id } as any);
+    publish.mockClear();
+    // The authenticated action may inherit a caller transaction. Its events must
+    // stay deferred through the caller's decision to roll back.
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      expect(await comments.createTaskComment({ taskId: task.task_id, note: 'Cancelled' })).toEqual(expect.any(String));
+      expect(publish).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled comment');
+    })).rejects.toThrow('Caller cancelled comment');
+    expect(await customer.table('project_task_comments')).toEqual([]);
+    expect(await customer.table('comment_threads')).toEqual([]);
+    expect(publish).not.toHaveBeenCalled();
+    const snapshots: any[] = [];
+    publish.mockImplementation(async (event: any) => {
+      snapshots.push(await customer.table('project_task_comments').where('task_comment_id', event.payload.taskCommentId).first());
+    });
+    const root = await comments.createTaskComment({ taskId: task.task_id, note: 'Customer question' }) as string;
+    expect(snapshots).toEqual([expect.objectContaining({ note: 'Customer question' }), expect.objectContaining({ note: 'Customer question' })]);
+    const reply = await comments.createTaskComment({ taskId: task.task_id, note: 'Answer', parentCommentId: root }) as string;
+    expect((await customer.table('comment_threads').first()).reply_count).toBe(1);
+    expect(await reactions.toggleTaskCommentReaction(reply, '👍')).toEqual({ added: true });
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await comments.getTaskCommentCount(task.task_id)).toBe(2);
+    const reactionRead = await reactions.getTaskCommentsReactionsBatch([reply]);
+    expect(reactionRead.reactions[reply]).toEqual([expect.objectContaining({ emoji: '👍', count: 1 })]);
+    const before = await customer.table('project_task_comments').orderBy('task_comment_id');
+    publish.mockClear();
+    await expect(comments.deleteTaskComment(root)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(reactions.toggleTaskCommentReaction(reply, '👍')).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('project_task_comments').orderBy('task_comment_id')).toEqual(before);
+    expect(await customer.table('project_task_comment_reactions')).toHaveLength(1);
+    expect(publish).not.toHaveBeenCalled();
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    snapshots.length = 0;
+    await comments.updateTaskComment(reply, { note: 'Revised answer' });
+    expect(snapshots).toEqual([expect.objectContaining({ note: 'Revised answer' }), expect.objectContaining({ note: 'Revised answer' })]);
+    await comments.deleteTaskComment(root);
+    expect((await customer.table('project_task_comments').where('task_comment_id', root).first()).deleted_at).not.toBeNull();
+    await comments.deleteTaskComment(reply);
+    expect(await customer.table('project_task_comment_reactions')).toEqual([]);
+    expect((await customer.table('comment_threads').first()).reply_count).toBe(0);
+    await comments.deleteTaskComment(root);
+    expect(await customer.table('project_task_comments')).toEqual([]);
+    expect(await customer.table('comment_threads')).toEqual([]);
+  }));
+});

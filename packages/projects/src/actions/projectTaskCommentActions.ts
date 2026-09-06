@@ -1,6 +1,7 @@
 'use server';
 
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -19,6 +20,10 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+
+function publishCommentEventAfterCommit(trx: Knex.Transaction, event: Parameters<typeof publishEvent>[0]): void {
+  registerAfterCommit(trx, () => publishEvent(event), event.eventType);
+}
 
 type ProjectTaskCommentActionError = ActionMessageError | ActionPermissionError;
 
@@ -143,6 +148,7 @@ export const createTaskComment = withAuth(async (
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const userId = user.user_id;
 
     // Verify user is internal
@@ -246,7 +252,7 @@ export const createTaskComment = withAuth(async (
     }
 
     // Publish event (mention extraction happens in event handler)
-    await publishEvent({
+    publishCommentEventAfterCommit(trx, {
       eventType: 'TASK_COMMENT_ADDED',
       payload: {
         tenantId: tenant,
@@ -266,7 +272,7 @@ export const createTaskComment = withAuth(async (
       }
     });
 
-    await publishEvent({
+    publishCommentEventAfterCommit(trx, {
       eventType: 'PROJECT_TASK_COMMENT_CREATED',
       payload: {
         tenantId: tenant,
@@ -363,6 +369,7 @@ export const updateTaskComment = withAuth(async (
   const userId = user.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const existingComment = await tenantScopedTable(trx, 'project_task_comments', tenant)
       .where({ task_comment_id: taskCommentId })
       .first();
@@ -399,7 +406,7 @@ export const updateTaskComment = withAuth(async (
 
     // Publish event for smart mention notifications
     // Event handler will compare old vs new mentions and only notify NEW ones
-    await publishEvent({
+    publishCommentEventAfterCommit(trx, {
       eventType: 'TASK_COMMENT_UPDATED',
       payload: {
         tenantId: tenant,
@@ -414,7 +421,7 @@ export const updateTaskComment = withAuth(async (
       }
     });
 
-    await publishEvent({
+    publishCommentEventAfterCommit(trx, {
       eventType: 'PROJECT_TASK_COMMENT_UPDATED',
       payload: {
         tenantId: tenant,
@@ -449,6 +456,7 @@ export const deleteTaskComment = withAuth(async (
   const userId = user.user_id;
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const existingComment = await tenantScopedTable(trx, 'project_task_comments', tenant)
       .where({ task_comment_id: taskCommentId })
       .first();
@@ -487,7 +495,7 @@ export const deleteTaskComment = withAuth(async (
           updated_at: now,
         });
 
-      await publishEvent({
+      publishCommentEventAfterCommit(trx, {
         eventType: 'PROJECT_TASK_COMMENT_DELETED',
         payload: {
           tenantId: tenant,
@@ -523,7 +531,7 @@ export const deleteTaskComment = withAuth(async (
         .del();
     }
 
-    await publishEvent({
+    publishCommentEventAfterCommit(trx, {
       eventType: 'PROJECT_TASK_COMMENT_DELETED',
       payload: {
         tenantId: tenant,

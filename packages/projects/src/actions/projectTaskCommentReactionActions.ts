@@ -1,6 +1,7 @@
 'use server';
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
@@ -41,6 +42,7 @@ export const toggleTaskCommentReaction = withAuth(async (
   const userId = user.user_id;
 
   return withTransaction(db, async (trx) => {
+    await assertCoManagedOperationalWrite(trx, tenant);
     const existing = await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
       .where({ task_comment_id: taskCommentId, user_id: userId, emoji })
       .first();
