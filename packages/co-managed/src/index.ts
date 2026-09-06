@@ -4,3 +4,4 @@ export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';
 export * from './ticketHandoffs';
+export * from './ticketCollaboration';

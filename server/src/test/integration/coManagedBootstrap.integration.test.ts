@@ -3349,3 +3349,102 @@ it('keeps explicit ticket grant revocation customer-controlled during license pa
   expect((await read(db, principal, resource)).fields.ticket_number).toBe('SHARED-1');
   expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'access_revoked' })).toHaveLength(2);
 });
+
+it('derives ticket screen capabilities from each live actor and preserves customer revocation during lapse', async () => {
+  const { principal, customerPrincipal, resource, operation, sponsorActor, target } = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+  expect(await screen(db, customerPrincipal, resource)).toMatchObject({ side: 'customer', canWrite: true, canEscalate: true, canHandBack: false, canRevoke: false });
+  await expect(screen(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please take responsibility.' });
+  expect(await screen(db, customerPrincipal, resource)).toMatchObject({ canEscalate: false, canHandBack: true, canRevoke: true });
+  expect(await screen(db, principal, resource)).toMatchObject({ side: 'sponsor', canEscalate: false, canHandBack: true, canRevoke: false });
+  await replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+  expect(await screen(db, principal, resource)).toMatchObject({ canWrite: true, canHandBack: false });
+  await expireCoManagedEntitlement(operation.tenant);
+  expect(await screen(db, customerPrincipal, resource)).toMatchObject({ canWrite: false, canEscalate: false, canHandBack: false, canRevoke: true });
+  expect(await screen(db, principal, resource)).toMatchObject({ canWrite: false, canHandBack: false });
+});
+
+it('paginates the qualified shared IT journal without leaking source fields hidden by authorization bundles', async () => {
+  const { principal, customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
+  const { getCoManagedTicketHandoffHistory: history, getCoManagedTicketScreen: screen } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  for (let revision = 0; revision < 26; revision++) {
+    const command = revision % 2 === 0 ? escalate : handback;
+    await command(db, revision % 2 === 0 ? customerPrincipal : principal, resource,
+      { operationId: randomUUID(), expectedRevision: revision, note: `Shared handoff ${revision + 1}` });
+  }
+  const first = await history(db, principal, resource);
+  expect(first.items.map(item => item.revision)).toEqual(Array.from({ length: 25 }, (_, index) => 26 - index));
+  expect(first.nextBeforeRevision).toBe(2);
+  expect(first.items[0].author).toMatchObject({ tenant: principal.tenant, userId: principal.userId });
+  expect(first.items[1].author).toMatchObject({ tenant: customerPrincipal.tenant, userId: customerPrincipal.userId });
+  expect(await history(db, principal, resource, 2)).toMatchObject({ items: [{ revision: 1, note: 'Shared handoff 1' }], nextBeforeRevision: null });
+  await expect(history(db, principal, { ...resource, id: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(history(db, principal, resource, 0)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Handoff redactions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['fields.author.name', 'note', 'board_id'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const redacted = await history(db, principal, resource);
+  expect(redacted.items).toHaveLength(25);
+  expect(redacted.items.every(item => item.note === undefined && item.author === undefined)).toBe(true);
+  await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ config: {
+    selectedClientIds: [operation.request.clientId], redactedFields: ['work', 'board_id'],
+  } });
+  expect(await history(db, principal, resource)).toEqual({ items: [], nextBeforeRevision: null });
+  expect(await screen(db, principal, resource)).toMatchObject({ canHandBack: false, canEscalate: false, canRevoke: false });
+  expect((await screen(db, principal, resource)).destinationName).toBeUndefined();
+  await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ config: {
+    selectedClientIds: [operation.request.clientId], redactedFields: ['history'],
+  } });
+  expect(await history(db, principal, resource)).toEqual({ items: [], nextBeforeRevision: null });
+  expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(26);
+});
+
+it('inventories only customer-owned active grants, withholds unreadable ticket labels, and allows revocation while paused', async () => {
+  const { principal, customerPrincipal, resource, customer, operation } = await ticketHandoffFixture();
+  const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate, revokeCoManagedTicketGrant: revoke } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  expect(await grants(db, customerPrincipal)).toEqual({ items: [], nextAfterTicketId: null });
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' });
+  expect(await grants(db, customerPrincipal)).toMatchObject({ items: [{ resource, revision: 1, ticketNumber: 'SHARED-1' }], nextAfterTicketId: null });
+  await expect(grants(db, principal)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const readPermissions = await customer.table('permissions').where({ resource: 'ticket', action: 'read' }).select('permission_id');
+  await customer.table('role_permissions').whereIn('permission_id', readPermissions.map(row => row.permission_id)).del();
+  await expireCoManagedEntitlement(operation.tenant);
+  expect(await grants(db, customerPrincipal)).toEqual({ items: [{ resource, revision: 1 }], nextAfterTicketId: null });
+  await revoke(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'End individual access.' });
+  expect(await grants(db, customerPrincipal)).toEqual({ items: [], nextAfterTicketId: null });
+  const adminPermissions = await customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).select('permission_id');
+  await customer.table('role_permissions').whereIn('permission_id', adminPermissions.map(row => row.permission_id)).del();
+  await expect(grants(db, customerPrincipal)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+});
+
+it('paginates explicit grants by stable customer ticket identity without counting another customer or revoked grants', async () => {
+  const { customerPrincipal, resource, customer } = await ticketHandoffFixture();
+  const { getCoManagedExplicitTicketGrants: grants } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Grant inventory fixture.' });
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('tenant', 'title', 'client_id', 'board_id', 'status_id', 'priority_id', 'entered_by');
+  const work = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
+  const ids = Array.from({ length: 26 }, () => randomUUID());
+  await customer.table('tickets').insert(ids.map((id, index) => ({ ...ticket, ticket_id: id, ticket_number: `GRANT-${index}` })));
+  await customer.table('co_management_ticket_work').insert(ids.map((id, index) => ({ ...work, ticket_id: id, work_id: randomUUID(),
+    grant_revoked_at: index === 25 ? new Date() : null })));
+  const sibling = await ticketHandoffFixture();
+  await escalate(db, sibling.customerPrincipal, sibling.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Other customer grant.' });
+  const expected = [resource.id, ...ids.slice(0, 25)].sort();
+  const first = await grants(db, customerPrincipal);
+  expect(first.items.map(item => item.resource.id)).toEqual(expected.slice(0, 25));
+  expect(first.nextAfterTicketId).toBe(expected[24]);
+  const last = await grants(db, customerPrincipal, first.nextAfterTicketId!);
+  expect(last.items.map(item => item.resource.id)).toEqual(expected.slice(25));
+  expect(last.nextAfterTicketId).toBeNull();
+  expect([...first.items, ...last.items].every(item => item.resource.tenant === resource.tenant && item.resource.relationshipId === resource.relationshipId)).toBe(true);
+  await expect(grants(db, customerPrincipal, 'invalid')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});

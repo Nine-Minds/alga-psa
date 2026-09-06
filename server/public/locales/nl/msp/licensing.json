@@ -390,6 +390,43 @@
         "user": "Medewerkers",
         "team": "Teams"
       }
+    },
+    "ticket": {
+      "title": "Co-managed ticket",
+      "escalate": "Escaleren naar MSP",
+      "handback": "Teruggeven aan klant",
+      "takeBack": "Terugnemen",
+      "revoke": "Tickettoegang intrekken",
+      "escalateHelp": "De MSP neemt direct de verantwoordelijkheid over. Voeg de benodigde context toe.",
+      "handbackHelp": "De verantwoordelijkheid gaat terug naar de klant. De MSP behoudt de goedgekeurde toegang tot het ticket.",
+      "revokeHelp": "Dit trekt de individuele tickettoegang in en geeft de verantwoordelijkheid terug aan de klant. Afzonderlijk goedgekeurde bordtoegang blijft gelden.",
+      "note": "Overdrachtsnotitie",
+      "noteAudience": "Zichtbaar voor bevoegde IT-medewerkers van beide organisaties. Deze notitie wordt niet naar aanvragers verzonden.",
+      "uncertain": "Het resultaat kon niet worden bevestigd. Probeer hetzelfde verzoek opnieuw of laad de huidige status voordat u iets anders wijzigt.",
+      "saving": "Opslaan…",
+      "retry": "Opnieuw proberen",
+      "reload": "Huidige status laden",
+      "cancel": "Annuleren",
+      "loadError": "Het ticket of de toegangslijst kon niet worden geladen. Uw rechten zijn mogelijk gewijzigd.",
+      "loading": "Laden…",
+      "restricted": "Afgeschermd ticket",
+      "responsibility": "Verantwoordelijk: {{organization}}",
+      "readOnly": "Deze werkruimte is alleen-lezen. Klantbeheerders kunnen nog steeds toegang intrekken.",
+      "history": "Gedeelde IT-overdrachtsgeschiedenis",
+      "noHistory": "Geen zichtbare overdrachten.",
+      "historyError": "De overdrachtsgeschiedenis kon niet worden geladen.",
+      "older": "Oudere laden",
+      "transitions": {
+        "escalated": "Geëscaleerd naar MSP",
+        "handed_back": "Teruggegeven aan klant",
+        "access_revoked": "Individuele tickettoegang ingetrokken"
+      }
+    },
+    "grants": {
+      "title": "Individuele tickettoegang",
+      "back": "Terug naar co-managed toegang",
+      "description": "Bekijk individuele tickettoegang die door escalatie is verleend. Intrekken verwijdert geen afzonderlijk goedgekeurde bordtoegang.",
+      "empty": "Geen actieve individuele tickettoegang op deze pagina."
     }
   }
 }

@@ -392,6 +392,43 @@
         "user": "Personale",
         "team": "Team"
       }
+    },
+    "ticket": {
+      "title": "Ticket cogestito",
+      "escalate": "Inoltra all’MSP",
+      "handback": "Restituisci al cliente",
+      "takeBack": "Riprendi",
+      "revoke": "Revoca accesso al ticket",
+      "escalateHelp": "L’MSP assume subito la responsabilità. Aggiungi il contesto necessario per proseguire.",
+      "handbackHelp": "La responsabilità torna al cliente. L’MSP mantiene l’accesso approvato al ticket.",
+      "revokeHelp": "L’accesso individuale al ticket viene revocato e la responsabilità torna al cliente. Gli accessi alla bacheca approvati separatamente restano validi.",
+      "note": "Nota di passaggio",
+      "noteAudience": "Visibile al personale IT autorizzato di entrambe le organizzazioni. Questa nota non viene inviata ai richiedenti.",
+      "uncertain": "Impossibile confermare il risultato. Riprova la stessa richiesta o ricarica lo stato attuale prima di altre modifiche.",
+      "saving": "Salvataggio…",
+      "retry": "Riprova",
+      "reload": "Ricarica stato attuale",
+      "cancel": "Annulla",
+      "loadError": "Impossibile caricare il ticket o l’elenco degli accessi. Le autorizzazioni potrebbero essere cambiate.",
+      "loading": "Caricamento…",
+      "restricted": "Ticket con accesso limitato",
+      "responsibility": "Responsabile: {{organization}}",
+      "readOnly": "Questo spazio è in sola lettura. Gli amministratori del cliente possono ancora revocare gli accessi.",
+      "history": "Cronologia condivisa dei passaggi IT",
+      "noHistory": "Nessun passaggio visibile.",
+      "historyError": "Impossibile caricare la cronologia dei passaggi.",
+      "older": "Carica precedenti",
+      "transitions": {
+        "escalated": "Inoltrato all’MSP",
+        "handed_back": "Restituito al cliente",
+        "access_revoked": "Accesso individuale al ticket revocato"
+      }
+    },
+    "grants": {
+      "title": "Accessi individuali ai ticket",
+      "back": "Torna agli accessi cogestiti",
+      "description": "Esamina gli accessi individuali concessi tramite inoltro. La revoca non rimuove gli accessi alla bacheca approvati separatamente.",
+      "empty": "Nessun accesso individuale attivo in questa pagina."
     }
   }
 }

@@ -390,6 +390,43 @@
         "user": "Mitarbeiter",
         "team": "Teams"
       }
+    },
+    "ticket": {
+      "title": "Co-Managed-Ticket",
+      "escalate": "An MSP eskalieren",
+      "handback": "An Kunden zurückgeben",
+      "takeBack": "Zurücknehmen",
+      "revoke": "Ticketzugriff entziehen",
+      "escalateHelp": "Der MSP übernimmt sofort die Verantwortung. Ergänzen Sie den nötigen Kontext.",
+      "handbackHelp": "Die Verantwortung geht an den Kunden zurück. Der MSP behält den genehmigten Ticketzugriff.",
+      "revokeHelp": "Der individuelle Ticketzugriff wird entzogen und die Verantwortung geht an den Kunden zurück. Separat genehmigter Board-Zugriff bleibt bestehen.",
+      "note": "Übergabenotiz",
+      "noteAudience": "Für berechtigte IT-Mitarbeitende beider Organisationen sichtbar. Diese Notiz wird nicht an Anfragende gesendet.",
+      "uncertain": "Das Ergebnis konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage oder laden Sie den aktuellen Stand, bevor Sie weitere Änderungen vornehmen.",
+      "saving": "Wird gespeichert…",
+      "retry": "Erneut versuchen",
+      "reload": "Aktuellen Stand laden",
+      "cancel": "Abbrechen",
+      "loadError": "Das Ticket oder die Zugriffsliste konnte nicht geladen werden. Ihre Berechtigungen haben sich möglicherweise geändert.",
+      "loading": "Wird geladen…",
+      "restricted": "Eingeschränktes Ticket",
+      "responsibility": "Verantwortlich: {{organization}}",
+      "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Kundenadministratoren können weiterhin Zugriff entziehen.",
+      "history": "Gemeinsamer IT-Übergabeverlauf",
+      "noHistory": "Keine sichtbaren Übergaben.",
+      "historyError": "Der Übergabeverlauf konnte nicht geladen werden.",
+      "older": "Ältere laden",
+      "transitions": {
+        "escalated": "An MSP eskaliert",
+        "handed_back": "An Kunden zurückgegeben",
+        "access_revoked": "Individueller Ticketzugriff entzogen"
+      }
+    },
+    "grants": {
+      "title": "Individueller Ticketzugriff",
+      "back": "Zurück zum Co-Managed-Zugriff",
+      "description": "Prüfen Sie individuelle Ticketfreigaben durch Eskalation. Ein Entzug entfernt keinen separat genehmigten Board-Zugriff.",
+      "empty": "Keine aktiven individuellen Ticketfreigaben auf dieser Seite."
     }
   }
 }

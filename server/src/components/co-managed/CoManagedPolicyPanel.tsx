@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CoManagedCustomerScope, CoManagedStaffAssignment } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -133,6 +134,7 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
         <p>{t(`coManaged.policy.${state.side}Description`)}</p>
         {!state.canExpand && <p role="status">{t('coManaged.policy.readOnly')}</p>}
         {state.side === 'customer' ? <>
+          <Link href="/msp/co-management/ticket-access" className="text-primary underline">{t('coManaged.grants.title')}</Link>
           <CustomSelect id="co-policy-visibility" label={t('coManaged.provisioning.visibility')} value={scope.visibilityMode} disabled={disabled}
             options={[...(state.canExpand || scope.visibilityMode === 'board_scope' ? [{ value: 'board_scope', label: t('coManaged.provisioning.board_scope') }] : []),
               { value: 'escalation_only', label: t('coManaged.provisioning.escalation_only') }]}

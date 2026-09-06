@@ -392,6 +392,43 @@
         "user": "Pessoal",
         "team": "Equipas"
       }
+    },
+    "ticket": {
+      "title": "Chamado cogerenciado",
+      "escalate": "Escalar para o MSP",
+      "handback": "Devolver ao cliente",
+      "takeBack": "Retomar",
+      "revoke": "Revogar acesso ao chamado",
+      "escalateHelp": "O MSP assume a responsabilidade imediatamente. Adicione o contexto necessário para continuar.",
+      "handbackHelp": "A responsabilidade retorna ao cliente. O MSP mantém o acesso aprovado ao chamado.",
+      "revokeHelp": "O acesso individual ao chamado é revogado e a responsabilidade retorna ao cliente. O acesso ao quadro aprovado separadamente continua válido.",
+      "note": "Nota de transferência",
+      "noteAudience": "Visível para a equipe de TI autorizada de ambas as organizações. Esta nota não é enviada aos solicitantes.",
+      "uncertain": "Não foi possível confirmar o resultado. Tente a mesma solicitação novamente ou recarregue o estado atual antes de outra alteração.",
+      "saving": "Salvando…",
+      "retry": "Tentar novamente",
+      "reload": "Recarregar estado atual",
+      "cancel": "Cancelar",
+      "loadError": "Não foi possível carregar o chamado ou a lista de acessos. Suas permissões podem ter mudado.",
+      "loading": "Carregando…",
+      "restricted": "Chamado restrito",
+      "responsibility": "Responsável: {{organization}}",
+      "readOnly": "Este espaço está em modo somente leitura. Os administradores do cliente ainda podem revogar acessos.",
+      "history": "Histórico compartilhado de transferências de TI",
+      "noHistory": "Nenhuma transferência visível.",
+      "historyError": "Não foi possível carregar o histórico de transferências.",
+      "older": "Carregar anteriores",
+      "transitions": {
+        "escalated": "Escalado para o MSP",
+        "handed_back": "Devolvido ao cliente",
+        "access_revoked": "Acesso individual ao chamado revogado"
+      }
+    },
+    "grants": {
+      "title": "Acesso individual aos chamados",
+      "back": "Voltar ao acesso cogerenciado",
+      "description": "Revise os acessos individuais concedidos por escalonamento. Revogá-los não remove o acesso ao quadro aprovado separadamente.",
+      "empty": "Nenhum acesso individual ativo nesta página."
     }
   }
 }

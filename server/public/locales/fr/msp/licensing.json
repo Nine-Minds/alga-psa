@@ -392,6 +392,43 @@
         "user": "Personnel",
         "team": "Équipes"
       }
+    },
+    "ticket": {
+      "title": "Ticket cogéré",
+      "escalate": "Transférer au MSP",
+      "handback": "Rendre au client",
+      "takeBack": "Reprendre",
+      "revoke": "Révoquer l’accès au ticket",
+      "escalateHelp": "Le MSP prend immédiatement la responsabilité. Ajoutez le contexte nécessaire pour poursuivre.",
+      "handbackHelp": "La responsabilité revient au client. Le MSP conserve l’accès approuvé au ticket.",
+      "revokeHelp": "L’accès individuel au ticket est révoqué et la responsabilité revient au client. Les accès au tableau approuvés séparément restent valables.",
+      "note": "Note de transfert",
+      "noteAudience": "Visible par le personnel informatique autorisé des deux organisations. Cette note n’est pas envoyée aux demandeurs.",
+      "uncertain": "Le résultat n’a pas pu être confirmé. Réessayez la même demande ou rechargez l’état actuel avant toute autre modification.",
+      "saving": "Enregistrement…",
+      "retry": "Réessayer",
+      "reload": "Recharger l’état actuel",
+      "cancel": "Annuler",
+      "loadError": "Impossible de charger le ticket ou la liste des accès. Vos autorisations ont peut-être changé.",
+      "loading": "Chargement…",
+      "restricted": "Ticket à accès restreint",
+      "responsibility": "Responsable : {{organization}}",
+      "readOnly": "Cet espace est en lecture seule. Les administrateurs du client peuvent toujours révoquer les accès.",
+      "history": "Historique des transferts informatiques partagés",
+      "noHistory": "Aucun transfert visible.",
+      "historyError": "Impossible de charger l’historique des transferts.",
+      "older": "Charger les précédents",
+      "transitions": {
+        "escalated": "Transféré au MSP",
+        "handed_back": "Rendu au client",
+        "access_revoked": "Accès individuel au ticket révoqué"
+      }
+    },
+    "grants": {
+      "title": "Accès individuels aux tickets",
+      "back": "Retour aux accès cogérés",
+      "description": "Examinez les accès individuels accordés lors des transferts. Leur révocation ne supprime pas les accès au tableau approuvés séparément.",
+      "empty": "Aucun accès individuel actif sur cette page."
     }
   }
 }

@@ -479,6 +479,43 @@
         "user": "Staff",
         "team": "Teams"
       }
+    },
+    "ticket": {
+      "title": "Co-managed ticket",
+      "escalate": "Escalate to MSP",
+      "handback": "Return to customer",
+      "takeBack": "Take back",
+      "revoke": "Revoke ticket access",
+      "escalateHelp": "The MSP takes responsibility immediately. Add the context they need to continue.",
+      "handbackHelp": "Responsibility returns to the customer. The MSP retains approved access to the ticket.",
+      "revokeHelp": "This removes the explicit ticket grant and returns responsibility to the customer. Separately approved board access still applies.",
+      "note": "Handoff note",
+      "noteAudience": "Visible to authorized IT staff in both organizations. This note is not sent to requesters.",
+      "uncertain": "The result could not be confirmed. Retry the same request, or reload to check the current ticket before making another change.",
+      "saving": "Saving…",
+      "retry": "Retry",
+      "reload": "Reload current state",
+      "cancel": "Cancel",
+      "loadError": "This ticket or access list could not be loaded. Your access may have changed.",
+      "loading": "Loading…",
+      "restricted": "Restricted ticket",
+      "responsibility": "Responsible: {{organization}}",
+      "readOnly": "This workspace is read-only. Customer administrators can still revoke access.",
+      "history": "Shared IT handoff history",
+      "noHistory": "No visible handoffs.",
+      "historyError": "Handoff history could not be loaded.",
+      "older": "Load older",
+      "transitions": {
+        "escalated": "Escalated to MSP",
+        "handed_back": "Returned to customer",
+        "access_revoked": "Explicit ticket access revoked"
+      }
+    },
+    "grants": {
+      "title": "Individual ticket access",
+      "back": "Back to co-managed access",
+      "description": "Review explicit ticket grants created through escalation. Revoking one does not remove separately approved board access.",
+      "empty": "No active individual ticket grants on this page."
     }
   }
 }

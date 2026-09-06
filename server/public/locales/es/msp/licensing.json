@@ -392,6 +392,43 @@
         "user": "Personal",
         "team": "Equipos"
       }
+    },
+    "ticket": {
+      "title": "Ticket cogestionado",
+      "escalate": "Escalar al MSP",
+      "handback": "Devolver al cliente",
+      "takeBack": "Retomar",
+      "revoke": "Revocar acceso al ticket",
+      "escalateHelp": "El MSP asume la responsabilidad de inmediato. Añada el contexto necesario para continuar.",
+      "handbackHelp": "La responsabilidad vuelve al cliente. El MSP conserva el acceso aprobado al ticket.",
+      "revokeHelp": "Se revoca el acceso individual al ticket y la responsabilidad vuelve al cliente. El acceso al tablero aprobado por separado sigue vigente.",
+      "note": "Nota de traspaso",
+      "noteAudience": "Visible para el personal de TI autorizado de ambas organizaciones. Esta nota no se envía a los solicitantes.",
+      "uncertain": "No se pudo confirmar el resultado. Reintente la misma solicitud o recargue el estado actual antes de hacer otro cambio.",
+      "saving": "Guardando…",
+      "retry": "Reintentar",
+      "reload": "Recargar estado actual",
+      "cancel": "Cancelar",
+      "loadError": "No se pudo cargar el ticket o la lista de accesos. Sus permisos pueden haber cambiado.",
+      "loading": "Cargando…",
+      "restricted": "Ticket restringido",
+      "responsibility": "Responsable: {{organization}}",
+      "readOnly": "Este espacio es de solo lectura. Los administradores del cliente aún pueden revocar accesos.",
+      "history": "Historial compartido de traspasos de TI",
+      "noHistory": "No hay traspasos visibles.",
+      "historyError": "No se pudo cargar el historial de traspasos.",
+      "older": "Cargar anteriores",
+      "transitions": {
+        "escalated": "Escalado al MSP",
+        "handed_back": "Devuelto al cliente",
+        "access_revoked": "Acceso individual al ticket revocado"
+      }
+    },
+    "grants": {
+      "title": "Acceso individual a tickets",
+      "back": "Volver al acceso cogestionado",
+      "description": "Revise los accesos individuales concedidos al escalar tickets. Revocarlos no elimina el acceso al tablero aprobado por separado.",
+      "empty": "No hay accesos individuales activos en esta página."
     }
   }
 }

@@ -394,6 +394,43 @@
         "user": "Pracownicy",
         "team": "Zespoły"
       }
+    },
+    "ticket": {
+      "title": "Zgłoszenie współzarządzane",
+      "escalate": "Eskaluj do MSP",
+      "handback": "Przekaż klientowi",
+      "takeBack": "Przejmij z powrotem",
+      "revoke": "Cofnij dostęp do zgłoszenia",
+      "escalateHelp": "MSP natychmiast przejmuje odpowiedzialność. Dodaj informacje potrzebne do kontynuowania pracy.",
+      "handbackHelp": "Odpowiedzialność wraca do klienta. MSP zachowuje zatwierdzony dostęp do zgłoszenia.",
+      "revokeHelp": "Indywidualny dostęp do zgłoszenia zostanie cofnięty, a odpowiedzialność wróci do klienta. Osobno zatwierdzony dostęp do tablicy nadal obowiązuje.",
+      "note": "Notatka przekazania",
+      "noteAudience": "Widoczna dla uprawnionego personelu IT obu organizacji. Ta notatka nie jest wysyłana do zgłaszających.",
+      "uncertain": "Nie udało się potwierdzić wyniku. Ponów to samo żądanie lub wczytaj aktualny stan przed kolejną zmianą.",
+      "saving": "Zapisywanie…",
+      "retry": "Ponów",
+      "reload": "Wczytaj aktualny stan",
+      "cancel": "Anuluj",
+      "loadError": "Nie udało się wczytać zgłoszenia lub listy dostępów. Twoje uprawnienia mogły się zmienić.",
+      "loading": "Wczytywanie…",
+      "restricted": "Zgłoszenie z ograniczonym dostępem",
+      "responsibility": "Odpowiedzialna organizacja: {{organization}}",
+      "readOnly": "Ten obszar jest tylko do odczytu. Administratorzy klienta nadal mogą cofać dostęp.",
+      "history": "Wspólna historia przekazań IT",
+      "noHistory": "Brak widocznych przekazań.",
+      "historyError": "Nie udało się wczytać historii przekazań.",
+      "older": "Wczytaj starsze",
+      "transitions": {
+        "escalated": "Eskalowano do MSP",
+        "handed_back": "Przekazano klientowi",
+        "access_revoked": "Cofnięto indywidualny dostęp do zgłoszenia"
+      }
+    },
+    "grants": {
+      "title": "Indywidualny dostęp do zgłoszeń",
+      "back": "Powrót do dostępu współzarządzanego",
+      "description": "Sprawdź indywidualne dostępy nadane przez eskalację. Ich cofnięcie nie usuwa osobno zatwierdzonego dostępu do tablicy.",
+      "empty": "Brak aktywnych indywidualnych dostępów na tej stronie."
     }
   }
 }

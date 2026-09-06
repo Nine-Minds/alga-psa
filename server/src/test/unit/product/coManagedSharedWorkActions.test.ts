@@ -1,16 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ session: vi.fn(), override: vi.fn(), db: vi.fn(), read: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn(),
+const mocks = vi.hoisted(() => ({ screen: vi.fn(), history: vi.fn(), grants: vi.fn(), first: vi.fn(), scoped: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(), read: vi.fn(), escalate: vi.fn(), handback: vi.fn(), revoke: vi.fn(),
   home: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {} }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.home, { tenant: mocks.home.tenant }, ...args),
   getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
-vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
-vi.mock('@alga-psa/co-managed', () => ({ getCoManagedSharedWorkSummary: mocks.read, escalateCoManagedTicket: mocks.escalate, handBackCoManagedTicket: mocks.handback, revokeCoManagedTicketGrant: mocks.revoke,
+vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db, withTransaction: (db: any, callback: any) => callback(db), tenantDb: mocks.scoped }));
+vi.mock('@alga-psa/co-managed', () => ({ getCoManagedTicketScreen: mocks.screen, getCoManagedTicketHandoffHistory: mocks.history, getCoManagedExplicitTicketGrants: mocks.grants, getCoManagedSharedWorkSummary: mocks.read, escalateCoManagedTicket: mocks.escalate, handBackCoManagedTicket: mocks.handback, revokeCoManagedTicketGrant: mocks.revoke,
   CoManagedSharedWorkError: class extends Error { code = 'CO_MANAGED_SHARED_WORK_FORBIDDEN'; } }));
-import { getSharedWorkSummaryAction, escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '../../../lib/actions/coManagedSharedWorkActions';
+import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, getExplicitTicketGrantsAction, getSharedWorkSummaryAction, escalateSharedTicketAction, handBackSharedTicketAction, revokeSharedTicketGrantAction } from '../../../lib/actions/coManagedSharedWorkActions';
 const resource = { tenant: 'customer-tenant', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 beforeEach(() => {
   vi.resetAllMocks(); mocks.home.user_type = 'internal';
   mocks.session.mockResolvedValue({ session_id: 'tracked-session', user: { tenant: mocks.home.tenant, id: mocks.home.user_id, user_type: 'internal' } });
+  const query = { where: () => query, whereNull: () => query, first: mocks.first };
+  mocks.scoped.mockReturnValue({ table: () => query }); mocks.first.mockResolvedValue({ relationship_id: 'home-relationship' });
   mocks.db.mockResolvedValue({ knex: mocks.knex }); mocks.read.mockResolvedValue({ resource, revision: 3, fields: { title: 'Shared issue' } });
 });
 describe('shared summary session adapter', () => {
@@ -48,4 +50,30 @@ it.each(['escalate', 'handback', 'revoke'] as const)('constructs the same verifi
   mocks.override.mockReturnValue(mocks.home);
   await expect(action(resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(command).toHaveBeenCalledTimes(1);
+});
+
+
+it('derives local ticket ownership from the home workspace and ignores forged target authority', async () => {
+  const ticketId = '00000000-0000-4000-8000-000000000001';
+  await getCoManagedTicketScreenAction({ kind: 'local', ticketId, tenant: 'forged', relationshipId: 'forged' } as any);
+  expect(mocks.scoped).toHaveBeenCalledWith(mocks.knex, 'home-tenant');
+  expect(mocks.screen).toHaveBeenCalledWith(mocks.knex, { kind: 'session', tenant: 'home-tenant', userId: 'home-user', sessionId: 'tracked-session' },
+    { tenant: 'home-tenant', relationshipId: 'home-relationship', kind: 'ticket', id: ticketId });
+  await expect(getCoManagedTicketScreenAction({ kind: 'local', ticketId: 'invalid' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(mocks.screen).toHaveBeenCalledTimes(1);
+});
+
+it('passes qualified reads and cursors through the verified browser principal and rejects identity overrides', async () => {
+  const actor = { kind: 'session', tenant: 'home-tenant', userId: 'home-user', sessionId: 'tracked-session' };
+  await getCoManagedTicketScreenAction({ kind: 'shared', resource });
+  await getSharedTicketHandoffHistoryAction(resource, 12);
+  await getExplicitTicketGrantsAction('cursor');
+  expect(mocks.screen).toHaveBeenCalledWith(mocks.knex, actor, resource);
+  expect(mocks.history).toHaveBeenCalledWith(mocks.knex, actor, resource, 12);
+  expect(mocks.grants).toHaveBeenCalledWith(mocks.knex, actor, 'cursor');
+  mocks.override.mockReturnValue(mocks.home);
+  await expect(getCoManagedTicketScreenAction({ kind: 'shared', resource })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(getSharedTicketHandoffHistoryAction(resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(getExplicitTicketGrantsAction()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(mocks.screen).toHaveBeenCalledTimes(1); expect(mocks.history).toHaveBeenCalledTimes(1); expect(mocks.grants).toHaveBeenCalledTimes(1);
 });

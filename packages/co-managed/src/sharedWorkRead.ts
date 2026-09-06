@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { tenantDb } from '@alga-psa/db';
 import { withCoManagedCustomerTicket } from './customerWork';
 import { withCoManagedSharedWork, CoManagedSharedWorkError,
@@ -28,11 +29,7 @@ function visibleFields(candidates: Record<string, Candidate>, redactions: readon
   const fields: Record<string, CoManagedSummaryValue> = {};
   for (const [key, candidate] of Object.entries(candidates)) {
     const names = [key, ...candidate.sources];
-    const hidden = redactions.some(field => {
-      if (field === '*' || field === 'fields') return true;
-      const path = field.startsWith('fields.') ? field.slice(7) : field;
-      return names.some(name => path === name || path.startsWith(`${name}.`) || name.startsWith(`${path}.`));
-    });
+    const hidden = isCoManagedReadFieldHidden(redactions, names);
     if (!hidden) fields[key] = candidate.value;
   }
   return fields;

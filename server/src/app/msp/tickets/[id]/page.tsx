@@ -1,3 +1,5 @@
+import { CoManagedFeatureBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
+import CoManagedTicketPanel from '@/components/co-managed/CoManagedTicketPanel';
 import React from 'react';
 import { cache } from 'react';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
@@ -210,6 +212,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     
     const detailsContent = (
       <div id="ticket-details-container" className="bg-[rgb(var(--color-app-ground))]">
+        {productCode === 'co_managed' && <CoManagedFeatureBoundary><CoManagedTicketPanel target={{ kind: 'local', ticketId: id }} /></CoManagedFeatureBoundary>}
         <Suspense fallback={<TicketDetailsSkeleton />}>
           <MspTicketDetailsContainerClient
             ticketData={ticketData as any}
