@@ -29,8 +29,10 @@ jobs:
     runs-on: ubuntu-latest
     # A microtask-spinning test starves vitest's own timeout timer entirely
     # (see billing's RenewalAutomationSettings hang), so the job needs its own
-    # backstop instead of the 6h default.
-    timeout-minutes: 30
+    # backstop instead of the 6h default. The measured full affected run takes
+    # about 30 minutes including setup and cache cleanup (the server tests alone
+    # take 18 minutes). Allow bounded headroom so successful cleanup can finish.
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -122,7 +124,7 @@ jobs:
           VITEST_SEED: '20260610'
 
       # sebastian-ee's inferred test target is a bare `vitest` over its full
-      # 209-file suite (~50 minutes serial — far past this job's 30-minute
+      # 209-file suite (~50 minutes serial — past this job's 45-minute
       # backstop, which it blew via WorkflowAiSchemaSection's render-loop hang
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
