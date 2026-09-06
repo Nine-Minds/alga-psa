@@ -1856,7 +1856,8 @@
           "credentialsReady": "Inloggegevens gereed",
           "credentialsRequired": "Inloggegevens vereist",
           "defaultConnected": "Bedrijf verbonden",
-          "noCompany": "Geen bedrijf verbonden"
+          "noCompany": "Geen bedrijf verbonden",
+          "sharedApp": "Gedeelde Intuit-app"
         },
         "callback": {
           "accessDenied": "QuickBooks-toegang werd geweigerd voordat de verbinding was voltooid.",
@@ -1880,11 +1881,12 @@
         "connectSuccess": "QuickBooks succesvol verbonden. Het verbonden bedrijf is nu de standaard live QuickBooks-context.",
         "connection": {
           "defaultCompany": "Verbonden bedrijf",
-          "description": "Start OAuth pas nadat de QuickBooks app-inloggegevens zijn geconfigureerd. Ontkoppelen verwijdert opgeslagen QuickBooks-toegangstokens maar behoudt de tenant-eigen app-inloggegevens.",
-          "notConnected": "Er is nog geen QuickBooks-bedrijf verbonden. Sla de inloggegevens op en klik vervolgens op QuickBooks verbinden.",
+          "description": "„QuickBooks koppelen” wordt beschikbaar zodra er een Intuit-app is (zie de kaart „Intuit-app” hierboven). Ontkoppelen verwijdert opgeslagen QuickBooks-toegangstokens, maar behoudt de eigen Intuit-app-inloggegevens van deze tenant.",
+          "notConnected": "Er is nog geen QuickBooks-bedrijf gekoppeld. Klik op „QuickBooks koppelen” om in te loggen bij Intuit en een bedrijf te kiezen.",
           "realmId": "Realm ID: {{id}}",
           "title": "Live QuickBooks-verbinding",
-          "unknown": "onbekend"
+          "unknown": "onbekend",
+          "descriptionShared": "Klik op „QuickBooks koppelen”, log in bij Intuit en kies het bedrijf dat u wilt koppelen. Er hoeft vooraf niets anders te worden ingesteld. Ontkoppelen verwijdert de opgeslagen QuickBooks-toegangstokens."
         },
         "credentialsSaved": "QuickBooks-inloggegevens opgeslagen. U kunt nu de QuickBooks OAuth-flow starten.",
         "csvAvailableMiddle": "in deze zelfde sectie Boekhouding en beheer exports vanuit",
@@ -1901,7 +1903,7 @@
           "load": "QuickBooks-instellingen laden mislukt.",
           "saveCredentials": "QuickBooks-inloggegevens opslaan mislukt."
         },
-        "howItWorksDescription": "Sla hier QuickBooks app-inloggegevens op, voltooi de Intuit OAuth-flow, en AlgaPSA gebruikt het verbonden QuickBooks-bedrijf als standaard live context voor exports en koppelingen.",
+        "howItWorksDescription": "Koppel uw QuickBooks-bedrijf door in te loggen bij Intuit; AlgaPSA gebruikt het dan als standaard live-context voor exports en toewijzingen. De kaart „Intuit-app” hieronder laat zien of uw installatie de app voor die aanmelding al levert of dat u er eerst een moet registreren.",
         "howItWorksTitle": "Hoe live QuickBooks werkt in deze release",
         "loading": "QuickBooks-instellingen worden geladen…",
         "mapping": {
@@ -1919,8 +1921,8 @@
         "requiredScopes": "Vereiste scopes",
         "storedClientId": "Opgeslagen client ID: {{value}}",
         "storedClientSecret": "Opgeslagen client secret: {{value}}",
-        "tenantOauthDescription": "Via welke Intuit-app deze tenant verbinding maakt. Secrets worden na opslaan nooit teruggestuurd naar de browser.",
-        "tenantOauthTitle": "Intuit-app-gegevens",
+        "tenantOauthDescription": "AlgaPSA bereikt QuickBooks via een Intuit-app: een ontwikkelaarsregistratie op developer.intuit.com, geen instelling binnen QuickBooks of AlgaPSA. Deze kaart laat zien of er al een voor u beschikbaar is.",
+        "tenantOauthTitle": "Intuit-app",
         "title": "QuickBooks Online",
         "automatedSalesTax": {
           "disabledMessage": "De Automated Sales Tax-modus staat uit. Alga blijft de belasting voor dit bedrijf berekenen.",
@@ -1929,9 +1931,10 @@
           "label": "QuickBooks berekent de omzetbelasting"
         },
         "credentialSource": {
-          "app": "Deze omgeving biedt een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Vul de velden hieronder alleen in als deze tenant een eigen Intuit-app moet gebruiken.",
-          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een in het Intuit Developer-portaal en plak hieronder de client-ID en het secret — de installatiegids legt dit stap voor stap uit.",
-          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app, met de hieronder opgeslagen gegevens."
+          "app": "Deze installatie levert een gedeelde Intuit-app, dus u kunt QuickBooks koppelen zonder er zelf een te registreren. Sla deze kaart over en klik hieronder op „QuickBooks koppelen”.",
+          "none": "Er is nog geen Intuit-app beschikbaar. Registreer er een bij Intuit voordat u kunt koppelen.",
+          "tenant": "Deze tenant maakt verbinding via een eigen Intuit-app met de hieronder opgeslagen inloggegevens. Plak een nieuwe waarde en sla op om een sleutel te roteren.",
+          "appTitle": "Geen inloggegevens nodig"
         },
         "setupGuideLink": "QuickBooks-installatiegids",
         "noPermissionDescription": "U hebt geen toestemming om boekhoudintegraties te bekijken of te configureren.",
@@ -1946,6 +1949,19 @@
           "targetFailed": "vereist aandacht",
           "targetPending": "in behandeling",
           "failedPermanentDescription": "De opschoning bij de aanbieder is op een permanente fout gestuit. U kunt het opnieuw proberen of geforceerd afronden om de opgeslagen inloggegevens te verwijderen met een auditregistratie."
+        },
+        "registerSteps": {
+          "createApp": "Log in op",
+          "createAppSuffix": "en maak een app voor QuickBooks Online and Payments met de Accounting-scope. Uw QuickBooks-login werkt daar.",
+          "openKeys": "Open de pagina „Keys & credentials” van de app. Gebruik de Development-sleutels als de Intuit-omgeving hieronder Sandbox toont, of de Production-sleutels als deze Productie toont.",
+          "addRedirect": "Voeg de hieronder getoonde Redirect-URI exact zo toe aan de lijst met redirect-URI’s van de app.",
+          "pasteKeys": "Kopieer de Client ID en het Client Secret van die pagina naar de twee velden hieronder en klik op „QuickBooks-inloggegevens opslaan”.",
+          "connect": "Klik op „QuickBooks koppelen” en log in bij het QuickBooks-bedrijf dat u wilt koppelen."
+        },
+        "ownApp": {
+          "show": "In plaats daarvan uw eigen Intuit-app gebruiken (geavanceerd)",
+          "hide": "Instellingen eigen app verbergen",
+          "intro": "Doe dit alleen als deze tenant moet autoriseren via een Intuit-app die u zelf beheert. Registreer de app zoals beschreven in de installatiehandleiding en plak hier de sleutels. Zolang niet beide zijn opgeslagen, blijft de gedeelde app in gebruik."
         }
       },
       "sync": {
