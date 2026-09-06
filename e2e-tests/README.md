@@ -67,6 +67,22 @@ The invoice generation cases cover recurring usage and manually entered invoice
 numbers; their complete production execution remains pending at the time of this
 addition. See the plan's evidence and checklist for verified scope.
 
+`fixtures/recurring-billing.ts` shares tenant, Finance-role, service, billing-profile
+and scheduled-period setup between usage and hourly journeys. The time journey
+creates a ticket and empty timesheet as preconditions, then logs/submits time as
+a technician, attempts billing before approval, approves as a manager, and
+generates the invoice as Finance. It checks an explicit approval-required refusal
+from a stale Finance selection, unchanged billing data before approval, and the
+exact hours, rate, amount and billed state afterward.
+Replaying generation must preserve invoice, charge, transaction and time rows.
+
+For concurrent user identities, use `sessions.create('finance')` from the auth
+fixture and submit the normal sign-in form in its new page. This creates a
+separate browser context and closes it in fixture teardown. Playwright manages
+its trace; the fixture adds named actor screenshots and videos on failure and
+discards those extra diagnostics on success. Let the fixture close these
+contexts so it can capture failed-session state before cleanup.
+
 When a new journey exposes a defect, retain its intended before-fix assertion
 failure and the successful after-fix execution. Record the missing boundary,
 owning suite and reproduction command in the
@@ -178,3 +194,8 @@ expected-failure cases fail required execution accounting even though plain
 Playwright permits them. Results go to
 `harness-results/`, separate from customer journey reports. These probes do not
 count as application coverage.
+
+The same command also runs an intentional assertion failure in an additional
+manager session, verifies its trace/screenshot/video attachments, then verifies
+that a passing session discards its extra diagnostics. It needs no application
+credentials or database and does not count as a customer journey.

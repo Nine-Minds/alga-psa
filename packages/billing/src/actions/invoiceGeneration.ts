@@ -83,6 +83,7 @@ import {
   DUPLICATE_RECURRING_INVOICE_CODE,
   DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY,
   NO_BILLING_EMAIL_MESSAGE_KEY,
+  TIME_APPROVAL_REQUIRED_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_MESSAGE_KEY,
   USAGE_RECORDS_MISSING_ACK_REQUIRED_MESSAGE_KEY,
   USAGE_PERIOD_TOTAL_STALE_MESSAGE_KEY,
@@ -957,6 +958,8 @@ function manualInvoiceErrorMessageKey(
   switch (code) {
     case 'NO_BILLING_EMAIL':
       return NO_BILLING_EMAIL_MESSAGE_KEY;
+    case 'TIME_APPROVAL_REQUIRED':
+      return TIME_APPROVAL_REQUIRED_MESSAGE_KEY;
     case 'USAGE_RECORDS_MISSING':
       return USAGE_RECORDS_MISSING_MESSAGE_KEY;
     case 'USAGE_RECORDS_MISSING_ACK_REQUIRED':
@@ -3117,7 +3120,9 @@ async function generateInvoiceForLockedSelectionInputs(params: Parameters<typeof
   );
   if (approvalBlockedEntryCount > 0) {
     throw withRecurringWindowErrorContext(
-      new Error(formatApprovalBlockedReason(approvalBlockedEntryCount)),
+      new ManualInvoiceError('TIME_APPROVAL_REQUIRED', formatApprovalBlockedReason(approvalBlockedEntryCount), {
+        count: String(approvalBlockedEntryCount),
+      }),
       normalizedSelectorInput,
     );
   }

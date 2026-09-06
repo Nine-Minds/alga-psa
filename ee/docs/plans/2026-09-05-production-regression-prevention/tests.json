@@ -104,7 +104,7 @@
   {
     "id": "T011",
     "description": "Submit a portal request, handle/assign/reply and reopen the associated ticket as MSP, then verify persisted response/status in a fresh portal session; a sibling client cannot read or update it and an ordinary technician cannot perform an admin-only action.",
-    "implemented": false,
+    "implemented": true,
     "kind": "browser-db",
     "featureIds": [
       "F012",

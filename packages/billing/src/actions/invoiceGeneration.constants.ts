@@ -15,6 +15,9 @@ export const DUPLICATE_RECURRING_INVOICE_MESSAGE_KEY = 'msp/billing:errors.dupli
  */
 export const NO_BILLING_EMAIL_MESSAGE_KEY = 'msp/invoicing:manualInvoices.errors.NO_BILLING_EMAIL';
 
+export const TIME_APPROVAL_REQUIRED_MESSAGE_KEY =
+  'msp/invoicing:automaticInvoices.executionRows.blockedUntilApproval';
+
 /**
  * Namespaced message key for the missing-usage-records preview failure
  * (`USAGE_RECORDS_MISSING`). Usage billing is record-driven: a usage-billed

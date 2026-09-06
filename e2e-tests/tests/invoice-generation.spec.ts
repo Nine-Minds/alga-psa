@@ -102,7 +102,7 @@ test('a manual invoice preserves its entered number, finalizes and downloads wit
   await page.getByRole('combobox').filter({ hasText: 'Automatic Invoice' }).click();
   await page.getByRole('option', { name: 'Manual Invoice', exact: true }).click();
   await page.locator('#client-picker-trigger').click();
-  await page.getByRole('option', { name: client.name, exact: true }).click();
+  await page.locator(`#client-picker-option-${client.id}`).click();
   await page.locator('#new-invoice-number-input').fill(invoiceNumber);
   await page.getByText('Select Service', { exact: true }).click();
   await page.locator('#service-select').click();

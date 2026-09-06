@@ -113,6 +113,46 @@
         "The complete UI-to-PDF after-fix journey is pending native production CI.",
         "This newly discovered issue has no supplied production incident identifier."
       ]
+    },
+    {
+      "id": "recurring-invoice-approval-remediation",
+      "classification": "discovered-during-production-build-testing",
+      "incident": null,
+      "journey": "Reject unapproved ticket time with actionable Finance feedback, then approve and invoice once",
+      "missingBoundary": "Typed approval validation through grouped invoice execution to localized browser error",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "e2e-tests/tests/time-approval-invoice.spec.ts",
+        "server/src/test/unit/billing/invoiceGeneration.selectorInputGenerate.test.ts",
+        "server/src/test/unit/billing/recurringBillingRunActions.test.ts",
+        "server/src/test/unit/billing/manualInvoiceErrorTranslation.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "before": {
+        "status": "browser-assertion-failed",
+        "imageRevision": "c3a05e14e53690793e10bb17e04c9f3da92b5698",
+        "assertion": "Expected Blocked until approval: 1 unapproved entry.; rendered Failed to generate invoice for this billing cycle. Finance retained a selection made before the technician entered and submitted time."
+      },
+      "after": {
+        "status": "focused-tests-passed",
+        "passed": 47,
+        "files": 4,
+        "assertion": "Generation returns the typed approval key/count; grouped execution preserves its code and identity; UI translation receives a numeric plural count; existing preview cases pass."
+      },
+      "reproduction": {
+        "cwd": "e2e-tests",
+        "command": "npm test -- tests/time-approval-invoice.spec.ts",
+        "requirements": "Isolated migrated production installation with configured E2E credentials and database, as documented in e2e-tests/README.md. For before behavior use the cited pre-fix image; for after use a newly built fix image."
+      },
+      "status": "browser-before-verified-focused-after-verified",
+      "limits": [
+        "Current-image complete browser after-fix execution is pending.",
+        "Focused tests use mocked action/database boundaries; the pre-fix browser submits real ticket time and receives the real server response.",
+        "No production incident identifier was supplied."
+      ]
     }
   ]
 }
