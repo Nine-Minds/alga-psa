@@ -1,3 +1,9 @@
+import { localizeTimePresentation } from '../../../lib/invoice-template-ast/timePresentationLocalization';
+import type { TemplateLabelTranslator } from '../../../lib/invoice-template-ast/i18nLabels';
+import { exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
+import { snapshotWorkspaceNodesById, useInvoiceDesignerStore } from '../state/designerStore';
+import type { TemplateAst } from '@alga-psa/types';
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useDroppable, useDraggable } from '@dnd-kit/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -20,6 +26,8 @@ import { resolveMediaFrameSize } from '../utils/mediaSizing';
 import { getNodeLayout, getNodeMetadata, getNodeName, getNodeStyle } from '../utils/nodeProps';
 import {
   isColumnHeaderTranslatable,
+  isTranslatableValue,
+  isTranslatableRef,
   isNodeLabelTranslatable,
   isNodeTextTranslatable,
 } from '../utils/translatableText';
@@ -28,7 +36,8 @@ import { resolveSortableStrategy } from '../utils/sortableStrategy';
 import {
   formatBoundValue,
   normalizeFieldFormat,
-  resolveCanvasCollectionRows,
+  resolveCanvasCollection,
+  resolveCanvasRowScope,
   resolveFieldPreviewValue,
   resolveInvoiceBindingRawValue,
   resolveTableItemBindingRawValue,
@@ -58,6 +67,9 @@ const TranslatableMark: React.FC<{ t?: DesignerTranslator }> = ({ t }) => (
     </span>
   </Tooltip>
 );
+
+export const CanvasDocumentPreviewContext = React.createContext<{ data: WasmInvoiceViewModel | null; locale?: string; presentationLabels?: Record<string, string> }>({ data: null });
+const CanvasAstContext = React.createContext<TemplateAst | null | undefined>(undefined);
 
 interface DesignCanvasProps {
   nodes: DesignerNode[];
@@ -474,14 +486,15 @@ const asTrimmedString = (value: unknown): string => (typeof value === 'string' ?
 
 const resolveTextInterpolationValue = (
   previewData: WasmInvoiceViewModel | null,
-  bindingPath: string
+  bindingPath: string,
+  scope?: Record<string, unknown>
 ): string | null => {
   const parsedToken = parseTemplateToken(bindingPath);
   if (!parsedToken || !parsedToken.path) {
     return null;
   }
 
-  const rawValue = resolveInvoiceBindingRawValue(previewData, parsedToken.path);
+  const rawValue = resolveInvoiceBindingRawValue(previewData, parsedToken.path, scope);
   if (rawValue === null || rawValue === undefined) {
     return null;
   }
@@ -542,7 +555,8 @@ const resolveTotalsRowAmountFallback = (
 
 const resolveTotalsRowPreviewModel = (
   node: DesignerNode,
-  previewData: WasmInvoiceViewModel | null = null
+  previewData: WasmInvoiceViewModel | null = null,
+  locale?: string
 ): TotalsRowPreviewModel => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
   if (!isTotalsRowType(node.type)) {
@@ -562,7 +576,8 @@ const resolveTotalsRowPreviewModel = (
   const boundValue = formatBoundValue(
     resolveInvoiceBindingRawValue(previewData, bindingKey),
     format,
-    currencyCode
+    currencyCode,
+    locale
   );
   const previewValue =
     boundValue ||
@@ -582,7 +597,7 @@ const resolveTotalsRowPreviewModel = (
 const renderTablePreview = (
   metadata: Record<string, unknown>,
   previewData: WasmInvoiceViewModel | null,
-  options: { fillHeight: boolean; t?: DesignerTranslator }
+  options: { fillHeight: boolean; t?: DesignerTranslator; ast?: TemplateAst | null; locale?: string; scope?: Record<string, unknown>; presentationTranslator?: TemplateLabelTranslator }
 ): React.ReactNode => {
   const borderConfig = resolveTableBorderConfig(metadata);
   const headerWeightClass = FONT_WEIGHT_CLASS[
@@ -595,7 +610,8 @@ const renderTablePreview = (
     asTrimmedString((metadata as { collectionBindingKey?: unknown }).collectionBindingKey) ||
     asTrimmedString((metadata as { collectionPath?: unknown }).collectionPath) ||
     'items';
-  const rows = resolveCanvasCollectionRows(previewData, sourceBindingId);
+  const { rows: neutralRows, diagnostic } = resolveCanvasCollection(previewData, sourceBindingId, options.ast, options.scope);
+  const rows = localizeTimePresentation(neutralRows, options.presentationTranslator);
 
   const resolvedColumns =
     columns.length > 0
@@ -606,7 +622,7 @@ const renderTablePreview = (
           { id: 'col-rate', header: 'Rate', key: 'item.unitPrice', type: 'currency' },
           { id: 'col-total', header: 'Amount', key: 'item.total', type: 'currency' },
         ];
-  const visibleColumns = resolvedColumns.slice(0, 4);
+  const visibleColumns = resolvedColumns;
   const tableGridTemplateColumns = resolveTableGridTemplateColumns(visibleColumns);
   const visibleRows = rows.slice(0, 5);
 
@@ -618,6 +634,7 @@ const renderTablePreview = (
         borderConfig.outer && ['border', INVOICE_BORDER_STRONG_COLOR_CLASS]
       )}
     >
+      {diagnostic && <div role="alert">{diagnostic}</div>}
       <div
         className={clsx(
           'grid gap-0 pb-1 uppercase tracking-wide',
@@ -641,12 +658,16 @@ const renderTablePreview = (
             )}
           >
             {isColumnHeaderTranslatable(column) && <TranslatableMark t={options.t} />}
-            {String(column.header ?? column.key ?? 'Column')}
+            {isColumnHeaderTranslatable(column) && isTranslatableRef(column.__astHeaderI18n)
+              ? options.presentationTranslator?.(column.__astHeaderI18n.i18nKey, { defaultValue: column.__astHeaderI18n.defaultValue }) ?? column.__astHeaderI18n.defaultValue
+              : String(column.header ?? column.key ?? 'Column')}
           </span>
         ))}
       </div>
       {visibleRows.length === 0 ? (
-        <div className="px-2 py-2 text-slate-400 italic">{options.t?.('designer.canvas.noLineItems', { defaultValue: 'No line items' }) ?? 'No line items'}</div>
+        <div className="px-2 py-2 text-slate-400 italic">{isTranslatableValue(metadata.emptyStateText, metadata.__astEmptyStateTextI18n) && isTranslatableRef(metadata.__astEmptyStateTextI18n)
+          ? options.presentationTranslator?.(metadata.__astEmptyStateTextI18n.i18nKey, { defaultValue: metadata.__astEmptyStateTextI18n.defaultValue }) ?? metadata.__astEmptyStateTextI18n.defaultValue
+          : asTrimmedString(metadata.emptyStateText) || options.t?.('designer.canvas.noLineItems', { defaultValue: 'No line items' }) || 'No line items'}</div>
       ) : (
         <div className="pt-1">
           {visibleRows.map((item, rowIndex) => {
@@ -664,8 +685,8 @@ const renderTablePreview = (
               {visibleColumns.map((column, columnIndex) => {
                 const key = asTrimmedString(column.key);
                 const type = normalizeFieldFormat(column.type);
-                const rawValue = resolveTableItemBindingRawValue(previewData, item, key);
-                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD') ?? '—';
+                const rawValue = resolveTableItemBindingRawValue(previewData, item, key, asTrimmedString(metadata.__astTableItemBinding) || 'item');
+                const text = formatBoundValue(rawValue, type, previewData?.currencyCode ?? 'USD', options.locale) ?? '—';
                 return (
                   <span
                     key={`${rowKey}-${String(column.id ?? key)}`}
@@ -689,12 +710,12 @@ const renderTablePreview = (
   );
 };
 
-const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): React.ReactNode => {
+const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, locale?: string): React.ReactNode => {
   const currencyCode = previewData?.currencyCode ?? 'USD';
   const zeroAmount = formatBoundValue(0, 'currency', currencyCode) ?? '';
-  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode) ?? zeroAmount;
-  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode) ?? zeroAmount;
-  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode) ?? zeroAmount;
+  const subtotal = formatBoundValue(previewData?.subtotal ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
+  const tax = formatBoundValue(previewData?.tax ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
+  const total = formatBoundValue(previewData?.total ?? null, 'currency', currencyCode, locale) ?? zeroAmount;
   return (
     <div className="space-y-1 text-[11px]">
       <div className="flex items-center justify-between text-slate-600">
@@ -713,8 +734,12 @@ const renderTotalsSummaryPreview = (previewData: WasmInvoiceViewModel | null, t?
   );
 };
 
-const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator): PreviewContentResult => {
+const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel | null, t?: DesignerTranslator, ast?: TemplateAst | null, locale?: string, scope?: Record<string, unknown>, presentationTranslator?: TemplateLabelTranslator): PreviewContentResult => {
   const metadata = getNodeMetadata(node);
+  // Translate display-only field/text values; tables retain the neutral input
+  // and localize their rows only after resolving transforms.
+  const displayData = localizeTimePresentation(previewData, presentationTranslator);
+  const displayScope = localizeTimePresentation(scope, presentationTranslator);
   switch (node.type) {
     case 'field': {
       const bindingKey =
@@ -723,9 +748,11 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
         asTrimmedString(metadata.key) ||
         asTrimmedString(metadata.path);
       const boundValue = resolveFieldPreviewValue({
-        invoice: previewData,
+        invoice: displayData,
         bindingKey,
         format: metadata.format,
+        locale,
+        scope: displayScope,
         displayFormat:
           metadata.displayFormat === 'single-line' ||
           metadata.displayFormat === 'multiline' ||
@@ -771,10 +798,14 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
       };
     }
     case 'text': {
-      const text =
+      const authoredText =
         asTrimmedString(metadata.text) ||
         asTrimmedString(metadata.label) ||
         asTrimmedString(metadata.content);
+      const expression = metadata.astContentExpression;
+      const text = isNodeTextTranslatable(node) && isTranslatableRef(expression)
+        ? presentationTranslator?.(expression.i18nKey, { defaultValue: expression.defaultValue }) ?? expression.defaultValue
+        : authoredText;
       const content = text.length > 0 ? text.slice(0, 140) : '';
 
       // Check for interpolation variables {{var}}
@@ -805,7 +836,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
             {parts.map((part, index) => {
               if (part.startsWith('{{') && part.endsWith('}}')) {
                 const tokenPath = part.replace(/^\{\{\s*|\s*\}\}$/g, '').trim();
-                const interpolatedValue = resolveTextInterpolationValue(previewData, tokenPath);
+                const interpolatedValue = resolveTextInterpolationValue(displayData, tokenPath, displayScope);
                 if (interpolatedValue !== null) {
                   return (
                     <span key={index} className="text-slate-800">
@@ -832,7 +863,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'tax':
     case 'discount':
     case 'custom-total': {
-      const totalsRow = resolveTotalsRowPreviewModel(node, previewData);
+      const totalsRow = resolveTotalsRowPreviewModel(node, previewData, locale);
       const labelInlineStyle = resolveLabelInlineStyle(metadata);
       return {
         content: (
@@ -881,7 +912,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'dynamic-table': {
       const fillHeight = inferHeightMode(getNodeStyle(node)) === 'fixed';
       return {
-        content: renderTablePreview(metadata, previewData, { fillHeight, t }),
+        content: renderTablePreview(metadata, previewData, { fillHeight, t, ast, locale, scope, presentationTranslator }),
       };
     }
     case 'action-button':
@@ -891,7 +922,7 @@ const getPreviewContent = (node: DesignerNode, previewData: WasmInvoiceViewModel
     case 'attachment-list':
       return { content: metadata.title ? `${t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments'}: ${metadata.title}` : (t?.('designer.canvas.attachmentsLabel', { defaultValue: 'Attachments' }) ?? 'Attachments') };
     case 'totals':
-      return { content: renderTotalsSummaryPreview(previewData, t) };
+      return { content: renderTotalsSummaryPreview(previewData, t, locale) };
     case 'divider':
       return { content: <div className={clsx('w-full border-t my-1', INVOICE_BORDER_COLOR_CLASS)} /> };
 	    case 'spacer':
@@ -1087,7 +1118,9 @@ const CanvasNodeInner: React.FC<CanvasNodeProps & { dnd: CanvasNodeDnd }> = ({
   );
 
   const draggablePointerDown = listeners?.onPointerDown;
-  const previewContent = useMemo(() => getPreviewContent(node, previewData, t), [node, previewData, t]);
+  const canvasAst = React.useContext(CanvasAstContext);
+  const documentPreview = React.useContext(CanvasDocumentPreviewContext);
+  const previewContent = useMemo(() => getPreviewContent(node, previewData ?? documentPreview.data, t, canvasAst, documentPreview.locale, resolveCanvasRowScope(previewData ?? documentPreview.data, canvasAst, node.id), (key, options) => documentPreview.presentationLabels?.[key] ?? options.defaultValue), [node, previewData, t, canvasAst, documentPreview]);
   const fieldNodeStyle = isFieldNode ? getNodeStyle(node) : undefined;
   const fieldLayoutStyle = isFieldNode
     ? {
@@ -1457,6 +1490,17 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   readOnly = false,
   previewData = null,
 }) => {
+  const exportWorkspace = useInvoiceDesignerStore((state) => state.exportWorkspace);
+  const transforms = useInvoiceDesignerStore((state) => state.transforms);
+  const canvasAst = useMemo(() => {
+    try {
+      return exportWorkspaceToTemplateAst({
+        ...exportWorkspace(),
+        rootId: nodes.find((node) => node.type === 'document' || node.parentId === null)?.id ?? '',
+        nodesById: snapshotWorkspaceNodesById(nodes),
+      });
+    } catch { return null; }
+  }, [nodes, transforms, exportWorkspace]);
   const { t } = useTranslation('msp/invoicing');
   const artboardRef = useRef<HTMLDivElement>(null);
   const documentNode = useMemo(
@@ -1650,6 +1694,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
   }, [canvasScale, snapToGrid, gridSize, onPointerLocationChange, readOnly]);
 
   return (
+    <CanvasAstContext.Provider value={canvasAst}>
     <div
       className="relative flex-1 overflow-auto bg-slate-100 dark:bg-[rgb(var(--color-background))]"
       onClick={() => {
@@ -1738,6 +1783,7 @@ export const DesignCanvas: React.FC<DesignCanvasProps> = ({
         </div>
       </div>
     </div>
+    </CanvasAstContext.Provider>
   );
 };
 

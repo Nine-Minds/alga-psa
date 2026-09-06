@@ -1272,6 +1272,7 @@ export async function persistInvoiceCharges(
       // Use client_contract_line_id if the schema requires it
       // client_contract_line_id: charge.client_contract_line_id ?? null,
       description,
+      billing_charge_type: charge.type,
       quantity:
         charge.type === 'hour_block'
           ? (charge as IHourBlockCharge).hoursUsed

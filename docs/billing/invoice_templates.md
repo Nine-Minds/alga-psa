@@ -63,26 +63,26 @@ Templates consume the groups through a repeatable `stack` bound to `groupsByLoca
 
 ### Ticket-Level Billed-Time Detail
 
-Invoice view models can expose two additional collection bindings built from an **immutable snapshot** captured at invoice generation:
+Invoice view models expose a complete primary presentation and two optional detail collections built from **immutable snapshots** captured at invoice generation:
+
+- **`ticketPresentationRows`** — the complete primary charge presentation: `label`, `description`, `quantity`, nullable `rate`, `rateKind`, `rateDisplay`, and `amount` (net minor units). Retained charges also preserve their service-period fields.
 
 - **`timeEntries`** — one row per billed time entry: `id` (source entry id), `date`, `ticketNumber`, `title` (ticket title or project-task name), `description` (customer-visible ticket description), `billedMinutes`, `hours`, `rate` (minor units/hour), `amount` (net, minor units), `serviceName`.
 - **`ticketGroups`** — the same entries grouped by source work item: `key`, `label` ("`<ticket number> — <title>`"), `ticketNumber`, `title`, `description`, `dateStart`/`dateEnd`, `totalMinutes`, `totalHours`, `totalAmount`, `rate`, `rateDisplay`, `hasMixedRates`, `entryCount`, and a nested `entries` array for per-entry detail tables. Grouping and ordering are deterministic (tickets by ticket number, then project tasks by name, then a single "Other billed time" fallback group); sums use integer minutes and minor currency units.
 
-**Rolled up by default.** The standard presentation is one line per ticket: all of a ticket's time entries aggregate into a single Ticket | Description | Hours | Rate | Amount row (`ticketGroups`). Per-entry lines are opt-in — bind `timeEntries` (or a nested table over `entries`) in a custom layout when a client genuinely needs the printed breakdown. The standard by-ticket template instead carries a note directing the client to the client portal for the per-entry detail.
+**Rolled up by default.** The standard by-ticket layout uses **Charges by Ticket** (`ticketPresentationRows`) as its single primary table. Eligible time across entries and services appears once per ticket. Project tasks group by task identity; ticketless time groups as Other billed time. Products, fees, usage, zero rows and signed adjustments retain their original rows. Totals and accounting exports continue to use canonical invoice charges.
 
-**Snapshot semantics.** When an invoice is generated, each time charge freezes its work-item metadata into `invoice_time_entries.work_item_snapshot` (jsonb, `InvoiceTimeEntrySnapshot` in `@alga-psa/types`). Rendering reads only this snapshot — never the live ticket or time entry — so a finalized invoice and its PDF cannot change when the source records are later edited. Source ids (`entryId`, `workItemId`) are preserved for traceability.
+**Exact coverage.** A charge can be replaced only when its frozen generation type is time, every persisted link has a supported valid snapshot, link ownership is unique and consistent with the invoice and tenant, and integer snapshot net amounts equal the entire canonical charge net amount. A partial, conflicting, adjusted or otherwise unproven charge stays whole, and none of its entries also appear in the primary rollup. No residual allocation is guessed. The row contribution metadata reconciles every removed charge independently. New generation records charge provenance; historical provenance is not backfilled.
 
-**Legacy invoices.** Invoices generated before snapshot support have no snapshot rows; there is deliberately **no backfill** (deriving detail from today's mutable ticket data would fabricate history). On such invoices both collections are absent: custom tables bound to them render their empty state, the standard by-ticket template states "No billed-time detail is available for this invoice.", and every layout that does not use the bindings renders exactly as before.
+**Legacy and partial invoices.** Unavailable time detail leaves the complete service charge visible. A localized coverage note explains partial or unavailable detail. Version-1 snapshots remain immutable and their rates display as unavailable. Current tickets, time entries and contracts are never used to reconstruct billed history.
 
-**Mixed rates.** A ticket whose entries bill at more than one hourly rate reports `hasMixedRates: true` and `rate: null` — templates never display a fabricated blended rate. `rateDisplay` is the value to put in a Rate column: the uniform hourly rate in minor units (a currency-formatted column renders it in the recipient's locale) or the text "Mixed rates" when rates differ. For the true per-rate breakdown, bind the `timeEntries` collection or point the client at the portal.
+**Honest rates.** Version-2 snapshots capture `rateKind` (`uniform`, `mixed`, `unknown`) and a nullable proven `uniformRate`. Overtime can make even one entry mixed. One hour at 15000 minor units plus one at 22500 shows two hours and 37500 total with Mixed rates. Averages never establish uniformity. `rate` is null for mixed/unavailable detail; `rateDisplay` carries either numeric minor units or a localized label. Customer descriptions remain unchanged.
 
-**Privacy.** The snapshot carries only the ticket's own customer-visible fields (number, title, description). Internal comments and time-entry notes are never captured, so they can never appear on an invoice by default.
+**Optional supporting detail.** In a custom layout, select Charges by Ticket to replace the primary charge table. To add a breakdown, create a separately titled **Billed-time detail — included in the charges above** section using **Billed Time Entries** (`timeEntries`) or nested `entries` under **Billed Time by Ticket** (`ticketGroups`). These supporting collections can be incomplete on older invoices and must not feed totals. Sort/filter preserves their field choices and runs before document localization. Filter mixed-rate time with `rateKind == mixed`; translated display labels such as `Tarifs variables` are presentation only and do not select rows. Declared nested collection aliases resolve their paths within the current ticket group. Invalid scalar or missing collection paths produce diagnostics; an empty collection or absent legacy time detail remains empty. Save and reopen the layout to reuse the source, columns and transforms. Existing custom layouts retain their authored structure.
 
-**Fallbacks.** Project-task time groups under the task name with no ticket fields; time recorded without any work item lands in the "Other billed time" group.
+The default recipient instruction is **Contact your service provider for a billed-time breakdown.** It does not promise an invoice-specific entry or rate ledger in the client portal.
 
-In the Invoice Layout designer, bind a table's source to **Billed Time by Ticket** (`ticketGroups`) or **Billed Time Entries** (`timeEntries`); the quick-add presets provide the Ticket | Description | Hours | Rate | Amount columns without editing binding keys by hand. The `standard-invoice-by-ticket` template demonstrates the rolled-up pattern: a heading, one `dynamic-table` over `ticketGroups` (one row per ticket, `rateDisplay` in the currency-formatted Rate column), an explicit empty state for invoices without snapshot data, and a portal-direction note.
-
-Accounting note: the snapshot is renderer-only metadata. Canonical `invoice_charges.description` values and the QBO/Xero export pipeline are untouched by this feature.
+**Privacy and accounting.** Snapshots include only approved customer-visible work-item fields. Internal ticket comments and time-entry notes are excluded. Presentation does not change canonical charge descriptions, service/account mappings, or accounting exports.
 
 ### Style Declaration Properties
 
@@ -155,7 +155,7 @@ There are two types of invoice layouts:
 | `standard-detailed` | Full branding + party blocks |
 | `standard-grouped` | Recurring / one-time sections |
 | `standard-invoice-by-location` | Per-location bands (address header, items, location subtotal) using the repeatable stack + `groupsByLocation` |
-| `standard-invoice-by-ticket` | Line items plus per-ticket billed-time bands (ticket header + description, per-entry rows, ticket subtotal) using the repeatable stack + `ticketGroups` |
+| `standard-invoice-by-ticket` | One primary table of eligible ticket rollups and retained charges using `ticketPresentationRows`; entry detail is optional |
 
 A parallel set exists for quotes (`standard-quote-default`, `standard-quote-detailed`, `standard-quote-by-location`).
 

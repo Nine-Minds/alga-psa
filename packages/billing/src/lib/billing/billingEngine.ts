@@ -1,3 +1,4 @@
+import { applyProjectCapAdjustments } from './domain/projectCapAdjustments';
 import { resolveUsageMeasurementRevision } from './usageMeasurementTransitions';
 import { Knex } from "knex";
 import {
@@ -131,10 +132,8 @@ import {
 } from "../contractLineDisambiguation.shared";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
 import {
-  computeCapWriteDown,
   computeDepositReconciliation,
   computeEntryAmounts,
-  detectThresholdCrossings,
 } from "../../services/projectBillingService";
 import {
   normalizeProjectBillingCapUsage,
@@ -210,29 +209,13 @@ type ProjectBillingContext = {
   capUsageByConfigId: Map<string, IProjectBillingCapUsage>;
 };
 
-export type ProjectCapThresholdCrossing = {
-  configId: string;
-  projectId: string;
-  threshold: number;
-  previousBilled: number;
-  newBilled: number;
-};
+export type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
+import type { ProjectCapThresholdCrossing } from './domain/projectCapAdjustments';
 
 export type ProjectBillingEngineResult = IBillingResult & {
   error?: string;
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
   warnings?: string[];
-};
-
-type ProjectAnnotatedCharge = IBillingCharge & {
-  project_id: string;
-  project_name: string;
-  project_number: string;
-  project_billing_config_id: string;
-  project_cap_original_amount?: number;
-  project_cap_original_tax_amount?: number;
-  write_down_amount?: number;
-  write_down_reason?: "project_cap";
 };
 
 type ProjectScheduleCharge = (
@@ -1848,7 +1831,9 @@ export class BillingEngine {
               billingPeriod,
               clientContractLine,
               familyObligationSinks[3],
+              cycle,
               recurringTimingSelections[clientContractLine.client_contract_line_id],
+              options.recurringTimingSelectionSource,
             ),
         options.projectTarget
           ? Promise.resolve()
@@ -1960,11 +1945,6 @@ export class BillingEngine {
       }
     }
 
-    const capResult = projectBillingContext
-      ? this.applyProjectCapAdjustments(totalCharges, projectBillingContext)
-      : { charges: totalCharges, thresholdCrossings: [] };
-    totalCharges = capResult.charges;
-
     // Resolve discount rows without pricing the obligations. Service-period
     // facts are enough for the existing effective-window query.
     const obligationWindows: IBillingCharge[] = contractObligations.flatMap(
@@ -2016,6 +1996,7 @@ export class BillingEngine {
       obligations: contractObligations,
       taxContexts: contractTaxContexts,
       supplementalCharges: totalCharges,
+      projectCaps: projectBillingContext ?? undefined,
       discountsAndAdjustments: {
         billingPeriod,
         discountCandidates: discountCandidates.map((discount) => ({
@@ -2051,7 +2032,7 @@ export class BillingEngine {
       ? {
           ...canonicalFinalCharges,
           ...usageStatusField,
-          projectCapThresholdCrossings: capResult.thresholdCrossings,
+          projectCapThresholdCrossings: canonical.projectCapThresholdCrossings,
           warnings: projectMaterialWarnings,
         }
       : { ...canonicalFinalCharges, ...usageStatusField };
@@ -2262,83 +2243,6 @@ export class BillingEngine {
     return charges;
   }
 
-  private applyProjectCapAdjustments(
-    charges: IBillingCharge[],
-    context: ProjectBillingContext,
-  ): {
-    charges: IBillingCharge[];
-    thresholdCrossings: ProjectCapThresholdCrossing[];
-  } {
-    const projectCharges = new Map<string, ProjectAnnotatedCharge[]>();
-    for (const charge of charges) {
-      if (
-        !("project_billing_config_id" in charge) ||
-        typeof charge.project_billing_config_id !== "string"
-      ) {
-        continue;
-      }
-      const projectCharge = charge as ProjectAnnotatedCharge;
-      const grouped =
-        projectCharges.get(projectCharge.project_billing_config_id) ?? [];
-      grouped.push(projectCharge);
-      projectCharges.set(projectCharge.project_billing_config_id, grouped);
-    }
-
-    const thresholdCrossings: ProjectCapThresholdCrossing[] = [];
-    for (const [configId, configCharges] of projectCharges) {
-      const config = context.configsById.get(configId);
-      if (!config || config.cap_amount === null) {
-        continue;
-      }
-
-      const usage = context.capUsageByConfigId.get(configId);
-      const previousBilled = usage?.billed_amount ?? 0;
-      let runningBilled = previousBilled;
-
-      for (const charge of configCharges) {
-        const originalAmount = charge.total;
-        const originalTaxAmount = charge.tax_amount ?? 0;
-        charge.project_cap_original_amount = originalAmount;
-        charge.project_cap_original_tax_amount = originalTaxAmount;
-        const writeDown = computeCapWriteDown(
-          config.cap_amount,
-          runningBilled,
-          originalAmount,
-        );
-        charge.total = writeDown.billable;
-        charge.write_down_amount = writeDown.writtenDown;
-        if (writeDown.writtenDown > 0) {
-          charge.write_down_reason = "project_cap";
-        }
-        if (originalAmount > 0 && originalTaxAmount > 0) {
-          charge.tax_amount = Math.round(
-            originalTaxAmount * (writeDown.billable / originalAmount),
-          );
-        }
-        runningBilled += writeDown.billable;
-      }
-
-      const crossed = detectThresholdCrossings(
-        config.cap_amount,
-        previousBilled,
-        runningBilled,
-        config.cap_notify_thresholds,
-        usage?.notified_thresholds ?? [],
-      );
-      thresholdCrossings.push(
-        ...crossed.map((threshold) => ({
-          configId,
-          projectId: config.project_id,
-          threshold,
-          previousBilled,
-          newBilled: runningBilled,
-        })),
-      );
-    }
-
-    return { charges, thresholdCrossings };
-  }
-
   async calculateUnresolvedNonContractChargesForExecutionWindow(input: {
     clientId: string;
     windowStart: ISO8601String;
@@ -2369,7 +2273,7 @@ export class BillingEngine {
             selection,
           );
       return context
-        ? this.applyProjectCapAdjustments(charges, context).charges
+        ? applyProjectCapAdjustments(charges, context).charges
         : charges;
     });
   }
@@ -2380,6 +2284,7 @@ export class BillingEngine {
    * (F135). Returns candidates, not ids, so the shared disambiguation rule can
    * be applied instead of re-deriving it here.
    */
+
   private async getEligibleContractLinesForServiceAtDate(input: {
     clientId: string;
     serviceId: string;
@@ -2809,6 +2714,8 @@ export class BillingEngine {
         total,
         workItemSnapshot: buildTimeEntryWorkItemSnapshot(entry, {
           billedMinutes: billableMinutes,
+          rateKind: 'uniform',
+          uniformRate: rate,
           rate,
           netAmount: total,
           serviceId: effectiveServiceId ?? null,
@@ -6472,7 +6379,9 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod,
     contractLine: IClientContractLine,
     obligationSink: ContractObligationSink,
-    timing?: ResolvedRecurringChargeTiming,
+    billingCycle?: string,
+    recurringTimingSelection?: ResolvedRecurringChargeTiming,
+    recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
   ): Promise<void> {
     await this.initKnex();
     if (!this.tenant) {
@@ -6507,6 +6416,14 @@ export class BillingEngine {
       return;
     }
 
+    // Legacy isolated calculator callers have no cadence selection. Live recurring
+    // generation must use the same persisted period as the other charge families.
+    const timing = billingCycle || recurringTimingSelectionSource || recurringTimingSelection
+      ? this.resolveRecurringChargeTiming(billingPeriod, contractLine, billingCycle,
+          recurringTimingSelection, recurringTimingSelectionSource)
+      : undefined;
+    if (timing === null) return;
+
     // Load persisted allowance state here; deterministic aggregation, rollover
     // application, overage pricing, and explanations live in shared compute.
     // One charge per bucket per period, as today one-per-config.
@@ -6519,7 +6436,7 @@ export class BillingEngine {
             client_id: clientId,
             bucket_id: pool.bucket_id,
           })
-          .where("period_start", ">=", timing?.servicePeriodStart ?? billingPeriod.startDate)
+          .where("period_start", ">=", timing?.servicePeriodStartExclusive ?? billingPeriod.startDate)
           .where("period_end", "<=", timing?.servicePeriodEnd ?? billingPeriod.endDate)
           .select("*");
 

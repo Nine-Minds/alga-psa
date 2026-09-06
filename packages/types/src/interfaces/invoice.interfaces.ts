@@ -75,8 +75,14 @@ export interface IInvoiceChargeRecurringDetailPeriod {
 }
 
 /** Snapshot row attached to a rendered invoice charge, keyed by source entry. */
-export interface IInvoiceChargeTimeEntrySnapshot extends InvoiceTimeEntrySnapshot {
+export type IInvoiceChargeTimeEntrySnapshot = InvoiceTimeEntrySnapshot & { entryId: string };
+
+export interface IInvoiceChargeTimeEntryLink {
+  itemId: string;
   entryId: string;
+  invoiceId: string;
+  tenant: string;
+  snapshot: unknown;
 }
 
 export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
@@ -99,6 +105,10 @@ export interface IInvoiceCharge extends TenantEntity, NetAmountItem {
    * renderer-only metadata — accounting exports must keep ignoring it.
    */
   time_entry_snapshots?: IInvoiceChargeTimeEntrySnapshot[];
+  /** All persisted links, including missing/invalid snapshots. Never reconstructed. */
+  time_entry_links?: IInvoiceChargeTimeEntryLink[];
+  /** Frozen calculator charge type; null on historical charges, with no backfill. */
+  billing_charge_type?: string | null;
   service_item_kind?: 'service' | 'product';
   service_sku?: string | null;
   service_name?: string | null;

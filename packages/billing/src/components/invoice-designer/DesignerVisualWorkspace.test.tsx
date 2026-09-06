@@ -21,13 +21,14 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
 }));
 
-vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
-  mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
-  // sampleScenarios.ts calls these at module load; grouping and the
-  // billed-time collections are irrelevant here.
-  enrichWithGroupedItems: (vm: unknown) => vm,
-  buildInvoiceTimeCollections: () => ({ timeEntries: [], ticketGroups: [] }),
-}));
+vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@alga-psa/billing/lib/adapters/invoiceAdapters')>();
+  return {
+    ...actual,
+    mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
+    // Keep sample collection enrichment real; only the fixture invoice read is stubbed.
+  };
+});
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({
   runAuthoritativeInvoiceTemplatePreview: (...args: unknown[]) =>

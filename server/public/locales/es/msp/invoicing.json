@@ -1413,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Plantilla de factura moderna",
         "description": "Diseño completo con encabezado, información de facturación, tabla de elementos y pie."
+      },
+      "billed-time-entries": {
+        "label": "Detalle de las entradas de tiempo facturado",
+        "description": "Añadir una tabla informativa con fechas, elementos de trabajo, horas, tarifas e importes."
+      },
+      "billed-time-by-ticket": {
+        "label": "Detalle del tiempo facturado por ticket",
+        "description": "Repetir un encabezado y la tabla de entradas correspondiente para cada ticket o tarea."
       }
     },
     "schema": {
@@ -1868,7 +1876,8 @@
         "transformsSource": "{{binding}} (origen de transformaciones)",
         "transformsOutput": "{{binding}} (salida de transformaciones)",
         "ticketGroups": "Tiempo facturado por ticket",
-        "timeEntries": "Entradas de tiempo facturadas"
+        "timeEntries": "Entradas de tiempo facturadas",
+        "ticketPresentationRows": "Cargos por ticket"
       },
       "presets": {
         "description": {
@@ -2137,7 +2146,8 @@
       "referenceMissing": "La plantilla de factura o el cliente seleccionado ya no existe. Actualice la página e inténtelo de nuevo.",
       "duplicate": "Ya existe una plantilla de factura con esa configuración.",
       "missingField": "Falta un campo obligatorio de la plantilla de factura.",
-      "missingFieldNamed": "Falta un campo obligatorio de la plantilla de factura: {{field}}."
+      "missingFieldNamed": "Falta un campo obligatorio de la plantilla de factura: {{field}}.",
+      "evaluationFailed": "Error en el enlace de datos de la plantilla: {{details}}"
     }
   },
   "periodTotal": {

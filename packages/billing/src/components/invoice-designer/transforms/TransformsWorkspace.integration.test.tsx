@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import TransformsWorkspace from './TransformsWorkspace';
@@ -71,7 +71,7 @@ const installWorkspace = () => {
   });
 };
 
-const renderTransformsWorkspace = () => {
+const renderTransformsWorkspace = (previewData = previewInvoice) => {
   const Wrapper = () => {
     const [previewState, dispatch] = React.useReducer(
       previewSessionReducer,
@@ -83,7 +83,7 @@ const renderTransformsWorkspace = () => {
     return (
       <TransformsWorkspace
         previewState={previewState}
-        previewData={previewInvoice}
+        previewData={previewData}
         activeSample={activeSample}
         onSourceKindChange={(source) => dispatch({ type: 'set-source', source })}
         onSampleChange={(sampleId) => dispatch({ type: 'set-sample', sampleId })}
@@ -140,10 +140,35 @@ describe('TransformsWorkspace', () => {
     useInvoiceDesignerStore.getState().resetWorkspace();
   });
 
+  it.each([false, true])('keeps evaluated empty billed-time output and its fields discoverable (grouped: %s)', async (grouped) => {
+    const sample = getPreviewSampleScenarioById('sample-ticket-time-detail')!.data;
+    act(() => useInvoiceDesignerStore.getState().setTransforms({
+      sourceBindingId: 'timeEntries', outputBindingId: 'selectedTime',
+      operations: [
+        { id: 'rate-filter', type: 'filter', predicate: { type: 'comparison', path: 'rateKind', op: 'eq', value: '__no_rate__' } },
+        ...(grouped ? [{ id: 'tickets', type: 'group' as const, key: 'ticketNumber' }] : []),
+      ],
+    }));
+    renderTransformsWorkspace(sample);
+    const output = within(screen.getByText('Output preview').closest('section')!);
+    expect(await output.findByText(grouped ? '0 grouped rows' : '0 rows')).toBeTruthy();
+    expect(output.queryByText(/Configure the source/)).toBeNull();
+    expect(output.getByText(grouped ? 'items' : 'rateKind')).toBeTruthy();
+    if (grouped) expect(output.queryByText('hours')).toBeNull();
+
+    const value = document.getElementById('transform-filter-value-rate-filter')!;
+    fireEvent.change(value, { target: { value: 'uniform' } });
+    fireEvent.blur(value);
+    const matches = sample.timeEntries!.filter((entry) => entry.rateKind === 'uniform');
+    expect(matches.length).toBeGreaterThan(0);
+    const count = grouped ? new Set(matches.map((entry) => entry.ticketNumber)).size : matches.length;
+    expect(await output.findByText(`${count} ${grouped ? 'grouped rows' : 'rows'}`)).toBeTruthy();
+  });
+
   it('lists collection bindings and updates source metadata when the source selection changes', async () => {
     renderTransformsWorkspace();
 
-    await selectCustomOption('invoice-designer-transforms-source-binding', 'lineItems (items)');
+    await selectCustomOption('invoice-designer-transforms-source-binding', 'All Line Items (items)');
     await waitFor(() => expect(screen.getAllByText('3 rows').length).toBeGreaterThan(0));
     expect(screen.getAllByText('description').length).toBeGreaterThan(0);
     expect(screen.getAllByText('quantity').length).toBeGreaterThan(0);
@@ -168,17 +193,20 @@ describe('TransformsWorkspace', () => {
     expect(screen.getAllByText('Sort key 1').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getAllByRole('button', { name: '+ Sort key' })[0]!);
+    const operationId = useInvoiceDesignerStore.getState().transforms.operations[0].id;
+    await selectCustomOption(`transform-sort-field-${operationId}-0`, 'quantity');
+    await selectCustomOption(`transform-sort-field-${operationId}-1`, 'total');
     await waitFor(() =>
       expect(useInvoiceDesignerStore.getState().transforms.operations[0]).toMatchObject({
         type: 'sort',
-        keys: [{ path: 'category' }, { path: 'category' }],
+        keys: [{ path: 'quantity' }, { path: 'total' }],
       })
     );
 
     const ast = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
     expect(ast.transforms?.operations[0]).toMatchObject({
       type: 'sort',
-      keys: [{ path: 'category' }, { path: 'category' }],
+      keys: [{ path: 'quantity' }, { path: 'total' }],
     });
   });
 

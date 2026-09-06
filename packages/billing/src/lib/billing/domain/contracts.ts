@@ -1,3 +1,5 @@
+import type { ProjectCapContext, ProjectCapThresholdCrossing } from './projectCapAdjustments';
+import type { TimeBasedPhaseRateOverride, TimeBasedProjectChargeConfig } from '../compute/computeTimeBasedCharges';
 import type {
   ChargeExplanation,
   IAdjustment,
@@ -141,6 +143,16 @@ export type ResolvedContractBillingChargeFacts =
         customRate?: number | null;
         currencyRate?: number | string | null;
         billableMinutes: number;
+        workItemId?: string | null;
+        workItemType?: string | null;
+        ticketNumber?: string | null;
+        ticketTitle?: string | null;
+        ticketDescription?: string | null;
+        projectTaskName?: string | null;
+        projectId?: string | null;
+        projectPhaseId?: string | null;
+        phaseRateOverride?: TimeBasedPhaseRateOverride | null;
+        projectChargeConfig?: TimeBasedProjectChargeConfig;
         billingProfileId?: string | null;
       }>;
     })
@@ -309,6 +321,7 @@ export interface ContractBillingCalculationInput {
   taxContexts: Record<string, ResolvedChargeTaxPolicy>;
   /** Explicit non-contract carve-out (materials/projects/manual activity). */
   supplementalCharges?: IBillingCharge[];
+  projectCaps?: ProjectCapContext;
   discountsAndAdjustments?: {
     billingPeriod: IBillingPeriod;
     discountCandidates: DiscountComputeCandidate[];
@@ -331,6 +344,7 @@ export interface ContractBillingCalculationResult {
   diagnostics: { code: string; message: string }[];
   /** Rich compute results used only by the guarded production commit adapter. */
   sourceCharges: IBillingCharge[];
+  projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
 }
 
 export type LiveContractBillingCalculationResult =

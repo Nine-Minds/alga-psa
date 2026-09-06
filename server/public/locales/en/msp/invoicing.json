@@ -1413,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modern Invoice Template",
         "description": "Complete layout with Header, Billing Info, Items Table, and Footer."
+      },
+      "billed-time-entries": {
+        "label": "Billed-time entry detail",
+        "description": "Add an informational entry table with dates, work items, hours, rates and amounts."
+      },
+      "billed-time-by-ticket": {
+        "label": "Billed-time detail by ticket",
+        "description": "Repeat a work-item heading and its scoped entry table for each ticket or task."
       }
     },
     "schema": {
@@ -1868,7 +1876,8 @@
         "transformsSource": "{{binding}} (Transforms source)",
         "transformsOutput": "{{binding}} (Transforms output)",
         "ticketGroups": "Billed Time by Ticket",
-        "timeEntries": "Billed Time Entries"
+        "timeEntries": "Billed Time Entries",
+        "ticketPresentationRows": "Charges by Ticket"
       },
       "presets": {
         "description": {
@@ -2137,7 +2146,8 @@
       "referenceMissing": "The selected invoice template or client no longer exists. Please refresh and try again.",
       "duplicate": "An invoice template with those settings already exists.",
       "missingField": "Missing required invoice template field.",
-      "missingFieldNamed": "Missing required invoice template field: {{field}}."
+      "missingFieldNamed": "Missing required invoice template field: {{field}}.",
+      "evaluationFailed": "Template data binding failed: {{details}}"
     }
   },
   "periodTotal": {

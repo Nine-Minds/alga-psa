@@ -1,5 +1,7 @@
 'use client';
 
+import { CanvasDocumentPreviewContext } from './canvas/DesignCanvas';
+
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -236,10 +238,6 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   }, [previewState.selectedInvoiceId, previewState.sourceKind]);
 
   useEffect(() => {
-    if (visualWorkspaceTab !== 'preview') {
-      return;
-    }
-
     if (!previewData) {
       previewRunSequence.current += 1;
       dispatch({ type: 'pipeline-reset' });
@@ -331,7 +329,9 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
       </TabsList>
 
       <TabsContent value="design" className="pt-3">
-        <DesignerShell />
+        <CanvasDocumentPreviewContext.Provider value={{ data: previewData, presentationLabels: authoritativePreview?.presentationLabels, locale: authoritativePreview?.effectiveLocale ?? previewState.selectedLocale }}>
+          <DesignerShell />
+        </CanvasDocumentPreviewContext.Provider>
       </TabsContent>
 
       <TabsContent value="transforms" className="pt-3">

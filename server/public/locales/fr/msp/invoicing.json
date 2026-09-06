@@ -1413,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modèle de facture moderne",
         "description": "Mise en page complète avec en-tête, infos de facturation, tableau des lignes et pied de page."
+      },
+      "billed-time-entries": {
+        "label": "Détail des écritures de temps facturé",
+        "description": "Ajouter un tableau informatif des dates, éléments de travail, heures, tarifs et montants."
+      },
+      "billed-time-by-ticket": {
+        "label": "Détail du temps facturé par ticket",
+        "description": "Répéter un en-tête et le tableau de ses écritures pour chaque ticket ou tâche."
       }
     },
     "schema": {
@@ -1868,7 +1876,8 @@
         "transformsSource": "{{binding}} (source des transformations)",
         "transformsOutput": "{{binding}} (sortie des transformations)",
         "ticketGroups": "Temps facturé par ticket",
-        "timeEntries": "Entrées de temps facturées"
+        "timeEntries": "Entrées de temps facturées",
+        "ticketPresentationRows": "Prestations par ticket"
       },
       "presets": {
         "description": {
@@ -2137,7 +2146,8 @@
       "referenceMissing": "Le modèle de facture ou le client sélectionné n’existe plus. Veuillez actualiser la page et réessayer.",
       "duplicate": "Un modèle de facture avec ces paramètres existe déjà.",
       "missingField": "Un champ obligatoire du modèle de facture est manquant.",
-      "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}."
+      "missingFieldNamed": "Un champ obligatoire du modèle de facture est manquant : {{field}}.",
+      "evaluationFailed": "Échec de la liaison des données du modèle : {{details}}"
     }
   },
   "periodTotal": {

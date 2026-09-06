@@ -118,8 +118,13 @@ export interface IFixedPriceCharge extends IBillingCharge, TenantEntity {
  * Customer-visibility rule: only the ticket's own title and description are
  * captured. Internal comments and time-entry notes are never included.
  */
-export interface InvoiceTimeEntrySnapshot {
-  version: 1;
+export type InvoiceTimeRateKind = 'uniform' | 'mixed' | 'unknown';
+export type InvoiceTimeEntrySnapshot = InvoiceTimeEntrySnapshotData & (
+  | { version: 1 }
+  | { version: 2; rateKind: InvoiceTimeRateKind; uniformRate: number | null }
+);
+
+export interface InvoiceTimeEntrySnapshotData {
   /** 'ticket' | 'project_task' | 'ad_hoc' provenance of the billed time. */
   workItemType: 'ticket' | 'project_task' | 'ad_hoc' | null;
   /** Ticket id or project-task id, preserved for traceability. */
@@ -133,7 +138,7 @@ export interface InvoiceTimeEntrySnapshot {
   entryDate: string | null;
   /** Billed duration in whole minutes, after minimum/rounding rules. */
   billedMinutes: number;
-  /** Effective hourly rate in minor currency units. */
+  /** Historical base rate; never proof of a uniform effective rate. */
   rate: number;
   /** Net (pre-tax) amount in minor currency units. */
   netAmount: number;

@@ -1413,6 +1413,14 @@
       "modern-invoice-complete": {
         "label": "Modello fattura moderno",
         "description": "Layout completo con intestazione, info fatturazione, tabella voci e piè di pagina."
+      },
+      "billed-time-entries": {
+        "label": "Dettaglio delle registrazioni di tempo fatturato",
+        "description": "Aggiungere una tabella informativa con date, attività, ore, tariffe e importi."
+      },
+      "billed-time-by-ticket": {
+        "label": "Dettaglio del tempo fatturato per ticket",
+        "description": "Ripetere un’intestazione e la relativa tabella delle registrazioni per ogni ticket o attività."
       }
     },
     "schema": {
@@ -1868,7 +1876,8 @@
         "transformsSource": "{{binding}} (origine trasformazioni)",
         "transformsOutput": "{{binding}} (output trasformazioni)",
         "ticketGroups": "Tempo fatturato per ticket",
-        "timeEntries": "Inserimenti ore fatturati"
+        "timeEntries": "Inserimenti ore fatturati",
+        "ticketPresentationRows": "Addebiti per ticket"
       },
       "presets": {
         "description": {
@@ -2137,7 +2146,8 @@
       "referenceMissing": "Il modello di fattura o il cliente selezionato non esiste più. Aggiornare la pagina e riprovare.",
       "duplicate": "Esiste già un modello di fattura con queste impostazioni.",
       "missingField": "Manca un campo obbligatorio del modello di fattura.",
-      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}."
+      "missingFieldNamed": "Manca un campo obbligatorio del modello di fattura: {{field}}.",
+      "evaluationFailed": "Associazione dei dati del modello non riuscita: {{details}}"
     }
   },
   "periodTotal": {

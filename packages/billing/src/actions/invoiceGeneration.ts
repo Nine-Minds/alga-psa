@@ -421,6 +421,12 @@ async function prepareProjectCapChargesForPersistence(
         originalAmount,
       );
       charge.total = result.billable;
+      if (charge.type === 'time') {
+        const timeCharge = charge as ITimeBasedCharge;
+        if (timeCharge.workItemSnapshot?.version === 2 && timeCharge.workItemSnapshot.rateKind === 'uniform' && timeCharge.workItemSnapshot.netAmount !== charge.total) {
+          timeCharge.workItemSnapshot = { ...timeCharge.workItemSnapshot, rateKind: 'unknown', uniformRate: null };
+        }
+      }
       charge.write_down_amount = result.writtenDown;
       charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
       charge.tax_amount = originalAmount > 0
@@ -2069,6 +2075,12 @@ async function adaptToWasmViewModel(
     }
   }
 
+  for (const item of invoiceItems) {
+    if (item.time_entry_links) {
+      item.tenant = tenant;
+      item.time_entry_links = item.time_entry_links.map((link) => ({ ...link, itemId: item.item_id, invoiceId: item.invoice_id, tenant }));
+    }
+  }
   const previewViewModelItems = invoiceItems.map(buildPreviewViewModelItem);
 
   const previewViewModel: WasmInvoiceViewModel = {
@@ -2233,7 +2245,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
       tax_amount: charge.tax_amount || 0,
       tax_rate: charge.tax_rate || 0,
       tax_region: charge.tax_region || '',
-      net_amount: charge.total - (charge.tax_amount || 0),
+      net_amount: charge.total,
       is_manual: false,
       rate: charge.rate,
       service_period_start: recurringSummary.servicePeriodStart,
@@ -2244,6 +2256,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         service_period_end: period.servicePeriodEnd ?? null,
         billing_timing: period.billingTiming ?? null,
       })),
+      billing_charge_type: charge.type,
+      time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
       time_entry_snapshots: previewTimeEntrySnapshots(charge),
     });
   });
@@ -2305,7 +2319,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         tax_amount: charge.tax_amount || 0,
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
+        net_amount: charge.total,
         is_manual: false,
         client_contract_id: clientContractGroupId,
         contract_name: contractGroupName,
@@ -2319,6 +2333,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        billing_charge_type: charge.type,
+        time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
         time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
@@ -2357,7 +2373,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         tax_amount: charge.tax_amount || 0,
         tax_rate: charge.tax_rate || 0,
         tax_region: charge.tax_region || '',
-        net_amount: charge.total - (charge.tax_amount || 0),
+        net_amount: charge.total,
         is_manual: false,
         parent_item_id: projectGroupHeaderId,
         rate: charge.rate,
@@ -2369,6 +2385,8 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
           service_period_end: period.servicePeriodEnd ?? null,
           billing_timing: period.billingTiming ?? null,
         })),
+        billing_charge_type: charge.type,
+        time_entry_links: charge.type === 'time' ? [{ itemId: '', entryId: (charge as ITimeBasedCharge).entryId, invoiceId: '', tenant, snapshot: (charge as ITimeBasedCharge).workItemSnapshot ?? null }] : [],
         time_entry_snapshots: previewTimeEntrySnapshots(charge),
       });
     });
