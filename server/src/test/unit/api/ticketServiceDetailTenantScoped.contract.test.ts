@@ -44,14 +44,14 @@ describe('ticket service detail tenant-scoped query contract', () => {
     expect(assetsSection).not.toContain("'aa.tenant': context.tenant");
     expect(assetsSection).not.toContain("'a.tenant': context.tenant");
 
-    expect(linkSection).toContain("tenantScopedTable(knex, 'tickets', context.tenant)");
-    expect(linkSection).toContain("tenantScopedTable(knex, 'assets', context.tenant)");
-    expect(linkSection).toContain("tenantScopedTable(knex, 'asset_associations', context.tenant)");
+    expect(linkSection).toContain("tenantScopedTable(trx, 'tickets', context.tenant)");
+    expect(linkSection).toContain("tenantScopedTable(trx, 'assets', context.tenant)");
+    expect(linkSection).toContain("tenantScopedTable(trx, 'asset_associations', context.tenant)");
     expect(linkSection).not.toMatch(/\.where\(\{\s*tenant:\s*context\.tenant,\s*ticket_id:\s*ticketId\s*\}\)/);
     expect(linkSection).not.toMatch(/\.where\(\{\s*tenant:\s*context\.tenant,\s*asset_id:\s*data\.asset_id\s*\}\)/);
     expect(linkSection).not.toMatch(/\.where\(\{\s*tenant:\s*context\.tenant,\s*asset_id:\s*data\.asset_id,\s*entity_id:\s*ticketId/s);
 
-    expect(unlinkSection).toContain("tenantScopedTable(knex, 'asset_associations', context.tenant)");
+    expect(unlinkSection).toContain("tenantScopedTable(trx, 'asset_associations', context.tenant)");
     expect(unlinkSection).not.toMatch(/\.where\(\{\s*tenant:\s*context\.tenant,\s*asset_id:\s*assetId/s);
   });
 });

@@ -579,6 +579,10 @@ describe('ticket API lifecycle admission against PostgreSQL', () => {
     const operations = [
       () => service.create(data, context),
       () => service.update(ticketId, { title: 'Changed' }, context),
+      () => service.delete(ticketId, context),
+      () => service.linkAsset(ticketId, { asset_id: secondId }, context),
+      () => service.unlinkAsset(ticketId, secondId, context),
+      () => service.deleteTicketDocument(ticketId, secondId, context),
       () => service.createFromAsset({ ...data, asset_id: secondId, description: '' }, context),
       () => service.addTicketAgent(ticketId, { user_id: secondId }, context),
       () => service.removeTicketAgent(ticketId, secondId, context),
@@ -982,4 +986,41 @@ describe('durable co-managed attachments', () => {
     expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
     expect(await customer.table('tickets')).toHaveLength(1);
   });
+});
+
+it('preserves ticket assets and documents after lapse and permits their removal and ticket deletion after renewal', async () => {
+  const { operation, actor, customer, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+  const { service, publish } = await ticketServiceForTest(), context = { tenant: actor.tenant, userId: actor.userId };
+  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+  const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+  const ticket = await service.create({ title: 'Keep customer work', description: '', client_id: operation.customer_client_id,
+    board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id }, context);
+  const assetId = randomUUID(), documentId = randomUUID();
+  await customer.table('assets').insert({ tenant: actor.tenant, asset_id: assetId, asset_tag: 'CUSTOMER-1', name: 'Workstation',
+    status: 'active', asset_type: 'workstation', client_id: operation.customer_client_id });
+  await service.linkAsset(ticket.ticket_id, { asset_id: assetId }, context);
+  await customer.table('documents').insert({ tenant: actor.tenant, document_id: documentId, document_name: 'Customer instructions',
+    user_id: actor.userId, created_by: actor.userId });
+  await customer.table('document_associations').insert({ tenant: actor.tenant, association_id: randomUUID(), document_id: documentId,
+    entity_id: ticket.ticket_id, entity_type: 'ticket' });
+  await expireCoManagedEntitlement(operation.tenant);
+  publish.mockClear();
+  for (const mutate of [() => service.delete(ticket.ticket_id, context), () => service.unlinkAsset(ticket.ticket_id, assetId, context),
+    () => service.deleteTicketDocument(ticket.ticket_id, documentId, context)]) {
+    await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  }
+  expect(await customer.table('tickets')).toHaveLength(1);
+  expect(await customer.table('asset_associations')).toHaveLength(1);
+  expect(await customer.table('documents')).toHaveLength(1);
+  expect(await customer.table('document_associations')).toHaveLength(1);
+  expect(publish).not.toHaveBeenCalled();
+  const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+    async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+  await service.unlinkAsset(ticket.ticket_id, assetId, context);
+  await service.deleteTicketDocument(ticket.ticket_id, documentId, context);
+  await runWithTenant(actor.tenant, () => service.delete(ticket.ticket_id, context));
+  for (const table of ['tickets', 'asset_associations', 'documents', 'document_associations']) expect(await customer.table(table)).toEqual([]);
+  expect(await customer.table('assets')).toHaveLength(1);
+  expect(publish).toHaveBeenCalledWith('TICKET_DELETED', context, { ticketId: ticket.ticket_id, userId: actor.userId });
 });

@@ -301,27 +301,30 @@ export class TicketService extends BaseService<ITicket> {
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
 
-    const result = await deleteEntityWithValidation(
-      'ticket',
-      id,
-      knex,
-      context.tenant,
-      async (trx, tenant) => {
-        const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ ticket_id: id })
-          .first();
+    const result = await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      return deleteEntityWithValidation(
+        'ticket',
+        id,
+        trx,
+        context.tenant,
+        async (trx, tenant) => {
+          const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+            .where({ ticket_id: id })
+            .first();
 
-        if (!ticket) {
-          throw new NotFoundError('Ticket not found');
+          if (!ticket) {
+            throw new NotFoundError('Ticket not found');
+          }
+
+          await deleteTicketChildRecords(trx, id, tenant, ticket);
+
+          await tenantScopedTable(trx, 'tickets', tenant)
+            .where({ ticket_id: id })
+            .delete();
         }
-
-        await deleteTicketChildRecords(trx, id, tenant, ticket);
-
-        await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ ticket_id: id })
-          .delete();
-      }
-    );
+      );
+    });
 
     if (!result.deleted) {
       throw new ConflictError(
@@ -730,45 +733,48 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const ticket = await tenantScopedTable(knex, 'tickets', context.tenant)
-      .where({ ticket_id: ticketId })
-      .first();
-    if (!ticket) {
-      throw new NotFoundError('Ticket not found');
-    }
+    return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+      if (!ticket) {
+        throw new NotFoundError('Ticket not found');
+      }
 
-    const asset = await tenantScopedTable(knex, 'assets', context.tenant)
-      .where({ asset_id: data.asset_id })
-      .first();
-    if (!asset) {
-      throw new NotFoundError('Asset not found');
-    }
+      const asset = await tenantScopedTable(trx, 'assets', context.tenant)
+        .where({ asset_id: data.asset_id })
+        .first();
+      if (!asset) {
+        throw new NotFoundError('Asset not found');
+      }
 
-    const existing = await tenantScopedTable(knex, 'asset_associations', context.tenant)
-      .where({
-        asset_id: data.asset_id,
-        entity_id: ticketId,
-        entity_type: 'ticket'
-      })
-      .first();
-    if (existing) {
-      throw new ConflictError('Asset is already linked to this ticket');
-    }
+      const existing = await tenantScopedTable(trx, 'asset_associations', context.tenant)
+        .where({
+          asset_id: data.asset_id,
+          entity_id: ticketId,
+          entity_type: 'ticket'
+        })
+        .first();
+      if (existing) {
+        throw new ConflictError('Asset is already linked to this ticket');
+      }
 
-    const [created] = await tenantScopedTable(knex, 'asset_associations', context.tenant)
-      .insert({
-        tenant: context.tenant,
-        asset_id: data.asset_id,
-        entity_id: ticketId,
-        entity_type: 'ticket',
-        relationship_type: data.relationship_type || 'affected',
-        notes: data.notes ?? null,
-        created_by: context.userId,
-        created_at: new Date().toISOString()
-      })
-      .returning('*');
+      const [created] = await tenantScopedTable(trx, 'asset_associations', context.tenant)
+        .insert({
+          tenant: context.tenant,
+          asset_id: data.asset_id,
+          entity_id: ticketId,
+          entity_type: 'ticket',
+          relationship_type: data.relationship_type || 'affected',
+          notes: data.notes ?? null,
+          created_by: context.userId,
+          created_at: new Date().toISOString()
+        })
+        .returning('*');
 
-    return created;
+      return created;
+    });
   }
 
   /**
@@ -778,17 +784,20 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const deleted = await tenantScopedTable(knex, 'asset_associations', context.tenant)
-      .where({
-        asset_id: assetId,
-        entity_id: ticketId,
-        entity_type: 'ticket'
-      })
-      .del();
+    return withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      const deleted = await tenantScopedTable(trx, 'asset_associations', context.tenant)
+        .where({
+          asset_id: assetId,
+          entity_id: ticketId,
+          entity_type: 'ticket'
+        })
+        .del();
 
-    if (!deleted) {
-      throw new NotFoundError('Asset-ticket association not found');
-    }
+      if (!deleted) {
+        throw new NotFoundError('Asset-ticket association not found');
+      }
+    });
   }
 
   /**
@@ -1173,23 +1182,24 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    const scopedDb = tenantDb(knex, context.tenant);
-    const docQuery = tenantScopedTable(knex, 'documents as d', context.tenant);
-    scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
-    const doc = await docQuery
-      .where({
-        'da.entity_id': ticketId,
-        'da.entity_type': 'ticket',
-        'd.document_id': documentId,
-      })
-      .select('d.document_id', 'd.file_id', 'da.association_id')
-      .first();
-
-    if (!doc) {
-      throw new NotFoundError('Document not found');
-    }
-
     await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, context.tenant);
+      const scopedDb = tenantDb(trx, context.tenant);
+      const docQuery = tenantScopedTable(trx, 'documents as d', context.tenant);
+      scopedDb.tenantJoin(docQuery, 'document_associations as da', 'd.document_id', 'da.document_id');
+      const doc = await docQuery
+        .where({
+          'da.entity_id': ticketId,
+          'da.entity_type': 'ticket',
+          'd.document_id': documentId,
+        })
+        .select('d.document_id', 'd.file_id', 'da.association_id')
+        .first();
+
+      if (!doc) {
+        throw new NotFoundError('Document not found');
+      }
+
       await tenantScopedTable(trx, 'document_associations', context.tenant)
         .where({ association_id: doc.association_id })
         .del();
