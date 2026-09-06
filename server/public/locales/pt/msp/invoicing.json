@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Fatura gerada com sucesso!",
-      "loadFailed": "Falha ao carregar dados"
+      "loadFailed": "Falha ao carregar dados",
+      "salesOrderSourcesUnavailable": "Não foi possível carregar os pedidos de venda de origem. Ainda pode introduzir itens de fatura manuais."
     }
   },
   "prepayment": {

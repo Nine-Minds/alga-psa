@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Fattura generata con successo!",
-      "loadFailed": "Impossibile caricare i dati"
+      "loadFailed": "Impossibile caricare i dati",
+      "salesOrderSourcesUnavailable": "Impossibile caricare gli ordini di vendita di origine. È comunque possibile inserire manualmente le voci della fattura."
     }
   },
   "prepayment": {

@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Facture générée avec succès !",
-      "loadFailed": "Échec du chargement des données"
+      "loadFailed": "Échec du chargement des données",
+      "salesOrderSourcesUnavailable": "Les commandes clients sources n’ont pas pu être chargées. Vous pouvez toujours saisir des lignes de facture manuelles."
     }
   },
   "prepayment": {

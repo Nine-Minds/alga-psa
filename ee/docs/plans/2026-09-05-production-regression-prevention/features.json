@@ -133,7 +133,7 @@
   {
     "id": "F011",
     "description": "Verify Add Usage through the browser with overlapping usage/bucket contract lines, persistence after reload and correct invoice preview.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP3",
     "priority": "P0",
     "prdRefs": [

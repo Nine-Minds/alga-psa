@@ -94,7 +94,7 @@
   {
     "id": "T010",
     "description": "As an authorized non-admin, add usage with overlapping usage/bucket eligibility through the real UI action, reload and verify chosen contract, quantity/date and preview amount; another tenant cannot access the result and cannot cause cross-tenant mutation.",
-    "implemented": false,
+    "implemented": true,
     "kind": "browser-db",
     "featureIds": [
       "F011",

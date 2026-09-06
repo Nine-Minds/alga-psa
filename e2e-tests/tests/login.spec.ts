@@ -48,7 +48,7 @@ test('legacy integration settings links redirect before rendering and remain usa
   const legacy = '/msp/settings?tab=integrations&category=accounting';
   const response = await page.request.get(legacy, { maxRedirects: 0 });
   expect(response.status()).toBe(307);
-  const target = new URL(response.headers().location);
+  const target = new URL(response.headers().location, response.url());
   expect(target.pathname).toBe('/msp/settings/integrations');
   expect(target.search).toBe('?category=accounting');
 

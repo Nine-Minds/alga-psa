@@ -1004,7 +1004,8 @@
     },
     "messages": {
       "success": "Factuur succesvol gegenereerd!",
-      "loadFailed": "Laden van gegevens is mislukt"
+      "loadFailed": "Laden van gegevens is mislukt",
+      "salesOrderSourcesUnavailable": "Bronverkooporders konden niet worden geladen. U kunt nog steeds handmatige factuurregels invoeren."
     }
   },
   "prepayment": {
