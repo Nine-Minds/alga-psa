@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -2748,8 +2748,10 @@ describe('co-managed collaboration policy administration', () => {
 async function sharedWorkFixture() {
   const fixture = await collaborationPolicyFixture();
   const { sponsor, sponsorActor, customer, roleId, actor, operation } = fixture;
+  // The catalog has separate MSP and portal rows for the same resource/action.
+  // Pick the intended principal type rather than relying on an unordered first().
   for (const resource of ['ticket', 'project']) for (const action of ['read', 'update']) {
-    const permission = await customer.table('permissions').where({ resource, action }).first();
+    const permission = await customer.table('permissions').where({ resource, action, msp: true, client: false }).first();
     await sponsor.table('permissions').insert({ ...permission, tenant: sponsorActor.tenant });
     await sponsor.table('role_permissions').insert({ tenant: sponsorActor.tenant, role_id: roleId, permission_id: permission.permission_id });
   }
@@ -2794,6 +2796,11 @@ describe('co-managed shared-work authorization boundary', () => {
     const permission = await sponsor.table('permissions').where({ resource: 'ticket', action: 'read' }).first();
     await sponsor.table('role_permissions').where({ role_id: roleId, permission_id: permission.permission_id }).del();
     await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    const portalPermission = await customer.table('permissions').where({ resource: 'ticket', action: 'read', msp: false, client: true }).first();
+    await sponsor.table('permissions').insert({ ...portalPermission, tenant: principal.tenant });
+    await sponsor.table('role_permissions').insert({ tenant: principal.tenant, role_id: roleId, permission_id: portalPermission.permission_id });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+
     await sponsor.table('role_permissions').insert({ tenant: principal.tenant, role_id: roleId, permission_id: permission.permission_id });
     await expireCoManagedEntitlement(operation.tenant);
     expect(await work(db, principal, resource, 'read', command)).toBe('authorized');
@@ -3048,7 +3055,8 @@ describe('co-managed shared metadata reads', () => {
       return summary;
     });
     expect(result.resource).toEqual(resource);
-    expect(Object.keys(result.fields).sort()).toEqual(['ticket_number', 'title', 'board', 'status', 'is_closed', 'priority', 'entered_at', 'updated_at', 'closed_at'].sort());
+    expect(Object.keys(result.fields).sort()).toEqual(['ticket_number', 'title', 'board', 'status', 'is_closed', 'priority', 'entered_at', 'updated_at', 'closed_at',
+      'work_revision', 'responsibility', 'first_escalated_at', 'last_transition_at', 'explicit_grant_active'].sort());
     expect(result).toMatchObject({ revision: 3, fields: { ticket_number: 'SHARED-1', title: 'Customer issue',
       board: { tenant: actor.tenant, kind: 'board', id: operation.customer_board_id },
       status: { tenant: actor.tenant, kind: 'status' }, priority: { tenant: actor.tenant, kind: 'priority' } } });
@@ -3074,7 +3082,8 @@ describe('co-managed shared metadata reads', () => {
     await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
     await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
     const result = await read(db, principal, resource);
-    expect(Object.keys(result.fields).sort()).toEqual(['ticket_number', 'entered_at', 'updated_at', 'closed_at'].sort());
+    expect(Object.keys(result.fields).sort()).toEqual(['ticket_number', 'entered_at', 'updated_at', 'closed_at', 'work_revision', 'responsibility',
+      'first_escalated_at', 'last_transition_at', 'explicit_grant_active'].sort());
     expect(JSON.stringify(result)).not.toContain(operation.customer_board_id);
     await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ config: {
       selectedClientIds: [operation.request.clientId], redactedFields: ['fields'],
@@ -3122,4 +3131,221 @@ describe('co-managed shared metadata reads', () => {
     await policy.replaceCoManagedCustomerScope(db, actor, target, 4, { ...initial, projects: [] });
     for (const ref of [projectRef, taskRef]) await expect(read(db, principal, ref)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   });
+});
+
+async function ticketHandoffFixture() {
+  const fixture = await sharedWorkFixture();
+  const sessionId = randomUUID();
+  await fixture.customer.table('sessions').insert({ tenant: fixture.actor.tenant, session_id: sessionId, user_id: fixture.actor.userId,
+    expires_at: new Date(Date.now() + 3600000) });
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  await policy.replaceCoManagedCustomerScope(db, fixture.actor, fixture.target, 2, { visibilityMode: 'escalation_only', boards: [], projects: [] });
+  await policy.replaceCoManagedStaffAssignments(db, fixture.sponsorActor, fixture.target, 3,
+    [{ kind: 'user', principalId: fixture.principal.userId, role: 'technician' }]);
+  return { ...fixture, customerPrincipal: { ...fixture.actor, kind: 'session' as const, sessionId } };
+}
+
+describe('co-managed ticket escalation and handback', () => {
+  it('atomically escalates one canonical ticket, keeps access on handback, and reuses the original work identity on re-escalation', async () => {
+    const { principal, customerPrincipal, resource, customer, sponsor, operation, actor } = await ticketHandoffFixture();
+    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const before = await customer.table('tickets').where('ticket_id', resource.id).first();
+    expect((await read(db, customerPrincipal, resource)).fields).toMatchObject({ work_revision: 0, responsibility: 'customer', explicit_grant_active: false });
+    await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    const request = { operationId: randomUUID(), expectedRevision: 0, note: '  Please investigate this issue.  ' };
+    const first = await escalate(db, customerPrincipal, resource, { ...request, boardId: randomUUID(), actor: principal, audience: 'requester' } as any);
+    expect(first).toMatchObject({ operationId: request.operationId, appliedRevision: 1, transition: 'escalated' });
+    expect((await read(db, principal, resource)).fields).toMatchObject({ work_revision: 1, responsibility: 'msp', explicit_grant_active: true });
+    expect(await escalate(db, customerPrincipal, resource, request)).toEqual(first);
+    expect((await read(db, principal, resource)).fields.ticket_number).toBe(before.ticket_number);
+    const work = await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first();
+    const reference = await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first();
+    expect(work).toMatchObject({ responsibility: 'msp', revision: 1, grant_revoked_at: null, can_collaborate: true });
+    expect(reference).toMatchObject({ tenant: principal.tenant, customer_tenant: actor.tenant, relationship_id: resource.relationshipId,
+      ticket_id: resource.id, work_id: work.work_id, client_id: operation.request.clientId, board_id: operation.escalation_board_id,
+      assigned_to: null, assigned_team_id: null });
+    const backRequest = { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify the local network.' };
+    const back = await handback(db, principal, resource, backRequest);
+    expect(back).toMatchObject({ appliedRevision: 2, transition: 'handed_back' });
+    expect(await handback(db, principal, resource, backRequest)).toEqual(back);
+    expect((await read(db, principal, resource)).fields.ticket_number).toBe(before.ticket_number);
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ responsibility: 'customer', grant_revoked_at: null });
+    await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Network verified; please continue.' });
+    expect(await escalate(db, customerPrincipal, resource, request)).toEqual(first);
+    expect(await handback(db, principal, resource, backRequest)).toEqual(back);
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ work_id: work.work_id,
+      first_escalated_at: work.first_escalated_at, responsibility: 'msp', revision: 3 });
+    expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ reference_id: reference.reference_id, work_id: work.work_id });
+    const history = await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id).orderBy('revision');
+    expect(history).toHaveLength(3);
+    expect(history.map(row => row.audience)).toEqual(['shared_it', 'shared_it', 'shared_it']);
+    expect(history[0]).toMatchObject({ actor_tenant: actor.tenant, actor_user_id: actor.userId, note: request.note.trim(), occurred_at: work.first_escalated_at });
+    expect(history[1]).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: principal.userId, note: backRequest.note });
+    expect(history.every(row => row.actor_name && row.actor_organization)).toBe(true);
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(before);
+    expect(await sponsor.table('tickets')).toEqual([]);
+    expect(await customer.table('users')).toHaveLength(1);
+    await expect(handback(db, customerPrincipal, resource, backRequest)).rejects.toMatchObject({ code: 'HANDOFF_CHANGED' });
+  });
+
+  it('rejects changed requests and concurrent stale revisions and rolls all stores back with the caller', async () => {
+    const { customerPrincipal, resource, customer, sponsor } = await ticketHandoffFixture();
+    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { withTransaction } = await import('@alga-psa/db');
+    const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' };
+    await expect(withTransaction(db, async trx => { await escalate(trx, customerPrincipal, resource, request); throw new Error('Caller rollback'); })).rejects.toThrow('Caller rollback');
+    expect(await customer.table('co_management_ticket_work')).toEqual([]);
+    expect(await customer.table('co_management_ticket_handoffs')).toEqual([]);
+    expect(await sponsor.table('co_managed_ticket_references')).toEqual([]);
+    const competing = { ...request, operationId: randomUUID() };
+    const outcomes = await Promise.allSettled([escalate(db, customerPrincipal, resource, request), escalate(db, customerPrincipal, resource, competing)]);
+    expect(outcomes.filter(item => item.status === 'fulfilled')).toHaveLength(1);
+    expect(outcomes.find(item => item.status === 'rejected')).toMatchObject({ reason: { code: 'HANDOFF_CHANGED' } });
+    const winner = outcomes[0].status === 'fulfilled' ? request : competing;
+    await expect(escalate(db, customerPrincipal, resource, { ...winner, note: 'Changed meaning' })).rejects.toMatchObject({ code: 'HANDOFF_CHANGED' });
+    await expect(escalate(db, customerPrincipal, resource, { ...winner, operationId: randomUUID(), expectedRevision: 1 })).rejects.toMatchObject({ code: 'ALREADY_RESPONSIBLE' });
+    expect(await customer.table('co_management_ticket_handoffs')).toHaveLength(1);
+    await handback(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'We can continue locally.' });
+    expect(await customer.table('co_management_ticket_work').first()).toMatchObject({ responsibility: 'customer', revision: 2 });
+    const migration = require('../../../migrations/20260906130000_create_co_management_ticket_handoffs.cjs');
+    await migration.up(db);
+    await expect(migration.down(db)).rejects.toThrow('Cannot remove retained');
+  });
+
+  it('fails closed on foreign identity, malformed notes, inactive destinations, lifecycle pauses, and revoked sessions', async () => {
+    const { principal, customerPrincipal, resource, customer, sponsor, operation, sponsorActor, target } = await ticketHandoffFixture();
+    const { escalateCoManagedTicket: escalate, handBackCoManagedTicket: handback } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate together.' };
+    await expect(escalate(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    for (const note of ['', '   ', 'x'.repeat(10001), '\0invalid']) await expect(escalate(db, customerPrincipal, resource, { ...request, note })).rejects.toMatchObject({ code: 'INVALID_HANDOFF' });
+    for (const ref of [{ ...resource, id: randomUUID() }, { ...resource, relationshipId: randomUUID() }, { ...resource, tenant: principal.tenant }]) {
+      await expect(escalate(db, customerPrincipal, ref, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    }
+    await sponsor.table('boards').where('board_id', operation.escalation_board_id).update({ is_inactive: true });
+    await expect(escalate(db, customerPrincipal, resource, request)).rejects.toMatchObject({ code: 'DESTINATION_UNAVAILABLE' });
+    await sponsor.table('boards').where('board_id', operation.escalation_board_id).update({ is_inactive: false });
+    await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    await expect(escalate(db, customerPrincipal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ revoked_at: null });
+    await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'pending_acceptance' });
+    await expect(escalate(db, customerPrincipal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'active' });
+    expect(await customer.table('co_management_ticket_work')).toEqual([]);
+    const ticketPermission = await customer.table('permissions').where({ resource: 'ticket', action: 'update', msp: true, client: false }).first();
+    const permissionRows = await customer.table('role_permissions').where('permission_id', ticketPermission.permission_id);
+    await customer.table('role_permissions').where('permission_id', ticketPermission.permission_id).del();
+    await expect(escalate(db, customerPrincipal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await customer.table('role_permissions').insert(permissionRows);
+    await escalate(db, customerPrincipal, resource, request);
+    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    await replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+    await expect(handback(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Viewer cannot return work.' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await replaceCoManagedStaffAssignments(db, sponsorActor, target, 5, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(handback(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Handing back.' })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(handback(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Taking back.' })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('co_management_ticket_handoffs')).toHaveLength(1);
+  });
+
+  it('respects customer ticket narrowing and uses only a qualified MSP reference for local queue narrowing', async () => {
+    const { principal, customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
+    const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const bundles = await import('@alga-psa/authorization');
+    const customerBundle = await bundles.createAuthorizationBundle(db, { tenant: customerPrincipal.tenant, name: 'Local board authority', actorUserId: customerPrincipal.userId });
+    await bundles.upsertBundleRule(db, { tenant: customerPrincipal.tenant, ...customerBundle, resourceType: 'ticket', action: 'update',
+      templateKey: 'selected_boards', config: { selectedBoardIds: [operation.escalation_board_id] } });
+    await bundles.publishBundleRevision(db, { tenant: customerPrincipal.tenant, ...customerBundle, actorUserId: customerPrincipal.userId });
+    await bundles.createBundleAssignment(db, { tenant: customerPrincipal.tenant, bundleId: customerBundle.bundleId, targetType: 'user', targetId: customerPrincipal.userId });
+    const request = { operationId: randomUUID(), expectedRevision: 0, note: 'Shared investigation.' };
+    await expect(escalate(db, customerPrincipal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('co_management_ticket_work')).toEqual([]);
+    await customer.table('authorization_bundle_rules').where('revision_id', customerBundle.revisionId).update({ config: { selectedBoardIds: [operation.customer_board_id] } });
+    await escalate(db, customerPrincipal, resource, request);
+    const mspBundle = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'MSP queue authority', actorUserId: principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: principal.tenant, ...mspBundle, resourceType: 'ticket', action: 'read',
+      templateKey: 'selected_boards', config: { selectedBoardIds: [operation.escalation_board_id] } });
+    await bundles.publishBundleRevision(db, { tenant: principal.tenant, ...mspBundle, actorUserId: principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId: mspBundle.bundleId, targetType: 'user', targetId: principal.userId });
+    expect((await read(db, principal, resource)).fields.ticket_number).toBe('SHARED-1');
+    await sponsor.table('authorization_bundle_rules').where('revision_id', mspBundle.revisionId).update({ config: { selectedBoardIds: [operation.customer_board_id] } });
+    await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    // Even matching local fields on a reference cannot borrow another work identity.
+    await sponsor.table('authorization_bundle_rules').where('revision_id', mspBundle.revisionId).update({ config: { selectedBoardIds: [operation.escalation_board_id] } });
+    await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).update({ work_id: randomUUID() });
+    await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+
+  it.each(['session', 'license'])('rechecks %s expiry after waiting for the approved destination lock without leaving a grant or work reference', async expiration => {
+    const { customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
+    const { escalateCoManagedTicket: escalate } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    if (expiration === 'session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+    else {
+      const lapse = new Date(Date.now() - 30 * 86_400_000 + 1000);
+      await sponsor.table('co_managed_entitlements').update({ valid_until: lapse, lapse_started_at: lapse,
+        read_only_after: new Date(lapse.getTime() + 30 * 86_400_000) });
+    }
+    const blocker = await db.transaction();
+    await tenantDb(blocker, operation.tenant).table('boards').where('board_id', operation.escalation_board_id).forUpdate().first();
+    let onQuery!: (query: { sql: string; bindings?: unknown[] }) => void;
+    const waiting = new Promise<void>(resolve => { onQuery = query => {
+      if (query.sql.includes('"boards"') && query.sql.includes('for share') && query.bindings?.includes(operation.escalation_board_id)) resolve();
+    }; db.on('query', onQuery); });
+    const attempt = escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Session expires during routing.' }).then(() => null, error => error);
+    try {
+      await Promise.race([waiting, attempt.then(error => { throw new Error(`Handoff ended before destination lock: ${error?.code}`); })]);
+      await db.raw('SELECT pg_sleep(1.1)');
+      await blocker.commit();
+      expect(await attempt).toMatchObject({ code: expiration === 'session' ? 'CO_MANAGED_SHARED_WORK_FORBIDDEN' : 'CO_MANAGED_READ_ONLY' });
+      expect(await customer.table('co_management_ticket_work')).toEqual([]);
+      expect(await customer.table('co_management_ticket_handoffs')).toEqual([]);
+      expect(await sponsor.table('co_managed_ticket_references')).toEqual([]);
+    } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
+  });
+});
+
+it('keeps explicit ticket grant revocation customer-controlled during license pauses and requires a deliberate new escalation to restore it', async () => {
+  const { principal, customerPrincipal, resource, customer, sponsor, actor, target, operation } = await ticketHandoffFixture();
+  const { escalateCoManagedTicket: escalate, revokeCoManagedTicketGrant: revoke } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const firstRequest = { operationId: randomUUID(), expectedRevision: 0, note: 'Shared investigation.' };
+  const first = await escalate(db, customerPrincipal, resource, firstRequest);
+  const revokeRequest = { operationId: randomUUID(), expectedRevision: 1, note: 'Return this ticket to our internal IT team.' };
+  await expect(revoke(db, principal, resource, revokeRequest)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const permission = await customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+  const permissionRows = await customer.table('role_permissions').where('permission_id', permission.permission_id);
+  await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+  await expect(revoke(db, customerPrincipal, resource, revokeRequest)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+  await customer.table('role_permissions').insert(permissionRows);
+  await expireCoManagedEntitlement(operation.tenant);
+  const receipt = await revoke(db, customerPrincipal, resource, revokeRequest);
+  expect(receipt).toMatchObject({ appliedRevision: 2, transition: 'access_revoked' });
+  expect(await revoke(db, customerPrincipal, resource, revokeRequest)).toEqual(receipt);
+  await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  await expect(revoke(db, customerPrincipal, resource, revokeRequest)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+
+  expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 2, responsibility: 'customer',
+    can_collaborate: false, grant_revoked_at: new Date(receipt.occurredAt) });
+  await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await read(db, customerPrincipal, resource)).fields).toMatchObject({ work_revision: 2, responsibility: 'customer', explicit_grant_active: false });
+  expect(await sponsor.table('co_managed_ticket_references')).toHaveLength(1);
+  const entitlement = await sponsor.table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+    async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+  // An old exact retry returns its old receipt; it cannot resurrect the grant.
+  expect(await escalate(db, customerPrincipal, resource, firstRequest)).toEqual(first);
+  await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await escalate(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 2, note: 'Please resume the shared investigation.' });
+  expect((await read(db, principal, resource)).fields.ticket_number).toBe('SHARED-1');
+  // Revocation remains possible even if the MSP reference is stale.
+  await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).update({ work_id: randomUUID() });
+  await revoke(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 3, note: 'Revoke the explicit grant.' });
+  await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await policy.replaceCoManagedCustomerScope(db, actor, target, 4, { visibilityMode: 'board_scope', projects: [],
+    boards: [{ id: operation.customer_board_id, canCollaborate: false }] });
+  expect((await read(db, principal, resource)).fields.ticket_number).toBe('SHARED-1');
+  expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'access_revoked' })).toHaveLength(2);
 });

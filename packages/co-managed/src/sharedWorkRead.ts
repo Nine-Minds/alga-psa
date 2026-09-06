@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { withCoManagedCustomerTicket } from './customerWork';
 import { withCoManagedSharedWork, CoManagedSharedWorkError,
   type CoManagedSessionActor, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 
@@ -9,7 +10,7 @@ export interface CoManagedDisplayReference {
   id: string;
   name: string | null;
 }
-export type CoManagedSummaryValue = string | boolean | null | CoManagedDisplayReference;
+export type CoManagedSummaryValue = string | number | boolean | null | CoManagedDisplayReference;
 export interface CoManagedSharedWorkSummary {
   resource: CoManagedSharedResource;
   revision: number;
@@ -54,11 +55,19 @@ async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManag
     owner.tenantJoin(query, 'boards', 'tickets.board_id', 'boards.board_id', { type: 'left' });
     owner.tenantJoin(query, 'statuses', 'tickets.status_id', 'statuses.status_id', { type: 'left' });
     owner.tenantJoin(query, 'priorities', 'tickets.priority_id', 'priorities.priority_id', { type: 'left' });
+    owner.tenantJoin(query, 'co_management_ticket_work as work', 'tickets.ticket_id', 'work.ticket_id', { type: 'left',
+      on: join => join.andOn('work.relationship_id', '=', trx.raw('?', [resource.relationshipId])) });
     const row = await query.first('tickets.ticket_number', 'tickets.title', 'tickets.board_id', 'boards.board_name',
       'tickets.status_id', 'statuses.name as status_name', 'statuses.is_closed', 'tickets.priority_id', 'priorities.priority_name',
-      'tickets.entered_at', 'tickets.updated_at', 'tickets.closed_at');
+      'tickets.entered_at', 'tickets.updated_at', 'tickets.closed_at', 'work.revision as work_revision', 'work.responsibility',
+      'work.first_escalated_at', 'work.last_transition_at', 'work.grant_revoked_at');
     if (!row) throw new CoManagedSharedWorkError();
     candidates = {
+      work_revision: { value: Number(row.work_revision ?? 0), sources: ['work', 'co_management_ticket_work'] },
+      responsibility: { value: row.responsibility ?? 'customer', sources: ['work', 'co_management_ticket_work'] },
+      first_escalated_at: { value: date(row.first_escalated_at), sources: ['work', 'co_management_ticket_work'] },
+      last_transition_at: { value: date(row.last_transition_at), sources: ['work', 'co_management_ticket_work'] },
+      explicit_grant_active: { value: row.work_revision != null && !row.grant_revoked_at, sources: ['work', 'grant_revoked_at', 'co_management_ticket_work'] },
       ticket_number: { value: text(row.ticket_number), sources: ['tickets.ticket_number'] },
       title: { value: text(row.title), sources: ['tickets.title'] },
       board: { value: reference(resource.tenant, 'board', row.board_id, row.board_name), sources: ['board_id', 'board_name', 'tickets.board_id', 'boards'] },
@@ -123,5 +132,7 @@ async function readSummary(context: CoManagedSharedWorkContext): Promise<CoManag
  * the underlying local resource through an ordinary action. */
 export async function getCoManagedSharedWorkSummary(db: Knex, actor: CoManagedSessionActor,
   resource: CoManagedSharedResource): Promise<CoManagedSharedWorkSummary> {
-  return withCoManagedSharedWork(db, actor, resource, 'read', readSummary);
+  return actor?.tenant === resource?.tenant && resource?.kind === 'ticket'
+    ? withCoManagedCustomerTicket(db, actor, resource, 'read', readSummary)
+    : withCoManagedSharedWork(db, actor, resource, 'read', readSummary);
 }

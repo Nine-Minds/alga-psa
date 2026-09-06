@@ -61,6 +61,14 @@ async function lockPolicy(trx: Knex.Transaction, actor: CoManagedHomeActor, targ
   return { customer, relationship, lifecycle };
 }
 
+/** Shared customer-administration boundary for scope changes and object-grant
+ * revocation. It admits security reductions during a license pause, so callers
+ * must independently reject any expansion when lifecycle.canWrite is false. */
+export async function lockCoManagedCustomerPolicy(trx: Knex.Transaction, actor: CoManagedHomeActor, target: CoManagedPolicyTarget) {
+  if (!trx.isTransaction || actor.tenant !== target.customerTenant) throw new CoManagedPolicyError('FORBIDDEN');
+  return lockPolicy(trx, actor, target);
+}
+
 async function readCustomerScope(trx: Knex.Transaction, target: CoManagedPolicyTarget, visibilityMode: CoManagedCustomerScope['visibilityMode']): Promise<CoManagedCustomerScope> {
   const customer = tenantDb(trx, target.customerTenant);
   const boards = await customer.table('co_management_board_scopes').where('relationship_id', target.relationshipId).orderBy('board_id');
@@ -117,7 +125,7 @@ export async function replaceCoManagedCustomerScope(db: Knex, actor: CoManagedHo
   const desired: CoManagedCustomerScope = { visibilityMode: scope.visibilityMode, boards: normalizeGrants(scope.boards), projects: normalizeGrants(scope.projects) };
   if (desired.visibilityMode === 'escalation_only' && desired.boards.length) throw new CoManagedPolicyError('INVALID_POLICY');
   return withTransaction(db, async trx => {
-    const { customer, relationship, lifecycle } = await lockPolicy(trx, actor, target);
+    const { customer, relationship, lifecycle } = await lockCoManagedCustomerPolicy(trx, actor, target);
     if (await isReplay(trx, actor, target, expectedRevision, relationship.revision, 'customer_scope_changed', desired)) return relationship.revision;
     const previous = await readCustomerScope(trx, target, relationship.visibility_mode);
     if (hash(previous) === hash(desired)) return relationship.revision;
