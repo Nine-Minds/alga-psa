@@ -14,7 +14,9 @@ x-provider-environment: &provider-environment
   XERO_API_BASE_URL: http://algasim:4060/api.xro/2.0
   STRIPE_API_BASE_URL: http://algasim:4050
   STRIPE_SECRET_KEY: sk_test_algasim
-  STRIPE_PAYMENT_WEBHOOK_SECRET: whsec_algasim
+  # EnvSecretProvider reads app-secret names verbatim. The payment provider
+  # requests this lowercase name and has no uppercase webhook fallback.
+  stripe_payment_webhook_secret: whsec_algasim
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_algasim
 
 services:
