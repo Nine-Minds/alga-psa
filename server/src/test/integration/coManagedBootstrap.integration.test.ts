@@ -1024,3 +1024,71 @@ it('preserves ticket assets and documents after lapse and permits their removal 
   expect(await customer.table('assets')).toHaveLength(1);
   expect(publish).toHaveBeenCalledWith('TICKET_DELETED', context, { ticketId: ticket.ticket_id, userId: actor.userId });
 });
+
+describe('canonical material lifecycle admission', () => {
+  it('guards direct ticket/project material mutations and the ticket API before any material or stock access', async () => {
+    const { operation, actor, customer, input } = await readyForAcceptance();
+    const { addMaterial, deleteMaterial, updateProjectMaterialBilling } = await import('../../../../packages/inventory/src/lib/materials');
+    const { service } = await ticketServiceForTest();
+    const id = randomUUID(), product = randomUUID();
+    const mutations = [
+      ...(['ticket', 'project'] as const).flatMap(parent_type => [
+        () => addMaterial(db, actor.tenant, { parent_type, parent_id: id, service_id: product, quantity: 1, rate: 0 }, actor.userId),
+        () => deleteMaterial(db, actor.tenant, parent_type, id, actor.userId),
+      ]),
+      () => updateProjectMaterialBilling(db, actor.tenant, id, { rate: 0, billing_destination: 'on_hold' }),
+      () => service.addTicketMaterial(id, { service_id: product, quantity: 1, rate: 0, currency_code: 'USD' },
+        { tenant: actor.tenant, userId: actor.userId }),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    for (const table of ['ticket_materials', 'project_materials', 'stock_movements', 'stock_units', 'stock_levels']) {
+      expect(await customer.table(table)).toEqual([]);
+    }
+  });
+
+  it('retains consumed stock after lapse and reverses it atomically after renewal', async () => {
+    const { operation, actor, customer, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const { service } = await ticketServiceForTest();
+    const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+    const ticket = await service.create({ title: 'Retain consumed stock', description: '', client_id: operation.customer_client_id,
+      board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id },
+    { tenant: actor.tenant, userId: actor.userId });
+    const typeId = randomUUID(), serviceId = randomUUID(), locationId = randomUUID();
+    await customer.table('service_types').insert({ tenant: actor.tenant, id: typeId, name: 'Fixture products' });
+    await customer.table('service_catalog').insert({ tenant: actor.tenant, service_id: serviceId, service_name: 'Fixture cable',
+      item_kind: 'product', custom_service_type_id: typeId, billing_method: 'per_unit', default_rate: 0 });
+    await customer.table('stock_locations').insert({ tenant: actor.tenant, location_id: locationId, name: 'Fixture shelf', is_default: true });
+    await customer.table('product_inventory_settings').insert({ tenant: actor.tenant, service_id: serviceId, track_stock: true,
+      is_serialized: false, cost_currency: 'USD', default_location_id: locationId, average_cost: 0 });
+    const { recordStockMovement } = await import('../../../../packages/inventory/src/lib/movements');
+    await db.transaction(trx => recordStockMovement(trx, actor.tenant, { movement_type: 'receipt', service_id: serviceId,
+      quantity: 3, to_location_id: locationId }));
+    const { addMaterial, deleteMaterial, listMaterials } = await import('../../../../packages/inventory/src/lib/materials');
+    const material = await addMaterial(db, actor.tenant, { parent_type: 'ticket', parent_id: ticket.ticket_id,
+      service_id: serviceId, quantity: 1, rate: 0, currency_code: 'USD' }, actor.userId) as { ticket_material_id: string };
+    const onHand = async () => Number((await customer.table('stock_levels').where({ service_id: serviceId, location_id: locationId }).first()).quantity_on_hand);
+    expect(await onHand()).toBe(2);
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(deleteMaterial(db, actor.tenant, 'ticket', material.ticket_material_id, actor.userId))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await onHand()).toBe(2);
+    expect(await listMaterials(db, actor.tenant, 'ticket', ticket.ticket_id)).toHaveLength(1);
+    expect(await customer.table('stock_movements')).toHaveLength(2);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    await expect(db.transaction(async trx => {
+      expect(await deleteMaterial(trx, actor.tenant, 'ticket', material.ticket_material_id, actor.userId)).toBe(true);
+      throw new Error('Rollback caller');
+    })).rejects.toThrow('Rollback caller');
+    expect(await onHand()).toBe(2);
+    expect(await listMaterials(db, actor.tenant, 'ticket', ticket.ticket_id)).toHaveLength(1);
+    expect(await deleteMaterial(db, actor.tenant, 'ticket', material.ticket_material_id, actor.userId)).toBe(true);
+    expect(await onHand()).toBe(3);
+    expect(await listMaterials(db, actor.tenant, 'ticket', ticket.ticket_id)).toEqual([]);
+    expect(await customer.table('stock_movements')).toHaveLength(3);
+  });
+});
