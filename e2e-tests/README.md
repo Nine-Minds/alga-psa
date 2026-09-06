@@ -147,6 +147,16 @@ export E2E_CALLBACK_TLS_DIR="$(mktemp -d)"
 node e2e-tests/harness/create-calendar-callback-tls.mjs "$E2E_CALLBACK_TLS_DIR"
 ```
 
+If Docker runs in a VM, the directory must be shared with its daemon. For
+example, Colima may not share the host's `/tmp`. From the repository root, use
+a fresh directory in the ignored workspace cache instead:
+
+```bash
+mkdir -p node_modules/.cache
+export E2E_CALLBACK_TLS_DIR="$(mktemp -d "$PWD/node_modules/.cache/calendar-tls.XXXXXX")"
+node e2e-tests/harness/create-calendar-callback-tls.mjs "$E2E_CALLBACK_TLS_DIR"
+```
+
 The emulator trusts that certificate through `NODE_EXTRA_CA_CERTS`. The private
 key is mounted only into the fixed callback proxy. Its internal
 `https://calendar-callback:3443/api/calendar/webhooks/microsoft` endpoint forwards
