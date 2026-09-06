@@ -11,8 +11,8 @@ import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const suite = process.argv[2];
-const cwd = path.join(root, suite === 'enterprise-unit' ? 'ee/server' : 'server');
-if (!['workspace-unit', 'workspace-runtime', 'server-colocated', 'enterprise-unit'].includes(suite)) throw new Error('Usage: node scripts/run-additional-workspace-tests.mjs workspace-unit|workspace-runtime|server-colocated|enterprise-unit [file filters]');
+const cwd = path.join(root, suite === 'enterprise-unit' ? 'ee/server' : suite === 'ai-gateway' ? 'services/ai-gateway' : 'server');
+if (!['workspace-unit', 'workspace-runtime', 'server-colocated', 'enterprise-unit', 'ai-gateway'].includes(suite)) throw new Error('Usage: node scripts/run-additional-workspace-tests.mjs workspace-unit|workspace-runtime|server-colocated|enterprise-unit|ai-gateway [file filters]');
 const shardIndex = Number(process.env.WORKSPACE_SHARD_INDEX || '1');
 const shardTotal = Number(process.env.WORKSPACE_SHARD_TOTAL || '1');
 const output = path.join(root, 'test-results', suite, ...(shardTotal > 1 ? [`shard-${shardIndex}`] : []));
@@ -31,7 +31,7 @@ const env = {
 };
 const filters = process.argv.slice(3);
 if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
-let args = ['--config', suite === 'enterprise-unit' ? 'vitest.unit.config.ts' : `vitest.${suite}.config.ts`, ...filters];
+let args = ['--config', suite === 'enterprise-unit' ? 'vitest.unit.config.ts' : suite === 'ai-gateway' ? 'vitest.config.ts' : `vitest.${suite}.config.ts`, ...filters];
 const run = (args) => spawnSync(process.execPath, [path.join(root, 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let allFiles = [];
 let before;
@@ -40,6 +40,15 @@ let phase = 'Revision inspection';
 try {
   if (filters.length && shardTotal > 1) throw new Error('Sharded execution cannot use file filters');
   before = testRevision(root);
+  if (suite === 'ai-gateway') {
+    phase = 'Service database configuration';
+    let database;
+    try { database = new URL(env.AI_GATEWAY_TEST_DATABASE_URL); } catch { /* handled below */ }
+    if (!database || !['postgres:', 'postgresql:'].includes(database.protocol)
+      || !/^\/[a-z0-9_]+_test$/.test(database.pathname)) {
+      throw new Error('AI_GATEWAY_TEST_DATABASE_URL must point to a dedicated PostgreSQL database whose name ends in _test');
+    }
+  }
   phase = 'File collection';
   const collection = run(['list', ...args, '--filesOnly', `--json=${collectedPath}`]);
   if (collection.status !== 0) throw new Error(`Collection failed (exit ${collection.status})`);

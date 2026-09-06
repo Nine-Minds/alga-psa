@@ -10,6 +10,44 @@ permissions:
   contents: read
 
 jobs:
+  ai-gateway:
+    name: AI gateway execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: alga_ai_gateway_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d alga_ai_gateway_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      AI_GATEWAY_TEST_DATABASE_URL: postgresql://postgres:test_password@127.0.0.1:5432/alga_ai_gateway_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Collect and execute service API, ledger and unit tests
+        run: node scripts/run-additional-workspace-tests.mjs ai-gateway
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ai-gateway-${{ github.sha }}
+          path: test-results/ai-gateway/
+          if-no-files-found: error
+          retention-days: 30
+
   workspace-tests:
     name: ${{ matrix.suite }} execution complete
     runs-on: ubuntu-latest

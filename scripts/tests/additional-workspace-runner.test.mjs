@@ -12,6 +12,7 @@ for (const [suite, directory, include] of [
   ['workspace-unit', 'sdk', '../sdk'],
   ['server-colocated', 'server/src/lib', 'src/lib'],
   ['enterprise-unit', 'ee/server/src/__tests__/unit', 'src/__tests__/unit'],
+  ['ai-gateway', 'services/ai-gateway/src/test', 'src/test'],
 ]) test(`${suite} runner rejects omitted files, skipped assertions, failures and empty collection`, { timeout: 60000 }, (t) => {
   const root = mkdtempSync(path.join(tmpdir(), 'alga-workspace-runner-'));
   t.after(() => rmSync(root, { recursive: true, force: true }));
@@ -23,7 +24,7 @@ for (const [suite, directory, include] of [
   ]) cpSync(path.join(repository, file), path.join(root, file));
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
-  const configure = (include) => writeFileSync(path.join(root, suite === 'enterprise-unit' ? 'ee/server/vitest.unit.config.ts' : `server/vitest.${suite}.config.ts`),
+  const configure = (include) => writeFileSync(path.join(root, suite === 'enterprise-unit' ? 'ee/server/vitest.unit.config.ts' : suite === 'ai-gateway' ? 'services/ai-gateway/vitest.config.ts' : `server/vitest.${suite}.config.ts`),
     `export default ${JSON.stringify({ test: { include, globals: true, environment: 'node', pool: 'forks', fileParallelism: false, maxWorkers: 1 } })};`);
   configure([`${include}/**/*.test.ts`]);
   const example = path.join(root, directory, 'example.test.ts');
@@ -32,15 +33,22 @@ for (const [suite, directory, include] of [
   git('init');
   git('add', '.');
   git('-c', 'user.name=Test fixture', '-c', 'user.email=fixture@example.invalid', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', 'commit', '-m', 'Create isolated runner fixture');
-  const run = () => {
+  const run = (overrides = {}) => {
     const result = spawnSync(process.execPath, [path.join(root, 'scripts/run-additional-workspace-tests.mjs'), suite], {
       cwd: root, encoding: 'utf8', timeout: 10000,
-      env: { ...process.env, CI: '1' },
+      env: { ...process.env, CI: '1', AI_GATEWAY_TEST_DATABASE_URL: 'postgresql://fixture:fixture@127.0.0.1:1/gateway_test', ...overrides },
     });
     assert.equal(result.error, undefined, result.error?.message);
     const evidence = JSON.parse(readFileSync(path.join(root, `test-results/${suite}/evidence.json`), 'utf8'));
     return { result, evidence };
   };
+  if (suite === 'ai-gateway') {
+    for (const url of [undefined, 'not-a-url', 'postgresql://fixture:fixture@127.0.0.1:1/server']) {
+      const invalid = run({ AI_GATEWAY_TEST_DATABASE_URL: url });
+      assert.equal(invalid.result.status, 1);
+      assert.ok(invalid.evidence.failures.some(message => message.includes('dedicated PostgreSQL database')));
+    }
+  }
   let current = run();
   assert.equal(current.result.status, 0, current.result.stderr);
   assert.equal(current.evidence.status, 'passed');

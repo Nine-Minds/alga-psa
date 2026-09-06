@@ -38,6 +38,10 @@ helpers. Assert persisted outcomes and rejected operations across the boundary
 that failed. Demonstrate the regression fails with the defect restored before
 relying on the passing result.
 
+Migration regressions under `server/migrations/__tests__/` also execute in this
+database lane, including tests named `.integration.test.ts`. Restore schema in
+`finally` after rollback assertions so a failure cannot break subsequent tests.
+
 Run the unfiltered command after adding or moving a test. Its discovery check
 compares Git's test-file inventory with Vitest's actual file collection. A file
 inside this lane's scope that Vitest omits causes failure. Files execute
@@ -201,11 +205,24 @@ node scripts/run-additional-workspace-tests.mjs enterprise-unit
 `server-colocated` covers conventional test/spec files beneath
 `server/src/{app,components,lib,services}` and directly inside `server/src/test`.
 `enterprise-unit` covers `ee/server/src/__tests__/{unit,services}` and
-`ee/server/src/components`. Both exclude explicitly named `.db`, `.integration`
+`ee/server/src/components`, and `ee/packages/`. Both exclude explicitly named `.db`, `.integration`
 and `.playwright` tests, whose service requirements need separate lanes.
 The existing `workspace-unit` and `workspace-runtime` lanes cover other roots
 defined in `scripts/lib/test-discovery.mjs`. These scoped inventories are not
 a repository-wide assignment guarantee.
+
+The `ai-gateway` lane runs all tests under `services/ai-gateway/src/test/`,
+including the actual HTTP API, credit ledger and signed webhook integration
+tests. It uses the service's own migrations in a separate PostgreSQL database:
+
+```sh
+AI_GATEWAY_TEST_DATABASE_URL=postgresql://postgres:test_password@127.0.0.1:5432/alga_ai_gateway_test node scripts/run-additional-workspace-tests.mjs ai-gateway
+```
+
+Provision that disposable database first. The runner rejects missing URLs and
+database names without the `_test` suffix; a missing service database must not
+turn integration tests into successful skips. CI provisions a separate service
+container for this job and retains its collection and execution evidence.
 
 Each full invocation checks actual Vitest collection against an independent
 Git inventory. Adding a test within the lane's scope cannot silently omit it

@@ -52,6 +52,7 @@ test('identities outside the workspace cannot be counted as discovered tests', (
 test('DB-less unit exclusions receive a dedicated DB lane without taking over other lanes', () => {
   for (const file of [
     'server/src/test/unit/migrations/rollback.db.test.ts',
+    'server/migrations/__tests__/rollback.integration.test.ts',
     'packages/billing/tests/eligibility.db.test.ts',
     'shared/workflow/tests/identity.db.test.ts',
     'ee/packages/calendar/tests/provider.db.test.tsx',
@@ -66,6 +67,13 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
 });
 
 test('service and SDK inventory assigns unit and runtime suites without counting build output', () => {
+  assert.equal(isAdditionalWorkspaceTest('services/ai-gateway/src/test/integration/ledgerPersistence.test.ts', 'ai-gateway'), true);
+  assert.equal(isAdditionalWorkspaceTest('services/ai-gateway/src/test/unit/auth.test.ts', 'ai-gateway'), true);
+  assert.equal(isAdditionalWorkspaceTest('services/ai-gateway/dist/test/unit/auth.test.js', 'ai-gateway'), false);
+  assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/src/lib/behavior.test.ts', 'enterprise-unit'), true);
+  assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/src/lib/behavior.db.test.ts', 'enterprise-unit'), false);
+  assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/src/lib/behavior.integration.test.ts', 'enterprise-unit'), false);
+  assert.equal(isAdditionalWorkspaceTest('ee/packages/workflows/dist/behavior.test.js', 'enterprise-unit'), false);
   for (const root of ['services/email-service', 'services/workflow-worker', 'sdk/extension-runtime', 'ee/server/src/lib']) {
     assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.test.ts`, 'workspace-unit'), true);
     assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.spec.tsx`, 'workspace-unit'), true);
