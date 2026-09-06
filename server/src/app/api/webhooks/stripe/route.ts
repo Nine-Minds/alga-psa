@@ -1,1 +1,1 @@
-export { POST } from '@alga-psa/integrations/webhooks/stripe';
+export { POST, GET } from '@alga-psa/integrations/webhooks/stripe';
