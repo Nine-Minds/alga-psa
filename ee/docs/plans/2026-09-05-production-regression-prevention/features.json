@@ -341,7 +341,7 @@
   {
     "id": "F026",
     "description": "Pilot StrykerJS/Vitest on selected billing/date and authorization predicates, review survivors and establish a scoped assertion-strength baseline.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP5",
     "priority": "P1",
     "prdRefs": [

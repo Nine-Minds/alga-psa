@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -22,7 +23,7 @@ async function removeDirIfExists(dirPath: string): Promise<void> {
 
 describe('validate-runtime-imports', () => {
   const tempDirs: string[] = [];
-  const scriptPath = path.resolve(process.cwd(), 'scripts/validate-runtime-imports.mjs');
+  const scriptPath = fileURLToPath(new URL('./validate-runtime-imports.mjs', import.meta.url));
 
   afterEach(async () => {
     while (tempDirs.length > 0) {
@@ -49,7 +50,7 @@ describe('validate-runtime-imports', () => {
       encoding: 'utf8',
     });
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('validation passed');
   });
 
@@ -93,7 +94,9 @@ describe('validate-runtime-imports', () => {
 
   it('allows AI runtime wiring only through the dedicated runtime/worker entrypoint', async () => {
     const distRoot = await createDistFixture({
-      'dist/src/index.js': "import '../../ee/packages/workflows/src/runtime/worker.js';\n",
+      'dist/src/index.js': "import '../ee/packages/workflows/src/runtime/worker.js';\n",
+      'dist/shared/workflow/runtime/actions/registerAiActions.js': 'export {};\n',
+      'dist/packages/ee/src/services/workflowInferenceService.js': 'export {};\n',
       'dist/ee/packages/workflows/src/runtime/worker.js': [
         "import '../../../../../shared/workflow/runtime/actions/registerAiActions.js';",
         "import '../../../../../packages/ee/src/services/workflowInferenceService.js';",
@@ -112,7 +115,7 @@ describe('validate-runtime-imports', () => {
       encoding: 'utf8',
     });
 
-    expect(result.status).toBe(0);
+    expect(result.status, result.stderr).toBe(0);
     expect(result.stdout).toContain('validation passed');
   });
 });

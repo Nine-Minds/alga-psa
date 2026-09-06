@@ -1,0 +1,67 @@
+name: Additional workspace tests
+
+on:
+  pull_request:
+  push:
+    branches: [main, master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workspace-tests:
+    name: ${{ matrix.suite }} execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [workspace-unit, workspace-runtime]
+    env:
+      VITEST_SEED: '20260610'
+      STORAGE_S3_ENDPOINT: http://127.0.0.1:59000
+      STORAGE_S3_REGION: us-east-1
+      STORAGE_S3_BUCKET: alga-regression-bundles
+      STORAGE_S3_ACCESS_KEY: regression-test
+      STORAGE_S3_SECRET_KEY: regression-test-password
+      STORAGE_S3_FORCE_PATH_STYLE: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Verify runner refuses incomplete execution
+        if: matrix.suite == 'workspace-unit'
+        run: node --test scripts/tests/additional-workspace-runner.test.mjs
+      - name: Start disposable object storage
+        if: matrix.suite == 'workspace-runtime'
+        shell: bash
+        run: |
+          docker run -d --name workspace-test-minio \
+            -p 127.0.0.1:59000:9000 \
+            -e MINIO_ROOT_USER=regression-test \
+            -e MINIO_ROOT_PASSWORD=regression-test-password \
+            minio/minio:RELEASE.2025-04-22T22-12-26Z server /data
+          for ((attempt = 1; attempt <= 60; attempt++)); do
+            if curl --fail --silent http://127.0.0.1:59000/minio/health/ready; then exit 0; fi
+            sleep 1
+          done
+          docker logs workspace-test-minio
+          exit 1
+      - name: Collect, execute and reconcile every required test
+        run: node scripts/run-additional-workspace-tests.mjs ${{ matrix.suite }}
+      - name: Retain execution evidence and first-failure progress
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.suite }}-${{ github.sha }}
+          path: test-results/${{ matrix.suite }}/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Stop disposable object storage
+        if: always() && matrix.suite == 'workspace-runtime'
+        run: docker rm -f workspace-test-minio

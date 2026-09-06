@@ -241,3 +241,69 @@
 - All 214 files absent from the older cancelled unit log completed locally: 1,169 assertions passed, no skips (`/tmp/alga-unit-missing-results.json`). Full local coverage diagnostic then completed without the stall; it found five macOS-only repair-script failures caused by GNU-only stat flags. Added GNU/BSD metadata probing. Existing secret-provider/repair tests now pass (36 passed, six existing platform/privilege skips), and an ephemeral Linux container verified dry-run refusal, repair, clean recheck, content preservation and symlink refusal. No assertions were weakened. Local full report before this correction: `/tmp/alga-full-unit-results.json`; progress `/tmp/alga-full-unit-progress.jsonl`; focused after-fix report `/tmp/alga-secret-repair-mac-results.json`. The initial sandboxed diagnostic was intentionally replaced after a direct loopback probe proved EPERM; the complete diagnostic used required local socket access.
 - Added standalone Add Usage fixture and browser journey with a canonical non-admin Finance actor, overlapping usage/fixed-bucket lines, last complete UTC month, four units at $10/unit, reload identity/date/quantity checks and exact $40 invoice preview without invoice/charge mutation. Shared billing setup helpers now accept their actual structural dependencies and import the pure tenant query facade plus Node UUID generation, avoiding connection/secret startup in browser collection. Existing scheduled periods are explicit fixture preconditions using production identity builders; period materialization itself is not claimed as browser coverage. Real migrated EE fixture probes pass with all rows rolled back, and the existing `usageAddFlowOverlappingBucket.test.ts` passes against dedicated disposable DB `regression_usage_fixture_20260906` after the helper change. Collection: 15 EE cases across seven files. The 13 changed/browser TypeScript files have no diagnostics; three other transitive diagnostics remain outside this focused check. F011/T010 remain false pending actual production execution and the full cross-tenant mutation boundary.
 - All touched workflows pass actionlint; repair script passes shellcheck. No GitHub protection, release, deployment or shared Sheets settings changed. The full goal remains active and the PR is not green.
+
+
+### 2026-09-06 — Additional workspace execution paths and mutation CI proof
+
+- Continued WP1/F004 inventory work. A raw 70-config Vitest collection probe found
+  3,891 conventional tracked test/spec candidates and 108 unmatched files. This is
+  a discovery lead, not execution proof: some broad configs collect files belonging
+  to another runner. F004 remains false until every actual CI path and reviewed
+  exclusion is accounted for.
+- Added `server/src/test/unit/**/*.db.test.*` to the dedicated workspace DB lane,
+  with independent candidate classification. The previously omitted hour-block
+  notification migration rollback suite executed all five assertions successfully
+  against the isolated migrated local database (filtered invocation, no skips).
+  Full workspace DB collection now includes 29 files; full expanded execution is
+  still required. Local log: `/tmp/alga-hour-block-migration-db-run.log`.
+- Added explicit workspace-unit and workspace-runtime configs and a launcher using
+  the existing file/test identity reconciliation and durable progress reporter.
+  Full local unit evidence: 21 files, 91 passed assertions, no skips/todos. Full
+  local runtime evidence: 2 files, 7 passed assertions against real MinIO and a
+  Temporal SDK test server, no skips/todos. These are dirty-worktree local results;
+  the new GitHub Actions workflow must still pass on the published candidate.
+- Fixed package-working-directory assumptions in SDK WIT resource paths and worker
+  validation fixtures. The validator's nominally valid AI graph also pointed out
+  of its fixture and lacked two imported modules; restored a complete resolvable
+  fixture without weakening import-validation assertions. Temporal path tests now
+  explicitly model the worker package launch directory and restore environment
+  overrides and spies afterward.
+- Renamed the actual S3 bundle-store integration suite with `.integration.test.ts`,
+  removed its missing-configuration skip path, provisioned the dedicated test
+  bucket, and used 5 MiB multipart parts. Unit success cannot count this real-service
+  coverage. The runtime workflow starts and removes disposable MinIO storage.
+- The actual launcher behavioral test uses a disposable Git repository and the
+  installed Vitest runner. It verifies a successful assertion, then proves a new
+  omitted file, skipped assertion, failed assertion and empty collection all fail
+  the launcher, replacing stale successful evidence. Additional discovery and
+  execution-accounting self-tests passed 12 assertions.
+- CI mutation run 34020091615 / job 101450948855 completed successfully for PR head
+  `12c880cccc` on merge revision `3327375f396fd81d18969f708690566bc3b52717`.
+  Downloaded summary reports Node 22.23.2 and a clean checkout. Both selected source
+  hashes match the local files and reviewed baseline: 79 Killed, 3 Survived, 1
+  NoCoverage. Existing baseline classifies the four remaining cases; job elapsed
+  time including install is 138 seconds. F026/T020 are now verified, scoped pilot
+  work; no repository-wide score or merge enforcement is claimed.
+
+- Earlier full integration CI run 34017777500 / job 101444597237 is now terminal
+  success. Its actual report shows 264 files passed, 14 files skipped; 1,915
+  assertions passed, 134 skipped (2,049 total), with a 3,565.21-second test duration.
+  This resolves the suspected hang for that run; it does not prove skipped suites
+  executed or satisfy global inventory completeness. Current-head integration
+  validation remains a separate result. Log saved at
+  `/tmp/alga-full-integration-040165.log`.
+- Fresh `git fetch origin main` still resolves `a90cd88edc`; verified it is an
+  ancestor of this worktree HEAD. The requested origin/main base is preserved.
+
+- Expanded workspace DB execution subsequently completed: all 29 files and 229
+  assertions passed, no skips/todos/missing identities, full selection. Vitest
+  duration 191.39 seconds. Evidence is in `test-results/workspace-db/evidence.json`;
+  log `/tmp/alga-workspace-db-29files.log`. New workspace unit/runtime launcher
+  behavioral self-test passed in 3.78 seconds; workflow actionlint and the existing
+  skip-budget check passed. Mutation execution itself took 11 seconds in CI (31
+  baseline assertions), in addition to the recorded whole-job duration.
+- Publication is deferred while production validation run 34020091589 is live on
+  head `12c880cccc`: its workflow cancels in-progress PR runs on a new push. Seven
+  images have completed successfully; the CE server image remained live at the
+  last readback. Preserve this run to obtain the first complete evidence for the
+  latest usage/QBO/Stripe/extended-ticket candidate before pushing the new lanes.

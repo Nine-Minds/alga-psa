@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { reconcileDiscovery } from '../lib/test-discovery.mjs';
+import { isAdditionalWorkspaceTest, isWorkspaceDbTest, reconcileDiscovery } from '../lib/test-discovery.mjs';
 
 function inspect(overrides = {}) {
   return reconcileDiscovery({
@@ -47,4 +47,33 @@ test('identities outside the workspace cannot be counted as discovered tests', (
   for (const file of ['../outside.test.ts', '/outside.test.ts', '/repo']) {
     assert.throws(() => inspect({ candidates: [file] }), /outside the repository/);
   }
+});
+
+test('DB-less unit exclusions receive a dedicated DB lane without taking over other lanes', () => {
+  for (const file of [
+    'server/src/test/unit/migrations/rollback.db.test.ts',
+    'packages/billing/tests/eligibility.db.test.ts',
+    'shared/workflow/tests/identity.db.test.ts',
+    'ee/packages/calendar/tests/provider.db.test.tsx',
+  ]) assert.equal(isWorkspaceDbTest(file), true, file);
+  for (const file of [
+    'server/src/test/integration/rollback.db.test.ts',
+    'server/src/test/infrastructure/fixture.db.test.ts',
+    'packages/billing/tests/eligibility.test.ts',
+    'tools/fixture.db.test.ts',
+  ]) assert.equal(isWorkspaceDbTest(file), false, file);
+});
+
+test('service and SDK inventory assigns unit and runtime suites without counting build output', () => {
+  for (const root of ['services/email-service', 'services/workflow-worker', 'sdk/extension-runtime', 'ee/server/src/lib']) {
+    assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.test.ts`, 'workspace-unit'), true);
+    assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.spec.tsx`, 'workspace-unit'), true);
+    assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.integration.test.ts`, 'workspace-unit'), false);
+    assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.integration.test.ts`, 'workspace-runtime'), true);
+    assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.test.ts`, 'workspace-runtime'), false);
+    assert.equal(isAdditionalWorkspaceTest(`${root}/dist/behavior.test.js`, 'workspace-unit'), false);
+    assert.equal(isAdditionalWorkspaceTest(`${root}/src/behavior.db.test.ts`, 'workspace-unit'), false);
+  }
+  assert.equal(isAdditionalWorkspaceTest('packages/billing/src/example.test.ts', 'workspace-unit'), false);
+  assert.throws(() => isAdditionalWorkspaceTest('sdk/example.test.ts', 'unknown'), /Unknown workspace lane/);
 });

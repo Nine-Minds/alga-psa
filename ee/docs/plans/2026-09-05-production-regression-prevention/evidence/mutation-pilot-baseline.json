@@ -133,5 +133,21 @@
     "mutationVitest": "4.1.10",
     "normalServerVitest": "3.2.7",
     "normalServerTestsPassed": 31
+  },
+  "ciVerification": {
+    "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34020091615",
+    "jobUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34020091615/job/101450948855",
+    "headRevision": "12c880cccc977b5b5db6e7e8d9cc58b101eb7ccd",
+    "testedMergeRevision": "3327375f396fd81d18969f708690566bc3b52717",
+    "conclusion": "success",
+    "runtime": "v22.23.2",
+    "workingTreeDirty": false,
+    "jobElapsedSeconds": 138,
+    "baselineAfterMatches": true,
+    "sourceHashesMatchCurrentFiles": true,
+    "artifact": "mutation-pilot-3327375f396fd81d18969f708690566bc3b52717",
+    "verifiedAt": "2026-09-06T08:08:00Z",
+    "mutationElapsedSeconds": 11,
+    "dryRunTests": 31
   }
 }

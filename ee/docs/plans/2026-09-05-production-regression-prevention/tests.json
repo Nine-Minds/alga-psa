@@ -189,7 +189,7 @@
   {
     "id": "T020",
     "description": "Run a compatible Stryker/Vitest pilot and prove selected tenant/eligibility/date mutations are killed by meaningful assertions; review surviving and equivalent mutants and attach the scoped baseline plus runtime cost.",
-    "implemented": false,
+    "implemented": true,
     "kind": "mutation-pilot",
     "featureIds": [
       "F026"

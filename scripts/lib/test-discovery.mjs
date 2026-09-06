@@ -11,6 +11,26 @@ export function repositoryTestFiles(root) {
   return [...new Set(files.split('\0').filter((file) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)))].sort();
 }
 
+// These tests are excluded from the DB-less unit job. Server unit-directory
+// DB tests need the same positive assignment as colocated package DB tests.
+// Integration/infrastructure directories retain their own database lanes.
+export function isWorkspaceDbTest(file) {
+  return /^(packages|shared|ee\/packages|server\/src\/test\/unit)\//.test(file)
+    && /\.db\.test\.[cm]?[jt]sx?$/.test(file);
+}
+
+// These roots are not covered by the server unit command or package-local
+// Nx test targets. Keep runtime requirements explicit during reconciliation.
+export function isAdditionalWorkspaceTest(file, lane) {
+  if (!/^(services\/(email-service|workflow-worker)|sdk|ee\/server\/src\/lib)\//.test(file)
+    || !/\.(test|spec)\.[cm]?[jt]sx?$/.test(file)
+    || /(^|\/)(node_modules|dist)\//.test(file)) return false;
+  const runtime = /\.integration\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  if (lane === 'workspace-runtime') return runtime;
+  if (lane === 'workspace-unit') return !runtime && !/\.(db|playwright)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  throw new Error(`Unknown workspace lane: ${lane}`);
+}
+
 // Collections come from the runners, not from a second interpretation of
 // their include/exclude globs. Inventory proves discoverability only; execution
 // evidence is separately required before a suite can satisfy readiness.

@@ -766,3 +766,29 @@ and verify that partial evidence survives without a fabricated completion.
 - [Testing Library Documentation](https://testing-library.com/)
 - [Contact API E2E Test Plan](../archive/contact-api-e2e-test-plan.md) - Example E2E test implementation
 - [Inbound Email Testing Guide](../inbound-email/development/testing.md) - Email workflow testing examples
+
+
+## Service, SDK and EE library execution lanes
+
+Run `node scripts/run-additional-workspace-tests.mjs workspace-unit` from the
+repository root for the unit suites under `services/email-service`,
+`services/workflow-worker`, `sdk` and `ee/server/src/lib`. The corresponding
+`workspace-runtime` lane runs their `*.integration.test.*` / `*.integration.spec.*`
+suites against actual services. The S3 bundle store suite requires an isolated
+MinIO endpoint and the `STORAGE_S3_*` configuration; the Temporal worker suite
+starts and tears down its own SDK test server. See
+`.github/workflows/workspace-tests.yml` for the complete service setup.
+
+Both lanes independently inventory candidate files, collect actual Vitest file
+and test identities, execute them, and reconcile results. Any omitted file,
+failed assertion, skip/todo, empty mandatory collection or missing report fails
+the command. Optional positional file filters are recorded as partial coverage;
+CI invokes the full lanes. Evidence, raw results, collection manifests and
+interrupted-run diagnostics live in `test-results/<lane>/` and are uploaded even
+on failure. Tests should resolve fixture resources relative to their own module,
+or explicitly establish a working-directory contract if that is what they test.
+
+These lanes close specific collection gaps. They do not constitute the complete
+repository-wide test inventory: remaining runners and manual exclusions still
+need explicit reconciliation. Likewise a passing job becomes a merge gate only
+when its check is registered in the effective repository rules.

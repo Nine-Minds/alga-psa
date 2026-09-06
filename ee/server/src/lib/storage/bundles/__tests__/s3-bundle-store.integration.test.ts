@@ -2,10 +2,11 @@
  * MinIO/S3-compatible integration tests for the S3-backed bundle store.
  *
  * These tests are intended to run against a locally available MinIO or any S3-compatible endpoint.
- * They are conditionally skipped if required env vars are not set, to keep CI runs green.
+ * The workspace runtime lane supplies an isolated MinIO instance. Missing
+ * configuration is a setup failure, never a successful skipped integration run.
  *
  * Env vars consumed (must match s3-client.ts expectations):
- * - STORAGE_S3_ENDPOINT (optional for AWS; required for MinIO)
+ * - STORAGE_S3_ENDPOINT (required; isolated S3-compatible test service)
  * - STORAGE_S3_ACCESS_KEY (required when STORAGE_S3_ENDPOINT is set)
  * - STORAGE_S3_SECRET_KEY (required when STORAGE_S3_ENDPOINT is set)
  * - STORAGE_S3_REGION (required)
@@ -15,8 +16,9 @@
 
 import { describe, it, expect, beforeAll } from "vitest";
 import { createS3BundleStore } from "../s3-bundle-store";
-import { getS3Client, getS3Config, getBucket } from "../../s3-client";
+import { getS3Client, getBucket } from "../../s3-client";
 import {
+  CreateBucketCommand,
   UploadPartCommand,
   type UploadPartCommandInput,
 } from "@aws-sdk/client-s3";
@@ -112,17 +114,25 @@ async function httpRequest(
   });
 }
 
-const env = hasAllEnv();
-const maybe = env.ok ? describe : describe.skip;
-
 // Use slightly longer timeout for integration calls against MinIO
 const TEST_TIMEOUT_MS = 30_000;
 
-maybe("S3 bundle store - MinIO integration", () => {
-  const store = createS3BundleStore();
-  const cfg = getS3Config();
-  const bucket = getBucket();
-  const isAwsS3 = !cfg.endpoint; // when endpoint is not provided, assume AWS
+describe("S3 bundle store - MinIO integration", () => {
+  let store: ReturnType<typeof createS3BundleStore>;
+  let bucket: string;
+  beforeAll(async () => {
+    const env = hasAllEnv();
+    if (!env.ok) throw new Error(env.reason);
+    // This lane provisions disposable local storage and never uses default AWS credentials.
+    if (!process.env.STORAGE_S3_ENDPOINT) throw new Error('Integration lane requires STORAGE_S3_ENDPOINT');
+    store = createS3BundleStore();
+    bucket = getBucket();
+    try {
+      await getS3Client().send(new CreateBucketCommand({ Bucket: bucket }));
+    } catch (error: any) {
+      if (error.name !== 'BucketAlreadyOwnedByYou') throw error;
+    }
+  });
   const prefix = `it-${randomHash(8)}`;
 
   const helloBytes = Buffer.from("hello");
@@ -232,8 +242,8 @@ maybe("S3 bundle store - MinIO integration", () => {
   it(
     "6) multipart upload happy path (2 parts) and headObject contentLength",
     async () => {
-      // AWS requires parts ≥ 5 MiB; MinIO allows smaller. Choose size per environment.
-      const partSize = isAwsS3 ? 5 * 1024 * 1024 : 256 * 1024;
+      // S3-compatible multipart uploads require non-final parts of at least 5 MiB.
+      const partSize = 5 * 1024 * 1024;
 
       const key = `${prefix}/multipart-${randomHash(8)}.bin`;
       const part1 = Buffer.alloc(partSize, 0x61); // 'a'
@@ -283,13 +293,4 @@ maybe("S3 bundle store - MinIO integration", () => {
     },
     { timeout: 2 * TEST_TIMEOUT_MS }
   );
-}, env.reason ? { skip: true } : undefined);
-
-// Fallback suite to indicate skipping reason when env is not configured.
-if (!env.ok) {
-  describe.skip("S3 bundle store - MinIO integration (skipped)", () => {
-    it("skipped due to missing env configuration", () => {
-      expect(env.reason).toBeDefined();
-    });
-  });
-}
+});

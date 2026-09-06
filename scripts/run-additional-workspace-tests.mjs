@@ -4,12 +4,14 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
-import { isWorkspaceDbTest, reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
+import { isAdditionalWorkspaceTest, reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cwd = path.join(root, 'server');
-const output = path.join(root, 'test-results/workspace-db');
+const suite = process.argv[2];
+if (!['workspace-unit', 'workspace-runtime'].includes(suite)) throw new Error('Usage: node scripts/run-additional-workspace-tests.mjs workspace-unit|workspace-runtime [file filters]');
+const output = path.join(root, 'test-results', suite);
 mkdirSync(output, { recursive: true });
 const collectedPath = path.join(output, 'collected.json');
 const reportPath = path.join(output, 'results.json');
@@ -17,30 +19,16 @@ const testsPath = path.join(output, 'collected-tests.json');
 const evidencePath = path.join(output, 'evidence.json');
 const discoveryPath = path.join(output, 'discovery.json');
 // Remove stale evidence even if the next process cannot start.
-for (const file of [collectedPath, testsPath, reportPath, evidencePath, discoveryPath]) writeFileSync(file, 'null\n');
+for (const file of [collectedPath, testsPath, reportPath, evidencePath, discoveryPath, path.join(output, 'progress.jsonl')]) writeFileSync(file, 'null\n');
 const env = {
   ...process.env,
-  REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1',
-  // These opt-in suites use an explicit connection contract rather than the
-  // regular DB_* helpers. Point both at the same isolated migrated database.
-  HOUR_BLOCK_DB_TESTS: '1',
-  HOUR_BLOCK_DB_HOST: process.env.DB_HOST || '127.0.0.1',
-  HOUR_BLOCK_DB_PORT: process.env.DB_PORT || '5432',
-  HOUR_BLOCK_DB_USER: process.env.DB_USER_SERVER || 'app_user',
-  HOUR_BLOCK_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  HOUR_BLOCK_DB_NAME: 'test_database',
-  TEST_DB_NAME: 'test_database',
-  DB_NAME_SERVER: 'test_database',
-  ACCOUNTING_SYNC_DB_TESTS: '1',
-  ACCOUNTING_SYNC_DB_HOST: process.env.DB_HOST || '127.0.0.1',
-  ACCOUNTING_SYNC_DB_PORT: process.env.DB_PORT || '5432',
-  ACCOUNTING_SYNC_DB_USER: process.env.DB_USER_SERVER || 'app_user',
-  ACCOUNTING_SYNC_DB_PASSWORD: process.env.DB_PASSWORD_SERVER || '',
-  ACCOUNTING_SYNC_DB_NAME: 'test_database',
+  SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '',
+  TEST_PROGRESS_PATH: path.join(output, 'progress.jsonl'),
 };
-const args = ['--config', 'vitest.workspace-db.config.ts', ...process.argv.slice(2)];
+const filters = process.argv.slice(3);
+if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
+const args = ['--config', `vitest.${suite}.config.ts`, ...filters];
 const run = (args) => spawnSync(process.execPath, [path.join(cwd, 'node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
-const filters = process.argv.slice(2);
 let before;
 let evidence;
 let phase = 'Revision inspection';
@@ -50,28 +38,28 @@ try {
   const collection = run(['list', ...args, '--filesOnly', `--json=${collectedPath}`]);
   if (collection.status !== 0) throw new Error(`Collection failed (exit ${collection.status})`);
   const collected = JSON.parse(readFileSync(collectedPath, 'utf8'));
-  if (!Array.isArray(collected) || !collected.length) throw new Error('Workspace DB suite collected no files');
+  if (!Array.isArray(collected) || !collected.length) throw new Error(`${suite} suite collected no files`);
   // A full invocation checks the repository independently of the runner's
   // globs. A developer's explicit file filter is recorded as partial coverage.
   const candidates = filters.length
     ? collected.map((entry) => typeof entry === 'string' ? entry : entry.file)
-    : repositoryTestFiles(root).filter(isWorkspaceDbTest);
+    : repositoryTestFiles(root).filter((file) => isAdditionalWorkspaceTest(file, suite));
   phase = 'Discovery reconciliation';
-  const discovery = reconcileDiscovery({ root, candidates, collections: [{ runner: 'workspace-db', status: 'passed', files: collected }] });
+  const discovery = reconcileDiscovery({ root, candidates, collections: [{ runner: suite, status: 'passed', files: collected }] });
   writeFileSync(discoveryPath, JSON.stringify(discovery, null, 2) + '\n');
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
   phase = 'Test collection';
   const testCollection = run(['list', ...args, `--json=${testsPath}`]);
   if (testCollection.status !== 0) throw new Error(`Test collection failed (exit ${testCollection.status})`);
   const collectedTests = JSON.parse(readFileSync(testsPath, 'utf8'));
-  console.log(`Workspace DB suite: ${collected.length} required files`);
+  console.log(`${suite} suite: ${collected.length} required files`);
   phase = 'Execution';
-  const result = run(['run', ...args, '--reporter=default', '--reporter=json', `--outputFile.json=${reportPath}`]);
+  const result = run(['run', ...args, '--reporter=default', '--reporter=json', '--reporter=../scripts/lib/vitest-progress-reporter.mjs', `--outputFile.json=${reportPath}`]);
   let report;
   try { report = JSON.parse(readFileSync(reportPath, 'utf8')); } catch { report = null; }
-  evidence = reconcileExecution({ collected, collectedTests, report, root, suite: 'workspace-db', revision: before.revision, exitCode: result.status });
+  evidence = reconcileExecution({ collected, collectedTests, report, root, suite, revision: before.revision, exitCode: result.status });
 } catch (error) {
-  evidence = { schemaVersion: 1, suite: 'workspace-db', revision: before?.revision, status: 'failed', failures: [`${phase}: ${error.message}`] };
+  evidence = { schemaVersion: 1, suite, revision: before?.revision, status: 'failed', failures: [`${phase}: ${error.message}`] };
 }
 evidence.selection = { mode: filters.length ? 'filtered' : 'full', filters };
 try {
