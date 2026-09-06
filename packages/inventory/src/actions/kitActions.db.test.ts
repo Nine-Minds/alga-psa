@@ -1,6 +1,4 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
 
@@ -33,7 +31,7 @@ import {
   updateKitProduct,
 } from './kitActions';
 import { listSalesOrders } from './salesOrderActions';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -43,20 +41,18 @@ let stockLocationId: string;
 let clientId: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 2 },
   });
-  testState.tenant = (await knex('tenants').select('tenant').first()).tenant;
+  testState.tenant = await createInventoryTestTenant(knex);
   serviceTypeId = (await knex('service_types').where({ tenant: testState.tenant }).select('id').first()).id;
   stockLocationId = (await knex('stock_locations').where({ tenant: testState.tenant }).select('location_id').first()).location_id;
   clientId = (await knex('clients').where({ tenant: testState.tenant }).select('client_id').first()).client_id;
 });
 
 beforeEach(async () => {
-  if (!databaseConnection) return;
   testState.trx = await knex.transaction();
 });
 
@@ -139,7 +135,7 @@ async function createComponent(input: {
   return serviceId;
 }
 
-describe.skipIf(!databaseConnection)('kit actions (real DB, rolled back)', () => {
+describe('kit actions (real DB, rolled back)', () => {
   it('T001: derives no-BOM, ready, low-stock, fixed/sum pricing, and non-stocked component detail', async () => {
     const noBom = await createKit(`No BOM ${randomUUID()}`);
     const ready = await createKit(`Ready sum ${randomUUID()}`);
@@ -221,8 +217,11 @@ describe.skipIf(!databaseConnection)('kit actions (real DB, rolled back)', () =>
     expect(Number(settings.kit_fixed_price)).toBe(15000);
 
     const sum = await createKit(`Sum ${randomUUID()}`);
-    await expect(updateKitProduct(sum.service_id, { kit_pricing_mode: 'fixed' }))
-      .rejects.toThrow('Fixed kit price must be greater than 0');
+    expect(await updateKitProduct(sum.service_id, { kit_pricing_mode: 'fixed' })).toMatchObject({
+      messageKey: 'features/inventory:errors.kits.fixedPriceRequired',
+    });
+    expect(await testState.trx('product_inventory_settings').where({ tenant: testState.tenant, service_id: sum.service_id }).first())
+      .toMatchObject({ kit_pricing_mode: 'sum', kit_fixed_price: null });
   });
 
   it('T004: adds, replaces duplicate quantity, validates, and removes BOM components', async () => {
@@ -236,8 +235,11 @@ describe.skipIf(!databaseConnection)('kit actions (real DB, rolled back)', () =>
     expect(rows).toHaveLength(1);
     expect(Number(rows[0].quantity)).toBe(5);
 
-    await expect(addKitComponent(kit.service_id, component, 0))
-      .rejects.toThrow('Component quantity must be a positive integer');
+    expect(await addKitComponent(kit.service_id, component, 0)).toMatchObject({
+      messageKey: 'features/inventory:errors.kits.componentQuantityPositive',
+    });
+    expect(await testState.trx('kit_components').where({ tenant: testState.tenant, kit_service_id: kit.service_id, component_service_id: component }))
+      .toEqual(rows);
     await removeKitComponent(kit.service_id, component);
     expect(await testState.trx('kit_components')
       .where({ tenant: testState.tenant, kit_service_id: kit.service_id, component_service_id: component }))

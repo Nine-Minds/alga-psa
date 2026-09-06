@@ -1,11 +1,9 @@
 /**
- * Stock-low edge trigger tests against the real local `server` DB.
+ * Stock-low edge trigger tests against the isolated migrated test DB.
  * Every test runs in a rolled-back transaction; stock_movements is append-only
  * in production, but these rows are only visible inside the test transaction.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 
@@ -15,7 +13,7 @@ import {
   collectDefaultLocationStockLowSignalAfterConsume,
   collectStockLowSignalAfterConsume,
 } from './stockLowSignal';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -24,13 +22,12 @@ let TENANT: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
 });
 
@@ -93,7 +90,7 @@ async function makeProduct(
   return svc.service_id;
 }
 
-describe.skipIf(!databaseConnection)('stock-low signal collection (real DB, rolled back)', () => {
+describe('stock-low signal collection (real DB, rolled back)', () => {
   it('returns a signal only when non-serialized on-hand crosses down to the reorder point', async () => {
     await inTx(async (trx) => {
       const serviceId = await makeProduct(trx, `edge-${randomUUID().slice(0, 8)}`, {

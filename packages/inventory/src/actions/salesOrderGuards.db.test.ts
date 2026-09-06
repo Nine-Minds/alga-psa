@@ -1,6 +1,4 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { type Knex } from 'knex';
 
@@ -11,10 +9,11 @@ const testState = vi.hoisted(() => ({
   permissions: new Set<string>(),
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async () => ({
+  ...(await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db')),
   createTenantKnex: vi.fn(async () => ({ knex: testState.trx })),
   withTransaction: vi.fn(async (_db: unknown, callback: (trx: Knex.Transaction) => Promise<unknown>) =>
-    callback(testState.trx)),
+    testState.trx.transaction(callback)),
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -31,8 +30,8 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn() }));
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { createDropShipForSoLine, confirmDropShipShipment } from './dropShipActions';
 import { fulfillSalesOrderLine } from './fulfillmentActions';
-import { removeSoLine, suggestPoFromBackorder, updateSoLine } from './salesOrderActions';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createSalesOrder, addSoLine, removeSoLine, suggestPoFromBackorder, updateSoLine } from './salesOrderActions';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -42,13 +41,12 @@ let stockLocationId: string;
 let clientId: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 2 },
   });
-  testState.tenant = (await knex('tenants').select('tenant').first()).tenant;
+  testState.tenant = await createInventoryTestTenant(knex);
   serviceTypeId = (await knex('service_types').where({ tenant: testState.tenant }).select('id').first()).id;
   stockLocationId = (await knex('stock_locations')
     .where({ tenant: testState.tenant })
@@ -63,10 +61,10 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
-  if (!databaseConnection) return;
   testState.trx = await knex.transaction();
   testState.permissions = new Set([
     'sales_order:read',
+    'sales_order:create',
     'sales_order:update',
     'purchase_order:create',
   ]);
@@ -210,7 +208,7 @@ async function purchaseOrdersForSoLine(soLineId: string): Promise<Array<{ po_id:
     .select('po.po_id', 'po.po_number');
 }
 
-describe.skipIf(!databaseConnection)('sales-order state guards (real DB, rolled back)', () => {
+describe('sales-order state guards (real DB, rolled back)', () => {
   it('T001: rejects fulfillment for a draft order without moving stock', async () => {
     const serviceId = await createProduct();
     const { soId, soLineId } = await createSalesOrderLine({ status: 'draft', serviceId });
@@ -373,5 +371,61 @@ describe.skipIf(!databaseConnection)('sales-order state guards (real DB, rolled 
       .first();
     expect(Number(soLine.quantity_fulfilled)).toBe(0);
     expect(Number(poLine.quantity_received)).toBe(0);
+  });
+});
+
+
+describe('sales-order tax references', () => {
+  it.each([
+    ['create', 'missing'], ['add', 'missing'], ['update', 'missing'],
+    ['create', 'foreign'], ['add', 'foreign'], ['update', 'foreign'],
+  ] as const)('%s refuses a %s tax rate without persisting changes', async (operation, reference) => {
+    const serviceId = await createProduct();
+    const { soId, soLineId } = await createSalesOrderLine({ status: 'draft', serviceId });
+    const headers = await testState.trx('sales_orders').where({ tenant: testState.tenant }).orderBy('so_id');
+    const lines = await testState.trx('sales_order_lines').where({ tenant: testState.tenant }).orderBy('so_line_id');
+    let taxRateId: string = randomUUID();
+    if (reference === 'foreign') {
+      const foreignTenant = randomUUID();
+      await testState.trx('tenants').insert({ tenant: foreignTenant, client_name: 'Other tax tenant', email: `tax-${foreignTenant}@example.invalid` });
+      taxRateId = await createTaxRate(foreignTenant);
+    }
+    const input = { service_id: serviceId, quantity_ordered: 1, unit_price: 100, tax_rate_id: taxRateId };
+    const result = operation === 'create'
+      ? await createSalesOrder({ client_id: clientId, currency_code: 'USD', invoice_mode: 'manual', allocation_mode: 'soft', lines: [input] })
+      : operation === 'add' ? await addSoLine(soId, input)
+      : await updateSoLine(soLineId, { tax_rate_id: input.tax_rate_id });
+    expect(result).toMatchObject({ messageKey: 'features/inventory:errors.salesOrders.recordInvalid' });
+    expect(await testState.trx('sales_orders').where({ tenant: testState.tenant }).orderBy('so_id')).toEqual(headers);
+    expect(await testState.trx('sales_order_lines').where({ tenant: testState.tenant }).orderBy('so_line_id')).toEqual(lines);
+  });
+});
+
+
+async function createTaxRate(tenant: string): Promise<string> {
+  const region = `TEST-${randomUUID().slice(0, 8)}`;
+  const id = randomUUID();
+  await testState.trx('tax_regions').insert({ tenant, region_code: region, region_name: 'Test region' });
+  await testState.trx('tax_rates').insert({ tenant, tax_rate_id: id, region_code: region, tax_percentage: 5, start_date: '2020-01-01' });
+  return id;
+}
+
+describe('valid sales-order tax selection', () => {
+  it.each(['create', 'add', 'update'] as const)('%s persists this tenant’s rate and permits clearing it', async (operation) => {
+    const serviceId = await createProduct();
+    const { soId, soLineId } = await createSalesOrderLine({ status: 'draft', serviceId });
+    const taxRateId = await createTaxRate(testState.tenant);
+    const input = { service_id: serviceId, quantity_ordered: 1, unit_price: 100, tax_rate_id: taxRateId };
+    const result = operation === 'create'
+      ? await createSalesOrder({ client_id: clientId, currency_code: 'USD', invoice_mode: 'manual', allocation_mode: 'soft', lines: [input] })
+      : operation === 'add' ? await addSoLine(soId, input)
+      : await updateSoLine(soLineId, { tax_rate_id: taxRateId });
+    expect(isActionMessageError(result)).toBe(false);
+    const saved = await testState.trx('sales_order_lines').where({ tenant: testState.tenant, tax_rate_id: taxRateId });
+    expect(saved).toHaveLength(1);
+    expect(Number(saved[0].unit_price)).toBeGreaterThan(0);
+    expect(isActionMessageError(await updateSoLine(saved[0].so_line_id, { tax_rate_id: null }))).toBe(false);
+    expect(await testState.trx('sales_order_lines').where({ tenant: testState.tenant, so_line_id: saved[0].so_line_id }).first())
+      .toMatchObject({ tax_rate_id: null });
   });
 });

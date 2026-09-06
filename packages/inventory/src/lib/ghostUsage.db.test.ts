@@ -1,11 +1,9 @@
 /**
- * Ghost-usage report integration tests against the real local `server` DB.
+ * Ghost-usage report integration tests against the isolated migrated test DB.
  * Every DB test runs inside a transaction that is ALWAYS rolled back, so the
- * dev database is never mutated.
+ * test database is never mutated.
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import {
@@ -17,7 +15,25 @@ import {
   setGhostUsageReviewDisposition,
   upsertGhostUsageReview,
 } from './ghostUsage';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+
+const actionState = vi.hoisted(() => ({
+  tenant: '',
+  user: { user_id: '' },
+  db: null as Knex | null,
+  permissions: new Set<string>(),
+}));
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => (...args: unknown[]) => fn(actionState.user, { tenant: actionState.tenant }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: async (_user: unknown, resource: string, action: string) => actionState.permissions.has(`${resource}:${action}`),
+}));
+vi.mock('@alga-psa/db', () => ({
+  createTenantKnex: async () => ({ knex: actionState.db }),
+  withTransaction: (db: Knex, fn: (trx: Knex.Transaction) => Promise<unknown>) => db.transaction(fn),
+}));
+import { getGhostUsageReport } from '../actions/ghostUsageActions';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -32,16 +48,18 @@ const CLOSED_LATER = '2031-01-16T12:00:00.000Z';
 const FILTERS = { closedFrom: '2031-01-01', closedTo: '2031-01-31' };
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   CLIENT = (await knex('clients').where({ tenant: TENANT }).first())?.client_id;
   SERVICE = (await knex('service_catalog').where({ tenant: TENANT }).orderBy('service_id').first())?.service_id;
   USER = (await knex('users').where({ tenant: TENANT }).first())?.user_id;
+  actionState.tenant = TENANT;
+  actionState.user.user_id = USER;
+  actionState.db = knex;
 
   if (!CLIENT || !SERVICE || !USER) {
     throw new Error('ghostUsage tests require seeded client, service_catalog, and user rows');
@@ -150,7 +168,7 @@ async function addTicketMaterial(trx: Knex.Transaction, ticketId: string): Promi
   });
 }
 
-describe.skipIf(!databaseConnection)('ghost usage report queries', () => {
+describe('ghost usage report queries', () => {
   it('T036: material-less closed hardware tickets are candidates until ticket_materials exists', async () => {
     await inTx(async (trx) => {
       const scope = await makeScope(trx);
@@ -284,12 +302,12 @@ describe.skipIf(!databaseConnection)('ghost usage report queries', () => {
 });
 
 describe('ghost usage action and parsing contracts', () => {
-  it('T039: getGhostUsageReport action enforces inventory:read in source', () => {
-    const source = fs.readFileSync(path.resolve(__dirname, '../actions/ghostUsageActions.ts'), 'utf8');
-    const start = source.indexOf('export const getGhostUsageReport');
-    const end = source.indexOf('/** §17.6');
-    const body = source.slice(start, end);
-    expect(body).toMatch(/hasPermission\(\s*_user\s*,\s*['"]inventory['"]\s*,\s*['"]read['"]\s*\)/);
+  it('T039: report refuses a user who can update inventory but cannot read it', async () => {
+    actionState.permissions = new Set(['inventory:update']);
+    expect(await getGhostUsageReport(FILTERS)).toEqual({
+      permissionError: 'Permission denied: inventory:read required',
+      messageKey: 'features/inventory:errors.permissions.inventoryRead',
+    });
   });
 
   it('T041: parses tolerant first-object AI classification JSON', () => {
@@ -308,7 +326,7 @@ describe('ghost usage action and parsing contracts', () => {
   });
 });
 
-describe.skipIf(!databaseConnection)('ghost usage AI settings', () => {
+describe('ghost usage AI settings', () => {
   it('defaults disabled, enables nested setting, and preserves unrelated settings', async () => {
     await inTx(async (trx) => {
       await trx('tenant_settings')

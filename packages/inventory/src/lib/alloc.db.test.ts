@@ -1,23 +1,21 @@
 /**
- * Allocation engine integration tests against the real local `server` DB (which
+ * Allocation engine integration tests against the isolated migrated test DB (which
  * has the inventory schema applied). Every test runs inside a transaction that is
- * ALWAYS rolled back, so the dev database is never mutated.
+ * ALWAYS rolled back, so the test database is never mutated.
  *
  * Connects using the credentials resolved by src/test-utils/inventoryTestDatabase.ts
- * (server/.env.local or env; skipped when none resolve — always in CI).
- * Run: (cd packages/inventory && npx vitest run src/lib/alloc.test.ts)
+ * (explicit isolated database environment; missing configuration fails).
+ * Run from the repository root: node scripts/run-workspace-db-tests.mjs packages/inventory
  *
  * Covers (engine/DB level):
  *  - T009 soft allocation (reserved): available = on_hand - reserved; on_hand unchanged.
  *  - T010 hard-hold (held): available = on_hand - held; held reduces available.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { availableQuantity, applyAllocationDelta } from './levels';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -27,13 +25,12 @@ let SERVICE: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').limit(1).select('service_id');
   SERVICE = svcs[0].service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
@@ -66,7 +63,7 @@ async function level(trx: Knex.Transaction, serviceId: string, locationId: strin
   return trx('stock_levels').where({ tenant: TENANT, service_id: serviceId, location_id: locationId }).first();
 }
 
-describe.skipIf(!databaseConnection)('inventory allocation engine (real server DB, rolled back)', () => {
+describe('inventory allocation engine (isolated migrated DB, rolled back)', () => {
   it('T009: soft allocation reserves stock — available drops, on_hand unchanged', async () => {
     await inTx(async (trx) => {
       await setupSettings(trx, SERVICE);

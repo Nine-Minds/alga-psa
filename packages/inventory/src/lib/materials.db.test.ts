@@ -4,15 +4,13 @@
  * commit to exercise the FOR UPDATE race and cleans up its own fixtures.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, InsufficientStockError } from './consume';
 import { addMaterial, deleteMaterial, isProjectMaterialEligible, MaterialValidationError } from './materials';
 import { queryProductAvailability } from './availability';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -23,9 +21,8 @@ let CLIENT: string;
 let TICKET: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 6 } });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
   CLIENT = (await knex('clients').where({ tenant: TENANT }).first()).client_id;
   TICKET = (await knex('tickets').where({ tenant: TENANT }).whereNotNull('client_id').first()).ticket_id;
@@ -90,7 +87,7 @@ describe('project product invoice eligibility', () => {
   });
 });
 
-describe.skipIf(!databaseConnection)('F014/F015 negative-stock guard (T003)', () => {
+describe('F014/F015 negative-stock guard (T003)', () => {
   it('blocks insufficient consumption naming the available quantity; exact-to-zero succeeds', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t003-${randomUUID().slice(0, 8)}`, 2);
@@ -130,7 +127,7 @@ describe.skipIf(!databaseConnection)('F014/F015 negative-stock guard (T003)', ()
   });
 });
 
-describe.skipIf(!databaseConnection)('F048 canonical materials service (T005)', () => {
+describe('F048 canonical materials service (T005)', () => {
   it('addMaterial writes the row, consumes stock, derives client from the ticket; deleteMaterial reverses', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t005-${randomUUID().slice(0, 8)}`, 3);
@@ -181,7 +178,7 @@ describe.skipIf(!databaseConnection)('F048 canonical materials service (T005)', 
   });
 });
 
-describe.skipIf(!databaseConnection)('F005 availability (T002)', () => {
+describe('F005 availability (T002)', () => {
   it('reports on-hand, available (minus reservations), reorder point, and per-location rows', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t002-${randomUUID().slice(0, 8)}`, 5, { reorder_point: 2 });
@@ -203,7 +200,7 @@ describe.skipIf(!databaseConnection)('F005 availability (T002)', () => {
   });
 });
 
-describe.skipIf(!databaseConnection)('F014 concurrency (T004) — committed race on a persistent fixture', () => {
+describe('F014 concurrency (T004) — committed race on a persistent fixture', () => {
   // stock_movements is an append-only ledger (no DELETE), so this test uses a single
   // idempotent get-or-create fixture (inactive product, hidden from pickers) instead of
   // disposable rows, and resets its level via `adjust` movements each run.

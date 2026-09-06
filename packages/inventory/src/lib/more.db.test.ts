@@ -1,15 +1,13 @@
 /**
- * Additional engine/DB-level tests against the real server DB (rolled back):
+ * Additional engine/DB-level tests against the isolated migrated DB (rolled back):
  * serialized COGS, drop-ship (no on-hand touch), sales-order invoice idempotency
  * (LEAST guard), and location-scoped write enforcement.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { assertLocationWritable } from './scope';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -22,13 +20,12 @@ let CLIENT: string;
 let USER: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).whereRaw("NOT EXISTS (SELECT 1 FROM stock_levels sl WHERE sl.tenant = service_catalog.tenant AND sl.service_id = service_catalog.service_id) AND NOT EXISTS (SELECT 1 FROM stock_units su WHERE su.tenant = service_catalog.tenant AND su.service_id = service_catalog.service_id)").orderBy('service_id').limit(2).select('service_id'); // seed-independent: skip services carrying real stock
   SERVICE = svcs[0].service_id;
   SER_SERVICE = svcs[1].service_id;
@@ -55,7 +52,7 @@ async function onHand(trx: Knex.Transaction, serviceId: string, locationId: stri
   return r ? Number(r.quantity_on_hand) : 0;
 }
 
-describe.skipIf(!databaseConnection)('inventory — COGS, drop-ship, invoicing, scope (real DB, rolled back)', () => {
+describe('inventory — COGS, drop-ship, invoicing, scope (real DB, rolled back)', () => {
   it('T011: serialized consume captures COGS = unit_cost and decrements on_hand', async () => {
     await inTx(async (trx) => {
       await trx('product_inventory_settings').insert({ tenant: TENANT, service_id: SER_SERVICE, track_stock: true, is_serialized: true, cost_currency: 'USD', default_location_id: LOCATION }).onConflict(['tenant', 'service_id']).merge();

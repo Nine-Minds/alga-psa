@@ -207,8 +207,8 @@ jobs:
           SKIP_DB_TESTS: '1'
           # Root .env.localtest is committed and dotenv-loaded by
           # vitest.globalSetup.js, so it would hand DB admin credentials to
-          # opt-in DB suites (packages/inventory) that then dial a database
-          # this job does not run. Blank them so those suites self-skip.
+          # tests that must not connect from this database-free job. Required
+          # *.db.test.* suites execute separately in the workspace DB lane.
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'

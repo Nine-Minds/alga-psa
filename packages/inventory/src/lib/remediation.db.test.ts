@@ -1,6 +1,6 @@
 /**
  * Remediation-plan integration tests (2026-07-01 plan) against the real local
- * `server` DB. Every test runs inside a transaction that is ALWAYS rolled back —
+ * isolated migrated test DB. Every test runs inside a transaction that is ALWAYS rolled back —
  * except the concurrency suite, which needs two live transactions and cleans up
  * after itself.
  *
@@ -12,12 +12,10 @@
  * Action-level flows (withAuth) need a session harness — see SCRATCHPAD.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { reconcileStockLevels, computeAllocationsFromTruth } from './reconcile';
 import { recordStockMovement } from './movements';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -30,13 +28,12 @@ let CLIENT: string;
 let VENDOR: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 6 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT }).orderBy('service_id').limit(2).select('service_id');
   SERVICE = svcs[0].service_id;
   SER_SERVICE = svcs[1].service_id;
@@ -92,7 +89,7 @@ async function makeSo(trx: Knex.Transaction, opts?: { allocation_mode?: string; 
   return so;
 }
 
-describe.skipIf(!databaseConnection)('T014 — CHECK constraints reject drifted quantities', () => {
+describe('T014 — CHECK constraints reject drifted quantities', () => {
   it('rejects negative reserved/held on stock_levels', async () => {
     await inTx(async (trx) => {
       await expect(
@@ -151,7 +148,7 @@ describe.skipIf(!databaseConnection)('T014 — CHECK constraints reject drifted 
   });
 });
 
-describe.skipIf(!databaseConnection)('T024 — stock_movements is append-only (trigger)', () => {
+describe('T024 — stock_movements is append-only (trigger)', () => {
   it('rejects UPDATE and DELETE, allows INSERT', async () => {
     await inTx(async (trx) => {
       const movement = await recordStockMovement(trx, TENANT, {
@@ -171,20 +168,9 @@ describe.skipIf(!databaseConnection)('T024 — stock_movements is append-only (t
   });
 });
 
-describe.skipIf(!databaseConnection)('T023 — hardened FKs and indexes', () => {
-  it('rejects an orphan tax_rate_id on SO lines', async () => {
-    await inTx(async (trx) => {
-      const so = await makeSo(trx, { status: 'draft' });
-      await expect(
-        trx('sales_order_lines').insert({
-          tenant: TENANT, so_id: so.so_id, service_id: SERVICE,
-          quantity_ordered: 1, quantity_fulfilled: 0, quantity_invoiced: 0, unit_price: 100,
-          fulfillment_type: 'from_stock', tax_rate_id: '00000000-0000-0000-0000-000000000001',
-        }),
-      ).rejects.toThrow(/fk_so_lines_tax_rate/);
-    });
-  });
-
+describe('T023 — hardened FKs and indexes', () => {
+  // Tax references are logical on the distributed schema. The create/add/update
+  // rejection and rollback contract lives in salesOrderGuards.db.test.ts.
   it('rejects an orphan allocated_so_line_id on stock_units', async () => {
     await inTx(async (trx) => {
       await expect(
@@ -207,7 +193,7 @@ describe.skipIf(!databaseConnection)('T023 — hardened FKs and indexes', () => 
   });
 });
 
-describe.skipIf(!databaseConnection)('T002/T003 mechanics — locking prevents double-claim and overshoot', () => {
+describe('T002/T003 mechanics — locking prevents double-claim and overshoot', () => {
   it('FOR UPDATE SKIP LOCKED: two transactions cannot pick the same unit', async () => {
     const serial = `SN-LOCK-${Math.floor(Math.random() * 1e9)}`;
     const [unit] = await knex('stock_units')
@@ -263,7 +249,7 @@ describe.skipIf(!databaseConnection)('T002/T003 mechanics — locking prevents d
   });
 });
 
-describe.skipIf(!databaseConnection)('T008 — reconcile recomputes reserved/held from open SO lines', () => {
+describe('T008 — reconcile recomputes reserved/held from open SO lines', () => {
   it('repairs manufactured drift and honors allocation_mode', async () => {
     await inTx(async (trx) => {
       // Manufacture drift: a counter with no backing reservation.
@@ -297,7 +283,7 @@ describe.skipIf(!databaseConnection)('T008 — reconcile recomputes reserved/hel
   });
 });
 
-describe.skipIf(!databaseConnection)('T027 — vendor price list constraints', () => {
+describe('T027 — vendor price list constraints', () => {
   it('enforces a single preferred offer per product', async () => {
     await inTx(async (trx) => {
       if (!VENDOR) return; // no vendor fixture in this DB
@@ -316,7 +302,7 @@ describe.skipIf(!databaseConnection)('T027 — vendor price list constraints', (
   });
 });
 
-describe.skipIf(!databaseConnection)('T032 math — landed-cost allocation adds up and rounds to the last line', () => {
+describe('T032 math — landed-cost allocation adds up and rounds to the last line', () => {
   it('allocates by value with cents preserved', () => {
     // Mirrors applyPoLandedCosts's weighting: 10000 cents across value weights 3:1.
     const lines = [
@@ -338,7 +324,7 @@ describe.skipIf(!databaseConnection)('T032 math — landed-cost allocation adds 
   });
 });
 
-describe.skipIf(!databaseConnection)('T034 constraints — vendor bill lifecycle schema', () => {
+describe('T034 constraints — vendor bill lifecycle schema', () => {
   it('rejects invalid statuses and duplicate bill numbers per vendor', async () => {
     await inTx(async (trx) => {
       if (!VENDOR) return;
@@ -357,7 +343,7 @@ describe.skipIf(!databaseConnection)('T034 constraints — vendor bill lifecycle
   });
 });
 
-describe.skipIf(!databaseConnection)('T019 schema — rma_cases no longer admits dead_unit_returned', () => {
+describe('T019 schema — rma_cases no longer admits dead_unit_returned', () => {
   it('rejects the removed status and accepts live ones', async () => {
     await inTx(async (trx) => {
       const base = { tenant: TENANT, rma_type: 'standard', service_id: SERVICE, client_id: CLIENT, opened_at: trx.fn.now() };
@@ -369,7 +355,7 @@ describe.skipIf(!databaseConnection)('T019 schema — rma_cases no longer admits
   });
 });
 
-describe.skipIf(!databaseConnection)('cycle count schema (T029/T031 paths)', () => {
+describe('cycle count schema (T029/T031 paths)', () => {
   it('unique per (session, service); status CHECK; cascade delete of lines', async () => {
     await inTx(async (trx) => {
       const [session] = await trx('count_sessions')

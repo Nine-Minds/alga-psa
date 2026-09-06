@@ -4,7 +4,7 @@ import knexLib, { Knex } from 'knex';
 import { adjustStockCore } from './adjust';
 import { receivePoLineCore } from './purchaseOrders';
 import { receiveStockCore } from './receive';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -16,9 +16,8 @@ let serviceId: string;
 let serializedServiceId: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 4 } });
-  tenant = (await knex('tenants').select('tenant').first()).tenant;
+  tenant = await createInventoryTestTenant(knex);
   const location = await knex('stock_locations').where({ tenant, is_default: true }).first();
   locationId = location.location_id;
   userId =
@@ -74,7 +73,7 @@ async function setSettings(trx: Knex.Transaction, selectedServiceId: string, ser
     });
 }
 
-describe.skipIf(!databaseConnection)('session-free inventory extraction cores (real DB, rolled back)', () => {
+describe('session-free inventory extraction cores (real DB, rolled back)', () => {
   it('T006: receiveStockCore records the receipt, level delta, moving average, and pending events', async () => {
     await inRollbackTransaction(async (trx) => {
       await setSettings(trx, serviceId, false);

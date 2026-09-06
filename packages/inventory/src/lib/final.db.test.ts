@@ -3,12 +3,10 @@
  * (available <= reorder point). Real server DB, rolled back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { availableQuantity } from './levels';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -18,13 +16,12 @@ let SERVICE: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   SERVICE = (await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').first()).service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
 });
@@ -42,7 +39,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
   }
 }
 
-describe.skipIf(!databaseConnection)('inventory — PO numbering + reorder (real DB, rolled back)', () => {
+describe('inventory — PO numbering + reorder (real DB, rolled back)', () => {
   it('T018: a duplicate po_number within a tenant is rejected', async () => {
     await inTx(async (trx) => {
       const [v] = await trx('vendors').insert({ tenant: TENANT, vendor_name: 'PO Test Vendor', is_active: true }).returning('vendor_id');

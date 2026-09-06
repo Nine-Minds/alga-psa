@@ -1,22 +1,19 @@
 /**
- * Procurement integration tests against the real local `server` DB. Every test
- * runs inside a transaction that is ALWAYS rolled back, so the dev database is
+ * Procurement integration tests against the isolated migrated test DB. Every test
+ * runs inside a transaction that is ALWAYS rolled back, so the test database is
  * never mutated. Connects using the credentials resolved by
- * src/test-utils/inventoryTestDatabase.ts (server/.env.local or env; skipped
- * when none resolve — always in CI).
+ * src/test-utils/inventoryTestDatabase.ts (explicit required test configuration).
  *
  * These exercise BEHAVIOR at the engine/DB level (no withAuth session in vitest):
  *  - T005: the moving-average cost math the purchase-order receipt action runs.
  *  - T044: the blocking scan checkProductCanBeDeleted performs over stock tables.
  *
- * Run: (cd packages/inventory && npx vitest run src/lib/procure.test.ts)
+ * Run from the repository root: node scripts/run-workspace-db-tests.mjs packages/inventory
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -26,13 +23,12 @@ let SERVICE: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   SERVICE = (await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').first()).service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
 });
@@ -69,7 +65,7 @@ function movingAverage(oldQty: number, oldAvg: number, recvQty: number, recvCost
   return denom > 0 ? Math.round((oldQty * oldAvg + recvQty * recvCost) / denom) : recvCost;
 }
 
-describe.skipIf(!databaseConnection)('inventory procurement (real server DB, rolled back)', () => {
+describe('inventory procurement (isolated migrated DB, rolled back)', () => {
   it('T005: moving-average helper matches the weighted formula', () => {
     // First receipt into empty stock: avg is just the receipt cost.
     expect(movingAverage(0, 0, 10, 5000)).toBe(5000);

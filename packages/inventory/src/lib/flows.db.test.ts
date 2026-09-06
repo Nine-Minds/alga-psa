@@ -1,14 +1,12 @@
 /**
  * Flow-level engine tests (transfers, loaners, restock, RMA transitions, negative
- * consume) against the real local `server` DB, each rolled back. Exercises the
+ * consume) against the isolated migrated test DB, each rolled back. Exercises the
  * movement primitive for every movement type the action layer relies on.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -19,13 +17,12 @@ let SER_SERVICE: string;
 let LOCATION: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).whereRaw("NOT EXISTS (SELECT 1 FROM stock_levels sl WHERE sl.tenant = service_catalog.tenant AND sl.service_id = service_catalog.service_id) AND NOT EXISTS (SELECT 1 FROM stock_units su WHERE su.tenant = service_catalog.tenant AND su.service_id = service_catalog.service_id)").orderBy('service_id').limit(2).select('service_id'); // seed-independent: skip services carrying real stock
   SERVICE = svcs[0].service_id;
   SER_SERVICE = svcs[1].service_id;
@@ -71,7 +68,7 @@ async function makeLocation(trx: Knex.Transaction, name: string) {
   return l.location_id as string;
 }
 
-describe.skipIf(!databaseConnection)('inventory flows (real server DB, rolled back)', () => {
+describe('inventory flows (isolated migrated DB, rolled back)', () => {
   it('T023/T024: transfer moves stock via in_transit (source -1 at dispatch, dest +1 at receive)', async () => {
     await inTx(async (trx) => {
       await settings(trx, SER_SERVICE, true);

@@ -1,13 +1,11 @@
 /**
  * Kit-explosion + contract-no-consume integration tests against the real local
- * `server` DB. Every test runs inside a transaction that is ALWAYS rolled back,
- * so the dev database is never mutated. Mirrors the harness in engine.test.ts.
+ * isolated migrated test DB. Every test runs inside a transaction that is ALWAYS rolled back,
+ * so the test database is never mutated. Mirrors the harness in engine.db.test.ts.
  *
- * Run: (cd packages/inventory && npx vitest run src/lib/kitmisc.test.ts)
+ * Run from the repository root: node scripts/run-workspace-db-tests.mjs packages/inventory
  */
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import { explodeKitOntoSalesOrder } from '../actions/kitActions';
@@ -29,7 +27,7 @@ vi.mock('next/cache', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
 }));
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -41,13 +39,12 @@ let COMP_B: string;
 let CLIENT: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').limit(3).select('service_id');
   KIT_SERVICE = svcs[0].service_id;
   COMP_A = svcs[1].service_id;
@@ -68,7 +65,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
   }
 }
 
-describe.skipIf(!databaseConnection)('kit explosion + contract no-consume (real server DB, rolled back)', () => {
+describe('kit explosion + contract no-consume (isolated migrated DB, rolled back)', () => {
   it('T007: resolves sum pricing from component selling prices without a kit catalog fallback', async () => {
     await inTx(async (trx) => {
       await trx('kit_components').where({ tenant: TENANT, kit_service_id: KIT_SERVICE }).del();

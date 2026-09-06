@@ -1,13 +1,11 @@
 /**
- * Schema-constraint tests against the real local `server` DB, rolled back:
+ * Schema-constraint tests against the isolated migrated test DB, rolled back:
  * serial uniqueness (per product), MAC uniqueness (tenant-wide), and the
  * single-default-location partial unique index.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -17,13 +15,12 @@ let SERVICE: string;
 let SERVICE2: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).whereRaw("NOT EXISTS (SELECT 1 FROM stock_levels sl WHERE sl.tenant = service_catalog.tenant AND sl.service_id = service_catalog.service_id) AND NOT EXISTS (SELECT 1 FROM stock_units su WHERE su.tenant = service_catalog.tenant AND su.service_id = service_catalog.service_id)").orderBy('service_id').limit(2).select('service_id'); // seed-independent: skip services carrying real stock
   SERVICE = svcs[0].service_id;
   SERVICE2 = svcs[1].service_id;
@@ -42,7 +39,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
   }
 }
 
-describe.skipIf(!databaseConnection)('inventory schema constraints (real server DB, rolled back)', () => {
+describe('inventory schema constraints (isolated migrated DB, rolled back)', () => {
   it('T002a: duplicate serial within (tenant, service_id) is rejected', async () => {
     await inTx(async (trx) => {
       await trx('stock_units').insert({ tenant: TENANT, service_id: SERVICE, serial_number: 'DUP-SERIAL', status: 'in_stock' });

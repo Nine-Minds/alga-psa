@@ -3,12 +3,10 @@
  * unit (serial), and an unbilled reversal restores it. Real server DB, rolled back.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, reverseStockConsumption } from './consume';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -19,9 +17,8 @@ let LOCATION: string;
 let CLIENT: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 4 } });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   SER_SERVICE = (await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').first()).service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
   CLIENT = (await knex('clients').where({ tenant: TENANT }).first()).client_id;
@@ -39,7 +36,7 @@ async function onHand(trx: Knex.Transaction, locationId: string) {
   return r ? Number(r.quantity_on_hand) : 0;
 }
 
-describe.skipIf(!databaseConnection)('F089 serialized material consumption (real DB, rolled back)', () => {
+describe('F089 serialized material consumption (real DB, rolled back)', () => {
   it('delivers the picked unit and reverses on unbilled delete', async () => {
     await inTx(async (trx) => {
       await trx('product_inventory_settings')

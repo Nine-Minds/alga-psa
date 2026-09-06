@@ -1,11 +1,9 @@
 /**
- * Opening-balance CSV integration tests against the real local `server` DB.
+ * Opening-balance CSV integration tests against the isolated migrated test DB.
  * Every DB test runs inside a transaction that is ALWAYS rolled back, so the
- * dev database is never mutated.
+ * test database is never mutated.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import fs from 'node:fs';
-import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import {
   applyOpeningBalance,
@@ -13,7 +11,7 @@ import {
   shapeOpeningBalanceRows,
   validateOpeningBalance,
 } from './openingBalanceCsv';
-import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
+import { createInventoryTestTenant, getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
 const databaseConnection = getInventoryTestDatabaseConnection();
 
@@ -26,13 +24,12 @@ let LOCATION_NAME: string;
 let USER: string;
 
 beforeAll(async () => {
-  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
     connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
-  TENANT = (await knex('tenants').select('tenant').first()).tenant;
+  TENANT = await createInventoryTestTenant(knex);
   const svcs = await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).whereRaw("NOT EXISTS (SELECT 1 FROM stock_levels sl WHERE sl.tenant = service_catalog.tenant AND sl.service_id = service_catalog.service_id) AND NOT EXISTS (SELECT 1 FROM stock_units su WHERE su.tenant = service_catalog.tenant AND su.service_id = service_catalog.service_id)").orderBy('service_id').limit(2).select('service_id'); // seed-independent: skip services carrying real stock
   SERVICE = svcs[0].service_id;
   SER_SERVICE = svcs[1].service_id;
@@ -143,7 +140,7 @@ SKU-3,,Main Warehouse,2,SN-1,,
   });
 });
 
-describe.skipIf(!databaseConnection)('opening balance validation and apply (real server DB, rolled back)', () => {
+describe('opening balance validation and apply (isolated migrated DB, rolled back)', () => {
   it('reports unknown location and unknown product errors', async () => {
     await inTx(async (trx) => {
       const a = await prepareCatalog(trx);
