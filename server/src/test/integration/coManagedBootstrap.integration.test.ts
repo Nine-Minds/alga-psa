@@ -1518,6 +1518,7 @@ async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<type
   actions: typeof import('../../../../packages/projects/src/actions/projectActions');
   exports: typeof import('../../../../packages/projects/src/actions/projectTaskExportActions');
   publish: ReturnType<typeof vi.spyOn>;
+  workflow: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   const fixture = await readyForAcceptance();
   const dbModule = await import('@alga-psa/db');
@@ -1525,16 +1526,17 @@ async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<type
   const events = await import('@alga-psa/event-bus/publishers');
   const adminDb = await import('@alga-psa/db/admin');
   const user = await fixture.customer.table('users').where('user_id', fixture.actor.userId).first();
+  const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
   const spies = [
     vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: fixture.actor.tenant }),
     vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db),
-    vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined),
+    workflow,
   ];
   const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
   try {
     const actions = await import('../../../../packages/projects/src/actions/projectActions');
     const exports = await import('../../../../packages/projects/src/actions/projectTaskExportActions');
-    await auth.runWithApiKeyUser(user, () => runWithTenant(fixture.actor.tenant, () => work({ ...fixture, actions, exports, publish })));
+    await auth.runWithApiKeyUser(user, () => runWithTenant(fixture.actor.tenant, () => work({ ...fixture, actions, exports, publish, workflow })));
   } finally { publish.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
 }
 
@@ -1808,5 +1810,88 @@ describe('co-managed project ordering recovery', () => {
     expect(await taskActions.cleanupOrderKeysForStatus(phases[1].phase_id, mapping.project_status_mapping_id)).toMatchObject({ success: true });
     expect((await customer.table('project_tasks').where('task_id', lone.task_id).first()).order_key).toBe('a0');
     expect(await ordering.repairTaskOrderKeys(db, actor.tenant, phases[1].phase_id, mapping.project_status_mapping_id)).toBe(false);
+  }));
+});
+
+describe('co-managed task action lifecycle and publication', () => {
+  it('denies task action mutations before acceptance and after expiry without emitting events', async () => withProjectActionsFixture(async ({ operation, actor, input, publish, workflow }) => {
+    const actions = await import('../../../../packages/projects/src/actions/projectTaskActions');
+    const id = randomUUID();
+    const checklist = { tenant: actor.tenant, item_name: 'Check', description: null, assigned_to: null, completed: false, due_date: null, order_number: 1 };
+    const mutations = [
+      () => actions.updateTaskWithChecklist(id, { task_name: 'Denied' }),
+      () => actions.addTaskToPhase(id, {} as any, []),
+      () => actions.updateTaskStatus(id, id),
+      () => actions.addChecklistItemToTask(id, checklist),
+      () => actions.updateChecklistItem(id, { completed: true }),
+      () => actions.deleteChecklistItem(id),
+      () => actions.deleteTask(id),
+      () => actions.addTicketLinkAction(id, id, id, id),
+      () => actions.addTaskResourceAction(id, actor.userId),
+      () => actions.addTaskResourcesAction(id, [actor.userId]),
+      () => actions.assignTeamToProjectTask(id, id),
+      () => actions.removeTeamFromProjectTask(id),
+      () => actions.removeTaskResourceAction(id),
+      () => actions.deleteTaskTicketLinkAction(id),
+      () => actions.deleteTaskTicketLinksByTicketIdAction(id),
+      () => actions.moveTaskToPhase(id, id),
+      () => actions.duplicateTaskToPhase(id, id),
+      () => actions.reorderTask(id),
+      () => actions.reorderTasksInStatus([{ taskId: id, newWbsCode: '1.1.9' }]),
+      () => actions.createCustomTaskType({} as any),
+      () => actions.addTaskDependency(id, randomUUID(), 'blocks'),
+      () => actions.removeTaskDependency(id),
+      () => actions.updateTaskDependency(id, { notes: 'Denied' }),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+  }));
+
+  it('publishes only committed tasks and checklists, preserves reads during lapse, and resumes edits after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects, publish, workflow }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const actions = await import('../../../../packages/projects/src/actions/projectTaskActions');
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Task action rollout',
+      client_id: operation.customer_client_id, status: status.status_id, description: null, start_date: null, end_date: null, is_inactive: false }) as any;
+    const phase = await projects.addProjectPhase({ project_id: project.project_id, phase_name: 'Discovery', description: null,
+      start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any) as any;
+    const mapping = await customer.table('project_status_mappings').where('project_id', project.project_id).first();
+    const data = { task_name: 'Inventory', task_type_key: 'task', project_status_mapping_id: mapping.project_status_mapping_id } as any;
+    const checklist = { item_name: 'Verify devices', description: null, assigned_to: null, completed: false, due_date: null, order_number: 1 };
+    publish.mockClear(); workflow.mockClear();
+    expect(await actions.addTaskToPhase(phase.phase_id, data, [{ ...checklist, item_name: null } as any]))
+      .toMatchObject({ actionError: expect.any(String) });
+    expect(await customer.table('project_tasks')).toEqual([]);
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+    const publishedSnapshots: number[][] = [];
+    workflow.mockImplementation(async () => { publishedSnapshots.push([
+      (await customer.table('project_tasks')).length, (await customer.table('task_checklist_items')).length,
+    ]); });
+    const task = await actions.addTaskToPhase(phase.phase_id, data, [checklist]) as any;
+    expect(task).toHaveProperty('task_id');
+    expect(publishedSnapshots).toEqual([[1, 1]]);
+    publish.mockClear(); workflow.mockClear();
+    expect(await actions.updateTaskWithChecklist(task.task_id, { task_name: 'Rolled back',
+      checklist_items: [{ ...checklist, item_name: null } as any] })).toMatchObject({ actionError: expect.any(String) });
+    expect((await customer.table('project_tasks').where('task_id', task.task_id).first()).task_name).toBe('Inventory');
+    expect(await customer.table('task_checklist_items')).toHaveLength(1);
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await actions.getTaskById(task.task_id)).toMatchObject({ task_name: 'Inventory' });
+    expect(await actions.getTaskChecklistItems(task.task_id)).toEqual([expect.objectContaining({ item_name: 'Verify devices' })]);
+    expect(await actions.bulkAddTagsToTasks([task.task_id], ['Blocked tag'])).toMatchObject({ updatedIds: [], failed: [expect.objectContaining({ taskId: task.task_id })] });
+    expect(await customer.table('tag_mappings')).toEqual([]);
+    expect(publish).not.toHaveBeenCalled();
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    const namesAtPublication: string[] = [];
+    publish.mockImplementation(async () => { namesAtPublication.push((await customer.table('project_tasks').where('task_id', task.task_id).first()).task_name); });
+    expect(await actions.updateTaskWithChecklist(task.task_id, { task_name: 'Verified', checklist_items: [{ ...checklist, completed: true } as any] }))
+      .toMatchObject({ task_name: 'Verified' });
+    expect(namesAtPublication).toEqual(['Verified']);
+    expect((await customer.table('task_checklist_items').first()).completed).toBe(true);
   }));
 });
