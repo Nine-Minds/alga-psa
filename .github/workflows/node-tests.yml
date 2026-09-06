@@ -47,9 +47,11 @@ jobs:
           cache-dependency-path: |
             package-lock.json
             ee/appliance/status-ui/package-lock.json
+            ee/appliance/host-service/package-lock.json
       - run: npm install -g npm@11
       - run: npm ci
       - run: npm --prefix ee/appliance/status-ui ci
+      - run: npm --prefix ee/appliance/host-service ci
       - uses: ./.github/actions/install-ripgrep
       - uses: azure/setup-helm@v4
         with:

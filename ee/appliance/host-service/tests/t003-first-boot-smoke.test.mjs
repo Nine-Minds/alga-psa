@@ -61,6 +61,26 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
   fs.writeFileSync(path.join(staticUiDir, 'setup', 'index.html'), '<!doctype html><h1>Setup UI</h1>');
   fs.writeFileSync(path.join(staticUiDir, 'assets', 'app.js'), 'console.log("status-ui");');
 
+  // First boot has no support pods. Simulate only this external command so
+  // startup cannot depend on a developer/CI runner's Kubernetes installation.
+  // Authentication, HTTP routing and credential persistence still run in the
+  // actual host-service process below.
+  const binDir = path.join(tmp, 'bin');
+  const kubeCalls = path.join(tmp, 'kube-calls.jsonl');
+  fs.mkdirSync(binDir);
+  fs.writeFileSync(path.join(binDir, 'kubectl'), `#!${process.execPath}
+import fs from 'node:fs';
+const args = process.argv.slice(2);
+fs.appendFileSync(${JSON.stringify(kubeCalls)}, JSON.stringify(args) + '\\n');
+if (args.includes('get') && args.includes('pods') && args.includes('alga-appliance-support')
+    && args.includes('alga.nineminds.com/support-session')) {
+  process.stdout.write(JSON.stringify({ items: [] }));
+} else {
+  process.stderr.write('Unexpected Kubernetes command: ' + JSON.stringify(args));
+  process.exitCode = 1;
+}
+`, { mode: 0o755 });
+
   const consoleResult = await new Promise((resolve) => {
     const child = spawn(process.execPath, [consoleScript], {
       cwd: repoRoot,
@@ -105,6 +125,8 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     env: {
       ...process.env,
       ALGA_APPLIANCE_DISABLE_SETUP_QUEUE: '1',
+      PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
+      ALGA_APPLIANCE_KUBECONFIG: path.join(tmp, 'absent-kubeconfig'),
       ALGA_APPLIANCE_PORT: '18081',
       ALGA_APPLIANCE_TOKEN_FILE: tokenFile,
       ALGA_APPLIANCE_ADMIN_CREDENTIAL_FILE: path.join(tmp, 'admin-ui-credential.json'),
@@ -229,6 +251,13 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     assert.equal(loginOk.statusCode, 200);
     const loginBad = await postJson(`${base}/api/auth/login`, { password: 'nope' });
     assert.equal(loginBad.statusCode, 401);
+    const calls = fs.readFileSync(kubeCalls, 'utf8').trim().split('\n').map(line => JSON.parse(line));
+    assert.ok(calls.length > 0, 'Startup must inspect support pods through the external adapter');
+    for (const args of calls) {
+      assert.deepEqual(args.slice(args.indexOf('get')), [
+        'get', 'pods', '-n', 'alga-appliance-support', '-l', 'alga.nineminds.com/support-session', '-o', 'json', '-o', 'json',
+      ]);
+    }
   } finally {
     server.kill('SIGTERM');
     await serverClosed;

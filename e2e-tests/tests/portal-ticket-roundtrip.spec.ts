@@ -91,27 +91,71 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
     for (const text of [reply, internal, resolution]) await expect(staffPage.getByText(text, { exact: true })).toBeVisible();
   } finally { await staff.close(); }
 
-  await page.goto(`/client-portal/tickets/${ticket.ticket_id}`);
-  await expect(page.getByText(reply, { exact: true })).toBeVisible();
-  await expect(page.getByText(resolution, { exact: true })).toBeVisible();
-  await expect(page.getByText(internal, { exact: true })).toHaveCount(0);
-  await page.reload();
-  await expect(page.getByText(reply, { exact: true })).toBeVisible();
-  await expect(page.getByText(internal, { exact: true })).toHaveCount(0);
+  // Re-authenticate in a fresh browser context to verify the persisted portal
+  // view independently of the session that created the request.
+  const returningPortal = await browser.newContext({ baseURL });
+  try {
+    const portalPage = await returningPortal.newPage();
+    await signInPortal(portalPage, { email: tenant.portal.email, password: credentials.password }, tenant.tenantId);
+    expect(await readSession(returningPortal.request)).toMatchObject({ id: tenant.portal.userId, tenant: tenant.tenantId });
+    await portalPage.goto(`/client-portal/tickets/${ticket.ticket_id}`);
+    for (const text of [reply, resolution]) await expect(portalPage.getByText(text, { exact: true })).toBeVisible();
+    await expect(portalPage.getByText(internal, { exact: true })).toHaveCount(0);
+    await portalPage.reload();
+    await expect(portalPage.getByText(reply, { exact: true })).toBeVisible();
+    await expect(portalPage.getByText(internal, { exact: true })).toHaveCount(0);
 
-  for (const actor of [tenant.siblingPortal, actors.secondary.portal]) {
-    const unrelated = await browser.newContext({ baseURL });
-    try {
-      const unrelatedPage = await unrelated.newPage();
-      await signInPortal(unrelatedPage, { email: actor.email, password: credentials.password }, actor.tenantId);
-      expect(await readSession(unrelated.request)).toMatchObject({ id: actor.userId, tenant: actor.tenantId });
-      await unrelatedPage.goto('/client-portal/tickets');
-      await expect(unrelatedPage.getByText(title, { exact: true })).toHaveCount(0);
-      await unrelatedPage.goto(`/client-portal/tickets/${ticket.ticket_id}`);
-      await expect(unrelatedPage.locator('#ticket-error-message')).toContainText('Ticket not found or access denied');
-      for (const text of [title, description, reply, internal, resolution]) {
-        await expect(unrelatedPage.getByText(text, { exact: true })).toHaveCount(0);
-      }
-    } finally { await unrelated.close(); }
-  }
+    const acknowledgment = `Portal confirms recovery ${actors.runId}`;
+    await portalPage.getByRole('button', { name: 'Add Comment', exact: true }).click();
+    await portalPage.locator('[contenteditable="true"]:visible').fill(acknowledgment);
+    const [commentRequest] = await Promise.all([
+      portalPage.waitForRequest(request => request.method() === 'POST'
+        && Boolean(request.headers()['next-action'])
+        && Boolean(request.postData()?.includes(acknowledgment))),
+      portalPage.getByRole('button', { name: 'Add Comment', exact: true }).click(),
+    ]);
+    await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
+    await portalPage.reload();
+    await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
+    const ticketWhere = { tenant: tenant.tenantId, ticket_id: ticket.ticket_id };
+    const beforeTicket = await database('tickets').where(ticketWhere).first();
+    const beforeComments = await database('comments').where(ticketWhere).orderBy('comment_id');
+    expect(beforeComments.filter(note => note.note?.includes(acknowledgment)))
+      .toEqual([expect.objectContaining({ user_id: tenant.portal.userId, is_internal: false })]);
+
+    for (const actor of [tenant.siblingPortal, actors.secondary.portal]) {
+      const unrelated = await browser.newContext({ baseURL });
+      try {
+        const unrelatedPage = await unrelated.newPage();
+        await signInPortal(unrelatedPage, { email: actor.email, password: credentials.password }, actor.tenantId);
+        expect(await readSession(unrelated.request)).toMatchObject({ id: actor.userId, tenant: actor.tenantId });
+        await unrelatedPage.goto('/client-portal/tickets');
+        await expect(unrelatedPage.getByText(title, { exact: true })).toHaveCount(0);
+        await unrelatedPage.goto(`/client-portal/tickets/${ticket.ticket_id}`);
+        await expect(unrelatedPage.locator('#ticket-error-message')).toContainText('Ticket not found or access denied');
+        for (const text of [title, description, reply, internal, resolution, acknowledgment]) {
+          await expect(unrelatedPage.getByText(text, { exact: true })).toHaveCount(0);
+        }
+
+        // Replay the actual portal comment action under the unrelated client's
+        // own cookies; hiding the ticket in the UI alone does not prove denial.
+        const originalBody = commentRequest.postData()!;
+        const forbiddenBody = originalBody.replace(acknowledgment, `Unauthorized comment ${actor.userId}`);
+        expect(forbiddenBody).not.toBe(originalBody);
+        const result = await unrelated.request.post(commentRequest.url(), {
+          headers: {
+            'next-action': commentRequest.headers()['next-action'],
+            'content-type': commentRequest.headers()['content-type'],
+            origin: new URL(baseURL!).origin,
+          },
+          data: forbiddenBody,
+        });
+        expect(result.status()).toBe(200); // Expected action errors are serialized in RSC.
+        expect(await result.text()).toContain('client-portal:errors.tickets.notFoundOrDenied');
+        expect(await database('tickets').where(ticketWhere).first()).toEqual(beforeTicket);
+        expect(await database('comments').where(ticketWhere).orderBy('comment_id')).toEqual(beforeComments);
+        expect(await database('comments').where({ tenant: actor.tenantId, user_id: actor.userId })).toEqual([]);
+      } finally { await unrelated.close(); }
+    }
+  } finally { await returningPortal.close(); }
 });
