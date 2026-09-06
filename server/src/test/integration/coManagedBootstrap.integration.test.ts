@@ -2272,3 +2272,88 @@ it('admits project status email at send time while retaining previews during pen
     expect(statusEmail.send).toHaveBeenCalledOnce();
   } finally { connection.mockRestore(); }
 }));
+
+describe('co-managed KB article API lifecycle', () => {
+  it('denies every article mutation during pending acceptance and lapse while preserving article and content reads', async () => {
+    const { operation, actor, input } = await readyForAcceptance();
+    const { KbArticleService } = await import('../../lib/api/services/KbArticleService');
+    const service = new KbArticleService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    let id = randomUUID();
+    const data = { title: 'Customer guide', article_type: 'how_to' as const, audience: 'client' as const, content: '# Guide', content_format: 'markdown' as const };
+    const mutations = [
+      () => service.create(data, context),
+      () => service.update(id, { title: 'Denied' }, context),
+      () => service.delete(id, context),
+      () => service.publish(id, context),
+      () => service.archive(id, context),
+      () => service.updateContent(id, { content: 'Denied', format: 'markdown' }, context),
+      () => service.createFromTicket(id, context),
+      () => service.bulkCreate([{}], context),
+      () => service.bulkUpdate([{ id, data: { slug: 'denied' } }], context),
+      () => service.bulkDelete([id], context),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input);
+    const article = await service.create(data, context); id = article.article_id;
+    await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await service.getById(id, context)).toMatchObject({ document_name: 'Customer guide', status: 'draft' });
+    expect(await service.getContent(id, context)).toMatchObject({ content: '# Guide' });
+    expect(await service.list({}, context)).toMatchObject({ data: [expect.objectContaining({ article_id: id })], total: 1 });
+  });
+
+  it('rolls back failed article/document changes, preserves caller transactions, and synchronizes publication visibility after renewal', async () => {
+    const { operation, actor, input, customer } = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, actor, input);
+    const { KbArticleService } = await import('../../lib/api/services/KbArticleService');
+    const { withTransaction } = await import('@alga-psa/db');
+    const service = new KbArticleService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    const data = { title: 'Customer guide', article_type: 'how_to' as const, audience: 'client' as const, content: '# Guide', content_format: 'markdown' as const };
+    await expect(service.create({ ...data, content: '{invalid', content_format: 'blocknote' }, context)).rejects.toThrow('Invalid BlockNote content');
+    await expect(service.create({ ...data, category_id: 'invalid-uuid' }, context)).rejects.toMatchObject({ code: '22P02' });
+    for (const table of ['kb_articles', 'documents', 'document_block_content']) expect(await customer.table(table)).toEqual([]);
+    await expect(withTransaction(db, async trx => {
+      const article = await service.create(data, { ...context, db: trx });
+      expect(article).toMatchObject({ document_name: data.title });
+      throw new Error('Caller cancelled article');
+    })).rejects.toThrow('Caller cancelled article');
+    for (const table of ['kb_articles', 'documents', 'document_block_content']) expect(await customer.table(table)).toEqual([]);
+    const article = await service.create(data, context);
+    const other = await service.create({ ...data, title: 'Other guide' }, context);
+    await expect(service.update(article.article_id, { title: 'Must roll back', slug: other.slug }, context)).rejects.toThrow('already exists');
+    expect(await service.getById(article.article_id, context)).toMatchObject({ document_name: data.title });
+    await expireCoManagedEntitlement(operation.tenant);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    const document = () => customer.table('documents').where('document_id', article.document_id).first();
+    expect((await document()).is_client_visible).toBe(false);
+    expect(await service.publish(article.article_id, context)).toMatchObject({ status: 'published' });
+    expect((await document()).is_client_visible).toBe(true);
+    await service.update(article.article_id, { audience: 'internal' }, context);
+    expect((await document()).is_client_visible).toBe(false);
+    await service.publish(article.article_id, context);
+    expect((await document()).is_client_visible).toBe(false);
+    await service.update(article.article_id, { audience: 'client' }, context);
+    expect((await document()).is_client_visible).toBe(true);
+    await service.archive(article.article_id, context);
+    expect((await document()).is_client_visible).toBe(false);
+    await service.updateContent(article.article_id, { content: '# Renewed', format: 'markdown' }, context);
+    expect(await service.getContent(article.article_id, context)).toMatchObject({ content: '# Renewed' });
+    const ticketStatus = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+    const ticketId = randomUUID();
+    await customer.table('tickets').insert({ tenant: actor.tenant, ticket_id: ticketId, ticket_number: 'KB-1', title: 'Learned from ticket',
+      client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: ticketStatus.status_id,
+      priority_id: priority.priority_id, entered_by: actor.userId, attributes: { description: 'Problem description' } });
+    const fromTicket = await service.createFromTicket(ticketId, context);
+    expect(fromTicket).toMatchObject({ document_name: 'Learned from ticket', audience: 'internal' });
+    expect(await service.getContent(fromTicket.article_id, context)).toMatchObject({ content: expect.stringContaining('Problem description') });
+    for (const id of [article.article_id, other.article_id, fromTicket.article_id]) await service.delete(id, context);
+    for (const table of ['kb_articles', 'documents', 'document_block_content']) expect(await customer.table(table)).toEqual([]);
+  });
+});
