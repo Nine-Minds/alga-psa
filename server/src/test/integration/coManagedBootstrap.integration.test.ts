@@ -84,7 +84,8 @@ beforeAll(async () => {
     '20260906050000_allow_system_seeded_priorities.cjs', '20260906060000_create_co_managed_board_scopes.cjs', '20260906070000_add_co_managed_invitation_delivery.cjs',
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
-    '20260906110000_add_kb_import_batch_identity.cjs']) {
+    '20260906110000_add_kb_import_batch_identity.cjs',
+    '20260906120000_create_co_management_collaboration_policy.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -2633,4 +2634,113 @@ describe('co-managed KB import recovery', () => {
     await expect(actions.getUnfinishedArticleImports(-1)).rejects.toThrow('Invalid import offset');
     expect(await other.customer.table('kb_import_files').first()).toMatchObject({ batch_id: foreignBatchId, content: 'Secret content' });
   }));
+});
+
+async function collaborationPolicyFixture() {
+  const fixture = await readyForAcceptance();
+  const sponsor = tenantDb(db, fixture.operation.tenant);
+  const permission = await fixture.customer.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+  const roleId = randomUUID();
+  await sponsor.table('permissions').insert({ ...permission, tenant: fixture.operation.tenant });
+  await sponsor.table('roles').insert({ tenant: fixture.operation.tenant, role_id: roleId, role_name: 'Policy administrator', msp: true, client: false });
+  await sponsor.table('role_permissions').insert({ tenant: fixture.operation.tenant, role_id: roleId, permission_id: permission.permission_id });
+  await sponsor.table('user_roles').insert({ tenant: fixture.operation.tenant, user_id: fixture.operation.requested_by, role_id: roleId });
+  await acceptCoManagedRelationship(db, fixture.actor, fixture.input);
+  return { ...fixture, sponsor, roleId, permissionId: permission.permission_id,
+    sponsorActor: { tenant: fixture.operation.tenant, userId: fixture.operation.requested_by },
+    target: { customerTenant: fixture.actor.tenant, relationshipId: fixture.operation.relationship_id } };
+}
+
+describe('co-managed collaboration policy administration', () => {
+  it('keeps customer scope customer-owned, validates local resources, and records idempotent revisioned changes', async () => {
+    const { operation, actor, customer, sponsorActor, target } = await collaborationPolicyFixture();
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    const initial = await policy.getCoManagedCollaborationPolicy(db, actor, target);
+    expect(initial).toMatchObject({ revision: 2, visibilityMode: 'board_scope', projects: [], assignments: [],
+      boards: [{ id: operation.customer_board_id, canCollaborate: true }] });
+    await expect(policy.replaceCoManagedCustomerScope(db, sponsorActor, target, initial.revision, initial)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const projectId = randomUUID();
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    await customer.table('projects').insert({ tenant: actor.tenant, project_id: projectId, project_name: 'Shared rollout',
+      client_id: operation.customer_client_id, status: status.status_id, project_number: 'POLICY-1', wbs_code: '1' });
+    const desired = { visibilityMode: 'board_scope' as const, boards: [{ id: operation.customer_board_id, canCollaborate: false }],
+      projects: [{ id: projectId, canCollaborate: true }] };
+    await expect(policy.replaceCoManagedCustomerScope(db, actor, target, 2,
+      { ...desired, boards: [{ id: operation.escalation_board_id, canCollaborate: true }] })).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    expect(await policy.getCoManagedCollaborationPolicy(db, actor, target)).toEqual(initial);
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 2, desired)).toBe(3);
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 2, desired)).toBe(3);
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 3, desired)).toBe(3);
+    const migration = require('../../../migrations/20260906120000_create_co_management_collaboration_policy.cjs');
+    await expect(migration.down(db)).rejects.toThrow('Cannot remove configured');
+    expect(await customer.table('co_management_relationship_events').where('event_type', 'customer_scope_changed')).toEqual([
+      expect.objectContaining({ revision: 3, actor_tenant: actor.tenant, actor_user_id: actor.userId, scope: desired }),
+    ]);
+    await expect(policy.replaceCoManagedCustomerScope(db, actor, target, 2, { ...desired, projects: [] })).rejects.toMatchObject({ code: 'POLICY_CHANGED' });
+    const { withTransaction } = await import('@alga-psa/db');
+    await expect(withTransaction(db, async trx => {
+      await policy.replaceCoManagedCustomerScope(trx, actor, target, 3, { ...desired, projects: [] });
+      throw new Error('Caller cancelled policy');
+    })).rejects.toThrow('Caller cancelled policy');
+    expect(await policy.getCoManagedCollaborationPolicy(db, sponsorActor, target)).toMatchObject({ ...desired, revision: 3 });
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(policy.replaceCoManagedCustomerScope(db, actor, target, 3, { ...desired,
+      boards: [{ id: operation.customer_board_id, canCollaborate: true }] })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await policy.replaceCoManagedCustomerScope(db, actor, target, 3, { visibilityMode: 'escalation_only', boards: [], projects: [] })).toBe(4);
+    expect(await policy.getCoManagedCollaborationPolicy(db, actor, target)).toMatchObject({ revision: 4, boards: [], projects: [] });
+  });
+
+  it('keeps staff assignments in the MSP, rejects foreign and inactive principals, and permits reductions during a pause', async () => {
+    const { operation, actor, customer, sponsor, sponsorActor, target, roleId, permissionId } = await collaborationPolicyFixture();
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    const teamId = randomUUID();
+    await sponsor.table('teams').insert({ tenant: sponsorActor.tenant, team_id: teamId, team_name: 'Service desk', manager_id: sponsorActor.userId });
+    const staff = [{ kind: 'team' as const, principalId: teamId, role: 'viewer' as const },
+      { kind: 'user' as const, principalId: sponsorActor.userId, role: 'technician' as const }];
+    await expect(policy.replaceCoManagedStaffAssignments(db, actor, target, 2, staff)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2,
+      [{ kind: 'user', principalId: actor.userId, role: 'viewer' }])).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    const inactiveId = randomUUID();
+    const homeUser = await sponsor.table('users').where('user_id', sponsorActor.userId).first();
+    await sponsor.table('users').insert({ ...homeUser, user_id: inactiveId, username: inactiveId, email: `${inactiveId}@example.test`, is_inactive: true });
+    await expect(policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2,
+      [{ kind: 'user', principalId: inactiveId, role: 'viewer' }])).rejects.toMatchObject({ code: 'RESOURCE_NOT_FOUND' });
+    expect(await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, staff)).toBe(3);
+    expect(await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [...staff].reverse())).toBe(3);
+    expect(await sponsor.table('co_management_staff_assignments')).toHaveLength(2);
+    expect(await customer.table('co_management_staff_assignments')).toEqual([]);
+    expect(await customer.table('users')).toHaveLength(1);
+    expect(await policy.getCoManagedCollaborationPolicy(db, actor, target)).toMatchObject({ assignments: staff, revision: 3 });
+    await sponsor.table('role_permissions').where({ role_id: roleId, permission_id: permissionId }).del();
+    await expect(policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 3, [])).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await sponsor.table('role_permissions').insert({ tenant: sponsorActor.tenant, role_id: roleId, permission_id: permissionId });
+    await sponsor.table('users').where('user_id', sponsorActor.userId).update({ is_inactive: true });
+    await expect(policy.getCoManagedCollaborationPolicy(db, sponsorActor, target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await sponsor.table('users').where('user_id', sponsorActor.userId).update({ is_inactive: false });
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 3,
+      [{ kind: 'team', principalId: teamId, role: 'technician' }])).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 3,
+      [{ kind: 'user', principalId: sponsorActor.userId, role: 'viewer' }])).toBe(4);
+    expect(await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [])).toBe(5);
+    expect(await sponsor.table('co_management_staff_assignments')).toEqual([]);
+  });
+
+  it('serializes competing policy revisions and rejects other tenants without leaking the policy', async () => {
+    const { actor, target, operation } = await collaborationPolicyFixture();
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    const other = await collaborationPolicyFixture();
+    await expect(policy.getCoManagedCollaborationPolicy(db, other.actor, target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(policy.getCoManagedCollaborationPolicy(db, other.sponsorActor, target)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    const results = await Promise.allSettled([
+      policy.replaceCoManagedCustomerScope(db, actor, target, 2, { visibilityMode: 'board_scope', boards: [], projects: [] }),
+      policy.replaceCoManagedCustomerScope(db, actor, target, 2, { visibilityMode: 'board_scope',
+        boards: [{ id: operation.customer_board_id, canCollaborate: false }], projects: [] }),
+    ]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'POLICY_CHANGED' } });
+    expect((await policy.getCoManagedCollaborationPolicy(db, actor, target)).revision).toBe(3);
+    const migration = require('../../../migrations/20260906120000_create_co_management_collaboration_policy.cjs');
+    await migration.up(db);
+  });
 });

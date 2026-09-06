@@ -31,6 +31,7 @@ export class CoManagedAcceptanceError extends Error {
   }
 }
 
+// LEVERAGE: pattern locked-co-management-rbac — acceptance and policy edits both need live, locked home permissions.
 async function customerAdministrator(db: Knex, actor: CoManagedCustomerActor, lock = false): Promise<boolean> {
   const customer = tenantDb(db, actor.tenant);
   const users = customer.table('users').where({ user_id: actor.userId, user_type: 'internal', is_inactive: false });

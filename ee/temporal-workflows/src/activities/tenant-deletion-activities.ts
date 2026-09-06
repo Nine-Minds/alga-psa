@@ -378,6 +378,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'service_request_definition_versions', 'service_request_definitions',
 
   // === LEVEL 3: Mid-level entities ===
+  'co_management_project_scopes', 'co_management_staff_assignments',
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
   // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so
