@@ -355,7 +355,7 @@
   {
     "id": "F027",
     "description": "Use fast-check to generate tenant-calendar month-end and DST boundary cases with reproducible minimized failures and DB-backed hydration checks.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP5",
     "priority": "P1",
     "prdRefs": [

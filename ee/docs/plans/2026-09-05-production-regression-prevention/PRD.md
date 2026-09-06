@@ -2,8 +2,8 @@
 
 - Slug: `production-regression-prevention`
 - Date: 2026-09-05
-- Status: Ready for implementation planning; no implementation shipped
-- Baseline: `origin/main` at `457654d6f0`
+- Status: Implementation in progress in draft PR #3343; see tracking files for verified scope
+- Audit baseline: `origin/main` at `457654d6f0`; implementation rebased onto `96a8f56492`
 - Scope authority: user's request to implement the preceding testing-audit recommendations
 - Tracking: [features.json](features.json), [tests.json](tests.json), [SCRATCHPAD.md](SCRATCHPAD.md)
 

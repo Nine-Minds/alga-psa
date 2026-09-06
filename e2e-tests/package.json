@@ -1,0 +1,17 @@
+{
+  "name": "alga-production-e2e-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Customer journeys against an already running production Alga build",
+  "scripts": {
+    "test": "playwright test",
+    "test:list": "playwright test --list",
+    "test:harness": "node harness/check-retry-policy.mjs"
+  },
+  "engines": {
+    "node": ">=22 <27"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.57.0"
+  }
+}
