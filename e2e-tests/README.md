@@ -45,11 +45,16 @@ persistence after reload, a rejected password, and unauthenticated access from
 a separate browser context. Tenant specs cover administrator and technician
 sign-in, saved client details, and cross-tenant client reads. Portal specs cover
 separate client identities, persistence, tenant-specific sign-in, and refusal
-to enter MSP pages. Customer workflow mutations, client-to-client data isolation,
-and EE production execution remain unfinished plan items.
+to enter MSP pages. The portal ticket round trip submits a request, checks its
+persisted client/contact/default assignment, adds public and internal technician
+comments, and verifies the public reply after reload. Separate client and tenant
+sessions must be denied access to the ticket. New journeys require successful
+production execution before their plan items can be marked complete.
 
 The worker fixture creates two tenants, each with an administrator, technician,
-and two portal users linked to different clients. It uses the migration's
+and two portal users linked to different clients. Each tenant has a support
+board, open/closed statuses, and a normal priority; its technician is the board's
+default assignee. It uses the migration's
 canonical role grants and copies the disposable installation's initialized
 password hash. Every browser still submits the real sign-in form with the
 installation password. Fixture creation is transactional; an error rolls back

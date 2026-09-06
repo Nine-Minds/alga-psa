@@ -21,8 +21,17 @@ function writeFixture(mode) {
     test('browser outcome', async ({ page }, testInfo) => {
       ${mode === 'skipped' ? "test.skip(true, 'deliberate skipped case');" : ''}
       ${mode === 'expected-failure' ? 'test.fail();' : ''}
-      await page.setContent('<h1>Browser policy probe</h1>');
+      // A fast about:blank/setContent test can finish before Linux Chromium
+      // emits a video frame. Navigate and require a rendered frame before
+      // testing retention; the intentional failure remains a separate step.
+      await page.goto('data:text/html,<h1>Browser policy probe</h1>');
       await expect(page.getByRole('heading')).toHaveText('Browser policy probe');
+      // Xvfb's first surface can appear after DOM readiness. Poll the surface
+      // itself instead of sleeping or accepting a retry-only passing test.
+      await expect(async () => {
+        expect((await page.screenshot()).length, 'probe must render a frame').toBeGreaterThan(0);
+      }).toPass({ timeout: 10_000, intervals: [100, 250, 500] });
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       expect(${mode === 'flaky' ? 'testInfo.retry' : mode === 'expected-failure' ? '0' : '1'}, 'deliberate first-attempt failure').toBe(1);
     });
   `);

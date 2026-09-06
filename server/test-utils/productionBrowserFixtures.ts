@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { getDefaultRoles } from '../../server/migrations/utils/permissions/roleGrants.cjs';
-import { reconcileAllTenants } from '../../server/migrations/utils/permissions/reconcileTenants.cjs';
+import { getDefaultRoles } from '../migrations/utils/permissions/roleGrants.cjs';
+import { reconcileAllTenants } from '../migrations/utils/permissions/reconcileTenants.cjs';
 
 export interface BrowserActor {
   userId: string;
@@ -21,6 +21,7 @@ export interface BrowserTenant {
   portal: BrowserActor;
   siblingPortal: BrowserActor;
   clients: { primary: { id: string; name: string }; sibling: { id: string; name: string } };
+  ticketing: { boardId: string; boardName: string; openStatusId: string; closedStatusId: string; priorityId: string; priorityName: string };
 }
 
 export interface BrowserActors {
@@ -97,12 +98,26 @@ export async function createProductionBrowserActors(
         await trx('user_roles').insert({ tenant: tenantId, user_id: userId, role_id: roleId });
         return { userId, tenantId, email, role, userType, contactId, clientId };
       }
-      created.push({ tenantId, name, clients,
+      const users = {
         admin: await actor('admin', 'msp:Admin'),
         technician: await actor('technician', 'msp:Technician'),
         portal: await actor('portal', 'client:User', clients.primary.id),
         siblingPortal: await actor('sibling-portal', 'client:User', clients.sibling.id),
-      });
+      };
+      const ticketing = { boardId: randomUUID(), boardName: `${name} support`,
+        openStatusId: randomUUID(), closedStatusId: randomUUID(), priorityId: randomUUID(), priorityName: 'Normal' };
+      await trx('boards').insert({ tenant: tenantId, board_id: ticketing.boardId, board_name: ticketing.boardName,
+        is_default: true, is_inactive: false, display_order: 1, priority_type: 'custom', category_type: 'custom',
+        default_assigned_to: users.technician.userId });
+      await trx('statuses').insert([
+        { tenant: tenantId, board_id: ticketing.boardId, status_id: ticketing.openStatusId, name: 'Open',
+          status_type: 'ticket', is_default: true, is_closed: false, order_number: 1, created_by: users.admin.userId },
+        { tenant: tenantId, board_id: ticketing.boardId, status_id: ticketing.closedStatusId, name: 'Closed',
+          status_type: 'ticket', is_default: false, is_closed: true, order_number: 2, created_by: users.admin.userId },
+      ]);
+      await trx('priorities').insert({ tenant: tenantId, priority_id: ticketing.priorityId,
+        priority_name: ticketing.priorityName, order_number: 1, color: '#808080', created_by: users.admin.userId });
+      created.push({ tenantId, name, clients, ticketing, ...users });
     }
     return { runId, primary: created[0], secondary: created[1] };
   });

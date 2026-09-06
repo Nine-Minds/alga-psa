@@ -1,6 +1,6 @@
 import { test as base, expect, type APIRequestContext, type Page } from '@playwright/test';
 import knex, { type Knex } from 'knex';
-import { createProductionBrowserActors, type BrowserActors } from './database';
+import { createProductionBrowserActors, type BrowserActors } from '../../server/test-utils/productionBrowserFixtures';
 import { buildTenantPortalSlug } from '../../shared/utils/tenantSlug';
 
 export interface Credentials {

@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
-import { createProductionBrowserActors } from '../../../../e2e-tests/fixtures/database';
+import { createProductionBrowserActors } from '../../../test-utils/productionBrowserFixtures';
 
 let db: Knex;
 let trx: Knex.Transaction;
@@ -54,6 +54,12 @@ describe('production browser actor fixtures', () => {
       expect(await grants(tenant.technician.userId)).toHaveLength(0);
       expect(tenant.portal.clientId).not.toBe(tenant.siblingPortal.clientId);
       expect(await trx('tenant_companies').where({ tenant: tenant.tenantId, is_default: true })).toHaveLength(1);
+      expect(await trx('boards').where({ tenant: tenant.tenantId, board_id: tenant.ticketing.boardId }).first())
+        .toMatchObject({ is_default: true, is_inactive: false, default_assigned_to: tenant.technician.userId });
+      expect(await trx('statuses').where({ tenant: tenant.tenantId, board_id: tenant.ticketing.boardId, is_default: true }))
+        .toEqual([expect.objectContaining({ status_id: tenant.ticketing.openStatusId, is_closed: false })]);
+      expect(await trx('priorities').where({ tenant: tenant.tenantId, priority_id: tenant.ticketing.priorityId }).first())
+        .toMatchObject({ priority_name: 'Normal' });
     }
     expect(new Set(ids).size).toBe(8);
   });
