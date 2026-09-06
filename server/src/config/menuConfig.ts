@@ -137,6 +137,10 @@ export const navigationSections: NavigationSection[] = [
         href: '/msp/clients'
       },
       {
+        name: 'Co-managed IT', translationKey: 'nav.coManaged', icon: Users,
+        href: '/msp/co-managed', requiredPermission: 'account_management:read',
+      },
+      {
         name: 'Opportunities',
         translationKey: 'nav.opportunities',
         icon: Target,

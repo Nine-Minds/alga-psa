@@ -357,5 +357,31 @@
   "errors": {
     "notSignedIn": "Unauthorized. Sign in to manage licensing.",
     "accountManagementRead": "Permission denied: account_management read required"
+  },
+  "coManaged": {
+    "title": "Co-managed IT",
+    "description": "Manage the technician seats available to your customer workspaces.",
+    "capacity": "Purchased seats",
+    "allocated": "Allocated to customers",
+    "available": "Available seats",
+    "seatPool": "Customer technician seats",
+    "seatDescription": "Allocate seats from this shared pool. Requesters are free, and your MSP technicians do not use customer seats.",
+    "quantity": "Total seats in your pool",
+    "reviewPurchase": "Review purchase",
+    "resumePurchase": "Resume purchase",
+    "confirmTitle": "Review customer seat purchase",
+    "monthlyTotal": "{{count}} seats · {{amount}} per month",
+    "dueNow": "Estimated amount due now: {{amount}}",
+    "confirmPurchase": "Confirm purchase",
+    "checkoutTitle": "Complete seat purchase",
+    "manageLicense": "Manage your self-hosted license",
+    "proRequired": "A Pro PSA subscription is required to sponsor customer workspaces.",
+    "loading": "Loading customer seat capacity…",
+    "loadError": "Could not load customer seat capacity. Please try again.",
+    "purchaseError": "Could not complete the seat purchase. You can resume it safely.",
+    "checkoutExpired": "This checkout expired. Start a new purchase to continue.",
+    "grace": "Renew your license or resolve the capacity shortfall before {{date}} to keep customer workspaces writable.",
+    "readOnly": "The grace period ended on {{date}}. Restore licensed capacity to resume customer workspace changes.",
+    "cancelPool": "This cancels your co-managed seat subscription. Release all allocated seats before confirming."
   }
 }

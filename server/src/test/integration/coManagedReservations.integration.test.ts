@@ -6,6 +6,7 @@ import { getSecret } from '../../lib/utils/getSecret';
 import { reserveCoManagedWorkspace } from '../../../../packages/licensing/src/lib/co-managed-reservation';
 import { getCoManagedEntitlementState, reconcileHostedCoManagedEntitlement, reconcileSelfHostCoManagedEntitlement, recordSelfHostCoManagedRevocation } from '../../../../packages/licensing/src/lib/co-managed-entitlements';
 import { upsertLicenseState } from '../../../../packages/licensing/src/lib/license-state';
+import { runCoManagedPurchase } from '../../../../packages/licensing/src/lib/co-managed-purchases';
 import { tenantDb } from '@alga-psa/db';
 
 const fixtureKeys = vi.hoisted(() => ({ fixture: '' }));
@@ -16,6 +17,7 @@ const require = createRequire(import.meta.url);
 const migration = require('../../../migrations/20260906010000_create_co_management_foundation.cjs');
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
 const sourceVersionMigration = require('../../../migrations/20260906020000_add_co_managed_entitlement_source_version.cjs');
+const purchaseMigration = require('../../../migrations/20260906030000_create_co_managed_purchase_operations.cjs');
 
 // Never bootstrap the running app or another suite's database. The fixture uses
 // the existing tenant/client key shapes; full-install migration coverage is separate.
@@ -61,6 +63,8 @@ beforeAll(async () => {
   await migration.down(db);
   await migration.up(db);
   await sourceVersionMigration.up(db);
+  await purchaseMigration.up(db);
+  await purchaseMigration.up(db);
 }, 60_000);
 
 afterAll(async () => {
@@ -364,5 +368,69 @@ describe('co-managed entitlement reconciliation', () => {
     await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 6, now - 1));
     await recordSelfHostCoManagedRevocation(db, token);
     expect(await getCoManagedEntitlementState(db, sponsor)).toMatchObject({ capacity: 6, canGrow: true, graceEndsAt: null });
+  });
+});
+
+describe('co-managed purchase persistence', () => {
+  it('deduplicates concurrent purchase submissions', async () => {
+    const sponsor = await sponsorFixture();
+    const input = { sponsorTenant: sponsor.sponsorTenant, quantity: 6, operationId: randomUUID() };
+    const provider = vi.fn(async () => ({ kind: 'updated' as const, subscriptionId: `subscription-${sponsor.sponsorTenant}` }));
+    const results = await Promise.all([runCoManagedPurchase(db, input, provider), runCoManagedPurchase(db, input, provider)]);
+    expect(results[0]).toEqual(results[1]);
+    expect(provider).toHaveBeenCalledTimes(1);
+    // The provider's mutation response does not itself grant unverified growth.
+    expect((await getCoManagedEntitlementState(db, sponsor.sponsorTenant)).capacity).toBe(4);
+  });
+
+  it('preserves intent after a lost provider response and blocks allocation growth until recovery', async () => {
+    const sponsor = await sponsorFixture();
+    const input = { sponsorTenant: sponsor.sponsorTenant, quantity: 2, operationId: randomUUID() };
+    await expect(runCoManagedPurchase(db, input, async () => { throw new Error('Response lost'); })).rejects.toThrow('Response lost');
+    await expect(reserveCoManagedWorkspace(db, sponsor)).rejects.toMatchObject({ code: 'CAPACITY_UNAVAILABLE' });
+    const recovered = await runCoManagedPurchase(db, input, async (op) => {
+      expect(op).toMatchObject({ operation_id: input.operationId, quantity: 2, state: 'preparing' });
+      return { kind: 'updated', subscriptionId: `subscription-${sponsor.sponsorTenant}` };
+    });
+    expect(recovered.kind).toBe('updated');
+    expect((await getCoManagedEntitlementState(db, sponsor.sponsorTenant)).capacity).toBe(2);
+    await expect(reserveCoManagedWorkspace(db, sponsor)).resolves.toMatchObject({ seats: 2 });
+  });
+
+  it('refuses a reduction below allocated seats without leaving a stuck operation', async () => {
+    const sponsor = await sponsorFixture();
+    await reserveCoManagedWorkspace(db, sponsor);
+    const input = { sponsorTenant: sponsor.sponsorTenant, quantity: 1, operationId: randomUUID() };
+    const provider = vi.fn();
+    await expect(runCoManagedPurchase(db, input, provider)).rejects.toMatchObject({ code: 'ALLOCATED_CAPACITY_REQUIRED' });
+    expect(provider).not.toHaveBeenCalled();
+    expect(await tenantDb(db, sponsor.sponsorTenant).table('co_managed_purchase_operations')).toHaveLength(0);
+  });
+
+  it('allows one pending checkout and preserves the original quantity on retries', async () => {
+    const sponsor = await sponsorFixture();
+    const input = { sponsorTenant: sponsor.sponsorTenant, quantity: 5, operationId: randomUUID() };
+    await runCoManagedPurchase(db, input, async () => ({ kind: 'checkout', sessionId: 'session', clientSecret: 'ephemeral' }));
+    await expect(runCoManagedPurchase(db, { ...input, quantity: 6 }, vi.fn())).rejects.toMatchObject({ code: 'OPERATION_CONFLICT' });
+    await expect(runCoManagedPurchase(db, { ...input, operationId: randomUUID() }, vi.fn())).rejects.toMatchObject({ code: 'PURCHASE_IN_PROGRESS' });
+    const rows = await tenantDb(db, sponsor.sponsorTenant).table('co_managed_purchase_operations');
+    expect(rows).toHaveLength(1);
+    expect(JSON.stringify(rows)).not.toContain('ephemeral');
+    await runCoManagedPurchase(db, input, async () => ({ kind: 'expired' }));
+    await expect(runCoManagedPurchase(db, { ...input, operationId: randomUUID() }, async () => ({ kind: 'updated', subscriptionId: null })))
+      .resolves.toMatchObject({ kind: 'updated' });
+  });
+
+  it('isolates identical operation IDs between sponsors and excludes customer products', async () => {
+    const one = await sponsorFixture();
+    const two = await sponsorFixture();
+    const customer = await sponsorFixture(2, 'co_managed');
+    const operationId = randomUUID();
+    const provider = vi.fn(async () => ({ kind: 'updated' as const, subscriptionId: null }));
+    await runCoManagedPurchase(db, { sponsorTenant: one.sponsorTenant, quantity: 2, operationId }, provider);
+    await runCoManagedPurchase(db, { sponsorTenant: two.sponsorTenant, quantity: 2, operationId }, provider);
+    await expect(runCoManagedPurchase(db, { sponsorTenant: customer.sponsorTenant, quantity: 2, operationId }, provider))
+      .rejects.toMatchObject({ code: 'SPONSOR_NOT_ELIGIBLE' });
+    expect(provider).toHaveBeenCalledTimes(2);
   });
 });

@@ -51,6 +51,18 @@ vi.mock('../../../lib/actions/licenseManagementActions', () => ({
 }));
 
 describe('SidebarWithFeatureFlags product shell composition', () => {
+  it.each([false, true])('shows co-managed navigation only after the release flag resolves enabled=%s', async (enabled) => {
+    useFeatureFlag.mockImplementation((key: string) => key === 'release-v1-6-feature'
+      ? { enabled, loading: false, error: null } : { enabled: true, loading: false, error: null });
+    useTier.mockReturnValue({ hasFeature: () => true, isPro: true });
+    getCurrentUserPermissions.mockResolvedValue(['account_management:read']);
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+    await waitFor(() => {
+      const props = sidebarPropsSpy.mock.calls.at(-1)?.[0];
+      expect(Boolean(props?.menuSections.flatMap((section: NavigationSection) => section.items).some((item: { href?: string }) => item.href === '/msp/co-managed'))).toBe(enabled);
+    });
+  });
+
   beforeEach(() => {
     vi.resetAllMocks();
     useFeatureFlag.mockReturnValue(true);

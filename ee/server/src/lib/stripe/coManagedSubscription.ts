@@ -22,6 +22,23 @@ function billingPeriodEnd(subscription: Stripe.Subscription): number {
   return Math.min(...subscription.items.data.map((item) => item.current_period_end * 1000));
 }
 
+export function assertCoManagedPrice(price: Stripe.Price, priceId: string): void {
+  if (!priceId || price.id !== priceId || price.currency !== 'usd' ||
+      price.unit_amount !== CO_MANAGED_MONTHLY_SEAT_CENTS || price.recurring?.interval !== 'month' ||
+      price.recurring.interval_count !== 1 || price.recurring.usage_type !== 'licensed') {
+    throw new Error('Co-managed seats require the configured USD monthly licensed price');
+  }
+}
+
+export function currentProSubscriptionExpiry(subscriptions: Stripe.Subscription[], customer: string,
+  proPriceIds: string[], coManagedPriceId: string, now = new Date()): Date | null {
+  const base = subscriptions.filter((candidate) =>
+    customerId(candidate) === customer && !isCoManagedSubscription(candidate, coManagedPriceId) && !candidate.metadata?.addon_key &&
+    ['active', 'trialing'].includes(candidate.status) &&
+    candidate.items.data.some((item) => proPriceIds.includes(item.price.id)) && billingPeriodEnd(candidate) > now.getTime());
+  return base.length ? new Date(Math.max(...base.map(billingPeriodEnd))) : null;
+}
+
 /** Converts live Stripe data to capacity after validating its owner and SKU.
  * The caller obtains this data with the platform Stripe credential, never from
  * browser fields or a webhook's potentially stale embedded subscription. */
@@ -44,28 +61,19 @@ export function coManagedSnapshotFromStripe(input: {
   }
   const item = subscription.items.data[0];
   const price = item.price;
-  if (price.id !== input.coManagedPriceId || price.currency !== 'usd' ||
-      price.unit_amount !== CO_MANAGED_MONTHLY_SEAT_CENTS || price.recurring?.interval !== 'month' ||
-      price.recurring.interval_count !== 1 || price.recurring.usage_type !== 'licensed' ||
-      !Number.isSafeInteger(item.quantity) || (item.quantity ?? 0) < 1) {
+  assertCoManagedPrice(price, input.coManagedPriceId);
+  if (!Number.isSafeInteger(item.quantity) || (item.quantity ?? 0) < 1) {
     throw new Error('Co-managed seats require the configured USD monthly licensed price');
   }
-  const base = input.baseSubscriptions.filter((candidate) =>
-    customerId(candidate) === input.customerId &&
-    !isCoManagedSubscription(candidate, input.coManagedPriceId) && !candidate.metadata?.addon_key &&
-    ['active', 'trialing'].includes(candidate.status) &&
-    candidate.items.data.some((baseItem) => input.proPriceIds.includes(baseItem.price.id)) &&
-    billingPeriodEnd(candidate) > now.getTime(),
-  );
-  const baseExpires = Math.max(now.getTime(), ...base.map(billingPeriodEnd));
+  const baseExpiry = currentProSubscriptionExpiry(input.baseSubscriptions, input.customerId, input.proPriceIds, input.coManagedPriceId, now);
   const latestInvoice = typeof subscription.latest_invoice === 'object' ? subscription.latest_invoice : null;
   const paid = latestInvoice && !('deleted' in latestInvoice) && latestInvoice.status === 'paid';
-  const active = subscription.status === 'active' && Boolean(paid) && base.length > 0;
+  const active = subscription.status === 'active' && Boolean(paid) && baseExpiry !== null;
   const periodEnd = billingPeriodEnd(subscription);
   if (!Number.isFinite(periodEnd)) throw new Error('Co-managed subscription has no valid billing period');
   return {
     capacity: item.quantity!, active,
-    validUntil: new Date(Math.min(periodEnd, baseExpires)),
+    validUntil: new Date(Math.min(periodEnd, baseExpiry?.getTime() ?? now.getTime())),
     ...(subscription.ended_at ? { lapseSince: new Date(subscription.ended_at * 1000) } : {}),
   };
 }

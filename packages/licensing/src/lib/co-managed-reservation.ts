@@ -73,6 +73,12 @@ export async function reserveCoManagedWorkspace(
         (entitlement.source === 'hosted' && tenant.plan !== 'pro')) {
       throw new CoManagedReservationError('SPONSOR_NOT_ELIGIBLE');
     }
+    // A payment provider may have applied a reduction whose response was lost.
+    // Preserve existing reservations, but do not grow until that operation is
+    // reconciled or its checkout is known to have expired.
+    if (await sponsor.table('co_managed_purchase_operations').whereIn('state', ['preparing', 'checkout']).first()) {
+      throw new CoManagedReservationError('CAPACITY_UNAVAILABLE');
+    }
     const client = await sponsor.table('clients').where('client_id', input.clientId).first();
     if (!client) throw new CoManagedReservationError('CLIENT_NOT_FOUND');
 
