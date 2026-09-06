@@ -431,6 +431,12 @@ Three tiers, so most failure modes cost nothing to support:
 
 ### Scenarios
 
+Xero's `select-organisation` action takes `xeroTenantId` for an already seeded
+organisation and places it first in `/connections`, matching Alga's supported
+default-connection selection. It retains the other organisations and their
+records; selecting an unknown organisation fails without changing the order.
+This control models the connection response, not a provider consent screen.
+
 Declarative YAML that seeds, acts, arms, and advances the clock by registry
 name — identical behavior from CI setup code, the CLI, and the console's run
 button. See [suite/scenarios/](suite/scenarios/) for examples:

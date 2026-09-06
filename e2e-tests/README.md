@@ -161,6 +161,16 @@ These three EE journeys and the CE availability assertion have passed production
 execution; F032 records that completed scope. Provider parity and release
 promotion are tracked separately and remain required for broader readiness.
 
+The QBO and Xero specs each drive real OAuth, service mapping and invoice
+export through the UI. They inject a failed export, expire provider access
+tokens, and recover with one invoice in the intended company/organisation.
+QBO also detects an external invoice-number edit through CDC and re-exports
+with the current SyncToken. Xero's supported live context is the first returned
+connection: the `select-organisation` emulator action controls that ordering
+before OAuth, and the journey verifies Alga displays and persists that context.
+This is not a separate Alga organisation picker or proof of live-provider OAuth
+parity. Both specs collect an explicit enterprise-only refusal check in CE.
+
 ## Diagnose failures
 
 Reports are written to `playwright-report/` and `test-results/`. Traces,

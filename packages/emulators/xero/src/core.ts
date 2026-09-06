@@ -186,6 +186,14 @@ export class XeroEmulatorCore implements EmulatorCore {
     return [...this.organisations];
   }
 
+  /** Alga's supported live context is the first returned connection. */
+  selectOrganisation(xeroTenantId: string): XeroOrganisation {
+    this.org(xeroTenantId);
+    const selected = this.organisations.find(org => org.tenantId === xeroTenantId)!;
+    this.organisations = [selected, ...this.organisations.filter(org => org !== selected)];
+    return selected;
+  }
+
   org(xeroTenantId: string): OrgData {
     const data = this.orgData.get(xeroTenantId);
     if (!data) {

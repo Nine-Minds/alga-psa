@@ -127,7 +127,16 @@ describe('xero emulator', { shuffle: false }, () => {
       expect(connection.tenantId).toBeTruthy();
     }
     expect(connections.map((c) => c.tenantName)).toContain('Second Org Ltd');
-    tenantId = connections[0].tenantId;
+    const selected = await controlPost('/control/xero/actions/select-organisation', { xeroTenantId: seeded.result.tenantId });
+    expect(selected.ok).toBe(true);
+    const readConnections = async () => (await fetch(`${base}/connections`, {
+      headers: { authorization: `Bearer ${accessToken}` },
+    })).json();
+    const reordered = await readConnections();
+    expect(reordered).toEqual([connections[1], connections[0]]);
+    expect((await controlPost('/control/xero/actions/select-organisation', { xeroTenantId: 'unconnected' })).ok).toBe(false);
+    expect(await readConnections()).toEqual(reordered);
+    tenantId = reordered[0].tenantId;
   });
 
   it('serves the read-only settings collections', async () => {

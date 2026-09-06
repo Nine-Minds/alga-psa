@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Knex } from 'knex';
-import { createTestDbConnection } from '../../../../../../server/test-utils/dbConfig';
+import { createWorkspaceTestDbConnection } from '../../../../../db/test-utils/workspaceConnection';
 import { v4 as uuidv4 } from 'uuid';
 
 import { buildDeferredRevenueReport } from './compose';
@@ -449,7 +449,7 @@ function clientByName(section: CurrencySection, name: string): ClientRollforward
 
 describe('deferred revenue report — database-backed integration', () => {
   it('rolls credits and hours forward across two months with the tie-out and carry invariants', async () => {
-    const db = await createTestDbConnection({ recreate: false });
+    const db = createWorkspaceTestDbConnection();
 
     try {
       const trx = await db.transaction();
@@ -535,7 +535,7 @@ describe('deferred revenue report — database-backed integration', () => {
   });
 
   it('reconstructs month-M detail for a credit issued in M-1 and fully applied in M+1 (fix round 3)', async () => {
-    const db = await createTestDbConnection({ recreate: false });
+    const db = createWorkspaceTestDbConnection();
 
     try {
       const trx = await db.transaction();
@@ -652,7 +652,7 @@ describe('deferred revenue report — database-backed integration', () => {
   });
 
   it('restores a credit reversed by a FinancialService-shaped credit_adjustment with only related_transaction_id (fix round 3)', async () => {
-    const db = await createTestDbConnection({ recreate: false });
+    const db = createWorkspaceTestDbConnection();
 
     try {
       const trx = await db.transaction();

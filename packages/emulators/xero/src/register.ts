@@ -3,6 +3,13 @@ import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { XeroEmulatorCore } from './core';
 
 export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
+  reg.action({
+    name: 'select-organisation',
+    description: 'Place a connected organisation first in /connections, selecting Alga\'s supported default live context',
+    params: z.object({ xeroTenantId: z.string().min(1) }),
+    run: ({ xeroTenantId }) => core.selectOrganisation(xeroTenantId),
+  });
+
   reg.seeder({
     name: 'organisation',
     description: 'Connect an additional Xero organisation (a second tenant in /connections)',

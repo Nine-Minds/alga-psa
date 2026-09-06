@@ -7,7 +7,7 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { createTestDbConnection } from '../../../server/test-utils/dbConfig';
+import { createWorkspaceTestDbConnection } from '../../db/test-utils/workspaceConnection';
 
 let mockedTenant: string | null = null;
 let mockedKnex: Knex.Transaction | null = null;
@@ -74,7 +74,7 @@ let SERVICE_B: string;
 let TICKET: string;
 
 beforeAll(async () => {
-  knex = await createTestDbConnection();
+  knex = createWorkspaceTestDbConnection();
 
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
   const ticket = await knex('tickets')
