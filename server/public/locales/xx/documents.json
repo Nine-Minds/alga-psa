@@ -130,6 +130,8 @@
     "quantityHours": "11111",
     "breakdown": "11111",
     "detail": "11111",
-    "incompleteDetail": "11111"
+    "incompleteDetail": "11111",
+    "detailPartial": "⟦Ȯƞŀẏ ȧṽȧīŀȧƀŀḗ ƀīŀŀḗḓ-ŧīḿḗ ḗƞŧřīḗş ȧřḗ īƞƈŀŭḓḗḓ īƞ ŧħīş ḓḗŧȧīŀ.⟧",
+    "detailUnavailable": "⟦Ɓīŀŀḗḓ-ŧīḿḗ ḗƞŧřẏ ḓḗŧȧīŀ īş ŭƞȧṽȧīŀȧƀŀḗ ƒȯř ŧħīş īƞṽȯīƈḗ.⟧"
   }
 }

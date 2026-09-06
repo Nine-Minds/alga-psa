@@ -1412,6 +1412,14 @@
       "modern-invoice-complete": {
         "label": "Modello fattura moderno",
         "description": "Layout completo con intestazione, info fatturazione, tabella voci e piè di pagina."
+      },
+      "billed-time-entries": {
+        "label": "Dettaglio delle registrazioni di tempo fatturato",
+        "description": "Aggiungere una tabella informativa con date, attività, ore, tariffe e importi."
+      },
+      "billed-time-by-ticket": {
+        "label": "Dettaglio del tempo fatturato per ticket",
+        "description": "Ripetere un’intestazione e la relativa tabella delle registrazioni per ogni ticket o attività."
       }
     },
     "schema": {

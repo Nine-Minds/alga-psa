@@ -130,6 +130,8 @@
     "quantityHours": "Qtd. / Horas",
     "breakdown": "Contacte o seu prestador para obter uma discriminação do tempo faturado.",
     "detail": "Detalhes do tempo faturado — incluídos nas cobranças acima",
-    "incompleteDetail": "Os detalhes do tempo faturado podem estar incompletos."
+    "incompleteDetail": "Os detalhes do tempo faturado podem estar incompletos.",
+    "detailPartial": "Estes detalhes incluem apenas os registros de tempo faturado disponíveis.",
+    "detailUnavailable": "Os detalhes dos registros de tempo faturado não estão disponíveis para esta fatura."
   }
 }

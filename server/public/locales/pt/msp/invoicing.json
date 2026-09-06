@@ -1412,6 +1412,14 @@
       "modern-invoice-complete": {
         "label": "Modelo de fatura moderno",
         "description": "Layout completo com Cabeçalho, Informações de Faturamento, Tabela de Itens e Rodapé."
+      },
+      "billed-time-entries": {
+        "label": "Detalhes dos registros de tempo faturado",
+        "description": "Adicionar uma tabela informativa com datas, itens de trabalho, horas, taxas e valores."
+      },
+      "billed-time-by-ticket": {
+        "label": "Detalhes do tempo faturado por chamado",
+        "description": "Repetir um cabeçalho e a tabela de registros correspondente para cada chamado ou tarefa."
       }
     },
     "schema": {

@@ -130,6 +130,8 @@
     "quantityHours": "Aantal / Uren",
     "breakdown": "Neem contact op met uw dienstverlener voor een specificatie van de gefactureerde tijd.",
     "detail": "Tijdspecificatie — inbegrepen in bovenstaande kosten",
-    "incompleteDetail": "De tijdspecificatie is mogelijk onvolledig."
+    "incompleteDetail": "De tijdspecificatie is mogelijk onvolledig.",
+    "detailPartial": "Deze specificatie bevat alleen beschikbare gefactureerde tijdregistraties.",
+    "detailUnavailable": "De specificatie van gefactureerde tijdregistraties is niet beschikbaar voor deze factuur."
   }
 }

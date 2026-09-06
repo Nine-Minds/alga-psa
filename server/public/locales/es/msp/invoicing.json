@@ -1412,6 +1412,14 @@
       "modern-invoice-complete": {
         "label": "Plantilla de factura moderna",
         "description": "Diseño completo con encabezado, información de facturación, tabla de elementos y pie."
+      },
+      "billed-time-entries": {
+        "label": "Detalle de las entradas de tiempo facturado",
+        "description": "Añadir una tabla informativa con fechas, elementos de trabajo, horas, tarifas e importes."
+      },
+      "billed-time-by-ticket": {
+        "label": "Detalle del tiempo facturado por ticket",
+        "description": "Repetir un encabezado y la tabla de entradas correspondiente para cada ticket o tarea."
       }
     },
     "schema": {
