@@ -35,3 +35,5 @@ export {
   logAuditEvent,
   type AuditEventInput,
 } from './resend-welcome-email-activities';
+
+export * from './co-managed-provisioning-activities';

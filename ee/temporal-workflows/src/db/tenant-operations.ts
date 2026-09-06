@@ -13,6 +13,7 @@ import { getSecret } from '@alga-psa/core/secrets';
 import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
 import { normalizeProductCode } from './product-bootstrap-resolver.js';
 import type { SeedRunLog } from './onboarding-seeds-operations.js';
+import { runTenantBootstrapTransaction, type TenantBootstrapContext } from './tenant-bootstrap-context.js';
 import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 
 const logger = () => Context.current().log;
@@ -98,16 +99,17 @@ export async function insertStripeSubscriptionForTenant(
  * Create a new tenant in the main application database
  */
 export async function createTenantInDB(
-  input: CreateTenantActivityInput
+  input: CreateTenantActivityInput,
+  context?: TenantBootstrapContext & { coManagedOperation?: { sponsorTenant: string; operationId: string } },
 ): Promise<CreateTenantActivityResult> {
-  const log = logger();
+  const log = context?.log ?? logger();
   log.info('Creating tenant in database', { 
     tenantName: input.tenantName,
     licenseCount: input.licenseCount 
   });
 
   try {
-    const knex = await getAdminConnection();
+    const knex = context?.transaction ?? await getAdminConnection();
 
     // Durable idempotency guard: refuse to mint a second tenant for a Stripe
     // subscription that was already provisioned. Backstops the Temporal reuse
@@ -129,7 +131,22 @@ export async function createTenantInDB(
       }
     }
 
-    const result = await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+    const result = await runTenantBootstrapTransaction(context?.transaction, async (trx: Knex.Transaction) => {
+      let coManagedClientId: string | undefined;
+      if (input.productCode === 'co_managed') {
+        if (!context?.transaction || !context.coManagedOperation || input.stripeCustomerId || input.stripeSubscriptionId ||
+            input.stripePriceId || input.appleIap || input.billingSource !== 'manual' || input.addons?.length) {
+          throw new Error('Co-managed bootstrap requires a reserved operation and sponsorship billing');
+        }
+        const operation = await tenantDb(trx, context.coManagedOperation.sponsorTenant)
+          .table('co_managed_provisioning_operations').where('operation_id', context.coManagedOperation.operationId).first();
+        if (!operation || !['queued', 'provisioning', 'failed'].includes(operation.state) || operation.step !== null ||
+            operation.customer_tenant !== input.tenantId || operation.request.workspaceName !== input.tenantName ||
+            operation.request.administrator.email !== input.email.toLowerCase() || operation.request.seats !== input.licenseCount) {
+          throw new Error('Co-managed bootstrap does not match its reserved operation');
+        }
+        coManagedClientId = operation.customer_client_id;
+      }
       // Create tenant first (include admin email since it's required)
       const tenantCompanyName = input.companyName ?? input.tenantName;
 
@@ -318,6 +335,7 @@ export async function createTenantInDB(
         const tenantScopedDb = tenantDb(trx, tenantId);
         const clientResult = await tenantScopedDb.table('clients')
           .insert({
+            ...(coManagedClientId ? { client_id: coManagedClientId } : {}),
             client_name: clientName,
             tenant: tenantId,
             client_type: 'company',
@@ -438,16 +456,17 @@ export async function createTenantInDB(
  * Set up initial tenant data (contract lines, default settings, etc.)
  */
 export async function setupTenantDataInDB(
-  input: SetupTenantDataActivityInput
+  input: SetupTenantDataActivityInput,
+  context?: TenantBootstrapContext,
 ): Promise<SetupTenantDataActivityResult> {
-  const log = logger();
+  const log = context?.log ?? logger();
   log.info('Setting up tenant data', { tenantId: input.tenantId });
 
   try {
-    const knex = await getAdminConnection();
+    const knex = context?.transaction ?? await getAdminConnection();
     const setupSteps: string[] = [];
 
-    await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
+    await runTenantBootstrapTransaction(context?.transaction, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {

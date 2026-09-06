@@ -97,7 +97,7 @@ export async function prepareCoManagedProvisioning(db: Knex, input: CoManagedPro
   });
 }
 
-async function lockOperation(trx: Knex.Transaction, sponsorTenant: string, operationId: string): Promise<CoManagedProvisioningOperation> {
+async function lockOperation(trx: Knex.Transaction, sponsorTenant: string, operationId: string, allowCompleted = false): Promise<CoManagedProvisioningOperation> {
   const sponsor = tenantDb(trx, sponsorTenant);
   // Capacity mutations use entitlement -> sponsor -> operation -> relationship.
   await sponsor.table('co_managed_entitlements').forUpdate().first();
@@ -108,9 +108,21 @@ async function lockOperation(trx: Knex.Transaction, sponsorTenant: string, opera
   const relationship = await tenantDb(trx, operation.customer_tenant).table('co_management_relationships')
     .where('relationship_id', operation.relationship_id).forUpdate().first();
   if (!relationship || relationship.sponsor_tenant !== sponsorTenant) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
-  if (relationship.state === 'active') throw new CoManagedProvisioningError('RELATIONSHIP_ACTIVE');
+  if (relationship.state === 'active' && !(allowCompleted && operation.state === 'pending_acceptance')) throw new CoManagedProvisioningError('RELATIONSHIP_ACTIVE');
   if (relationship.ended_at && operation.state !== 'cancelled') throw new CoManagedProvisioningError('OPERATION_CLOSED');
   return operation;
+}
+
+async function assertProvisioningCapacity(trx: Knex.Transaction, sponsorTenant: string): Promise<void> {
+  const sponsor = tenantDb(trx, sponsorTenant);
+  const owner = await sponsor.table('tenants').first();
+  const entitlement = await sponsor.table('co_managed_entitlements').first();
+  const capacity = await getCoManagedEntitlementState(trx, sponsorTenant);
+  if (owner?.product_code !== 'psa' || (entitlement?.source === 'hosted' && owner.plan !== 'pro') ||
+      capacity.isReadOnly || capacity.graceEndsAt || capacity.capacity < capacity.allocated ||
+      await sponsor.table('co_management_relationships').whereNull('ended_at').first()) {
+    throw new CoManagedProvisioningError('CAPACITY_UNAVAILABLE');
+  }
 }
 
 /** Database-only worker steps commit their changes and progress atomically.
@@ -122,21 +134,14 @@ export async function runCoManagedProvisioningStep<T>(db: Knex, sponsorTenant: s
     { skipped: true } | { skipped: false; result: T }
   > {
   return db.transaction(async trx => {
-    const operation = await lockOperation(trx, sponsorTenant, operationId);
+    const operation = await lockOperation(trx, sponsorTenant, operationId, true);
+    if (operation.state === 'pending_acceptance' && operation.step === 'administrator_invitation') return { skipped: true };
     if (!['queued', 'provisioning', 'failed'].includes(operation.state)) throw new CoManagedProvisioningError('OPERATION_CLOSED');
     const completed = provisioningSteps.indexOf(operation.step as typeof provisioningSteps[number]);
     const requested = provisioningSteps.indexOf(step);
     if (requested < 0 || requested > completed + 1) throw new CoManagedProvisioningError('OPERATION_CLOSED');
     if (requested <= completed) return { skipped: true };
-    const sponsor = tenantDb(trx, sponsorTenant);
-    const owner = await sponsor.table('tenants').first();
-    const entitlement = await sponsor.table('co_managed_entitlements').first();
-    const capacity = await getCoManagedEntitlementState(trx, sponsorTenant);
-    if (owner?.product_code !== 'psa' || (entitlement?.source === 'hosted' && owner.plan !== 'pro') ||
-        capacity.isReadOnly || capacity.graceEndsAt || capacity.capacity < capacity.allocated ||
-        await sponsor.table('co_management_relationships').whereNull('ended_at').first()) {
-      throw new CoManagedProvisioningError('CAPACITY_UNAVAILABLE');
-    }
+    await assertProvisioningCapacity(trx, sponsorTenant);
     const allocation = await tenantDb(trx, sponsorTenant).table('co_managed_allocations')
       .where({ allocation_id: operation.allocation_id, customer_tenant: operation.customer_tenant,
         relationship_id: operation.relationship_id, state: 'reserved' }).first();
@@ -188,5 +193,34 @@ export async function completeCoManagedProvisioningCleanup(db: Knex, sponsorTena
       .whereNot('state', 'released').update({ state: 'released', released_at: trx.fn.now(), updated_at: trx.fn.now() });
     await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
       .update({ state: 'cancelled', error_code: null, updated_at: trx.fn.now() });
+  });
+}
+
+/** Prepare the exact scope the customer administrator will review. A prepared
+ * board scope is not an access grant until the relationship is accepted. */
+export async function finalizeCoManagedProvisioning(db: Knex, sponsorTenant: string, operationId: string): Promise<void> {
+  await db.transaction(async trx => {
+    const operation = await lockOperation(trx, sponsorTenant, operationId, true);
+    if (operation.state === 'pending_acceptance') return;
+    if (operation.state !== 'provisioning' || operation.step !== 'administrator_invitation') {
+      throw new CoManagedProvisioningError('OPERATION_CLOSED');
+    }
+    await assertProvisioningCapacity(trx, sponsorTenant);
+    const customer = tenantDb(trx, operation.customer_tenant);
+    const owner = await customer.table('tenants').where('product_code', 'co_managed').first();
+    const board = await customer.table('boards').where({ board_id: operation.customer_board_id, is_inactive: false }).first();
+    const invitation = await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id,
+      email: operation.request.administrator.email, used_at: null }).where('expires_at', '>', trx.fn.now()).first();
+    const destination = await tenantDb(trx, sponsorTenant).table('boards').where({ board_id: operation.escalation_board_id, is_inactive: false }).first();
+    if (!owner || !board || !invitation || !destination) throw new CoManagedProvisioningError('RESERVATION_NOT_FOUND');
+    await customer.table('co_management_relationships').where('relationship_id', operation.relationship_id)
+      .update({ state: 'pending_acceptance', escalation_board_id: operation.escalation_board_id, updated_at: trx.fn.now() });
+    if (operation.request.visibilityMode === 'board_scope') {
+      await customer.table('co_management_board_scopes').insert({ tenant: operation.customer_tenant,
+        relationship_id: operation.relationship_id, board_id: operation.customer_board_id, can_collaborate: true,
+      }).onConflict(['tenant', 'relationship_id', 'board_id']).ignore();
+    }
+    await tenantDb(trx, sponsorTenant).table('co_managed_provisioning_operations').where('operation_id', operationId)
+      .update({ state: 'pending_acceptance', updated_at: trx.fn.now() });
   });
 }

@@ -102,6 +102,7 @@
       "@alga-psa/event-schemas/*": ["../../packages/event-schemas/src/*"],
       "@alga-psa/authorization": ["../../packages/authorization/src/index.ts"],
       "@alga-psa/authorization/*": ["../../packages/authorization/src/*"],
+      "@alga-psa/co-managed": ["../../packages/co-managed/src/index.ts"],
       "@alga-psa/licensing": ["../../packages/licensing/src/index.ts"],
       "@alga-psa/licensing/*": ["../../packages/licensing/src/*"],
       "@alga-psa/validation": ["../../packages/validation/src/index.ts"],

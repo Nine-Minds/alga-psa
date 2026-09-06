@@ -77,6 +77,7 @@ export default defineConfig({
     'billingClients/weightedBurn': 'billingClients/weightedBurn.ts',
     'billingClients/drawAdjustments': 'billingClients/drawAdjustments.ts',
     'billingClients/templateClone': 'billingClients/templateClone.ts',
+    'lib/boardTicketDefaults': 'lib/boardTicketDefaults.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',

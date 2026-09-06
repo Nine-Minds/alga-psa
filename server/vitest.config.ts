@@ -155,6 +155,8 @@ export default defineConfig({
       { find: '@enterprise', replacement: path.resolve(__dirname, '../packages/ee/src') },
       { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
       { find: '@alga-psa/shared', replacement: path.resolve(__dirname, '../shared') },
+      // Worker bootstrap modules use the ESM specifier in the shared admin API.
+      { find: '@alga-psa/db/admin.js', replacement: path.resolve(__dirname, '../packages/db/src/lib/admin.ts') },
       // @alga-psa/search export names mirror its src layout, so a prefix alias
       // resolves all subpaths (./sql, ./indexers/*, ...) to source for Vitest.
       { find: '@alga-psa/search', replacement: path.resolve(__dirname, '../packages/search/src') },
