@@ -15,6 +15,9 @@ import { bootstrapCoManagedWorkspace } from '../../../../ee/temporal-workflows/s
 import { deliverCoManagedAdministratorInvitation } from '../../../../ee/temporal-workflows/src/activities/co-managed-provisioning-activities';
 import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenant-operations';
 
+vi.mock('next/cache', async importOriginal => ({
+  ...await importOriginal<typeof import('next/cache')>(), revalidatePath: vi.fn(),
+}));
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
@@ -1508,5 +1511,100 @@ describe('co-managed canonical project model lifecycle admission', () => {
     for (const table of ['projects', 'project_phases', 'project_tasks', 'project_status_mappings']) expect(await customer.table(table)).toEqual([]);
     await model.deleteProjectStatus(db, tenant, custom.status_id);
     expect(await customer.table('statuses').where('status_id', custom.status_id)).toEqual([]);
+  }));
+});
+
+async function withProjectActionsFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
+  actions: typeof import('../../../../packages/projects/src/actions/projectActions');
+  exports: typeof import('../../../../packages/projects/src/actions/projectTaskExportActions');
+  publish: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  const fixture = await readyForAcceptance();
+  const dbModule = await import('@alga-psa/db');
+  const auth = await import('@alga-psa/auth');
+  const events = await import('@alga-psa/event-bus/publishers');
+  const adminDb = await import('@alga-psa/db/admin');
+  const user = await fixture.customer.table('users').where('user_id', fixture.actor.userId).first();
+  const spies = [
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: fixture.actor.tenant }),
+    vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db),
+    vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined),
+  ];
+  const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+  try {
+    const actions = await import('../../../../packages/projects/src/actions/projectActions');
+    const exports = await import('../../../../packages/projects/src/actions/projectTaskExportActions');
+    await auth.runWithApiKeyUser(user, () => runWithTenant(fixture.actor.tenant, () => work({ ...fixture, actions, exports, publish })));
+  } finally { publish.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
+}
+
+describe('co-managed project action lifecycle admission', () => {
+  it('denies direct action mutations without changing project rows or publishing events', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions, publish }) => {
+    const id = randomUUID();
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const data = { tenant: actor.tenant, project_name: 'Action project', client_id: operation.customer_client_id,
+      status: status.status_id, description: null, start_date: null, end_date: null, is_inactive: false };
+    const mutations = [
+      () => actions.createProject(data),
+      () => actions.updateProject(id, { project_name: 'Denied' }),
+      () => actions.updatePhase(id, { phase_name: 'Denied' }),
+      () => actions.markPhaseComplete(id),
+      () => actions.reopenPhase(id),
+      () => actions.deletePhase(id),
+      () => actions.addProjectPhase({ project_id: id, phase_name: 'Denied', description: null, start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any),
+      () => actions.reorderPhase(id),
+      () => actions.updateProjectStructure(id, { phases: [], tasks: [] }),
+      () => actions.addStatusToProject(id, {} as any),
+      () => actions.updateProjectStatus(id, id, {}, {}),
+      () => actions.deleteProjectStatus(id),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(await actions.deleteProject(id)).toMatchObject({ success: false });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await actions.deleteProject(id)).toMatchObject({ success: false });
+    for (const table of ['projects', 'project_phases', 'project_status_mappings']) expect(await customer.table(table)).toEqual([]);
+    expect(publish).not.toHaveBeenCalled();
+  }));
+
+  it('defers creation events through caller rollback and keeps tree reads and CSV exports available after expiry', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions, exports, publish }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { withTransaction } = await import('@alga-psa/db');
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const data = { tenant: actor.tenant, project_name: 'Action rollout', client_id: operation.customer_client_id,
+      status: status.status_id, description: null, start_date: null, end_date: null, is_inactive: false };
+    await expect(withTransaction(db, async trx => {
+      const project = await actions.createProject(data, undefined, { trx });
+      expect(project).toMatchObject({ project_name: 'Action rollout' });
+      expect(publish).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled');
+    })).rejects.toThrow('Caller cancelled');
+    expect(await customer.table('projects')).toEqual([]); expect(publish).not.toHaveBeenCalled();
+    const project = await actions.createProject(data) as any;
+    expect(publish).toHaveBeenCalledOnce();
+    const phase = await actions.addProjectPhase({ project_id: project.project_id, phase_name: 'Discovery',
+      description: null, start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any) as any;
+    expect(phase).toHaveProperty('phase_id');
+    const mapping = await customer.table('project_status_mappings').where('project_id', project.project_id).first();
+    await customer.table('project_tasks').insert({ tenant: actor.tenant, task_id: randomUUID(), phase_id: phase.phase_id,
+      task_name: 'Customer inventory', task_type_key: 'task', wbs_code: '1.1.1', project_status_mapping_id: mapping.project_status_mapping_id });
+    const completed = await actions.markPhaseComplete(phase.phase_id);
+    expect(completed.phase.completed_at).not.toBeNull();
+    expect((await actions.reopenPhase(phase.phase_id)).completed_at).toBeNull();
+    // A legacy project without mappings must remain visible without read-time repair.
+    const bareId = randomUUID();
+    await customer.table('projects').insert({ tenant: actor.tenant, project_id: bareId, project_name: 'Legacy project',
+      client_id: operation.customer_client_id, status: status.status_id, wbs_code: '99', project_number: 'LEGACY-99' });
+    const barePhaseId = randomUUID();
+    await customer.table('project_phases').insert({ tenant: actor.tenant, phase_id: barePhaseId, project_id: bareId,
+      phase_name: 'Legacy phase', status: 'planning', order_number: 1, wbs_code: '99.1' });
+    await expireCoManagedEntitlement(operation.tenant);
+    const mappingCount = await customer.table('project_status_mappings').count('* as total').first();
+    expect(await actions.getProjectTreeData(bareId)).toEqual([expect.objectContaining({ value: bareId, children: [expect.objectContaining({ value: barePhaseId, children: [] })] })]);
+    expect(await customer.table('project_status_mappings').count('* as total').first()).toEqual(mappingCount);
+    const result = await exports.exportProjectTasksToCSV(project.project_id, [phase.phase_id], ['task_name']);
+    expect(result).toMatchObject({ count: 1, csv: expect.stringContaining('Customer inventory') });
+    await expect(actions.markPhaseComplete(phase.phase_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect((await customer.table('project_phases').where('phase_id', phase.phase_id).first()).completed_at).toBeNull();
   }));
 });

@@ -8,7 +8,7 @@ import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
 import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { Knex } from 'knex';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
-import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
+import { assertTenantProductCapability, ProductAccessError } from '@shared/services/productAccessGuard';
 import {
   actionError,
   permissionError,
@@ -351,7 +351,7 @@ export const exportProjectTasksToCSV = withAuth(async (
   taskIds?: string[],
 ): Promise<{ csv: string; count: number } | ProjectTaskExportActionError> => {
   try {
-    await assertPsaOnlyTenantAccess(tenant, 'project_actions');
+    await assertTenantProductCapability(tenant, 'projects');
     const { knex: db } = await createTenantKnex();
 
     return await withTransaction(db, async (trx: Knex.Transaction) => {
