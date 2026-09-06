@@ -232,13 +232,32 @@ global.ResizeObserver = class ResizeObserver {
   disconnect() {}
 };
 
-// Mock UI reflection hooks
-vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({
-  useAutomationIdAndRegister: () => ({
-    automationIdProps: {},
-    updateMetadata: vi.fn(),
-  }),
-}));
+// Mock UI reflection hooks. The stubs sever registration (context/websocket)
+// but must stay faithful to the real hook's rendered-DOM contract: the real
+// useAutomationIdAndRegister always emits { id, 'data-automation-id' }
+// (overrideId || component.id || a useId-derived fallback), and component
+// tests locate elements via document.getElementById(...). Returning {}
+// here silently stripped ids from every @alga-psa/ui control under the
+// server suite while the packages' own vitest targets kept them.
+vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', async () => {
+  const { useId } = await import('react');
+  return {
+    useAutomationIdAndRegister: (
+      component: { id?: string; type?: string },
+      _actionsOrShouldRegister?: unknown,
+      overrideId?: string
+    ) => {
+      const reactId = useId();
+      const finalId =
+        overrideId || component?.id || `${component?.type ?? 'component'}-${reactId}`;
+      return {
+        automationIdProps: { id: finalId, 'data-automation-id': finalId },
+        updateMetadata: vi.fn(),
+        updateActions: vi.fn(),
+      };
+    },
+  };
+});
 
 vi.mock('@alga-psa/ui/ui-reflection/useRegisterUIComponent', () => ({
   useRegisterUIComponent: () => vi.fn(),

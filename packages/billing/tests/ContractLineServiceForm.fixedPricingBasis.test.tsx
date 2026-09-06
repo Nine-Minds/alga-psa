@@ -42,6 +42,9 @@ vi.mock('@alga-psa/billing/actions/contractLineServiceConfigurationActions', () 
 
 vi.mock('@alga-psa/billing/actions/contractLineSemanticsActions', () => ({
   setUsageMeasurementMode: actionMocks.setUsageMeasurementMode,
+  // loadConfiguration resolves the next service boundary before fetching
+  // configuration details, so the editor never renders when this is absent.
+  getNextContractServiceBoundary: async () => '2026-10-01',
 }));
 
 vi.mock('../src/actions/bucketOverlayActions', () => ({
