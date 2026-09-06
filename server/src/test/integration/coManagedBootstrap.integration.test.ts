@@ -2744,3 +2744,187 @@ describe('co-managed collaboration policy administration', () => {
     await migration.up(db);
   });
 });
+
+async function sharedWorkFixture() {
+  const fixture = await collaborationPolicyFixture();
+  const { sponsor, sponsorActor, customer, roleId, actor, operation } = fixture;
+  for (const resource of ['ticket', 'project']) for (const action of ['read', 'update']) {
+    const permission = await customer.table('permissions').where({ resource, action }).first();
+    await sponsor.table('permissions').insert({ ...permission, tenant: sponsorActor.tenant });
+    await sponsor.table('role_permissions').insert({ tenant: sponsorActor.tenant, role_id: roleId, permission_id: permission.permission_id });
+  }
+  const sessionId = randomUUID();
+  await sponsor.table('sessions').insert({ tenant: sponsorActor.tenant, user_id: sponsorActor.userId, session_id: sessionId,
+    expires_at: new Date(Date.now() + 3600000) });
+  const ticketId = randomUUID();
+  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+  const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+  await customer.table('tickets').insert({ tenant: actor.tenant, ticket_id: ticketId, ticket_number: 'SHARED-1', title: 'Customer issue',
+    client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id,
+    priority_id: priority.priority_id, entered_by: actor.userId });
+  const principal = { ...sponsorActor, kind: 'session' as const, sessionId };
+  const resource = { tenant: actor.tenant, relationshipId: operation.relationship_id, kind: 'ticket' as const, id: ticketId };
+  return { ...fixture, principal, resource };
+}
+
+describe('co-managed shared-work authorization boundary', () => {
+  it('intersects live home RBAC, explicit staff assignment, customer scope, and lifecycle without switching identity', async () => {
+    const { principal, resource, sponsorActor, actor, target, sponsor, customer, operation, roleId } = await sharedWorkFixture();
+    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    const command = vi.fn(async () => 'authorized');
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+    expect(await work(db, principal, resource, 'read', command)).toBe('authorized');
+    await expect(work(db, principal, resource, 'update', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 3, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    const { getTenantContext, withTransaction } = await import('@alga-psa/db');
+    await runWithTenant(principal.tenant, () => work(db, principal, resource, 'update', async context => {
+      expect(getTenantContext()).toBe(principal.tenant);
+      expect(context.actor).toEqual(sponsorActor); expect(context.resource).toEqual(resource);
+      await tenantDb(context.trx, context.resource.tenant).table('tickets').where('ticket_id', context.resource.id).update({ title: 'Shared update' });
+    }));
+    expect(await customer.table('tickets').first()).toMatchObject({ title: 'Shared update', entered_by: actor.userId });
+    expect(await customer.table('users')).toHaveLength(1);
+    await expect(withTransaction(db, async trx => work(trx, principal, resource, 'update', async context => {
+      await tenantDb(context.trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ title: 'Must roll back' });
+      throw new Error('Caller cancelled shared work');
+    }))).rejects.toThrow('Caller cancelled shared work');
+    expect(await customer.table('tickets').first()).toMatchObject({ title: 'Shared update' });
+    const permission = await sponsor.table('permissions').where({ resource: 'ticket', action: 'read' }).first();
+    await sponsor.table('role_permissions').where({ role_id: roleId, permission_id: permission.permission_id }).del();
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('role_permissions').insert({ tenant: principal.tenant, role_id: roleId, permission_id: permission.permission_id });
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await work(db, principal, resource, 'read', command)).toBe('authorized');
+    await expect(work(db, principal, resource, 'update', command)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await policy.replaceCoManagedCustomerScope(db, actor, target, 4, { visibilityMode: 'escalation_only', boards: [], projects: [] });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+
+  it('rejects revoked, expired, inactive, mismatched, foreign, and unsupported principals before executing a command', async () => {
+    const { principal, resource, sponsorActor, target, sponsor, customer } = await sharedWorkFixture();
+    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    const command = vi.fn(async () => true);
+    for (const invalid of [{ ...principal, kind: 'api_key' }, { ...principal, userId: randomUUID() },
+      { ...principal, sessionId: randomUUID() }, { ...principal, tenant: randomUUID() }, { ...principal, tenant: resource.tenant }]) {
+      await expect(work(db, invalid as any, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    }
+    for (const kind of ['document', 'credential', 'asset']) {
+      await expect(work(db, principal, { ...resource, kind } as any, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    }
+    await sponsor.table('sessions').where('session_id', principal.sessionId).update({ revoked_at: new Date() });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('sessions').where('session_id', principal.sessionId).update({ revoked_at: null, expires_at: new Date(Date.now() - 1) });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+    await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: false, user_type: 'client' });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('users').where('user_id', principal.userId).update({ user_type: 'internal' });
+    await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(command).not.toHaveBeenCalled();
+  });
+
+  it('requires explicit project grants and current team membership for both projects and their actual tasks', async () => {
+    const { principal, sponsorActor, actor, target, sponsor, customer, operation } = await sharedWorkFixture();
+    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { ProjectModel: model } = await import('@alga-psa/projects/models');
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await model.create(db, actor.tenant, { project_name: 'Shared rollout', project_number: 'SHARED-1',
+      client_id: operation.customer_client_id, status: status.status_id, wbs_code: '1' } as any);
+    const phase = await model.addPhase(db, actor.tenant, { project_id: project.project_id, phase_name: 'Rollout', wbs_code: '1.1', status: 'planning', order_number: 1 } as any);
+    await model.addStatusToProject(db, actor.tenant, project.project_id, { name: 'Ready', status_type: 'project_task',
+      item_type: 'project_task', order_number: 100, is_closed: false, is_default: false } as any);
+    const mapping = (await model.getProjectStatusMappings(db, actor.tenant, project.project_id))[0];
+    const taskId = randomUUID();
+    await customer.table('project_tasks').insert({ tenant: actor.tenant, task_id: taskId, phase_id: phase.phase_id,
+      task_name: 'Shared task', wbs_code: '1.1.1', project_status_mapping_id: mapping.project_status_mapping_id, task_type_key: 'task' });
+    const projectRef = { tenant: actor.tenant, relationshipId: target.relationshipId, kind: 'project' as const, id: project.project_id };
+    const taskRef = { ...projectRef, kind: 'project_task' as const, id: taskId };
+    const teamId = randomUUID();
+    await sponsor.table('teams').insert({ tenant: sponsorActor.tenant, team_id: teamId, manager_id: principal.userId, team_name: 'Assigned team' });
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'team', principalId: teamId, role: 'technician' }]);
+    const command = vi.fn(async () => true);
+    await expect(work(db, principal, projectRef, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('team_members').insert({ tenant: principal.tenant, team_id: teamId, user_id: principal.userId });
+    await expect(work(db, principal, projectRef, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    const current = await policy.getCoManagedCollaborationPolicy(db, actor, target);
+    await policy.replaceCoManagedCustomerScope(db, actor, target, 3, { ...current, projects: [{ id: project.project_id, canCollaborate: false }] });
+    for (const ref of [projectRef, taskRef]) {
+      expect(await work(db, principal, ref, 'read', command)).toBe(true);
+      await expect(work(db, principal, ref, 'update', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    }
+    await sponsor.table('team_members').where({ team_id: teamId, user_id: principal.userId }).del();
+    await expect(work(db, principal, taskRef, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+
+  it('rechecks customer revocation after waiting for the relationship policy lock', async () => {
+    const { principal, resource, sponsorActor, actor, target, operation } = await sharedWorkFixture();
+    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    const blocker = await db.transaction();
+    await tenantDb(blocker, operation.tenant).table('co_managed_entitlements').forUpdate().first();
+    let onQuery!: (query: { sql: string }) => void;
+    const waiting = new Promise<void>(resolve => {
+      onQuery = query => { if (query.sql.includes('co_managed_entitlements') && query.sql.includes('for update')) resolve(); };
+      db.on('query', onQuery);
+    });
+    const command = vi.fn(async () => true);
+    const attempt = work(db, principal, resource, 'update', command).then(() => null, error => error);
+    try {
+      await waiting;
+      await policy.replaceCoManagedCustomerScope(blocker, actor, target, 3, { visibilityMode: 'board_scope', boards: [], projects: [] });
+      await blocker.commit();
+      expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+      expect(command).not.toHaveBeenCalled();
+    } finally {
+      db.removeListener('query', onQuery);
+      if (!blocker.isCompleted()) await blocker.rollback();
+    }
+  });
+
+  it('applies home bundle restrictions using home IDs and propagates redactions and fail-closed field constraints', async () => {
+    const { principal, resource, sponsorActor, target, sponsor, operation } = await sharedWorkFixture();
+    const { withCoManagedSharedWork: work } = await import('../../../../packages/co-managed/src/sharedWork');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+    const bundles = await import('@alga-psa/authorization');
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Scoped shared work', actorUserId: principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+      templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId] } });
+    await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+    const command = vi.fn(async context => context.redactedFields);
+    expect(await work(db, principal, resource, 'read', command)).toEqual([]);
+    // Simulate an existing home policy whose UUID happens to be a customer ID.
+    await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ template_key: 'selected_boards',
+      config: { selectedBoardIds: [operation.customer_board_id] } });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ template_key: 'selected_clients',
+      config: { selectedClientIds: [operation.customer_client_id] } });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ config: {
+      selectedClientIds: [operation.request.clientId], redactedFields: ['description'],
+      constraints: [{ field: 'client_id', operator: 'eq', value: operation.request.clientId }],
+    } });
+    expect(await work(db, principal, resource, 'read', command)).toEqual(['description']);
+    await work(db, principal, resource, 'read', async () => {
+      await expect(db.transaction(async trx => {
+        await trx.raw("SET LOCAL lock_timeout = '50ms'");
+        await tenantDb(trx, principal.tenant).table('authorization_bundle_rules').where('revision_id', revisionId)
+          .update({ config: {} });
+      })).rejects.toMatchObject({ code: '55P03' });
+    });
+    await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ config: {
+      selectedClientIds: [operation.request.clientId], constraints: [{ field: 'unknown_field', operator: 'eq', value: true }],
+    } });
+    await expect(work(db, principal, resource, 'read', command)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+});

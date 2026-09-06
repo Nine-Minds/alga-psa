@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
+import { hasCoManagedLocalPermission } from './localPermission';
 import { getCoManagedOperationalState, CoManagedLifecycleError } from '@alga-psa/licensing';
 
 /** Authentication adapters supply the live home identity, never request fields. */
@@ -32,17 +33,8 @@ const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 
 /** No cached roles or caller-provided user type; retain current permission rows. */
-// LEVERAGE: pattern locked-co-management-rbac — acceptance and policy edits both need live, locked home permissions.
 async function requirePolicyAdministrator(trx: Knex.Transaction, actor: CoManagedHomeActor): Promise<void> {
-  const home = tenantDb(trx, actor.tenant);
-  const user = await home.table('users').where({ user_id: actor.userId, user_type: 'internal', is_inactive: false }).forShare().first('user_id');
-  const query = home.table('user_roles').where('user_roles.user_id', actor.userId);
-  home.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
-  home.tenantJoin(query, 'role_permissions', 'roles.role_id', 'role_permissions.role_id');
-  home.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
-  const permission = await query.where({ 'roles.msp': true, 'permissions.msp': true,
-    'permissions.resource': 'co_management', 'permissions.action': 'manage' }).forShare().first('permissions.permission_id');
-  if (!user || !permission) throw new CoManagedPolicyError('FORBIDDEN');
+  if (!await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true)) throw new CoManagedPolicyError('FORBIDDEN');
 }
 
 async function lockPolicy(trx: Knex.Transaction, actor: CoManagedHomeActor, target: CoManagedPolicyTarget, write = true) {

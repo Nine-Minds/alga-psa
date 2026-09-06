@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { hasCoManagedLocalPermission } from './localPermission';
 import { getCoManagedEntitlementState } from '@alga-psa/licensing';
 
 /** Always constructed by the authentication adapter from the home identity.
@@ -31,7 +32,6 @@ export class CoManagedAcceptanceError extends Error {
   }
 }
 
-// LEVERAGE: pattern locked-co-management-rbac — acceptance and policy edits both need live, locked home permissions.
 async function customerAdministrator(db: Knex, actor: CoManagedCustomerActor, lock = false): Promise<boolean> {
   const customer = tenantDb(db, actor.tenant);
   const users = customer.table('users').where({ user_id: actor.userId, user_type: 'internal', is_inactive: false });
@@ -39,13 +39,7 @@ async function customerAdministrator(db: Knex, actor: CoManagedCustomerActor, lo
   const user = await users.first();
   const owner = await customer.table('tenants').where('product_code', 'co_managed').first();
   if (!user || !owner) throw new CoManagedAcceptanceError('FORBIDDEN');
-  const query = customer.table('user_roles').where('user_roles.user_id', actor.userId);
-  customer.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
-  customer.tenantJoin(query, 'role_permissions', 'roles.role_id', 'role_permissions.role_id');
-  customer.tenantJoin(query, 'permissions', 'role_permissions.permission_id', 'permissions.permission_id');
-  if (lock) query.forShare();
-  return Boolean(await query.where({ 'roles.msp': true, 'permissions.msp': true,
-    'permissions.resource': 'co_management', 'permissions.action': 'manage' }).first('permissions.permission_id'));
+  return hasCoManagedLocalPermission(db, actor, 'co_management', 'manage', lock);
 }
 
 async function readScope(db: Knex, relationship: any, lock = false): Promise<CoManagedAcceptanceScope> {
