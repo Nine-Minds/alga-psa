@@ -53,10 +53,8 @@
     "TypeScript check; workflow actionlint; CE/EE Compose merge and shared-volume/internal-network validation"
   ],
   "limitations": [
-    "Native candidate CE/EE execution still required; the local app image was reused from an earlier build.",
     "Mailbox authentication and SPF/DKIM/DMARC results are simulated.",
-    "Duplicate assertion covers the same provider UID and MIME source; a fresh SMTP delivery has a different identity and Received headers.",
-    "F019/T014 remain incomplete until native acceptance evidence is available."
+    "Duplicate assertion covers the same provider UID and MIME source; a fresh SMTP delivery has a different identity and Received headers."
   ],
   "reports": {
     "browser": {
@@ -67,5 +65,12 @@
       "path": "/tmp/alga-email-service-final.log",
       "sha256": "c8b6babe4822883f4dd5434e6b7071e7424d0920acc906581b1f837ea54087db"
     }
+  },
+  "nativeAcceptance": {
+    "evidence": "production-browser-native-762.json",
+    "community": "first-attempt-passed",
+    "enterprise": "first-attempt-passed",
+    "feature": "F019",
+    "test": "T014"
   }
 }

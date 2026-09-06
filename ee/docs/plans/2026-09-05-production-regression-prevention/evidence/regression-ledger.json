@@ -367,6 +367,37 @@
         "Authentication, external event delivery and remote notifications are fixture seams.",
         "No production incident identifier supplied. Native candidate execution remains required."
       ]
+    },
+    {
+      "id": "accounting-mapping-catalog-refresh-erases-draft",
+      "classification": "native-browser-discovered-behavioral-defect",
+      "incident": null,
+      "journey": "Configure an accounting service mapping while a provider catalog reloads",
+      "missingBoundary": "Asynchronous catalog results arriving during user input and pending persistence",
+      "ownerRole": "Integration maintainers",
+      "testFiles": [
+        "packages/integrations/src/components/accounting-mappings/AccountingMappingDialog.targetKind.test.tsx",
+        "e2e-tests/tests/xero-export.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "evidence": "accounting-mapping-draft-refresh.json",
+      "before": {
+        "result": "intended-assertion-failure",
+        "assertion": "After real picker selections and a fresh catalog array, Save must submit the selected service/item and metadata. Actual onSubmit calls: 0.",
+        "logSha256": "f64cbc48ae020a4108913aeae465dd7469e9b0126083585cfa9b25bb56a15c9d"
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "assertion": "Selections and metadata submit after catalog refresh; removed targets require replacement and pending saves stay disabled."
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "No production incident supplied. Native browser revalidation of the fix remains required."
+      ]
     }
   ]
 }

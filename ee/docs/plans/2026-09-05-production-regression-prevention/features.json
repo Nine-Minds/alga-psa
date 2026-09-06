@@ -245,7 +245,7 @@
   {
     "id": "F019",
     "description": "Verify raw MIME intake, queue processing, preserved ticket content, duplicate handling and threaded outbound reply through built email-service containers and a test mail sink.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4",
     "priority": "P1",
     "prdRefs": [

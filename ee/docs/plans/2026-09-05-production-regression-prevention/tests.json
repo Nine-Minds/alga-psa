@@ -133,7 +133,7 @@
   {
     "id": "T014",
     "description": "Send raw MIME through the built email service, intake, queue and DB for inline-blockquote and quoted-history cases; verify authored text, single ticket/thread, delivered reply headers and idempotent duplicate intake in the test mailbox.",
-    "implemented": false,
+    "implemented": true,
     "kind": "service-containers",
     "featureIds": [
       "F019",

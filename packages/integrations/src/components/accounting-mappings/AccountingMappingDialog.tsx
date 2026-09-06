@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -61,11 +61,28 @@ export function AccountingMappingDialog({
   const [metadataInput, setMetadataInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const initializedDraft = useRef<string | null>(null);
+  const draftIdentity = JSON.stringify([module.id, context.realmId, context.connectionId, existingMapping?.id]);
 
   useEffect(() => {
     if (!isOpen) {
+      initializedDraft.current = null;
       return;
     }
+    // Catalog refreshes and new prop object identities must not erase work in
+    // progress (or re-enable Save while its request is still pending).
+    if (initializedDraft.current === draftIdentity) {
+      const available = !targetConfig || !selectedExternalId || externalEntities.some(entity =>
+        entity.id === selectedExternalId && (!entity.kind || entity.kind === selectedKindId)
+      );
+      if (!available) {
+        // Preserve the rest of the draft, but never submit a removed catalog item.
+        setSelectedExternalId('');
+        setStaleTarget(true);
+      }
+      return;
+    }
+    initializedDraft.current = draftIdentity;
     if (existingMapping) {
       setSelectedAlgaId(existingMapping.alga_entity_id ?? '');
       if (targetConfig) {
@@ -98,7 +115,7 @@ export function AccountingMappingDialog({
     }
     setError(null);
     setIsSaving(false);
-  }, [isOpen, existingMapping, module.metadata, targetConfig, externalEntities]);
+  }, [isOpen, draftIdentity, existingMapping, module.metadata, targetConfig, externalEntities, selectedExternalId, selectedKindId]);
 
   const dialogTitle = useMemo(
     () =>
@@ -273,7 +290,10 @@ export function AccountingMappingDialog({
                 id={`${module.id}-external-select`}
                 options={externalOptions}
                 value={selectedExternalId}
-                onValueChange={(value: string) => setSelectedExternalId(value || '')}
+                onValueChange={(value: string) => {
+                  setSelectedExternalId(value || '');
+                  if (value) setStaleTarget(false);
+                }}
                 placeholder={t('integrations.accounting.dialog.selectPlaceholder', { defaultValue: 'Select {{field}}...', field: module.labels.dialog.externalField })}
                 required
                 className="w-full"
