@@ -7,14 +7,23 @@ const send = vi.hoisted(() => vi.fn());
 vi.mock('@/lib/notifications/sendEventEmail', () => ({ sendEventEmail: send }));
 import { EventEmailRetryQueue } from '@/lib/notifications/EventEmailRetryQueue';
 
-// Opt in against a local Redis instance. Every test owns and removes a random key prefix.
-describe.runIf(process.env.REAL_REDIS === '1' && Boolean(process.env.TEST_REDIS_URL))('event email retry processing leases (Redis)', () => {
+// Required integration coverage. Use the lane's Redis service; every test owns
+// and removes a random key prefix rather than clearing shared service state.
+describe('event email retry processing leases (Redis)', () => {
   let redis: ReturnType<typeof createClient>;
   beforeAll(async () => {
-    redis = createClient({ url: process.env.TEST_REDIS_URL, password: process.env.REDIS_PASSWORD });
+    if (process.env.REAL_REDIS !== '1' || (!process.env.TEST_REDIS_URL && !process.env.REDIS_HOST)) {
+      throw new Error('Retry recovery tests require REAL_REDIS=1 and TEST_REDIS_URL or REDIS_HOST/REDIS_PORT');
+    }
+    redis = createClient({
+      ...(process.env.TEST_REDIS_URL
+        ? { url: process.env.TEST_REDIS_URL }
+        : { socket: { host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT || 6379) } }),
+      password: process.env.REDIS_PASSWORD,
+    });
     await redis.connect();
   });
-  afterAll(async () => { await redis?.quit(); });
+  afterAll(async () => { if (redis?.isOpen) await redis.quit(); });
 
   async function withQueue(test: (queue: any, prefix: string) => Promise<void>) {
     const prefix = `attachment-queue-test:${randomUUID()}:`;

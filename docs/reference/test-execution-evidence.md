@@ -12,6 +12,10 @@ dependencies with `npm ci`, and build the shared libraries listed in
 isolated PostgreSQL and Redis services through `DB_*` and `REDIS_*` variables.
 The database helpers recreate `test_database`; do not share that database with
 another run or a development application.
+Use separate PostgreSQL instances for concurrent lanes, or serialize their
+bootstraps. Separate database names alone do not isolate migrations that alter
+the shared `app_user` role; concurrent bootstrap can collide in PostgreSQL's
+role-settings catalog. CI gives each lane its own service instance.
 
 From the repository root:
 
@@ -44,12 +48,24 @@ database lane, including tests named `.integration.test.ts`. Restore schema in
 Colocated `.db` and `.integration` test/spec files beneath
 `server/src/{app,components,lib,services}` use this lane too. They include the
 prepaid alert/replenishment subscriber's persisted delivery and invoice tests.
+Invoice COGS/vendor-bill export, deferred-revenue rollforward and ticket
+notification priority regressions also use the database lane. Their fixtures
+come from the isolated test database instead of developer secrets or fixed
+tenant IDs. The package unit configs exclude these `.db.test` files.
 
 Run the unfiltered command after adding or moving a test. Its discovery check
 compares Git's test-file inventory with Vitest's actual file collection. A file
 inside this lane's scope that Vitest omits causes failure. Files execute
 serially because the existing helpers share a database name. CI jobs receive
 separate database and Redis services.
+
+The server integration lane also requires the bucket/pool behavior suites:
+weighted usage, hourly overlays, report totals, pool listing, wizard/template
+round trips, simulator snapshots and time-entry draw adjustment. These create
+their own migrated fixtures without `RUN_DB_TESTS` or developer database
+defaults. Retry-queue recovery uses `REAL_REDIS=1` with the lane's
+`REDIS_HOST`/`REDIS_PORT` (or an explicit `TEST_REDIS_URL`), and removes only its
+random test-key prefix. Missing required service configuration fails the test.
 
 ## Inspect the artifacts
 

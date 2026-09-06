@@ -1,6 +1,9 @@
-import { beforeAll, afterAll, describe, expect, it } from 'vitest';
+import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest';
+import type { Knex } from 'knex';
+import type { IUserWithRoles } from '@alga-psa/types';
+import type { InternalNotificationPriority } from '@alga-psa/notifications/types/internalNotification';
+import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
-import { createTenantKnex } from '@alga-psa/db';
 import { runWithApiKeyUser } from '@alga-psa/auth';
 import { internalNotificationSubscriberTestHarness } from '../../../lib/eventBus/subscribers/internalNotificationSubscriber';
 
@@ -28,49 +31,43 @@ import { internalNotificationSubscriberTestHarness } from '../../../lib/eventBus
 // The handler only reads the ticket row, so the suite creates its own
 // throwaway ticket (assigned to the target user) and deletes it afterwards.
 
-// Opt-in: this repro drives the REAL server actions and event bus against a
-// live, seeded database (the Glinda tenant fixtures below only exist in the
-// local dev DB). The DB-less unit CI job has neither a database nor those
-// rows, so — following the repo convention for DB-backed suites — it is gated
-// behind RUN_DB_TESTS=1 and skipped at collection time otherwise (so beforeAll
-// never attempts a connection there). The priority-resolution logic itself is
-// covered in CI by priorityResolution.test.ts and the publisher-recipient test.
-const RUN_DB_TESTS = process.env.RUN_DB_TESTS === '1';
-
-const TENANT = 'dd8cb218-d46d-47f3-be27-8aa50aad5fce';
-const USER = '6684ee32-8f0a-46fb-b84c-4563337b2766'; // glinda
-const ASSIGNER = '00000000-0000-4000-8000-000000000001'; // smoke actor
-const SUBTYPE_TICKET_ASSIGNED = 1; // ticket-assigned
-const CATEGORY_TICKETS = 1;
-
-// Real reference values for a valid ticket row in the Glinda tenant.
-const FIXTURE_REFERENCE = {
-  client_id: '66229c62-a609-41b1-93c2-e870d9926195',
-  status_id: '55069d07-a8d9-451f-a825-dd1ca82d485a',
-  priority_id: 'eaa5550f-b8f6-470d-ad34-61a292a0c87f',
-  board_id: '4b18fabc-b0f6-4200-bc63-cbd514840257',
-};
-
-let knex: any;
+// The runner owns a migrated, seeded disposable database. Route database access
+// to that connection while keeping the real authentication context, RBAC,
+// writer actions, event dispatch and notification creation behavior.
+let TENANT: string;
+let USER: string;
+let ASSIGNER: string;
+let SUBTYPE_TICKET_ASSIGNED: number;
+let CATEGORY_TICKETS: number;
+let knex: Knex;
 let fixtureTicketId: string;
 let fixtureTicketNumber: string;
+let sessionUser: IUserWithRoles;
 
-// The session identity the withAuth-wrapped actions see. Mirrors the profile
-// page session for glinda in the Glinda tenant.
-const sessionUser = {
-  user_id: USER,
-  user_type: 'internal',
-  tenant: TENANT,
-  roles: [] as any[],
-};
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@alga-psa/db')>(),
+  createTenantKnex: async () => ({ knex, tenant: TENANT }),
+  getConnection: async () => knex,
+}));
+// Transport effects are not the assertion boundary of this database test.
+vi.mock('@alga-psa/notifications/realtime/internalNotificationBroadcaster', () => ({
+  broadcastNotification: vi.fn(async () => undefined),
+  broadcastNotificationRead: vi.fn(async () => undefined),
+  broadcastAllNotificationsRead: vi.fn(async () => undefined),
+  broadcastUnreadCount: vi.fn(async () => undefined),
+}));
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishWorkflowEvent: vi.fn(async () => undefined),
+  publishEvent: vi.fn(async () => undefined),
+}));
 
 /** Persist a per-user subtype override through the real server action the UI calls. */
-async function setUserPriority(priority: string | null) {
+async function setUserPriority(priority: InternalNotificationPriority | null) {
   await runWithApiKeyUser(sessionUser, async () => {
     const { updateUserInternalNotificationPreferenceAction } = await import(
       '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions'
     );
-    await updateUserInternalNotificationPreferenceAction({
+    const result = await updateUserInternalNotificationPreferenceAction({
       tenant: TENANT,
       user_id: USER,
       category_id: CATEGORY_TICKETS,
@@ -78,20 +75,22 @@ async function setUserPriority(priority: string | null) {
       is_enabled: true,
       priority,
     });
+    expect(result).toMatchObject({ tenant: TENANT, user_id: USER, priority });
   });
 }
 
 /** Persist a tenant-level subtype override through the real server action the admin settings UI calls. */
-async function setTenantPriority(priority: string | null) {
+async function setTenantPriority(priority: InternalNotificationPriority | null) {
   await runWithApiKeyUser(sessionUser, async () => {
     const { updateInternalSubtypeAction } = await import(
       '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions'
     );
-    await updateInternalSubtypeAction(SUBTYPE_TICKET_ASSIGNED, {
+    const result = await updateInternalSubtypeAction(SUBTYPE_TICKET_ASSIGNED, {
       is_enabled: true,
       is_default_enabled: true,
       priority,
     });
+    expect(result).not.toHaveProperty('error');
   });
 }
 
@@ -125,17 +124,33 @@ async function newestStampedNotification() {
     .orderBy('internal_notification_id', 'desc')
     .first();
   if (row) {
-    await knex('internal_notifications').where({ internal_notification_id: row.internal_notification_id }).delete();
+    await knex('internal_notifications').where({ tenant: TENANT, internal_notification_id: row.internal_notification_id }).delete();
   }
   return row;
 }
 
-// Hooks live inside the gated describe so that, when RUN_DB_TESTS is unset,
-// skipIf skips the whole block at collection time and beforeAll never runs
-// (no connection attempt, no throw) in the DB-less unit CI job.
-describe.skipIf(!RUN_DB_TESTS)('behavioral: per-user priority override honored on the ticket-assigned creation path', () => {
+describe('behavioral: per-user priority override honored on the ticket-assigned creation path', () => {
   beforeAll(async () => {
-    knex = (await createTenantKnex()).knex;
+    knex = await createTestDbConnection();
+    TENANT = (await knex('tenants').first('tenant')).tenant;
+    const admin = await knex('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.tenant': TENANT, 'r.role_name': 'Admin', 'u.user_type': 'internal' })
+      .select('u.*').first();
+    if (!admin) throw new Error('Workspace seed must provide an internal administrator');
+    USER = admin.user_id;
+    ASSIGNER = USER;
+    sessionUser = { ...admin, roles: [] };
+    const reference = await knex('tickets').where({ tenant: TENANT }).first();
+    if (!reference) throw new Error('Workspace seed must provide a ticket');
+    const subtype = await knex('internal_notification_templates as t')
+      .join('internal_notification_subtypes as s', 's.internal_notification_subtype_id', 't.subtype_id')
+      .where({ 't.name': 'ticket-assigned' })
+      .select('s.internal_notification_subtype_id', 's.internal_category_id').first();
+    if (!subtype) throw new Error('Workspace seed must provide the ticket-assigned template');
+    SUBTYPE_TICKET_ASSIGNED = subtype.internal_notification_subtype_id;
+    CATEGORY_TICKETS = subtype.internal_category_id;
 
     // Throwaway ticket assigned to the target user (the handler reads it only).
     fixtureTicketId = randomUUID();
@@ -145,10 +160,10 @@ describe.skipIf(!RUN_DB_TESTS)('behavioral: per-user priority override honored o
       ticket_id: fixtureTicketId,
       ticket_number: fixtureTicketNumber,
       title: 'behavioral priority repro',
-      client_id: FIXTURE_REFERENCE.client_id,
-      status_id: FIXTURE_REFERENCE.status_id,
-      priority_id: FIXTURE_REFERENCE.priority_id,
-      board_id: FIXTURE_REFERENCE.board_id,
+      client_id: reference.client_id,
+      status_id: reference.status_id,
+      priority_id: reference.priority_id,
+      board_id: reference.board_id,
       assigned_to: USER,
       source: 'api',
       ticket_origin: 'internal',
@@ -160,9 +175,17 @@ describe.skipIf(!RUN_DB_TESTS)('behavioral: per-user priority override honored o
   });
 
   afterAll(async () => {
-    await knex('tickets').where({ tenant: TENANT, ticket_id: fixtureTicketId }).delete();
-    await setTenantPriority(null);
-    await setUserPriority(null);
+    if (!knex) return;
+    try {
+      if (fixtureTicketId) await knex('tickets').where({ tenant: TENANT, ticket_id: fixtureTicketId }).delete();
+      if (SUBTYPE_TICKET_ASSIGNED) {
+        await knex('user_internal_notification_preferences').where({ tenant: TENANT, user_id: USER, subtype_id: SUBTYPE_TICKET_ASSIGNED }).delete();
+        await knex('tenant_internal_notification_subtype_settings').where({ tenant: TENANT, subtype_id: SUBTYPE_TICKET_ASSIGNED }).delete();
+        await knex('internal_notifications').where({ tenant: TENANT, user_id: USER, template_name: 'ticket-assigned' }).delete();
+      }
+    } finally {
+      await knex.destroy();
+    }
   });
 
   it('user=high, tenant=none -> stamps high (the reported defect case)', async () => {

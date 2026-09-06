@@ -17,14 +17,14 @@
  * process-wide, so a dev-DB fixture (like the "Smoke Weighted Pool") is not
  * reachable from here.
  *
- * Opt-in: needs a reachable database (RUN_DB_TESTS=1).
+ * Required integration coverage against the isolated migrated test database.
  */
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { randomUUID } from 'node:crypto';
 
-import { createTestDbConnection, wireLocalTestDbEnv } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { createTenant } from '../../../test-utils/testDataFactory';
 import { tenantDb } from '@alga-psa/db';
 
@@ -62,9 +62,8 @@ vi.mock('@alga-psa/auth/rbac', () => ({
   hasPermission: vi.fn(async () => true),
 }));
 
-const ENABLED = process.env.RUN_DB_TESTS === '1';
 
-describe.skipIf(!ENABLED)('bucket pool list loads a real pool snapshot with members (real DB)', () => {
+describe('bucket pool list loads a real pool snapshot with members (real DB)', () => {
   let db: Knex;
   let tenantId: string;
   let contractLineId: string;
@@ -73,7 +72,6 @@ describe.skipIf(!ENABLED)('bucket pool list loads a real pool snapshot with memb
   let listBucketPoolsForLine: any;
 
   beforeAll(async () => {
-    wireLocalTestDbEnv();
     db = await createTestDbConnection();
     tenantId = await createTenant(db, 'Bucket pool actions tenant');
 
@@ -146,15 +144,20 @@ describe.skipIf(!ENABLED)('bucket pool list loads a real pool snapshot with memb
   }, 180_000);
 
   afterAll(async () => {
-    const scopedDb = tenantDb(db, tenantId);
-    await scopedDb.table('contract_line_bucket_services').where({ tenant: tenantId }).delete();
-    await scopedDb.table('contract_line_buckets').where({ tenant: tenantId }).delete();
-    await scopedDb.table('service_catalog').where({ tenant: tenantId }).delete();
-    await scopedDb.table('service_types').where({ tenant: tenantId }).delete();
-    await scopedDb.table('contract_lines').where({ tenant: tenantId }).delete();
-    await scopedDb.table('contracts').where({ tenant: tenantId }).delete();
-    await scopedDb.table('tenants').where({ tenant: tenantId }).delete();
-    await db?.destroy().catch(() => undefined);
+    try {
+      if (db && tenantId) {
+        const scopedDb = tenantDb(db, tenantId);
+        await scopedDb.table('contract_line_bucket_services').where({ tenant: tenantId }).delete();
+        await scopedDb.table('contract_line_buckets').where({ tenant: tenantId }).delete();
+        await scopedDb.table('service_catalog').where({ tenant: tenantId }).delete();
+        await scopedDb.table('service_types').where({ tenant: tenantId }).delete();
+        await scopedDb.table('contract_lines').where({ tenant: tenantId }).delete();
+        await scopedDb.table('contracts').where({ tenant: tenantId }).delete();
+        await scopedDb.table('tenants').where({ tenant: tenantId }).delete();
+      }
+    } finally {
+      await db?.destroy();
+    }
   });
 
   it('loads the pool snapshot with joined member service_name (no ambiguous tenant column)', async () => {

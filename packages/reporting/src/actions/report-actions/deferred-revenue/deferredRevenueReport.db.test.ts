@@ -1,42 +1,15 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { knex, type Knex } from 'knex';
+import type { Knex } from 'knex';
+import { createTestDbConnection } from '../../../../../../server/test-utils/dbConfig';
 import { v4 as uuidv4 } from 'uuid';
 
 import { buildDeferredRevenueReport } from './compose';
 import type { ClientRollforward, CurrencySection } from './types';
 
 /**
- * Database-backed integration test for the deferred-revenue report.
- *
- * Connects to the worktree's dev database (DB_HOST / DB_PORT, defaulting to
- * the local dev stack), seeds a scratch tenant inside a single transaction,
- * and rolls the transaction back afterwards — nothing is persisted. The suite
- * auto-skips when no dev-database secret is present (e.g. in CI, where there is
- * no local stack), and SKIP_DB_INTEGRATION_TESTS=true forces a skip explicitly.
+ * Required workspace database coverage. Each case seeds a scratch tenant in a
+ * transaction and rolls it back. The runner migrates the disposable database.
  */
-
-const repoRoot = path.resolve(__dirname, '../../../../../..');
-
-function readSecret(name: string): string {
-  try {
-    return readFileSync(path.join(repoRoot, 'secrets', name), 'utf8').trim();
-  } catch {
-    return '';
-  }
-}
-
-const dbHost = process.env.DB_HOST || '127.0.0.1';
-const dbPort = parseInt(process.env.DB_PORT || '6472', 10);
-const dbUser = process.env.DB_USER_SERVER || 'app_user';
-const dbPassword = readSecret('db_password_server');
-const dbName = process.env.DB_NAME_SERVER || 'server';
-
-// Skip when explicitly disabled or when the dev-database secret is absent —
-// the missing secret is the reliable "no reachable database" signal (CI, fresh
-// clones), so the suite skips gracefully instead of failing the run.
-const SKIP = process.env.SKIP_DB_INTEGRATION_TESTS === 'true' || !dbPassword;
 
 const TENANT = uuidv4();
 
@@ -474,23 +447,9 @@ function clientByName(section: CurrencySection, name: string): ClientRollforward
   return client;
 }
 
-describe.skipIf(SKIP)('deferred revenue report — database-backed integration', () => {
+describe('deferred revenue report — database-backed integration', () => {
   it('rolls credits and hours forward across two months with the tie-out and carry invariants', async () => {
-    if (!dbPassword) {
-      throw new Error('Missing secrets/db_password_server — cannot reach the dev database');
-    }
-
-    const db: Knex = knex({
-      client: 'pg',
-      connection: {
-        host: dbHost,
-        port: dbPort,
-        user: dbUser,
-        password: dbPassword,
-        database: dbName,
-      },
-      pool: { min: 1, max: 2 },
-    });
+    const db = await createTestDbConnection({ recreate: false });
 
     try {
       const trx = await db.transaction();
@@ -576,21 +535,7 @@ describe.skipIf(SKIP)('deferred revenue report — database-backed integration',
   });
 
   it('reconstructs month-M detail for a credit issued in M-1 and fully applied in M+1 (fix round 3)', async () => {
-    if (!dbPassword) {
-      throw new Error('Missing secrets/db_password_server — cannot reach the dev database');
-    }
-
-    const db: Knex = knex({
-      client: 'pg',
-      connection: {
-        host: dbHost,
-        port: dbPort,
-        user: dbUser,
-        password: dbPassword,
-        database: dbName,
-      },
-      pool: { min: 1, max: 2 },
-    });
+    const db = await createTestDbConnection({ recreate: false });
 
     try {
       const trx = await db.transaction();
@@ -707,21 +652,7 @@ describe.skipIf(SKIP)('deferred revenue report — database-backed integration',
   });
 
   it('restores a credit reversed by a FinancialService-shaped credit_adjustment with only related_transaction_id (fix round 3)', async () => {
-    if (!dbPassword) {
-      throw new Error('Missing secrets/db_password_server — cannot reach the dev database');
-    }
-
-    const db: Knex = knex({
-      client: 'pg',
-      connection: {
-        host: dbHost,
-        port: dbPort,
-        user: dbUser,
-        password: dbPassword,
-        database: dbName,
-      },
-      pool: { min: 1, max: 2 },
-    });
+    const db = await createTestDbConnection({ recreate: false });
 
     try {
       const trx = await db.transaction();
