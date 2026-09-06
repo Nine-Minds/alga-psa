@@ -6,7 +6,7 @@ import logger from '../../core/logger';
 import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 import { persistIngressPointer } from './inboundEmailProducer';
-import { getInboundDurableMode } from './inboundEmailDurableStore';
+import { getInboundDurableModeForTenant } from './inboundEmailDurableStore';
 import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 import { classifyInboundAuthFailure } from './InboundEmailAuthFailurePolicy';
 import { randomBytes } from 'crypto';
@@ -723,7 +723,7 @@ export class EmailWebhookMaintenanceService {
   ): Promise<ReconciliationResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, config.tenant);
-    const durableEnforce = getInboundDurableMode() === 'enforce';
+    const durableEnforce = await getInboundDurableModeForTenant(config.tenant, knex) === 'enforce';
     const reconciliationState = await db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
       .first(

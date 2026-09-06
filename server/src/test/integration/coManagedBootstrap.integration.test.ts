@@ -16,9 +16,12 @@ import { deliverCoManagedAdministratorInvitation } from '../../../../ee/temporal
 import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenant-operations';
 
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
-const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn() }));
+const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
+const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
+vi.mock('../../../../shared/services/email/unifiedInboundEmailQueueV2', () => ({ enqueueInboundEmailDurableJob: durableTransport.enqueue }));
 vi.mock('../../../../shared/services/email/inboundEmailSourceStager', () => ({
   readStagedSourceMime: intake.read, parseStagedMimeIntoEmailDetails: intake.parse,
+  stageInboundSourceMime: intake.stage,
 }));
 vi.mock('../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
 vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send }));
@@ -731,4 +734,151 @@ describe('durable co-managed email intake pauses', () => {
     expect(await customer.table('inbound_email_inbox').first()).toMatchObject({ status: 'received', attempt_count: 1,
       last_error: 'earlier source failure', error_details: { diagnostic: 'preserve', co_managed_lifecycle: { state: 'pending_acceptance' } } });
   });
+});
+
+async function withInboundMode<T>(mode: string, work: () => Promise<T>): Promise<T> {
+  const previous = process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE;
+  process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = mode;
+  try { return await work(); }
+  finally {
+    if (previous === undefined) delete process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE;
+    else process.env.UNIFIED_INBOUND_EMAIL_DURABLE_MODE = previous;
+  }
+}
+
+describe('co-managed durable intake selection', () => {
+  it('requires durable intake across installation modes and retains the choice after independent upgrade', async () => {
+    const { operation, actor, customer } = await readyForAcceptance();
+    const { getTenantInboundEmailPolicy } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    for (const mode of ['off', 'shadow', 'enforce'] as const) await withInboundMode(mode, async () => {
+      expect(await getTenantInboundEmailPolicy(actor.tenant, db)).toEqual({ mode: 'enforce', requiresDurable: true });
+      expect(await getTenantInboundEmailPolicy(operation.tenant, db)).toEqual({ mode, requiresDurable: false });
+    });
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    await customer.table('tenants').update({ product_code: 'psa' });
+    await withInboundMode('off', async () => {
+      expect(await getTenantInboundEmailPolicy(actor.tenant, db)).toEqual({ mode: 'enforce', requiresDurable: true });
+      await expect(getTenantInboundEmailPolicy(randomUUID(), db)).rejects.toThrow('does not exist');
+    });
+  });
+
+  it('persists Microsoft, Google, and IMAP pointers while rollout is off even when Redis handoff fails', async () => {
+    const { actor, customer } = await readyForAcceptance();
+    const { persistIngressPointer } = await import('../../../../shared/services/email/inboundEmailProducer');
+    durableTransport.enqueue.mockReset(); durableTransport.enqueue.mockRejectedValue(new Error('Redis unavailable'));
+    const pointers = [
+      { providerType: 'microsoft' as const, providerMessageId: 'ms-message', extra: { subscriptionId: 'subscription' } },
+      { providerType: 'google' as const, historyId: '200', pubsubMessageId: 'pubsub', mailbox: 'help@example.test' },
+      { providerType: 'imap' as const, mailbox: 'INBOX', uid: '24', uidValidity: '2', providerMessageId: 'imap-message' },
+    ];
+    await withInboundMode('off', async () => {
+      for (const pointer of pointers) {
+        const providerId = randomUUID();
+        await customer.table('email_providers').insert({ tenant: actor.tenant, id: providerId, provider_type: pointer.providerType,
+          provider_name: 'Co-managed Inbox', mailbox: `${pointer.providerType}@example.test`, is_active: true, status: 'connected' });
+        const params = { tenant: actor.tenant, providerId, providerType: pointer.providerType, pointer };
+        const result = await persistIngressPointer(params);
+        expect(result).toMatchObject({ mode: 'enforce', durable: true, enqueued: false, ingressId: expect.any(String) });
+        expect(await persistIngressPointer(params)).toEqual(result);
+      }
+    });
+    expect(await customer.table('inbound_email_ingress')).toHaveLength(3);
+    expect(await customer.table('email_processed_messages')).toHaveLength(0);
+    durableTransport.enqueue.mockReset();
+  });
+
+  it('hands an old V1 delivery to durable ingress without running legacy effects or needing a license renewal first', async () => {
+    const { actor, customer } = await readyForAcceptance();
+    const providerId = randomUUID();
+    await customer.table('email_providers').insert({ tenant: actor.tenant, id: providerId, provider_type: 'google',
+      provider_name: 'Old producer', mailbox: 'help@example.test', is_active: true, status: 'connected' });
+    const { processUnifiedInboundEmailQueueJob } = await import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessor');
+    intake.process.mockReset(); durableTransport.enqueue.mockReset(); durableTransport.enqueue.mockRejectedValue(new Error('Redis unavailable'));
+    const job = { schemaVersion: 1 as const, provider: 'google' as const, tenantId: actor.tenant, providerId,
+      jobId: randomUUID(), enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5,
+      pointer: { historyId: '200', emailAddress: 'help@example.test', pubsubMessageId: 'legacy-pubsub', discoveredMessageIds: ['message-1'] } };
+    await withInboundMode('off', async () => {
+      expect(await processUnifiedInboundEmailQueueJob(job)).toMatchObject({ outcome: 'handed_off', processedCount: 0, reason: 'required_durable_ingress' });
+      expect(await processUnifiedInboundEmailQueueJob(job)).toMatchObject({ outcome: 'handed_off' });
+      await expect(processUnifiedInboundEmailQueueJob({ ...job, provider: 'microsoft',
+        pointer: { messageId: '', subscriptionId: '' } })).rejects.toThrow('did not persist');
+    });
+    expect(await customer.table('inbound_email_ingress')).toEqual([expect.objectContaining({
+      provider_pointer: expect.objectContaining({ discoveredMessageIds: ['message-1'], historyId: '200' }),
+    })]);
+    expect(await customer.table('email_processed_messages')).toHaveLength(0);
+    expect(intake.process).not.toHaveBeenCalled();
+    durableTransport.enqueue.mockReset();
+  });
+
+  it('dispatches co-managed inboxes to lifecycle deferral while the installation default is off', async () => {
+    const { operation, actor } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
+    const { processUnifiedInboundEmailDurableJob } = await import('../../../../shared/services/email/unifiedInboundEmailQueueJobProcessorV2');
+    const context = { signal: new AbortController().signal, renew: async () => true, registerPostgresLease: vi.fn() };
+    const job = { schemaVersion: 2 as const, workType: 'process_inbox' as const, tenantId: actor.tenant,
+      recordId: inbox.inbox_id, jobId: randomUUID(), enqueuedAt: new Date().toISOString(), attempt: 0, maxAttempts: 5 };
+    await withInboundMode('off', async () => {
+      expect(await processUnifiedInboundEmailDurableJob(job, context)).toMatchObject({ disposition: 'defer', reason: 'co_managed_pending_acceptance' });
+      for (const workType of ['stage_ingress', 'process_inbox', 'process_artifact', 'publish_outbox', 'republish_outbox_event'] as const) {
+        expect(await processUnifiedInboundEmailDurableJob({ ...job, workType, tenantId: operation.tenant }, context))
+          .toMatchObject({ disposition: 'defer', reason: 'durable_mode_off' });
+      }
+    });
+    expect(context.registerPostgresLease).not.toHaveBeenCalled();
+  });
+
+  it('stages already-fetched IMAP source and schedules core processing when rollout is off', async () => {
+    const { actor, customer } = await readyForAcceptance(), providerId = randomUUID(), messageId = randomUUID();
+    await customer.table('email_providers').insert({ tenant: actor.tenant, id: providerId, provider_type: 'imap',
+      provider_name: 'IMAP', mailbox: 'help@example.test', is_active: true, status: 'connected' });
+    const { stageReadyInboundSource } = await import('../../../../shared/services/email/inboundEmailProducer');
+    intake.parse.mockReset(); intake.stage.mockReset(); durableTransport.enqueue.mockReset();
+    intake.parse.mockResolvedValue({ normalizedMessageId: messageId, providerMessageId: messageId,
+      rfcMessageId: `<${messageId}@example.test>`, emailData: { id: messageId, subject: 'IMAP source', from: { email: 'user@example.test' }, attachments: [] } });
+    intake.stage.mockResolvedValue({ objectKey: `test/${messageId}.eml`, sha256: 'b'.repeat(64), sizeBytes: 40 });
+    await withInboundMode('off', async () => {
+      const result = await stageReadyInboundSource({ tenant: actor.tenant, providerId, providerType: 'imap',
+        pointer: { providerType: 'imap', mailbox: 'INBOX', uid: '1', uidValidity: '2' }, rawMime: Buffer.from('retained IMAP source') });
+      expect(result).toEqual({ durable: true, inboxId: expect.any(String) });
+      expect(durableTransport.enqueue).toHaveBeenCalledWith({ workType: 'process_inbox', tenantId: actor.tenant, recordId: result.inboxId });
+    });
+    expect(await customer.table('inbound_email_inbox')).toHaveLength(1);
+    expect(await customer.table('inbound_email_ingress')).toEqual([expect.objectContaining({ status: 'staged' })]);
+  });
+
+  it('sweeps retained co-managed inboxes in off and shadow installations', async () => {
+    const { actor } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
+    const dbModule = await import('@alga-psa/db');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: actor.tenant });
+    try {
+      const { sweepTenantDurableWork } = await import('../../../../shared/services/email/inboundEmailRecovery');
+      for (const mode of ['off', 'shadow']) await withInboundMode(mode, async () => {
+        durableTransport.enqueue.mockReset();
+        const result = await sweepTenantDurableWork(actor.tenant);
+        expect(result.enqueued.inbox).toBe(1);
+        expect(durableTransport.enqueue).toHaveBeenCalledWith({ workType: 'process_inbox', tenantId: actor.tenant, recordId: inbox.inbox_id });
+      });
+    } finally { connection.mockRestore(); }
+  });
+});
+
+it('deduplicates co-managed outbox consumers even with installation rollout off', async () => {
+  const { operation, actor, customer } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
+  const { insertOutboxRow } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const { reserveInboundOutboxEventForConsumer, completeInboundOutboxEventForConsumer } =
+    await import('../../../../shared/services/email/inboundEmailConsumerDedupe');
+  const id = randomUUID(), event = { id, eventType: 'TICKET_CREATED', payload: { tenantId: actor.tenant } };
+  await insertOutboxRow(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id, outbox_id: id,
+    event_key: 'ticket-created', event_type: 'TICKET_CREATED', payload: event.payload });
+  await withInboundMode('off', async () => {
+    const params = { db, event, consumer: 'internal-notification', owner: 'first', failOpenOnLedgerError: false };
+    const first = await reserveInboundOutboxEventForConsumer(params);
+    expect(first).toMatchObject({ decision: 'deliver', token: expect.any(String), version: expect.any(Number) });
+    expect(first.failOpen).not.toBe(true);
+    expect(await completeInboundOutboxEventForConsumer({ ...params, token: first.token!, version: first.version! })).toBe(true);
+    expect(await reserveInboundOutboxEventForConsumer({ ...params, owner: 'second' })).toMatchObject({ decision: 'skip' });
+    expect(await reserveInboundOutboxEventForConsumer({ ...params, event: { ...event, payload: { tenantId: operation.tenant } } }))
+      .toEqual({ decision: 'deliver', failOpen: true });
+  });
+  expect(await customer.table('inbound_email_event_deliveries')).toEqual([expect.objectContaining({ status: 'delivered' })]);
 });

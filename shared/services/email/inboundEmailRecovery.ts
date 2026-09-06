@@ -32,6 +32,7 @@ import {
   getInboxByIdentity,
   insertEffect,
   getInboundDurableMode,
+  getInboundDurableModeForTenant,
   upsertInbox,
   type InboundEventDeliveryRecord,
   type InboundIngressRecord,
@@ -117,7 +118,7 @@ export async function sweepTenantDurableWork(tenant: string, limit: number = 10)
 
   // In shadow mode the durable processor does not run; legacy is authoritative
   // and shadow-staged inbox rows stay non-terminal for enforce-mode reconciliation.
-  if (getInboundDurableMode() !== 'shadow') {
+  if (await getInboundDurableModeForTenant(tenant, db) === 'enforce') {
     const inboxRows = await findDueInbox(db, { tenant, limit });
     for (const row of inboxRows) {
       if (row.status === 'retryable_failed' && row.attempt_count >= maxAttempts) {
@@ -907,7 +908,7 @@ export async function runInboundEmailRecoveryForTenant(
   const swept = await sweepTenantDurableWork(tenantId, batchLimit);
   const mirror = await mirrorTenantTerminalInbox(tenantId, batchLimit);
   let backfilled = 0;
-  if (getInboundDurableMode() !== 'off') {
+  if (await getInboundDurableModeForTenant(tenantId) !== 'off') {
     const backfill = await backfillTenantLegacyRows(tenantId, batchLimit);
     backfilled = backfill.imported;
   }

@@ -54,6 +54,28 @@ export function isInboundDurableEnabled(): boolean {
   return getInboundDurableMode() !== 'off';
 }
 
+/** The installation rollout setting cannot disable the durable intake required
+ * by co-managed lifecycle pauses. Preserve that choice after an independent
+ * upgrade: retained inboxes must not fall back to the legacy processor. This
+ * uses customer-owned relationship history, never a caller-supplied tier/flag. */
+export async function getTenantInboundEmailPolicy(tenant: string, db?: DurableDb): Promise<{
+  mode: InboundEmailDurableMode; requiresDurable: boolean;
+}> {
+  if (!tenant) throw new Error('A tenant is required for inbound email policy');
+  const connection = db ?? await (await import('@alga-psa/db/admin')).getAdminConnection();
+  const scoped = tenantDb(connection, tenant);
+  const workspace = await scoped.table('tenants').first('product_code');
+  if (!workspace) throw new Error('The inbound email workspace does not exist');
+  const requiresDurable = workspace.product_code === 'co_managed' || Boolean(
+    await scoped.table('co_management_relationships').first('relationship_id'),
+  );
+  return { requiresDurable, mode: requiresDurable ? 'enforce' : getInboundDurableMode() };
+}
+
+export async function getInboundDurableModeForTenant(tenant: string, db?: DurableDb): Promise<InboundEmailDurableMode> {
+  return (await getTenantInboundEmailPolicy(tenant, db)).mode;
+}
+
 /** Claim lease TTL for Postgres durable rows (independent of the Redis claim). */
 export function getDurableLeaseTtlMs(): number {
   const raw = Number(process.env.UNIFIED_INBOUND_EMAIL_DURABLE_LEASE_TTL_MS);

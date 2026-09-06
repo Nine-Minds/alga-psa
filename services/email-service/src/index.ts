@@ -9,7 +9,6 @@ import {
   processUnifiedInboundEmailDurableJob,
   renewPostgresLeaseForV2Job,
 } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueJobProcessorV2';
-import { getInboundDurableMode } from '@alga-psa/shared/services/email/inboundEmailDurableStore';
 import {
   assertInboundAuthPauseNotifierRegistered,
 } from '@alga-psa/shared/services/email/inboundAuthPauseNotifier';
@@ -59,23 +58,21 @@ async function start() {
     });
     logger.info('[IMAP] Unified inbound queue consumer started');
 
-    // V2 durable consumer: only active when durable mode is not off. It owns
+    // Keep V2 available for co-managed tenants even when the rollout is off. It owns
     // the heartbeat lifecycle (Redis claim + Postgres lease) and fenced
     // ack/retry/defer dispositions.
-    if (getInboundDurableMode() !== 'off') {
-      durableConsumer = new UnifiedInboundEmailQueueConsumerV2({
-        pollDelayMs: 250,
-        renewPostgresLease: renewPostgresLeaseForV2Job,
-        handleJob: async (job, ctx) => {
-          return processUnifiedInboundEmailDurableJob(job, ctx);
-        },
-      });
-      durableConsumerTask = durableConsumer.start().catch((error) => {
-        logger.error('[IMAP] Durable inbound queue consumer fatal error', error);
-        process.exit(1);
-      });
-      logger.info('[IMAP] Durable inbound queue consumer started');
-    }
+    durableConsumer = new UnifiedInboundEmailQueueConsumerV2({
+      pollDelayMs: 250,
+      renewPostgresLease: renewPostgresLeaseForV2Job,
+      handleJob: async (job, ctx) => {
+        return processUnifiedInboundEmailDurableJob(job, ctx);
+      },
+    });
+    durableConsumerTask = durableConsumer.start().catch((error) => {
+      logger.error('[IMAP] Durable inbound queue consumer fatal error', error);
+      process.exit(1);
+    });
+    logger.info('[IMAP] Durable inbound queue consumer started');
 
     const port = Number(process.env.PORT || 8080);
     // `HOST` in Alga is a public base URL (e.g. "http://localhost:3000"), not a bind address.

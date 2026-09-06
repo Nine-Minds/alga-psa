@@ -5,9 +5,10 @@
  */
 
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
+import type { InboundEmailDurableMode } from '../../interfaces/inbound-email.interfaces';
 import type { InboundPostgresLease } from './unifiedInboundEmailQueueConsumerV2';
 import {
-  getInboundDurableMode,
+  getInboundDurableModeForTenant,
   getDurableLeaseTtlMs,
 } from './inboundEmailDurableStore';
 import {
@@ -45,9 +46,16 @@ export async function processUnifiedInboundEmailDurableJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext
 ): Promise<InboundEmailQueueDisposition> {
+  const mode = await getInboundDurableModeForTenant(job.tenantId);
+  if (mode === 'off') {
+    // The consumer stays live for co-managed tenants. Preserve ordinary tenants'
+    // rollout choice across every V2 work type, including cursor updates and
+    // artifact/outbox effects, without dropping their existing queued work.
+    return { disposition: 'defer', untilIso: new Date(Date.now() + 60_000).toISOString(), reason: 'durable_mode_off' };
+  }
   switch (job.workType) {
     case 'process_inbox':
-      return handleProcessInbox(job, ctx);
+      return handleProcessInbox(job, ctx, mode);
     case 'stage_ingress':
       return handleStageIngress(job, ctx);
     case 'process_artifact':
@@ -61,13 +69,8 @@ export async function processUnifiedInboundEmailDurableJob(
   }
 }
 
-async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext): Promise<InboundEmailQueueDisposition> {
-  const mode = getInboundDurableMode();
-  if (mode === 'off') {
-    // Enforce/off plumbing: without a durable processor, nothing to do here —
-    // the V1 path remains authoritative.
-    return { disposition: 'ack' };
-  }
+async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext,
+  mode: Exclude<InboundEmailDurableMode, 'off'>): Promise<InboundEmailQueueDisposition> {
   const owner = newInboundProcessorOwner();
   return processInboundInbox({
     tenantId: job.tenantId,
