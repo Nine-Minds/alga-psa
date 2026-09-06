@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketActivityAttribution } from '../../lib/ticketActivityAttribution';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
@@ -59,7 +60,8 @@ interface FormattedEntry {
 }
 
 function actorLabel(activity: TicketActivityRow): string {
-  if (activity.actor_display_name) return activity.actor_display_name;
+  const snapshot = ticketActivityAttribution(activity);
+  if (snapshot) return snapshot;
   switch (activity.actor_type) {
     case 'user':
       return 'A user';

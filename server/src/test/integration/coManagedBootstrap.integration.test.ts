@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -3584,3 +3584,117 @@ it('admits the auto-close transaction before creating its resolution comment and
   expect(await customer.table('ticket_auto_close_state').where('ticket_id', ticketId)).toEqual([]);
   expect(workflow.mock.calls.some(([event]: any[]) => event.eventType === 'TICKET_CLOSED')).toBe(true);
 }));
+
+it('stores foreign ticket activity through an owner-local actor reference with immutable name and organization snapshots', async () => {
+  const { principal, customerPrincipal, resource, customer, sponsor, operation } = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { writeTicketActivity, readTicketActivity } = await import('@alga-psa/shared/lib/ticketActivity');
+  await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared work.' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Morgan', last_name: 'Provider' });
+  await sponsor.table('tenants').update({ client_name: 'Original MSP' });
+  const append = () => withCoManagedSharedWork(db, principal, resource, 'update', async context => {
+    const actorReferenceId = await ensureCoManagedActorReference(context);
+    const auditId = await writeTicketActivity(context.trx, { tenant: resource.tenant, ticketId: resource.id, entityType: 'ticket',
+      eventType: 'TICKET_UPDATED', source: 'ui', actor: { actorType: 'user', actorReferenceId, displayName: 'Forged display ignored' },
+      changes: { title: { old: 'Before', new: 'After' } } });
+    return { actorReferenceId, auditId };
+  });
+  const first = await append();
+  const reference = await customer.table('collaboration_actor_references').first();
+  expect(reference).toMatchObject({ actor_reference_id: first.actorReferenceId, tenant: resource.tenant, actor_tenant: principal.tenant,
+    actor_user_id: principal.userId, display_name: 'Morgan Provider', organization_name: 'Original MSP' });
+  expect(await customer.table('users')).toHaveLength(1);
+  expect(await customer.table('ticket_audit_logs').where('audit_id', first.auditId).first()).toMatchObject({ actor_user_id: null,
+    actor_contact_id: null, actor_reference_id: first.actorReferenceId, actor_display_name: 'Morgan Provider', actor_organization_name: 'Original MSP' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Renamed' });
+  await sponsor.table('tenants').update({ client_name: 'Renamed MSP' });
+  const second = await append();
+  expect(second.actorReferenceId).toBe(first.actorReferenceId);
+  expect(await customer.table('collaboration_actor_references')).toHaveLength(1);
+  const longName = 'M'.repeat(300);
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: longName });
+  const third = await append();
+  await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+  await expect(append()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  const rows = await readTicketActivity(db, resource.tenant, resource.id);
+  expect(rows.find(row => row.audit_id === first.auditId)).toMatchObject({ actor_display_name: 'Morgan Provider', actor_organization_name: 'Original MSP' });
+  expect(rows.find(row => row.audit_id === second.auditId)).toMatchObject({ actor_display_name: 'Renamed Provider', actor_organization_name: 'Renamed MSP' });
+  expect(rows.find(row => row.audit_id === third.auditId)?.actor_display_name).toBe(`${longName} Provider`);
+  expect(rows.every(row => row.actor_reference_id === first.actorReferenceId && row.actor_user_id === null)).toBe(true);
+  const migration = require('../../../migrations/20260906140000_create_collaboration_actor_references.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot remove retained collaboration actor attribution');
+});
+
+it('keeps foreign actor references transactional, rejects mixed/local impersonation and other-owner references, and preserves legacy audit rows', async () => {
+  const { principal, customerPrincipal, resource, customer } = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { writeTicketActivity, readTicketActivity } = await import('@alga-psa/shared/lib/ticketActivity');
+  const { withTransaction } = await import('@alga-psa/db');
+  await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared work.' });
+  const input = { tenant: resource.tenant, ticketId: resource.id, entityType: 'ticket', eventType: 'TICKET_UPDATED', source: 'ui' };
+  await expect(withCoManagedSharedWork(db, principal, resource, 'update', async context => {
+    const actorReferenceId = await ensureCoManagedActorReference(context);
+    await writeTicketActivity(context.trx, { ...input, actor: { actorType: 'user', actorReferenceId } });
+    throw new Error('Cancelled foreign activity');
+  })).rejects.toThrow('Cancelled foreign activity');
+  expect(await customer.table('collaboration_actor_references')).toEqual([]);
+  expect(await customer.table('ticket_audit_logs')).toEqual([]);
+  await expect(withCoManagedSharedWork(db, principal, resource, 'read', ensureCoManagedActorReference))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const actorReferenceId = await withCoManagedSharedWork(db, principal, resource, 'update', ensureCoManagedActorReference);
+  for (const actor of [{ actorType: 'user' as const, actorReferenceId, userId: customerPrincipal.userId },
+    { actorType: 'user' as const, actorReferenceId, contactId: randomUUID() }, { actorType: 'system' as const, actorReferenceId }]) {
+    await expect(withTransaction(db, trx => writeTicketActivity(trx, { ...input, actor }))).rejects.toThrow('exclusive actor reference');
+  }
+  await expect(writeTicketActivity(db, { ...input, actor: { actorType: 'user', actorReferenceId } })).rejects.toThrow('requires a transaction');
+  const sibling = await ticketHandoffFixture();
+  await expect(withTransaction(db, trx => writeTicketActivity(trx, { ...input, tenant: sibling.resource.tenant, ticketId: sibling.resource.id,
+    actor: { actorType: 'user', actorReferenceId } }))).rejects.toThrow('not available in the owning tenant');
+  const legacyId = await writeTicketActivity(db, { ...input, actor: { actorType: 'user', userId: customerPrincipal.userId, displayName: 'Local technician' } });
+  expect((await readTicketActivity(db, resource.tenant, resource.id)).find(row => row.audit_id === legacyId)).toMatchObject({
+    actor_user_id: customerPrincipal.userId, actor_reference_id: null, actor_organization_name: null, actor_display_name: 'Local technician' });
+  await expect(withTransaction(db, trx => tenantDb(trx, resource.tenant).table('ticket_audit_logs').insert({ tenant: resource.tenant,
+    audit_id: randomUUID(), ticket_id: resource.id, event_type: 'TICKET_UPDATED', entity_type: 'ticket', actor_type: 'user',
+    actor_reference_id: actorReferenceId, actor_user_id: customerPrincipal.userId, actor_display_name: 'Wrong local actor', actor_organization_name: 'MSP',
+    source: 'ui', occurred_at: new Date() }))).rejects.toMatchObject({ code: '23514' });
+});
+
+it('distinguishes equal user UUIDs across organizations and retains foreign attribution after source-user deletion', async () => {
+  const { principal, customerPrincipal, resource, customer, sponsor, sponsorActor, target, roleId } = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+  const { withCoManagedSharedWork } = await import('../../../../packages/co-managed/src/sharedWork');
+  const { ensureCoManagedActorReference } = await import('../../../../packages/co-managed/src/actorReferences');
+  const { writeTicketActivity, readTicketActivity } = await import('@alga-psa/shared/lib/ticketActivity');
+  await escalateCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Shared work.' });
+  const original = await sponsor.table('users').where('user_id', principal.userId).first();
+  const collision = { ...principal, userId: customerPrincipal.userId, sessionId: randomUUID() };
+  await sponsor.table('users').insert({ ...original, user_id: collision.userId, username: `foreign-${randomUUID()}`, email: `${randomUUID()}@example.test`,
+    first_name: 'External', last_name: 'Technician' });
+  await sponsor.table('user_roles').insert({ tenant: principal.tenant, user_id: collision.userId, role_id: roleId });
+  await sponsor.table('sessions').insert({ tenant: principal.tenant, user_id: collision.userId, session_id: collision.sessionId,
+    expires_at: new Date(Date.now() + 3600000) });
+  await replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: collision.userId, role: 'technician' }]);
+  const auditId = await withCoManagedSharedWork(db, collision, resource, 'update', async context => {
+    const actorReferenceId = await ensureCoManagedActorReference(context);
+    return writeTicketActivity(context.trx, { tenant: resource.tenant, ticketId: resource.id, entityType: 'ticket', eventType: 'TICKET_UPDATED',
+      source: 'ui', actor: { actorType: 'user', actorReferenceId } });
+  });
+  const reference = await customer.table('collaboration_actor_references').first();
+  expect(reference).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: customerPrincipal.userId, display_name: 'External Technician' });
+  await replaceCoManagedStaffAssignments(db, sponsorActor, target, 5, []);
+  await sponsor.table('sessions').where('user_id', collision.userId).del();
+  await sponsor.table('user_roles').where('user_id', collision.userId).del();
+  await sponsor.table('users').where('user_id', collision.userId).del();
+  expect(await customer.table('users').where('user_id', customerPrincipal.userId).first()).toBeDefined();
+  expect(await customer.table('collaboration_actor_references').first()).toMatchObject({ actor_reference_id: reference.actor_reference_id });
+  expect((await readTicketActivity(db, resource.tenant, resource.id)).find(row => row.audit_id === auditId)).toMatchObject({
+    actor_user_id: null, actor_reference_id: reference.actor_reference_id, actor_display_name: 'External Technician' });
+  await expect(withCoManagedSharedWork(db, collision, resource, 'update', ensureCoManagedActorReference)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+});

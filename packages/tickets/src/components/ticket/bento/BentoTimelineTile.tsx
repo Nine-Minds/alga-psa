@@ -1,5 +1,6 @@
 'use client';
 
+import { ticketActivityAttribution } from '../../../lib/ticketActivityAttribution';
 import React, { use, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dynamic from 'next/dynamic';
 import type { PartialBlock } from '@blocknote/core';
@@ -215,7 +216,7 @@ function eventLabel(eventType: string, t: Translator): string {
 function describeSystemEntry(entry: TicketTimelineEntry, t: Translator): string {
   const activity = entry.activity;
   if (!activity) return t('bento.timeline.ticketUpdated', 'Ticket updated');
-  const actor = activity.actor_display_name || t('bento.timeline.systemActor', 'System');
+  const actor = ticketActivityAttribution(activity) || t('bento.timeline.systemActor', 'System');
   const changes = activity.changes ?? {};
   const changeLines = Object.entries(changes).map(([field, change]) => {
     const from = change?.oldLabel ?? null;

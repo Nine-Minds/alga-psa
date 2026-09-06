@@ -5,3 +5,5 @@ export * from './sharedWork';
 export * from './sharedWorkRead';
 export * from './ticketHandoffs';
 export * from './ticketCollaboration';
+
+export * from './actorReferences';

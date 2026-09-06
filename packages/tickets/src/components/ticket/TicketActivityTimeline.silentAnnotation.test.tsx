@@ -79,3 +79,11 @@ describe('TicketActivityTimeline silent annotations', () => {
     expect(entry.annotation).toBeUndefined();
   });
 });
+
+
+it('keeps a foreign technician qualified by their historical organization without local-user attribution', () => {
+  const [entry] = formatEntries([activityEntry(makeActivity({ actor_user_id: null, actor_reference_id: 'owner-local-reference',
+    actor_display_name: 'Pat Agent', actor_organization_name: 'Managed Services Ltd' }))]);
+  expect(entry.actor).toBe('Pat Agent (Managed Services Ltd)');
+  expect(entry.title).toBe('Pat Agent (Managed Services Ltd) updated the ticket');
+});
