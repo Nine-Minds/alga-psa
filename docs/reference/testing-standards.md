@@ -469,6 +469,22 @@ and CI uses explicit translation gates instead. It is not counted as passing
 coverage. New roots and other test frameworks still need their own execution
 assignment; this tooling lane alone is not the repository-wide test inventory.
 
+### Appliance Node execution
+
+Run `npm --prefix ee/appliance/status-ui ci`, then
+`node scripts/run-appliance-tests.mjs` with Node 22, Docker and Helm available.
+The `Appliance Node execution complete` job performs that preparation on every
+PR. The runner rebuilds the status UI from the checkout and runs all Node test
+files under `ee/appliance`, excluding generated overlays and dependencies.
+It uses the same execution reconciliation as the tooling lane and currently
+has no manual exclusions. Evidence is retained in `test-results/appliance/`.
+
+These tests cover host-service HTTP behavior, operator/status models, rendered
+Helm resources and packaging scripts. The ISO tests use a simulated ISO writer;
+they do not establish that a physical machine or VM completed installation.
+VM boot, upgrade and deployed application journeys still require their own
+execution evidence.
+
 ## Test File Templates
 
 ### Unit Test Template

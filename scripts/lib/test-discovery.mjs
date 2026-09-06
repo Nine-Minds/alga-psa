@@ -24,6 +24,12 @@ export function isNodeToolingTest(file) {
     && /\.(test|spec)\.[cm]?js$/.test(file);
 }
 
+export function isApplianceNodeTest(file) {
+  return /^ee\/appliance\//.test(file)
+    && /\.(test|spec)\.[cm]?js$/.test(file)
+    && !/(^|\/)(node_modules|dist|overlay)\//.test(file);
+}
+
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {

@@ -1,4 +1,4 @@
-import { test as authenticatedTest, expect, signIn } from '../fixtures/auth';
+import { test as authenticatedTest, expect, readSession, signIn } from '../fixtures/auth';
 import { createUsageFixture } from '../fixtures/usage';
 
 const test = authenticatedTest.extend<{ usage: Awaited<ReturnType<typeof createUsageFixture>> }>({
@@ -9,7 +9,7 @@ const test = authenticatedTest.extend<{ usage: Awaited<ReturnType<typeof createU
   },
 });
 
-test('Add Usage selects the usage line over an overlapping bucket and previews the persisted amount', async ({ page, usage, credentials, database }) => {
+test('Add Usage selects the usage line over an overlapping bucket and previews the persisted amount', async ({ page, browser, baseURL, usage, credentials, database }) => {
   test.setTimeout(300000);
   const { tenant, client, service, usageLine, bucketLine, period, quantity, expectedAmountCents } = usage;
   const scope = { tenant: tenant.tenantId };
@@ -63,7 +63,12 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   await expect(editDialog.locator('#comments-input')).toHaveValue(comment);
   const editedComment = `${comment} — confirmed`;
   await editDialog.locator('#comments-input').fill(editedComment);
-  await editDialog.locator('#submit-usage-button').click();
+  const [updateRequest] = await Promise.all([
+    page.waitForRequest(request => request.method() === 'POST'
+      && Boolean(request.headers()['next-action'])
+      && Boolean(request.postData()?.includes(editedComment))),
+    editDialog.locator('#submit-usage-button').click(),
+  ]);
   await expect(editDialog).toBeHidden();
   await expect.poll(async () => (await records())[0]?.comments).toBe(editedComment);
   expect(Number((await records())[0].quantity)).toBe(quantity);
@@ -92,4 +97,38 @@ test('Add Usage selects the usage line over an overlapping bucket and previews t
   expect(await database('invoices').where(scope)).toEqual([]);
   expect(await database('invoice_charges').where(scope)).toEqual([]);
   expect((await records())[0].invoiced).toBe(false);
+
+  // Replay the real browser action under another tenant's own authenticated
+  // session. The action ID and serialized arguments come from the shipped UI,
+  // so this also covers the HTTP/session boundary rather than a mocked action.
+  const unrelated = await browser.newContext({ baseURL });
+  try {
+    const actor = usage.actors.secondary.admin;
+    const unrelatedPage = await unrelated.newPage();
+    await signIn(unrelatedPage, { email: actor.email, password: credentials.password });
+    expect(await readSession(unrelated.request)).toMatchObject({ id: actor.userId, tenant: actor.tenantId });
+    await unrelatedPage.goto('/msp/billing?tab=usage-tracking');
+    const unrelatedTable = unrelatedPage.locator('[data-automation-id="usage-tracking-table"]');
+    await expect(unrelatedTable).toBeVisible();
+    await expect(unrelatedTable).not.toContainText(service.name);
+    await expect(unrelatedPage.locator(`#usage-actions-menu-${record.usage_id}`)).toHaveCount(0);
+
+    const originalBody = updateRequest.postData()!;
+    const attackBody = originalBody.replace(editedComment, 'Forbidden cross-tenant edit');
+    expect(attackBody).not.toBe(originalBody);
+    const result = await unrelated.request.post(updateRequest.url(), {
+      headers: {
+        'next-action': updateRequest.headers()['next-action'],
+        'content-type': updateRequest.headers()['content-type'],
+        origin: new URL(baseURL!).origin,
+      },
+      data: attackBody,
+    });
+    expect(result.status()).toBe(200); // Server actions serialize expected errors in RSC.
+    expect(await result.text()).toContain('msp/billing:errors.usage.notFoundRefresh');
+    expect((await records())[0]).toMatchObject({ comments: editedComment, contract_line_id: usageLine.id, invoiced: false });
+    expect(Number((await records())[0].quantity)).toBe(quantity);
+    expect(await database('usage_tracking').where({ tenant: actor.tenantId })).toEqual([]);
+    expect(await database('invoices').where({ tenant: actor.tenantId })).toEqual([]);
+  } finally { await unrelated.close(); }
 });

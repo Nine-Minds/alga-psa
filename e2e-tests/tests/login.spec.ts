@@ -41,3 +41,24 @@ test('a rejected password shows an actionable error and creates no session', asy
   await expect(page).toHaveURL(/\/auth\/(?:msp\/)?signin(?:[/?#]|$)/);
   expect(await readSession(page.request)).toBeUndefined();
 });
+
+test('legacy integration settings links redirect before rendering and remain usable after reload', async ({ page, actors, credentials }) => {
+  const actor = actors.primary.admin;
+  await signIn(page, { email: actor.email, password: credentials.password });
+  const legacy = '/msp/settings?tab=integrations&category=accounting';
+  const response = await page.request.get(legacy, { maxRedirects: 0 });
+  expect(response.status()).toBe(307);
+  const target = new URL(response.headers().location);
+  expect(target.pathname).toBe('/msp/settings/integrations');
+  expect(target.search).toBe('?category=accounting');
+
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto(legacy);
+  await expect(page).toHaveURL(/\/msp\/settings\/integrations\?category=accounting$/);
+  await expect(page.locator('#accounting-integrations-setup')).toBeVisible();
+  await page.reload();
+  await expect(page.locator('#accounting-integrations-setup')).toBeVisible();
+  expect(errors).toEqual([]);
+  expect(await readSession(page.request)).toMatchObject({ id: actor.userId, tenant: actor.tenantId });
+});

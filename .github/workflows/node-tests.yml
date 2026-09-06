@@ -1,4 +1,4 @@
-name: Node tooling tests
+name: Node tests
 
 on:
   pull_request:
@@ -31,5 +31,36 @@ jobs:
         with:
           name: node-tooling-${{ github.sha }}
           path: test-results/node-tooling/
+          if-no-files-found: error
+          retention-days: 30
+
+  appliance:
+    name: Appliance Node execution complete
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ee/appliance/status-ui/package-lock.json
+      - run: npm install -g npm@11
+      - run: npm ci
+      - run: npm --prefix ee/appliance/status-ui ci
+      - uses: ./.github/actions/install-ripgrep
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+      - name: Build status UI and run every appliance Node test
+        run: node scripts/run-appliance-tests.mjs
+      - name: Preserve appliance execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appliance-node-${{ github.sha }}
+          path: test-results/appliance/
           if-no-files-found: error
           retention-days: 30

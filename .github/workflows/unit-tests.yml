@@ -198,7 +198,7 @@ jobs:
         working-directory: ./server
         run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
         env:
-          TEST_PROGRESS_PATH: ./test-progress.jsonl
+          TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/server-coverage/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=14336'
           # This job has no database; *.db.test.* suites are DB-backed
           # integration tests (see the exclude block in server/vitest.config.ts).
@@ -225,7 +225,7 @@ jobs:
         with:
           name: server-unit-execution
           path: |
-            server/test-progress.jsonl
+            test-results/server-coverage/progress.jsonl
             server/test-results.json
             server/coverage/coverage-summary.json
           retention-days: 30
