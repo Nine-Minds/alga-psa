@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { tenantDb } from '@alga-psa/db';
 import { addDays } from 'date-fns';
 import ProjectModel from '../models/project';
@@ -42,6 +43,7 @@ export async function applyProjectTemplate(
   templateId: string,
   projectData: ApplyProjectTemplateInput,
 ): Promise<string> {
+  await assertCoManagedOperationalWrite(trx, tenant);
   const validatedData = validateData(applyTemplateSchema, { template_id: templateId, ...projectData });
   const options = {
     copyPhases: validatedData.options?.copyPhases ?? true,

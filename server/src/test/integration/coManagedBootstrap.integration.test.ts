@@ -2048,3 +2048,128 @@ describe('co-managed task comments and reactions', () => {
     expect(await customer.table('comment_threads')).toEqual([]);
   }));
 });
+
+describe('co-managed project templates and import', () => {
+  it('denies every template mutation, the application service, and CSV import while inactive', async () => withProjectActionsFixture(async ({ operation, actor, input, publish, workflow }) => {
+    const templates = await import('../../../../packages/projects/src/actions/projectTemplateActions');
+    const wizard = await import('../../../../packages/projects/src/actions/projectTemplateWizardActions');
+    const importer = await import('../../../../packages/projects/src/actions/phaseTaskImportActions');
+    const { applyProjectTemplate } = await import('../../../../packages/projects/src/services/applyProjectTemplate');
+    const { replaceTemplateStatusMappingCore } = await import('../../../../packages/projects/src/lib/projectTemplateStatusMappingResolution');
+    const { withTransaction } = await import('@alga-psa/db');
+    const id = randomUUID();
+    const data = { template_name: 'Denied', phases: [], tasks: [], status_mappings: [], checklist_items: [] };
+    const projectData = { project_name: 'Denied', client_id: operation.customer_client_id };
+    const mutations = [
+      () => templates.createTemplateFromProject(id, { template_name: 'Denied' }),
+      () => templates.applyTemplate(id, projectData),
+      () => templates.updateTemplate(id, { template_name: 'Denied' }),
+      () => templates.deleteTemplate(id),
+      () => templates.duplicateTemplate(id),
+      () => templates.addTemplateDependency(id, id, randomUUID(), 'blocks'),
+      () => templates.updateTemplateDependency(id, { notes: 'Denied' }),
+      () => templates.removeTemplateDependency(id),
+      () => templates.addTemplatePhase(id, { phase_name: 'Denied' }),
+      () => templates.updateTemplatePhase(id, { phase_name: 'Denied' }),
+      () => templates.deleteTemplatePhase(id),
+      () => templates.reorderTemplatePhase(id, null, null),
+      () => templates.addTemplateTask(id, { task_name: 'Denied' }),
+      () => templates.updateTemplateTask(id, { task_name: 'Denied' }),
+      () => templates.deleteTemplateTask(id),
+      () => templates.moveTemplateTask(id, id),
+      () => templates.updateTemplateTaskStatus(id, id),
+      () => templates.addTemplateStatusMapping(id, { status_id: id }),
+      () => templates.replaceTemplateStatusMapping(id, id, { type: 'tenant', statusId: id }),
+      () => templates.removeTemplateStatusMapping(id),
+      () => templates.reorderTemplateStatusMappings(id, [id]),
+      () => templates.copyTemplateStatusesToPhase(id, id),
+      () => templates.removeTemplatePhaseStatuses(id, id),
+      () => templates.setTaskAdditionalAgents(id, [actor.userId]),
+      () => templates.addTaskAdditionalAgent(id, actor.userId),
+      () => templates.removeTaskAdditionalAgent(id, actor.userId),
+      () => templates.addTemplateChecklistItem(id, { item_name: 'Denied' }),
+      () => templates.updateTemplateChecklistItem(id, { item_name: 'Denied' }),
+      () => templates.deleteTemplateChecklistItem(id),
+      () => templates.saveTemplateChecklistItems(id, []),
+      () => wizard.createTemplateFromWizard(data),
+      () => wizard.updateTemplateFromEditor(id, data),
+      () => wizard.saveTemplateAsNew(id, 'Denied'),
+      () => withTransaction(db, trx => applyProjectTemplate(trx, actor.tenant, id, projectData)),
+      () => withTransaction(db, trx => replaceTemplateStatusMappingCore(trx, actor.tenant, id, id, { type: 'tenant', statusId: id })),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(await importer.importPhasesAndTasks(id, [])).toMatchObject({ success: false, phasesCreated: 0, tasksCreated: 0 });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await importer.importPhasesAndTasks(id, [])).toMatchObject({ success: false, phasesCreated: 0, tasksCreated: 0 });
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+  }));
+
+  it('creates and applies wizard templates atomically, preserves lapse reads, and resumes imports after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish, workflow }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const templates = await import('../../../../packages/projects/src/actions/projectTemplateActions');
+    const wizard = await import('../../../../packages/projects/src/actions/projectTemplateWizardActions');
+    const importer = await import('../../../../packages/projects/src/actions/phaseTaskImportActions');
+    const dbModule = await import('@alga-psa/db');
+    const status = await customer.table('statuses').where({ status_type: 'project_task', is_closed: false }).first();
+    const data = { template_name: 'Customer rollout',
+      phases: [{ temp_id: 'phase', phase_name: 'Discovery', start_offset_days: 0, order_number: 1 }],
+      status_mappings: [{ temp_id: 'status', status_id: status.status_id, display_order: 1 }],
+      tasks: [{ temp_id: 'task', phase_temp_id: 'phase', task_name: 'Inventory', task_type_key: 'task', template_status_mapping_id: 'status', order_number: 1 }],
+      checklist_items: [{ temp_id: 'check', task_temp_id: 'task', item_name: 'Verify', order_number: 1, completed: false }],
+    };
+    const templateId = await wizard.createTemplateFromWizard(data) as string;
+    expect(templateId).toEqual(expect.any(String));
+    const templatePhases = await customer.table('project_template_phases').where('template_id', templateId);
+    const templateTasks = await customer.table('project_template_tasks').whereIn('template_phase_id', templatePhases.map(row => row.template_phase_id));
+    expect(templateTasks).toHaveLength(1);
+    expect(await customer.table('project_template_checklist_items').where('template_task_id', templateTasks[0].template_task_id)).toHaveLength(1);
+    const projectData = { project_name: 'Applied rollout', client_id: operation.customer_client_id };
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      expect(await templates.applyTemplate(templateId, projectData)).toEqual(expect.any(String));
+      expect(publish).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled template application');
+    })).rejects.toThrow('Caller cancelled template application');
+    expect(await customer.table('projects')).toEqual([]);
+    expect(await customer.table('project_tasks')).toEqual([]);
+    expect((await customer.table('project_templates').where('template_id', templateId).first()).use_count).toBe(0);
+    expect(publish).not.toHaveBeenCalled();
+    const publishedProjects: any[] = [];
+    publish.mockImplementation(async (event: any) => {
+      publishedProjects.push(await customer.table('projects').where('project_id', event.payload.projectId).first());
+    });
+    const projectId = await templates.applyTemplate(templateId, projectData) as string;
+    expect(publishedProjects).toEqual([expect.objectContaining({ project_id: projectId })]);
+    expect(await customer.table('project_tasks')).toHaveLength(1);
+    expect(await customer.table('task_checklist_items')).toHaveLength(1);
+    const rows = [{ phase_name: 'CSV phase', tasks: [{ task_name: 'CSV task', task_type_key: 'task', tags: [] }] }] as any;
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      expect(await importer.importPhasesAndTasks(projectId, rows)).toMatchObject({ success: true, phasesCreated: 1, tasksCreated: 1 });
+      expect(workflow).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled import');
+    })).rejects.toThrow('Caller cancelled import');
+    expect(await customer.table('project_tasks')).toHaveLength(1);
+    expect(workflow).not.toHaveBeenCalled();
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await templates.getTemplates()).toEqual(expect.arrayContaining([expect.objectContaining({ template_id: templateId })]));
+    expect(await templates.getTemplateWithDetails(templateId)).toMatchObject({ template_name: data.template_name });
+    expect(await importer.getImportReferenceData(projectId)).toHaveProperty('phases');
+    expect(await importer.importPhasesAndTasks(projectId, rows)).toMatchObject({ success: false, phasesCreated: 0, tasksCreated: 0 });
+    expect(await customer.table('project_tasks')).toHaveLength(1);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    const publishedTasks: any[] = [];
+    workflow.mockImplementation(async (event: any) => {
+      publishedTasks.push(await customer.table('project_tasks').where('task_id', event.payload.taskId).first());
+    });
+    expect(await importer.importPhasesAndTasks(projectId, rows)).toMatchObject({ success: true, phasesCreated: 1, tasksCreated: 1 });
+    expect(publishedTasks).toEqual([expect.objectContaining({ task_name: 'CSV task' })]);
+    expect(await templates.updateTemplate(templateId, { template_name: 'Renewed rollout' })).toMatchObject({ template_name: 'Renewed rollout' });
+    const templateMapping = await customer.table('project_template_status_mappings').where('template_id', templateId).first();
+    expect(await templates.replaceTemplateStatusMapping(templateId, templateMapping.template_status_mapping_id, { type: 'tenant', statusId: status.status_id }))
+      .toMatchObject({ mapping: { status_id: status.status_id }, unresolvedStatusMappingCount: 0 });
+  }));
+});
