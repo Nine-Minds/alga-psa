@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { getCoManagedEntitlementState, getLicenseStateRow, type CoManagedPurchaseOperation } from '@alga-psa/licensing';
+import { getCoManagedEntitlementState, getLicenseStateRow, changeCoManagedAllocation, type CoManagedPurchaseOperation } from '@alga-psa/licensing';
 
 export const canOpenCoManagedClientProvisioning = withAuth(async (user, { tenant }, clientId: string) => {
   if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'read') ||
@@ -63,13 +63,18 @@ export const getCoManagedProvisioningStatus = withAuth(async (user, { tenant }, 
   const operations = await scoped.table('co_managed_provisioning_operations').orderBy('created_at', 'desc').orderBy('operation_id')
     .offset(page * 25).limit(26).select('operation_id', 'customer_tenant', 'relationship_id', 'state', 'step',
       'request', 'error_code', 'invitation_sent_at', 'invitation_delivery_error');
+  const allocations = operations.length ? await scoped.table('co_managed_allocations')
+    .whereIn('operation_id', operations.map(operation => operation.operation_id)).select('operation_id', 'seats', 'state') : [];
   // Each foreign read is rooted in an operation owned by this authenticated
   // sponsor, and returns only relationship lifecycle state, never customer work.
   const items = await Promise.all(operations.slice(0, 25).map(async operation => {
     const relationship = await tenantDb(knex, operation.customer_tenant).table('co_management_relationships')
       .where({ relationship_id: operation.relationship_id, sponsor_tenant: tenant }).first('state');
+    const allocation = allocations.find(row => row.operation_id === operation.operation_id);
     return { operationId: operation.operation_id as string, workspaceName: operation.request.workspaceName as string,
-      administratorEmail: operation.request.administrator.email as string, seats: operation.request.seats as number,
+      administratorEmail: operation.request.administrator.email as string, seats: Number(allocation?.seats ?? operation.request.seats),
+      canChangeSeats: Boolean(allocation && allocation.state !== 'released' && operation.state === 'pending_acceptance' &&
+        ['active', 'pending_acceptance'].includes(relationship?.state)),
       state: (relationship?.state === 'active' || relationship?.state === 'terminated' ? relationship.state : operation.state) as string,
       invitationSent: Boolean(operation.invitation_sent_at),
       deliveryFailed: Boolean(operation.invitation_delivery_error),
@@ -80,4 +85,16 @@ export const getCoManagedProvisioningStatus = withAuth(async (user, { tenant }, 
   const canManage = await hasPermission(user, 'co_management', 'manage');
   return { items, hasMore: operations.length > 25, canManage,
     canCreate: canManage && await hasPermission(user, 'client', 'read') && await hasPermission(user, 'ticket', 'read') };
+});
+
+export const changeCoManagedWorkspaceSeats = withAuth(async (user, { tenant }, input: {
+  operationId: string; seats: number; expectedSeats: number;
+}) => {
+  if (user.user_type !== 'internal' || !await hasPermission(user, 'co_management', 'manage')) throw new Error('Permission denied');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.operationId)) throw new Error('Provisioning operation not found.');
+  const { knex } = await createTenantKnex(tenant);
+  const operation = await tenantDb(knex, tenant).table('co_managed_provisioning_operations').where('operation_id', input.operationId).first();
+  if (!operation) throw new Error('Provisioning operation not found.');
+  await changeCoManagedAllocation(knex, tenant, { customerTenant: operation.customer_tenant,
+    relationshipId: operation.relationship_id, seats: input.seats, expectedSeats: input.expectedSeats });
 });

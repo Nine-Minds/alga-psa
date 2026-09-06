@@ -10,7 +10,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus } from '@/lib/actions/coManagedActions';
+import { getCoManagedProvisioningOptions, getCoManagedProvisioningStatus, changeCoManagedWorkspaceSeats } from '@/lib/actions/coManagedActions';
 import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction } from '@enterprise/lib/actions/coManagedProvisioningActions';
 
 type Request = Omit<CoManagedProvisioningRequest, 'sponsorTenant' | 'requestedBy'>;
@@ -30,6 +30,8 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<Request | null>(null);
+  const [allocation, setAllocation] = useState<{ operationId: string; seats: number; workspaceName: string } | null>(null);
+  const [allocatedSeats, setAllocatedSeats] = useState(1);
   const autoOpened = useRef(false);
   const operationId = useRef<string | null>(null);
   const reload = useCallback(async () => { setStatus(await getCoManagedProvisioningStatus(page)); }, [page]);
@@ -86,6 +88,15 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
     } catch { setError(t('coManaged.provisioning.retryError')); }
     finally { setBusy(false); }
   };
+  const resize = async () => {
+    if (!allocation) return;
+    setBusy(true); setError(null);
+    try {
+      await changeCoManagedWorkspaceSeats({ operationId: allocation.operationId, seats: allocatedSeats, expectedSeats: allocation.seats });
+      setAllocation(null); await reload(); await onChanged();
+    } catch { setError(t('coManaged.provisioning.resizeError')); }
+    finally { setBusy(false); }
+  };
   const valid = form.clientId && form.workspaceName.trim() && form.administrator.firstName.trim() && form.administrator.lastName.trim() &&
     /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.administrator.email) && form.escalationBoardId && Number.isInteger(form.seats) && form.seats >= 1 && form.seats <= available;
   return <Card><CardHeader><CardTitle>{t('coManaged.provisioning.title')}</CardTitle></CardHeader><CardContent className="space-y-4">
@@ -107,8 +118,12 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           {item.state === 'pending_acceptance' && <p className="text-muted-foreground">{t(item.invitationSent
             ? 'coManaged.provisioning.invitationSent' : item.deliveryFailed ? 'coManaged.provisioning.deliveryFailed' : 'coManaged.provisioning.invitationPending')}</p>}
         </TableCell>
-        <TableCell>{status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}
-          onClick={() => void retry(item.operationId)}>{t('coManaged.provisioning.retry')}</Button>}</TableCell>
+        <TableCell><div className="flex gap-2">
+          {status.canManage && item.canChangeSeats && <Button id={`co-managed-resize-${item.operationId}`} variant="outline" disabled={busy}
+            onClick={() => { setAllocation(item); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
+          {status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}
+            onClick={() => void retry(item.operationId)}>{t('coManaged.provisioning.retry')}</Button>}
+        </div></TableCell>
       </TableRow>)}</TableBody>
     </Table></div>}
     {(page > 0 || status?.hasMore) && <div className="flex gap-3">
@@ -150,6 +165,17 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           {t(submitted ? 'coManaged.provisioning.retry' : 'coManaged.provisioning.submit')}
         </Button>
       </form>
+    </Dialog>
+    <Dialog id="co-managed-resize-allocation" isOpen={Boolean(allocation)} onClose={() => { if (!busy) setAllocation(null); }} title={t('coManaged.provisioning.resize')}>
+      {allocation && <div className="space-y-4">
+        {error && <p role="alert" className="text-destructive">{error}</p>}
+        <p>{allocation.workspaceName}</p><p>{t('coManaged.provisioning.resizeDescription')}</p>
+        <Label htmlFor="co-managed-allocation-seats">{t('coManaged.provisioning.seats')}</Label>
+        <Input id="co-managed-allocation-seats" type="number" min={1} max={allocation.seats + (canGrow ? available : 0)} step={1}
+          value={allocatedSeats} disabled={busy} onChange={event => setAllocatedSeats(Number(event.target.value))} />
+        <Button id="co-managed-save-allocation" disabled={busy || !Number.isInteger(allocatedSeats) || allocatedSeats < 1 ||
+          allocatedSeats > allocation.seats + (canGrow ? available : 0)} onClick={() => void resize()}>{t('coManaged.provisioning.saveAllocation')}</Button>
+      </div>}
     </Dialog>
   </CardContent></Card>;
 }

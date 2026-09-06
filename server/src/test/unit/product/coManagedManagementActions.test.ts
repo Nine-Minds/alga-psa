@@ -1,10 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { getCoManagedProvisioningStatus, getCoManagedProvisioningOptions, getCoManagedBillingState, canOpenCoManagedClientProvisioning } from '../../../lib/actions/coManagedActions';
-const mocks = vi.hoisted(() => ({ permission: vi.fn(), capacity: vi.fn(), license: vi.fn(),
+import { getCoManagedProvisioningStatus, getCoManagedProvisioningOptions, getCoManagedBillingState, changeCoManagedWorkspaceSeats, canOpenCoManagedClientProvisioning } from '../../../lib/actions/coManagedActions';
+const mocks = vi.hoisted(() => ({ permission: vi.fn(), capacity: vi.fn(), license: vi.fn(), resize: vi.fn(),
   user: { tenant: 'home', user_id: 'admin', user_type: 'internal' }, rows: {} as Record<string, any[]>, reads: [] as string[] }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) => handler(mocks.user, { tenant: mocks.user.tenant }, ...args) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
-vi.mock('@alga-psa/licensing', () => ({ getCoManagedEntitlementState: mocks.capacity, getLicenseStateRow: mocks.license }));
+vi.mock('@alga-psa/licensing', () => ({ getCoManagedEntitlementState: mocks.capacity, getLicenseStateRow: mocks.license, changeCoManagedAllocation: mocks.resize }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: {} }), tenantDb: (_db: any, tenant: string) => ({
   table: (table: string) => {
     const key = `${tenant}:${table}`; mocks.reads.push(key);
@@ -37,7 +37,7 @@ describe('sponsor co-management read boundaries', () => {
   it('returns only own progress and lifecycle state, excluding internal fields and sibling operations', async () => {
     const result = await getCoManagedProvisioningStatus();
     expect(result.items).toEqual([{ operationId: 'own-operation', workspaceName: 'Own customer', administratorEmail: 'admin@example.test',
-      seats: 1, state: 'active', invitationSent: false, deliveryFailed: false, canRetry: false }]);
+      seats: 1, canChangeSeats: false, state: 'active', invitationSent: false, deliveryFailed: false, canRetry: false }]);
     expect(JSON.stringify(result)).not.toContain('never-return');
     expect(mocks.reads.some(key => key.startsWith('sibling:'))).toBe(false);
   });
@@ -77,4 +77,13 @@ describe('sponsor co-management read boundaries', () => {
     mocks.rows['home:tenants'][0] = { product_code: 'co_managed', plan: 'pro' };
     expect(await canOpenCoManagedClientProvisioning(clientId)).toBe(false);
   });
+});
+
+it('resizes only a sponsor-owned operation and derives the customer identity from its durable record', async () => {
+  const operationId = 'a0000000-0000-4000-8000-000000000002';
+  await expect(changeCoManagedWorkspaceSeats({ operationId, seats: 2, expectedSeats: 1 })).rejects.toThrow('not found');
+  expect(mocks.resize).not.toHaveBeenCalled();
+  mocks.rows['home:co_managed_provisioning_operations'][0].operation_id = operationId;
+  await changeCoManagedWorkspaceSeats({ operationId, seats: 2, expectedSeats: 1, customerTenant: 'forged-customer', sponsorTenant: 'forged-sponsor' } as any);
+  expect(mocks.resize).toHaveBeenCalledWith({}, 'home', { customerTenant: 'own-customer', relationshipId: 'own-relationship', seats: 2, expectedSeats: 1 });
 });

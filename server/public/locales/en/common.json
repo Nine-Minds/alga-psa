@@ -1598,5 +1598,9 @@
   },
   "callLink": {
     "teamsCall": "Call in Microsoft Teams"
+  },
+  "users": {
+    "soloLicenseLimit": "The Solo plan supports one technician. Upgrade the workspace before activating another user.",
+    "technicianLicenseLimit": "This workspace cannot activate another technician. Check its activation status and available license allocation."
   }
 }

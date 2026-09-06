@@ -1,3 +1,4 @@
+import { assertCoManagedSeatAdmission } from '@alga-psa/licensing';
 import crypto from 'node:crypto';
 import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
@@ -100,6 +101,7 @@ export async function createAgent(input: CreateAgentInput): Promise<AgentRecord>
     return knex.transaction(async (trx) => {
       const db = tenantDb(trx, tenant);
 
+      await assertCoManagedSeatAdmission(trx, tenant, { email: `mcp-agent-${agentId}@agents.alga.local` });
       await db.table('users').insert({
         user_id: userId,
         tenant,

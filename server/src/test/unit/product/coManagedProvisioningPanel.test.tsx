@@ -4,10 +4,10 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import CoManagedProvisioningPanel from '../../../components/co-managed/CoManagedProvisioningPanel';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), status: vi.fn(), options: vi.fn(), provision: vi.fn(), retry: vi.fn(), changed: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), status: vi.fn(), options: vi.fn(), provision: vi.fn(), retry: vi.fn(), resize: vi.fn(), changed: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
-vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedProvisioningStatus: mocks.status, getCoManagedProvisioningOptions: mocks.options }));
+vi.mock('../../../lib/actions/coManagedActions', () => ({ getCoManagedProvisioningStatus: mocks.status, getCoManagedProvisioningOptions: mocks.options, changeCoManagedWorkspaceSeats: mocks.resize }));
 vi.mock('@enterprise/lib/actions/coManagedProvisioningActions', () => ({ provisionCoManagedWorkspaceAction: mocks.provision, retryCoManagedProvisioningAction: mocks.retry }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) =>
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>
@@ -73,4 +73,16 @@ describe('co-managed provisioning UI', () => {
     panel(); fireEvent.click(await screen.findByRole('button', { name: 'coManaged.provisioning.retry' }));
     await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith('operation')); expect(mocks.provision).not.toHaveBeenCalled();
   });
+});
+
+it('resizes the existing customer allocation with its expected previous seat count', async () => {
+  mocks.status.mockResolvedValue({ canManage: true, canCreate: true, hasMore: false, items: [
+    { operationId: 'existing-operation', workspaceName: 'Customer', administratorEmail: 'admin@example.test', seats: 1,
+      state: 'active', canRetry: false, canChangeSeats: true },
+  ] });
+  panel(); fireEvent.click(await screen.findByRole('button', { name: 'coManaged.provisioning.resize' }));
+  fireEvent.change(screen.getByLabelText('coManaged.provisioning.seats'), { target: { value: '2' } });
+  expect(mocks.resize).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.saveAllocation' }));
+  await waitFor(() => expect(mocks.resize).toHaveBeenCalledWith({ operationId: 'existing-operation', seats: 2, expectedSeats: 1 }));
 });

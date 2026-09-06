@@ -294,6 +294,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       if (!result.success) {
         const errorKeys: Record<typeof result.code, string> = {
+          SOLO_PLAN_LIMIT: 'common:users.soloLicenseLimit',
+          LICENSE_LIMIT_REACHED: 'common:users.technicianLicenseLimit',
           EMAIL_ALREADY_EXISTS: 'profile.messages.error.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',

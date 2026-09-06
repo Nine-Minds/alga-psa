@@ -6,6 +6,7 @@
  * Provides business logic integration with existing user server actions and database operations
  */
 
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
 import { Knex } from 'knex';
 import { BaseService, ServiceContext, ListResult, tenantDb, withTransaction } from '@alga-psa/db';
 import { IUser, IUserWithRoles, IRole, IRoleWithPermissions, ITeam } from '@alga-psa/types';
@@ -224,96 +225,129 @@ export class UserService extends BaseService<IUser> {
     
     const { knex } = await this.getKnex();
 
-    return withTransaction(knex, async (trx) => {
-      // Validate email uniqueness per tenant + user_type (allow same email across different types)
-      const targetUserType = data.user_type || 'internal';
-      const existingUserByEmail = await this.buildTenantScopedQuery(trx, context)
-        .andWhere('email', data.email.toLowerCase())
-        .andWhere('user_type', targetUserType)
-        .select('user_id')
-        .first();
+    return withTransaction(knex, trx => this.createUsingTransaction(data, context, trx));
+  }
 
-      if (existingUserByEmail) {
-        throw new Error('A user with this email address already exists');
-      }
-
-      // Validate username uniqueness within tenant + user_type (allow same username across different types)
-      const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
-        .andWhere('username', data.username.toLowerCase())
-        .andWhere('user_type', targetUserType)
-        .select('user_id')
-        .first();
-
-      if (existingUserByUsername) {
-        throw new Error('A user with this username already exists for this user type');
-      }
-
-      // Validate role IDs if provided
-      if (data.role_ids && data.role_ids.length > 0) {
-        const roles = await tenantDb(trx, context.tenant).table('roles')
-          .whereIn('role_id', data.role_ids)
-          .select('*');
-
-        if (roles.length !== data.role_ids.length) {
-          throw new Error('One or more invalid role IDs provided');
-        }
-      }
-
-      // Prepare user data
-      const userData = {
-        user_id: knex.raw('gen_random_uuid()'),
-        username: data.username.toLowerCase(),
-        first_name: data.first_name || null,
-        last_name: data.last_name || null,
-        email: data.email.toLowerCase(),
-        hashed_password: await hashPassword(data.password),
-        phone: data.phone || null,
-        timezone: data.timezone || null,
-        user_type: data.user_type || 'internal',
-        contact_id: data.contact_id || null,
-        two_factor_enabled: data.two_factor_enabled || false,
-        is_google_user: data.is_google_user || false,
-        is_inactive: data.is_inactive || false,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
-      };
-
-      // Insert user
-      const [createdUser] = await tenantDb(trx, context.tenant).table('users')
-        .insert(userData)
-        .returning(USER_RESPONSE_FIELD_NAMES);
-
-      // Assign roles
-      if (data.role_ids && data.role_ids.length > 0) {
-        const userRoles = data.role_ids.map((roleId: string) => ({
-          user_id: createdUser.user_id,
-          role_id: roleId,
-          tenant: context.tenant
-        }));
-        await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
-      }
-
-      // Create default user preferences
-      await this.createDefaultUserPreferences(createdUser.user_id, context, trx);
-
-      // Log user creation activity
-      await this.logUserActivity({
-        user_id: createdUser.user_id,
-        activity_type: 'user_created',
-        metadata: { created_by: context.userId }
-      }, context, trx);
-
-      // Return enhanced user
-      const [enhancedUser] = await this.enhanceUsersWithDetails([createdUser], context, {
-        includeRoles: true,
-        includeTeams: false,
-        includeAvatar: true,
-        includeHateoas: true
-      }, trx);
-
-      return enhancedUser as unknown as IUser;
+  async createFromInvitation(token: string, password: string, context: ServiceContext): Promise<IUser> {
+    await this.ensurePermission(context, 'user', 'create');
+    const { knex } = await this.getKnex();
+    return withTransaction(knex, async trx => {
+      const invitation = await tenantDb(trx, context.tenant).table('user_invitations').where({ token, used_at: null })
+        .where('expires_at', '>', trx.raw('clock_timestamp()')).first();
+      if (!invitation) throw new Error('Invalid or expired invitation token');
+      return this.createUsingTransaction({ username: invitation.email, email: invitation.email, password,
+        first_name: invitation.first_name, last_name: invitation.last_name, user_type: 'internal', is_inactive: false,
+        role_ids: [invitation.role_id] }, context, trx, token);
     });
+  }
+
+  private async createUsingTransaction(data: CreateUserData, context: ServiceContext, trx: Knex.Transaction, invitationToken?: string): Promise<IUser> {
+    const knex = trx;
+    if ((data.user_type || 'internal') === 'internal' && !data.is_inactive) {
+      const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant, { email: data.email, invitationToken });
+      if (isInternalUserLicenseLimitRejected(licenseCheck)) throw new Error(licenseCheck.error);
+    }
+    let invitation;
+    if (invitationToken) {
+      invitation = await tenantDb(trx, context.tenant).table('user_invitations').where({ token: invitationToken, used_at: null })
+        .where('expires_at', '>', trx.raw('clock_timestamp()')).forUpdate().first();
+      const role = invitation?.role_id ? await tenantDb(trx, context.tenant).table('roles').where({ role_id: invitation.role_id, msp: true }).first() : null;
+      if (!invitation || !role || invitation.email !== data.email || invitation.role_id !== data.role_ids?.[0] ||
+          invitation.first_name !== data.first_name || invitation.last_name !== data.last_name) throw new Error('The invitation changed or expired. Please reopen your invitation.');
+    }
+
+    // Validate email uniqueness per tenant + user_type (allow same email across different types)
+    const targetUserType = data.user_type || 'internal';
+    const existingUserByEmail = await this.buildTenantScopedQuery(trx, context)
+      .andWhere('email', data.email.toLowerCase())
+      .andWhere('user_type', targetUserType)
+      .select('user_id')
+      .first();
+
+    if (existingUserByEmail) {
+      throw new Error('A user with this email address already exists');
+    }
+
+    // Validate username uniqueness within tenant + user_type (allow same username across different types)
+    const existingUserByUsername = await this.buildTenantScopedQuery(trx, context)
+      .andWhere('username', data.username.toLowerCase())
+      .andWhere('user_type', targetUserType)
+      .select('user_id')
+      .first();
+
+    if (existingUserByUsername) {
+      throw new Error('A user with this username already exists for this user type');
+    }
+
+    // Validate role IDs if provided
+    if (data.role_ids && data.role_ids.length > 0) {
+      const roles = await tenantDb(trx, context.tenant).table('roles')
+        .whereIn('role_id', data.role_ids)
+        .select('*');
+
+      if (roles.length !== data.role_ids.length) {
+        throw new Error('One or more invalid role IDs provided');
+      }
+    }
+
+    // Prepare user data
+    const userData = {
+      user_id: knex.raw('gen_random_uuid()'),
+      username: data.username.toLowerCase(),
+      first_name: data.first_name || null,
+      last_name: data.last_name || null,
+      email: data.email.toLowerCase(),
+      hashed_password: await hashPassword(data.password),
+      phone: data.phone || null,
+      timezone: data.timezone || null,
+      user_type: data.user_type || 'internal',
+      contact_id: data.contact_id || null,
+      two_factor_enabled: data.two_factor_enabled || false,
+      is_google_user: data.is_google_user || false,
+      is_inactive: data.is_inactive || false,
+      tenant: context.tenant,
+      created_at: knex.raw('now()'),
+      updated_at: knex.raw('now()')
+    };
+
+    // Insert user
+    const [createdUser] = await tenantDb(trx, context.tenant).table('users')
+      .insert(userData)
+      .returning(USER_RESPONSE_FIELD_NAMES);
+
+    // Assign roles
+    if (data.role_ids && data.role_ids.length > 0) {
+      const userRoles = data.role_ids.map((roleId: string) => ({
+        user_id: createdUser.user_id,
+        role_id: roleId,
+        tenant: context.tenant
+      }));
+      await tenantDb(trx, context.tenant).table('user_roles').insert(userRoles);
+    }
+
+    // Create default user preferences
+    await this.createDefaultUserPreferences(createdUser.user_id, context, trx);
+
+    // Log user creation activity
+    await this.logUserActivity({
+      user_id: createdUser.user_id,
+      activity_type: 'user_created',
+      metadata: { created_by: context.userId }
+    }, context, trx);
+
+    // Return enhanced user
+    const [enhancedUser] = await this.enhanceUsersWithDetails([createdUser], context, {
+      includeRoles: true,
+      includeTeams: false,
+      includeAvatar: true,
+      includeHateoas: true
+    }, trx);
+
+    if (invitation) {
+      await tenantDb(trx, context.tenant).table('user_invitations').where('invitation_id', invitation.invitation_id).update({ used_at: trx.fn.now() });
+      await UserPreferences.upsert(trx, { user_id: createdUser.user_id, setting_name: 'has_reset_password', setting_value: true, updated_at: new Date() });
+    }
+    return enhancedUser as unknown as IUser;
   }
 
   /**
@@ -328,11 +362,18 @@ export class UserService extends BaseService<IUser> {
       // Verify user exists and belongs to tenant
       const existingUser = await this.buildTenantScopedQuery(trx, context)
         .where({ user_id: id })
-        .select('user_id', 'email', 'user_type')
+        .select('user_id', 'email', 'user_type', 'is_inactive')
         .first();
 
       if (!existingUser) {
         throw new Error('User not found or permission denied');
+      }
+
+      if ((data.user_type || existingUser.user_type) === 'internal' &&
+          (data.is_inactive ?? existingUser.is_inactive) === false &&
+          (data.is_inactive === false || data.user_type === 'internal')) {
+        const licenseCheck = await checkInternalUserLicenseLimit(trx, context.tenant, { email: data.email || existingUser.email, existingUserId: id });
+        if (isInternalUserLicenseLimitRejected(licenseCheck)) throw new Error(licenseCheck.error);
       }
 
       // Validate email uniqueness per user_type if changing email

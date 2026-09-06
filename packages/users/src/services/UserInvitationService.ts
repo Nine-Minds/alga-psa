@@ -1,6 +1,7 @@
 import { createTenantKnex, tenantDb, requireTenantId, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { checkPortalInvitationLimit, formatRateLimitError } from '@alga-psa/auth';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../lib/internalUserLicenseGuard';
 import crypto from 'crypto';
 import { Knex } from 'knex';
 
@@ -77,6 +78,10 @@ export class UserInvitationService {
 
       const token = this.generateSecureToken();
       const normalizedEmail = params.email.toLowerCase();
+
+      // Hold the same admission lock through reservation and invitation write.
+      const licenseCheck = await checkInternalUserLicenseLimit(trx, tenant, { email: normalizedEmail, kind: 'invitation' });
+      if (isInternalUserLicenseLimitRejected(licenseCheck)) return { success: false, error: licenseCheck.error };
 
       // Reuse an existing active invitation for the same email to allow
       // resending without erroring.

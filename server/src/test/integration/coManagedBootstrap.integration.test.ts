@@ -3,7 +3,8 @@ import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import knex, { type Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManagedCommittedSeats } from '@alga-psa/licensing';
+import { tenantDb, runWithTenant } from '@alga-psa/db';
 import { getSecret } from '../../lib/utils/getSecret';
 import { prepareCoManagedProvisioning } from '../../../../packages/co-managed/src/provisioning';
 import { requestCoManagedProvisioningCleanup } from '../../../../packages/co-managed/src/provisioning';
@@ -249,4 +250,172 @@ describe('customer-owned co-management acceptance', () => {
     if (relationship.state === 'active') expect(stored.state).toBe('pending_acceptance');
     else expect(stored.state).toBe('cleanup_requested');
   });
+});
+
+async function createCustomerTechnician(tenant: string, email = `technician-${randomUUID()}@example.test`) {
+  return db.transaction(async trx => {
+    await assertCoManagedSeatAdmission(trx, tenant, { email });
+    const [user] = await tenantDb(trx, tenant).table('users').insert({ tenant, user_id: randomUUID(), username: email, email,
+      first_name: 'Technician', last_name: 'Test', hashed_password: 'not-a-login', user_type: 'internal', is_inactive: false }).returning('*');
+    return user;
+  });
+}
+async function reserveCustomerInvitation(tenant: string, email: string) {
+  return db.transaction(async trx => {
+    await assertCoManagedSeatAdmission(trx, tenant, { email, kind: 'invitation' });
+    const role = await tenantDb(trx, tenant).table('roles').where({ role_name: 'Technician', msp: true }).first();
+    await tenantDb(trx, tenant).table('user_invitations').insert({ tenant, invitation_id: randomUUID(), email,
+      first_name: 'Invited', last_name: 'Tech', role_id: role.role_id, token: randomUUID(), expires_at: trx.raw("now() + interval '24 hours'"), metadata: {} });
+  });
+}
+
+describe('customer technician allocation admission', () => {
+  it('serializes concurrent last-seat creates without using MSP licensed_user_count', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, actor, input);
+    await tenantDb(db, operation.tenant).table('tenants').update({ licensed_user_count: 0 });
+    const results = await Promise.allSettled([createCustomerTechnician(actor.tenant), createCustomerTechnician(actor.tenant)]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    expect(await customer.table('users').where({ user_type: 'internal', is_inactive: false })).toHaveLength(2);
+  });
+  it('reserves invitation capacity against direct creates and concurrent other invitations', async () => {
+    const { actor, input } = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, actor, input);
+    const results = await Promise.allSettled([reserveCustomerInvitation(actor.tenant, 'one@example.test'), reserveCustomerInvitation(actor.tenant, 'two@example.test')]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    await expect(createCustomerTechnician(actor.tenant)).rejects.toMatchObject({ code: 'CO_MANAGED_SEAT_LIMIT' });
+    expect(await db.transaction(trx => countCoManagedCommittedSeats(trx, actor.tenant))).toBe(2);
+  });
+  it('does not charge requesters or expired invitations as technician seats', async () => {
+    const { customer, actor, input } = await readyForAcceptance();
+    await acceptCoManagedRelationship(db, actor, input);
+    await reserveCustomerInvitation(actor.tenant, 'expired@example.test');
+    await customer.table('user_invitations').where('email', 'expired@example.test').update({ expires_at: new Date(0) });
+    await customer.table('users').insert({ tenant: actor.tenant, user_id: randomUUID(), username: 'requester', email: 'requester@example.test',
+      first_name: 'Requester', last_name: 'Test', hashed_password: 'not-a-login', user_type: 'client', is_inactive: false });
+    await expect(createCustomerTechnician(actor.tenant)).resolves.toMatchObject({ user_type: 'internal' });
+  });
+  it('requires the original administrator invitation before activation', async () => {
+    const operation = await prepare(); await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
+    const customer = tenantDb(db, operation.customer_tenant), invitation = await customer.table('user_invitations').first();
+    await expect(createCustomerTechnician(operation.customer_tenant, invitation.email)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await expect(db.transaction(trx => assertCoManagedSeatAdmission(trx, operation.customer_tenant, { email: invitation.email, invitationToken: 'wrong-token' })))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_INVITATION_INVALID' });
+    expect(await db.transaction(trx => assertCoManagedSeatAdmission(trx, operation.customer_tenant, { email: invitation.email, invitationToken: invitation.token })))
+      .toMatchObject({ managed: true, invitation: { invitation_id: invitation.invitation_id } });
+  });
+  it('blocks growth immediately on lapse, including consuming an already-issued invitation', async () => {
+    const { operation, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    await reserveCustomerInvitation(actor.tenant, 'pending@example.test');
+    await tenantDb(db, operation.tenant).table('co_managed_entitlements').update({ valid_until: new Date(0) });
+    await expect(createCustomerTechnician(actor.tenant, 'pending@example.test')).rejects.toMatchObject({ code: 'CO_MANAGED_LICENSE_LAPSED' });
+  });
+  it('serializes reactivation with a new last-seat account and tolerates repeated activation of the winner', async () => {
+    const { customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const inactiveId = randomUUID();
+    await customer.table('users').insert({ tenant: actor.tenant, user_id: inactiveId, username: 'inactive', email: 'inactive@example.test',
+      first_name: 'Inactive', last_name: 'Test', hashed_password: 'not-a-login', user_type: 'internal', is_inactive: true });
+    const reactivate = () => db.transaction(async trx => {
+      await assertCoManagedSeatAdmission(trx, actor.tenant, { email: 'inactive@example.test', existingUserId: inactiveId });
+      await tenantDb(trx, actor.tenant).table('users').where('user_id', inactiveId).update({ is_inactive: false });
+    });
+    const results = await Promise.allSettled([reactivate(), createCustomerTechnician(actor.tenant)]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    expect(await customer.table('users').where({ user_type: 'internal', is_inactive: false })).toHaveLength(2);
+    if (results[0].status === 'fulfilled') await expect(reactivate()).resolves.toBeUndefined();
+  });
+  it('never shrinks below committed seats or evicts users; a concurrent shrink/create cannot oversubscribe', async () => {
+    const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const change = { customerTenant: actor.tenant, relationshipId: input.relationshipId, seats: 1, expectedSeats: 2 };
+    const results = await Promise.allSettled([changeCoManagedAllocation(db, operation.tenant, change), createCustomerTechnician(actor.tenant)]);
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    const allocated = await tenantDb(db, operation.tenant).table('co_managed_allocations').first();
+    const count = await db.transaction(trx => countCoManagedCommittedSeats(trx, actor.tenant));
+    expect(count).toBeLessThanOrEqual(allocated.seats);
+    expect((await customer.table('tenants').first()).licensed_user_count).toBe(allocated.seats);
+    expect(await customer.table('users').where('is_inactive', true)).toHaveLength(0);
+    await expect(changeCoManagedAllocation(db, randomUUID(), change)).rejects.toMatchObject({ code: 'CO_MANAGED_ALLOCATION_CONFLICT' });
+  });
+});
+
+async function userServiceForTest() {
+  // Keep the real admission, transaction, account, role, preferences, and token
+  // writes. Only authentication (covered by action tests) and presentation
+  // enrichment are replaced; no service connection may reach the source DB.
+  const { UserService } = await import('../../../../packages/users/src/services/UserService');
+  const service = new UserService();
+  vi.spyOn(service as any, 'ensurePermission').mockResolvedValue(undefined);
+  vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+  vi.spyOn(service as any, 'enhanceUsersWithDetails').mockImplementation(async (rows: unknown) => rows);
+  return service;
+}
+
+describe('real user service with co-managed allocation admission', () => {
+  it('creates the initial administrator from its token exactly once, with role and token consumption in the same transaction', async () => {
+    const operation = await prepare(); await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
+    const customer = tenantDb(db, operation.customer_tenant), invitation = await customer.table('user_invitations').first();
+    const service = await userServiceForTest(), context = { tenant: operation.customer_tenant, userId: randomUUID() };
+    const results = await runWithTenant(operation.customer_tenant, () => Promise.allSettled([
+      service.createFromInvitation(invitation.token, 'Testing-strong-password-42!', context),
+      service.createFromInvitation(invitation.token, 'Different-password-must-not-reset-42!', context),
+    ]));
+    expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    const users = await customer.table('users'); expect(users).toHaveLength(1);
+    expect(await customer.table('user_roles')).toEqual([expect.objectContaining({ user_id: users[0].user_id, role_id: invitation.role_id })]);
+    expect((await customer.table('user_invitations').first()).used_at).not.toBeNull();
+    expect((await customer.table('co_management_relationships').first()).state).toBe('pending_acceptance');
+  });
+  it('rolls back the account and keeps the invitation usable if a required account write fails', async () => {
+    const operation = await prepare(); await bootstrapCoManagedWorkspace(db, operation.tenant, operation.operation_id, log);
+    const customer = tenantDb(db, operation.customer_tenant), invitation = await customer.table('user_invitations').first();
+    const service = await userServiceForTest(), context = { tenant: operation.customer_tenant, userId: randomUUID() };
+    const fail = vi.spyOn(service as any, 'createDefaultUserPreferences').mockRejectedValueOnce(new Error('Simulated account write failure'));
+    await expect(runWithTenant(operation.customer_tenant, () => service.createFromInvitation(invitation.token, 'Testing-strong-password-42!', context)))
+      .rejects.toThrow('Simulated account write failure');
+    expect(await customer.table('users')).toHaveLength(0); expect(await customer.table('user_roles')).toHaveLength(0);
+    expect((await customer.table('user_invitations').first()).used_at).toBeNull();
+    fail.mockRestore();
+    await runWithTenant(operation.customer_tenant, () => service.createFromInvitation(invitation.token, 'Testing-strong-password-42!', context));
+    expect(await customer.table('users')).toHaveLength(1);
+  });
+  it('prevents API creation from taking a seat already reserved by another invitation', async () => {
+    const { customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    await reserveCustomerInvitation(actor.tenant, 'invited-service@example.test');
+    const service = await userServiceForTest(), context = { tenant: actor.tenant, userId: actor.userId };
+    await expect(runWithTenant(actor.tenant, () => service.create({ username: 'direct-api', email: 'direct-api@example.test',
+      password: 'Testing-strong-password-42!', user_type: 'internal' }, context))).rejects.toThrow('allocation is full');
+    const invitation = await customer.table('user_invitations').where('email', 'invited-service@example.test').first();
+    await runWithTenant(actor.tenant, () => service.createFromInvitation(invitation.token, 'Testing-strong-password-42!', context));
+    expect(await customer.table('users')).toHaveLength(2);
+  });
+});
+
+describe('co-managed directory reactivation', () => {
+  it('keeps a directory-deactivated user inactive when another technician has taken the available seat', async () => {
+    const { customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const linked = await createCustomerTechnician(actor.tenant, 'directory-tech@example.test');
+    const [connection] = await customer.table('scim_connections').insert({ tenant: actor.tenant, enabled: true,
+      current_token_generation: 1, created_at: new Date(), updated_at: new Date() }).returning('*');
+    const { ScimProvisioningService } = await import('../../../../ee/server/src/lib/scim/service');
+    const service = new ScimProvisioningService(db, connection, 'https://example.test/scim');
+    const resource = await service.createUser({ externalId: randomUUID(), userName: linked.email, primaryEmail: linked.email,
+      active: true, displayName: 'Directory Tech', givenName: 'Directory', familyName: 'Tech', title: null });
+    await service.patchUser(String(resource.id), [{ op: 'replace', path: 'active', value: false }]);
+    await createCustomerTechnician(actor.tenant);
+    await expect(service.patchUser(String(resource.id), [{ op: 'replace', path: 'active', value: true }])).rejects.toThrow('allocation is full');
+    expect(await customer.table('users').where('user_id', linked.user_id).first()).toMatchObject({ is_inactive: true });
+  });
+});
+
+it('grows an allocation only from available verified capacity and rejects stale resize attempts', async () => {
+  const { operation, customer, actor, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+  const grow = { customerTenant: actor.tenant, relationshipId: input.relationshipId, seats: 3, expectedSeats: 2 };
+  await expect(changeCoManagedAllocation(db, operation.tenant, grow)).rejects.toMatchObject({ code: 'CO_MANAGED_POOL_LIMIT' });
+  const sponsor = tenantDb(db, operation.tenant);
+  await sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+  await changeCoManagedAllocation(db, operation.tenant, grow);
+  expect((await customer.table('tenants').first()).licensed_user_count).toBe(3);
+  await expect(changeCoManagedAllocation(db, operation.tenant, { ...grow, seats: 4 })).rejects.toMatchObject({ code: 'CO_MANAGED_ALLOCATION_CONFLICT' });
+  await sponsor.table('co_managed_purchase_operations').insert({ tenant: operation.tenant, operation_id: randomUUID(), quantity: 4, state: 'preparing' });
+  await expect(changeCoManagedAllocation(db, operation.tenant, { ...grow, seats: 4, expectedSeats: 3 })).rejects.toMatchObject({ code: 'CO_MANAGED_ALLOCATION_CONFLICT' });
 });

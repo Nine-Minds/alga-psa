@@ -442,7 +442,11 @@
         "cancelled": "Cancelled",
         "active": "Active",
         "terminated": "Relationship ended"
-      }
+      },
+      "resize": "Change seat allocation",
+      "saveAllocation": "Save allocation",
+      "resizeDescription": "Move seats between this customer and your purchased co-managed pool. Active technicians and pending invitations must fit within the allocation. At least one seat is required.",
+      "resizeError": "Unable to change the allocation. Refresh and check available seats, active technicians, and pending invitations before trying again."
     }
   }
 }
