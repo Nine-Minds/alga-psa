@@ -1,0 +1,42 @@
+name: Scoped mutation pilot
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/mutation-pilot.yml'
+      - 'stryker.config.mjs'
+      - 'tools/mutation/**'
+      - 'shared/billingClients/calendarMonthEndClosePolicy.ts'
+      - 'packages/authorization/src/kernel/**'
+      - 'server/src/test/unit/billing/calendarMonthEndClosePolicy.test.ts'
+      - 'server/src/test/unit/authorization/kernel.failClosed.test.ts'
+      - 'package.json'
+      - 'package-lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  mutation-pilot:
+    name: Mutation pilot execution (score reported)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install -g npm@11
+      - run: npm ci
+      - name: Run selected billing and authorization mutations
+        run: npm run test:mutation:pilot
+      - name: Retain the full report and scoped evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-pilot-${{ github.sha }}
+          path: reports/mutation/
+          if-no-files-found: error
+          retention-days: 14

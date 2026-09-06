@@ -8,7 +8,7 @@ import {
   intersectAuthorizationScopes,
   type AuthorizationEvaluationInput,
   type BundleAuthorizationProvider,
-} from 'server/src/lib/authorization';
+} from '@alga-psa/authorization/kernel';
 
 function baseInput(overrides: Partial<AuthorizationEvaluationInput> = {}): AuthorizationEvaluationInput {
   return {
@@ -145,7 +145,7 @@ describe('authorization kernel fail-closed behavior', () => {
 
 describe('intersectAuthorizationScopes', () => {
   it('returns allow-all for an empty scope list', () => {
-    expect(intersectAuthorizationScopes()).toEqual(ALLOW_ALL_SCOPE);
+    expect(intersectAuthorizationScopes()).toEqual({ allowAll: true, denied: false, constraints: [] });
   });
 
   it('lets a single denied scope dominate the intersection and drops constraints', () => {
@@ -158,7 +158,7 @@ describe('intersectAuthorizationScopes', () => {
       DENY_ALL_SCOPE
     );
 
-    expect(result).toEqual(DENY_ALL_SCOPE);
+    expect(result).toEqual({ allowAll: false, denied: true, constraints: [] });
     expect(result.constraints).toEqual([]);
   });
 
