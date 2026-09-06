@@ -138,8 +138,55 @@ and moved or empty manifest entries.
 
 ## Current enforcement scope
 
-This accounting is wired into the workspace database lane. It does not yet
-establish repository-wide discovery, complete execution evidence for the other
-unit/integration/browser lanes, a required aggregate release gate, or release
-image provenance. Track those deliverables in the
+The workspace database lane has verified CI execution evidence. Infrastructure
+and production-browser adapters are being added in the containing PR; their
+CI verification remains tracked separately. This does not yet establish
+repository-wide discovery, complete evidence for the unit/integration lanes,
+a required aggregate release gate, or release image provenance. Track those deliverables in the
 [production regression prevention plan](../../ee/docs/plans/2026-09-05-production-regression-prevention/PRD.md).
+
+## Infrastructure partitions
+
+The full infrastructure suite exceeded its 35-minute CI step budget while
+tests were still passing. Its runner divides the collected file set into three
+deterministic partitions; each CI job owns separate PostgreSQL and Redis
+services. Files within a partition still execute serially. Do not run these
+commands concurrently against the same local database.
+
+```sh
+CI=1 INFRA_MODE=full INFRA_SHARD_INDEX=1 INFRA_SHARD_TOTAL=3 node scripts/run-infrastructure-tests.mjs
+```
+
+Use `INFRA_MODE=tier1` with index/total both 1 for the four-file mandatory
+infrastructure floor. Every invocation checks the full infrastructure directory
+for unmatched files and confirms the floor still collects. It records the
+selected mode, complete required file set and assigned partition, then checks
+individual execution identities. The runner uses explicit files because the
+installed Vitest's `--list --filesOnly` does not apply `--shard`.
+
+CI uploads each partition as `infrastructure-shard-N`. The aggregate downloads
+them into separate directories and runs `scripts/verify-infrastructure-shards.mjs`.
+It rejects absent, failed, stale or overlapping partitions and recomputes
+assertion evidence from the raw reports. The combined report preserves one
+full-suite metrics row; incomplete partition coverage explicitly reports
+`executionCompleteness: incomplete`, which suppresses a misleading pass
+percentage. Raw passing counts remain visible.
+
+Verify the runner without database services:
+
+```sh
+node --test scripts/tests/test-sharding.test.mjs scripts/tests/infrastructure-runner.vitest.test.mjs
+```
+
+The installed-runner check executes disposable Vitest fixtures through all
+three partitions, validates the aggregate, rejects stale/missing results,
+executes the Tier-1 floor and detects a newly unmatched test.
+
+## Production browser evidence
+
+The [production browser package](../../e2e-tests/README.md) collects and
+reconciles Playwright's project and nested-title identities, including repeated
+cases. Its headed-browser policy check proves first-failure artifacts survive
+and retry-only, skipped and expected-failure cases cannot satisfy a mandatory
+journey. Neither that policy probe nor a collection-only check establishes
+that the application journey itself passed.

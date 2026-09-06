@@ -9,6 +9,7 @@ node_modules/
 /coverage
 test-results/
 e2e-tests/harness-results/
+e2e-tests/execution-evidence/
 test-results-*.json
 server/test-results.json
 playwright-test-results/

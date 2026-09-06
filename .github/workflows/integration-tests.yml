@@ -210,15 +210,18 @@ jobs:
   # timeout cancelled the integration suite mid-run (2026-08-21). Its own job
   # gives each suite independent duration headroom and keeps infra's pool
   # problems out of the integration run.
-  # Non-blocking until it has a green baseline; drop continue-on-error once
-  # stable — that is the whole point of collecting the baseline.
+  # Full coverage is partitioned across independent service instances. The
+  # aggregate rejects missing, stale or failed shard evidence.
   infrastructure-tests:
-    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'Full infrastructure suite' || 'Tier-1 infrastructure subset' }}
+    name: Infrastructure shard ${{ matrix.shard }}
     needs: check-changes
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '[1,2,3]' || '[1]') }}
 
     services:
       postgres:
@@ -245,6 +248,9 @@ jobs:
           --health-retries 5
 
     env:
+      INFRA_MODE: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'full' || 'tier1' }}
+      INFRA_SHARD_INDEX: ${{ matrix.shard }}
+      INFRA_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '3' || '1' }}
       DB_HOST: localhost
       DB_PORT: '5432'
       DB_USER_ADMIN: postgres
@@ -303,33 +309,59 @@ jobs:
           echo -n "test_password" > secrets/db_password_server
           chmod 600 secrets/*
 
-      # timeout-minutes bounds a hang below the job budget so the recording
-      # step still gets to run.
-      - name: Run Tier-1 infrastructure subset
-        id: tier1
-        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full' && needs.check-changes.outputs.full != 'true'
-        timeout-minutes: 15
-        working-directory: ./server
-        run: npm run test:infrastructure:tier1
-        env:
-          NODE_OPTIONS: '--max-old-space-size=8192'
-
-      - name: Run full infrastructure suite
-        id: full
-        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true'
+      - name: Run and reconcile assigned infrastructure files
+        id: run
         timeout-minutes: 35
-        working-directory: ./server
-        run: npm run test:infrastructure:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-infrastructure.json
+        run: node scripts/run-infrastructure-tests.mjs
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
-      - name: Record infrastructure metrics to Google Sheet
-        if: always() && (steps.full.outcome == 'success' || steps.full.outcome == 'failure')
+      - name: Upload infrastructure shard evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-shard-${{ matrix.shard }}
+          path: test-results/infrastructure/
+          if-no-files-found: error
+          retention-days: 7
+
+  infrastructure-complete:
+    name: Infrastructure execution complete
+    needs: [check-changes, infrastructure-tests]
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      INFRA_MODE: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'full' || 'tier1' }}
+      INFRA_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '3' || '1' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download all infrastructure shards
+        uses: actions/download-artifact@v4
+        with:
+          pattern: infrastructure-shard-*
+          path: test-results/infrastructure-shards
+      - name: Verify all required infrastructure files and assertions executed
+        if: always()
+        run: node scripts/verify-infrastructure-shards.mjs
+      - name: Upload combined infrastructure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: infrastructure-execution-evidence
+          path: test-results/infrastructure/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Record full infrastructure metrics to Google Sheet
+        if: always() && env.INFRA_MODE == 'full'
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:
           TEST_METRICS_SUITE: infrastructure-full
-          TEST_METRICS_RESULTS: server/test-results-infrastructure.json
+          TEST_METRICS_RESULTS: test-results/infrastructure/results.json
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
@@ -404,7 +436,7 @@ jobs:
         run: npm ci
 
       - name: Verify discovery and selection against the installed Vitest runner
-        run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs
+        run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs scripts/tests/infrastructure-runner.vitest.test.mjs
 
       - name: Build shared libraries
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3

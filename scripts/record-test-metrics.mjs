@@ -59,6 +59,9 @@ export const MIN_EXECUTED_RATIO = 0.5;
 
 export function runStatus(results) {
   if (!results) return '';
+  // A reconciled multi-job run knows its required set, including absent
+  // shards. Its explicit incompleteness must override ratios of observed tests.
+  if (results.executionCompleteness === 'incomplete') return 'partial';
   const executed = (results.numPassedTests ?? 0) + (results.numFailedTests ?? 0);
   const total = results.numTotalTests ?? 0;
   const cutShort = (results.testResults ?? []).some(

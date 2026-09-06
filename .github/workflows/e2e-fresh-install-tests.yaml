@@ -30,52 +30,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.changed_files_check.outputs.any_changed == 'true' }}
+      run_tests: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.should_run == 'true' }}
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches all history for all branches and tags, required for tj-actions/changed-files
+          fetch-depth: 0
 
-      #--------------------------------------------------------------
-      # Detect whether the proposed changes require running the
-      # (slow) E2E installation tests.  Skip if only non-application
-      # files changed (e.g., Helm charts, docs, scripts).
-      #--------------------------------------------------------------
-      - name: Check for relevant file changes
-        id: changed_files_check
-        uses: tj-actions/changed-files@v46 # Updated from v42 to fix CVE-2025-30066
+      - uses: actions/setup-node@v4
         with:
-          # List of paths that, when modified, SHOULD trigger the heavy
-          # E2E job. Paths NOT listed here (helm/, docs/, scripts/, sdk/)
-          # will not trigger the tests.
-          files: |
-            .github/workflows/e2e-fresh-install-tests.yaml
-            docker-compose.base.yaml
-            docker-compose.ce.yaml
-            docker-compose.prod.yaml
-            docker-compose.setup-ubuntu.override.yaml
-            docker-compose.imap-test.yaml
-            .dockerignore
-            .env.example
-            hocuspocus/**
-            redis/**
-            pgbouncer/**
-            Dockerfile
-            Dockerfile.build
-            server/**
-            setup/**
-            shared/**
-            packages/**
-            services/**
-            ee/**
-            e2e-tests/**
-            package.json
-            package-lock.json
-            tsconfig.base.json
-            tsconfig.json
-            types/**
+          node-version: '22'
+
+      # Share the conservative policy with integration coverage. In particular,
+      # runner/fixture scripts, service builds and unknown paths cannot silently
+      # bypass the production browser job; only known documentation may skip it.
+      - name: Determine production validation requirements
+        id: filter
+        env:
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+          TIER1_HEAD_SHA: ${{ github.sha }}
+        run: node scripts/select-integration-tests.mjs
 
   build-images:
     needs: changes
@@ -706,7 +681,7 @@ jobs:
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
         timeout-minutes: 8
-        run: xvfb-run --auto-servernum npx playwright test
+        run: xvfb-run --auto-servernum npm test
         shell: bash
 
       - name: Collect all container logs on failure
@@ -790,6 +765,7 @@ jobs:
             e2e-tests/playwright-report/
             e2e-tests/test-results/
             e2e-tests/harness-results/
+            e2e-tests/execution-evidence/
           retention-days: 7
 
       - name: Cleanup Docker Compose

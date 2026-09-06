@@ -4,7 +4,7 @@
   "private": true,
   "description": "Customer journeys against an already running production Alga build",
   "scripts": {
-    "test": "playwright test",
+    "test": "node run.mjs",
     "test:list": "playwright test --list",
     "test:harness": "node harness/check-retry-policy.mjs"
   },

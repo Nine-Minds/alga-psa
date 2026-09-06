@@ -47,6 +47,14 @@ one retry for diagnosis, but a retry-only pass fails the command. Missing
 credentials fail the tests rather than skipping them. Tests run serially
 until data fixtures support independent concurrent execution.
 
+`npm test` first collects the installed runner's cases and compares discovered
+files with Git's independent inventory of `e2e-tests/tests/`. After execution it
+reconciles file, project, nested test title and repeat count. Missing, skipped,
+interrupted, expected-failure and retry-only cases cannot satisfy the required
+set. Collection, raw results, discovery and source-attributed execution evidence
+are saved in `execution-evidence/` and uploaded by CI. Use `npx playwright test`
+directly for a filtered local investigation; that command is not the gate.
+
 Use only isolated test credentials and data: browser traces include requests
 and form interactions. CI uploads these reports with seven-day retention.
 
@@ -59,6 +67,8 @@ npm run test:harness
 This launches the installed Chromium runner using the production configuration
 and a disposable test suite. It checks a first-attempt pass, then an intentional
 failure that passes on retry, requiring the latter command to fail and retain
-the first attempt's trace, screenshot and video. Results go to
+the first attempt's trace, screenshot and video. It also proves that skipped and
+expected-failure cases fail required execution accounting even though plain
+Playwright permits them. Results go to
 `harness-results/`, separate from customer journey reports. These probes do not
 count as application coverage.
