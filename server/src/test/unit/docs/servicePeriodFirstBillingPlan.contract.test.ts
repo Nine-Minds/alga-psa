@@ -140,6 +140,11 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
 const servicePeriodPostInventoryRefs = new Set([
+  // Invoice ticket presentation (origin/main a81661446e) added template
+  // descriptors and behavioral coverage after this historical snapshot.
+  'packages/billing/src/lib/invoice-template-ast/collectionDescriptors.ts',
+  'server/src/test/integration/invoiceTicketProduction.integration.test.ts',
+  'server/src/test/unit/billing/invoiceTicketPresentation.test.ts',
   // Explicit usage-contract measurement semantics (usage period totals, seat
   // revisions, unit-pricing revisions) added persisted service-period readers
   // and fixtures after the pass-0 snapshot.
