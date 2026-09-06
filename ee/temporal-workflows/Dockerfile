@@ -87,6 +87,10 @@ RUN npx tsup
 WORKDIR /app/ee/packages/workflows
 RUN npx tsup
 
+# KB import handlers and the shared creation model load compiled lifecycle admission.
+WORKDIR /app/packages/licensing
+RUN npm run build
+
 # Build @alga-psa/jobs (dist/lib/handlers/*.mjs + dist/lib/fanout/index.mjs
 # required at runtime by the job + maintenance-fanout activities)
 WORKDIR /app/packages/jobs
@@ -184,6 +188,9 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = awai
 # the whole compiled root graph now to fail the build instead.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "await import('./dist/packages/licensing/src/index.js')"
 
+# Package-loaded jobs use the compiled lifecycle subpath, not the worker TS tree.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/licensing/lifecycle'); if (typeof m.assertCoManagedOperationalWrite !== 'function') throw new Error('licensing lifecycle runtime export missing')"
+
 RUN groupadd -r temporal && useradd -r -g temporal temporal
 RUN chown -R temporal:temporal /app
 USER temporal
@@ -210,6 +217,7 @@ COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
 # Copy package exports used by dynamically loaded onboarding seeds.
 COPY --from=development /app/packages/core/dist /app/packages/core/dist
 COPY --from=development /app/packages/db/dist /app/packages/db/dist
+COPY --from=development /app/packages/licensing/dist /app/packages/licensing/dist
 COPY --from=development /app/packages/email/dist /app/packages/email/dist
 COPY --from=development /app/packages/marketing/dist /app/packages/marketing/dist
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
@@ -259,6 +267,9 @@ RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = awai
 # re-export of the Next-only actions, each crash-looped prod workers) — link
 # the whole compiled root graph now to fail the build instead.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "await import('./dist/packages/licensing/src/index.js')"
+
+# Package-loaded jobs use the compiled lifecycle subpath, not the worker TS tree.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/licensing/lifecycle'); if (typeof m.assertCoManagedOperationalWrite !== 'function') throw new Error('licensing lifecycle runtime export missing')"
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal

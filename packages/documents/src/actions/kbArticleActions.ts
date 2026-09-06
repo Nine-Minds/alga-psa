@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'crypto';
 import { withAuth, hasPermission } from '@alga-psa/auth';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -133,12 +133,11 @@ export const createArticle = withAuth(
       return permissionError('Permission denied', 'documents:errors.permissions.denied');
     }
 
-    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, input);
-
-    // Published after the writes land, never from inside a transaction.
-    await publishKbArticleCreated(tenant, article, user.user_id);
-
-    return article;
+    return withTransaction(knex, async trx => {
+      const article = await createKbArticle(trx, { tenant, userId: user.user_id }, input);
+      registerAfterCommit(trx, () => publishKbArticleCreated(tenant, article, user.user_id), 'KB_ARTICLE_CREATED');
+      return article;
+    });
   }
 );
 
@@ -1318,15 +1317,15 @@ export const createArticleFromTicket = withAuth(
     ];
 
     // Create the article through the shared model (avoids nested withAuth calls)
-    const article = await createKbArticle(knex, { tenant, userId: user.user_id }, {
-      title,
-      articleType: 'troubleshooting',
-      audience: 'internal',
-      content,
+    return withTransaction(knex, async trx => {
+      const article = await createKbArticle(trx, { tenant, userId: user.user_id }, {
+        title,
+        articleType: 'troubleshooting',
+        audience: 'internal',
+        content,
+      });
+      registerAfterCommit(trx, () => publishKbArticleCreated(tenant, article, user.user_id), 'KB_ARTICLE_CREATED');
+      return article;
     });
-
-    await publishKbArticleCreated(tenant, article, user.user_id);
-
-    return article;
   }
 );

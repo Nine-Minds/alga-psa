@@ -25,7 +25,7 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
       '/**\n * Submits an article for review.',
     );
 
-    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db'");
+    expect(source).toContain("import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db'");
     expect(source).toContain('function tenantScopedTable(');
     expect(source).not.toContain('createTenantScopedQuery');
     expect(lifecycleSection).toContain("tenantScopedTable(trx, 'kb_articles', tenant)");
@@ -40,7 +40,7 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
 
   it('delegates article creation to the session-free shared model', () => {
     expect(source).toContain("from '@alga-psa/shared/models/kbArticleModel'");
-    expect(source).toContain('createKbArticle(knex, { tenant, userId: user.user_id }');
+    expect(source).toContain('createKbArticle(trx, { tenant, userId: user.user_id }');
     expect(source).not.toContain('_createArticleInternal');
   });
 
@@ -58,7 +58,7 @@ describe('KB article lifecycle tenant-scoped query contract', () => {
       modelSource.indexOf('export async function createKbArticle('),
     );
     expect(creationSource).not.toContain('publishKbArticleCreated(');
-    expect(source).toContain('await publishKbArticleCreated(tenant, article, user.user_id)');
+    expect(source).toContain('registerAfterCommit(trx, () => publishKbArticleCreated(tenant, article, user.user_id)');
     expect(modelSource).not.toContain('withAuth');
     expect(modelSource).not.toContain('createTenantKnex');
     expect(modelSource).not.toContain('.where({ tenant,');

@@ -2357,3 +2357,60 @@ describe('co-managed KB article API lifecycle', () => {
     for (const table of ['kb_articles', 'documents', 'document_block_content']) expect(await customer.table(table)).toEqual([]);
   });
 });
+
+describe('co-managed shared KB creation and worker admission', () => {
+  it('keeps direct and UI article creation atomic and defers UI events through caller rollback', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
+    const { createKbArticle } = await import('../../../../shared/models/kbArticleModel');
+    const actions = await import('../../../../packages/documents/src/actions/kbArticleActions');
+    const dbModule = await import('@alga-psa/db');
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    const data = { title: 'UI article', audience: 'client' as const, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Customer content' }] }] };
+    await expect(createKbArticle(db, context, data)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await expect(actions.createArticle(data)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input);
+    await expect(createKbArticle(db, context, { ...data, categoryId: 'bad-uuid' })).rejects.toMatchObject({ code: '22P02' });
+    for (const table of ['kb_articles', 'documents', 'document_block_content']) expect(await customer.table(table)).toEqual([]);
+    await expect(dbModule.withTransaction(db, async trx => {
+      vi.mocked(dbModule.createTenantKnex).mockResolvedValueOnce({ knex: trx, tenant: actor.tenant });
+      expect(await actions.createArticle(data)).toMatchObject({ document_name: data.title });
+      expect(publish).not.toHaveBeenCalled();
+      throw new Error('Caller cancelled KB creation');
+    })).rejects.toThrow('Caller cancelled KB creation');
+    for (const table of ['kb_articles', 'documents', 'document_block_content']) expect(await customer.table(table)).toEqual([]);
+    expect(publish).not.toHaveBeenCalled();
+    const visibleAtPublication: any[] = [];
+    publish.mockImplementation(async () => { visibleAtPublication.push(await customer.table('kb_articles').first()); });
+    const article = await actions.createArticle(data) as any;
+    expect(visibleAtPublication).toEqual([expect.objectContaining({ article_id: article.article_id })]);
+    expect(article.document.is_client_visible).toBe(false);
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(createKbArticle(db, context, data)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    await expect(actions.createArticle(data)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('kb_articles')).toHaveLength(1);
+  }));
+
+  it('retains pending import content during license pauses and imports the same staged file once after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, publish }) => {
+    const { kbArticleImportHandler } = await import('../../../../packages/jobs/src/lib/handlers/kbArticleImportHandler');
+    const jobId = randomUUID(), fileId = randomUUID();
+    const source = '# Customer runbook\n\nPreserved import content';
+    await customer.table('kb_import_files').insert({ tenant: actor.tenant, import_file_id: fileId, job_id: jobId,
+      filename: 'runbook.md', content: source, status: 'pending', audience: 'internal' });
+    const data = { tenantId: actor.tenant, userId: actor.userId, fileIds: [fileId] };
+    await expect(kbArticleImportHandler(jobId, data)).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    expect(await customer.table('kb_import_files').first()).toMatchObject({ status: 'pending', content: source, error: null });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    await expect(kbArticleImportHandler(jobId, data)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('kb_import_files').first()).toMatchObject({ status: 'pending', content: source, article_id: null });
+    expect(await customer.table('kb_articles')).toEqual([]); expect(publish).not.toHaveBeenCalled();
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    const snapshots: any[] = [];
+    publish.mockImplementation(async () => { snapshots.push(await customer.table('kb_import_files').first()); });
+    expect(await kbArticleImportHandler(jobId, data)).toMatchObject({ processed: 1, imported: 1, failed: 0 });
+    expect(await customer.table('kb_articles')).toHaveLength(1);
+    expect(snapshots).toEqual([expect.objectContaining({ status: 'imported', content: null, article_id: expect.any(String) })]);
+    expect(await kbArticleImportHandler(jobId, data)).toMatchObject({ imported: 1, failed: 0 });
+    expect(await customer.table('kb_articles')).toHaveLength(1); expect(publish).toHaveBeenCalledOnce();
+  }));
+});
