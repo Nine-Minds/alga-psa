@@ -122,6 +122,14 @@ describe('co-managed bootstrap against the complete installed schema', () => {
     expect(await customer.table('stripe_customers')).toHaveLength(0);
     expect(await customer.table('boards').first()).toMatchObject({ board_id: operation.customer_board_id, is_default: true });
     expect((await customer.table('statuses').where({ board_id: operation.customer_board_id, status_type: 'ticket' })).length).toBeGreaterThan(0);
+    const projectStatuses = await customer.table('statuses').where({ status_type: 'project' }).orderBy('order_number');
+    expect(projectStatuses).toHaveLength(5);
+    expect(projectStatuses.filter(status => status.is_default)).toEqual([expect.objectContaining({ name: 'Not Started' })]);
+    const projectSeed = require('../../../../ee/server/seeds/onboarding/co_managed/05_project_statuses.cjs');
+    await customer.table('statuses').where('status_id', projectStatuses[0].status_id).update({ name: 'Customer backlog' });
+    await projectSeed.seed(db, operation.customer_tenant);
+    expect(await customer.table('statuses').where({ status_type: 'project' }).orderBy('order_number'))
+      .toEqual(projectStatuses.map((status, index) => index === 0 ? { ...status, name: 'Customer backlog' } : status));
     expect((await customer.table('project_templates')).length).toBeGreaterThan(0);
     expect(await customer.table('asset_type_registry')).toHaveLength(6);
     expect(await customer.table('user_invitations').first()).toMatchObject({ invitation_id: operation.administrator_invitation_id,
@@ -1315,4 +1323,121 @@ describe('inherited operational API mutations', () => {
       expect(await services.priorities.getById(priority.priority_id, context)).toMatchObject({ priority_name: 'Renewed priority' });
     } finally { publish.mockRestore(); }
   });
+});
+
+async function withProjectFixture(work: (fixture: Awaited<ReturnType<typeof readyForAcceptance>> & {
+  service: import('../../lib/api/services/ProjectService').ProjectService;
+  connection: ReturnType<typeof vi.spyOn>;
+  publish: ReturnType<typeof vi.spyOn>;
+  workflow: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  const fixture = await readyForAcceptance();
+  const { ProjectService } = await import('../../lib/api/services/ProjectService');
+  const service = new ProjectService();
+  const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+  const events = await import('../../lib/eventBus/publishers');
+  const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+  const workflow = vi.spyOn(events, 'publishWorkflowEvent').mockResolvedValue(undefined);
+  try { await runWithTenant(fixture.actor.tenant, () => work({ ...fixture, service, connection, publish, workflow })); }
+  finally { publish.mockRestore(); workflow.mockRestore(); connection.mockRestore(); }
+}
+
+describe('co-managed project API lifecycle admission', () => {
+  it('denies project, phase, task, checklist, link, and bulk mutations before acceptance and after expiry', async () => withProjectFixture(async ({ operation, actor, input, customer, service, publish, workflow }) => {
+    const context = { tenant: actor.tenant, userId: actor.userId }, id = randomUUID();
+    const mutations = [
+      () => service.create({ project_name: 'Denied project', client_id: operation.customer_client_id }, context),
+      () => service.update(id, { project_name: 'Denied change' }, context),
+      () => service.delete(id, context),
+      () => service.createPhase(id, { phase_name: 'Denied phase' } as any, context),
+      () => service.updatePhase(id, { phase_name: 'Denied change' }, context),
+      () => service.deletePhase(id, context),
+      () => service.createTask(id, { task_name: 'Denied task', project_status_mapping_id: id } as any, context),
+      () => service.updateTask(id, { task_name: 'Denied change' }, context),
+      () => service.deleteTask(id, context),
+      () => service.createChecklistItem(id, { item_text: 'Denied checklist', is_completed: false }, context),
+      () => service.createTicketLink(id, { ticket_id: id, link_type: 'related' }, context),
+      () => service.bulkCreate([{}], context),
+      () => service.bulkUpdate([{ id, data: { project_name: 'Denied inherited update' } }], context),
+      () => service.bulkDelete([id], context),
+      () => service.bulkUpdateProjects([id], { project_name: 'Denied bulk update' }, context),
+      () => service.bulkAssign([id], actor.userId, context),
+      () => service.bulkStatusUpdate([id], 'active', context),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    for (const table of ['projects', 'project_phases', 'project_tasks', 'task_checklist_items', 'project_ticket_links']) {
+      expect(await customer.table(table)).toEqual([]);
+    }
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+  }));
+
+  it('uses one bulk transaction, rolls back a failed member without events, and resumes after renewal', async () => withProjectFixture(async ({ operation, actor, input, customer, service, connection, publish, workflow }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    const first = await service.create({ project_name: 'First', client_id: operation.customer_client_id }, context);
+    const second = await service.create({ project_name: 'Second', client_id: operation.customer_client_id }, context);
+    publish.mockClear(); workflow.mockClear();
+    // A lost transaction context fails immediately instead of hanging on this
+    // operation's own sponsor lock on a second connection.
+    connection.mockReset().mockRejectedValue(new Error('Nested update opened a new connection')).mockResolvedValueOnce({ knex: db });
+    await expect(service.bulkUpdateProjects([first.project_id, randomUUID()], { project_name: 'Rolled back' }, context)).rejects.toThrow('Project not found');
+    expect((await customer.table('projects').where('project_id', first.project_id).first()).project_name).toBe('First');
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+    connection.mockResolvedValue({ knex: db });
+    await expireCoManagedEntitlement(operation.tenant);
+    await expect(service.bulkUpdateProjects([first.project_id, second.project_id], { project_name: 'Paused' }, context))
+      .rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await service.getById(first.project_id, context)).toMatchObject({ project_name: 'First' });
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    const seenAtPublication: string[][] = [];
+    workflow.mockImplementation(async () => {
+      seenAtPublication.push((await customer.table('projects').orderBy('project_id')).map(row => row.project_name));
+    });
+    connection.mockReset().mockRejectedValue(new Error('Nested update opened a new connection')).mockResolvedValueOnce({ knex: db });
+    const updated = await service.bulkUpdateProjects([first.project_id, second.project_id], { project_name: 'Renewed' }, context);
+    expect(updated).toHaveLength(2);
+    expect(connection).toHaveBeenCalledOnce();
+    expect(workflow).toHaveBeenCalledTimes(2);
+    expect(seenAtPublication).toEqual([['Renewed', 'Renewed'], ['Renewed', 'Renewed']]);
+  }));
+
+  it('creates a project, phase, and task in a caller transaction and discards events and records on rollback', async () => withProjectFixture(async ({ operation, actor, input, customer, service, connection, publish, workflow }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const { withTransaction } = await import('@alga-psa/db');
+    connection.mockReset().mockRejectedValue(new Error('Caller transaction was lost'));
+    let projectId: string, phaseId: string, taskId: string;
+    const createWork = async (trx: Knex.Transaction) => {
+      const context = { tenant: actor.tenant, userId: actor.userId, db: trx };
+      const project = await service.create({ project_name: 'Customer rollout', client_id: operation.customer_client_id }, context);
+      projectId = project.project_id;
+      const phase = await service.createPhase(project.project_id, { phase_name: 'Discovery' } as any, context); phaseId = phase.phase_id;
+      const standard = await trx('standard_statuses').where({ item_type: 'project_task' }).orderBy('display_order').first();
+      const mappingId = randomUUID();
+      await tenantDb(trx, actor.tenant).table('project_status_mappings').insert({ tenant: actor.tenant,
+        project_status_mapping_id: mappingId, project_id: project.project_id, standard_status_id: standard.standard_status_id,
+        is_standard: true, display_order: 1, is_visible: true });
+      const task = await service.createTask(phase.phase_id, { task_name: 'Inventory devices', task_type_key: 'general',
+        project_status_mapping_id: mappingId }, context); taskId = task.task_id;
+      expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+    };
+    await expect(withTransaction(db, async trx => { await createWork(trx); throw new Error('Caller cancelled'); })).rejects.toThrow('Caller cancelled');
+    for (const table of ['projects', 'project_phases', 'project_status_mappings', 'project_tasks']) expect(await customer.table(table)).toEqual([]);
+    expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+    await withTransaction(db, createWork);
+    expect(publish).toHaveBeenCalledOnce();
+    expect(workflow).toHaveBeenCalledOnce();
+    connection.mockResolvedValue({ knex: db });
+    const context = { tenant: actor.tenant, userId: actor.userId };
+    await service.updatePhase(phaseId!, { phase_name: 'Discovery completed' }, context);
+    await service.updateTask(taskId!, { task_name: 'Inventory verified' }, context);
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await service.getPhases(projectId!, context)).toEqual([expect.objectContaining({ phase_name: 'Discovery completed' })]);
+    expect(await service.getTasks(projectId!, context)).toEqual([expect.objectContaining({ task_name: 'Inventory verified' })]);
+    await expect(service.deleteTask(taskId!, context)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('project_tasks')).toHaveLength(1);
+  }));
 });
