@@ -4,6 +4,8 @@ import { generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import knex, { type Knex } from 'knex';
 import { getSecret } from '../../lib/utils/getSecret';
 import { reserveCoManagedWorkspace } from '../../../../packages/licensing/src/lib/co-managed-reservation';
+import { getCoManagedEntitlementState, reconcileHostedCoManagedEntitlement, reconcileSelfHostCoManagedEntitlement, recordSelfHostCoManagedRevocation } from '../../../../packages/licensing/src/lib/co-managed-entitlements';
+import { upsertLicenseState } from '../../../../packages/licensing/src/lib/license-state';
 import { tenantDb } from '@alga-psa/db';
 
 const fixtureKeys = vi.hoisted(() => ({ fixture: '' }));
@@ -13,6 +15,7 @@ fixtureKeys.fixture = keys.publicKey.export({ type: 'spki', format: 'pem' }).toS
 const require = createRequire(import.meta.url);
 const migration = require('../../../migrations/20260906010000_create_co_management_foundation.cjs');
 const previousProductMigration = require('../../../migrations/20260505140000_add_tenant_product_code.cjs');
+const sourceVersionMigration = require('../../../migrations/20260906020000_add_co_managed_entitlement_source_version.cjs');
 
 // Never bootstrap the running app or another suite's database. The fixture uses
 // the existing tenant/client key shapes; full-install migration coverage is separate.
@@ -42,6 +45,11 @@ beforeAll(async () => {
     table.uuid('client_id').notNullable();
     table.primary(['tenant', 'client_id']);
   });
+  await db.schema.createTable('license_state', (table) => {
+    table.increments('id').primary();
+    table.text('license_token');
+    table.timestamp('updated_at', { useTz: true });
+  });
   if (process.env.CO_MANAGED_TEST_CITUS === '1') {
     await db.raw("SELECT create_distributed_table('tenants', 'tenant')");
     await db.raw("SELECT create_distributed_table('clients', 'tenant', colocate_with => 'tenants')");
@@ -52,6 +60,7 @@ beforeAll(async () => {
   await migration.up(db);
   await migration.down(db);
   await migration.up(db);
+  await sourceVersionMigration.up(db);
 }, 60_000);
 
 afterAll(async () => {
@@ -73,11 +82,11 @@ async function sponsorFixture(capacity = 4, productCode = 'psa', plan = 'pro') {
   return { sponsorTenant, clientId, operationId: randomUUID(), seats: 2, visibilityMode: 'board_scope' as const };
 }
 
-function license(aud: string, seats: number) {
+function license(aud: string, seats: number, issuedAt?: number) {
   const now = Math.floor(Date.now() / 1000);
   const header = Buffer.from(JSON.stringify({ alg: 'ES256', kid: 'fixture' })).toString('base64url');
   const payload = Buffer.from(JSON.stringify({ iss: 'nineminds-license', sub: 'license', cust: 'customer', tier: 'pro', aud,
-    iat: now - 10, exp: now + 3600, co_managed_seats: seats })).toString('base64url');
+    iat: issuedAt ?? now - 10, exp: now + 3600, co_managed_seats: seats })).toString('base64url');
   const signingInput = `${header}.${payload}`;
   return `${signingInput}.${sign('sha256', Buffer.from(signingInput), { key: keys.privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
 }
@@ -220,5 +229,140 @@ describe('co-managed reservation persistence', () => {
     await expect(db('tenants').insert({ tenant: randomUUID(), product_code: 'unknown' })).rejects.toMatchObject({ code: '23514' });
     await expect(migration.down(db)).rejects.toThrow('Cannot roll back co-management');
     expect(await db.schema.hasTable('co_managed_allocations')).toBe(true);
+  });
+});
+
+describe('co-managed entitlement reconciliation', () => {
+  const future = () => new Date(Date.now() + 3_600_000);
+
+  it('persists expiry-based read-only deadlines even when no webhook or worker ran', async () => {
+    const input = await sponsorFixture();
+    await reserveCoManagedWorkspace(db, input);
+    const expired = new Date(Date.now() - 40 * 86_400_000);
+    await tenantDb(db, input.sponsorTenant).table('co_managed_entitlements').update({ valid_until: expired });
+    const state = await getCoManagedEntitlementState(db, input.sponsorTenant);
+    expect(state).toMatchObject({ capacity: 0, allocated: 2, canGrow: false, isReadOnly: true,
+      graceEndsAt: new Date(expired.getTime() + 30 * 86_400_000).toISOString() });
+    expect(await getCoManagedEntitlementState(db, input.sponsorTenant)).toEqual(state);
+    const row = await tenantDb(db, input.sponsorTenant).table('co_managed_entitlements').first();
+    expect(new Date(row.lapse_started_at)).toEqual(expired);
+  });
+
+  it('starts one grace period for a capacity deficit and never evicts allocated users', async () => {
+    const input = await sponsorFixture();
+    await reserveCoManagedWorkspace(db, input);
+    const sync = () => reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, `subscription-${input.sponsorTenant}`,
+      async () => ({ capacity: 1, active: true, validUntil: future() }));
+    const state = await sync();
+    expect(state).toMatchObject({ capacity: 1, allocated: 2, available: 0, canGrow: false, isReadOnly: false });
+    expect(state.graceEndsAt).not.toBeNull();
+    expect((await sync()).graceEndsAt).toBe(state.graceEndsAt);
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_allocations').first()).toMatchObject({ seats: 2, state: 'reserved' });
+  });
+
+  it('clears the old deadline after valid capacity recovers', async () => {
+    const input = await sponsorFixture();
+    await reserveCoManagedWorkspace(db, input);
+    const source = `subscription-${input.sponsorTenant}`;
+    await reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, source,
+      async () => ({ capacity: 0, active: false, validUntil: future() }));
+    expect(await reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, source,
+      async () => ({ capacity: 3, active: true, validUntil: future() })))
+      .toMatchObject({ canGrow: true, isReadOnly: false, graceEndsAt: null, available: 1 });
+    expect(await tenantDb(db, input.sponsorTenant).table('co_managed_entitlements').first())
+      .toMatchObject({ lapse_started_at: null, read_only_after: null });
+  });
+
+  it('does not restart an unobserved old lapse when a delinquency event finally arrives', async () => {
+    const input = await sponsorFixture();
+    const expired = new Date(Date.now() - 40 * 86_400_000);
+    await tenantDb(db, input.sponsorTenant).table('co_managed_entitlements').update({ valid_until: expired });
+    const state = await reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, `subscription-${input.sponsorTenant}`,
+      async () => ({ capacity: 0, active: false, validUntil: future() }));
+    expect(state).toMatchObject({ isReadOnly: true, graceEndsAt: new Date(expired.getTime() + 30 * 86_400_000).toISOString() });
+  });
+
+  it('rolls back an initial entitlement if provider validation fails', async () => {
+    const sponsor = randomUUID();
+    await expect(reconcileHostedCoManagedEntitlement(db, sponsor, 'sub-invalid', async () => {
+      throw new Error('Customer or price mismatch');
+    })).rejects.toThrow('Customer or price mismatch');
+    expect(await tenantDb(db, sponsor).table('co_managed_entitlements').first()).toBeUndefined();
+    expect((await getCoManagedEntitlementState(db, sponsor)).isReadOnly).toBe(true);
+  });
+
+  it('rejects an event for a different subscription without changing purchased capacity', async () => {
+    const input = await sponsorFixture();
+    const loader = vi.fn(async () => ({ capacity: 100, active: true, validUntil: future() }));
+    await expect(reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, 'another-subscription', loader))
+      .rejects.toThrow('different subscription');
+    expect(loader).not.toHaveBeenCalled();
+    expect((await getCoManagedEntitlementState(db, input.sponsorTenant)).capacity).toBe(4);
+  });
+
+  it('serializes observations while provider state is fetched', async () => {
+    const input = await sponsorFixture();
+    const source = `subscription-${input.sponsorTenant}`;
+    let release!: () => void;
+    let entered!: () => void;
+    const blocked = new Promise<void>((resolve) => { release = resolve; });
+    const started = new Promise<void>((resolve) => { entered = resolve; });
+    const calls: string[] = [];
+    const first = reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, source, async () => {
+      calls.push('first-start'); entered(); await blocked; calls.push('first-end');
+      return { capacity: 3, active: true, validUntil: future() };
+    });
+    await started;
+    const second = reconcileHostedCoManagedEntitlement(db, input.sponsorTenant, source, async () => {
+      calls.push('second'); return { capacity: 2, active: true, validUntil: future() };
+    });
+    release();
+    await Promise.all([first, second]);
+    expect(calls).toEqual(['first-start', 'first-end', 'second']);
+    expect((await getCoManagedEntitlementState(db, input.sponsorTenant)).capacity).toBe(2);
+  });
+
+  it('ignores delayed older signed licenses after a newer signed reduction', async () => {
+    const sponsor = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 2, now - 5));
+    expect(await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 10, now - 10)))
+      .toMatchObject({ capacity: 2 });
+    expect(await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 3, now - 1)))
+      .toMatchObject({ capacity: 3 });
+  });
+
+  it('never overwrites hosted capacity with an offline license', async () => {
+    const input = await sponsorFixture();
+    await expect(reconcileSelfHostCoManagedEntitlement(db, input.sponsorTenant, license(input.sponsorTenant, 100)))
+      .rejects.toThrow('Cannot replace hosted');
+    expect((await getCoManagedEntitlementState(db, input.sponsorTenant)).capacity).toBe(4);
+  });
+
+  it('applies a signed license and its capacity atomically through the shared appliance writer', async () => {
+    const sponsor = randomUUID();
+    const token = license(sponsor, 5);
+    await upsertLicenseState({ license_token: token }, db);
+    expect((await getCoManagedEntitlementState(db, sponsor)).capacity).toBe(5);
+    expect(await db('license_state').first()).toMatchObject({ license_token: token });
+    const hosted = await sponsorFixture();
+    await expect(upsertLicenseState({ license_token: license(hosted.sponsorTenant, 50) }, db)).rejects.toThrow('Cannot replace hosted');
+    expect(await db('license_state').first()).toMatchObject({ license_token: token });
+  });
+
+  it('starts grace on online revocation and ignores a delayed revocation of an older license', async () => {
+    const sponsor = randomUUID();
+    const now = Math.floor(Date.now() / 1000);
+    const token = license(sponsor, 5, now - 10);
+    await reconcileSelfHostCoManagedEntitlement(db, sponsor, token);
+    await recordSelfHostCoManagedRevocation(db, token);
+    const revoked = await getCoManagedEntitlementState(db, sponsor);
+    expect(revoked).toMatchObject({ canGrow: false, isReadOnly: false, capacity: 0 });
+    expect(revoked.graceEndsAt).not.toBeNull();
+    await recordSelfHostCoManagedRevocation(db, token);
+    expect(await reconcileSelfHostCoManagedEntitlement(db, sponsor, token)).toEqual(revoked);
+    await reconcileSelfHostCoManagedEntitlement(db, sponsor, license(sponsor, 6, now - 1));
+    await recordSelfHostCoManagedRevocation(db, token);
+    expect(await getCoManagedEntitlementState(db, sponsor)).toMatchObject({ capacity: 6, canGrow: true, graceEndsAt: null });
   });
 });

@@ -23,6 +23,7 @@
 
 import { Context } from '@temporalio/activity';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
+import { upsertLicenseState, recordSelfHostCoManagedRevocation } from '@alga-psa/licensing';
 
 const logger = () => Context.current().log;
 
@@ -113,6 +114,7 @@ export async function applianceLicenseCheckInActivity(): Promise<ApplianceCheckI
     .update({ last_checkin_at: knex.fn.now(), updated_at: knex.fn.now() });
 
   if (data.status === 'revoked') {
+    if (row.license_token) await recordSelfHostCoManagedRevocation(knex, row.license_token);
     // Soft revocation: the service stops issuing fresh tokens. Honor grace —
     // leave license_token intact so the box stays licensed until the current
     // token's exp, then resolveSelfHostTier falls to essentials on its own.
@@ -131,9 +133,7 @@ export async function applianceLicenseCheckInActivity(): Promise<ApplianceCheckI
   // token string, so the server process picks up the new token (and its
   // rolled-forward exp) as a cache miss on its next read — no cross-process
   // cache coordination needed.
-  await knex('license_state')
-    .where({ id: row.id })
-    .update({ license_token: data.jwt, updated_at: knex.fn.now() });
+  await upsertLicenseState({ license_token: data.jwt }, knex);
 
   log.info('Appliance license token refreshed', { exp: data.exp });
   return { outcome: 'refreshed', exp: data.exp };

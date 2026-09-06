@@ -10,6 +10,8 @@ import type { TenantTier } from '@alga-psa/types';
 import { isEnterprise } from '@alga-psa/core/features';
 import { verifyLicense, clearLicenseVerifyCache } from './verify-license';
 import { isLicenseVerifyFailure } from './license-types';
+import { reconcileSelfHostCoManagedEntitlement } from './co-managed-entitlements';
+import type { Knex } from 'knex';
 
 /** Raw row from the license_state table. */
 export interface LicenseStateRow {
@@ -70,18 +72,26 @@ export async function getLicenseStateRow(): Promise<LicenseStateRow | null> {
  * There should be exactly one row; this creates or updates it.
  */
 export async function upsertLicenseState(
-  fields: Partial<Omit<LicenseStateRow, 'id' | 'updated_at'>>
+  fields: Partial<Omit<LicenseStateRow, 'id' | 'updated_at'>>,
+  connection?: Knex,
 ): Promise<void> {
-  const knex = await getAdminConnection();
+  const knex = connection ?? await getAdminConnection();
   // Admin-scoped singleton: keep raw admin DB access so tenantDb fails closed.
-  const existing = await knex('license_state').first('id');
-  if (existing) {
-    await knex('license_state')
-      .where({ id: existing.id })
-      .update({ ...fields, updated_at: knex.fn.now() });
-  } else {
-    await knex('license_state').insert({ ...fields, updated_at: knex.fn.now() });
-  }
+  await knex.transaction(async (trx) => {
+    const existing = await trx('license_state').forUpdate().first('id');
+    if (existing) {
+      await trx('license_state').where({ id: existing.id }).update({ ...fields, updated_at: trx.fn.now() });
+    } else {
+      await trx('license_state').insert({ ...fields, updated_at: trx.fn.now() });
+    }
+    if (fields.license_token) {
+      const verified = verifyLicense(fields.license_token);
+      if (isLicenseVerifyFailure(verified)) throw new Error(`Invalid license: ${verified.reason}`);
+      if (verified.claims.aud) {
+        await reconcileSelfHostCoManagedEntitlement(trx, verified.claims.aud, fields.license_token);
+      }
+    }
+  });
   clearLicenseVerifyCache();
 }
 

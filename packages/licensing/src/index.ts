@@ -12,6 +12,7 @@ export * from './lib/get-license-usage';
 export * from './lib/license-types';
 export * from './lib/co-managed-license';
 export * from './lib/co-managed-reservation';
+export * from './lib/co-managed-entitlements';
 export * from './lib/verify-license';
 export * from './lib/license-state';
 export * from './lib/tenant-tier';

@@ -21,6 +21,8 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { startTenantDeletionWorkflow } from '@ee/lib/tenant-management/workflowClient';
 import { ADD_ONS, type AddOnKey, type TenantTier } from '@alga-psa/types';
 import { tierFromStripeProduct } from './stripeTierMapping';
+import { reconcileHostedCoManagedEntitlement } from '@alga-psa/licensing';
+import { coManagedSnapshotFromStripe, isCoManagedSubscription } from './coManagedSubscription';
 import {
   getAppleIapConfig,
   getAllSubscriptionStatuses,
@@ -267,7 +269,8 @@ function licenseSubscriptions(
 ): Knex.QueryBuilder<Record<string, any>, Record<string, any>[]> {
   return tenantScopedTable(conn, 'stripe_subscriptions', tenant)
     .whereIn('status', [...statuses])
-    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''");
+    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''")
+    .whereRaw("COALESCE(metadata->>'subscription_kind', '') <> 'co_managed'");
 }
 
 const RETIRED_PREMIUM_SCHEDULE_KEY = 'retired_premium_schedule_id';
@@ -629,6 +632,10 @@ export class StripeService {
     knex?: Knex
   ): Promise<void> {
     const db = knex || (await getConnection(tenantId));
+    if (isCoManagedSubscription(subscription, process.env.STRIPE_CO_MANAGED_USER_PRICE_ID)) {
+      await this.syncCoManagedSubscription(tenantId, subscription.id, db);
+      return;
+    }
 
     // Find the billable user item (works for both 1-item per-seat and 2-item multi-tier subscriptions)
     const subscriptionItem = this.findUserItemFromStripe(subscription.items.data);
@@ -1251,6 +1258,15 @@ export class StripeService {
           logger.info(`[StripeService] Unhandled event type: ${event.type}`);
       }
 
+      // Base Pro renewal/cancellation also affects sponsored capacity, even if
+      // the separate co-managed subscription itself has not emitted an event.
+      if (event.type.startsWith('customer.subscription.') || event.type === 'checkout.session.completed') {
+        const entitlement = await tenantScopedTable(knex, 'co_managed_entitlements', eventTenantId).first();
+        if (entitlement?.source === 'hosted') {
+          await this.syncCoManagedSubscription(eventTenantId, entitlement.source_reference, knex);
+        }
+      }
+
       // Mark as processed
       await tenantScopedTable(knex, 'stripe_webhook_events', eventTenantId)
         .where('stripe_event_id', event.id)
@@ -1310,6 +1326,29 @@ export class StripeService {
     }
 
     return null;
+  }
+
+  private async syncCoManagedSubscription(tenantId: string, subscriptionId: string, db: Knex): Promise<void> {
+    const priceId = process.env.STRIPE_CO_MANAGED_USER_PRICE_ID;
+    if (!priceId) throw new Error('STRIPE_CO_MANAGED_USER_PRICE_ID is required for co-managed billing');
+    const customer = await tenantScopedTable(db, 'stripe_customers', tenantId).first();
+    if (!customer) throw new Error('Co-managed sponsor has no Stripe customer');
+    const externalCustomerId = customer.stripe_customer_external_id;
+    await reconcileHostedCoManagedEntitlement(db, tenantId, subscriptionId, async () => {
+      const subscription = await this.stripe.subscriptions.retrieve(subscriptionId, { expand: ['latest_invoice'] });
+      const baseSubscriptions: Stripe.Subscription[] = [];
+      for await (const candidate of this.stripe.subscriptions.list({ customer: externalCustomerId, status: 'all', limit: 100 })) {
+        baseSubscriptions.push(candidate);
+      }
+      const tenant = await tenantScopedTable(db, 'tenants', tenantId).first('product_code', 'plan');
+      const proPriceIds = tenant?.product_code === 'psa' && tenant?.plan === 'pro'
+        ? [this.config.proPriceId, this.config.proAnnualPriceId, this.config.algapsaUserPriceId,
+          this.config.algapsaUserAnnualPriceId, this.config.earlyAdoptersUserPriceId, this.config.earlyAdoptersUserAnnualPriceId]
+          .filter((id): id is string => Boolean(id))
+        : [];
+      return coManagedSnapshotFromStripe({ subscription, baseSubscriptions, sponsorTenant: tenantId,
+        customerId: externalCustomerId, coManagedPriceId: priceId, proPriceIds });
+    });
   }
 
   private getAddOnKeyFromMetadata(metadata: Stripe.Metadata | null | undefined): AddOnKey | null {
@@ -1381,6 +1420,11 @@ export class StripeService {
     const subscription = await this.stripe.subscriptions.retrieve(session.subscription as string, {
       expand: ['items.data.price.product'],
     });
+
+    if (isCoManagedSubscription(subscription, process.env.STRIPE_CO_MANAGED_USER_PRICE_ID)) {
+      await this.syncCoManagedSubscription(tenantId, subscription.id, knex);
+      return;
+    }
 
     const addOnKey = this.getAddOnKeyFromMetadata(subscription.metadata) || this.getAddOnKeyFromMetadata(session.metadata);
     if (addOnKey) {
@@ -1468,6 +1512,10 @@ export class StripeService {
     knex: Knex
   ): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
+    if (isCoManagedSubscription(subscription, process.env.STRIPE_CO_MANAGED_USER_PRICE_ID)) {
+      await this.syncCoManagedSubscription(tenantId, subscription.id, knex);
+      return;
+    }
 
     logger.info(`[StripeService] Subscription updated: ${subscription.id}`);
 
@@ -1657,6 +1705,10 @@ export class StripeService {
     knex: Knex
   ): Promise<void> {
     const subscription = event.data.object as Stripe.Subscription;
+    if (isCoManagedSubscription(subscription, process.env.STRIPE_CO_MANAGED_USER_PRICE_ID)) {
+      await this.syncCoManagedSubscription(tenantId, subscription.id, knex);
+      return;
+    }
 
     logger.info(`[StripeService] Subscription deleted: ${subscription.id}`);
 

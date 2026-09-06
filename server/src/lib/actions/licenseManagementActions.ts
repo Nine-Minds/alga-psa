@@ -10,6 +10,7 @@ import {
 import {
   getLicenseStateRow,
   upsertLicenseState,
+  recordSelfHostCoManagedRevocation,
   resolveSelfHostTier,
   isLicenseVerifyFailure,
   type ResolvedLicenseState,
@@ -17,6 +18,7 @@ import {
 } from '@alga-psa/licensing';
 import { verifyLicense } from '@alga-psa/licensing';
 import crypto from 'node:crypto';
+import { getAdminConnection } from '@alga-psa/db/admin';
 
 export interface LicenseStatus {
   /** Whether a license_state row exists (self-host mode). */
@@ -199,6 +201,7 @@ export async function refreshLicenseNow(): Promise<LicenseMutationResult> {
 
     const body = await res.json() as { status: 'ok' | 'no_change' | 'revoked'; jwt?: string };
     if (body.status === 'revoked') {
+      if (row.license_token) await recordSelfHostCoManagedRevocation(await getAdminConnection(), row.license_token);
       // Soft revocation: keep the stored token (it grace-expires on its own exp).
       await upsertLicenseState({ last_checkin_at: new Date() } as any);
       return { success: false, error: 'This license has been revoked. Contact support if this is unexpected.' };
