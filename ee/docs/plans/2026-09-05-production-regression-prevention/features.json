@@ -369,7 +369,7 @@
   {
     "id": "F028",
     "description": "Use an independent financial state model for finalize/pay/credit/void/retry sequences, checking balance conservation and duplicate effects against real behavior.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP5",
     "priority": "P1",
     "prdRefs": [

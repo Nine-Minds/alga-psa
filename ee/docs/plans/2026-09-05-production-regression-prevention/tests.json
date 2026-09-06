@@ -207,7 +207,7 @@
   {
     "id": "T022",
     "description": "Execute valid generated finalize/pay/credit/void/retry sequences against actual billing behavior using an independently simplified expected ledger; balances reconcile, disallowed transitions preserve state and duplicate retries cannot repeat financial effects; replay a seeded counterexample.",
-    "implemented": false,
+    "implemented": true,
     "kind": "model-db",
     "featureIds": [
       "F028"
