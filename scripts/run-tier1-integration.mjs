@@ -26,15 +26,14 @@ function warn(message) {
   console.warn(process.env.GITHUB_ACTIONS ? `::warning::${message}` : `WARNING: ${message}`);
 }
 
-// Suites vitest marks as affected by the diff. Returns null when vitest cannot
-// walk the graph, which must widen the gate rather than narrow it.
-function affectedSuites(base) {
+// Read actual runner collection rather than interpreting include/exclude globs.
+function collectIntegrationFiles(args) {
   const temporary = mkdtempSync(path.join(tmpdir(), 'alga-affected-'));
   const output = path.join(temporary, 'files.json');
   try {
     const list = spawnSync(
       process.execPath,
-      [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', '--filesOnly', '--changed', base, integrationDir, `--json=${output}`],
+      [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', '--filesOnly', ...args, `--json=${output}`],
       { cwd: serverDir, encoding: 'utf8' },
     );
     if (list.status !== 0) throw new Error(list.stderr || 'Vitest collection failed');
@@ -46,11 +45,17 @@ function affectedSuites(base) {
       if (!file.startsWith(`${integrationDir}/`)) throw new Error(`Unexpected affected file: ${file}`);
       return file;
     });
+  } finally {
+    rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
+function affectedSuites(base) {
+  try {
+    return collectIntegrationFiles(['--changed', base, integrationDir]);
   } catch (error) {
     warn(`Affected collection failed; running the full integration suite. ${error.message}`);
     return null;
-  } finally {
-    rmSync(temporary, { recursive: true, force: true });
   }
 }
 
@@ -59,12 +64,25 @@ function coveredByManifest(file, manifestPaths) {
 }
 
 const { paths } = JSON.parse(readFileSync(manifestPath, 'utf8'));
+if (!Array.isArray(paths) || !paths.length || paths.some((entry) => typeof entry !== 'string' || !entry.startsWith(`${integrationDir}/`) || entry.split('/').includes('..'))) {
+  throw new Error('tier1.manifest.json requires a nonempty floor of paths inside src/test/integration');
+}
 const missing = paths.filter((p) => !existsSync(path.join(serverDir, p)));
 if (missing.length > 0) {
   console.error('tier1.manifest.json entries not found on disk:');
   for (const p of missing) console.error(`  - ${p}`);
   console.error('Update the manifest in the same PR that moves or deletes a suite.');
   process.exit(1);
+}
+
+// Existing directories can still be empty or excluded by the actual runner.
+// Verify every floor entry collects tests even when an affected/full selection
+// would otherwise run unrelated files and conceal that missing coverage.
+const floorFiles = collectIntegrationFiles(paths);
+for (const entry of paths) {
+  if (!floorFiles.some((file) => coveredByManifest(file, [entry]))) {
+    throw new Error(`Tier-1 floor entry collects no tests: ${entry}`);
+  }
 }
 
 const base = process.env.TIER1_BASE_SHA?.trim();
@@ -92,8 +110,8 @@ console.log(`tier1 gate: ${mode}`);
 
 const extraArgs = process.argv.slice(2);
 const result = spawnSync(
-  'npx',
-  ['vitest', 'run', ...selection, '--coverage.enabled=false', ...extraArgs],
+  process.execPath,
+  [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...selection, '--coverage.enabled=false', ...extraArgs],
   { cwd: serverDir, stdio: 'inherit' },
 );
 process.exit(result.status ?? 1);

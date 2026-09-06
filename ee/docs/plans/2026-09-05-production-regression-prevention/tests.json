@@ -12,7 +12,7 @@
   {
     "id": "T002",
     "description": "Collect and run the month-end regression under the actual CI DB command: real pg-hydrated Dates succeed on the tenant final day, an early invocation is rejected, and narrowly restoring the old normalization triggers the intended failure.",
-    "implemented": false,
+    "implemented": true,
     "kind": "db-integration",
     "featureIds": [
       "F003",
@@ -42,7 +42,7 @@
   {
     "id": "T005",
     "description": "Exercise selection with temporary git revisions changing only root lockfile, harness, schema, selection script, service and EE package files; verify required suites are selected through the outer workflow and runner. Missing base, diff failure and graph failure cannot silently narrow execution; docs-only selection remains explainable.",
-    "implemented": false,
+    "implemented": true,
     "kind": "selection-behavior",
     "featureIds": [
       "F005"
@@ -198,7 +198,7 @@
   {
     "id": "T021",
     "description": "Generate and replay month-end/DST calendar cases across selected tenant timezones and real pg date hydration; invalid dates are rejected and a deliberate normalization defect yields a shrunk, reproducible failing case.",
-    "implemented": false,
+    "implemented": true,
     "kind": "property-db",
     "featureIds": [
       "F027"

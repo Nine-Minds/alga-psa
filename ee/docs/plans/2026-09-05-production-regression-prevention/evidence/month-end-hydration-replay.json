@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "defect": "month-end-close-postgres-date-hydration",
+  "boundary": "PostgreSQL service-period date columns -> canonical window -> month-end eligibility",
+  "baseRevision": "7fcc6d1d2f09859516a4cff07d31f466b393c730",
+  "evidenceKind": "local behavioral replay with uncommitted test additions; not release-image provenance",
+  "source": {
+    "file": "packages/billing/src/lib/billing/clientCadenceWindowMaterialization.ts",
+    "sha256": "ce836a5531937ba2748d158898eb70023b3fc28d02594653c7e2c20a02e9014b"
+  },
+  "testSource": {
+    "file": "packages/billing/src/actions/calendarMonthEndCloseActions.db.test.ts",
+    "sha256": "54aba0eb397e772ed709ffaa45c5c3ce8ecfacc05acb42b1048af390f1b416f2"
+  },
+  "command": "node scripts/run-workspace-db-tests.mjs calendarMonthEndCloseActions.db.test.ts",
+  "mutation": "Replace toDateOnly(row.<column>) with String(row.<column>).slice(0, 10) only in the canonical mapping for service_period_start, service_period_end and invoice_window_start.",
+  "initialShrink": {
+    "test": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) matches the tenant calendar across generated month ends, leap years and timezone boundaries",
+    "status": "failed",
+    "details": [
+      "{ seed: 20260906, path: \"0:0:0\", endOnFailure: true }",
+      "Counterexample: [{\"year\":2000,\"month\":1,\"dayOffset\":0,\"hour\":0,\"minute\":0,\"zone\":\"UTC\"}]",
+      "Shrunk 2 time(s)"
+    ]
+  },
+  "replay": {
+    "seed": 20260906,
+    "path": "0:0:0",
+    "property": {
+      "test": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) matches the tenant calendar across generated month ends, leap years and timezone boundaries",
+      "status": "failed",
+      "details": [
+        "{ seed: 20260906, path: \"0:0:0\", endOnFailure: true }",
+        "Counterexample: [{\"year\":2000,\"month\":1,\"dayOffset\":0,\"hour\":0,\"minute\":0,\"zone\":\"UTC\"}]",
+        "Shrunk 0 time(s)"
+      ]
+    },
+    "runnerSuccess": false
+  },
+  "restored": {
+    "seed": 20260906,
+    "tests": 8,
+    "passed": 8,
+    "failed": 0,
+    "property": {
+      "test": "generateCalendarMonthEndCloseInvoices (DB-backed hydration) matches the tenant calendar across generated month ends, leap years and timezone boundaries",
+      "status": "passed",
+      "details": []
+    },
+    "sourceRestored": true
+  },
+  "limits": [
+    "The action uses real migrated PostgreSQL, tenant timezone resolution and eligibility; invoice creation/auth are mocked.",
+    "The initial shrink ran before the separate invalid-window test was added; the property body is unchanged.",
+    "The new generated test still needs CI verification on its containing PR revision."
+  ]
+}

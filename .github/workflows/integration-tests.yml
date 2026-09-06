@@ -170,9 +170,12 @@ jobs:
         id: full
         if: github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true'
         working-directory: ./server
-        run: npm run test:integration:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
+        # Use the same runner as Tier-1 so the mandatory floor is validated
+        # against actual collection even when the entire directory is selected.
+        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+          TIER1_BASE_SHA: ''
 
       # Append this run's numbers to the shared metrics sheet
       # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
@@ -400,8 +403,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify discovery against the installed Vitest runner
-        run: node --test scripts/tests/test-discovery.vitest.test.mjs
+      - name: Verify discovery and selection against the installed Vitest runner
+        run: node --test scripts/tests/test-discovery.vitest.test.mjs scripts/tests/integration-selection.vitest.test.mjs
 
       - name: Build shared libraries
         run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3

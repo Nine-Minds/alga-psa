@@ -52,7 +52,7 @@
   {
     "id": "F005",
     "description": "Align workflow triggers and affected selection for dependencies, schemas, harnesses, scripts, services and EE packages; unknown selection widens or fails explicitly.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP1",
     "priority": "P0",
     "prdRefs": [

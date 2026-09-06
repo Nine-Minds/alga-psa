@@ -94,6 +94,48 @@ tests in a disposable Git workspace, invokes the installed Vitest binary,
 detects the missing collection, repairs the configuration and reconciles the
 executed tests.
 
+## Generated calendar cases
+
+`calendarMonthEndCloseActions.db.test.ts` uses the pinned fast-check dependency
+for a 64-run calendar campaign, including explicit leap-year, century-year and
+timezone-boundary examples. It seeds real PostgreSQL periods, reads hydrated
+dates and invokes the month-end-close action. Its expected eligibility uses
+`Date.UTC` and `Intl` calendar calculations independently of the production
+policy. Invoice creation remains mocked in this action-level regression;
+invoice persistence and browser behavior require their own suites.
+
+Failures report a seed, a shrunk counterexample and its replay path. To replay
+that case, copy the values from the failure into the same database command:
+
+```sh
+CI=1 FC_SEED=20260906 FC_PATH='0:0:0' node scripts/run-workspace-db-tests.mjs calendarMonthEndCloseActions.db.test.ts
+```
+
+Omit `FC_PATH` for the full campaign. `FC_SEED` selects another repeatable
+campaign; the default seed is 20260906. A fixed implementation should pass the
+previously failing case. See the
+[fast-check runner documentation](https://fast-check.dev/docs/core-blocks/runners/)
+for failure reporting.
+
+## Verify integration selection
+
+The workflow selector and Tier-1 runner share
+[`integration-selection.mjs`](../../scripts/lib/integration-selection.mjs).
+Dependency, schema, harness, script, service and EE package changes require the
+full integration directory. Missing Git evidence or a failed affected-graph
+lookup also widens coverage. Documentation-only changes may skip the workflow;
+a direct runner invocation retains the mandatory manifest floor. Every floor
+entry must exist and collect tests under the installed Vitest configuration.
+
+```sh
+node --test scripts/tests/integration-selection.test.mjs scripts/tests/integration-selection.vitest.test.mjs
+```
+
+The installed-runner check invokes both entry points in a disposable Git
+repository. It inspects workflow outputs and actual execution reports, covering
+affected selection, missing revisions, a failed Git diff, an unavailable graph,
+and moved or empty manifest entries.
+
 ## Current enforcement scope
 
 This accounting is wired into the workspace database lane. It does not yet
