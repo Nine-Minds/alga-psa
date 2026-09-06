@@ -30,6 +30,11 @@ const {
   getUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/scheduling/actions', () => ({
   approveAppointmentRequest,
   declineAppointmentRequest,
@@ -212,6 +217,7 @@ const setPicker = (testId: string, iso: string) => {
 
 describe('EntryPopup start/end synchronisation', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     getTeamsMeetingCapability.mockResolvedValue({ available: false });
     getAppointmentRequestById.mockResolvedValue({ success: false });
     getWorkItemById.mockResolvedValue(null);

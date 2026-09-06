@@ -1,5 +1,6 @@
 'use client'
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import React, { useState, useEffect } from 'react';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -39,6 +40,7 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
     disabled = false,
   } = props;
   const { t } = useTranslation('msp/service-catalog');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const { money } = useCurrencyFormat();
   const [enableProration, setEnableProration] = useState(planFixedConfig.enable_proration || false);
   const [billingCycleAlignment, setBillingCycleAlignment] = useState<string>(
@@ -132,38 +134,40 @@ export function FixedServiceConfigPanel(props: FixedServiceConfigPanelProps) {
             split across allocations, or a standing quantity billed at a unit
             rate every period. The copy names the quantity source explicitly so
             an allocation is never read as a billable seat count. */}
-        <div data-testid="fixed-pricing-basis">
-          <Label>
-            {t('fixedConfig.pricingBasis.label', { defaultValue: 'How does this service price?' })}
-          </Label>
-          <RadioGroup
-            id={`${idPrefix}fixed-pricing-basis`}
-            name={`${idPrefix}fixed-pricing-basis`}
-            value={pricingBasis}
-            onChange={handlePricingBasisChange}
-            disabled={disabled}
-            options={[
-              {
-                value: 'bundle',
-                label: t('fixedConfig.pricingBasis.bundle.label', { defaultValue: 'Bundle price' }),
-                description: t('fixedConfig.pricingBasis.bundle.description', {
-                  defaultValue:
-                    "The contract line's fixed total is what bills. Quantities on this service only allocate a share of that total for reporting — they are not billable seats, and changing one does not change the amount billed.",
-                }),
-              },
-              {
-                value: 'unit',
-                label: t('fixedConfig.pricingBasis.unit.label', {
-                  defaultValue: 'Recurring seats/units',
-                }),
-                description: t('fixedConfig.pricingBasis.unit.description', {
-                  defaultValue:
-                    'Bills quantity × unit rate every period, with no line total taking precedence. The same quantity and rate bill again next period until you schedule a change. A quantity of zero bills zero.',
-                }),
-              },
-            ]}
-          />
-        </div>
+        {(releaseV16Enabled || pricingBasis === 'unit') && (
+          <div data-testid="fixed-pricing-basis">
+            <Label>
+              {t('fixedConfig.pricingBasis.label', { defaultValue: 'How does this service price?' })}
+            </Label>
+            <RadioGroup
+              id={`${idPrefix}fixed-pricing-basis`}
+              name={`${idPrefix}fixed-pricing-basis`}
+              value={pricingBasis}
+              onChange={handlePricingBasisChange}
+              disabled={disabled}
+              options={[
+                {
+                  value: 'bundle',
+                  label: t('fixedConfig.pricingBasis.bundle.label', { defaultValue: 'Bundle price' }),
+                  description: t('fixedConfig.pricingBasis.bundle.description', {
+                    defaultValue:
+                      "The contract line's fixed total is what bills. Quantities on this service only allocate a share of that total for reporting — they are not billable seats, and changing one does not change the amount billed.",
+                  }),
+                },
+                {
+                  value: 'unit',
+                  label: t('fixedConfig.pricingBasis.unit.label', {
+                    defaultValue: 'Recurring seats/units',
+                  }),
+                  description: t('fixedConfig.pricingBasis.unit.description', {
+                    defaultValue:
+                      'Bills quantity × unit rate every period, with no line total taking precedence. The same quantity and rate bill again next period until you schedule a change. A quantity of zero bills zero.',
+                  }),
+                },
+              ]}
+            />
+          </div>
+        )}
 
         {pricingBasis === 'unit' && (
           <div className="pl-6 border-l-2 border-[rgb(var(--color-border-200))] space-y-2">

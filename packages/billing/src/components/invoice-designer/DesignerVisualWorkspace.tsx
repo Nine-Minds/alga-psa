@@ -1,5 +1,6 @@
 'use client';
 
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { CanvasDocumentPreviewContext } from './canvas/DesignCanvas';
 
 import React, { useEffect, useMemo, useReducer, useRef, useState } from 'react';
@@ -68,6 +69,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
   onVisualWorkspaceTabChange,
 }) => {
   const { t, i18n } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const canvasScale = useInvoiceDesignerStore((state) => state.canvasScale);
   const showGuides = useInvoiceDesignerStore((state) => state.showGuides);
@@ -365,7 +367,7 @@ export const DesignerVisualWorkspace: React.FC<DesignerVisualWorkspaceProps> = (
               <div className="w-fit">
                 <CustomSelect
                   id="invoice-designer-preview-sample-select"
-                  options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.map((scenario) => ({
+                  options={INVOICE_PREVIEW_SAMPLE_SCENARIOS.filter(scenario => releaseV16Enabled || scenario.id !== 'sample-ticket-time-detail').map((scenario) => ({
                     value: scenario.id,
                     label: scenario.label,
                   }))}

@@ -1,5 +1,7 @@
 'use client';
 
+import { isBilledTimeCollection } from '../utils/billedTimeUi';
+import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
 import { INVOICE_COLLECTION_DESCRIPTORS, humanizeCollectionBindingLabel, resolveCollectionDescriptor } from '../../../lib/invoice-template-ast/collectionDescriptors';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -271,6 +273,7 @@ const TransformsWorkspace: React.FC<Props> = ({
   loadExistingInvoiceOptions,
 }) => {
   const { t } = useTranslation('msp/invoicing');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const nodes = useInvoiceDesignerStore((state) => state.nodes);
   const rootId = useInvoiceDesignerStore((state) => state.rootId);
   const snapToGrid = useInvoiceDesignerStore((state) => state.snapToGrid);
@@ -411,8 +414,8 @@ const TransformsWorkspace: React.FC<Props> = ({
       });
     }
 
-    return options.sort((left, right) => left.label.localeCompare(right.label));
-  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId, t, previewDocumentKind]);
+    return options.filter(option => releaseV16Enabled || option.value === transforms.sourceBindingId || !isBilledTimeCollection(option.path)).sort((left, right) => left.label.localeCompare(right.label));
+  }, [baseAst, collectionPathById, previewData, sourceCollection.length, transforms.sourceBindingId, t, previewDocumentKind, releaseV16Enabled]);
 
   const selectedSourceOption = useMemo(
     () => sourceCollectionOptions.find((option) => option.value === transforms.sourceBindingId) ?? null,
@@ -1105,7 +1108,7 @@ const TransformsWorkspace: React.FC<Props> = ({
                   </label>
                   <CustomSelect
                     id="invoice-designer-transforms-sample-select"
-                    options={sampleScenarios.map((scenario) => ({
+                    options={sampleScenarios.filter(scenario => releaseV16Enabled || scenario.id !== 'sample-ticket-time-detail').map((scenario) => ({
                       value: scenario.id,
                       label: scenario.label,
                     }))}
