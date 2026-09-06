@@ -3032,3 +3032,94 @@ describe('authenticated co-managed policy actions', () => {
     expect(await customer.table('co_management_relationship_events').whereIn('event_type', ['customer_scope_changed', 'staff_assignments_changed'])).toHaveLength(3);
   }));
 });
+
+
+describe('co-managed shared metadata reads', () => {
+  it('returns an allowlisted canonical ticket with qualified context, stays readable during lapse, and denies revoked scope', async () => {
+    const { principal, resource, sponsorActor, target, customer, actor, operation } = await sharedWorkFixture();
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+    await customer.table('tickets').where('ticket_id', resource.id).update({ attributes: { description: 'Private linked image', internal_cost: 987 }, url: 'https://private.example.test' });
+    const result = await runWithTenant(principal.tenant, async () => {
+      const summary = await read(db, principal, { ...resource, actor: { tenant: actor.tenant }, fields: ['*'] } as any);
+      const { getTenantContext } = await import('@alga-psa/db');
+      expect(getTenantContext()).toBe(principal.tenant);
+      return summary;
+    });
+    expect(result.resource).toEqual(resource);
+    expect(Object.keys(result.fields).sort()).toEqual(['ticket_number', 'title', 'board', 'status', 'is_closed', 'priority', 'entered_at', 'updated_at', 'closed_at'].sort());
+    expect(result).toMatchObject({ revision: 3, fields: { ticket_number: 'SHARED-1', title: 'Customer issue',
+      board: { tenant: actor.tenant, kind: 'board', id: operation.customer_board_id },
+      status: { tenant: actor.tenant, kind: 'status' }, priority: { tenant: actor.tenant, kind: 'priority' } } });
+    expect(JSON.stringify(result)).not.toMatch(/Private linked image|internal_cost|private.example|entered_by|client_id|assigned_to/);
+    const other = await sharedWorkFixture();
+    await expect(read(db, principal, other.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(read(db, principal, { ...resource, id: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expireCoManagedEntitlement(operation.tenant);
+    expect((await read(db, principal, resource)).fields).toEqual(result.fields);
+    await policy.replaceCoManagedCustomerScope(db, actor, target, 3, { visibilityMode: 'board_scope', boards: [], projects: [] });
+    await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+
+  it('redacts canonical source fields and their derived references before returning the response', async () => {
+    const { principal, resource, sponsorActor, target, sponsor, operation } = await sharedWorkFixture();
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const { replaceCoManagedStaffAssignments } = await import('../../../../packages/co-managed/src/policy');
+    await replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+    const bundles = await import('@alga-psa/authorization');
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Redacted shared metadata', actorUserId: principal.userId });
+    await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+      templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['title', 'board_id', 'tickets.status_id', 'fields.priority.name'] } });
+    await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+    await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+    const result = await read(db, principal, resource);
+    expect(Object.keys(result.fields).sort()).toEqual(['ticket_number', 'entered_at', 'updated_at', 'closed_at'].sort());
+    expect(JSON.stringify(result)).not.toContain(operation.customer_board_id);
+    await sponsor.table('authorization_bundle_rules').where('revision_id', revisionId).update({ config: {
+      selectedClientIds: [operation.request.clientId], redactedFields: ['fields'],
+    } });
+    expect(await read(db, principal, resource)).toEqual({ resource, revision: 3, fields: {} });
+  });
+
+  it('reads granted project/task metadata with the actual parent and canonical custom status while omitting private and effort fields', async () => {
+    const { principal, sponsorActor, actor, target, customer, operation } = await sharedWorkFixture();
+    const { getCoManagedSharedWorkSummary: read } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    const policy = await import('../../../../packages/co-managed/src/policy');
+    const { ProjectModel: model } = await import('@alga-psa/projects/models');
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await model.create(db, actor.tenant, { project_name: 'Shared metadata', project_number: 'SUMMARY-1',
+      description: 'Private rich text', client_id: operation.customer_client_id, status: status.status_id, wbs_code: '1' } as any);
+    const phase = await model.addPhase(db, actor.tenant, { project_id: project.project_id, phase_name: 'Deployment', wbs_code: '1.1', status: 'planning', order_number: 1 } as any);
+    await model.addStatusToProject(db, actor.tenant, project.project_id, { name: 'Ready', status_type: 'project_task',
+      item_type: 'project_task', order_number: 100, is_closed: false, is_default: false } as any);
+    const mapping = (await model.getProjectStatusMappings(db, actor.tenant, project.project_id))[0];
+    await customer.table('project_status_mappings').where('project_status_mapping_id', mapping.project_status_mapping_id).update({ custom_name: 'Customer verification' });
+    const taskId = randomUUID();
+    await customer.table('project_tasks').insert({ tenant: actor.tenant, task_id: taskId, phase_id: phase.phase_id,
+      task_name: 'Verify rollout', description: 'Private task rich text', actual_hours: 900, wbs_code: '1.1.1',
+      project_status_mapping_id: mapping.project_status_mapping_id, task_type_key: 'task' });
+    const projectRef = { tenant: actor.tenant, relationshipId: target.relationshipId, kind: 'project' as const, id: project.project_id };
+    const taskRef = { ...projectRef, kind: 'project_task' as const, id: taskId };
+    await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+    await expect(read(db, principal, taskRef)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    const initial = await policy.getCoManagedCollaborationPolicy(db, actor, target);
+    await policy.replaceCoManagedCustomerScope(db, actor, target, 3, { ...initial, projects: [{ id: project.project_id, canCollaborate: false }] });
+    const projectSummary = await read(db, principal, projectRef);
+    expect(projectSummary.fields).toMatchObject({ project_name: 'Shared metadata', project_number: 'SUMMARY-1',
+      status: { tenant: actor.tenant, kind: 'status', id: status.status_id, name: status.name } });
+    const taskSummary = await read(db, principal, taskRef);
+    expect(taskSummary.fields).toMatchObject({ task_name: 'Verify rollout',
+      project: { tenant: actor.tenant, kind: 'project', id: project.project_id, name: 'Shared metadata' },
+      phase: { tenant: actor.tenant, kind: 'project_phase', id: phase.phase_id, name: 'Deployment' },
+      status: { tenant: actor.tenant, kind: 'project_status_mapping', id: mapping.project_status_mapping_id, name: 'Customer verification' } });
+    expect(JSON.stringify([projectSummary, taskSummary])).not.toMatch(/description|Private|actual_hours|estimated_hours|client_id|assigned_to/);
+    const otherPhase = await model.addPhase(db, actor.tenant, { project_id: project.project_id, phase_name: 'Other phase', wbs_code: '1.2', status: 'planning', order_number: 2 } as any);
+    // A stale/misassigned phase mapping must not expose another phase's custom label.
+    await customer.table('project_status_mappings').where('project_status_mapping_id', mapping.project_status_mapping_id).update({ phase_id: otherPhase.phase_id });
+    expect((await read(db, principal, taskRef)).fields).toMatchObject({ status: null, is_closed: null });
+
+    await policy.replaceCoManagedCustomerScope(db, actor, target, 4, { ...initial, projects: [] });
+    for (const ref of [projectRef, taskRef]) await expect(read(db, principal, ref)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+});
