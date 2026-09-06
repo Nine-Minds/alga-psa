@@ -30,6 +30,11 @@ const mockPreviewGroupedInvoicesForSelectionInputs = vi.fn(async (groups: Array<
 }));
 const mockGenerateGroupedInvoicesAsRecurringBillingRun = vi.fn(async () => ({ failures: [] }));
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('../src/actions/usagePeriodTotalActions', () => ({upsertUsagePeriodTotal: mockUpsertUsagePeriodTotal}));
 
 const mockNavigateToUsage = vi.hoisted(() => vi.fn());

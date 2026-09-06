@@ -18,6 +18,11 @@ import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
 (globalThis as unknown as { React?: typeof React }).React = React;
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
