@@ -124,6 +124,7 @@ jobs:
           npm test --workspace=@alga-psa/emulator-host
           npm test --workspace=@alga-psa/emulator-stripe
           npm test --workspace=@alga-psa/emulator-qbo
+          npm test --workspace=@alga-psa/emulator-smtp-sink
           node --test e2e-tests/harness/emulator-control.test.mjs
 
       - uses: docker/setup-buildx-action@v3

@@ -18,6 +18,26 @@ interface ParsedMailSlice {
   subject?: string;
   text?: unknown;
   html?: unknown;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string | string[];
+  attachments?: Array<{
+    filename?: string;
+    contentType: string;
+    contentDisposition?: string;
+    contentId?: string;
+    content: Buffer;
+    size: number;
+  }>;
+}
+
+export interface CapturedAttachment {
+  filename: string | null;
+  contentType: string;
+  contentDisposition: string | null;
+  contentId: string | null;
+  contentBase64: string;
+  size: number;
 }
 
 export interface CapturedEmail {
@@ -27,6 +47,10 @@ export interface CapturedEmail {
   subject: string;
   text: string;
   html: string | null;
+  messageId: string | null;
+  inReplyTo: string | null;
+  references: string[];
+  attachments: CapturedAttachment[];
   receivedAt: string;
 }
 
@@ -48,8 +72,12 @@ export class SmtpSinkCore implements EmulatorCore {
     this.nextId = 1;
   }
 
-  capture(input: Omit<CapturedEmail, 'id' | 'receivedAt'>): CapturedEmail {
-    const email: CapturedEmail = { ...input, id: this.nextId++, receivedAt: this.env.clock.now().toISOString() };
+  capture(input: Omit<CapturedEmail, 'id' | 'receivedAt' | 'messageId' | 'inReplyTo' | 'references' | 'attachments'>
+    & Partial<Pick<CapturedEmail, 'messageId' | 'inReplyTo' | 'references' | 'attachments'>>): CapturedEmail {
+    const email: CapturedEmail = {
+      messageId: null, inReplyTo: null, references: [], attachments: [],
+      ...input, id: this.nextId++, receivedAt: this.env.clock.now().toISOString(),
+    };
     this.emails.push(email);
     return email;
   }
@@ -86,6 +114,17 @@ const smtpSinkEmulator: EmulatorPackage<SmtpSinkCore> = {
               subject: mail.subject ?? '',
               text: typeof mail.text === 'string' ? mail.text : '',
               html: typeof mail.html === 'string' ? mail.html : null,
+              messageId: mail.messageId ?? null,
+              inReplyTo: mail.inReplyTo ?? null,
+              references: Array.isArray(mail.references) ? mail.references : mail.references ? [mail.references] : [],
+              attachments: (mail.attachments ?? []).map(attachment => ({
+                filename: attachment.filename ?? null,
+                contentType: attachment.contentType,
+                contentDisposition: attachment.contentDisposition ?? null,
+                contentId: attachment.contentId ?? null,
+                contentBase64: attachment.content.toString('base64'),
+                size: attachment.size,
+              })),
             });
             callback();
           })

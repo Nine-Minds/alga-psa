@@ -382,6 +382,14 @@ elapsed milliseconds, HTTP status, and whether the connection aborted. Query
 strings, headers, and bodies are excluded. Use provider state views to verify
 business effects such as created invoices or captured email.
 
+For SMTP, `GET /control/smtp-sink/state/emails` returns received messages in
+`result`, including `messageId`, `inReplyTo`, `references` and `attachments`.
+Each attachment includes `filename`, `contentType`, `contentDisposition`,
+`contentId`, byte `size` and `contentBase64`. Decode the base64 to compare exact
+received bytes; match attachments by identity rather than MIME part order.
+These values come from parsing the received SMTP message. Reset clears the
+captured messages. The sink does not provide inbox/IMAP behavior.
+
 History is in memory, in completion order, and retains the latest 1,000
 completed requests by default (`EmulatorHost.requestHistoryLimit`, 1–10,000).
 `dropped` reports evicted records; `inFlight` reports unfinished requests in
