@@ -18,6 +18,11 @@ import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenan
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
+const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn() }));
+vi.mock('@alga-psa/storage/StorageProviderFactory', () => ({
+  StorageProviderFactory: { createProvider: async () => artifactStorage },
+  generateStoragePath: (tenant: string, _base: string, name: string) => `${tenant}/${randomUUID()}/${name}`,
+}));
 vi.mock('../../../../shared/services/email/unifiedInboundEmailQueueV2', () => ({ enqueueInboundEmailDurableJob: durableTransport.enqueue }));
 vi.mock('../../../../shared/services/email/inboundEmailSourceStager', () => ({
   readStagedSourceMime: intake.read, parseStagedMimeIntoEmailDetails: intake.parse,
@@ -881,4 +886,100 @@ it('deduplicates co-managed outbox consumers even with installation rollout off'
       .toEqual({ decision: 'deliver', failOpen: true });
   });
   expect(await customer.table('inbound_email_event_deliveries')).toEqual([expect.objectContaining({ status: 'delivered' })]);
+});
+
+async function runCoManagedArtifact(tenantId: string, inboxId: string, artifactKey: string) {
+  const { processInboundArtifactJob } = await import('../../../../shared/services/email/inboundEmailArtifactWorker');
+  return processInboundArtifactJob({ version: 2, jobId: randomUUID(), tenantId, inboxId, recordId: artifactKey,
+    workType: 'process_artifact', providerId: '', providerType: 'google', enqueuedAt: new Date().toISOString() } as any,
+  { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} });
+}
+async function expireCoManagedEntitlement(sponsorTenant: string) {
+  const lapse = new Date(Date.now() - 31 * 86_400_000);
+  await tenantDb(db, sponsorTenant).table('co_managed_entitlements').update({ valid_until: lapse, lapse_started_at: lapse,
+    read_only_after: new Date(lapse.getTime() + 30 * 86_400_000) });
+}
+
+describe('durable co-managed attachments', () => {
+  it('parks attachments without spending attempts or overwriting failure history and fences reclaimed pause releases', async () => {
+    const { actor, customer } = await readyForAcceptance(), inbox = await stagedCoManagedInbox(actor.tenant);
+    const store = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    await store.insertArtifacts(db, actor.tenant, ['pending', 'retryable_failed', 'fenced'].map(key => ({ tenant: actor.tenant,
+      inbox_id: inbox.inbox_id, artifact_key: key, artifact_type: 'attachment' })));
+    await customer.table('inbound_email_artifacts').where('artifact_key', 'retryable_failed')
+      .update({ status: 'retryable_failed', attempt_count: 3, next_attempt_at: new Date(0), last_error: 'previous download failure' });
+    intake.read.mockReset(); artifactStorage.upload.mockReset();
+    for (let i = 0; i < 7; i++) for (const key of ['pending', 'retryable_failed']) {
+      expect(await runCoManagedArtifact(actor.tenant, inbox.inbox_id, key))
+        .toMatchObject({ disposition: 'defer', reason: 'co_managed_pending_acceptance' });
+    }
+    expect(intake.read).not.toHaveBeenCalled(); expect(artifactStorage.upload).not.toHaveBeenCalled();
+    expect(await store.getArtifact(db, actor.tenant, inbox.inbox_id, 'pending')).toMatchObject({ status: 'pending', attempt_count: 0 });
+    expect(await store.getArtifact(db, actor.tenant, inbox.inbox_id, 'retryable_failed'))
+      .toMatchObject({ status: 'retryable_failed', attempt_count: 3, last_error: 'previous download failure' });
+    expect((await store.findDueArtifacts(db, { tenant: actor.tenant })).map(row => row.artifact_key)).toEqual(['fenced']);
+    expect(await store.claimArtifact(db, { tenant: actor.tenant, inbox_id: inbox.inbox_id,
+      artifact_key: 'pending', owner: 'early', leaseTtlMs: 30_000 })).toEqual({ claimed: false, reason: 'not_due' });
+    const params = { tenant: actor.tenant, inbox_id: inbox.inbox_id, artifact_key: 'fenced', owner: 'first', leaseTtlMs: 30_000 };
+    const first = await store.claimArtifact(db, params); if (!first.claimed) throw new Error('Expected claim');
+    await customer.table('inbound_email_artifacts').where('artifact_key', 'fenced').update({ lease_expires_at: new Date(0) });
+    const second = await store.reclaimArtifact(db, { ...params, owner: 'second' }); if (!second.claimed) throw new Error('Expected reclaim');
+    const pause = { tenant: actor.tenant, inboxId: inbox.inbox_id, artifactKey: 'fenced', until: new Date(Date.now() + 60_000) };
+    expect(await store.deferArtifactForCoManagedLifecycle(db, { ...pause, claim: { owner: 'first',
+      token: first.row.lease_token!, version: first.row.lease_version, refundAttempt: true } })).toBe(false);
+    expect(await store.deferArtifactForCoManagedLifecycle(db, { ...pause, claim: { owner: 'second',
+      token: second.row.lease_token!, version: second.row.lease_version, refundAttempt: false } })).toBe(true);
+    expect(await store.getArtifact(db, actor.tenant, inbox.inbox_id, 'fenced')).toMatchObject({ status: 'pending', attempt_count: 1 });
+  });
+
+  it('rolls back documents when expiry wins during upload, refunds the attempt, and resumes exactly once after renewal', async () => {
+    const { operation, actor, customer, input } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const { service } = await ticketServiceForTest();
+    const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+    const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+    const ticket = await service.create({ title: 'Attachment destination', description: '', client_id: operation.customer_client_id,
+      board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id },
+    { tenant: actor.tenant, userId: actor.userId });
+    const inbox = await stagedCoManagedInbox(actor.tenant), key = 'file-1';
+    const comment = await service.addComment(ticket.ticket_id, { comment_text: 'Retained message', is_internal: false, is_resolution: false },
+      { tenant: actor.tenant, userId: actor.userId });
+    await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id)
+      .update({ status: 'succeeded', outcome_kind: 'created', ticket_id: ticket.ticket_id,
+        comment_id: comment.comment_id, completed_at: new Date() });
+    const store = await import('../../../../shared/services/email/inboundEmailDurableStore');
+    await store.insertArtifacts(db, actor.tenant, [{ tenant: actor.tenant, inbox_id: inbox.inbox_id,
+      artifact_key: key, artifact_type: 'attachment', source_attachment_id: key }]);
+    intake.read.mockReset().mockResolvedValue(Buffer.from('retained source'));
+    intake.parse.mockReset().mockResolvedValue({ emailData: { id: inbox.provider_message_id, body: { text: 'file' },
+      rawMime: 'Subject: retained\r\n\r\nfile', attachments: [{ id: key, name: 'notes.txt', contentType: 'text/plain',
+        size: 5, content: Buffer.from('notes').toString('base64') }] } });
+    artifactStorage.delete.mockReset().mockResolvedValue(undefined);
+    artifactStorage.upload.mockReset().mockImplementationOnce(async (_buffer, path) => {
+      await expireCoManagedEntitlement(operation.tenant);
+      return { path };
+    }).mockImplementation(async (_buffer, path) => ({ path }));
+    expect(await runCoManagedArtifact(actor.tenant, inbox.inbox_id, key))
+      .toMatchObject({ disposition: 'defer', reason: 'co_managed_read_only' });
+    for (const table of ['documents', 'external_files', 'document_associations', 'document_folders']) {
+      expect(await customer.table(table)).toEqual([]);
+    }
+    expect(artifactStorage.delete).toHaveBeenCalledOnce();
+    expect(await store.getArtifact(db, actor.tenant, inbox.inbox_id, key))
+      .toMatchObject({ status: 'pending', attempt_count: 0, lease_owner: null, lease_token: null });
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    await customer.table('inbound_email_artifacts').update({ next_attempt_at: new Date(0) });
+    expect(await runCoManagedArtifact(actor.tenant, inbox.inbox_id, key)).toMatchObject({ disposition: 'ack' });
+    expect(await store.getArtifact(db, actor.tenant, inbox.inbox_id, key))
+      .toMatchObject({ status: 'succeeded', attempt_count: 1, file_id: expect.any(String), document_id: expect.any(String) });
+    expect(await customer.table('documents').where('document_name', 'notes.txt')).toHaveLength(1);
+    expect(await customer.table('documents')).toHaveLength(2);
+    expect(await customer.table('document_associations')).toHaveLength(2);
+    const uploads = artifactStorage.upload.mock.calls.length;
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await runCoManagedArtifact(actor.tenant, inbox.inbox_id, key)).toMatchObject({ disposition: 'ack' });
+    expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
+    expect(await customer.table('tickets')).toHaveLength(1);
+  });
 });

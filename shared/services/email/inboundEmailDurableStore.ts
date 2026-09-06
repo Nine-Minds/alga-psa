@@ -1060,6 +1060,7 @@ export async function claimArtifact(db: DurableDb, params: {
   };
   const updated = await tenantDb(db, params.tenant).table('inbound_email_artifacts')
     .where({ tenant: params.tenant, inbox_id: params.inbox_id, artifact_key: params.artifact_key, status: 'pending' })
+    .andWhere((qb: any) => qb.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', db.fn.now()))
     .update(patch)
     .returning('*');
   if (updated.length > 0) return { claimed: true, row: updated[0] };
@@ -1077,6 +1078,7 @@ export async function claimArtifact(db: DurableDb, params: {
   if (['succeeded', 'skipped', 'terminal_failed'].includes(current.status)) {
     return { claimed: false, reason: 'terminal' };
   }
+  if (current.status === 'pending') return { claimed: false, reason: 'not_due' };
   if (current.status === 'retryable_failed') {
     if (isDue(current.next_attempt_at, now) && current.attempt_count >= maxAttempts) {
       await deadletterArtifact(db, current as InboundArtifactRecord);
@@ -1085,6 +1087,29 @@ export async function claimArtifact(db: DurableDb, params: {
     return { claimed: false, reason: 'not_due' };
   }
   return { claimed: false, reason: 'already_claimed' };
+}
+
+/** Retain paused attachments and their failure history without spending an
+ * attempt. Only the exact current lease may release claimed work. */
+export async function deferArtifactForCoManagedLifecycle(db: DurableDb, params: {
+  tenant: string;
+  inboxId: string;
+  artifactKey: string;
+  until: Date;
+  claim?: { owner: string; token: string; version: number; refundAttempt: boolean };
+}): Promise<boolean> {
+  const query = tenantDb(db, params.tenant).table('inbound_email_artifacts')
+    .where({ inbox_id: params.inboxId, artifact_key: params.artifactKey });
+  const patch: Record<string, unknown> = { next_attempt_at: params.until, updated_at: db.fn.now() };
+  if (params.claim) {
+    query.where({ status: 'processing', lease_owner: params.claim.owner,
+      lease_token: params.claim.token, lease_version: params.claim.version });
+    Object.assign(patch, { status: 'pending', lease_owner: null, lease_token: null, lease_expires_at: null });
+    if (params.claim.refundAttempt) patch.attempt_count = db.raw('GREATEST(0, attempt_count - 1)');
+  } else {
+    query.whereIn('status', ['pending', 'retryable_failed']);
+  }
+  return await query.update(patch) > 0;
 }
 
 /** Dead-letter an over-cap due retryable artifact row into `terminal_failed`. */
@@ -1858,9 +1883,8 @@ export async function findDueArtifacts(db: DurableDb, options: DueScanOptions): 
   const rows = await tenantDb(db, options.tenant).table('inbound_email_artifacts')
     .where({ tenant: options.tenant })
     .andWhere(function (this: any) {
-      this.where({ status: 'pending' })
-        .orWhere((inner: any) => {
-          inner.where({ status: 'retryable_failed' })
+      this.where((inner: any) => {
+          inner.whereIn('status', ['pending', 'retryable_failed'])
             .where(function (due: any) {
               due.whereNull('next_attempt_at').orWhere('next_attempt_at', '<=', now.toISOString());
             });

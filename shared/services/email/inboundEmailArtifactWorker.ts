@@ -6,16 +6,17 @@
  * best-effort artifact machinery provides the deterministic idempotency guard
  * (`email_processed_attachments` PK) and the legacy compatibility mirror; the
  * durable `inbound_email_artifacts` rows track resumable state on top. A
- * storage-success/DB-failure retry reuses the deterministic object and never
- * generates another file/document for an already-successful artifact.
+ * successful compatibility mirror prevents another file/document on replay.
  *
  * Artifact failure never recreates or erases the core ticket/comment.
  */
 
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
 import type { InboundV2JobContext } from './unifiedInboundEmailQueueJobProcessorV2';
+import { CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import {
   claimArtifact,
+  deferArtifactForCoManagedLifecycle,
   getArtifact,
   getDurableLeaseTtlMs,
   getDurableMaxAttempts,
@@ -45,6 +46,16 @@ export async function processInboundArtifactJob(
 
   if (!inboxId) {
     return { disposition: 'retry', error: 'artifact_job_missing_inbox_id' };
+  }
+
+  const existing = await getArtifact(db, job.tenantId, inboxId, artifactKey);
+  if (existing && TERMINAL_ARTIFACT_STATUSES.has(existing.status)) return { disposition: 'ack' };
+  if (!existing) return { disposition: 'retry', error: 'artifact_missing' };
+  const lifecycle = await getCoManagedOperationalState(db, job.tenantId);
+  if (!lifecycle.canWrite) {
+    const until = new Date(Date.now() + 60_000);
+    await deferArtifactForCoManagedLifecycle(db, { tenant: job.tenantId, inboxId, artifactKey, until });
+    return { disposition: 'defer', untilIso: until.toISOString(), reason: `co_managed_${lifecycle.state}` };
   }
 
   const claim = await claimArtifact(db, {
@@ -87,7 +98,7 @@ export async function processInboundArtifactJob(
         }
         return { disposition: 'defer', untilIso: new Date(Date.now() + 30_000).toISOString(), reason: 'artifact_reclaim_race' };
       }
-    } else if (current?.status === 'retryable_failed') {
+    } else if (current?.status === 'retryable_failed' || current?.status === 'pending') {
       const next = current.next_attempt_at ? new Date(current.next_attempt_at).getTime() : Date.now();
       return { disposition: 'defer', untilIso: new Date(Math.max(Date.now(), next)).toISOString(), reason: 'artifact_not_due' };
     } else {
@@ -159,6 +170,12 @@ export async function processInboundArtifactJob(
       clientVisibleAttachments: true,
     });
   } catch (error: any) {
+    if (error instanceof CoManagedLifecycleError) {
+      const until = new Date(Date.now() + 60_000);
+      await deferArtifactForCoManagedLifecycle(db, { tenant: job.tenantId, inboxId, artifactKey, until,
+        claim: { owner, token, version, refundAttempt: claim.claimed } });
+      return { disposition: 'defer', untilIso: until.toISOString(), reason: `co_managed_${error.lifecycle.state}` };
+    }
     processError = error?.message || String(error);
   }
 
