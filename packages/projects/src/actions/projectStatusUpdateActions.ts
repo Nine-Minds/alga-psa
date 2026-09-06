@@ -2,6 +2,7 @@
 
 import Handlebars from 'handlebars';
 import type { Knex } from 'knex';
+import { withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getPortalDomain } from '@alga-psa/auth/lib/PortalDomainModel';
@@ -486,7 +487,11 @@ export const sendProjectStatusUpdate = withAuth(
         text,
       };
 
-      await emailProvider.sendEmail(message, tenant);
+      // Keep admission through transport so a concurrent sponsorship change
+      // cannot pass the final check and revoke this send before it starts.
+      await withCoManagedOperationalTransaction(knex, tenant, async () => {
+        await emailProvider.sendEmail(message, tenant);
+      });
 
       logger.info('[projectStatusUpdate] Status update sent', {
         tenant,

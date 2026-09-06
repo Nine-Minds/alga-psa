@@ -19,6 +19,7 @@ vi.mock('next/cache', async importOriginal => ({
   ...await importOriginal<typeof import('next/cache')>(), revalidatePath: vi.fn(),
 }));
 const delivery = vi.hoisted(() => ({ send: vi.fn() }));
+const statusEmail = vi.hoisted(() => ({ create: vi.fn(), send: vi.fn() }));
 const intake = vi.hoisted(() => ({ read: vi.fn(), parse: vi.fn(), process: vi.fn(), stage: vi.fn() }));
 const durableTransport = vi.hoisted(() => ({ enqueue: vi.fn() }));
 const artifactStorage = vi.hoisted(() => ({ upload: vi.fn(), delete: vi.fn(), download: vi.fn() }));
@@ -37,7 +38,11 @@ vi.mock('../../../../shared/services/email/inboundEmailSourceStager', () => ({
   stageInboundSourceMime: intake.stage,
 }));
 vi.mock('../../../../shared/services/email/processInboundEmailInApp', () => ({ processInboundEmailInApp: intake.process }));
-vi.mock('@alga-psa/email', () => ({ sendTeamInvitationEmail: delivery.send }));
+vi.mock('@alga-psa/email', () => ({
+  sendTeamInvitationEmail: delivery.send,
+  SystemEmailProviderFactory: { createProvider: statusEmail.create },
+  resolveTenantCompanyName: async () => 'Customer IT',
+}));
 vi.mock('@alga-psa/analytics', () => ({ ServerAnalyticsTracker: class {
   async trackTicketCreated() {}
   async trackTicketUpdated() {}
@@ -2225,4 +2230,45 @@ it('keeps client portal task uploads atomic when expiry wins during transport an
   expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
   expect(await auth.runWithApiKeyUser(requester, () => portal.getClientTaskDocuments(task.task_id)))
     .toMatchObject({ success: true, documents: [expect.objectContaining({ document_name: 'saved.txt' })] });
+}));
+
+it('admits project status email at send time while retaining previews during pending acceptance and lapse', async () => withProjectActionsFixture(async ({ operation, actor, input, customer }) => {
+  const actions = await import('../../../../packages/projects/src/actions/projectStatusUpdateActions');
+  const dbModule = await import('@alga-psa/db');
+  const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+  statusEmail.create.mockReset().mockResolvedValue({ sendEmail: statusEmail.send });
+  statusEmail.send.mockReset().mockResolvedValue(undefined);
+  try {
+    const projectId = randomUUID();
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const contact = await customer.table('contacts').where('client_id', operation.customer_client_id).first();
+    await customer.table('projects').insert({ tenant: actor.tenant, project_id: projectId, project_name: 'Customer rollout',
+      client_id: operation.customer_client_id, contact_name_id: contact.contact_name_id, status: status.status_id,
+      project_number: 'MAIL-1', wbs_code: '1', client_portal_config: { show_tasks: true, show_phases: true, show_budget_hours: false } });
+    await customer.table('tenant_email_templates').insert({ tenant: actor.tenant, name: 'project-status-update', language_code: 'en',
+      subject: '{{project.name}} update', html_content: '<p>{{customMessage}}</p>', text_content: '{{customMessage}}' });
+    expect(await actions.getProjectStatusUpdateRecipient(projectId)).toMatchObject({ projectId, recipientEmail: contact.email });
+    expect(await actions.sendProjectStatusUpdate(projectId, 'Ready')).toMatchObject({ actionError: expect.any(String) });
+    expect(statusEmail.send).not.toHaveBeenCalled();
+    await acceptCoManagedRelationship(db, actor, input);
+    expect(await actions.sendProjectStatusUpdate(projectId, 'Ready')).toMatchObject({ recipientEmail: contact.email });
+    expect(statusEmail.send).toHaveBeenCalledWith(expect.objectContaining({ subject: 'Customer rollout update', text: 'Ready' }), actor.tenant);
+    statusEmail.send.mockClear();
+    // Expiry after the UI preview, while preparing a provider, must still stop
+    // transmission. An initial request-time check alone would miss this race.
+    statusEmail.create.mockImplementationOnce(async () => {
+      await expireCoManagedEntitlement(operation.tenant);
+      return { sendEmail: statusEmail.send };
+    });
+    expect(await actions.sendProjectStatusUpdate(projectId, 'Blocked')).toMatchObject({ actionError: expect.any(String) });
+    expect(statusEmail.send).not.toHaveBeenCalled();
+    expect(await actions.getProjectStatusUpdateRecipient(projectId)).toMatchObject({ projectId, recipientEmail: contact.email });
+    expect(await actions.sendProjectStatusUpdate(projectId, 'Still blocked')).toMatchObject({ actionError: expect.any(String) });
+    expect(statusEmail.send).not.toHaveBeenCalled();
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    expect(await actions.sendProjectStatusUpdate(projectId, 'Renewed')).toMatchObject({ recipientEmail: contact.email });
+    expect(statusEmail.send).toHaveBeenCalledOnce();
+  } finally { connection.mockRestore(); }
 }));
