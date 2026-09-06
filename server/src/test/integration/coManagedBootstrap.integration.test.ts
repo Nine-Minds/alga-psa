@@ -1441,3 +1441,72 @@ describe('co-managed project API lifecycle admission', () => {
     expect(await customer.table('project_tasks')).toHaveLength(1);
   }));
 });
+
+describe('co-managed canonical project model lifecycle admission', () => {
+  it('denies every project-model mutation before acceptance and after expiry', async () => withProjectFixture(async ({ operation, actor, input, customer }) => {
+    const { ProjectModel: model } = await import('@alga-psa/projects/models');
+    const tenant = actor.tenant, id = randomUUID();
+    const mutations = [
+      () => model.create(db, tenant, {} as any),
+      () => model.update(db, tenant, id, {}),
+      () => model.delete(db, tenant, id),
+      () => model.addPhase(db, tenant, {} as any),
+      () => model.updatePhase(db, tenant, id, {}),
+      () => model.deletePhase(db, tenant, id),
+      () => model.addProjectStatusMapping(db, tenant, id, {} as any),
+      () => model.addStatusToProject(db, tenant, id, {} as any),
+      () => model.updateProjectStatus(db, tenant, id, {}, {}),
+      () => model.deleteProjectStatus(db, tenant, id),
+      () => model.updateStructure(db, tenant, id, { phases: [], tasks: [] }),
+      () => model.copyProjectStatusMappingsToPhase(db, tenant, id, id),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    for (const table of ['projects', 'project_phases', 'project_status_mappings']) expect(await customer.table(table)).toEqual([]);
+  }));
+
+  it('retains reads during expiry and renews real model writes, status cloning, and cascading deletion', async () => withProjectFixture(async ({ operation, actor, input, customer }) => {
+    const { ProjectModel: model } = await import('@alga-psa/projects/models');
+    const { withTransaction } = await import('@alga-psa/db');
+    const tenant = actor.tenant;
+    await acceptCoManagedRelationship(db, actor, input);
+    const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await model.create(db, tenant, { project_name: 'Model rollout', project_number: 'MODEL-1',
+      client_id: operation.customer_client_id, status: status.status_id, wbs_code: '1' } as any);
+    const phase = await model.addPhase(db, tenant, { project_id: project.project_id, phase_name: 'Model phase', wbs_code: '1.1', status: 'planning', order_number: 1 } as any);
+    const custom = await model.addStatusToProject(db, tenant, project.project_id, { name: 'Review', status_type: 'project_task',
+      item_type: 'project_task', order_number: 100, is_closed: false, is_default: false } as any);
+    await model.updateProjectStatus(db, tenant, custom.status_id, { name: 'Customer review' }, { custom_name: 'Local review' });
+    const mapping = (await model.getProjectStatusMappings(db, tenant, project.project_id))[0];
+    const taskId = randomUUID();
+    await customer.table('project_tasks').insert({ tenant, task_id: taskId, phase_id: phase.phase_id,
+      task_name: 'Check rollout', wbs_code: '1.1.1', project_status_mapping_id: mapping.project_status_mapping_id, task_type_key: 'task' });
+    await expect(withTransaction(db, async trx => {
+      await model.update(trx, tenant, project.project_id, { project_name: 'Rolled back' });
+      await model.copyProjectStatusMappingsToPhase(trx, tenant, project.project_id, phase.phase_id);
+      throw new Error('Caller cancelled');
+    })).rejects.toThrow('Caller cancelled');
+    expect((await model.getById(db, tenant, project.project_id))?.project_name).toBe('Model rollout');
+    expect(await model.getProjectStatusMappings(db, tenant, project.project_id, phase.phase_id)).toEqual([]);
+    expect((await customer.table('project_tasks').where('task_id', taskId).first()).project_status_mapping_id).toBe(mapping.project_status_mapping_id);
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await model.getPhases(db, tenant, project.project_id)).toHaveLength(1);
+    expect(await model.getProjectStatusMappings(db, tenant, project.project_id)).toHaveLength(1);
+    await expect(model.delete(db, tenant, project.project_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('project_tasks')).toHaveLength(1);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    const clones = await model.copyProjectStatusMappingsToPhase(db, tenant, project.project_id, phase.phase_id);
+    expect(clones).toHaveLength(1);
+    expect((await customer.table('project_tasks').where('task_id', taskId).first()).project_status_mapping_id).toBe(clones[0].project_status_mapping_id);
+    await model.updateStructure(db, tenant, project.project_id, { phases: [{ phase_id: phase.phase_id, phase_name: 'Complete' }],
+      tasks: [{ task_id: taskId, task_name: 'Verified' }] });
+    expect((await model.getPhases(db, tenant, project.project_id))[0].phase_name).toBe('Complete');
+    await model.delete(db, tenant, project.project_id);
+    for (const table of ['projects', 'project_phases', 'project_tasks', 'project_status_mappings']) expect(await customer.table(table)).toEqual([]);
+    await model.deleteProjectStatus(db, tenant, custom.status_id);
+    expect(await customer.table('statuses').where('status_id', custom.status_id)).toEqual([]);
+  }));
+});

@@ -41,6 +41,7 @@
     "@alga-psa/email": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/inventory": "*",
+    "@alga-psa/licensing": "*",
     "@alga-psa/notifications": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/types": "*",

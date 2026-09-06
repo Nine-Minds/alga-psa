@@ -13,6 +13,7 @@ import type { Knex } from 'knex';
 import type { IProject, IProjectPhase, IProjectStatusMapping, IProjectTask, IStatus, IStandardStatus, ItemType } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
+import { withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 
 /** Status enriched with mapping metadata as returned by getProjectTaskStatuses. */
 export type ProjectTaskStatus = (IStatus | IStandardStatus) & Pick<IProjectStatusMapping, 'project_status_mapping_id' | 'phase_id' | 'custom_name' | 'display_order' | 'is_visible'> & { is_standard: boolean };
@@ -176,39 +177,41 @@ const ProjectModel = {
       throw new Error('Tenant context is required for creating project');
     }
 
-    try {
-      // Remove derived fields before insert
-      const { status_name, is_closed, client_portal_config, ...insertData } = projectData as any;
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        // Remove derived fields before insert
+        const { status_name, is_closed, client_portal_config, ...insertData } = projectData as any;
 
-      // Build insert data, serializing JSONB fields
-      const finalInsertData: Record<string, unknown> = {
-        ...insertData,
-        project_id: uuidv4(),
-        is_inactive: false,
-        tenant: tenant,
-        assigned_to: insertData.assigned_to || null,
-        contact_name_id: insertData.contact_name_id || null,
-        status: insertData.status || '',
-        budgeted_hours: insertData.budgeted_hours || null,
-        project_number: insertData.project_number
-      };
+        // Build insert data, serializing JSONB fields
+        const finalInsertData: Record<string, unknown> = {
+          ...insertData,
+          project_id: uuidv4(),
+          is_inactive: false,
+          tenant: tenant,
+          assigned_to: insertData.assigned_to || null,
+          contact_name_id: insertData.contact_name_id || null,
+          status: insertData.status || '',
+          budgeted_hours: insertData.budgeted_hours || null,
+          project_number: insertData.project_number
+        };
 
-      // Only include client_portal_config if it was provided
-      if (client_portal_config !== undefined) {
-        finalInsertData.client_portal_config = JSON.stringify(client_portal_config);
+        // Only include client_portal_config if it was provided
+        if (client_portal_config !== undefined) {
+          finalInsertData.client_portal_config = JSON.stringify(client_portal_config);
+        }
+
+        const [newProject] = await tenantScopedTable<IProject>(trx, 'projects', tenant)
+          .insert(finalInsertData)
+          .returning('*');
+
+        // Fetch the full project details including status info
+        const projectWithStatus = await ProjectModel.getById(trx, tenant, newProject.project_id);
+        return projectWithStatus || newProject;
+      } catch (error) {
+        console.error('Error creating project:', error);
+        throw error;
       }
-
-      const [newProject] = await tenantScopedTable<IProject>(knexOrTrx, 'projects', tenant)
-        .insert(finalInsertData)
-        .returning('*');
-
-      // Fetch the full project details including status info
-      const projectWithStatus = await ProjectModel.getById(knexOrTrx, tenant, newProject.project_id);
-      return projectWithStatus || newProject;
-    } catch (error) {
-      console.error('Error creating project:', error);
-      throw error;
-    }
+    });
   },
 
   /**
@@ -224,47 +227,49 @@ const ProjectModel = {
       throw new Error('Tenant context is required for updating project');
     }
 
-    try {
-      // Remove derived and joined fields before update
-      const {
-        status_name,
-        is_closed,
-        client_name,
-        assigned_to_first_name,
-        assigned_to_last_name,
-        contact_name,
-        tenant: _tenant,
-        client_portal_config,
-        ...updateData
-      } = projectData;
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        // Remove derived and joined fields before update
+        const {
+          status_name,
+          is_closed,
+          client_name,
+          assigned_to_first_name,
+          assigned_to_last_name,
+          contact_name,
+          tenant: _tenant,
+          client_portal_config,
+          ...updateData
+        } = projectData;
 
-      // Build final update object, serializing JSONB fields
-      const finalUpdateData: Record<string, unknown> = {
-        ...updateData,
-        updated_at: knexOrTrx.fn.now()
-      };
+        // Build final update object, serializing JSONB fields
+        const finalUpdateData: Record<string, unknown> = {
+          ...updateData,
+          updated_at: trx.fn.now()
+        };
 
-      // Only include client_portal_config if it was provided
-      if (client_portal_config !== undefined) {
-        finalUpdateData.client_portal_config = JSON.stringify(client_portal_config);
+        // Only include client_portal_config if it was provided
+        if (client_portal_config !== undefined) {
+          finalUpdateData.client_portal_config = JSON.stringify(client_portal_config);
+        }
+
+        const [updatedProject] = await tenantScopedTable<IProject>(trx, 'projects', tenant)
+          .where('project_id', projectId)
+          .update(finalUpdateData)
+          .returning('*');
+
+        if (!updatedProject) {
+          throw new Error(`Project ${projectId} not found in tenant ${tenant}`);
+        }
+
+        // Fetch the full project details including status info
+        const projectWithStatus = await ProjectModel.getById(trx, tenant, projectId);
+        return projectWithStatus || updatedProject;
+      } catch (error) {
+        console.error('Error updating project:', error);
+        throw error;
       }
-
-      const [updatedProject] = await tenantScopedTable<IProject>(knexOrTrx, 'projects', tenant)
-        .where('project_id', projectId)
-        .update(finalUpdateData)
-        .returning('*');
-
-      if (!updatedProject) {
-        throw new Error(`Project ${projectId} not found in tenant ${tenant}`);
-      }
-
-      // Fetch the full project details including status info
-      const projectWithStatus = await ProjectModel.getById(knexOrTrx, tenant, projectId);
-      return projectWithStatus || updatedProject;
-    } catch (error) {
-      console.error('Error updating project:', error);
-      throw error;
-    }
+    });
   },
 
   /**
@@ -280,119 +285,112 @@ const ProjectModel = {
       throw new Error('Tenant context is required for deleting project');
     }
 
-    const isTransaction = (knexOrTrx as any).isTransaction || false;
-    const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        // First, get all phases for this project
+        const phases = await tenantScopedTable(trx, 'project_phases', tenant)
+          .where('project_id', projectId)
+          .select('phase_id') as Array<{ phase_id: string }>;
 
-    try {
-      // First, get all phases for this project
-      const phases = await tenantScopedTable(trx, 'project_phases', tenant)
-        .where('project_id', projectId)
-        .select('phase_id') as Array<{ phase_id: string }>;
+        const phaseIds = phases.map((phase): string => phase.phase_id);
 
-      const phaseIds = phases.map((phase): string => phase.phase_id);
+        // Build subquery for task IDs in this project's phases
+        const taskIdsSubquery = tenantScopedTable(trx, 'project_tasks', tenant)
+          .select('task_id')
+          .whereIn('phase_id', phaseIds);
 
-      // Build subquery for task IDs in this project's phases
-      const taskIdsSubquery = tenantScopedTable(trx, 'project_tasks', tenant)
-        .select('task_id')
-        .whereIn('phase_id', phaseIds);
+        // Check for time entries linked to tasks in this project
+        if (phaseIds.length > 0) {
+          const timeEntriesCount = await tenantScopedTable(trx, 'time_entries', tenant)
+            .whereIn('work_item_id', taskIdsSubquery)
+            .andWhere('work_item_type', 'project_task')
+            .count('* as count')
+            .first();
 
-      // Check for time entries linked to tasks in this project
-      if (phaseIds.length > 0) {
-        const timeEntriesCount = await tenantScopedTable(trx, 'time_entries', tenant)
-          .whereIn('work_item_id', taskIdsSubquery)
-          .andWhere('work_item_type', 'project_task')
-          .count('* as count')
-          .first();
-
-        if (timeEntriesCount && Number(timeEntriesCount.count) > 0) {
-          throw new Error(
-            `Cannot delete project: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this project.`
-          );
+          if (timeEntriesCount && Number(timeEntriesCount.count) > 0) {
+            throw new Error(
+              `Cannot delete project: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this project.`
+            );
+          }
         }
-      }
 
-      // Delete task dependencies (both predecessor and successor references)
-      if (phaseIds.length > 0) {
-        await tenantScopedTable(trx, 'project_task_dependencies', tenant)
-          .where(function() {
-            this.whereIn('predecessor_task_id', taskIdsSubquery)
-              .orWhereIn('successor_task_id', taskIdsSubquery);
-          })
+        // Delete task dependencies (both predecessor and successor references)
+        if (phaseIds.length > 0) {
+          await tenantScopedTable(trx, 'project_task_dependencies', tenant)
+            .where(function() {
+              this.whereIn('predecessor_task_id', taskIdsSubquery)
+                .orWhereIn('successor_task_id', taskIdsSubquery);
+            })
+            .del();
+        }
+
+        // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+        if (phaseIds.length > 0) {
+          const commentIdsSubquery = tenantScopedTable(trx, 'project_task_comments', tenant)
+            .select('task_comment_id')
+            .whereIn('task_id', taskIdsSubquery);
+          await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
+            .whereIn('task_comment_id', commentIdsSubquery)
+            .del();
+        }
+
+        // Delete task comments
+        if (phaseIds.length > 0) {
+          await tenantScopedTable(trx, 'project_task_comments', tenant)
+            .whereIn('task_id', taskIdsSubquery)
+            .del();
+        }
+
+        // Delete task resources (additional assignees)
+        if (phaseIds.length > 0) {
+          await tenantScopedTable(trx, 'task_resources', tenant)
+            .whereIn('task_id', taskIdsSubquery)
+            .del();
+        }
+
+        // Delete checklist items for all tasks in all phases
+        if (phaseIds.length > 0) {
+          await tenantScopedTable(trx, 'task_checklist_items', tenant)
+            .whereIn('task_id', taskIdsSubquery)
+            .del();
+        }
+
+        // Delete all tasks in all phases
+        if (phaseIds.length > 0) {
+          await tenantScopedTable(trx, 'project_tasks', tenant)
+            .whereIn('phase_id', phaseIds)
+            .del();
+        }
+
+        // Delete project ticket links
+        await tenantScopedTable(trx, 'project_ticket_links', tenant)
+          .where('project_id', projectId)
           .del();
-      }
 
-      // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
-      if (phaseIds.length > 0) {
-        const commentIdsSubquery = tenantScopedTable(trx, 'project_task_comments', tenant)
-          .select('task_comment_id')
-          .whereIn('task_id', taskIdsSubquery);
-        await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
-          .whereIn('task_comment_id', commentIdsSubquery)
+        // Delete all phases
+        await tenantScopedTable(trx, 'project_phases', tenant)
+          .where('project_id', projectId)
           .del();
-      }
 
-      // Delete task comments
-      if (phaseIds.length > 0) {
-        await tenantScopedTable(trx, 'project_task_comments', tenant)
-          .whereIn('task_id', taskIdsSubquery)
+        // Delete project status mappings
+        await tenantScopedTable(trx, 'project_status_mappings', tenant)
+          .where('project_id', projectId)
           .del();
-      }
 
-      // Delete task resources (additional assignees)
-      if (phaseIds.length > 0) {
-        await tenantScopedTable(trx, 'task_resources', tenant)
-          .whereIn('task_id', taskIdsSubquery)
+        // Finally, delete the project
+        const deleted = await tenantScopedTable(trx, 'projects', tenant)
+          .where('project_id', projectId)
           .del();
+
+        if (deleted === 0) {
+          throw new Error(`Project ${projectId} not found in tenant ${tenant}`);
+        }
+
+      } catch (error) {
+        console.error('Error deleting project:', error);
+        throw error;
       }
-
-      // Delete checklist items for all tasks in all phases
-      if (phaseIds.length > 0) {
-        await tenantScopedTable(trx, 'task_checklist_items', tenant)
-          .whereIn('task_id', taskIdsSubquery)
-          .del();
-      }
-
-      // Delete all tasks in all phases
-      if (phaseIds.length > 0) {
-        await tenantScopedTable(trx, 'project_tasks', tenant)
-          .whereIn('phase_id', phaseIds)
-          .del();
-      }
-
-      // Delete project ticket links
-      await tenantScopedTable(trx, 'project_ticket_links', tenant)
-        .where('project_id', projectId)
-        .del();
-
-      // Delete all phases
-      await tenantScopedTable(trx, 'project_phases', tenant)
-        .where('project_id', projectId)
-        .del();
-
-      // Delete project status mappings
-      await tenantScopedTable(trx, 'project_status_mappings', tenant)
-        .where('project_id', projectId)
-        .del();
-
-      // Finally, delete the project
-      const deleted = await tenantScopedTable(trx, 'projects', tenant)
-        .where('project_id', projectId)
-        .del();
-
-      if (deleted === 0) {
-        throw new Error(`Project ${projectId} not found in tenant ${tenant}`);
-      }
-
-      if (!isTransaction) {
-        await trx.commit();
-      }
-    } catch (error) {
-      if (!isTransaction) {
-        await trx.rollback();
-      }
-      console.error('Error deleting project:', error);
-      throw error;
-    }
+    });
   },
 
   /**
@@ -444,31 +442,33 @@ const ProjectModel = {
       throw new Error('Tenant context is required for adding project phase');
     }
 
-    try {
-      // Generate order_key for the new phase
-      const { generateKeyBetween } = await import('fractional-indexing');
-      const lastPhase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
-        .where({ project_id: phaseData.project_id })
-        .orderBy('order_key', 'desc')
-        .first();
-      const orderKey = generateKeyBetween(lastPhase?.order_key || null, null);
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        // Generate order_key for the new phase
+        const { generateKeyBetween } = await import('fractional-indexing');
+        const lastPhase = await tenantScopedTable(trx, 'project_phases', tenant)
+          .where({ project_id: phaseData.project_id })
+          .orderBy('order_key', 'desc')
+          .first();
+        const orderKey = generateKeyBetween(lastPhase?.order_key || null, null);
 
-      const [newPhase] = await tenantScopedTable<IProjectPhase>(knexOrTrx, 'project_phases', tenant)
-        .insert({
-          ...phaseData,
-          phase_id: uuidv4(),
-          order_key: orderKey,
-          tenant: tenant,
-          created_at: knexOrTrx.fn.now(),
-          updated_at: knexOrTrx.fn.now()
-        })
-        .returning('*');
+        const [newPhase] = await tenantScopedTable<IProjectPhase>(trx, 'project_phases', tenant)
+          .insert({
+            ...phaseData,
+            phase_id: uuidv4(),
+            order_key: orderKey,
+            tenant: tenant,
+            created_at: trx.fn.now(),
+            updated_at: trx.fn.now()
+          })
+          .returning('*');
 
-      return newPhase;
-    } catch (error) {
-      console.error('Error adding project phase:', error);
-      throw error;
-    }
+        return newPhase;
+      } catch (error) {
+        console.error('Error adding project phase:', error);
+        throw error;
+      }
+    });
   },
 
   /**
@@ -484,24 +484,26 @@ const ProjectModel = {
       throw new Error('Tenant context is required for updating project phase');
     }
 
-    try {
-      const [updatedPhase] = await tenantScopedTable<IProjectPhase>(knexOrTrx, 'project_phases', tenant)
-        .where('phase_id', phaseId)
-        .update({
-          ...phaseData,
-          updated_at: knexOrTrx.fn.now()
-        })
-        .returning('*');
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        const [updatedPhase] = await tenantScopedTable<IProjectPhase>(trx, 'project_phases', tenant)
+          .where('phase_id', phaseId)
+          .update({
+            ...phaseData,
+            updated_at: trx.fn.now()
+          })
+          .returning('*');
 
-      if (!updatedPhase) {
-        throw new Error(`Phase ${phaseId} not found in tenant ${tenant}`);
+        if (!updatedPhase) {
+          throw new Error(`Phase ${phaseId} not found in tenant ${tenant}`);
+        }
+
+        return updatedPhase;
+      } catch (error) {
+        console.error('Error updating project phase:', error);
+        throw error;
       }
-
-      return updatedPhase;
-    } catch (error) {
-      console.error('Error updating project phase:', error);
-      throw error;
-    }
+    });
   },
 
   /**
@@ -516,83 +518,76 @@ const ProjectModel = {
       throw new Error('Tenant context is required for deleting project phase');
     }
 
-    const isTransaction = (knexOrTrx as any).isTransaction || false;
-    const trx = isTransaction ? knexOrTrx as Knex.Transaction : await knexOrTrx.transaction();
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        // Build subquery for task IDs in this phase
+        const taskIdsSubquery = tenantScopedTable(trx, 'project_tasks', tenant)
+          .select('task_id')
+          .where('phase_id', phaseId);
 
-    try {
-      // Build subquery for task IDs in this phase
-      const taskIdsSubquery = tenantScopedTable(trx, 'project_tasks', tenant)
-        .select('task_id')
-        .where('phase_id', phaseId);
+        // Check for time entries linked to tasks in this phase
+        const timeEntriesCount = await tenantScopedTable(trx, 'time_entries', tenant)
+          .whereIn('work_item_id', taskIdsSubquery)
+          .andWhere('work_item_type', 'project_task')
+          .count('* as count')
+          .first();
 
-      // Check for time entries linked to tasks in this phase
-      const timeEntriesCount = await tenantScopedTable(trx, 'time_entries', tenant)
-        .whereIn('work_item_id', taskIdsSubquery)
-        .andWhere('work_item_type', 'project_task')
-        .count('* as count')
-        .first();
+        if (timeEntriesCount && Number(timeEntriesCount.count) > 0) {
+          throw new Error(
+            `Cannot delete phase: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this phase.`
+          );
+        }
 
-      if (timeEntriesCount && Number(timeEntriesCount.count) > 0) {
-        throw new Error(
-          `Cannot delete phase: ${timeEntriesCount.count} time ${Number(timeEntriesCount.count) === 1 ? 'entry exists' : 'entries exist'} for tasks in this phase.`
-        );
+        // Delete task dependencies (both predecessor and successor references)
+        await tenantScopedTable(trx, 'project_task_dependencies', tenant)
+          .where(function() {
+            this.whereIn('predecessor_task_id', taskIdsSubquery)
+              .orWhereIn('successor_task_id', taskIdsSubquery);
+          })
+          .del();
+
+        // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
+        const commentIdsSubquery = tenantScopedTable(trx, 'project_task_comments', tenant)
+          .select('task_comment_id')
+          .whereIn('task_id', taskIdsSubquery);
+        await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
+          .whereIn('task_comment_id', commentIdsSubquery)
+          .del();
+
+        // Delete task comments
+        await tenantScopedTable(trx, 'project_task_comments', tenant)
+          .whereIn('task_id', taskIdsSubquery)
+          .del();
+
+        // Delete task resources (additional assignees)
+        await tenantScopedTable(trx, 'task_resources', tenant)
+          .whereIn('task_id', taskIdsSubquery)
+          .del();
+
+        // Delete all checklist items for tasks in this phase
+        await tenantScopedTable(trx, 'task_checklist_items', tenant)
+          .whereIn('task_id', taskIdsSubquery)
+          .del();
+
+        // Delete all tasks in the phase
+        await tenantScopedTable(trx, 'project_tasks', tenant)
+          .where('phase_id', phaseId)
+          .del();
+
+        // Finally, delete the phase itself
+        const deleted = await tenantScopedTable(trx, 'project_phases', tenant)
+          .where('phase_id', phaseId)
+          .del();
+
+        if (deleted === 0) {
+          throw new Error(`Phase ${phaseId} not found in tenant ${tenant}`);
+        }
+
+      } catch (error) {
+        console.error('Error deleting phase:', error);
+        throw error;
       }
-
-      // Delete task dependencies (both predecessor and successor references)
-      await tenantScopedTable(trx, 'project_task_dependencies', tenant)
-        .where(function() {
-          this.whereIn('predecessor_task_id', taskIdsSubquery)
-            .orWhereIn('successor_task_id', taskIdsSubquery);
-        })
-        .del();
-
-      // Delete task comment reactions before comments (CitusDB doesn't support ON DELETE CASCADE)
-      const commentIdsSubquery = tenantScopedTable(trx, 'project_task_comments', tenant)
-        .select('task_comment_id')
-        .whereIn('task_id', taskIdsSubquery);
-      await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
-        .whereIn('task_comment_id', commentIdsSubquery)
-        .del();
-
-      // Delete task comments
-      await tenantScopedTable(trx, 'project_task_comments', tenant)
-        .whereIn('task_id', taskIdsSubquery)
-        .del();
-
-      // Delete task resources (additional assignees)
-      await tenantScopedTable(trx, 'task_resources', tenant)
-        .whereIn('task_id', taskIdsSubquery)
-        .del();
-
-      // Delete all checklist items for tasks in this phase
-      await tenantScopedTable(trx, 'task_checklist_items', tenant)
-        .whereIn('task_id', taskIdsSubquery)
-        .del();
-
-      // Delete all tasks in the phase
-      await tenantScopedTable(trx, 'project_tasks', tenant)
-        .where('phase_id', phaseId)
-        .del();
-
-      // Finally, delete the phase itself
-      const deleted = await tenantScopedTable(trx, 'project_phases', tenant)
-        .where('phase_id', phaseId)
-        .del();
-
-      if (deleted === 0) {
-        throw new Error(`Phase ${phaseId} not found in tenant ${tenant}`);
-      }
-
-      if (!isTransaction) {
-        await trx.commit();
-      }
-    } catch (error) {
-      if (!isTransaction) {
-        await trx.rollback();
-      }
-      console.error('Error deleting phase:', error);
-      throw error;
-    }
+    });
   },
 
   /**
@@ -715,20 +710,22 @@ const ProjectModel = {
       throw new Error('Tenant context is required for adding project status mapping');
     }
 
-    try {
-      const [newMapping] = await tenantScopedTable<IProjectStatusMapping>(knexOrTrx, 'project_status_mappings', tenant)
-        .insert({
-          ...mappingData,
-          project_id: projectId,
-          project_status_mapping_id: uuidv4(),
-          tenant: tenant,
-        })
-        .returning('*');
-      return newMapping;
-    } catch (error) {
-      console.error('Error adding project status mapping:', error);
-      throw error;
-    }
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        const [newMapping] = await tenantScopedTable<IProjectStatusMapping>(trx, 'project_status_mappings', tenant)
+          .insert({
+            ...mappingData,
+            project_id: projectId,
+            project_status_mapping_id: uuidv4(),
+            tenant: tenant,
+          })
+          .returning('*');
+        return newMapping;
+      } catch (error) {
+        console.error('Error adding project status mapping:', error);
+        throw error;
+      }
+    });
   },
 
   getStandardStatus: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, standardStatusId: string): Promise<IStandardStatus | null> => {
@@ -842,41 +839,34 @@ const ProjectModel = {
       throw new Error('Tenant context is required for adding status to project');
     }
 
-    const isTransaction = (knexOrTrx as any).isTransaction || false;
-    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        const [newStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant)
+          .insert({
+            ...statusData,
+            status_id: uuidv4(),
+            tenant: tenant,
+          })
+          .returning('*');
 
-    try {
-      const [newStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant)
-        .insert({
-          ...statusData,
-          status_id: uuidv4(),
+        await tenantScopedTable<IProjectStatusMapping>(trx, 'project_status_mappings', tenant).insert({
+          project_id: projectId,
+          status_id: newStatus.status_id,
+          is_standard: false,
+          custom_name: null,
+          display_order: 0,
+          is_visible: true,
+          project_status_mapping_id: uuidv4(),
           tenant: tenant,
-        })
-        .returning('*');
+        });
 
-      await tenantScopedTable<IProjectStatusMapping>(trx, 'project_status_mappings', tenant).insert({
-        project_id: projectId,
-        status_id: newStatus.status_id,
-        is_standard: false,
-        custom_name: null,
-        display_order: 0,
-        is_visible: true,
-        project_status_mapping_id: uuidv4(),
-        tenant: tenant,
-      });
 
-      if (!isTransaction) {
-        await trx.commit();
+        return newStatus;
+      } catch (error) {
+        console.error('Error adding status to project:', error);
+        throw error;
       }
-
-      return newStatus;
-    } catch (error) {
-      if (!isTransaction) {
-        await trx.rollback();
-      }
-      console.error('Error adding status to project:', error);
-      throw error;
-    }
+    });
   },
 
   updateProjectStatus: async (
@@ -890,30 +880,23 @@ const ProjectModel = {
       throw new Error('Tenant context is required for updating project status');
     }
 
-    const isTransaction = (knexOrTrx as any).isTransaction || false;
-    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        const [updatedStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant).where('status_id', statusId).update({ ...statusData }).returning('*');
 
-    try {
-      const [updatedStatus] = await tenantScopedTable<IStatus>(trx, 'statuses', tenant).where('status_id', statusId).update({ ...statusData }).returning('*');
+        if (mappingData) {
+          await tenantScopedTable(trx, 'project_status_mappings', tenant)
+            .where('status_id', statusId)
+            .update(mappingData);
+        }
 
-      if (mappingData) {
-        await tenantScopedTable(trx, 'project_status_mappings', tenant)
-          .where('status_id', statusId)
-          .update(mappingData);
+
+        return updatedStatus;
+      } catch (error) {
+        console.error('Error updating project status:', error);
+        throw error;
       }
-
-      if (!isTransaction) {
-        await trx.commit();
-      }
-
-      return updatedStatus;
-    } catch (error) {
-      if (!isTransaction) {
-        await trx.rollback();
-      }
-      console.error('Error updating project status:', error);
-      throw error;
-    }
+    });
   },
 
   deleteProjectStatus: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, statusId: string): Promise<void> => {
@@ -921,33 +904,26 @@ const ProjectModel = {
       throw new Error('Tenant context is required for deleting project status');
     }
 
-    const isTransaction = (knexOrTrx as any).isTransaction || false;
-    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        // First, check if the status is being used by any tasks
+        const tasksUsingStatus = await tenantScopedTable(trx, 'project_tasks', tenant)
+          .where('project_status_mapping_id', statusId)
+          .first();
 
-    try {
-      // First, check if the status is being used by any tasks
-      const tasksUsingStatus = await tenantScopedTable(trx, 'project_tasks', tenant)
-        .where('project_status_mapping_id', statusId)
-        .first();
+        if (tasksUsingStatus) {
+          throw new Error('Cannot delete status: it is being used by one or more tasks');
+        }
 
-      if (tasksUsingStatus) {
-        throw new Error('Cannot delete status: it is being used by one or more tasks');
+        await tenantScopedTable(trx, 'project_status_mappings', tenant).where('status_id', statusId).del();
+
+        await tenantScopedTable(trx, 'statuses', tenant).where('status_id', statusId).del();
+
+      } catch (error) {
+        console.error('Error deleting project status:', error);
+        throw error;
       }
-
-      await tenantScopedTable(trx, 'project_status_mappings', tenant).where('status_id', statusId).del();
-
-      await tenantScopedTable(trx, 'statuses', tenant).where('status_id', statusId).del();
-
-      if (!isTransaction) {
-        await trx.commit();
-      }
-    } catch (error) {
-      if (!isTransaction) {
-        await trx.rollback();
-      }
-      console.error('Error deleting project status:', error);
-      throw error;
-    }
+    });
   },
 
   getPhaseById: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, phaseId: string): Promise<IProjectPhase | null> => {
@@ -974,47 +950,40 @@ const ProjectModel = {
       throw new Error('Tenant context is required for updating project structure');
     }
 
-    const isTransaction = (knexOrTrx as any).isTransaction || false;
-    const trx = isTransaction ? (knexOrTrx as Knex.Transaction) : await knexOrTrx.transaction();
-
-    try {
-      for (const phase of updates.phases) {
-        if (!phase.phase_id) {
-          throw new Error('Phase ID is required for update');
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      try {
+        for (const phase of updates.phases) {
+          if (!phase.phase_id) {
+            throw new Error('Phase ID is required for update');
+          }
+          // Remove wbs_code from updates to prevent override
+          const { wbs_code: _wbs, ...phaseUpdate } = phase as any;
+          await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ project_id: projectId, phase_id: phase.phase_id })
+            .update({
+              ...phaseUpdate,
+              updated_at: trx.fn.now(),
+            });
         }
-        // Remove wbs_code from updates to prevent override
-        const { wbs_code: _wbs, ...phaseUpdate } = phase as any;
-        await tenantScopedTable(trx, 'project_phases', tenant)
-          .where({ project_id: projectId, phase_id: phase.phase_id })
-          .update({
-            ...phaseUpdate,
-            updated_at: trx.fn.now(),
-          });
-      }
-      for (const task of updates.tasks) {
-        if (!task.task_id) {
-          throw new Error('Task ID is required for update');
+        for (const task of updates.tasks) {
+          if (!task.task_id) {
+            throw new Error('Task ID is required for update');
+          }
+          // Remove wbs_code from updates to prevent override
+          const { wbs_code: _wbs, ...taskUpdate } = task as any;
+          await tenantScopedTable(trx, 'project_tasks', tenant)
+            .where({ task_id: task.task_id })
+            .update({
+              ...taskUpdate,
+              updated_at: trx.fn.now(),
+            });
         }
-        // Remove wbs_code from updates to prevent override
-        const { wbs_code: _wbs, ...taskUpdate } = task as any;
-        await tenantScopedTable(trx, 'project_tasks', tenant)
-          .where({ task_id: task.task_id })
-          .update({
-            ...taskUpdate,
-            updated_at: trx.fn.now(),
-          });
-      }
 
-      if (!isTransaction) {
-        await trx.commit();
+      } catch (error) {
+        console.error('Error updating project structure:', error);
+        throw error;
       }
-    } catch (error) {
-      if (!isTransaction) {
-        await trx.rollback();
-      }
-      console.error('Error updating project structure:', error);
-      throw error;
-    }
+    });
   },
 
   generateNextWbsCode: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, parentWbsCode: string): Promise<string> => {
@@ -1123,53 +1092,55 @@ const ProjectModel = {
       throw new Error('Tenant context is required for copying project status mappings to phase');
     }
 
-    // Scope guard: the target phase must belong to the given project. Runs on
-    // the caller's connection/transaction before any mapping insert or task
-    // remap, so a foreign-project phase rejects with zero writes behind it.
-    const phase = await tenantScopedTable(knexOrTrx, 'project_phases', tenant)
-      .where('phase_id', phaseId)
-      .first() as IProjectPhase | undefined;
-    if (!phase) {
-      throw new Error('Project phase not found');
-    }
-    if (phase.project_id !== projectId) {
-      throw new Error('Project phase does not belong to this project');
-    }
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
+      // Scope guard: the target phase must belong to the given project. Runs on
+      // the caller's connection/transaction before any mapping insert or task
+      // remap, so a foreign-project phase rejects with zero writes behind it.
+      const phase = await tenantScopedTable(trx, 'project_phases', tenant)
+        .where('phase_id', phaseId)
+        .first() as IProjectPhase | undefined;
+      if (!phase) {
+        throw new Error('Project phase not found');
+      }
+      if (phase.project_id !== projectId) {
+        throw new Error('Project phase does not belong to this project');
+      }
 
-    const existing = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId, phaseId);
-    if (existing.length > 0) {
-      return existing;
-    }
+      const existing = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId, phaseId);
+      if (existing.length > 0) {
+        return existing;
+      }
 
-    const defaultMappings = await ProjectModel.getProjectStatusMappings(knexOrTrx, tenant, projectId);
-    if (defaultMappings.length === 0) {
-      return [];
-    }
+      const defaultMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, projectId);
+      if (defaultMappings.length === 0) {
+        return [];
+      }
 
-    const inserts = defaultMappings.map((mapping) => ({
-      tenant,
-      project_id: projectId,
-      phase_id: phaseId,
-      status_id: mapping.status_id,
-      standard_status_id: mapping.standard_status_id,
-      is_standard: mapping.is_standard,
-      custom_name: mapping.custom_name,
-      display_order: mapping.display_order,
-      is_visible: mapping.is_visible,
-    }));
+      const inserts = defaultMappings.map((mapping) => ({
+        tenant,
+        project_id: projectId,
+        phase_id: phaseId,
+        status_id: mapping.status_id,
+        standard_status_id: mapping.standard_status_id,
+        is_standard: mapping.is_standard,
+        custom_name: mapping.custom_name,
+        display_order: mapping.display_order,
+        is_visible: mapping.is_visible,
+      }));
 
-    const newMappings = (await tenantScopedTable(knexOrTrx, 'project_status_mappings', tenant)
-      .insert<IProjectStatusMapping>(inserts)
-      .returning('*')) as unknown as IProjectStatusMapping[];
+      const newMappings = (await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .insert<IProjectStatusMapping>(inserts)
+        .returning('*')) as unknown as IProjectStatusMapping[];
 
-    const oldToNew = buildStatusMappingCloneCorrespondence(defaultMappings, newMappings);
-    for (const [oldId, newId] of oldToNew) {
-      await tenantScopedTable(knexOrTrx, 'project_tasks', tenant)
-        .where({ phase_id: phaseId, project_status_mapping_id: oldId })
-        .update({ project_status_mapping_id: newId });
-    }
+      const oldToNew = buildStatusMappingCloneCorrespondence(defaultMappings, newMappings);
+      for (const [oldId, newId] of oldToNew) {
+        await tenantScopedTable(trx, 'project_tasks', tenant)
+          .where({ phase_id: phaseId, project_status_mapping_id: oldId })
+          .update({ project_status_mapping_id: newId });
+      }
 
-    return newMappings;
+      return newMappings;
+    });
   },
 
   /**
