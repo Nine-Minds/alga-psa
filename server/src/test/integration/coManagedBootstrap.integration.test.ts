@@ -1895,3 +1895,76 @@ describe('co-managed task action lifecycle and publication', () => {
     expect((await customer.table('task_checklist_items').first()).completed).toBe(true);
   }));
 });
+
+describe('co-managed project status action lifecycle', () => {
+  it('denies all status library and mapping mutations before acceptance and after expiry', async () => withProjectActionsFixture(async ({ operation, actor, input }) => {
+    const actions = await import('../../../../packages/projects/src/actions/projectTaskStatusActions');
+    const id = randomUUID();
+    const mutations = [
+      () => actions.addStatusToProject(id, { status_id: id }),
+      () => actions.copyProjectStatusesToPhase(id, id),
+      () => actions.removePhaseStatuses(id),
+      () => actions.updateProjectStatusMapping(id, { custom_name: 'Denied' }),
+      () => actions.deleteProjectStatusMapping(id),
+      () => actions.reorderProjectStatuses(id, [{ mapping_id: id, display_order: 1 }]),
+      () => actions.createTenantProjectStatus({ name: 'Denied', is_closed: false }),
+      () => actions.updateTenantProjectStatus(id, { name: 'Denied' }),
+      () => actions.deleteTenantProjectStatus(id),
+      () => actions.reorderTenantProjectStatuses([{ status_id: id, order_number: 1 }]),
+    ];
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_NOT_ACTIVE' });
+    await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+    for (const mutate of mutations) await expect(mutate()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  }));
+
+  it('preserves mapping reads during expiry and resumes status swaps, phase remapping, and deletion after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects }) => {
+    await acceptCoManagedRelationship(db, actor, input);
+    const actions = await import('../../../../packages/projects/src/actions/projectTaskStatusActions');
+    const { ProjectTaskModel } = await import('@alga-psa/projects/models');
+    const projectStatus = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+    const project = await projects.createProject({ tenant: actor.tenant, project_name: 'Status rollout', client_id: operation.customer_client_id,
+      status: projectStatus.status_id, description: null, start_date: null, end_date: null, is_inactive: false }) as any;
+    const phase = await projects.addProjectPhase({ project_id: project.project_id, phase_name: 'Discovery', description: null,
+      start_date: null, end_date: null, status: 'planning', order_number: 1, wbs_code: '' } as any) as any;
+    const custom = await actions.createTenantProjectStatus({ name: 'Customer review', is_closed: false }) as any;
+    expect(custom).toHaveProperty('status_id');
+    const added = await actions.addStatusToProject(project.project_id, { status_id: custom.status_id }) as any;
+    expect(added).toHaveProperty('project_status_mapping_id');
+    const task = await ProjectTaskModel.addTask(db, actor.tenant, phase.phase_id, { task_name: 'Review rollout', task_type_key: 'task',
+      project_status_mapping_id: added.project_status_mapping_id } as any);
+    const phaseMappings = await actions.copyProjectStatusesToPhase(project.project_id, phase.phase_id) as any[];
+    const clone = phaseMappings.find(mapping => mapping.status_id === custom.status_id);
+    expect((await customer.table('project_tasks').where('task_id', task.task_id).first()).project_status_mapping_id).toBe(clone.project_status_mapping_id);
+    await actions.updateProjectStatusMapping(clone.project_status_mapping_id, { custom_name: 'Phase review' });
+    expect(await actions.deleteProjectStatusMapping(clone.project_status_mapping_id, added.project_status_mapping_id))
+      .toMatchObject({ actionError: expect.stringContaining('same project and phase scope') });
+    expect((await customer.table('project_tasks').where('task_id', task.task_id).first()).project_status_mapping_id).toBe(clone.project_status_mapping_id);
+    await expireCoManagedEntitlement(operation.tenant);
+    expect(await actions.getProjectStatusMappings(project.project_id, phase.phase_id))
+      .toEqual(expect.arrayContaining([expect.objectContaining({ custom_name: 'Phase review' })]));
+    expect(await actions.getStatusMappingTaskCount(clone.project_status_mapping_id)).toBe(1);
+    expect(await actions.validateTenantProjectStatusDeletion(custom.status_id)).toMatchObject({ canDelete: false });
+    await expect(actions.removePhaseStatuses(phase.phase_id)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect((await customer.table('project_tasks').where('task_id', task.task_id).first()).project_status_mapping_id).toBe(clone.project_status_mapping_id);
+    const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+    await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+      async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+    await actions.updateTenantProjectStatus(custom.status_id, { name: 'Approved review' });
+    const library = await customer.table('statuses').where({ status_type: 'project_task' }).orderBy('order_number');
+    const order = [{ status_id: library[0].status_id, order_number: library[1].order_number },
+      { status_id: library[1].status_id, order_number: library[0].order_number }];
+    expect(await actions.reorderTenantProjectStatuses(order)).toBeUndefined();
+    expect((await customer.table('statuses').where('status_id', library[0].status_id).first()).order_number).toBe(library[1].order_number);
+    const afterSwap = await customer.table('statuses').where({ status_type: 'project_task' }).orderBy('status_id');
+    expect(await actions.reorderTenantProjectStatuses([order[0], order[0]])).toMatchObject({ actionError: expect.any(String) });
+    expect(await customer.table('statuses').where({ status_type: 'project_task' }).orderBy('status_id')).toEqual(afterSwap);
+    await actions.removePhaseStatuses(phase.phase_id);
+    expect((await customer.table('project_tasks').where('task_id', task.task_id).first()).project_status_mapping_id).toBe(added.project_status_mapping_id);
+    const otherMapping = await customer.table('project_status_mappings').where('project_id', project.project_id)
+      .whereNot('project_status_mapping_id', added.project_status_mapping_id).first();
+    await actions.deleteProjectStatusMapping(added.project_status_mapping_id, otherMapping.project_status_mapping_id);
+    expect((await customer.table('project_tasks').where('task_id', task.task_id).first()).project_status_mapping_id).toBe(otherMapping.project_status_mapping_id);
+    await actions.deleteTenantProjectStatus(custom.status_id);
+    expect(await customer.table('statuses').where('status_id', custom.status_id)).toEqual([]);
+  }));
+});

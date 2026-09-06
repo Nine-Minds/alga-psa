@@ -2,11 +2,12 @@
 
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { DeletionValidationResult, IProjectStatusMapping, IStatus } from '@alga-psa/types';
 import type { IUserWithRoles } from '@alga-psa/types';
-import ProjectModel from '@alga-psa/projects/models/project';
+import ProjectModel, { statusMappingSemanticKey } from '@alga-psa/projects/models/project';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -31,6 +32,7 @@ const EXPECTED_PROJECT_TASK_STATUS_ERROR_PREFIXES = [
   'Cannot delete the last status in a project',
   'Cannot delete status with',
   'Cannot delete status',
+  'Cannot reorder project task statuses',
   'Cannot remove phase statuses without project default statuses',
   'Phase task status removal could not resolve a replacement status mapping',
   'Project not found',
@@ -87,6 +89,14 @@ function tenantScopedTable(
   tenant: string,
 ): Knex.QueryBuilder {
   return tenantDb(conn, tenant).table(table);
+}
+
+/** Serialize library creation and reordering with the same tenant/type lock. */
+async function lockProjectTaskStatusLibrary(trx: Knex.Transaction, tenant: string): Promise<void> {
+  const key = `${tenant}:project_task:project_task`;
+  let hash = 0;
+  for (let index = 0; index < key.length; index++) hash = ((hash << 5) - hash + key.charCodeAt(index)) | 0;
+  await trx.raw('SELECT pg_advisory_xact_lock(?)', [Math.abs(hash) % 2147483647]);
 }
 
 function formatProjectUsageDescription(projectNames: string[], count: number): string {
@@ -323,6 +333,17 @@ function resolveReplacementStatusMapping(
   sourceMapping: ProjectStatusMappingDetails,
   targetMappings: ProjectStatusMappingDetails[]
 ): ProjectStatusMappingDetails | null {
+  const sourceKey = statusMappingSemanticKey(sourceMapping);
+  if (sourceKey) {
+    const matches = targetMappings.filter(mapping => statusMappingSemanticKey(mapping) === sourceKey);
+    const original = matches.find(mapping => mapping.display_order === sourceMapping.display_order && mapping.custom_name === sourceMapping.custom_name)
+      ?? matches.find(mapping => mapping.display_order === sourceMapping.display_order)
+      ?? matches.find(mapping => mapping.custom_name === sourceMapping.custom_name)
+      ?? matches[0];
+    if (original) return original;
+  }
+  // A phase-only status has no corresponding default; retain the established
+  // name/closed-state fallback for that case.
   const sourceName = sourceMapping.name ?? sourceMapping.status_name ?? null;
 
   if (sourceName) {
@@ -367,6 +388,7 @@ export const addStatusToProject = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
       // When adding the first phase-scoped mapping, the phase is about to move
@@ -457,6 +479,7 @@ export const copyProjectStatusesToPhase = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
       // Clone project defaults into the phase and remap existing phase tasks by
@@ -489,6 +512,7 @@ export const removePhaseStatuses = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const phase = await tenantScopedTable(trx, 'project_phases', tenant)
       .where({ phase_id: phaseId })
       .first();
@@ -565,6 +589,7 @@ export const updateProjectStatusMapping = withAuth(async (
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const existingMapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
       .where({ project_status_mapping_id: mappingId })
       .first();
@@ -644,6 +669,7 @@ export const deleteProjectStatusMapping = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const mapping = await tenantScopedTable(trx, 'project_status_mappings', tenant)
       .where({ project_status_mapping_id: mappingId })
       .first();
@@ -655,6 +681,13 @@ export const deleteProjectStatusMapping = withAuth(async (
 
     // Move tasks if a target mapping is provided
     if (moveTasksToMappingId) {
+      const replacement = await tenantScopedTable(trx, 'project_status_mappings', tenant)
+        .where({ project_status_mapping_id: moveTasksToMappingId }).first();
+      if (!replacement || replacement.project_id !== mapping.project_id ||
+          (replacement.phase_id ?? null) !== (mapping.phase_id ?? null)) {
+        throw new Error('Project task status not found in the same project and phase scope');
+      }
+      if (moveTasksToMappingId === mappingId) throw new Error('Cannot delete status by moving tasks to itself');
       await tenantScopedTable(trx, 'project_tasks', tenant)
         .where({ project_status_mapping_id: mappingId })
         .update({ project_status_mapping_id: moveTasksToMappingId });
@@ -722,6 +755,7 @@ export const reorderProjectStatuses = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
 
     for (const { mapping_id, display_order } of statusOrder) {
@@ -823,25 +857,8 @@ export const createTenantProjectStatus = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
-      // Use advisory lock to serialize status creation for this tenant/type combination
-    // Create a hash from tenant + item_type + status_type for the lock key
-    const lockKey = `${tenant}:project_task:project_task`;
-
-    // Create a stable 32-bit integer hash
-    let hash = 0;
-    for (let i = 0; i < lockKey.length; i++) {
-      const char = lockKey.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    const lockHash = Math.abs(hash) % 2147483647; // Ensure it fits in PostgreSQL integer range
-
-    console.log(`[DEBUG] Acquiring advisory lock ${lockHash} for ${lockKey}`);
-
-    // Acquire advisory lock
-    await trx.raw('SELECT pg_advisory_xact_lock(?)', [lockHash]);
-
-    console.log(`[DEBUG] Lock acquired, calculating order_number`);
+      await assertCoManagedOperationalWrite(trx, tenant);
+      await lockProjectTaskStatusLibrary(trx, tenant);
 
     // Get next order number - filter by status_type since that's what the constraint uses
     const maxOrder = await tenantScopedTable(trx, 'statuses', tenant)
@@ -896,9 +913,12 @@ export const updateTenantProjectStatus = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
-    await tenantScopedTable(knex, 'statuses', tenant)
-      .where({ status_id: statusId, status_type: 'project_task' })
-      .update(updates);
+    await withTransaction(knex, async trx => {
+      await assertCoManagedOperationalWrite(trx, tenant);
+      await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_id: statusId, status_type: 'project_task' })
+        .update(updates);
+    });
   } catch (error) {
     const expected = projectTaskStatusActionErrorFrom(error);
     if (expected) {
@@ -947,6 +967,7 @@ export const deleteTenantProjectStatus = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
       const validation = await buildTenantProjectStatusDeletionValidation(trx, tenant, statusId);
     if (!validation.canDelete) {
       const dependencyDetails = validation.dependencies
@@ -987,6 +1008,31 @@ export const reorderTenantProjectStatuses = withAuth(async (
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
+      await assertCoManagedOperationalWrite(trx, tenant);
+      await lockProjectTaskStatusLibrary(trx, tenant);
+      if (statusOrder.length === 0) return;
+      const ids = new Set(statusOrder.map(row => row.status_id));
+      const positions = new Set(statusOrder.map(row => row.order_number));
+      if (ids.size !== statusOrder.length || positions.size !== statusOrder.length ||
+          statusOrder.some(row => !Number.isInteger(row.order_number) || row.order_number < 0 || row.order_number > 2147483647)) {
+        throw new Error('Cannot reorder project task statuses with duplicate or invalid positions');
+      }
+      const existing = await tenantScopedTable(trx, 'statuses', tenant)
+        .where({ status_type: 'project_task' }).select('status_id', 'order_number').forUpdate();
+      const existingIds = new Set(existing.map(row => row.status_id));
+      if (statusOrder.some(row => !existingIds.has(row.status_id))) throw new Error('Project task status not found');
+      if (existing.some(row => !ids.has(row.status_id) && positions.has(row.order_number))) {
+        throw new Error('Cannot reorder project task statuses into an occupied position');
+      }
+      const maximum = Math.max(0, ...existing.map(row => Number(row.order_number)), ...positions);
+      if (maximum + statusOrder.length > 2147483647) throw new Error('Cannot reorder project task statuses beyond the supported position range');
+      // The order index is immediate, so release every affected position before
+      // assigning final values. Temporary values are invisible outside this transaction.
+      for (let index = 0; index < statusOrder.length; index++) {
+        await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: statusOrder[index].status_id, status_type: 'project_task' })
+          .update({ order_number: maximum + index + 1 });
+      }
       for (const { status_id, order_number } of statusOrder) {
         await tenantScopedTable(trx, 'statuses', tenant)
           .where({
