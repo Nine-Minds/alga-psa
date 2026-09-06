@@ -41,6 +41,9 @@ relying on the passing result.
 Migration regressions under `server/migrations/__tests__/` also execute in this
 database lane, including tests named `.integration.test.ts`. Restore schema in
 `finally` after rollback assertions so a failure cannot break subsequent tests.
+Colocated `.db` and `.integration` test/spec files beneath
+`server/src/{app,components,lib,services}` use this lane too. They include the
+prepaid alert/replenishment subscriber's persisted delivery and invoice tests.
 
 Run the unfiltered command after adding or moving a test. Its discovery check
 compares Git's test-file inventory with Vitest's actual file collection. A file
@@ -246,6 +249,30 @@ Provision that disposable database first. The runner rejects missing URLs and
 database names without the `_test` suffix; a missing service database must not
 turn integration tests into successful skips. CI provisions a separate service
 container for this job and retains its collection and execution evidence.
+
+The `nx-tooling` lane executes `tools/nx-tests/` serially from the repository
+root. It exercises edition resolution, ESLint boundaries, actual Nx project
+graphs, affected selection and build-cache reuse:
+
+```sh
+node scripts/run-additional-workspace-tests.mjs nx-tooling
+```
+
+The `ui-kit-showcase` lane uses the sample's own locked Vitest runtime. Install
+the root lockfile first, then build the sample before executing its component
+and bundle tests:
+
+```sh
+npm ci --prefix ee/extensions/samples/ui-kit-showcase
+npm run build --prefix ee/extensions/samples/ui-kit-showcase
+node scripts/run-additional-workspace-tests.mjs ui-kit-showcase
+```
+
+Its source UI kit and linked dependencies share the root React renderer and
+testing library; this avoids two React instances in the same test. These are
+jsdom component checks and inherited manifest/build checks, not production
+browser or extension-host installation evidence. CI provisions both lockfiles
+and builds the iframe on its clean checkout.
 
 Each full invocation checks actual Vitest collection against an independent
 Git inventory. Adding a test within the lane's scope cannot silently omit it

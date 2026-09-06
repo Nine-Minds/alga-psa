@@ -12,6 +12,9 @@ import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const suite = process.argv[2];
 const settings = {
+  'nx-tooling': { directory: '.', config: 'tools/nx-tests/vitest.config.ts' },
+  'ui-kit-showcase': { directory: 'ee/extensions/samples/ui-kit-showcase', config: 'vitest.config.ts',
+    vitest: 'ee/extensions/samples/ui-kit-showcase/node_modules/vitest/vitest.mjs' },
   'workspace-unit': { directory: 'server', config: 'vitest.workspace-unit.config.ts' },
   'workspace-runtime': { directory: 'server', config: 'vitest.workspace-runtime.config.ts' },
   'server-colocated': { directory: 'server', config: 'vitest.server-colocated.config.ts' },
@@ -44,7 +47,7 @@ const env = {
 const filters = process.argv.slice(3);
 if (filters.some((filter) => filter.startsWith('-'))) throw new Error('Only file filters are supported');
 let args = ['--config', settings.config, ...filters];
-const run = (args) => spawnSync(process.execPath, [path.join(root, 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
+const run = (args) => spawnSync(process.execPath, [path.join(root, settings.vitest ?? 'server/node_modules/vitest/vitest.mjs'), ...args], { cwd, env, stdio: 'inherit' });
 let allFiles = [];
 let before;
 let evidence;

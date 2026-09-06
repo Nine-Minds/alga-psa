@@ -13,6 +13,7 @@ export default defineConfig({
       path.resolve(__dirname, 'test-utils/workspaceDbGlobalSetup.ts'),
     ],
     include: [
+      'src/{app,components,lib,services}/**/*.{db,integration}.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'src/test/unit/**/*.db.test.?(c|m)[jt]s?(x)',
       '../packages/**/*.db.test.?(c|m)[jt]s?(x)',

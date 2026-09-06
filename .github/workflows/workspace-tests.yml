@@ -110,7 +110,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [workspace-unit, workspace-runtime, server-colocated]
+        suite: [workspace-unit, workspace-runtime, server-colocated, nx-tooling, ui-kit-showcase]
     env:
       VITEST_SEED: '20260610'
       STORAGE_S3_ENDPOINT: http://127.0.0.1:59000
@@ -127,6 +127,11 @@ jobs:
           cache: npm
       - run: npm install -g npm@11
       - run: npm ci
+      - name: Install locked showcase dependencies and build its iframe
+        if: matrix.suite == 'ui-kit-showcase'
+        run: |
+          npm ci --prefix ee/extensions/samples/ui-kit-showcase
+          npm run build --prefix ee/extensions/samples/ui-kit-showcase
       - name: Verify runner refuses incomplete execution
         if: matrix.suite == 'workspace-unit'
         run: node --test scripts/tests/additional-workspace-runner.test.mjs

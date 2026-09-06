@@ -15,6 +15,9 @@ export function repositoryTestFiles(root) {
 // DB tests need the same positive assignment as colocated package DB tests.
 // Integration/infrastructure directories retain their own database lanes.
 export function isWorkspaceDbTest(file) {
+  if (/^server\/src\/(app|components|lib|services)\//.test(file)) {
+    return /\.(db|integration)\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  }
   if (/^server\/migrations\/__tests__\//.test(file)) {
     return /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }
@@ -36,6 +39,13 @@ export function isApplianceNodeTest(file) {
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
+  if (lane === 'nx-tooling') {
+    return /^tools\/nx-tests\//.test(file) && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  }
+  if (lane === 'ui-kit-showcase') {
+    return /^ee\/extensions\/samples\/ui-kit-showcase\/test\//.test(file)
+      && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
+  }
   if (lane === 'enterprise-integration') {
     return /^ee\/server\/src\/__tests__\/integration\//.test(file)
       && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file)

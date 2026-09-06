@@ -68,6 +68,13 @@ test('DB-less unit exclusions receive a dedicated DB lane without taking over ot
 
 test('service and SDK inventory assigns unit and runtime suites without counting build output', () => {
   assert.equal(isAdditionalWorkspaceTest('ee/server/src/__tests__/integration/scim.integration.test.ts', 'enterprise-integration'), true);
+  assert.equal(isAdditionalWorkspaceTest('tools/nx-tests/nxCache.test.ts', 'nx-tooling'), true);
+  assert.equal(isWorkspaceDbTest('server/src/lib/eventBus/subscribers/prepaidBalanceAlertSubscriber.integration.test.ts'), true);
+  assert.equal(isWorkspaceDbTest('server/src/services/example.db.spec.tsx'), true);
+  assert.equal(isWorkspaceDbTest('server/src/lib/example.test.ts'), false);
+  assert.equal(isAdditionalWorkspaceTest('tools/nx-tests/vitest.config.ts', 'nx-tooling'), false);
+  assert.equal(isAdditionalWorkspaceTest('ee/extensions/samples/ui-kit-showcase/test/integration.test.tsx', 'ui-kit-showcase'), true);
+  assert.equal(isAdditionalWorkspaceTest('ee/extensions/samples/ui-kit-showcase/ui/dist/example.test.js', 'ui-kit-showcase'), false);
   assert.equal(isAdditionalWorkspaceTest('ee/server/src/__tests__/integration/extensionProxyFlow.test.ts', 'enterprise-integration'), true);
   assert.equal(isAdditionalWorkspaceTest('ee/server/src/__tests__/integration/login.playwright.test.ts', 'enterprise-integration'), false);
   assert.equal(isAdditionalWorkspaceTest('services/ai-gateway/src/test/integration/ledgerPersistence.test.ts', 'ai-gateway'), true);

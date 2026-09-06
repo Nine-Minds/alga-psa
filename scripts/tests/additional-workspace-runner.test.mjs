@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
 
-for (const [suite, directory, include] of [
+for (const [suite, directory, include, customConfig] of [
+  ['nx-tooling', 'tools/nx-tests', 'tools/nx-tests', 'tools/nx-tests/vitest.config.ts'],
+  ['ui-kit-showcase', 'ee/extensions/samples/ui-kit-showcase/test', 'test', 'ee/extensions/samples/ui-kit-showcase/vitest.config.ts'],
   ['workspace-unit', 'sdk', '../sdk'],
   ['server-colocated', 'server/src/lib', 'src/lib'],
   ['enterprise-unit', 'ee/server/src/__tests__/unit', 'src/__tests__/unit'],
@@ -24,10 +26,13 @@ for (const [suite, directory, include] of [
     'scripts/lib/test-revision.mjs', 'scripts/lib/vitest-progress-reporter.mjs', 'scripts/lib/test-sharding.mjs',
   ]) cpSync(path.join(repository, file), path.join(root, file));
   symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
+  if (suite === 'ui-kit-showcase') {
+    symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'ee/extensions/samples/ui-kit-showcase/node_modules'), 'dir');
+  }
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
   const configure = (include) => writeFileSync(path.join(root,
-    suite.startsWith('enterprise-') ? `ee/server/vitest.${suite.slice('enterprise-'.length)}.config.ts`
-      : suite === 'ai-gateway' ? 'services/ai-gateway/vitest.config.ts' : `server/vitest.${suite}.config.ts`),
+    customConfig ?? (suite.startsWith('enterprise-') ? `ee/server/vitest.${suite.slice('enterprise-'.length)}.config.ts`
+      : suite === 'ai-gateway' ? 'services/ai-gateway/vitest.config.ts' : `server/vitest.${suite}.config.ts`)),
     `export default ${JSON.stringify({ test: { include, globals: true, environment: 'node', pool: 'forks', fileParallelism: false, maxWorkers: 1 } })};`);
   configure([`${include}/**/*.test.ts`]);
   const example = path.join(root, directory, 'example.test.ts');
