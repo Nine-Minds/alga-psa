@@ -1,4 +1,16 @@
 import net from 'node:net';
+import { readFileSync } from 'node:fs';
+import { createCalendarCallbackServer } from './calendar-callback-proxy.mjs';
+
+if (process.env.E2E_CALENDAR_CALLBACK_TLS === 'true') {
+  createCalendarCallbackServer({
+    key: readFileSync('/calendar-tls/private-key.pem'),
+    cert: readFileSync('/calendar-tls/certificate.pem'),
+  }).on('error', error => {
+    console.error(`Cannot bind calendar callback: ${error.code}`);
+    process.exit(1);
+  }).listen(3443, '0.0.0.0');
+}
 
 // Publish only fixed test-stack destinations. Alga, workers and algasim stay
 // on the internal network; this process cannot act as an arbitrary HTTP proxy.

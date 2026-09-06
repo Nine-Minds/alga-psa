@@ -128,6 +128,7 @@ jobs:
           npm test --workspace=@alga-psa/emulator-msgraph
           npm test --workspace=@alga-psa/emulator-smtp-sink
           node --test e2e-tests/harness/emulator-control.test.mjs
+          node --test e2e-tests/harness/calendar-callback-proxy.test.mjs
 
       - uses: docker/setup-buildx-action@v3
 
@@ -344,6 +345,9 @@ jobs:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
           SERVER_ARCHIVE: ${{ matrix.server_archive }}
         run: |
+          node e2e-tests/harness/create-calendar-callback-tls.mjs "$RUNNER_TEMP/calendar-callback-tls"
+          export E2E_CALLBACK_TLS_DIR="$RUNNER_TEMP/calendar-callback-tls"
+          echo "E2E_CALLBACK_TLS_DIR=$E2E_CALLBACK_TLS_DIR" >> "$GITHUB_ENV"
           for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
             docker load --input "$archive"
@@ -362,6 +366,7 @@ jobs:
         run: |
           echo '127.0.0.1 algasim.test' | sudo tee -a /etc/hosts
           docker-compose -p alga-e2e-test up --no-build --wait --wait-timeout 90 -d algasim test-ingress
+          docker-compose -p alga-e2e-test exec -T algasim node --input-type=module -e 'const r = await fetch("https://calendar-callback:3443/probe", { signal: AbortSignal.timeout(5000) }); if (r.status !== 404) throw new Error("Calendar callback TLS routing failed")'
           curl --fail --silent http://127.0.0.1:9500/control/catalog > "$RUNNER_TEMP/algasim-catalog.json"
           jq -e '[.result.emulators[].id] | sort == ["msgraph", "qbo", "smtp-sink", "stripe", "webhook-sink", "xero"]' "$RUNNER_TEMP/algasim-catalog.json"
           docker image inspect alga-e2e-test-algasim:latest --format '{{.Id}}' > "$RUNNER_TEMP/algasim-image-id.txt"

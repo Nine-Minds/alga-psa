@@ -139,7 +139,23 @@ For local production stacks, add `docker-compose.e2e-emulators.yaml` to the
 Compose files and build `alga-e2e-test-algasim:latest` using
 `packages/emulators/build-image.sh alga-e2e-test-algasim:latest`. Add
 `127.0.0.1 algasim.test` to the browser host's hosts file for Microsoft login.
-The same name resolves through a Docker alias for server-side token exchange.
+Before loading this Compose override, generate fresh callback TLS files in an
+owned temporary directory:
+
+```sh
+export E2E_CALLBACK_TLS_DIR="$(mktemp -d)"
+node e2e-tests/harness/create-calendar-callback-tls.mjs "$E2E_CALLBACK_TLS_DIR"
+```
+
+The emulator trusts that certificate through `NODE_EXTRA_CA_CERTS`. The private
+key is mounted only into the fixed callback proxy. Its internal
+`https://calendar-callback:3443/api/calendar/webhooks/microsoft` endpoint forwards
+POSTs to the real application's calendar webhook; other paths and methods are
+rejected. The application retains its HTTPS requirement. CI verifies both proxy
+health and certificate trust from algasim before starting application journeys.
+Remove the temporary TLS directory after the stack is stopped.
+
+The `algasim.test` name resolves through a Docker alias for server-side token exchange.
 QBO/Xero browser authorization uses localhost; token/API calls use the algasim
 container. Seed Stripe's `hostedBaseUrl` with `ALGASIM_PUBLIC_STRIPE_URL` and its
 webhook target with `ALGASIM_CALLBACK_BASE_URL` plus the actual webhook path.

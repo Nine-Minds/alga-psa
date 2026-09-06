@@ -5,6 +5,7 @@ x-provider-environment: &provider-environment
   # exchange. CI maps this name on the host; Docker resolves the network alias.
   MICROSOFT_LOGIN_BASE_URL: http://algasim.test:4010
   MICROSOFT_GRAPH_BASE_URL: http://algasim:4010/v1.0
+  CALENDAR_MICROSOFT_WEBHOOK_BASE_URL: https://calendar-callback:3443
   QBO_OAUTH_AUTHORIZE_URL: http://localhost:4020/connect/oauth2
   QBO_OAUTH_TOKEN_URL: http://algasim:4020/oauth2/v1/tokens/bearer
   QBO_API_BASE_URL: http://algasim:4020/v3/company
@@ -25,6 +26,9 @@ services:
     init: true
     environment:
       ALGASIM_SEED: '20260906'
+      NODE_EXTRA_CA_CERTS: /calendar-certificate.pem
+    volumes:
+      - ${E2E_CALLBACK_TLS_DIR:?Generate callback TLS files and set E2E_CALLBACK_TLS_DIR}/certificate.pem:/calendar-certificate.pem:ro
     networks:
       app-network:
         aliases:
@@ -38,8 +42,18 @@ services:
     image: alga-e2e-test-algasim:latest
     init: true
     entrypoint: ['node', '/provider-ingress.mjs']
+    environment:
+      E2E_CALENDAR_CALLBACK_TLS: 'true'
+      NODE_EXTRA_CA_CERTS: /calendar-tls/certificate.pem
+    healthcheck:
+      test: ['CMD', 'node', '--input-type=module', '-e', 'const r = await fetch("https://localhost:3443/probe"); process.exit(r.status === 404 ? 0 : 1)']
+      interval: 2s
+      timeout: 3s
+      retries: 30
     volumes:
       - ./e2e-tests/harness/provider-ingress.mjs:/provider-ingress.mjs:ro
+      - ./e2e-tests/harness/calendar-callback-proxy.mjs:/calendar-callback-proxy.mjs:ro
+      - ${E2E_CALLBACK_TLS_DIR:?Generate callback TLS files and set E2E_CALLBACK_TLS_DIR}:/calendar-tls:ro
     ports:
       - '127.0.0.1:3000:3000'
       - '127.0.0.1:5432:5432'
@@ -53,8 +67,10 @@ services:
       - '127.0.0.1:4060:4060'
       - '127.0.0.1:9500:9500'
     networks:
-      - app-network
-      - test-ingress-network
+      app-network:
+        aliases:
+          - calendar-callback
+      test-ingress-network: {}
   server:
     ports: !reset []
     environment:
