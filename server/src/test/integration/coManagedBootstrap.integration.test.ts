@@ -586,6 +586,9 @@ describe('ticket API lifecycle admission against PostgreSQL', () => {
       () => service.create(data, context),
       () => service.update(ticketId, { title: 'Changed' }, context),
       () => service.delete(ticketId, context),
+      () => service.bulkCreate([{}], context),
+      () => service.bulkUpdate([{ id: ticketId, data: { title: 'Bypass attempt' } }], context),
+      () => service.bulkDelete([ticketId], context),
       () => service.linkAsset(ticketId, { asset_id: secondId }, context),
       () => service.unlinkAsset(ticketId, secondId, context),
       () => service.deleteTicketDocument(ticketId, secondId, context),
@@ -1245,3 +1248,71 @@ it('commits ticket upload records together and publishes only after the attachme
   expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
   expect(await service.downloadTicketDocument(ticket.ticket_id, document.document_id, context)).toMatchObject({ buffer: Buffer.from('saved') });
 }));
+
+async function operationalConfigurationServices() {
+  const [{ BoardService }, { StatusService }, { PriorityService }] = await Promise.all([
+    import('../../lib/api/services/BoardService'), import('../../lib/api/services/StatusService'), import('../../lib/api/services/PriorityService'),
+  ]);
+  const services = { boards: new BoardService(), statuses: new StatusService(), priorities: new PriorityService() };
+  for (const service of Object.values(services)) vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+  return services;
+}
+
+describe('inherited operational API mutations', () => {
+  it('enforces admission on every inherited single and bulk mutation for boards, statuses, and priorities', async () => {
+    const { operation, actor, input, customer } = await readyForAcceptance();
+    const services = await operationalConfigurationServices(), context = { tenant: actor.tenant, userId: actor.userId }, id = randomUUID();
+    const publisher = await import('../../lib/eventBus/publishers');
+    const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
+    try {
+      for (const expectedCode of ['CO_MANAGED_NOT_ACTIVE', 'CO_MANAGED_READ_ONLY']) {
+        for (const service of Object.values(services)) {
+          for (const mutate of [() => service.create({}, context), () => service.update(id, {}, context), () => service.delete(id, context),
+            () => service.bulkCreate([{}], context), () => service.bulkUpdate([{ id, data: {} }], context), () => service.bulkDelete([id], context)]) {
+            await expect(mutate()).rejects.toMatchObject({ code: expectedCode });
+          }
+        }
+        if (expectedCode === 'CO_MANAGED_NOT_ACTIVE') {
+          await acceptCoManagedRelationship(db, actor, input); await expireCoManagedEntitlement(operation.tenant);
+        }
+      }
+      expect(publish).not.toHaveBeenCalled();
+      const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+      const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+      expect(await services.boards.getById(operation.customer_board_id, context)).toMatchObject({ board_name: 'Service Desk' });
+      expect(await services.statuses.getById(status.status_id, context)).toMatchObject({ status_id: status.status_id });
+      expect(await services.priorities.getById(priority.priority_id, context)).toMatchObject({ priority_id: priority.priority_id });
+    } finally { publish.mockRestore(); }
+  });
+
+  it('supports real configuration edits and bulk operations after renewal without writing missing audit columns', async () => {
+    const { operation, actor, input, customer } = await readyForAcceptance(); await acceptCoManagedRelationship(db, actor, input);
+    const services = await operationalConfigurationServices(), context = { tenant: actor.tenant, userId: actor.userId };
+    const publisher = await import('../../lib/eventBus/publishers');
+    const publish = vi.spyOn(publisher, 'publishEvent').mockResolvedValue(undefined);
+    try {
+      const board = await services.boards.create({ board_name: 'Temporary customer board', is_inactive: false }, context);
+      const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+      const priority = await customer.table('priorities').where({ item_type: 'ticket' }).first();
+      await services.statuses.update(status.status_id, { name: 'Customer queue' }, context);
+      await services.priorities.update(priority.priority_id, { priority_name: 'Customer priority' }, context);
+      await expireCoManagedEntitlement(operation.tenant);
+      await expect(services.boards.bulkDelete([board.board_id], context)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+      expect(await services.boards.getById(board.board_id, context)).toMatchObject({ board_name: 'Temporary customer board' });
+      const entitlement = await tenantDb(db, operation.tenant).table('co_managed_entitlements').first();
+      await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
+        async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
+      const boards = await services.boards.bulkCreate([{ board_name: 'Customer A' }, { board_name: 'Customer B' }], context);
+      expect(boards).toHaveLength(2);
+      const updated = await services.boards.bulkUpdate(boards.map(row => ({ id: row.board_id, data: { is_inactive: true } })), context);
+      expect(updated.every(row => row.is_inactive)).toBe(true);
+      await services.statuses.bulkUpdate([{ id: status.status_id, data: { name: 'Renewed queue' } }], context);
+      await services.priorities.bulkUpdate([{ id: priority.priority_id, data: { priority_name: 'Renewed priority' } }], context);
+      await services.boards.bulkDelete(boards.map(row => row.board_id), context);
+      await services.boards.delete(board.board_id, context);
+      expect(await customer.table('boards')).toHaveLength(1);
+      expect(await services.statuses.getById(status.status_id, context)).toMatchObject({ name: 'Renewed queue' });
+      expect(await services.priorities.getById(priority.priority_id, context)).toMatchObject({ priority_name: 'Renewed priority' });
+    } finally { publish.mockRestore(); }
+  });
+});

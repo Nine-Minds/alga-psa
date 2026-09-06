@@ -230,6 +230,7 @@ export interface BundleView {
 export class TicketService extends BaseService<ITicket> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'tickets',
       primaryKey: 'ticket_id',
       tenantColumn: 'tenant',

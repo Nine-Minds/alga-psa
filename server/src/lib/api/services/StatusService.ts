@@ -4,11 +4,13 @@
  */
 
 import { IStatus } from '@alga-psa/types';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { BaseService, ServiceContext, ListResult, ListOptions } from '@alga-psa/db';
 
 export class StatusService extends BaseService<IStatus> {
   constructor() {
     super({
+      mutationGuard: (trx, context) => assertCoManagedOperationalWrite(trx, context.tenant),
       tableName: 'statuses',
       primaryKey: 'status_id',
       tenantColumn: 'tenant',
