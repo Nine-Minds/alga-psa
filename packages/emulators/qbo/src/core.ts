@@ -53,7 +53,7 @@ export class QboEmulatorCore implements EmulatorCore {
   private idCounter = 0;
 
   constructor(readonly env: HostEnv) {
-    this.sims.set(this.realmId, new QboSimulator({ realmId: this.realmId }));
+    this.addRealm(this.realmId);
   }
 
   /** The default company file — most scenarios only ever use this one. */
@@ -75,7 +75,7 @@ export class QboEmulatorCore implements EmulatorCore {
 
   /** Add (or reset) a separately-stated company file under its own realm id. */
   addRealm(realmId: string): { realmId: string } {
-    this.sims.set(realmId, new QboSimulator({ realmId }));
+    this.sims.set(realmId, new QboSimulator({ realmId, now: () => this.env.clock.now() }));
     return { realmId };
   }
 
@@ -85,7 +85,7 @@ export class QboEmulatorCore implements EmulatorCore {
 
   reset(): void {
     this.sims.clear();
-    this.sims.set(this.realmId, new QboSimulator({ realmId: this.realmId }));
+    this.addRealm(this.realmId);
     this.clients.clear();
     this.authCodes.clear();
     this.accessTokens.clear();

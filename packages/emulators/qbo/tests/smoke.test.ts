@@ -154,6 +154,47 @@ describe('qbo emulator', { shuffle: false }, () => {
     expect(((await missing.json()) as any).Fault.Error[0].code).toBe('610');
   });
 
+  it('records a company-local invoice edit and rejects stale re-export until the live token is read', async () => {
+    await controlPost('/control/qbo/seed/client', { clientId: 'drift-app', clientSecret: 'drift-secret' });
+    const tokens = (await controlPost('/control/qbo/actions/mint-tokens', { clientId: 'drift-app' })).result;
+    const headers = { authorization: `Bearer ${tokens.access_token}`, 'content-type': 'application/json' };
+    const realms = ['drift-selected', 'drift-unselected'];
+    for (const realmId of realms) {
+      await controlPost('/control/qbo/seed/realm', { realmId });
+      const customer = (await controlPost('/control/qbo/seed/customer', { realmId, name: 'Drift customer' })).result;
+      await controlPost('/control/qbo/seed/invoice', { realmId, customerId: customer.Id, amountCents: 27500, docNumber: 'ORIGINAL' });
+    }
+    const entities = async (realmId: string) => (await controlPost('/control/qbo/actions/entities', { realmId, entityType: 'Invoice' })).result;
+    const [original] = await entities(realms[0]);
+    const other = await entities(realms[1]);
+    expect(other[0].Id).toBe(original.Id);
+    const renamed = await controlPost('/control/qbo/actions/rename-invoice', {
+      realmId: realms[0], invoiceId: original.Id, docNumber: 'BOOKKEEPER-EDIT',
+    });
+    expect(renamed.ok).toBe(true);
+    expect(renamed.result).toMatchObject({ Id: original.Id, DocNumber: 'BOOKKEEPER-EDIT', TotalAmt: 275, Balance: 275 });
+    expect(renamed.result.SyncToken).not.toBe(original.SyncToken);
+    const endpoint = `${base}/v3/company/${realms[0]}`;
+    const update = (SyncToken: string) => fetch(`${endpoint}/invoice?operation=update`, {
+      method: 'POST', headers, body: JSON.stringify({ Id: original.Id, SyncToken, DocNumber: 'ORIGINAL', sparse: true }),
+    });
+    const stale = await update(original.SyncToken);
+    expect(stale.status).toBe(400);
+    expect((await stale.json()).Fault.Error[0].code).toBe('5010');
+    expect(await entities(realms[0])).toEqual([renamed.result]);
+    const since = new Date(host.clock.now().getTime() - 60000).toISOString();
+    const changed = await (await fetch(`${endpoint}/cdc?changedSince=${encodeURIComponent(since)}`, { headers })).json();
+    expect(changed.CDCResponse[0].QueryResponse[0].Invoice).toEqual(expect.arrayContaining([
+      expect.objectContaining({ Id: original.Id, DocNumber: 'BOOKKEEPER-EDIT', SyncToken: renamed.result.SyncToken }),
+    ]));
+    const live = await (await fetch(`${endpoint}/invoice/${original.Id}`, { headers })).json();
+    const restored = await update(live.Invoice.SyncToken);
+    expect(restored.status).toBe(200);
+    expect((await restored.json()).Invoice).toMatchObject({ Id: original.Id, DocNumber: 'ORIGINAL', TotalAmt: 275, Balance: 275 });
+    expect(await entities(realms[0])).toHaveLength(1);
+    expect(await entities(realms[1])).toEqual(other);
+  });
+
   // The customer bug: an Automated Sales Tax company carries a large,
   // auto-generated tax-code table, so the mapping catalog was truncated at
   // QBO's 100-row default and any code past it printed its bare backend Id.

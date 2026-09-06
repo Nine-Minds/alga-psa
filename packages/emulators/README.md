@@ -422,7 +422,12 @@ Three tiers, so most failure modes cost nothing to support:
   `"GET /me"` or `"POST /v3/conversations/{id}/activities"` N times, for
   Graph throttling and bot-connector failures; a trailing `*` matches by
   prefix), QBO stale SyncTokens produced by out-of-band
-  `receive-payment`/`apply-credit` actions.
+  `receive-payment`/`apply-credit` actions. QBO `rename-invoice` models a
+  bookkeeper changing `DocNumber`; pass `realmId`, `invoiceId`, and `docNumber`
+  to create invoice drift without changing the invoice identity or amount.
+  Wire QBO timestamps follow the shared host clock so current-time CDC polls
+  discover these edits. Pure in-process simulator tests retain their default
+  deterministic logical clock.
 
 ### Scenarios
 

@@ -2,7 +2,7 @@ import { test as providerTest, expect } from '../fixtures/emulators';
 import { signIn } from '../fixtures/auth';
 import { createAccountingFixture } from '../fixtures/accounting';
 
-type Entity = { Id: string; Name?: string; DocNumber?: string; TotalAmt?: number;
+type Entity = { Id: string; SyncToken?: string; Name?: string; DocNumber?: string; TotalAmt?: number;
   CustomerRef?: { value: string }; Line?: Array<{ Amount: number; SalesItemLineDetail: { ItemRef: { value: string } } }> };
 type AccountingFixture = Awaited<ReturnType<typeof createAccountingFixture>> & { item: Entity };
 const settingsURL = '/msp/settings?tab=integrations&category=accounting&accounting_integration=qbo';
@@ -122,6 +122,45 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     await expect(page.getByText('No invoices match the selected filters (or all matching invoices have already been exported).', { exact: true })).toBeVisible();
     expect(await database('accounting_export_batches').where({ ...scope, adapter_type: 'quickbooks_online' })).toHaveLength(1);
     expect(await emulators.action('qbo', 'entities', { realmId: provider.realmId, entityType: 'Invoice' })).toEqual(remote);
+
+    // An external bookkeeper edit must arrive through CDC. Keep Alga's stored
+    // token stale so the actual re-export has to read the current vendor token.
+    const invoiceMapping = () => database('tenant_external_entity_mappings')
+      .where({ ...mappingScope, alga_entity_type: 'invoice', alga_entity_id: invoice.id }).first();
+    const originalMapping = await invoiceMapping();
+    const edited = await emulators.action<Entity>('qbo', 'rename-invoice', {
+      realmId: provider.realmId, invoiceId: remote[0].Id, docNumber: 'BOOKKEEPER-EDIT',
+    });
+    expect(edited.Id).toBe(remote[0].Id);
+    expect(edited.SyncToken).not.toBe(originalMapping.metadata.sync_token);
+    await page.goto(settingsURL);
+    await page.locator('#qbo-sync-now-button').click();
+    await expect.poll(async () => (await invoiceMapping())?.sync_status).toBe('drift');
+    const drift = await invoiceMapping();
+    expect(drift.metadata.sync_token).toBe(originalMapping.metadata.sync_token);
+    expect(drift.metadata.external_observed).toMatchObject({
+      doc_number: 'BOOKKEEPER-EDIT', sync_token: edited.SyncToken,
+    });
+
+    await page.goto(`/msp/billing?tab=invoicing&subtab=finalized&invoiceId=${invoice.id}`);
+    await page.locator('#invoice-drift-reexport-button').click();
+    await expect(page.getByText('Re-export to QuickBooks queued.', { exact: true })).toBeVisible();
+    await page.locator('#invoice-sync-now-button').click();
+    await expect.poll(async () => (await invoiceMapping())?.sync_status,
+      { timeout: 90000 }).toBe('synced');
+    const restored = await emulators.action<Entity[]>('qbo', 'entities', {
+      realmId: provider.realmId, entityType: 'Invoice',
+    });
+    expect(restored).toHaveLength(1);
+    expect(restored[0]).toMatchObject({ Id: remote[0].Id, DocNumber: invoice.number,
+      TotalAmt: invoice.amountCents / 100, CustomerRef: { value: provider.customerId },
+    });
+    expect(restored[0].SyncToken).not.toBe(edited.SyncToken);
+    expect((await invoiceMapping()).metadata.sync_token).toBe(restored[0].SyncToken);
+    expect(await emulators.action('qbo', 'entities', { realmId: 'realm-sim', entityType: 'Invoice' })).toEqual([]);
+    await page.reload();
+    await expect(page.locator('#invoice-sync-now-button')).toBeVisible();
+    await expect(page.locator('#invoice-drift-reexport-button')).toBeHidden();
     const history = await emulators.requests('qbo');
     expect(history.complete).toBe(true);
     expect(history.requests).toEqual(expect.arrayContaining([
