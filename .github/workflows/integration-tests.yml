@@ -332,6 +332,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
+      INFRA_JOB_RESULT: ${{ needs.infrastructure-tests.result }}
       INFRA_MODE: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'full' || 'tier1' }}
       INFRA_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '3' || '1' }}
     steps:

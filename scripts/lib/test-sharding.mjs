@@ -11,12 +11,13 @@ export function partitionTestFiles(files, index, total) {
   return selected;
 }
 
-export function reconcileTestShards({ shards, suite, revision, mode, total }) {
+export function reconcileTestShards({ shards, suite, revision, mode, total, jobResult = 'success' }) {
   const failures = [];
   const seen = new Set();
   const executed = new Set();
   const expectedFiles = shards[0]?.selection?.allFiles || [];
   const counts = { passed: 0, failed: 0, skipped: 0, todo: 0, pending: 0 };
+  if (jobResult !== 'success') failures.push(`Required shard jobs did not succeed: ${jobResult}`);
   if (!Number.isInteger(total) || total < 1 || shards.length !== total) failures.push('Missing or extra shard evidence');
   for (const shard of shards) {
     const selection = shard.selection || {};
@@ -51,6 +52,6 @@ export function reconcileTestShards({ shards, suite, revision, mode, total }) {
   for (let index = 1; index <= total; index++) if (!seen.has(index)) failures.push(`Missing shard ${index}`);
   if (!expectedFiles.length || expectedFiles.some(file => !executed.has(file))) failures.push('Required file coverage is incomplete');
   if (Object.entries(counts).some(([key, count]) => key !== 'passed' && count !== 0)) failures.push('Required shards contain non-passing assertions');
-  return { schemaVersion: 1, suite, revision, mode, shardCount: total,
+  return { schemaVersion: 1, suite, revision, mode, shardCount: total, jobResult,
     status: failures.length ? 'failed' : 'passed', expectedFiles, executedFiles: [...executed].sort(), counts, failures };
 }

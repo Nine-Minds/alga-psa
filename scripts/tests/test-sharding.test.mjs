@@ -47,4 +47,7 @@ test('missing, failed, duplicate, stale and incorrectly assigned shards reject r
     assert.equal(reconcile(entries).status, 'failed');
   }
   assert.equal(reconcile([]).status, 'failed');
+  for (const jobResult of ['failure', 'cancelled', 'skipped', '']) {
+    assert.equal(reconcileTestShards({ shards: shards(), suite: 'infrastructure', revision: 'abc', mode: 'full', total: 3, jobResult }).status, 'failed');
+  }
 });

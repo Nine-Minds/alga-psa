@@ -12,6 +12,7 @@ const output = path.join(root, 'test-results/infrastructure');
 mkdirSync(output, { recursive: true });
 const total = Number(process.env.INFRA_SHARD_TOTAL || '1');
 const mode = process.env.INFRA_MODE || 'full';
+const jobResult = process.env.INFRA_JOB_RESULT ?? (process.env.GITHUB_ACTIONS === 'true' ? 'missing' : 'success');
 const revision = testRevision(root).revision;
 const shards = [];
 const reports = [];
@@ -19,25 +20,27 @@ const failures = [];
 const verifiedReports = [];
 try {
   for (const directory of readdirSync(input, { withFileTypes: true }).filter(entry => entry.isDirectory())) {
-    const read = name => JSON.parse(readFileSync(path.join(input, directory.name, `${name}.json`), 'utf8'));
-    const evidence = read('evidence');
-    const report = read('results');
-    // Recompute the assertion evidence from raw reports; do not trust a passed label alone.
-    const verified = reconcileExecution({ root, suite: 'infrastructure', revision,
-      collected: read('collected'), collectedTests: read('collected-tests'), report, exitCode: evidence.status === 'passed' ? 0 : 1 });
-    if (verified.status !== 'passed') failures.push(...verified.failures);
-    verifiedReports.push(verified);
-    shards.push(evidence);
-    reports.push(report);
+    try {
+      const read = name => JSON.parse(readFileSync(path.join(input, directory.name, `${name}.json`), 'utf8'));
+      const evidence = read('evidence');
+      const report = read('results');
+      // Recompute the assertion evidence from raw reports; do not trust a passed label alone.
+      const verified = reconcileExecution({ root, suite: 'infrastructure', revision,
+        collected: read('collected'), collectedTests: read('collected-tests'), report, exitCode: evidence.status === 'passed' ? 0 : 1 });
+      if (verified.status !== 'passed') failures.push(...verified.failures);
+      verifiedReports.push(verified);
+      shards.push(evidence);
+      reports.push(report);
+    } catch (error) { failures.push(`Cannot read shard ${directory.name}: ${error.message}`); }
   }
 } catch (error) { failures.push(`Cannot read required infrastructure evidence: ${error.message}`); }
-const aggregate = reconcileTestShards({ shards, suite: 'infrastructure', revision, mode, total });
+const aggregate = reconcileTestShards({ shards, suite: 'infrastructure', revision, mode, total, jobResult });
 aggregate.failures.push(...failures);
 aggregate.status = aggregate.failures.length ? 'failed' : 'passed';
 writeFileSync(path.join(output, 'aggregate.json'), JSON.stringify(aggregate, null, 2) + '\n');
 // Preserve the existing full-suite scorecard as one row rather than three partial rows.
 const identities = entries => JSON.stringify((entries || []).map(entry => JSON.stringify(entry)).sort());
-const complete = shards.length === total && new Set(shards.map(shard => shard.selection?.shard?.index)).size === total
+const complete = jobResult === 'success' && shards.length === total && new Set(shards.map(shard => shard.selection?.shard?.index)).size === total
   && aggregate.expectedFiles.length > 0
   && identities(aggregate.expectedFiles) === identities(aggregate.executedFiles)
   && shards.every(shard => shard.revision === revision && shard.source?.before?.revision === revision && shard.source?.after?.revision === revision

@@ -29,7 +29,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'fixture');
   const run = (script, index = 1, mode = 'full', total = 3) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
-    env: { ...process.env, CI: '1', INFRA_MODE: mode, INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total) },
+    env: { ...process.env, CI: '1', INFRA_JOB_RESULT: 'success', INFRA_MODE: mode, INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total) },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
   for (const index of [1, 2, 3]) {
