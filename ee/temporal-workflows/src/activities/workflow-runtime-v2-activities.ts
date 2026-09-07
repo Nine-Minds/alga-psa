@@ -229,13 +229,16 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
       const knex = await getAdminConnection();
       const now = new Date().toISOString();
       const step = await tenantDb(knex, '__workflow_step_completion_discovery__')
-        .unscoped<{ step_id: string; started_at?: string | null; tenant?: string | null }>(
+        .unscoped<{ step_id: string; run_id: string; step_path: string; started_at?: string | null; tenant?: string | null }>(
           'workflow_run_steps',
           'workflow step completion resolves the tenant and duration from step_id before updating'
         )
-        .where({ step_id: input.stepId })
+        .where({ step_id: input.stepId, run_id: input.runId, step_path: input.stepPath })
         .first();
-      const tenant = step?.tenant ?? null;
+      if (!step) {
+        throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
+      }
+      const tenant = step.tenant ?? null;
       const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
       const durationMs = Math.max(Date.now() - startedAt, 0);
 

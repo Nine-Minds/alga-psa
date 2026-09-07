@@ -190,3 +190,34 @@ it('redacts secret references in persisted action inputs without changing handle
   expect(rows[0].input_json).toEqual({ connection: { secretRef: '[REDACTED]', label: 'Mailbox' }, values: [{ secretRef: '[REDACTED]' }] });
   expect(args.connection.secretRef).toBe('synthetic-private-reference');
 });
+
+
+it('rejects missing or mismatched step completion without modifying either run', async () => {
+  const Step = (await import('@alga-psa/workflows/persistence/workflowRunStepModelV2')).default;
+  const { projectWorkflowRuntimeV2StepCompletion } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const tenant = randomUUID();
+  const workflow = await WorkflowDefinition.create(db, tenant, {
+    name: 'Step completion ownership regression', payload_schema_ref: 'payload.EmailWorkflowPayload.v1',
+    draft_definition: {} as any, draft_version: 1,
+  });
+  const runs = await Promise.all([0, 1].map(() => WorkflowRun.create(db, {
+    workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING',
+  })));
+  const step = await Step.create(db, { tenant, run_id: runs[0].run_id, step_path: 'root.steps[0]',
+    definition_step_id: 'owned-step', status: 'STARTED', attempt: 1 });
+  const valid = { runId: runs[0].run_id, stepId: step.step_id, stepPath: step.step_path, status: 'FAILED' as const,
+    errorMessage: 'Expected action failure' };
+  for (const invalid of [
+    { ...valid, stepId: randomUUID() },
+    { ...valid, runId: runs[1].run_id },
+    { ...valid, stepPath: 'root.steps[1]' },
+  ]) {
+    await expect(projectWorkflowRuntimeV2StepCompletion(invalid)).rejects.toThrow('does not belong');
+    expect((await Step.listByRun(db, runs[0].run_id, tenant))[0]).toMatchObject({ status: 'STARTED', completed_at: null });
+    for (const run of runs) expect((await WorkflowRun.getById(db, run.run_id))?.status).toBe('RUNNING');
+  }
+  await projectWorkflowRuntimeV2StepCompletion(valid);
+  expect((await Step.listByRun(db, runs[0].run_id, tenant))[0]).toMatchObject({ status: 'FAILED', error_json: { message: valid.errorMessage } });
+  expect((await WorkflowRun.getById(db, runs[0].run_id))?.status).toBe('FAILED');
+  expect((await WorkflowRun.getById(db, runs[1].run_id))?.status).toBe('RUNNING');
+});

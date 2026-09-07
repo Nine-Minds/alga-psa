@@ -1186,3 +1186,9 @@
 - Executed the entire invoice production integration file at published revision `9a0ea31e57`: nine cases passed together in 108.39 seconds; three explicitly manual cases remain skipped. Evidence: `evidence/invoice-combined-9a0ea.json`.
 - Audited the project survey skip through subscriber, invitation service, both storage tables, token resolution, response persistence and analytics. A dispatch-only fix is insufficient. Recorded the full restoration requirements in `evidence/project-survey-restoration-scope.json`; no requirement or skip was removed.
 - Native integration run `34093073754`, full-suite job `101650631428`, was verified in progress. Keep it running; these local evidence updates need not cancel or replace the published execution.
+
+### 2026-09-07 — Workflow step completion ownership regression
+
+- While tracing skipped snapshot coverage, found that the real completion activity discovered a step by ID alone and used a separately supplied run ID for the run update; a missing step fell back to an unscoped update.
+- Added a real database case covering absent step, wrong run, wrong path and successful owned completion. It failed before the fix (nonexistent step accepted), then passed with the full six-case persistence suite after matching all three identities before either update.
+- Temporal readiness: 72/72 passed; targeted TypeScript passed. Evidence: `evidence/workflow-step-completion-ownership.json`. Snapshot and output-storage redaction remain unfinished; this incidental fix does not replace those requirements.
