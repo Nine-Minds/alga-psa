@@ -13551,3 +13551,93 @@ it('native time sheet lists reject the whole collection when the key expires dur
   } finally { await blocker.rollback(); }
   await rejected;
 }));
+
+async function newSheetPeriod(customer: any, tenant: string) {
+  const periodId = randomUUID();
+  await customer.table('time_periods').insert({ tenant, period_id: periodId, start_date: '2026-09-14', end_date: '2026-09-21' });
+  return periodId;
+}
+
+it('native time sheet lifecycle serializes technician opening and grants project managers matching approval defaults', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, operations, service }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  const technician = await customer.table('roles').where({ role_name: 'Technician', msp: true }).first();
+  await customer.table('user_roles').where('user_id', context.userId).del();
+  await customer.table('user_roles').insert({ tenant: context.tenant, user_id: context.userId, role_id: technician.role_id });
+  const opened = await Promise.all([1, 2].map(() => operations.fetchOrCreateTimeSheet(context.userId, periodId)));
+  expect(opened[0].id).toBe(opened[1].id); expect(opened[0]).toMatchObject({ approval_status: 'DRAFT', comments: [], time_period: { start_date: '2026-09-14' } });
+  expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(1);
+  const manager = await customer.table('roles').where({ role_name: 'Project Manager', msp: true }).first();
+  await customer.table('user_roles').where('user_id', context.userId).update({ role_id: manager.role_id });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  expect(await service.approveTimeEntries({ entry_ids: [entry.entry_id] }, context)).toMatchObject({ approved_count: 1 });
+}));
+
+it('native time sheet lifecycle deletes only admitted empty drafts and clears their private child records', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, operations, sheets }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant), empty = await operations.fetchOrCreateTimeSheet(context.userId, periodId);
+  await sheets.addCommentToTimeSheet(empty.id, context.userId, 'Private empty sheet history', false);
+  await customer.table('time_entry_change_requests').insert({ tenant: context.tenant, change_request_id: randomUUID(), time_entry_id: randomUUID(), time_sheet_id: empty.id, comment: 'Legacy orphan review', created_by: context.userId, created_at: new Date() });
+  const result = await operations.deleteTimeSheets([entry.time_sheet_id, empty.id, empty.id]);
+  expect(result.deletedIds).toEqual([empty.id]); expect(result.failed).toHaveLength(1); expect(result.failed[0].timeSheetId).toBe(entry.time_sheet_id);
+  expect(await customer.table('time_sheets')).toHaveLength(1); expect(await customer.table('time_sheet_comments')).toHaveLength(0); expect(await customer.table('time_entry_change_requests')).toHaveLength(0);
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native time sheet lifecycle keeps existing history readable during lapse but blocks new sheets and removal', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, operations, principal }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant), existing = await customer.table('time_sheets').where('id', entry.time_sheet_id).first();
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await operations.fetchOrCreateTimeSheet(context.userId, existing.period_id)).toMatchObject({ id: entry.time_sheet_id, total_hours: 1.5 });
+  await expect(operations.fetchOrCreateTimeSheet(context.userId, periodId)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  expect(await operations.deleteTimeSheets([entry.time_sheet_id])).toMatchObject({ deletedIds: [], failed: [{ timeSheetId: entry.time_sheet_id }] });
+  expect(await customer.table('time_sheets')).toHaveLength(1);
+}));
+
+it.each(['create', 'delete'])('native time sheet lifecycle rolls %s and its child changes back on final session expiry', async operation => withNativeTimeSheetCommandFixture(async ({ context, customer, operations, sheets, sessionId }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  const target = operation === 'delete' ? await operations.fetchOrCreateTimeSheet(context.userId, periodId) : null;
+  if (target) await sheets.addCommentToTimeSheet(target.id, context.userId, 'Retained on failure', false);
+  const row = operation === 'delete' ? 'OLD' : 'NEW';
+  await db.raw(`CREATE FUNCTION expire_sheet_lifecycle_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = ${row}.tenant AND session_id = '${sessionId}'::uuid; RETURN ${row}; END $$`);
+  await db.raw(`CREATE TRIGGER expire_sheet_lifecycle_session AFTER ${operation === 'delete' ? 'DELETE' : 'INSERT'} ON time_sheets FOR EACH ROW EXECUTE FUNCTION expire_sheet_lifecycle_session()`);
+  try {
+    if (operation === 'create') await expect(operations.fetchOrCreateTimeSheet(context.userId, periodId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    else {
+      const domain = await import('../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
+      await expect(domain.deleteCoManagedNativeTimeSheet(db, context.tenant, target.id, async () => ({ kind: 'session', tenant: context.tenant, userId: context.userId, sessionId }))).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    }
+    expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(operation === 'delete' ? 1 : 0);
+    expect(await customer.table('time_sheet_comments')).toHaveLength(operation === 'delete' ? 1 : 0);
+  } finally { await db.raw('DROP TRIGGER expire_sheet_lifecycle_session ON time_sheets'); await db.raw('DROP FUNCTION expire_sheet_lifecycle_session()'); }
+}));
+
+it('native time sheet lifecycle rechecks emptiness after a concurrent entry insert commits', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, operations, apiKeyId }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant), empty = await operations.fetchOrCreateTimeSheet(context.userId, periodId);
+  const original = await customer.table('time_entries').where('entry_id', entry.entry_id).first(), writer = await db.transaction();
+  await tenantDb(writer, context.tenant).table('time_entries').insert({ ...original, entry_id: randomUUID(), time_sheet_id: empty.id, work_date: '2026-09-15', start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:30:00Z' });
+  const domain = await import('../../../../packages/co-managed/src/nativeTimeSheetLifecycle');
+  let pid: number | undefined;
+  const removing = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return domain.deleteCoManagedNativeTimeSheet(trx, context.tenant, empty.id, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId }));
+  });
+  const rejected = expect(removing).rejects.toThrow('Time sheet still has time entries');
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await writer.commit(); await rejected;
+  } finally { if (!writer.isCompleted()) await writer.rollback(); }
+  expect(await customer.table('time_sheets').where('id', empty.id)).toHaveLength(1);
+  expect(await customer.table('time_entries').where('time_sheet_id', empty.id)).toHaveLength(1);
+}));
+
+it('native time sheet lifecycle applies creation permission to automatic API sheets while allowing existing sheets', async () => withNativeTimeSheetCommandFixture(async ({ context, customer, create }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_sheet', action: 'create' }).select('permission_id'));
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  await expect(create({ start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:00:00Z' })).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(0);
+  await customer.table('role_permissions').insert(permissions);
+  const first = await create({ start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:00:00Z' });
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  const second = await create({ start_time: '2026-09-15T11:00:00Z', end_time: '2026-09-15T12:00:00Z' });
+  expect(second.time_sheet_id).toBe(first.time_sheet_id);
+  expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(1);
+}));

@@ -28,7 +28,7 @@ import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
-  NativeTimeTrackingError, NativeTimeDeletionError, NativeTimeReviewError, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  NativeTimeTrackingError, NativeTimeDeletionError, NativeTimeReviewError, reviewCoManagedNativeTimeEntry, openCoManagedNativeTimeSheet, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 
@@ -1170,6 +1170,9 @@ export class TimeEntryService extends BaseService<any> {
     if (!period) {
       throw new ValidationError('No time period found for this date');
     }
+
+    const current = await openCoManagedNativeTimeSheet(knex, context.tenant, { userId, periodId: period.period_id }, async () => this.timeActor(context));
+    if (current.handled) return current.sheet.id;
 
     // Check for existing time sheet
     let timeSheet = await tenantDb(knex, context.tenant).table('time_sheets')

@@ -465,3 +465,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `fetchTimeSheets`, `fetchAllTimeSheets`, `fetchTimeSheetsForApproval`, `fetchTimePeriods`, shared `nativeTimeSheetList`.
 - **Gate:** Four adapters share current credential, delegation and disclosure invariants. ACT / bounded-now in the approved time workstream.
 - **Status:** all use retained sheet projections; employee metadata and metrics honor masks; scope-limited removal counts remain unknown, and the period UI renders masked metrics as an em dash. Six focused source-mode scenarios pass. Sheet creation/deletion, API sheet/period adapters and broader scale/concurrency verification remain pending.
+
+## native-time-sheet-lifecycle-authority — pattern
+- **What:** Native lazy opening/removal and API automatic sheet creation independently trusted user/period hints and performed unheld check-then-write operations.
+- **Where:** `fetchOrCreateTimeSheet`, `deleteTimeSheets`, `TimeEntryService.getOrCreateTimeSheetForWorkDate`, shared `nativeTimeSheetLifecycle`.
+- **Gate:** Three adapters share current identity, owner/period, creation permission and retained emptiness invariants. ACT / bounded-now in the approved time workstream.
+- **Status:** shared open/remove commands retain current authority and serialize creation on target users. Existing history is a read; missing sheets require create permission/current write entitlement. Empty-draft deletion checks actual children, clears private feedback atomically and retains final credential checks. Seven focused scenarios verified across the initial six-case run and a two-case API follow-up. Standalone sheet/period API services and wider concurrency/scale verification remain pending.

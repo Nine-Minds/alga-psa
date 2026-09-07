@@ -1,6 +1,6 @@
 'use server'
 
-import { commandCoManagedNativeTimeSheets, listCoManagedNativeTimeSheets } from '@alga-psa/co-managed';
+import { commandCoManagedNativeTimeSheets, listCoManagedNativeTimeSheets, openCoManagedNativeTimeSheet, deleteCoManagedNativeTimeSheet } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { Knex } from 'knex'; // Import Knex type
@@ -368,6 +368,8 @@ export const fetchOrCreateTimeSheet = withAuth(async (user, { tenant }, userId: 
     );
 
     const {knex: db} = await createTenantKnex();
+    const current = await openCoManagedNativeTimeSheet(db, tenant, { userId: validatedParams.userId, periodId: validatedParams.periodId }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.sheet as ITimeSheetView;
 
     await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
@@ -450,6 +452,9 @@ export const deleteTimeSheets = withAuth(async (
 
   for (const timeSheetId of uniqueIds) {
     try {
+      if (await deleteCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant))) {
+        deletedIds.push(timeSheetId); continue;
+      }
       await db.transaction(async (trx) => {
         const sheet = await tenantScopedTable(trx, 'time_sheets', tenant)
           .where({ id: timeSheetId })
