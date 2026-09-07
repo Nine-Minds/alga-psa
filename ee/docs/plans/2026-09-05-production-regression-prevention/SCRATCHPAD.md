@@ -2184,3 +2184,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Action-level DB coverage exposed a second bug: addTaxRate/updateTaxRate returned withTransaction without awaiting it, so asynchronous overlap rejection bypassed their existing error mapper. Both now await within try.
 - Added successful create/update persisted readback and overlapping create/update error-result/non-mutation checks. Real transaction/savepoint and PostgreSQL paths execute; auth, RBAC and product-access guards are fixture-controlled. Initial assertion used message; corrected it to the existing actionError/messageKey contract after fixing the escaped rejection.
 - All 29 DB cases pass (1.44 seconds). Evidence: evidence/tax-action-transaction-errors.json. No broad plan flags changed; native CI remains unverified.
+
+### 2026-09-07 — connect new tax defects to permanent CI coverage
+
+- Added open-ended-overlap and asynchronous-action-error records to the regression ledger with base/fix revisions, behavioral reproduction commands, evidence and verification limits. Both have null production incident IDs; neither is counted as an attributed production escape.
+- Recollected the canonical workspace DB file inventory and verified the shared tax regression file is included. The integration workflow invokes that runner in Workspace database tests and uploads its evidence. Recorded this assignment separately from execution readiness in evidence/tax-regression-runner-assignment.json.
+- Added a subsequent-coverage note to the original PostgreSQL numeric defect record so its historical mock limitations remain accurate while the later real-settings coverage is discoverable. No broad plan flags changed; current native CI remains unverified.

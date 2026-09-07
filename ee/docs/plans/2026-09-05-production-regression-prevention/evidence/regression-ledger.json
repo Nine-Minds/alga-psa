@@ -556,6 +556,92 @@
         "Tenant context and reverse-charge/default-profile provisioning are substituted; rate selection, tenant predicates and PostgreSQL hydration are real.",
         "Does not verify authentication, international policy selection, invoice orchestration, tax caps or subscription periods.",
         "Current candidate native CI remains unverified."
+      ],
+      "subsequentCoverage": {
+        "evidence": "tax-settings-postgres.json",
+        "details": "Later tests remove settings/profile mocks; original evidence limits above describe the historical run."
+      }
+    },
+    {
+      "id": "tax-open-ended-overlap",
+      "journey": "Create or edit a regional tax rate without an end date",
+      "missingBoundary": "Open-ended interval intersection against persisted equal-start and future rates",
+      "baseRevision": "28735644e3",
+      "fixRevision": "7a3897ff1f",
+      "evidence": "tax-open-ended-overlap.json",
+      "before": {
+        "status": "intended-assertion-failure",
+        "failed": 3,
+        "passed": 23
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "passed": 27
+      },
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests",
+        "jobId": "workspace-db-tests",
+        "runner": "scripts/run-workspace-db-tests.mjs",
+        "config": "server/vitest.workspace-db.config.ts"
+      },
+      "status": "local-before-and-after-verified",
+      "reproduction": {
+        "cwd": "repository root",
+        "command": "node scripts/run-workspace-db-tests.mjs taxService.rateSelection.db.test.ts",
+        "defect": "Use the permanent database test against the pre-fix TaxService validator, which substitutes startDate for a missing endDate."
+      },
+      "limits": [
+        "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
+        "No production incident identifier was supplied; do not count as an attributed production escape.",
+        "Current candidate native CI remains unverified."
+      ]
+    },
+    {
+      "id": "tax-action-asynchronous-error-mapping",
+      "journey": "Receive a usable validation error when creating or updating an overlapping tax rate",
+      "missingBoundary": "Rejected transaction promise to server-action error mapping and database non-mutation",
+      "baseRevision": "7a3897ff1f",
+      "fixRevision": "ed2a23d2b3",
+      "evidence": "tax-action-transaction-errors.json",
+      "before": {
+        "status": "uncaught-validation-rejection",
+        "assertion": "Create action rejects instead of returning its structured actionError response."
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "passed": 29
+      },
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests",
+        "jobId": "workspace-db-tests",
+        "runner": "scripts/run-workspace-db-tests.mjs",
+        "config": "server/vitest.workspace-db.config.ts"
+      },
+      "status": "local-before-and-after-verified",
+      "reproduction": {
+        "cwd": "repository root",
+        "command": "node scripts/run-workspace-db-tests.mjs taxService.rateSelection.db.test.ts",
+        "defect": "Use the permanent database tests against the pre-fix addTaxRate/updateTaxRate functions, which return withTransaction without awaiting inside try."
+      },
+      "limits": [
+        "Requires disposable PostgreSQL/Redis services for canonical runner; local evidence used the task-owned migrated database with rollback fixtures.",
+        "No production incident identifier was supplied; do not count as an attributed production escape.",
+        "Current candidate native CI remains unverified.",
+        "Auth, RBAC and product-access guards are substituted. Transaction/savepoint, validation and persistence behavior are real."
       ]
     }
   ]
