@@ -1,0 +1,82 @@
+#!/usr/bin/env node
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { readCandidateExecutionBundle } from './lib/candidate-execution-artifacts.mjs';
+import { evaluateCandidateExecution } from './lib/candidate-execution-gate.mjs';
+import { repositoryTestFiles, isAdditionalWorkspaceTest } from './lib/test-discovery.mjs';
+import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
+import { testRevision } from './lib/test-revision.mjs';
+
+function browserDirectory(directory) {
+  const found = [];
+  const visit = current => {
+    for (const entry of readdirSync(current, { withFileTypes: true })) {
+      const target = path.join(current, entry.name);
+      if (entry.isDirectory()) visit(target);
+      else if (entry.name === 'evidence.json' && path.basename(current) === 'execution-evidence') found.push(current);
+    }
+  };
+  visit(directory);
+  if (found.length !== 1) throw new Error(`Expected one browser execution artifact, received ${found.length}`);
+  return found[0];
+}
+
+export function verifyFreshInstallExecution({ root, revision, input, sourceRoot = root, candidates, jobResults, shouldRun }) {
+  const failures = [], requirements = [], bundles = [];
+  for (const job of ['changes', 'production-browser']) {
+    if (jobResults?.[job]?.result !== 'success') failures.push(`Required job ${job}: ${jobResults?.[job]?.result ?? 'missing'}`);
+  }
+  for (const job of ['browser-collection', 'build-images']) {
+    const expected = shouldRun ? 'success' : 'skipped';
+    if (jobResults?.[job]?.result !== expected) failures.push(`Required job ${job}: expected ${expected}, received ${jobResults?.[job]?.result ?? 'missing'}`);
+  }
+  if (typeof shouldRun !== 'boolean') failures.push('Missing independent change selection');
+  let result;
+  if (shouldRun === false) {
+    result = { schemaVersion: 1, revision, scope: 'fresh-install-execution', status: 'not-applicable',
+      reason: 'Independent change selection identifies only documentation or identical revisions', results: [], failures: [] };
+  } else {
+    for (const edition of ['community', 'enterprise']) {
+      for (const format of ['vitest', 'playwright']) {
+        const id = `${format}-${edition}`;
+        requirements.push({ id, format, candidates: candidates.filter(file => format === 'vitest'
+          ? isAdditionalWorkspaceTest(file, 'api-e2e') : file.startsWith('e2e-tests/tests/')) });
+        try {
+          const directory = format === 'vitest' ? path.join(input, `fresh-install-api-${edition}`)
+            : browserDirectory(path.join(input, `fresh-install-playwright-${edition}`));
+          const bundle = readCandidateExecutionBundle({ id, format, directory, sourceRoot,
+            outcome: jobResults?.['production-browser']?.result });
+          if (format === 'playwright' && bundle.collected?.config?.metadata?.edition !== edition) {
+            failures.push(`${id}: browser collection has a missing or different edition`);
+          }
+          bundles.push(bundle);
+        } catch (error) { failures.push(`${id}: ${error.message}`); }
+      }
+    }
+    result = evaluateCandidateExecution({ root, revision, requirements, bundles });
+    result.scope = 'fresh-install-execution';
+  }
+  result.failures.push(...failures);
+  if (result.failures.length) result.status = 'failed';
+  return result;
+}
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  let result;
+  try {
+    const source = testRevision(root);
+    if (source.dirty || source.revision !== process.env.GITHUB_SHA) throw new Error('Gate checkout is dirty or differs from candidate');
+    const selection = selectIntegration(readChangedFiles({ cwd: root, base: process.env.TIER1_BASE_SHA, head: source.revision }));
+    result = verifyFreshInstallExecution({ root, revision: source.revision,
+      input: path.join(root, 'test-results/fresh-install-input'), candidates: repositoryTestFiles(root),
+      shouldRun: selection.shouldRun, jobResults: JSON.parse(process.env.FRESH_INSTALL_JOB_RESULTS || '{}') });
+  } catch (error) { result = { schemaVersion: 1, scope: 'fresh-install-execution', status: 'failed', failures: [error.message] }; }
+  const output = path.join(root, 'test-results/fresh-install-gate');
+  mkdirSync(output, { recursive: true });
+  writeFileSync(path.join(output, 'aggregate.json'), JSON.stringify(result, null, 2) + '\n');
+  for (const failure of result.failures) console.error(failure);
+  console.log(`Fresh-install execution: ${result.status}`);
+  process.exitCode = ['passed', 'not-applicable'].includes(result.status) ? 0 : 1;
+}

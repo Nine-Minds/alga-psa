@@ -994,24 +994,35 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Require complete production browser validation
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download both browser execution artifacts
+        if: always() && needs.changes.outputs.run_tests == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-playwright-*
+          path: test-results/fresh-install-input
+      - name: Download both API execution artifacts
+        if: always() && needs.changes.outputs.run_tests == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          pattern: fresh-install-api-*
+          path: test-results/fresh-install-input
+      - name: Require complete production execution
+        if: always()
         env:
-          CHANGES_RESULT: ${{ needs.changes.result }}
-          RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
-          COLLECTION_RESULT: ${{ needs.browser-collection.result }}
-          BUILD_RESULT: ${{ needs.build-images.result }}
-          BROWSER_RESULT: ${{ needs.production-browser.result }}
-        run: |
-          test "$CHANGES_RESULT" = success
-          test "$BROWSER_RESULT" = success
-          if [ "$RUN_TESTS" = true ]; then
-            test "$COLLECTION_RESULT" = success
-            test "$BUILD_RESULT" = success
-          elif [ "$RUN_TESTS" = false ]; then
-            test "$COLLECTION_RESULT" = skipped
-            test "$BUILD_RESULT" = skipped
-            echo "Known documentation-only change: production validation is not applicable."
-          else
-            echo "Missing production validation selection."
-            exit 1
-          fi
+          FRESH_INSTALL_JOB_RESULTS: ${{ toJSON(needs) }}
+          TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+        run: node scripts/verify-fresh-install-execution.mjs
+      - name: Preserve aggregate decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-execution-gate
+          path: test-results/fresh-install-gate/
+          if-no-files-found: error
+          retention-days: 30
