@@ -17,7 +17,8 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
 export async function getClientContactVisibilityContext(
   trx: Knex.Transaction,
   tenant: string,
-  contactId: string
+  contactId: string,
+  options: { lock?: boolean } = {}
 ): Promise<ContactVisibilityContext> {
   const contact = await tenantScopedTable<{
     contact_name_id: string;
@@ -27,6 +28,7 @@ export async function getClientContactVisibilityContext(
     .where({
       contact_name_id: contactId
     })
+    .modify(query => { if (options.lock) query.forShare(); })
     .first('contact_name_id', 'client_id', 'portal_visibility_group_id');
 
   if (!contact || !contact.client_id) {
@@ -49,6 +51,7 @@ export async function getClientContactVisibilityContext(
     .where({
       group_id: contact.portal_visibility_group_id
     })
+    .modify(query => { if (options.lock) query.forShare(); })
     .first('group_id', 'client_id');
 
   if (!group) {
@@ -73,6 +76,7 @@ export async function getClientContactVisibilityContext(
     .where({
       'cvgb.group_id': contact.portal_visibility_group_id
     })
+    .modify(query => { if (options.lock) query.forShare(); })
     .select('cvgb.board_id')
     .then((rows: Array<{ board_id: string }>) => rows.map((row) => row.board_id));
 

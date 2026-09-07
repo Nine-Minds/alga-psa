@@ -6668,3 +6668,160 @@ it('rejects stale displayed reply audiences before draft reservation or text cre
   await expect(drafts.beginCoManagedConversationDraft(db, principal, resource, { ...request, expectedAudience: 'bad' } as any)).rejects.toMatchObject({ code: 'INVALID_CONVERSATION_DRAFT' });
   await expect(create(principal, { ...textRequest, expectedAudience: 'bad' } as any)).rejects.toMatchObject({ code: 'INVALID_COMMENT_CREATE' });
 }));
+
+async function withPortalAttachmentFixture(work: (fixture: Parameters<Parameters<typeof withConversationDraftFixture>[0]>[0] & {
+  portal: typeof import('../../lib/co-managed/portalAttachments'); requester: import('../../../../packages/co-managed/src/sharedWorkIdentity').CoManagedSessionActor;
+  contactId: string; roleId: string;
+}) => Promise<void>) {
+  await withConversationDraftFixture(async fixture => {
+    const { customer, resource, operation } = fixture, userId = randomUUID(), sessionId = randomUUID(), roleId = randomUUID();
+    const contact = await customer.table('contacts').where('client_id', operation.customer_client_id).first();
+    await customer.table('users').insert({ tenant: resource.tenant, user_id: userId, username: `portal-files-${userId}`, email: 'portal-files@example.test',
+      first_name: 'File', last_name: 'Requester', hashed_password: 'not-a-login', user_type: 'client', contact_id: contact.contact_name_id, is_inactive: false });
+    await customer.table('sessions').insert({ tenant: resource.tenant, user_id: userId, session_id: sessionId, expires_at: new Date(Date.now() + 3600000) });
+    const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'read', client: true, msp: false }).first();
+    await customer.table('roles').insert({ tenant: resource.tenant, role_id: roleId, role_name: 'Attachment requester', msp: false, client: true });
+    await customer.table('role_permissions').insert({ tenant: resource.tenant, role_id: roleId, permission_id: permission.permission_id });
+    await customer.table('user_roles').insert({ tenant: resource.tenant, role_id: roleId, user_id: userId });
+    const portal = await import('../../lib/co-managed/portalAttachments');
+    await work({ ...fixture, portal, requester: { kind: 'session', tenant: resource.tenant, userId, sessionId }, contactId: contact.contact_name_id, roleId });
+  });
+}
+const portalAttachmentTarget = (resource: { id: string }, comment: { threadId: string; commentId: string }) => ({ ticketId: resource.id, threadId: comment.threadId, commentId: comment.commentId });
+
+it('serves requester-facing files through actual portal identity, never shared IT, private or forged references', async () => withPortalAttachmentFixture(async ({
+  principal, customerPrincipal, requester, portal, resource, create, attachments, upload, download,
+}) => {
+  for (const audience of ['requester', 'shared_it', 'organization_private'] as const) {
+    const root = await create(customerPrincipal, { operationId: randomUUID(), audience, text: 'Audience parent' });
+    const saved = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource,
+      { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Evidence.txt', mimeType: 'text/plain', content: Buffer.from(audience) }, upload);
+    const target = portalAttachmentTarget(resource, root);
+    if (audience === 'requester') {
+      expect(await portal.listPortalConversationAttachments(db, requester, target)).toEqual([saved]);
+      expect(Buffer.from((await portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download)).content).toString()).toBe(audience);
+      download.mockClear();
+      for (const wrong of [{ ...target, ticketId: randomUUID() }, { ...target, threadId: randomUUID() }, { ...target, commentId: randomUUID() }, { ...target, storeTenant: principal.tenant }])
+        await expect(portal.downloadPortalConversationAttachment(db, requester, wrong, saved.attachmentId, download)).rejects.toBeDefined();
+      await expect(portal.downloadPortalConversationAttachment(db, principal, target, saved.attachmentId, download)).rejects.toBeDefined();
+      await expect(portal.downloadPortalConversationAttachment(db, customerPrincipal, target, saved.attachmentId, download)).rejects.toBeDefined();
+    } else {
+      await expect(portal.listPortalConversationAttachments(db, requester, target)).rejects.toBeDefined();
+      await expect(portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download)).rejects.toBeDefined();
+    }
+    expect(download).not.toHaveBeenCalled();
+  }
+}));
+it('retains customer portal file access after sponsor revocation, lapse and departure while applying current comment visibility', async () => withPortalAttachmentFixture(async ({
+  principal, customerPrincipal, requester, portal, resource, customer, create, attachments, upload, download,
+}) => {
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Requester root' });
+  const reply = await create(principal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'MSP response' });
+  const saved = await attachments.uploadCoManagedConversationAttachment(db, principal, resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(reply), fileName: 'Response.txt', mimeType: 'text/plain', content: Buffer.from('Retained bytes') }, upload);
+  const target = portalAttachmentTarget(resource, reply);
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: db.fn.now() });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await portal.listPortalConversationAttachments(db, requester, target)).toEqual([saved]);
+  await customer.table('tenants').update({ product_code: 'psa' });
+  await customer.table('comments').where('comment_id', root.commentId).update({ deleted_at: db.fn.now(), note: '', markdown_content: '' });
+  expect((await portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download)).attachment).toEqual(saved);
+  await customer.table('comments').where('comment_id', reply.commentId).update({ deleted_at: db.fn.now() });
+  await expect(portal.listPortalConversationAttachments(db, requester, target)).rejects.toBeDefined();
+  await customer.table('comments').where('comment_id', reply.commentId).update({ deleted_at: null });
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'shared_it', is_internal: true });
+  await expect(portal.listPortalConversationAttachments(db, requester, target)).rejects.toBeDefined();
+}));
+it('enforces current portal board, client, role, user and contact access before opening file storage', async () => withPortalAttachmentFixture(async ({
+  customerPrincipal, requester, portal, resource, customer, operation, contactId, roleId, create, attachments, upload, download,
+}) => {
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Scoped public reply' });
+  const saved = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Scoped.txt', mimeType: 'text/plain', content: Buffer.from('Scoped bytes') }, upload);
+  const target = portalAttachmentTarget(resource, root), read = () => portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download);
+  const groupId = randomUUID();
+  await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'File reader boards' });
+  await customer.table('contacts').where('contact_name_id', contactId).update({ portal_visibility_group_id: groupId });
+  await expect(read()).rejects.toBeDefined();
+  await customer.table('client_portal_visibility_group_boards').insert({ tenant: resource.tenant, group_id: groupId, board_id: operation.customer_board_id });
+  expect((await read()).attachment).toEqual(saved); download.mockClear();
+  await customer.table('user_roles').where({ user_id: requester.userId, role_id: roleId }).del(); await expect(read()).rejects.toBeDefined();
+  await customer.table('user_roles').insert({ tenant: resource.tenant, user_id: requester.userId, role_id: roleId });
+  await customer.table('users').where('user_id', requester.userId).update({ is_inactive: true }); await expect(read()).rejects.toBeDefined();
+  await customer.table('users').where('user_id', requester.userId).update({ is_inactive: false });
+  await customer.table('contacts').where('contact_name_id', contactId).update({ is_inactive: true }); await expect(read()).rejects.toBeDefined();
+  await customer.table('contacts').where('contact_name_id', contactId).update({ is_inactive: false });
+  const otherClient = randomUUID(); await customer.table('clients').insert({ tenant: resource.tenant, client_id: otherClient, client_name: 'Other portal company', client_type: 'company' });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ client_id: otherClient }); await expect(read()).rejects.toBeDefined();
+  expect(download).not.toHaveBeenCalled();
+}));
+it('keeps staged files invisible to requesters until publication and rejects corrupted bytes or session expiry during download', async () => withPortalAttachmentFixture(async ({
+  principal, requester, portal, resource, customer, drafts, publishCustomer, file, upload, download, objects,
+}) => {
+  const part = file('Staged');
+  const begun = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), audience: 'requester', content: { text: 'Public draft' }, files: [part.descriptor] });
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(begun), part.descriptor.attachmentId, part.content, upload);
+  const target = { ticketId: resource.id, threadId: begun.operationId, commentId: begun.operationId };
+  await expect(portal.listPortalConversationAttachments(db, requester, target)).rejects.toBeDefined();
+  await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(begun), publishCustomer);
+  expect(await portal.listPortalConversationAttachments(db, requester, target)).toHaveLength(1);
+  const read = () => portal.downloadPortalConversationAttachment(db, requester, target, part.descriptor.attachmentId, download);
+  objects.set(`co-management/${resource.tenant}/${part.descriptor.attachmentId}`, Buffer.from('Broken')); await expect(read()).rejects.toMatchObject({ code: 'ATTACHMENT_CONTENT_MISMATCH' });
+  objects.set(`co-management/${resource.tenant}/${part.descriptor.attachmentId}`, part.content);
+  download.mockClear();
+  await customer.table('sessions').where('session_id', requester.sessionId).update({ expires_at: new Date(Date.now() + 500) });
+  download.mockImplementationOnce(async () => { await new Promise(resolve => setTimeout(resolve, 700)); return part.content; });
+  await expect(read()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(download).toHaveBeenCalledOnce(); download.mockClear(); await expect(read()).rejects.toBeDefined(); expect(download).not.toHaveBeenCalled();
+}));
+
+it('retains requester identity, RBAC, board visibility and audience locks through file transport', async () => withPortalAttachmentFixture(async ({
+  customerPrincipal, requester, portal, resource, customer, operation, contactId, roleId, create, attachments, upload,
+}) => {
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Locked download' });
+  const content = Buffer.from('Locked bytes'), saved = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Locked.txt', mimeType: 'text/plain', content }, upload);
+  const groupId = randomUUID();
+  await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'Retained board' });
+  await customer.table('contacts').where('contact_name_id', contactId).update({ portal_visibility_group_id: groupId });
+  await customer.table('client_portal_visibility_group_boards').insert({ tenant: resource.tenant, group_id: groupId, board_id: operation.customer_board_id });
+  const target = portalAttachmentTarget(resource, root), transfer = vi.fn(async () => {
+    const mutations = [
+      (owner: ReturnType<typeof tenantDb>) => owner.table('user_roles').where({ user_id: requester.userId, role_id: roleId }).del(),
+      (owner: ReturnType<typeof tenantDb>) => owner.table('client_portal_visibility_group_boards').where('group_id', groupId).del(),
+      (owner: ReturnType<typeof tenantDb>) => owner.table('contacts').where('contact_name_id', contactId).update({ is_inactive: true }),
+      (owner: ReturnType<typeof tenantDb>) => owner.table('sessions').where('session_id', requester.sessionId).update({ revoked_at: db.fn.now() }),
+      (owner: ReturnType<typeof tenantDb>) => owner.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'shared_it', is_internal: true }),
+    ];
+    for (const mutate of mutations) await expect(db.transaction(async trx => {
+      await trx.raw("SET LOCAL lock_timeout = '30ms'"); await mutate(tenantDb(trx, resource.tenant));
+    })).rejects.toMatchObject({ code: '55P03' });
+    return content;
+  });
+  expect((await portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, transfer)).attachment).toEqual(saved);
+  expect(transfer).toHaveBeenCalledOnce();
+  await customer.table('client_portal_visibility_group_boards').where('group_id', groupId).del();
+  await expect(portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, transfer)).rejects.toBeDefined();
+  expect(transfer).toHaveBeenCalledOnce();
+}));
+
+it('rechecks requester session expiry after comment lock waits before opening storage', async () => withPortalAttachmentFixture(async ({
+  customerPrincipal, requester, portal, resource, customer, create, attachments, upload, download,
+}) => {
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Blocked public file' });
+  const saved = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Wait.txt', mimeType: 'text/plain', content: Buffer.from('Wait') }, upload);
+  await customer.table('sessions').where('session_id', requester.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('comment_threads').where('thread_id', root.threadId).forUpdate().first();
+  let signal!: () => void;
+  const waiting = new Promise<void>(resolve => { signal = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('comment_threads') && query.sql.includes('for share')) signal(); };
+  db.on('query', listener);
+  const attempt = portal.downloadPortalConversationAttachment(db, requester, portalAttachmentTarget(resource, root), saved.attachmentId, download).catch(error => error);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Requester read completed without waiting'); })]);
+    await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(download).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));

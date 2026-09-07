@@ -5,6 +5,7 @@ import { tenantDb } from '@alga-psa/db';
 export async function hasCoManagedLocalPermission(db: Knex, actor: { tenant: string; userId: string },
   resource: string, action: string, lock = false): Promise<boolean> {
   if (lock && !db.isTransaction) throw new Error('Retaining co-management permission locks requires a transaction');
+  // LEVERAGE: pattern retained-local-rbac — requester attachment admission uses the same locked grant shape with portal role flags.
   const home = tenantDb(db, actor.tenant);
   const query = home.table('users').where({ 'users.user_id': actor.userId, 'users.user_type': 'internal', 'users.is_inactive': false });
   home.tenantJoin(query, 'user_roles', 'users.user_id', 'user_roles.user_id');

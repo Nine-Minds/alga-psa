@@ -18,7 +18,7 @@ export * from './ticketCommentCreation';
 export * from './ticketCommentNotification';
 export * from './ticketCommentRecipients';
 export * from './storedCommentNotification';
-export { assertCoManagedSessionUnexpired } from './sharedWorkIdentity';
+export { assertCoManagedSessionUnexpired, isCoManagedUuid, snapshotCoManagedSessionActor } from './sharedWorkIdentity';
 export * from './ticketCommentMutation';
 export * from './conversationAttachments';
 export * from './conversationDrafts';

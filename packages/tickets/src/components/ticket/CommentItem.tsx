@@ -25,6 +25,7 @@ import { normalizeEmailAddress } from '@shared/lib/email/addressUtils';
 import { parseTicketRichTextContent } from '../../lib/ticketRichText';
 import { extractTicketRichTextPlainText } from '../../lib/ticketRichText';
 import { extractTicketRichTextHtml } from '../../lib/ticketRichTextHtml';
+import { TicketConversationAttachments } from './TicketConversationAttachments';
 import { CommentMetadataDebugModal } from './CommentMetadataDebugModal';
 import { isNonEmptyCommentMetadata } from './commentMetadataDebug';
 import { cancelScheduledComment, rescheduleScheduledComment } from '../../actions/comment-actions/commentActions';
@@ -716,6 +717,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                   </ClampedContent>
               </div>
           )}
+          <TicketConversationAttachments ticketId={ticketId} comment={conversation} />
           {reactions && onToggleReaction && (
             <ReactionDisplay
               id={`${commentId}-reactions`}

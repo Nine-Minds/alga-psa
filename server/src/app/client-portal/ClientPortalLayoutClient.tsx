@@ -14,6 +14,7 @@ import { ClientPortalDocumentsProvider } from "./ClientPortalDocumentsProvider";
 import { usePathname } from "next/navigation";
 import { resolveProductRouteBehavior } from "@/lib/productSurfaceRegistry";
 import { ProductRouteBoundary } from "@/components/product/ProductRouteBoundary";
+import { CoManagedPortalAttachmentsProvider } from '@/components/co-managed/CoManagedPortalAttachments';
 import { CoManagedWorkspaceBoundary } from '@/components/co-managed/CoManagedFeatureBoundary';
 
 interface Props {
@@ -49,6 +50,7 @@ export function ClientPortalLayoutClient({
         <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
         <BrandingProvider initialBranding={branding}>
           <ClientPortalDocumentsProvider>
+          <CoManagedPortalAttachmentsProvider>
             <ClientPortalLayout
               productCode={productCode}
               appointmentsEnabled={appointmentsEnabled}
@@ -58,6 +60,7 @@ export function ClientPortalLayoutClient({
                 ? <ProductRouteBoundary behavior={routeBehavior} scope="client-portal" />
                 : children}
             </ClientPortalLayout>
+          </CoManagedPortalAttachmentsProvider>
           </ClientPortalDocumentsProvider>
         </BrandingProvider>
         </CurrencyFormatProvider>

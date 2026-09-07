@@ -86,16 +86,24 @@ function summary(row: any, audience: CommentAudience): CoManagedConversationAtta
   return { storeTenant: row.tenant, threadId: row.thread_id, commentId: row.comment_id, attachmentId: row.attachment_id,
     fileName: row.file_name, mimeType: row.mime_type, size: row.file_size, audience };
 }
-function attachmentQuery(context: CoManagedAttachmentContext) {
+/** Internal read engine context. Local requester admission may read retained
+ * customer files across ended relationships; MSP admission always qualifies one. */
+export interface CoManagedAttachmentReadContext {
+  trx: Knex.Transaction; comment: CoManagedCommentReference; audience: CommentAudience;
+  resource: Pick<CoManagedSharedResource, 'tenant' | 'id'> & { relationshipId?: string };
+}
+function attachmentQuery(context: CoManagedAttachmentReadContext) {
   return tenantDb(context.trx, context.comment.storeTenant).table(TABLE).where({ customer_tenant: context.resource.tenant,
-    relationship_id: context.resource.relationshipId, ticket_id: context.resource.id, thread_id: context.comment.threadId, comment_id: context.comment.commentId });
+    ticket_id: context.resource.id, thread_id: context.comment.threadId, comment_id: context.comment.commentId })
+    .modify(query => { if (context.resource.relationshipId !== undefined) query.where('relationship_id', context.resource.relationshipId); });
 }
 
-function visibleAttachmentQuery(context: CoManagedAttachmentContext) {
+function visibleAttachmentQuery(context: CoManagedAttachmentReadContext) {
   const published = tenantDb(context.trx, context.comment.storeTenant).table('co_management_conversation_drafts as d')
-    .where({ 'd.status': 'published', 'd.customer_tenant': context.resource.tenant, 'd.relationship_id': context.resource.relationshipId,
+    .where({ 'd.status': 'published', 'd.customer_tenant': context.resource.tenant,
       'd.ticket_id': context.resource.id, 'd.thread_id': context.comment.threadId, 'd.operation_id': context.comment.commentId })
-    .whereRaw('d.operation_id = co_management_conversation_attachments.draft_operation_id');
+    .whereRaw('d.operation_id = co_management_conversation_attachments.draft_operation_id')
+    .whereRaw('d.relationship_id = co_management_conversation_attachments.relationship_id');
   return attachmentQuery(context).where(query => query.whereNull('draft_operation_id').orWhereExists(published));
 }
 
@@ -157,23 +165,31 @@ export async function transferCoManagedAttachment(db: Knex, inputActor: CoManage
 export async function listCoManagedConversationAttachments(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
   inputComment: CoManagedCommentReference): Promise<CoManagedConversationAttachment[]> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), comment = reference(inputComment);
-  return withComment(db, actor, resource, comment, 'read', async context => {
-    const rows = await visibleAttachmentQuery(context).where('status', 'ready').forShare().orderBy('created_at').orderBy('attachment_id');
-    return rows.map(row => summary(row, context.audience));
-  });
+  return withComment(db, actor, resource, comment, 'read', listPublishedCoManagedAttachments);
 }
 export async function downloadCoManagedConversationAttachment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
   input: CoManagedAttachmentReference, download: (path: string) => Promise<Uint8Array>): Promise<{ attachment: CoManagedConversationAttachment; content: Uint8Array }> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource);
   if (!input || Object.keys(input).some(key => !['storeTenant', 'threadId', 'commentId', 'attachmentId'].includes(key)) || !isCoManagedUuid(input.attachmentId)) deny();
   const attachmentId = input.attachmentId.toLowerCase(), comment = reference({ storeTenant: input.storeTenant, threadId: input.threadId, commentId: input.commentId });
-  return withComment(db, actor, resource, comment, 'read', async context => {
-    const row = await visibleAttachmentQuery(context).where({ attachment_id: attachmentId, status: 'ready' }).forShare().first();
-    if (!row || row.storage_path !== `co-management/${comment.storeTenant}/${attachmentId}`) deny();
-    const content = await download(row.storage_path);
-    if (content.length !== row.file_size || createHash('sha256').update(content).digest('hex') !== row.content_hash) throw new CoManagedAttachmentError('ATTACHMENT_CONTENT_MISMATCH');
-    return { attachment: summary(row, context.audience), content };
-  });
+  return withComment(db, actor, resource, comment, 'read', context => readPublishedCoManagedAttachment(context, attachmentId, download));
+}
+
+/** Internal engines, called inside retained technician or requester admission.
+ * They do not authenticate a request or accept browser-supplied contexts. */
+export async function listPublishedCoManagedAttachments(context: CoManagedAttachmentReadContext): Promise<CoManagedConversationAttachment[]> {
+  if (!context.trx.isTransaction) deny();
+  const rows = await visibleAttachmentQuery(context).where('status', 'ready').forShare().orderBy('created_at').orderBy('attachment_id');
+  return rows.map((row: any) => summary(row, context.audience));
+}
+export async function readPublishedCoManagedAttachment(context: CoManagedAttachmentReadContext, attachmentId: string,
+  download: (path: string) => Promise<Uint8Array>): Promise<{ attachment: CoManagedConversationAttachment; content: Uint8Array }> {
+  if (!context.trx.isTransaction || !isCoManagedUuid(attachmentId)) deny();
+  const row = await visibleAttachmentQuery(context).where({ attachment_id: attachmentId.toLowerCase(), status: 'ready' }).forShare().first();
+  if (!row || row.storage_path !== `co-management/${context.comment.storeTenant}/${attachmentId.toLowerCase()}`) deny();
+  const content = await download(row.storage_path);
+  if (content.length !== row.file_size || createHash('sha256').update(content).digest('hex') !== row.content_hash) throw new CoManagedAttachmentError('ATTACHMENT_CONTENT_MISMATCH');
+  return { attachment: summary(row, context.audience), content };
 }
 
 /** UI hint only. Upload repeats this complete authority check and does not trust
