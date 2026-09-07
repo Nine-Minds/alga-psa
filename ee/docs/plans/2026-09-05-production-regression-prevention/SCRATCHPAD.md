@@ -1454,3 +1454,15 @@
 - Independently reconciled raw Playwright collection/results from enterprise artifact 10013131758, run 34104450316, merge revision 7c52ed7d53ade3306f2ec7fae2971bd5868efaf2. Full counts reproduce 24 pass / one failed invoice fixture / zero missing/skipped/flaky.
 - QBO and Xero each passed on the first attempt (32.991s and 29.135s). Inspected test bodies against R6: real OAuth and UI mapping, export batch, vendor invoice readback, selected realm/organisation identity, injected 500, expired token refresh, successful recovery and no duplicate invoice. QBO also verifies external edit/CDC drift and stale SyncToken re-export recovery.
 - Marked F033/F035 and T027/T029 implemented with evidence/accounting-native-browser.json. Xero selection follows its supported first-connected-organisation behavior, explicitly documented in the evidence. No claim of a separate Alga organisation picker or live-provider parity. F036 aggregate enforcement/fault-matrix and full browser green remain incomplete.
+
+### 2026-09-07 — Queued repairs published and inventory refreshed
+
+- Prior browser run 34104450316 is terminal. Both API execution/reconciliation steps succeeded; browser failure remains invoice fixture only. Published all queued commits through 9180b2a9c85aa46a26f6151c1d7053acd73ccaf6 and verified PR head. New browser run 34109001526, Temporal 34109001598, unit 34109001912, integration 34109001846 are live.
+- Refreshed partial repository inventory using native browser/mobile plus fresh Temporal runner collections: 3944 candidates, 110 unmatched. No blanket exclusions introduced. Evidence: evidence/remaining-inventory.json. This mixes revisions and proves remaining assignment gaps, not aggregate readiness.
+- Temporary Playwright fixture diagnostic had cleared root test-results; fresh Temporal list commands recovered collections into /tmp. Earlier execution summaries remain committed; native rerun will provide retained raw artifacts.
+
+### 2026-09-07 — Product upgrade CLI is a required behavioral gate
+
+- Existing four CLI cases execute the actual child process and verify refusal of conflicting modes, missing explicit mode and malformed tenant UUID, plus help without DB access. Focused run passed four cases; added the file to readiness include and independent discovery.
+- Exact readiness runner session 55615 exited zero: 26 files / 192 tests with zero skips/missing identities. Evidence: evidence/temporal-upgrade-cli-readiness.json. Native verification pending next publication.
+- Corrected prior inventory wording: 110 files were unmatched in mixed-revision collection artifacts, not necessarily unassigned in current code. The i18n baseline already matches current Node tooling selection; current CI artifacts must close stale collection gaps before claiming remaining ownership counts.

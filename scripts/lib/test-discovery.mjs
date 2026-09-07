@@ -45,6 +45,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|tenant-creation-appliance|sla-ticket-workflow|managed-email-domain-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {
+    if (file === 'ee/temporal-workflows/src/scripts/__tests__/upgrade-tenant-product.test.ts') return true;
     return /^ee\/temporal-workflows\/src\/config\/__tests__\/.*\.test\.ts$/.test(file)
       || file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts'
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/workflow-runtime-v2-(interpreter|run-workflow|simulator-contract)\.test\.ts$/.test(file)
