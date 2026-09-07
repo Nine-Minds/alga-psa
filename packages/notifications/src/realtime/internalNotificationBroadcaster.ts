@@ -6,6 +6,7 @@ import {
   buildNotificationDeliveredPayload,
   buildNotificationFailedPayload,
 } from '@alga-psa/workflow-streams';
+import { deliverCurrentNotification } from '../lib/notificationDelivery';
 import { deliverTeamsNotification } from './teamsNotificationDelivery';
 
 /**
@@ -104,10 +105,15 @@ async function broadcastInAppNotification(notification: InternalNotification): P
 
 export async function broadcastNotification(notification: InternalNotification): Promise<void> {
   const results = await Promise.allSettled([
-    broadcastInAppNotification(notification),
+    deliverCurrentNotification(notification, broadcastInAppNotification),
     deliverTeamsNotification(notification),
   ]);
 
+  if (results[0]?.status === 'rejected') {
+    logger.warn('[NotificationBroadcaster] In-app notification authorization or delivery failed', {
+      notificationId: notification.internal_notification_id, error: normalizeErrorMessage(results[0].reason),
+    });
+  }
   if (results[1]?.status === 'rejected') {
     logger.warn('[NotificationBroadcaster] Teams notification delivery crashed unexpectedly', {
       notificationId: notification.internal_notification_id,

@@ -10,7 +10,7 @@ export async function initializeEventBus(): Promise<void> {
 
     // Register push notification hook for internal notifications
     registerInternalNotificationHook((notification) => {
-      triggerPushForNotification(notification).catch((err) =>
+      return triggerPushForNotification(notification).catch((err) =>
         logger.error('[Push] Failed to send push notification', { err, template: notification.template_name }),
       );
     });

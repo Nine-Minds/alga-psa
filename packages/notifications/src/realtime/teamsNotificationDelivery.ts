@@ -1,3 +1,4 @@
+import { deliverCurrentNotification } from '../lib/notificationDelivery';
 import logger from '@alga-psa/core/logger';
 import { isEnterprise } from '@alga-psa/core/features';
 import type { InternalNotification } from '../types/internalNotification';
@@ -69,5 +70,6 @@ export async function deliverTeamsNotification(
     return { status: 'skipped', reason: 'delivery_unavailable' };
   }
 
-  return seam.deliverTeamsNotificationImpl(notification);
+  const deliver = seam.deliverTeamsNotificationImpl;
+  return await deliverCurrentNotification(notification, deliver) ?? { status: 'skipped', reason: 'notification_no_longer_visible' };
 }

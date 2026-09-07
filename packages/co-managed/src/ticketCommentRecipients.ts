@@ -28,7 +28,7 @@ async function routingReference(db: Knex, resource: CoManagedSharedResource, spo
 /** Routing is a candidate selector, never permission. Recheck it while the
  * recipient's resource authority is held so a queued event cannot notify an
  * agent removed from the assignment/team between discovery and delivery. */
-async function isCurrentAssignee(context: CoManagedNotificationRecipientContext): Promise<boolean> {
+export async function isCoManagedNotificationAssignee(context: CoManagedNotificationRecipientContext): Promise<boolean> {
   const reference = await routingReference(context.trx, context.resource, context.actor.tenant, true);
   if (!reference) return false;
   if (reference.assigned_to === context.actor.userId) return true;
@@ -64,7 +64,7 @@ export async function deliverCoManagedTicketCommentToAssignees(db: Knex, input: 
     try {
       await withCoManagedTicketCommentNotification(db, { kind: 'notification_recipient', tenant: relationship.sponsor_tenant, userId: candidate.user_id },
         resource, request.commentId, async (context, message) => {
-          if (!await isCurrentAssignee(context)) return;
+          if (!await isCoManagedNotificationAssignee(context)) return;
           const deliveryKey = `co-managed-comment:${request.ownerTenant}:${request.ticketId}:${request.commentId}:${request.eventId}:${request.channel}:${context.actor.tenant}:${context.actor.userId}`;
           await deliver(context, message, deliveryKey);
         });

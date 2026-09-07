@@ -1630,7 +1630,7 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
     // in a promise we can await after the delivery resolves.
     let hookPromise: Promise<void> = Promise.resolve();
     hooksModule.registerInternalNotificationHook((notification: any) => {
-      hookPromise = (async () => {
+      return hookPromise = (async () => {
         // A separate connection observes the notification row only because the
         // transaction committed BEFORE the after-commit hooks flushed — proving the
         // effects fire after the commit, never inside the open transaction.
@@ -1656,6 +1656,8 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
     const event = buildEvent({ eventId, eventType: 'TICKET_CLOSED', tenantId, ticketId, actorUserId, commentId });
 
     await subscriber.internalNotificationSubscriberTestHarness.handleInternalNotificationEvent(event);
+    // Authorization now performs asynchronous reads before invoking a hook.
+    await vi.waitFor(() => expect(effectHookSpy).toHaveBeenCalledTimes(1));
     await hookPromise;
 
     expect(effectPublishWorkflowEventSpy).toHaveBeenCalledTimes(1);
@@ -1693,6 +1695,8 @@ describeDb('inbound outbox transactional delivery against Postgres', () => {
     expect(afterFirst.length).toBe(1);
     const delivered = await getDelivery(eventId, INBOUND_OUTBOX_NOTIFICATION_CONSUMER);
     expect(delivered?.status).toBe('delivered');
+
+    await vi.waitFor(() => expect(effectHookSpy).toHaveBeenCalledTimes(1));
 
     // Two redeliveries of the same stable outbox event id: the reservation skips,
     // the effect is NOT re-produced, and the external effects do NOT re-fire.

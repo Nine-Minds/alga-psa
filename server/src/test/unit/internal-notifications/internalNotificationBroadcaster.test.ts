@@ -1,3 +1,8 @@
+// Native transport/transaction tests; real receipt authorization is exercised in the co-managed PostgreSQL suite.
+vi.mock('@alga-psa/notifications/lib/notificationDelivery', () => ({
+  deliverCurrentNotification: async (notification: unknown, deliver: (notification: unknown) => Promise<unknown>) => deliver(notification),
+}));
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InternalNotification } from '@alga-psa/notifications';
 

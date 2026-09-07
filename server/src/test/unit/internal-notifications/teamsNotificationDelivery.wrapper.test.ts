@@ -1,3 +1,7 @@
+// Native transport/transaction tests; real receipt authorization is exercised in the co-managed PostgreSQL suite.
+const deliveryGate = vi.hoisted(() => vi.fn());
+vi.mock('@alga-psa/notifications/lib/notificationDelivery', () => ({ deliverCurrentNotification: deliveryGate }));
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { InternalNotification } from '@alga-psa/notifications';
 
@@ -64,6 +68,7 @@ function makeNotification(overrides: Partial<InternalNotification> = {}): Intern
 describe('teamsNotificationDelivery shared delegator (T018/T019)', () => {
   beforeEach(() => {
     vi.resetModules();
+    deliveryGate.mockReset().mockImplementation(async (notification, deliver) => deliver(notification));
     hoisted.isEnterprise.value = true;
     hoisted.seamHasImpl.value = true;
     hoisted.seamFactoryCalls.count = 0;
@@ -129,4 +134,14 @@ describe('teamsNotificationDelivery shared delegator (T018/T019)', () => {
     expect(source).not.toContain('teams_integrations');
     expect(source).not.toContain('login.microsoftonline.com');
   });
+});
+
+it('does not enter the Teams seam when current notification authority is lost', async () => {
+  vi.resetModules();
+  hoisted.isEnterprise.value = true; hoisted.seamHasImpl.value = true;
+  deliveryGate.mockReset().mockResolvedValue(null);
+  hoisted.deliverTeamsNotificationImplMock.mockClear();
+  const { deliverTeamsNotification } = await import(SHARED_TEAMS_NOTIFICATION_MODULE);
+  expect(await deliverTeamsNotification(makeNotification())).toEqual({ status: 'skipped', reason: 'notification_no_longer_visible' });
+  expect(hoisted.deliverTeamsNotificationImplMock).not.toHaveBeenCalled();
 });

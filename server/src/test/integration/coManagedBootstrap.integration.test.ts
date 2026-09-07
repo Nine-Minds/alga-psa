@@ -5663,3 +5663,126 @@ it('does not let removed notification metadata bypass receipt-based inbox classi
   expect(await actions.markAsReadAction(principal.tenant, principal.userId, notificationId)).toHaveProperty('actionError');
   expect((await sponsor.table('internal_notifications').where('internal_notification_id', notificationId).first()).is_read).toBe(false);
 }));
+
+it('revalidates queued shared deliveries and replaces cached content while retaining qualified routing', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, customer, persist, event,
+}) => {
+  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  await persist(db, event);
+  const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Fresh delivery content' });
+  const deliver = vi.fn(async (current: any) => current);
+  const current = await withNotificationDelivery(db, { ...queued, title: 'QUEUED SECRET', message: 'QUEUED SECRET', link: '/msp/tickets/wrong', metadata: null }, deliver);
+  expect(current?.message).toContain('Fresh delivery content');
+  expect(JSON.stringify(current)).not.toContain('QUEUED SECRET');
+  expect(current?.metadata.coManaged.resource).toEqual(resource);
+  expect(current?.link).toContain(`/msp/co-management/tickets/${resource.tenant}/${resource.relationshipId}/${resource.id}`);
+  expect(current?.metadata).not.toHaveProperty('ticketId');
+  // A background delivery does not borrow or require the browser's session.
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+  expect(await withNotificationDelivery(db, queued, deliver)).not.toBeNull();
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  deliver.mockClear();
+  expect(await withNotificationDelivery(db, queued, deliver)).toBeNull(); expect(deliver).not.toHaveBeenCalled();
+}));
+
+it('suppresses receipt-backed queued delivery with stripped metadata, wrong recipients or changed audiences', async () => withInAppCommentFixture(async ({
+  principal, sponsor, customer, eligibleIds, persist, event,
+}) => {
+  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  await persist(db, event);
+  const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  const deliver = vi.fn(async () => true);
+  await sponsor.table('internal_notifications').where('internal_notification_id', queued.internal_notification_id).update({ metadata: null });
+  expect(await withNotificationDelivery(db, { ...queued, metadata: null }, deliver)).toBeNull();
+  await sponsor.table('internal_notifications').where('internal_notification_id', queued.internal_notification_id).update({ metadata: JSON.stringify(queued.metadata) });
+  expect(await withNotificationDelivery(db, { ...queued, user_id: eligibleIds.find(id => id !== principal.userId) }, deliver)).toBeNull();
+  await customer.table('comment_threads').where('thread_id', queued.metadata.coManaged.threadId).update({ collaboration_audience: 'organization_private' });
+  expect(await withNotificationDelivery(db, queued, deliver)).toBeNull(); expect(deliver).not.toHaveBeenCalled();
+}));
+
+it('holds shared source authority until asynchronous notification delivery finishes', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, customer, persist, event,
+}) => {
+  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  await persist(db, event);
+  const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  let release!: () => void, started!: () => void;
+  const paused = new Promise<void>(resolve => { release = resolve; });
+  const entered = new Promise<void>(resolve => { started = resolve; });
+  const attempt = withNotificationDelivery(db, queued, async () => { started(); await paused; return true; });
+  await Promise.race([entered, attempt.then(() => { throw new Error('Delivery never started'); })]);
+  try {
+    // NOWAIT proves the actual canonical resource lock is retained throughout
+    // the external callback, without relying on scheduler timing or sleeps.
+    await expect(db.transaction(async trx => {
+      await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).forUpdate().noWait().first();
+    })).rejects.toMatchObject({ code: '55P03' });
+  } finally { release(); }
+  expect(await attempt).toBe(true);
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  expect(await withNotificationDelivery(db, queued, async () => true)).toBeNull();
+}));
+
+it('delivers current ordinary notification rows and suppresses deleted or forged shared rows', async () => withInAppCommentFixture(async ({
+  principal, sponsor, persist, event,
+}) => {
+  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  await persist(db, event);
+  const shared = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  const id = randomUUID();
+  const [ordinary] = await sponsor.table('internal_notifications').insert({ ...shared, internal_notification_id: id, metadata: null, title: 'Native current', message: 'Native current', link: '/msp/tickets/native' }).returning('*');
+  expect(await withNotificationDelivery(db, { ...ordinary, message: 'Stale native' }, async row => row.message)).toBe('Native current');
+  expect(await withNotificationDelivery(db, { ...ordinary, metadata: { coManaged: {} } }, async () => true)).toBeNull();
+  await sponsor.table('internal_notifications').where('internal_notification_id', id).update({ metadata: { coManaged: {} } });
+  expect(await withNotificationDelivery(db, ordinary, async () => true)).toBeNull();
+  await sponsor.table('internal_notifications').where('internal_notification_id', id).update({ deleted_at: new Date() });
+  expect(await withNotificationDelivery(db, ordinary, async () => true)).toBeNull();
+}));
+
+it('rechecks routing for queued delivery while preserving an authorized historical inbox read', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, persist, event,
+}) => {
+  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  const { readCoManagedStoredCommentNotification } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  await persist(db, event);
+  const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  await sponsor.table('co_managed_ticket_references').where({ customer_tenant: resource.tenant, ticket_id: resource.id }).update({ assigned_to: null, assigned_team_id: null });
+  const deliver = vi.fn(async () => true);
+  expect(await withNotificationDelivery(db, queued, deliver)).toBeNull(); expect(deliver).not.toHaveBeenCalled();
+  expect(await readCoManagedStoredCommentNotification(db, principal, queued.internal_notification_id)).not.toBeNull();
+}));
+
+it('guards the actual Redis broadcaster and asynchronous post-creation hooks with current shared authority', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, customer, persist, event,
+}) => {
+  const dbModule = await import('@alga-psa/db');
+  const eventBus = await import('@alga-psa/event-bus');
+  const teams = await import('../../../../packages/notifications/src/realtime/teamsNotificationDelivery');
+  const { broadcastNotification } = await import('../../../../packages/notifications/src/realtime/internalNotificationBroadcaster');
+  const { registerInternalNotificationHook, runPostCreationHooks } = await import('../../../../packages/notifications/src/actions/internal-notification-actions/notificationHooks');
+  await persist(db, event);
+  const queued = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  const publish = vi.fn(async (_channel: string, _payload: string) => 1), observed: any[] = [];
+  const spies = [vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db),
+    vi.spyOn(eventBus, 'getRedisClient').mockResolvedValue({ publish, disconnect: async () => {} } as any),
+    vi.spyOn(teams, 'deliverTeamsNotification').mockResolvedValue({ status: 'skipped', reason: 'test_transport' })];
+  registerInternalNotificationHook(async current => {
+    if (current.internal_notification_id !== queued.internal_notification_id) return;
+    await expect(db.transaction(async trx => {
+      await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).forUpdate().noWait().first();
+    })).rejects.toMatchObject({ code: '55P03' });
+    observed.push(current);
+  });
+  try {
+    await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Current transport body' });
+    await broadcastNotification(queued); await runPostCreationHooks(queued);
+    expect(publish).toHaveBeenCalledTimes(1);
+    const sent = JSON.parse(publish.mock.calls[0][1] as string).notification;
+    expect(sent.message).toContain('Current transport body'); expect(sent.metadata.coManaged.resource).toEqual(resource);
+    expect(observed).toHaveLength(1); expect(observed[0].message).toContain('Current transport body');
+    await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+    await broadcastNotification(queued); await runPostCreationHooks(queued);
+    expect(publish).toHaveBeenCalledTimes(1); expect(observed).toHaveLength(1);
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
+}));
