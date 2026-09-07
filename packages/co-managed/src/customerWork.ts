@@ -31,6 +31,7 @@ export async function withCoManagedCustomerTicket<T>(db: Knex, inputActor: CoMan
     const ticket = await ticketQuery.first('ticket_id', 'client_id', 'board_id', 'entered_by', 'assigned_to', 'assigned_team_id');
     if (!ticket) throw new CoManagedSharedWorkError();
     // Additional time-entry resources do not confer ticket access.
+    // LEVERAGE: pattern customer-ticket-policy-record — local commands and recipient reads use the same owner projection with distinct lifecycle admission.
     const record: AuthorizationRecord = { id: ticket.ticket_id, clientId: ticket.client_id, boardId: ticket.board_id,
       ownerUserId: ticket.entered_by, assignedUserIds: ticket.assigned_to ? [ticket.assigned_to] : [],
       teamIds: ticket.assigned_team_id ? [ticket.assigned_team_id] : [] };

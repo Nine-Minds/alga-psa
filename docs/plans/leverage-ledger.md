@@ -143,3 +143,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: TenantEmailService rate limiting, sendEventEmail outcome handling, upcoming co-managed recipient delivery queue.
 - Gate: high stale-content disclosure cost and a stable existing send boundary; ACT / bounded opt-in engine revision.
 - Status: revised (2026-09-07). Explicit caller-owned retry returns rate-limit metadata without enqueueing rendered content. A result-returning event-email entry point distinguishes sent, queued and skipped outcomes; the existing void entry point preserves its contract and queued reply tokens. The co-managed recipient queue remains the next integration step.
+
+## Customer-owned notification content — friction
+- What: the existing comment notification reader binds current content loading to an MSP trust admission; reusing that admission for customer technicians would make ownership depend on a live sponsor and omit customer-private history.
+- Where: ticketCommentNotification.ts and customerCommentNotification.ts.
+- Gate: high disclosure/lifecycle cost, two actual identity boundaries, stable locked source/audience/redaction rules; ACT / bounded extraction of the internal content reader.
+- Status: revised (2026-09-07). Both callers use the same retained ticket/thread/comment content reader. MSP admission still requires current trust and permits only requester/shared-IT content. The new customer recipient boundary applies local RBAC/bundle policy, permits customer-owned private content, and remains independent of sponsorship after departure or PSA upgrade. It grants no session or mutation authority. Routing/preferences and durable customer delivery remain separate integration work.

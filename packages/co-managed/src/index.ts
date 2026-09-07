@@ -33,3 +33,4 @@ export { consumeCoManagedConversationEvent, recoverCoManagedEventConsumers, coMa
 export type { CoManagedEventConsumer } from './conversationEventConsumers';
 
 export * from './commentEmailDeliveries';
+export * from './customerCommentNotification';
