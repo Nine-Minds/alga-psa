@@ -1142,3 +1142,8 @@
 - Legacy email integration tests rely on removed synchronous execution and snapshots. Before porting, found three existing current-engine suites missing from temporal-readiness: workflow-runtime-v2-interpreter, run-workflow and simulator-contract. Added them to positive candidate assignment and runner collection.
 - Actual readiness runner collected/executed six files and 60 tests successfully, zero skips/failures. These use activity/transport doubles and do not establish live Temporal persistence or replace any of the 47 legacy required skips. Evidence: temporal-engine-readiness.json.
 - New published candidate c5d608 is live: integration run 34087162034, browser 34087162072, unit 34087162013, types 34087162026, Node 34087162007. Keep subsequent local commits unpushed while this execution is live.
+
+### Email definition port: current interpreter routing — 2026-09-07
+- Added six cases executing the shipped inbound-email JSON through the current Temporal workflow loop and real registered node handlers: existing reply, missing defaults, new ticket/acknowledgement, optional attachment failure, optional acknowledgement failure, and required-action failure/manual-resolution path.
+- Actual readiness runner passed six files/66 tests, zero failures/skips. External action outputs, persistence projections and Temporal transport remain mocked; this establishes branch and node behavior only. Evidence: temporal-email-definition-routing.json.
+- The 29 legacy email tests and total 47 skipped integration requirements remain open. Input mapping/idempotency, real persisted action effects, live Temporal execution and explicit requirement mapping must be completed before claiming the port finished or removing skips.
