@@ -45,6 +45,7 @@ export default defineConfig({
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       // Workspace packages resolved from source — their package.json entries
       // point at dist/, which is not built in test environments.
+      { find: /^@alga-psa\/email\/providerConfig$/, replacement: path.resolve(__dirname, '../../packages/email/src/providerConfig.ts') },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../packages/workflows/src/index.ts') },
       { find: /^@alga-psa\/workflows\/runtime$/, replacement: path.resolve(__dirname, '../packages/workflows/src/runtime/index.ts') },
       { find: /^@alga-psa\/workflows\/persistence$/, replacement: path.resolve(__dirname, '../packages/workflows/src/persistence/index.ts') },

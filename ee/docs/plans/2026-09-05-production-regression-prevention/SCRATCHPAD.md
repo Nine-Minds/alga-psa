@@ -1593,3 +1593,9 @@
 - EventBus now leases a Redis isolation-pool connection for blocking reads and tracks it for explicit interruption before hard-timeout reset or close. Writes retain the command connection. Existing pending/poison/hard-timeout doubles implement the lease callback.
 - Real regression passes publication/delivery, actively blocked close under2s, and recreation/repeated delivery (2.45s total). Calendar/search real Redis regression also passes; four existing timeout/pending/poison tests pass; package tsc --noEmit passes. Synthetic prefix keys and processed markers cleaned.
 - New file is independently discovered by the infrastructure runner; CI config already supplies REAL_REDIS=1. Native verification and exact causality of earlier API timeout remain pending. Preserve current browser run before publishing this follow-up.
+
+### 2026-09-07 — Native Temporal database collection repaired
+
+- Published a02bfb4136 Citus job101714987332 failed collecting the new Temporal database lane: @alga-psa/email/providerConfig resolves to unbuilt dist in clean CI. Prior Citus runtime lane passed all8 workflow/invoice tests.
+- Added exact providerConfig source alias to the shared Temporal Vitest config, consistent with existing workspace aliases. Real provider defaults remain executed, not mocked. All11 database tests pass against owned invoice_citus_82cc (7.33s). Native verification pending.
+- Published Temporal run34113539264: engine job101714986881, readiness101714987097 and aggregate101715882515 all completed success. Docker parity legitimately skipped on PR. Native browser run34113539423 still builds CE/EE images. Keep local bus fix and alias follow-up queued until browser run terminal.
