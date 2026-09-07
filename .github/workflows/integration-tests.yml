@@ -387,19 +387,25 @@ jobs:
   infrastructure-complete:
     name: Infrastructure execution complete
     needs: [check-changes, infrastructure-tests]
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
       INFRA_JOB_RESULT: ${{ needs.infrastructure-tests.result }}
+      INFRA_SELECTION_RESULT: ${{ needs.check-changes.result }}
+      INFRA_EVENT: ${{ github.event_name }}
+      TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
       INFRA_MODE: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'full' || 'tier1' }}
       INFRA_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '3' || '1' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
       - name: Download all infrastructure shards
+        if: always() && needs.infrastructure-tests.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
           pattern: infrastructure-shard-*
@@ -416,7 +422,7 @@ jobs:
           if-no-files-found: error
           retention-days: 7
       - name: Record full infrastructure metrics to Google Sheet
-        if: always() && env.INFRA_MODE == 'full'
+        if: always() && env.INFRA_MODE == 'full' && needs.infrastructure-tests.result != 'skipped'
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:

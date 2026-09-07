@@ -7,6 +7,7 @@ import { reconcileTestShards } from './lib/test-sharding.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { repositoryTestFiles } from './lib/test-discovery.mjs';
 import { requiredInfrastructureFiles } from './lib/infrastructure-selection.mjs';
+import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const input = path.resolve(root, process.argv[2] || 'test-results/infrastructure-shards');
@@ -29,6 +30,23 @@ try {
   revision = source.revision;
   if (!process.env.GITHUB_SHA || revision !== process.env.GITHUB_SHA || source.dirty) {
     throw new Error('Infrastructure aggregate checkout is dirty or differs from the candidate');
+  }
+  const selectionResult = process.env.INFRA_SELECTION_RESULT;
+  if (selectionResult !== 'success' && !(process.env.INFRA_EVENT === 'schedule' && selectionResult === 'skipped')) {
+    throw new Error(`Infrastructure change selection did not succeed: ${selectionResult || 'missing'}`);
+  }
+  if (!['full', 'tier1'].includes(mode)) throw new Error('Invalid infrastructure coverage mode');
+  const decision = selectIntegration(readChangedFiles({ cwd: root, base: process.env.TIER1_BASE_SHA?.trim(), head: revision }));
+  if (mode !== 'full' && (decision.full || process.env.INFRA_EVENT === 'schedule')) {
+    throw new Error('Independent change evidence requires full infrastructure coverage');
+  }
+  if (mode === 'tier1' && !decision.shouldRun && jobResult === 'skipped') {
+    const verdict = { schemaVersion: 1, suite: 'infrastructure', revision, mode, jobResult,
+      status: 'not-applicable', reason: decision.reason, source, expectedFiles: [], executedFiles: [], failures: [] };
+    writeFileSync(path.join(output, 'aggregate.json'), JSON.stringify(verdict, null, 2) + '\n');
+    writeFileSync(path.join(output, 'results.json'), JSON.stringify({ success: true,
+      executionCompleteness: 'not-applicable', testResults: [], reason: decision.reason }, null, 2) + '\n');
+    process.exit(0);
   }
   requiredFiles = requiredInfrastructureFiles(
     repositoryTestFiles(root).filter(file => file.startsWith('server/src/test/infrastructure/')), mode);

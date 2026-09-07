@@ -16,7 +16,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   };
   for (const file of ['scripts/run-infrastructure-tests.mjs', 'scripts/verify-infrastructure-shards.mjs',
     'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
-    'scripts/lib/infrastructure-selection.mjs']) {
+    'scripts/lib/infrastructure-selection.mjs', 'scripts/lib/integration-selection.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules/\ntest-results/\n');
@@ -31,7 +31,9 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   git('add', '.'); git('commit', '-qm', 'fixture');
   const run = (script, index = 1, mode = 'full', total = 3, environment = {}) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
-    env: { ...process.env, CI: '1', GITHUB_SHA: git('rev-parse', 'HEAD').trim(), INFRA_JOB_RESULT: 'success', INFRA_MODE: mode, INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total), ...environment },
+    env: { ...process.env, CI: '1', GITHUB_SHA: git('rev-parse', 'HEAD').trim(), TIER1_BASE_SHA: git('rev-parse', 'HEAD').trim(),
+      INFRA_SELECTION_RESULT: 'success', INFRA_EVENT: 'pull_request', INFRA_JOB_RESULT: 'success', INFRA_MODE: mode,
+      INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total), ...environment },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
   for (const index of [1, 2, 3]) {
@@ -47,6 +49,8 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
   assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, 6);
   assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'complete');
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'full', 3,
+    { INFRA_EVENT: 'schedule', INFRA_SELECTION_RESULT: 'skipped' }).status, 0);
 
   const rawFiles = ['collected', 'collected-tests', 'results'];
   const originals = rawFiles.map(file => read(`test-results/infrastructure-shards/shard-1/${file}.json`));
@@ -110,4 +114,23 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   write('server/src/test/infrastructure/omitted.spec.ts', "test('new test', () => expect(true).toBe(true));\n");
   assert.equal(run('run-infrastructure-tests.mjs', 1, 'tier1', 1).status, 1);
   assert.deepEqual(read('test-results/infrastructure/discovery.json').unmatched, ['server/src/test/infrastructure/omitted.spec.ts']);
+  rmSync(path.join(root, 'server/src/test/infrastructure/omitted.spec.ts'));
+  const beforeDocs = git('rev-parse', 'HEAD').trim();
+  write('README.md', 'Documentation-only change.\n');
+  git('add', '.'); git('commit', '-qm', 'docs');
+  const skipped = { TIER1_BASE_SHA: beforeDocs, INFRA_JOB_RESULT: 'skipped' };
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1, skipped).status, 0);
+  assert.equal(read('test-results/infrastructure/aggregate.json').status, 'not-applicable');
+  assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'not-applicable');
+  for (const status of ['failure', 'cancelled', 'skipped', '']) {
+    assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1,
+      { ...skipped, INFRA_SELECTION_RESULT: status }).status, 1);
+  }
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1, { ...skipped, TIER1_BASE_SHA: '' }).status, 1);
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'full', 1, skipped).status, 1);
+  const beforeRuntime = git('rev-parse', 'HEAD').trim();
+  write('server/src/runtime.ts', 'export const enabled = true;\n');
+  git('add', '.'); git('commit', '-qm', 'runtime change');
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1,
+    { ...skipped, TIER1_BASE_SHA: beforeRuntime }).status, 1);
 });
