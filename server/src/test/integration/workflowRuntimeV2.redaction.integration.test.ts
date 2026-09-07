@@ -84,9 +84,9 @@ afterAll(async () => {
 // these tests assert on was deleted (ea2641d317, 6c08dd4305). Nothing
 // server-side writes workflow_run_snapshots/workflow_action_invocations
 // anymore — those are produced by the Temporal interpreter and its activities
-// (ee/temporal-workflows), and the run-studio read path deliberately passes
-// stored secretRef values through (storage-time redaction is the guarantee), so
-// seeding rows here would fake the behavior rather than test it. Redaction
+// (ee/temporal-workflows). Run-studio reads now redact secret references, but
+// seeding rows here would still bypass the storage-time behavior under test.
+// Invocation input storage is covered separately; output and snapshot redaction
 // coverage needs a port to ee/temporal-workflows — tracked as a follow-up, not
 // a lean edit (same adjudication as workflowRuntimeV2.email).
 describe.skip('workflow runtime v2 redaction + snapshot integration tests', () => {

@@ -132,7 +132,7 @@ vi.mock('@alga-psa/workflows/persistence', () => {
   };
 });
 
-vi.mock('@alga-psa/workflows/runtime', () => ({
+vi.mock('@alga-psa/workflows/runtime', async () => ({
   workflowDefinitionSchema: z.record(z.any()),
   initializeWorkflowRuntimeV2: vi.fn(),
   getActionRegistryV2: vi.fn(() => ({ list: () => [] })),
@@ -149,7 +149,7 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
         : { type: 'object', properties: { ticketId: { type: 'string' } } },
     listRefs: () => ['payload.Workflow.v1', 'payload.Event.v1']
   })),
-  applyRedactions: vi.fn((input) => input),
+  applyRedactions: (await import('../../../../../shared/workflow/runtime/utils/redactionUtils')).applyRedactions,
   isWorkflowEventTrigger: vi.fn((trigger) => trigger?.type === 'event'),
   isWorkflowOneTimeScheduleTrigger: vi.fn(() => false),
   isWorkflowRecurringScheduleTrigger: vi.fn(() => false),
@@ -187,7 +187,7 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
   didYouMean: vi.fn(() => [])
 }));
 
-import { listWorkflowRunStepsAction, simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
+import { exportWorkflowRunDetailAction, listWorkflowRunStepsAction, simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
 
 const definition = {
   id: 'wf-1',
@@ -343,6 +343,24 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
       message: 'payload synthesized from schema; no real event of this type has been validated against this definition — consider useLatestEvent: true'
     });
     expect(result.replayedEvent).toBeNull();
+  });
+
+  it.each([
+    ['run details', listWorkflowRunStepsAction],
+    ['run export', exportWorkflowRunDetailAction],
+  ] as const)('redacts invocation secrets for managers in %s without mutating replay output', async (_name, action) => {
+    const output = { secretRef: 'private-reference', credentials: [{ $secret: 'PRIVATE_KEY' }], apiKey: 'private-value', ticketId: 'ticket-1' };
+    fixture.invocations = [{ invocation_id: 'invocation-1', input_json: output, output_json: output, error_json: { token: 'private-error-token' } }];
+    fixture.snapshots = [{ snapshot_id: 'snapshot-1', envelope_json: { payload: output } }];
+    fixture.run.input_json = output;
+    const result = await action({ runId: 'run-1' }) as any;
+    const expected = { secretRef: '[REDACTED]', credentials: [{ $secret: '[SECRET:REDACTED]' }], apiKey: '[REDACTED]', ticketId: 'ticket-1' };
+    expect(result.invocations[0].input_json).toEqual(expected);
+    expect(result.invocations[0].output_json).toEqual(expected);
+    expect(result.invocations[0].error_json).toEqual({ token: '[REDACTED]' });
+    expect(result.snapshots[0].envelope_json.payload).toEqual(expected);
+    if (action === exportWorkflowRunDetailAction) expect(result.run.input_json).toEqual(expected);
+    expect(output).toEqual({ secretRef: 'private-reference', credentials: [{ $secret: 'PRIVATE_KEY' }], apiKey: 'private-value', ticketId: 'ticket-1' });
   });
 
   it('includes structured invocation error_json in run step details', async () => {
