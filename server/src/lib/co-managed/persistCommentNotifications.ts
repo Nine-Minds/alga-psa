@@ -1,14 +1,16 @@
 import type { Knex } from 'knex';
+import type { InternalNotification } from '@alga-psa/notifications';
 import { tenantDb } from '@alga-psa/db';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { deliverCoManagedTicketCommentToAssignees } from '@alga-psa/co-managed';
 import { createNotificationRowFromTemplate } from '@alga-psa/notifications/actions/internal-notification-actions/createNotificationCore';
 import { coManagedCommentPresentation } from '@alga-psa/notifications/lib/coManagedCommentPresentation';
 
-/** Transactional in-app storage adapter. Caller/worker transport must separately
- * enforce qualified inbox and broadcast access before connecting this adapter
- * to the event subscriber. No realtime, email, Teams, or push effects run here. */
-export async function persistCoManagedCommentNotifications(db: Knex, inputEvent: unknown): Promise<void> {
+/** Transactional in-app storage adapter. The optional server-side callback
+ * registers effects on the owning transaction only for newly created rows.
+ * Completed receipts do not recreate rows or replay creation effects. */
+export async function persistCoManagedCommentNotifications(db: Knex, inputEvent: unknown,
+  onCreated?: (trx: Knex.Transaction, notification: InternalNotification) => void): Promise<void> {
   const event = EventSchemas.TICKET_COMMENT_ADDED.parse(inputEvent);
   if (event.payload.suppressInternalNotifications === true) return;
   await deliverCoManagedTicketCommentToAssignees(db, { ownerTenant: event.payload.tenantId, ticketId: event.payload.ticketId,
@@ -32,5 +34,6 @@ export async function persistCoManagedCommentNotifications(db: Knex, inputEvent:
     await home.table('co_management_in_app_receipts').where('delivery_key', deliveryKey).update({
       outcome: notification ? 'created' : 'disabled', notification_id: notification?.internal_notification_id ?? null,
     });
+    if (notification) onCreated?.(context.trx, notification);
   });
 }

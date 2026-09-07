@@ -623,13 +623,8 @@ describe('internal notification event handling', () => {
           assigned_to: assignedUserId
         }
       ],
-      users: [
-        {
-          user_id: performerId,
-          first_name: 'Taylor',
-          last_name: 'Tech'
-        }
-      ],
+      // Actor names use a batched directory query, which returns an array.
+      users: [[{ user_id: performerId, first_name: 'Taylor', last_name: 'Tech' }]],
       ticket_resources: [[]],
       statuses: [
         {
@@ -710,11 +705,7 @@ describe('internal notification event handling', () => {
       ],
       ticket_resources: [[]],
       users: [
-        {
-          user_id: closedById,
-          first_name: 'Casey',
-          last_name: 'Closer'
-        },
+        [{ user_id: closedById, first_name: 'Casey', last_name: 'Closer' }],
         {
           user_id: contactUserId,
           user_type: 'client'

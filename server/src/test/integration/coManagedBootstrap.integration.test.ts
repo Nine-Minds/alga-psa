@@ -5786,3 +5786,94 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
     expect(publish).toHaveBeenCalledTimes(1); expect(observed).toHaveLength(1);
   } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
 }));
+
+async function withCoManagedNotificationSubscriberFixture(work: (fixture: Parameters<Parameters<typeof withInAppCommentFixture>[0]>[0] & {
+  handle: (event: any) => Promise<void>;
+  broadcast: ReturnType<typeof vi.spyOn>; hooks: ReturnType<typeof vi.spyOn>;
+  observed: { notification: any; committed: boolean }[];
+}) => Promise<void>) {
+  await withInAppCommentFixture(async fixture => {
+    const dbModule = await import('@alga-psa/db');
+    const broadcaster = await import('@alga-psa/notifications/realtime/internalNotificationBroadcaster');
+    const hookModule = await import('@alga-psa/notifications/actions/internal-notification-actions/notificationHooks');
+    const observed: { notification: any; committed: boolean }[] = [];
+    const broadcast = vi.spyOn(broadcaster, 'broadcastNotification').mockImplementation(async notification => {
+      const row = await tenantDb(db, notification.tenant).table('internal_notifications').where('internal_notification_id', notification.internal_notification_id).first();
+      observed.push({ notification, committed: Boolean(row) });
+    });
+    const hooks = vi.spyOn(hookModule, 'runPostCreationHooks').mockResolvedValue(undefined);
+    const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+    try {
+      const { internalNotificationSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+      await work({ ...fixture, handle: internalNotificationSubscriberTestHarness.handleInternalNotificationEvent, broadcast, hooks, observed });
+    } finally { connection.mockRestore(); hooks.mockRestore(); broadcast.mockRestore(); }
+  });
+}
+
+it('connects normal comment events to MSP in-app receipts and emits creation effects only after committed first delivery', async () => withCoManagedNotificationSubscriberFixture(async ({
+  sponsor, customer, eligibleIds, event, handle, broadcast, hooks, observed,
+}) => {
+  await Promise.all([handle(event), handle(event)]);
+  const rows = await sponsor.table('internal_notifications').orderBy('user_id');
+  expect(rows.map(row => row.user_id)).toEqual(eligibleIds);
+  expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+  await vi.waitFor(() => expect(observed).toHaveLength(2));
+  expect(observed.every(item => item.committed)).toBe(true);
+  expect(observed.map(item => item.notification.internal_notification_id).sort()).toEqual(rows.map(row => row.internal_notification_id).sort());
+  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+  // No local assignment/contact is needed for the independent MSP fanout.
+  expect(await customer.table('internal_notifications')).toEqual([]);
+  await handle(event);
+  expect(await sponsor.table('internal_notifications').orderBy('user_id')).toEqual(rows);
+  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+  await handle({ ...event, id: randomUUID(), payload: { ...event.payload, suppressInternalNotifications: true } });
+  expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+}));
+
+it('rolls back MSP notification receipts and effects with a failed inbound outbox completion, then recovers once', async () => withCoManagedNotificationSubscriberFixture(async ({
+  resource, sponsor, customer, event, handle, broadcast, hooks, observed,
+}) => {
+  const inbox = await stagedCoManagedInbox(resource.tenant);
+  const { insertOutboxRow } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const dedupe = await import('@alga-psa/shared/services/email/inboundEmailConsumerDedupe');
+  await insertOutboxRow(db, { tenant: resource.tenant, inbox_id: inbox.inbox_id, outbox_id: event.id,
+    event_key: `co-managed-comment:${event.id}`, event_type: event.eventType, payload: event.payload });
+  const completion = vi.spyOn(dedupe, 'completeInboundOutboxEventForConsumer').mockRejectedValue(new Error('Injected outbox completion failure'));
+  try {
+    await withInboundMode('off', () => handle(event));
+    expect(await sponsor.table('internal_notifications')).toEqual([]); expect(await sponsor.table('co_management_in_app_receipts')).toEqual([]);
+    expect(broadcast).not.toHaveBeenCalled(); expect(hooks).not.toHaveBeenCalled();
+    expect(await customer.table('inbound_email_event_deliveries').where('outbox_id', event.id)).toEqual([
+      expect.objectContaining({ consumer: 'internal-notification', status: 'retryable_failed' }),
+    ]);
+  } finally { completion.mockRestore(); }
+  await customer.table('inbound_email_event_deliveries').where('outbox_id', event.id).update({ next_attempt_at: new Date(0) });
+  await withInboundMode('off', () => handle(event));
+  expect(await sponsor.table('internal_notifications')).toHaveLength(2); expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+  await vi.waitFor(() => expect(observed).toHaveLength(2)); expect(observed.every(item => item.committed)).toBe(true);
+  expect(await customer.table('inbound_email_event_deliveries').where('outbox_id', event.id)).toEqual([
+    expect.objectContaining({ consumer: 'internal-notification', status: 'delivered' }),
+  ]);
+  await withInboundMode('off', () => handle(event));
+  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+}));
+
+it('propagates failed ordinary-event MSP fanout for retry without duplicating recipients already committed', async () => withCoManagedNotificationSubscriberFixture(async ({
+  sponsor, eligibleIds, event, handle, broadcast, observed,
+}) => {
+  const core = await import('@alga-psa/notifications/actions/internal-notification-actions/createNotificationCore');
+  const actual = core.createNotificationRowFromTemplate;
+  const create = vi.spyOn(core, 'createNotificationRowFromTemplate').mockImplementation(async (...args) => {
+    if (args[2] === eligibleIds[0]) throw new Error('Injected template storage failure');
+    return actual(...args);
+  });
+  try {
+    await expect(handle(event)).rejects.toMatchObject({ name: 'AggregateError' });
+    expect(await sponsor.table('internal_notifications')).toEqual([expect.objectContaining({ user_id: eligibleIds[1] })]);
+    expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(1);
+    await vi.waitFor(() => expect(observed).toHaveLength(1));
+  } finally { create.mockRestore(); }
+  await handle(event);
+  expect(await sponsor.table('internal_notifications')).toHaveLength(2); expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+  await vi.waitFor(() => expect(observed).toHaveLength(2)); expect(broadcast).toHaveBeenCalledTimes(2);
+}));

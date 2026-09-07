@@ -1,3 +1,5 @@
+import { persistCoManagedCommentNotifications } from '../../co-managed/persistCommentNotifications';
+import { registerNotificationCreatedEffects } from '@alga-psa/notifications/actions/internal-notification-actions/notificationCreatedEffects';
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
 import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 
@@ -3134,6 +3136,11 @@ async function dispatchInternalNotificationHandlers(
       await handleTicketClosed(validatedEvent as TicketClosedEvent, opts);
       break;
     case 'TICKET_COMMENT_ADDED':
+      // Preserve an inbound outbox's owning transaction. This fanout runs even
+      // when the customer has no local assignee/contact notification recipient.
+      // Failures propagate to the ledger/event bus; receipt replay is idempotent.
+      await persistCoManagedCommentNotifications(opts.db ?? await getConnection(validatedEvent.payload.tenantId),
+        validatedEvent, registerNotificationCreatedEffects);
       await handleTicketCommentAdded(validatedEvent as TicketCommentAddedEvent, opts);
       break;
     case 'TICKET_COMMENT_UPDATED':

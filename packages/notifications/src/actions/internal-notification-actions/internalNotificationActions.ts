@@ -2,7 +2,7 @@
 
 import { coManagedInboxScope } from '../../lib/coManagedInbox';
 
-import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermissionAsync } from '../../lib/authHelpers';
@@ -22,13 +22,12 @@ import {
   UpdateUserInternalNotificationPreferenceRequest
 } from "../../types/internalNotification";
 import {
-  broadcastNotification,
   broadcastNotificationRead,
   broadcastAllNotificationsRead,
   broadcastUnreadCount
 } from "../../realtime/internalNotificationBroadcaster";
 import logger from '@alga-psa/core/logger';
-import { runPostCreationHooks } from './notificationHooks';
+import { registerNotificationCreatedEffects } from './notificationCreatedEffects';
 import {
   createNotificationRowFromTemplate,
   resolveNotificationPriority as resolveNotificationPriorityCore,
@@ -36,7 +35,6 @@ import {
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import {
   buildNotificationReadPayload,
-  buildNotificationSentPayload,
 } from '@alga-psa/workflow-streams';
 import {
   notificationActionErrorFrom,
@@ -112,49 +110,7 @@ export async function createNotificationFromTemplateInternal(
       return null;
     }
 
-    const createdAt = normalizeDateTime(notification?.created_at);
-
-    // External effects must not run inside the open transaction: the enclosing
-    // ledger transaction can still roll back (effect failure, completion-mark
-    // failure, crash before commit) or be replayed by the recovery sweeper,
-    // either of which would orphan or duplicate them. registerAfterCommit
-    // attaches them to the owning transaction and flushes them exactly once
-    // after a successful commit; on rollback the queue is dropped. This gives
-    // at-most-once per committed transaction: a crash after commit but before
-    // the flush loses the fire-and-forget effect (same exposure as before
-    // deferral) — never emit for a rolled-back transaction, never double-emit
-    // on replay.
-    registerAfterCommit(
-      trx,
-      () => {
-        safePublishNotificationWorkflowEvent({
-          eventType: 'NOTIFICATION_SENT',
-          payload: buildNotificationSentPayload({
-            notificationId: notification.internal_notification_id,
-            channel: 'in_app',
-            recipientId: request.user_id,
-            sentAt: createdAt,
-            templateId: request.template_name,
-          }),
-          ctx: {
-            tenantId: request.tenant,
-            occurredAt: createdAt,
-            actor: { actorType: 'SYSTEM' },
-            correlationId: notification.internal_notification_id,
-          },
-          idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
-        });
-
-        // Broadcast notification to connected clients (async, don't await)
-        broadcastNotification(notification).catch(err => {
-          console.error('Failed to broadcast notification:', err);
-        });
-
-        // Fire post-creation hooks (e.g., push notifications)
-        runPostCreationHooks(notification);
-      },
-      `notification=${notification.internal_notification_id} broadcast`
-    );
+    registerNotificationCreatedEffects(trx, notification);
 
     return notification;
   });
@@ -191,40 +147,7 @@ export const createNotificationFromTemplateAction = withAuth(async (
         return null;
       }
 
-      const createdAt = normalizeDateTime(notification?.created_at);
-
-      // Defer the external effects (workflow event publication + realtime
-      // broadcast) until the owning transaction commits so a rollback cannot
-      // orphan them and a replay cannot double-emit; see the identical
-      // registerAfterCommit block in createNotificationFromTemplateInternal.
-      registerAfterCommit(
-        trx,
-        () => {
-          safePublishNotificationWorkflowEvent({
-            eventType: 'NOTIFICATION_SENT',
-            payload: buildNotificationSentPayload({
-              notificationId: notification.internal_notification_id,
-              channel: 'in_app',
-              recipientId: targetUserId,
-              sentAt: createdAt,
-              templateId: request.template_name,
-            }),
-            ctx: {
-              tenantId: targetTenant,
-              occurredAt: createdAt,
-              actor: { actorType: 'SYSTEM' },
-              correlationId: notification.internal_notification_id,
-            },
-            idempotencyKey: `notification:${notification.internal_notification_id}:sent`,
-          });
-
-          // Broadcast notification to connected clients (async, don't await)
-          broadcastNotification(notification).catch(err => {
-            console.error('Failed to broadcast notification:', err);
-          });
-        },
-        `notification=${notification.internal_notification_id} broadcast`
-      );
+      registerNotificationCreatedEffects(trx, notification, { postCreationHooks: false });
 
       return notification;
     });
