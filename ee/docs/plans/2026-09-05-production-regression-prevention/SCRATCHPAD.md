@@ -2302,3 +2302,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Found an incidental calculation bug: sequential remaining-amount allocation ignored a nonzero first min_amount and shifted later brackets across untaxed gaps. UI/schema permit nonzero minima; the editor surfaces gaps. Added boundary/gap behavioral cases before changing code: four fail, 14 pass.
 - Compute taxable intersection of each configured bracket with the original positive amount. Existing contiguous brackets and per-bracket rounding remain intact. Focused tax suites: 57 pass, three pre-existing policy TODOs remain. Real PostgreSQL threshold persistence/readback suite: 30 pass with rollback cleanup.
 - Recorded discovered defect in regression-ledger.json, without claiming a production incident. Evidence: evidence/tax-threshold-boundaries.json. No full native CI claim or broad flags changed.
+
+### 2026-09-07 — full database lane passes after tax threshold fix
+
+- Canonical workspace DB runner used fresh disposable pgvector/pg16 and Redis containers, real bootstrap/migrations, no filters or setup bypass. All 455 tests across 60 files pass in 341.03 seconds; no skips/TODOs/pending/failures. Includes the persisted tax threshold-boundary regression.
+- Discovery and independent workspace DB aggregate pass at clean e1a0295918af8420e8cea10328b593aa18160a5a. Source before/after matches and remains clean. Evidence: evidence/workspace-db-local-e1a029.json.
+- Removed alga-workspace-db-pg-e1a029 and alga-workspace-db-redis-e1a029 only after terminal exit 0. Native CI and supported-release upgrade remain unverified. No broad flags changed.
