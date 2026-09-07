@@ -1,3 +1,4 @@
+import { ActivityFailure } from '@temporalio/common';
 import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/utils/redactionUtils';
 import { ApplicationFailure, condition, continueAsNew, defineQuery, defineSignal, executeChild, proxyActivities, setHandler, sleep } from '@temporalio/workflow';
 import {
@@ -1766,9 +1767,14 @@ function normalizeRuntimeError(error: unknown, stepPath: string): RuntimeErrorLi
     };
   }
 
+  // Temporal wraps activity failures with a generic transport message. Preserve
+  // the actionable activity cause for catch handlers and human-task diagnostics.
+  const diagnosticError = error instanceof ActivityFailure && error.cause instanceof Error
+    ? error.cause
+    : error;
   return {
     category: isCancellationLikeError(error) ? 'Cancellation' : 'ActionError',
-    message: error instanceof Error ? error.message : String(error),
+    message: diagnosticError instanceof Error ? diagnosticError.message : String(diagnosticError),
     nodePath: stepPath,
     at: new Date().toISOString(),
   };
