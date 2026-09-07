@@ -269,10 +269,11 @@ export const startTimeTrackingSchema = z.object({
   work_item_id: uuidSchema.optional(),
   work_item_type: workItemTypeSchema,
   notes: z.string().optional(),
-  service_id: uuidSchema
+  service_id: uuidSchema.optional()
 });
 
 export const activeTimeSessionResponseSchema = z.object({
+  billing_mode: z.enum(['commercial', 'operational']),
   session_id: uuidSchema,
   work_item_id: uuidSchema.nullable(),
   work_item_type: workItemTypeSchema,

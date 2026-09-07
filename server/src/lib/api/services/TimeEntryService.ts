@@ -27,12 +27,13 @@ import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvent
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
-  CoManagedSharedWorkError, TimeEntryBillingModeError, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
+  NativeTimeTrackingError, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 
 interface TimeApiAdmission {
-  operational: boolean; access: CoManagedNativeTimeAccess | null; existing: any; source: any;
+  entryId?: string; operational: boolean; access: CoManagedNativeTimeAccess | null; existing: any; source: any;
   fields: ReturnType<typeof operationalTimeEntryFields> | null;
 }
 
@@ -65,8 +66,7 @@ export class TimeEntryService extends BaseService<any> {
     work: (service: TimeEntryService, admission: TimeApiAdmission, data: any, context: ServiceContext) => Promise<any>) {
     const context = { ...inputContext, user: inputContext.user ? { ...inputContext.user } : undefined }, data = { ...input };
     const { knex } = await this.getKnex();
-    try {
-      return await withTransaction(knex, async trx => {
+    return this.withTimeErrors(() => withTransaction(knex, async trx => {
         const currentMode = await lockTimeEntryBillingMode(trx, context.tenant), owner = tenantDb(trx, context.tenant);
         const existing = id ? await owner.table('time_entries').where('entry_id', id).first() : null;
         if (id && !existing) throw new NotFoundError('Time entry not found');
@@ -91,12 +91,7 @@ export class TimeEntryService extends BaseService<any> {
           const workId = source.work_item_type === 'non_billable_category' && !source.work_item_id ? '__non_billable__' : source.work_item_id;
           access = await admitCoManagedNativeTimeSave(trx, actor, { ...source, work_item_id: workId });
           source.work_item_id = workId === '__non_billable__' ? null : workId;
-          const sheet = owner.table('time_sheets as sheet').where('sheet.id', source.time_sheet_id);
-          owner.tenantJoin(sheet, 'time_periods as period', 'sheet.period_id', 'period.period_id');
-          const period = await sheet.first('period.start_date', 'period.end_date');
-          const dateOnly = (value: Date | string) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
-          const endDate = source.end_time ? computeWorkDateFields(source.end_time, zone).work_date : source.work_date;
-          if (!period || source.work_date < dateOnly(period.start_date) || source.work_date >= dateOnly(period.end_date) || endDate < dateOnly(period.start_date) || endDate >= dateOnly(period.end_date)) throw new ValidationError('Time entry must fall within the time sheet period');
+          await service.assertTimeSheetPeriod(source, context);
           await credential.assertCurrent();
         }
         const mode = await lockTimeEntryBillingMode(trx, context.tenant, id), operational = mode === 'operational';
@@ -104,8 +99,18 @@ export class TimeEntryService extends BaseService<any> {
         const result = await work(service, { existing, source, access, operational, fields }, data, context);
         await access?.assertCurrent();
         return result;
-      });
-    } catch (error) {
+      }));
+  }
+
+  private async withTimeErrors<T>(work: () => Promise<T>): Promise<T> {
+    try { return await work(); } catch (error) {
+      if (error instanceof NativeTimeTrackingError) {
+        if (error.code === 'TIMER_NOT_FOUND') throw new NotFoundError('Time tracking session not found');
+        if (error.code === 'TIMER_ALREADY_ACTIVE') throw new ConflictError('An active time tracking session already exists');
+        if (error.code === 'TIMER_STOP_CONFLICT') throw new ConflictError('This timer was already stopped with a different request');
+        if (error.code === 'TIMER_SERVICE_REQUIRED') throw new ValidationError('A current service is required for commercial time tracking');
+        throw new ValidationError('Invalid time tracking input');
+      }
       if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
       if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError('Permission denied: Cannot access this time entry');
       if (error instanceof TimeEntryBillingModeError) {
@@ -115,6 +120,17 @@ export class TimeEntryService extends BaseService<any> {
       }
       throw error;
     }
+  }
+
+  private async assertTimeSheetPeriod(source: any, context: ServiceContext) {
+    const { knex } = await this.getKnex(), owner = tenantDb(knex, context.tenant);
+    const sheet = owner.table('time_sheets as sheet').where('sheet.id', source.time_sheet_id);
+    owner.tenantJoin(sheet, 'time_periods as period', 'sheet.period_id', 'period.period_id');
+    const period = await sheet.first('period.start_date', 'period.end_date');
+    const dateOnly = (value: Date | string) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+    const endDate = computeWorkDateFields(source.end_time, source.work_timezone).work_date;
+    if (!period || source.work_date < dateOnly(period.start_date) || source.work_date >= dateOnly(period.end_date) ||
+      endDate < dateOnly(period.start_date) || endDate >= dateOnly(period.end_date)) throw new ValidationError('Time entry must fall within the time sheet period');
   }
 
   private admittedPersistFields(admission: TimeApiAdmission) {
@@ -366,7 +382,7 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-    const { work_date, work_timezone } = computeWorkDateFields(data.start_time, userTimeZone);
+    const { work_date, work_timezone } = admission.source ?? computeWorkDateFields(data.start_time, userTimeZone);
     
     // Calculate billable duration
     // LEVERAGE: pattern time-entry-duration-persist — normalize-to-minute + Math.round duration
@@ -424,6 +440,7 @@ export class TimeEntryService extends BaseService<any> {
 
     if (admission.source) Object.assign(timeEntryData, this.admittedPersistFields(admission));
     if (admission.fields) Object.assign(timeEntryData, admission.fields);
+    if (admission.entryId) Object.assign(timeEntryData, { entry_id: admission.entryId });
 
     // Get billing information if billable
     if (!admission.operational && data.is_billable !== false) {
@@ -658,164 +675,45 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Time tracking sessions
+  private timerActor(context: ServiceContext) {
+    if (!context.apiKeyId || context.user?.user_id !== context.userId || context.user?.tenant !== context.tenant || context.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
+    return { kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId };
+  }
+
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-
-    this.assertServiceIdPresent(data.service_id);
-    
-    // Check for existing active session (time entry with null end_time)
-    const existingSession = await this.buildTenantScopedQuery(knex, context)
-      .where('user_id', context.userId)
-      .whereNull('end_time')
-      .first();
-
-    if (existingSession) {
-      throw new ConflictError('Active time tracking session already exists. Please stop the current session first.');
-    }
-
-    // Stamp the session start at minute granularity. Start and stop fire at different
-    // wall-clock instants, so keeping raw seconds is exactly what produced the off-by-one
-    // duration bug in stored entries.
-    const startTime = truncateToMinute(new Date());
-    const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-    const { work_date, work_timezone } = computeWorkDateFields(startTime, userTimeZone);
-
-    // Create a time entry with null end_time to represent an active session
-    const timeEntryData = {
-      work_item_id: data.work_item_id,
-      work_item_type: data.work_item_type,
-      service_id: data.service_id,
-      user_id: context.userId,
-      start_time: startTime,
-      end_time: null, // Active session has no end time
-      work_date,
-      work_timezone,
-      notes: data.notes || '',
-      billable_duration: 0, // Will be calculated when stopped
-      approval_status: 'DRAFT',
-      tenant: context.tenant,
-      created_at: new Date(),
-      updated_at: new Date()
-    };
-
-    const session = await knex.transaction(async (trx) => {
-      const [created] = await tenantDb(trx, context.tenant).table('time_entries')
-        .insert(timeEntryData)
-        .returning('*');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, null, created);
-      return created;
-    });
-
-    return {
-      session_id: session.entry_id, // Use entry_id as session_id
-      ...session,
-      status: 'active',
-      elapsed_minutes: 0,
-      work_item_title: data.work_item_id ? await this.getWorkItemTitle(data.work_item_id, data.work_item_type, context) : null,
-      service_name: data.service_id ? await this.getServiceName(data.service_id, context) : null
-    };
+    return this.withTimeErrors(() => startNativeTimeTracking(knex, this.timerActor(context), data));
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    
-    // Find the active session (time entry with null end_time)
-    const session = await this.buildTenantScopedQuery(knex, context)
-      .where('entry_id', sessionId)
-      .where('user_id', context.userId)
-      .whereNull('end_time')
-      .first();
-
-    if (!session) {
-      throw new NotFoundError('Active session not found');
-    }
-
-    this.assertServiceIdPresent(data.service_id ?? session.service_id);
-
-    // LEVERAGE: pattern time-entry-duration-persist — same normalize-to-minute + round shape.
-    const endTime = truncateToMinute(data.end_time ?? new Date());
-    const startTime = truncateToMinute(session.start_time);
-    const durationMs = endTime.getTime() - startTime.getTime();
-    const billableDuration = Math.round(durationMs / (1000 * 60)); // minutes
-    
-    // Update the time entry to complete the session
-    const updateData: any = {
-      end_time: endTime,
-      notes: data.notes || session.notes,
-      service_id: data.service_id || session.service_id,
-      billable_duration: data.is_billable !== false ? billableDuration : 0,
-      updated_at: new Date()
-    };
-
-    // Backstop: if a legacy row is missing these fields, compute now using the stored work_timezone if present.
-    if (!session.work_date || !session.work_timezone) {
-      const userTimeZone = await resolveUserTimeZone(knex, context.tenant, context.userId);
-      const { work_date, work_timezone } = computeWorkDateFields(
-        session.start_time,
-        session.work_timezone || userTimeZone
-      );
-      updateData.work_date = work_date;
-      updateData.work_timezone = work_timezone;
-    }
-
-    await knex.transaction(async (trx) => {
-      const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
-        .where({ entry_id: sessionId })
-        .update(updateData)
-        .returning('*');
-      if (!updated) throw new NotFoundError('Active session not found');
-      await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, session, updated);
-    });
-
-    const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
-      workItemType: session.work_item_type,
-      workItemId: session.work_item_id,
-      timeEntryId: sessionId,
-      minutes: billableDuration,
-      billable: updateData.billable_duration > 0,
-      createdAt: session.created_at,
-    });
-    if (ticketTimeEntryAdded) {
-      await publishWorkflowEvent({
-        eventType: ticketTimeEntryAdded.eventType,
-        payload: ticketTimeEntryAdded.payload,
-        ctx: {
-          tenantId: context.tenant,
-          occurredAt: endTime,
-          actor: { actorType: 'USER', actorUserId: context.userId },
-        },
-      });
-    }
-
-    return this.getById(sessionId, context);
+    return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timerActor(context), sessionId, data, async completion => {
+      const { trx, actor, clock, endTime, billingMode, serviceId, notes, billable } = completion;
+      const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
+      const startTime = new Date(clock.start_time), workDate = clock.work_date instanceof Date ? clock.work_date.toISOString().slice(0, 10) : clock.work_date;
+      const timeSheetId = await service.getOrCreateTimeSheetForWorkDate(workDate, clock.user_id, context);
+      const source = { work_item_id: clock.work_item_id, work_item_type: clock.work_item_type, start_time: startTime,
+        end_time: endTime, work_date: workDate, work_timezone: clock.work_timezone, time_sheet_id: timeSheetId };
+      const access = await admitCoManagedNativeTimeSource(trx, actor, { ...source, entry_id: clock.session_id,
+        work_item_id: clock.work_item_id || '__non_billable__', user_id: clock.user_id, approval_status: 'DRAFT' }, 'update');
+      await service.assertTimeSheetPeriod(source, context);
+      const operational = billingMode === 'operational';
+      const result = await service.createAdmitted({ work_item_id: clock.work_item_id ?? undefined, work_item_type: clock.work_item_type,
+        start_time: startTime.toISOString(), end_time: endTime.toISOString(), notes, service_id: serviceId, is_billable: billable }, context,
+        { entryId: clock.session_id, source, access, operational, fields: operational ? operationalTimeEntryFields({}) : null, existing: null });
+      await access.assertCurrent();
+      return result;
+    }));
   }
 
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
-    
-    // Find active session (time entry with null end_time)
-    const session = await this.buildTenantScopedQuery(knex, context)
-      .where('user_id', userId)
-      .whereNull('end_time')
-      .first();
-
-    if (!session) return null;
-
-    const now = new Date();
-    const elapsedMs = now.getTime() - new Date(session.start_time).getTime();
-    const elapsedMinutes = Math.round(elapsedMs / (1000 * 60));
-
-    return {
-      session_id: session.entry_id,
-      ...session,
-      status: 'active',
-      elapsed_minutes: elapsedMinutes,
-      work_item_title: session.work_item_id ? await this.getWorkItemTitle(session.work_item_id, session.work_item_type, context) : null,
-      service_name: session.service_id ? await this.getServiceName(session.service_id, context) : null
-    };
+    return this.withTimeErrors(() => {
+      if (userId !== context.userId) throw new CoManagedSharedWorkError();
+      return getNativeActiveTimeTracking(knex, this.timerActor(context));
+    });
   }
 
-  // Templates
   async createTemplate(data: CreateTimeTemplateData, context: ServiceContext): Promise<any> {
     // TODO: Implement time_entry_templates table and functionality
     // For now, throw error indicating feature is not implemented

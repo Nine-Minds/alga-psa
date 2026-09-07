@@ -61,3 +61,5 @@ export * from './timeEntryBillingMode';
 export * from './nativeTimeEntryAccess';
 
 export * from './localAuthentication';
+
+export * from './nativeTimeTracking';

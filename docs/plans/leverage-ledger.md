@@ -413,4 +413,4 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **What:** Running timers have no end instant, while completed time entries and their consumers require one.
 - **Where:** REST `startTimeTracking`/`stopTimeTracking`, initial `time_entries` schema.
 - **Gate:** The existing representation cannot satisfy its own persistence contract. ACT / staged-migration in the co-managed time plan.
-- **Status:** planned. Store active clocks separately, then atomically create completed effort on stop under current authority and the original billing mode. Preserve native timesheet, task-effort and invoicing assumptions.
+- **Status:** implemented for REST start/read/stop. Separate tenant clocks transition atomically into the existing completed-time engine; immutable request receipts prevent duplicate effort on retries. Current source/credential policy, original billing mode and timezone remain retained through completion. Explicit cancellation after lost source access remains a follow-up; completed entries keep their non-null end invariant.

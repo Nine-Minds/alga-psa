@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -12378,12 +12378,14 @@ async function withOperationalTimeApiFixture(work: (fixture: any) => Promise<voi
     const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService');
     const schemas = await import('../../lib/api/schemas/timeEntry'), service = new TimeEntryService();
     const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+    const apiEvents = await import('../../lib/eventBus/publishers');
+    const publish = vi.spyOn(apiEvents, 'publishEvent').mockResolvedValue(undefined);
     const context = { tenant: resource.tenant, userId: user.user_id, user, apiKeyId };
     const input = { work_item_type: 'project_task', work_item_id: resource.id, start_time: fixture.input.start_time, end_time: fixture.input.end_time, notes: 'Private API effort' };
     const create = (extra: any = {}, ctx = context) => service.create(schemas.createTimeEntrySchema.parse({ ...input, ...extra }), ctx);
     const update = (id: string, data: any, ctx = context) => service.update(id, schemas.updateTimeEntrySchema.parse(data), ctx);
-    try { await work({ ...fixture, service, schemas, context, apiKeyId, apiInput: input, create, update }); }
-    finally { connection.mockRestore(); }
+    try { await work({ ...fixture, publish, service, schemas, context, apiKeyId, apiInput: input, create, update }); }
+    finally { publish.mockRestore(); connection.mockRestore(); }
   });
 }
 
@@ -12530,4 +12532,170 @@ it('operational time API bulk controllers retain the verified key through native
     await controller.bulkUpdate()(request({ entries: [{ entry_id: entry.entry_id, data: { notes: 'Revoked HTTP key' } }] }));
     expect((await customer.table('time_entries').first()).notes).toBe('HTTP bulk change');
   } finally { product.mockRestore(); permission.mockRestore(); connection.mockRestore(); findUser.mockRestore(); validate.mockRestore(); }
+}));
+
+it('native timers keep active clocks outside time entries and stop once into completed operational effort', async () => withNativeTimerFixture(async ({ service, context, customer, resource, publish }: any) => {
+  const timer = await service.startTimeTracking({ work_item_type: 'project_task', work_item_id: resource.id, notes: 'Running customer effort' }, context);
+  expect(timer).toMatchObject({ billing_mode: 'operational', status: 'active', service_id: null, work_item_title: 'Verify rollout' });
+  expect(await customer.table('time_entries')).toHaveLength(0);
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(123);
+  expect(await service.getActiveSession(context.userId, context)).toMatchObject({ session_id: timer.session_id, notes: 'Running customer effort' });
+  const end = new Date(new Date(timer.start_time).getTime() + 90 * 60000).toISOString();
+  const entry = await service.stopTimeTracking(timer.session_id, { end_time: end }, context);
+  expect(entry).toMatchObject({ entry_id: timer.session_id, billing_mode: 'operational', billable_duration: 0, duration_hours: 1.5, service_id: null });
+  expect(await service.getActiveSession(context.userId, context)).toBeNull();
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(90);
+  const replay = await service.stopTimeTracking(timer.session_id, { end_time: end }, context);
+  expect(replay).toMatchObject({ entry_id: timer.session_id, billing_mode: 'operational', duration_hours: 1.5 });
+  expect(await customer.table('time_entries')).toHaveLength(1); expect(publish).toHaveBeenCalledTimes(1);
+  expect(await customer.table('native_time_tracking_sessions').first()).toMatchObject({ completed_entry_id: timer.session_id, notes: '' });
+  await expect(service.stopTimeTracking(timer.session_id, { end_time: end, notes: 'Different stop' }, context)).rejects.toMatchObject({ statusCode: 409 });
+}));
+
+async function withNativeTimerFixture(work: (fixture: any) => Promise<void>) {
+  await withOperationalTimeApiFixture(async (fixture: any) => {
+    const today = Date.now();
+    await fixture.customer.table('time_periods').update({ start_date: new Date(today - 7 * 86400_000).toISOString().slice(0, 10), end_date: new Date(today + 7 * 86400_000).toISOString().slice(0, 10) });
+    const start = (extra: any = {}, context = fixture.context) => fixture.service.startTimeTracking({ work_item_type: 'project_task', work_item_id: fixture.resource.id, notes: 'Private running clock', ...extra }, context);
+    const stop = (timer: any, extra: any = {}, context = fixture.context) => fixture.service.stopTimeTracking(timer.session_id, { end_time: new Date(new Date(timer.start_time).getTime() + 30 * 60000).toISOString(), ...extra }, context);
+    await work({ ...fixture, start, stop });
+  });
+}
+
+it('native timers serialize concurrent starts and stops without duplicate clocks, entries or events', async () => withNativeTimerFixture(async ({ start, stop, customer, publish }: any) => {
+  const starts = await Promise.allSettled([start(), start()]);
+  expect(starts.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  const timer = (starts.find(result => result.status === 'fulfilled') as PromiseFulfilledResult<any>).value;
+  const entries = await Promise.all([stop(timer), stop(timer)]);
+  expect(entries.map(entry => entry.entry_id)).toEqual([timer.session_id, timer.session_id]);
+  expect(await customer.table('native_time_tracking_sessions')).toHaveLength(1);
+  expect(await customer.table('time_entries')).toHaveLength(1); expect(publish).toHaveBeenCalledTimes(1);
+}));
+
+it('native timers preserve original operational mode through separation and paid PSA upgrade', async () => withNativeTimerFixture(async ({ start, stop, customer }: any) => {
+  const timer = await start();
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  await expect(customer.table('native_time_tracking_sessions').where('session_id', timer.session_id).update({ billing_mode: 'commercial', service_id: randomUUID() })).rejects.toMatchObject({ constraint: 'native_timer_identity_immutable' });
+  const entry = await stop(timer, { is_billable: true });
+  expect(entry).toMatchObject({ entry_id: timer.session_id, billing_mode: 'operational', billable_duration: 0, service_id: null });
+  await expect(customer.table('invoice_time_entries').insert({ tenant: timer.tenant, invoice_time_entry_id: randomUUID(), invoice_id: randomUUID(), entry_id: timer.session_id })).rejects.toMatchObject({ constraint: 'operational_time_not_invoiceable' });
+  await expect(start()).rejects.toThrow(/service/);
+}));
+
+it('native timers reject foreign or revoked credentials and reread current work scope at stop', async () => withNativeTimerFixture(async ({ start, stop, customer, apiKeyId, context, resource, operation, user }: any) => {
+  const timer = await start();
+  await expect(stop(timer, {}, { ...context, apiKeyId: randomUUID() })).rejects.toMatchObject({ statusCode: 403 });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Timer key scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('authorization_bundle_assignments').where('bundle_id', bundleId).del();
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_entries')).toHaveLength(0);
+  expect((await customer.table('native_time_tracking_sessions').first()).completed_entry_id).toBeNull();
+}));
+
+it('native timers retain active clocks for reading after license expiry but do not complete new effort', async () => withNativeTimerFixture(async ({ start, stop, service, context, customer, principal }: any) => {
+  const timer = await start(); await expireCoManagedEntitlement(principal.tenant);
+  expect(await service.getActiveSession(context.userId, context)).toMatchObject({ session_id: timer.session_id, notes: 'Private running clock' });
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  expect(await customer.table('time_entries')).toHaveLength(0);
+}));
+
+it('native timers roll completion, task totals, automatic sheets and receipt back together on final key expiry', async () => withNativeTimerFixture(async ({ start, stop, customer, resource, apiKeyId, publish }: any) => {
+  const timer = await start(); await customer.table('time_sheets').del();
+  await db.raw(`CREATE FUNCTION expire_timer_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_timer_key AFTER INSERT ON time_entries FOR EACH ROW EXECUTE FUNCTION expire_timer_key()');
+  try {
+    await expect(stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_entries')).toHaveLength(0); expect(await customer.table('time_sheets')).toHaveLength(0);
+    expect((await customer.table('native_time_tracking_sessions').first()).completed_entry_id).toBeNull();
+    expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(123);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_timer_key ON time_entries'); await db.raw('DROP FUNCTION expire_timer_key()'); }
+  expect(await stop(timer)).toMatchObject({ entry_id: timer.session_id });
+}));
+
+it('native timers keep completion receipts immutable and do not recreate deleted completed effort', async () => withNativeTimerFixture(async ({ start, stop, customer }: any) => {
+  const timer = await start(); await stop(timer);
+  await expect(customer.table('native_time_tracking_sessions').where('session_id', timer.session_id).update({ stop_request_hash: 'a'.repeat(64) })).rejects.toMatchObject({ constraint: 'native_timer_completion_immutable' });
+  await customer.table('time_entries').where('entry_id', timer.session_id).del();
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 404 });
+  expect(await customer.table('time_entries')).toHaveLength(0);
+  const migration = require('../../../migrations/20260907210000_create_native_time_tracking_sessions.cjs');
+  await migration.up(db); await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained timer clocks or completion receipts');
+}));
+
+it('native timers preserve the start timezone and retry an omitted end without creating new effort', async () => withNativeTimerFixture(async ({ start, service, context, customer }: any) => {
+  await customer.table('users').where('user_id', context.userId).update({ timezone: 'America/New_York' });
+  const timer = await start();
+  await customer.table('users').where('user_id', context.userId).update({ timezone: 'Pacific/Auckland' });
+  const entry = await service.stopTimeTracking(timer.session_id, {}, context);
+  expect(entry.work_timezone).toBe('America/New_York');
+  expect(entry.work_date instanceof Date ? entry.work_date.toISOString().slice(0, 10) : entry.work_date).toBe(timer.work_date);
+  expect(new Date(entry.end_time).getTime()).toBeGreaterThanOrEqual(new Date(timer.start_time).getTime());
+  const replay = await service.stopTimeTracking(timer.session_id, {}, context);
+  expect(replay.entry_id).toBe(entry.entry_id); expect(replay.end_time).toEqual(entry.end_time);
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native timers reject invalid stops and submitted sheets without losing the active clock', async () => withNativeTimerFixture(async ({ start, stop, service, context, customer, sheetId }: any) => {
+  const timer = await start();
+  await expect(stop(timer, { end_time: new Date(new Date(timer.start_time).getTime() - 60000).toISOString() })).rejects.toMatchObject({ statusCode: 400 });
+  await expect(stop(timer, { end_time: 'invalid' })).rejects.toMatchObject({ statusCode: 400 });
+  await customer.table('time_sheets').where('id', sheetId).update({ approval_status: 'SUBMITTED' });
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_entries')).toHaveLength(0);
+  expect(await service.getActiveSession(context.userId, context)).toMatchObject({ session_id: timer.session_id });
+}));
+
+it('native timers apply current note masks to active clocks and completed receipts and deny full-response edits', async () => withNativeTimerFixture(async ({ start, stop, update, service, context, customer, resource, operation, user, apiKeyId }: any) => {
+  const timer = await start(), entry = await stop(timer), active = await start();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Timer note visibility', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['values.notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  expect(await service.getActiveSession(context.userId, context)).toMatchObject({ session_id: active.session_id, notes: '' });
+  expect(await stop(timer)).toMatchObject({ entry_id: entry.entry_id, notes: '' });
+  await expect(stop(active)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(update(entry.entry_id, { is_billable: false })).rejects.toMatchObject({ statusCode: 403 });
+  expect((await customer.table('time_entries').where('entry_id', entry.entry_id).first()).notes).toBe('Private running clock');
+}));
+
+it('native timers require an owned service for ordinary PSA clocks and complete commercial effort', async () => withOperationalTimeApiFixture(async ({ service, sponsor, sponsorActor, customer, roleId }: any) => {
+  for (const action of ['read', 'create', 'update']) {
+    const permission = await customer.table('permissions').where({ resource: 'time_entry', action, msp: true, client: false }).first();
+    await sponsor.table('permissions').insert({ ...permission, tenant: sponsorActor.tenant });
+    await sponsor.table('role_permissions').insert({ tenant: sponsorActor.tenant, role_id: roleId, permission_id: permission.permission_id });
+  }
+  const user = await sponsor.table('users').where('user_id', sponsorActor.userId).first(), apiKeyId = randomUUID();
+  await sponsor.table('api_keys').insert({ tenant: sponsorActor.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: user.user_id, active: true });
+  const context = { tenant: sponsorActor.tenant, userId: user.user_id, user, apiKeyId }, typeId = randomUUID(), serviceId = randomUUID();
+  await sponsor.table('service_types').insert({ tenant: sponsorActor.tenant, id: typeId, name: 'PSA timer effort' });
+  await sponsor.table('service_catalog').insert({ tenant: sponsorActor.tenant, service_id: serviceId, service_name: 'PSA timer hourly', billing_method: 'hourly', custom_service_type_id: typeId });
+  const input = { work_item_type: 'non_billable_category', notes: 'Internal timer' };
+  await expect(service.startTimeTracking(input, context)).rejects.toMatchObject({ statusCode: 400 });
+  await expect(service.startTimeTracking({ ...input, service_id: randomUUID() }, context)).rejects.toMatchObject({ statusCode: 400 });
+  const timer = await service.startTimeTracking({ ...input, service_id: serviceId }, context);
+  expect(timer).toMatchObject({ billing_mode: 'commercial', service_id: serviceId, service_name: 'PSA timer hourly' });
+  await sponsor.table('time_periods').insert({ tenant: sponsorActor.tenant, period_id: randomUUID(), start_date: timer.work_date, end_date: new Date(new Date(timer.start_time).getTime() + 2 * 86400_000).toISOString().slice(0, 10) });
+  const entry = await service.stopTimeTracking(timer.session_id, { end_time: new Date(new Date(timer.start_time).getTime() + 30 * 60000).toISOString(), is_billable: false }, context);
+  expect(entry).toMatchObject({ billing_mode: 'commercial', service_id: serviceId, duration_hours: 0.5, billable_duration: 0 });
+  expect(await sponsor.table('time_entries')).toHaveLength(1);
+}));
+
+it('native timers mask optional fields equally on first completion and replay', async () => withNativeTimerFixture(async ({ start, stop, service, context, resource, operation, user, apiKeyId }: any) => {
+  const timer = await start(), bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Timer receipt visibility', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['billing', 'time_entries.updated_at', 'work_item_title'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  expect(await service.getActiveSession(context.userId, context)).toMatchObject({ service_id: null, work_item_title: '' });
+  for (const entry of [await stop(timer), await stop(timer)]) expect(entry).toMatchObject({ entry_id: timer.session_id, billable_duration: null, is_billable: null, updated_at: null, work_item_title: '' });
 }));
