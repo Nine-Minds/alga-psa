@@ -5,11 +5,12 @@ import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity'
 import { withCoManagedCustomerCommentNotification, type CoManagedCustomerCommentNotification, type CoManagedCustomerNotificationContext } from './customerCommentNotification';
 import type { CoManagedEmailDeliveryResult } from './commentEmailDeliveries';
 import { coManagedInternalEmailRecipient } from './commentEmailRecipient';
+import { issueCoManagedCustomerReplyToken } from './customerReplyTokens';
 
 const TABLE = 'co_management_customer_email_deliveries';
 const IDENTITY = ['tenant', 'delivery_key', 'recipient_user_id', 'event_id', 'ticket_id', 'comment_id', 'thread_id', 'audience'] as const;
 export interface CoManagedCustomerEmailDelivery {
-  tenant: string; recipientUserId: string; email: string; subtypeId?: number; messageId: string; message: CoManagedCustomerCommentNotification;
+  tenant: string; recipientUserId: string; email: string; subtypeId?: number; messageId: string; replyToken: string; message: CoManagedCustomerCommentNotification;
 }
 /** Persist only qualified routing/source identities, never email addresses,
  * rendered content or provider credentials. Preferences are checked at send. */
@@ -63,47 +64,75 @@ async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDel
     attempt_count: attempts, next_attempt_at: retry ? trx.raw("clock_timestamp() + ? * interval '1 millisecond'", [delay]) : null,
     completed_at: retry ? null : trx.raw('clock_timestamp()'), error_code: result.status === 'failed' ? result.errorCode.slice(0, 100) : null });
 }
-/** Retains current recipient, source and routing locks through the awaited
- * transport. External acceptance followed by a lost commit may repeat a send;
- * its stable RFC Message-ID is preserved, without claiming exactly-once SMTP. */
+/** Token preparation commits before SMTP can expose the credential. Delivery
+ * then reacquires the current recipient, source, preferences and queue locks.
+ * External acceptance followed by a lost commit may repeat a send with its stable
+ * RFC Message-ID/token; this does not claim exactly-once SMTP delivery. */
 export async function processCoManagedCustomerEmailDeliveries(db: Knex, tenant: string,
   send: (delivery: CoManagedCustomerEmailDelivery) => Promise<CoManagedEmailDeliveryResult>, options: { limit?: number } = {}) {
   const limit = options.limit ?? 30;
   if (db.isTransaction || !isCoManagedUuid(tenant) || !Number.isInteger(limit) || limit < 1 || limit > 300) throw new Error('Invalid customer email recovery scope');
   const due = (trx: Knex, key: string) => tenantDb(trx, tenant).table(TABLE).where({ delivery_key: key, status: 'pending' }).where('next_attempt_at', '<=', trx.raw('clock_timestamp()'));
   const rows = await tenantDb(db, tenant).table(TABLE).where('status', 'pending').where('next_attempt_at', '<=', db.raw('clock_timestamp()')).orderBy('next_attempt_at').orderBy('delivery_key').limit(limit);
+  async function claim(trx: Knex.Transaction, candidate: any) {
+    const row = await due(trx, candidate.delivery_key).forUpdate().skipLocked().first();
+    if (row && !sameIdentity(row, candidate)) throw new Error('Customer email identity changed');
+    return row;
+  }
+  async function complete(trx: Knex.Transaction, candidate: any, outcome: CoManagedEmailDeliveryResult) {
+    const row = await claim(trx, candidate);
+    if (!row) return false;
+    await finish(trx, row, outcome); return true;
+  }
+  async function withCurrentDelivery<T>(trx: Knex.Transaction, candidate: any,
+    ready: (context: CoManagedCustomerNotificationContext, message: CoManagedCustomerCommentNotification, row: any,
+      to: NonNullable<Awaited<ReturnType<typeof coManagedInternalEmailRecipient>>>) => Promise<T>) {
+    const resource = { tenant, kind: 'ticket' as const, id: candidate.ticket_id };
+    const result = await withCoManagedCustomerCommentNotification(trx, { kind: 'notification_recipient', tenant, userId: candidate.recipient_user_id }, resource, candidate.comment_id, async (context, message) => {
+      const assigned = await isCustomerNotificationAssignee(context), to = await coManagedInternalEmailRecipient(context);
+      const row = await claim(trx, candidate);
+      if (!row) return { kind: 'done' as const, processed: false };
+      if (!assigned || !to || !await commentEmailEnabled(context, message.commentId) || message.threadId !== row.thread_id || message.audience !== row.audience) {
+        await finish(trx, row, { status: 'skipped' }); return { kind: 'done' as const, processed: true };
+      }
+      return ready(context, message, row, to);
+    });
+    return result ?? { kind: 'done' as const, processed: await complete(trx, candidate, { status: 'skipped' }) };
+  }
   let processed = 0;
   for (const candidate of rows) {
     try {
-      const didProcess = await withTransaction(db, async trx => {
-        const resource = { tenant, kind: 'ticket' as const, id: candidate.ticket_id };
-        const delivered = await withCoManagedCustomerCommentNotification(trx, { kind: 'notification_recipient', tenant, userId: candidate.recipient_user_id }, resource, candidate.comment_id, async (context, message) => {
-          const assigned = await isCustomerNotificationAssignee(context), to = await coManagedInternalEmailRecipient(context);
-          const row = await due(trx, candidate.delivery_key).forUpdate().skipLocked().first();
-          if (!row) return false;
-          if (!sameIdentity(row, candidate)) throw new Error('Customer email identity changed');
-          if (!assigned || !to || !await commentEmailEnabled(context, message.commentId) || message.threadId !== row.thread_id || message.audience !== row.audience) { await finish(trx, row, { status: 'skipped' }); return true; }
-          const messageId = `<co-managed-customer-${createHash('sha256').update(row.delivery_key).digest('hex')}@notifications.alga.invalid>`;
-          let outcome: CoManagedEmailDeliveryResult;
-          try { outcome = await send({ tenant, recipientUserId: context.actor.userId, ...to, messageId, message }); }
-          catch { outcome = { status: 'failed', retryable: true, errorCode: 'email_transport_failed' }; }
-          if (!outcome || !['delivered', 'skipped', 'failed'].includes(outcome.status)) outcome = { status: 'failed', retryable: true, errorCode: 'invalid_email_transport_result' };
-          await finish(trx, row, outcome); return true;
-        });
-        if (delivered !== null) return delivered;
-        const row = await due(trx, candidate.delivery_key).forUpdate().skipLocked().first();
-        if (!row) return false;
-        if (!sameIdentity(row, candidate)) throw new Error('Customer email identity changed');
-        await finish(trx, row, { status: 'skipped' }); return true;
-      });
-      if (didProcess) processed++;
+      // LEVERAGE: pattern qualified-email-preparation — requester and technician credentials need a committed prepare phase before retained-authority delivery.
+      const prepared = await withTransaction(db, trx => withCurrentDelivery(trx, candidate, async (context, message, row) => {
+        const issued = await issueCoManagedCustomerReplyToken(trx, { recipient: { kind: 'notification_recipient', ...context.actor },
+          resource: context.resource, commentId: message.commentId, deliveryKey: row.delivery_key });
+        if (!issued) { await finish(trx, row, { status: 'skipped' }); return { kind: 'done' as const, processed: true }; }
+        return { kind: 'ready' as const, ...issued };
+      }));
+      if (prepared.kind === 'done') { if (prepared.processed) processed++; continue; }
+      const delivered = await withTransaction(db, trx => withCurrentDelivery(trx, candidate, async (context, message, row, to) => {
+        if (to.email.trim().toLowerCase() !== prepared.email) {
+          await finish(trx, row, { status: 'failed', retryable: true, errorCode: 'customer_address_changed' }); return { kind: 'done' as const, processed: true };
+        }
+        const tokens = tenantDb(trx, tenant).table('co_management_customer_reply_tokens');
+        const token = await tokens.where({ token: prepared.token, delivery_key: row.delivery_key, recipient_user_id: context.actor.userId,
+          recipient_email: prepared.email, ticket_id: row.ticket_id, comment_id: row.comment_id, thread_id: row.thread_id, audience: row.audience })
+          .whereNull('revoked_at').where(query => query.whereNull('expires_at').orWhere('expires_at', '>', trx.raw('clock_timestamp()'))).forShare().first('token');
+        // A lock wait can outlast the pre-lock expiry predicate.
+        const stillActive = token && await tenantDb(trx, tenant).table('co_management_customer_reply_tokens').where('token', token.token)
+          .whereNull('revoked_at').where(query => query.whereNull('expires_at').orWhere('expires_at', '>', trx.raw('clock_timestamp()'))).first('token');
+        if (!stillActive) { await finish(trx, row, { status: 'skipped' }); return { kind: 'done' as const, processed: true }; }
+        const messageId = `<co-managed-customer-${createHash('sha256').update(row.delivery_key).digest('hex')}@notifications.alga.invalid>`;
+        let outcome: CoManagedEmailDeliveryResult;
+        try { outcome = await send({ tenant, recipientUserId: context.actor.userId, ...to, messageId, replyToken: token.token, message }); }
+        catch { outcome = { status: 'failed', retryable: true, errorCode: 'email_transport_failed' }; }
+        if (!outcome || !['delivered', 'skipped', 'failed'].includes(outcome.status)) outcome = { status: 'failed', retryable: true, errorCode: 'invalid_email_transport_result' };
+        await finish(trx, row, outcome); return { kind: 'done' as const, processed: true };
+      }));
+      if (delivered.processed) processed++;
     } catch (error) {
-      await withTransaction(db, async trx => {
-        const row = await due(trx, candidate.delivery_key).forUpdate().skipLocked().first();
-        if (!row || !sameIdentity(row, candidate)) return;
-        await finish(trx, row, error instanceof CoManagedSharedWorkError ? { status: 'skipped' }
-          : { status: 'failed', retryable: true, errorCode: 'email_processing_failed' });
-      });
+      await withTransaction(db, trx => complete(trx, candidate, error instanceof CoManagedSharedWorkError ? { status: 'skipped' }
+        : { status: 'failed', retryable: true, errorCode: 'email_processing_failed' }));
     }
   }
   return { examined: rows.length, processed };

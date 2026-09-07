@@ -8008,7 +8008,7 @@ it('retains customer email delivery after departure and upgrade and preserves lo
   const ids: string[] = [];
   const send = vi.fn(async delivery => {
     ids.push(delivery.messageId);
-    for (const [table, where] of [['users', { user_id: recipient.userId }], ['comments', { comment_id: request.commentId }], ['tickets', { ticket_id: resource.id }]] as const) {
+    for (const [table, where] of [['co_management_customer_reply_tokens', { token: delivery.replyToken }], ['users', { user_id: recipient.userId }], ['comments', { comment_id: request.commentId }], ['tickets', { ticket_id: resource.id }]] as const) {
       await expect(db.transaction(trx => tenantDb(trx, resource.tenant).table(table).where(where).forUpdate().noWait().first())).rejects.toMatchObject({ code: '55P03' });
     }
     throw new Error('Accepted but acknowledgement lost');
@@ -9656,4 +9656,107 @@ it('defers technician artifacts on lapse and resumes retained customer ownership
   await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id).update({ next_attempt_at: new Date(0) });
   for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
   expect(artifactStorage.upload).toHaveBeenCalledTimes(1);
+}));
+
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('commits outgoing technician %s tokens before transport and admits their actual durable inbox replies', async audience => withTechnicianInboundFixture(async fixture => {
+  const { customer, resource, recipient, request, enqueue, processEmail, run, emailData } = fixture;
+  await enqueue(db, request);
+  const seen: any[] = [], send = vi.fn(async (delivery: any) => {
+    // A separate pooled connection must already be able to see this token.
+    seen.push({ delivery, token: await customer.table('co_management_customer_reply_tokens').where('token', delivery.replyToken).first() });
+    return { status: 'delivered' as const };
+  });
+  await Promise.all([processEmail(db, resource.tenant, send), processEmail(db, resource.tenant, send)]);
+  expect(send).toHaveBeenCalledTimes(1);
+  const { token, delivery } = seen[0];
+  expect(token).toMatchObject({ recipient_user_id: recipient.userId, recipient_email: 'technician@example.test', ticket_id: resource.id, comment_id: request.commentId, audience });
+  expect(delivery.replyToken).toMatch(/^cm2:[A-Za-z0-9_-]{43}$/);
+  emailData.body.text = `Answer to delivered technician mail.\n[ALGA-REPLY-TOKEN ${delivery.replyToken}]`;
+  const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+  expect(await customer.table('comments').where('comment_id', (result as any).commentId).first()).toMatchObject({ user_id: recipient.userId, is_internal: audience !== 'requester' });
+  await processEmail(db, resource.tenant, send); expect(send).toHaveBeenCalledTimes(1);
+}, audience));
+
+it('reuses outgoing technician tokens on acknowledgement retries and creates a distinct address-bound token after address changes', async () => withCustomerEmailQueueFixture(async ({ customer, resource, recipient, request, enqueue, processEmail }) => {
+  await enqueue(db, request);
+  const send = vi.fn().mockResolvedValue({ status: 'failed', retryable: true, errorCode: 'lost_acknowledgement' });
+  await processEmail(db, resource.tenant, send);
+  await customer.table('co_management_customer_email_deliveries').update({ next_attempt_at: new Date(0) });
+  await processEmail(db, resource.tenant, send);
+  expect(send.mock.calls[1][0].replyToken).toBe(send.mock.calls[0][0].replyToken);
+  expect(send.mock.calls[1][0].messageId).toBe(send.mock.calls[0][0].messageId);
+  await customer.table('users').where('user_id', recipient.userId).update({ email: 'changed-technician@example.test' });
+  await customer.table('co_management_customer_email_deliveries').update({ next_attempt_at: new Date(0) });
+  send.mockResolvedValue({ status: 'delivered' }); await processEmail(db, resource.tenant, send);
+  expect(send.mock.calls[2][0].replyToken).not.toBe(send.mock.calls[0][0].replyToken);
+  expect(send.mock.calls[2][0]).toMatchObject({ email: 'changed-technician@example.test', messageId: send.mock.calls[0][0].messageId });
+  expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(2);
+}));
+
+it.each(['address', 'audience', 'revocation', 'expiry', 'preferences', 'reassigned', 'deleted', 'inactive'] as const)('rechecks outgoing technician %s between committed preparation and delivery', async change => withCustomerEmailQueueFixture(async ({ customer, resource, recipient, request, enqueue, processEmail }) => {
+  if (change === 'preferences' && !await customer.table('notification_settings').first()) await customer.table('notification_settings').insert({ tenant: resource.tenant, is_enabled: true });
+  await enqueue(db, request);
+  const tokenChange = change === 'revocation' || change === 'expiry';
+  if (tokenChange) {
+    await processEmail(db, resource.tenant, async () => ({ status: 'failed', retryable: true, errorCode: 'prepare_change' }));
+    await customer.table('co_management_customer_email_deliveries').update({ next_attempt_at: new Date(0) });
+  }
+  const tokens = await import('../../../../packages/co-managed/src/customerReplyTokens'), original = tokens.issueCoManagedCustomerReplyToken;
+  let mutation: Promise<void> | undefined, pid: number | undefined;
+  const source = await customer.table('comments').where('comment_id', request.commentId).first('thread_id');
+  const issue = vi.spyOn(tokens, 'issueCoManagedCustomerReplyToken').mockImplementationOnce(async (...args) => {
+    const issued = await original(...args);
+    mutation = db.transaction(async trx => {
+      pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+      const owner = tenantDb(trx, resource.tenant);
+      if (change === 'address') await owner.table('users').where('user_id', recipient.userId).update({ email: 'between-technician-phases@example.test' });
+      if (change === 'audience') await owner.table('comment_threads').where('thread_id', source.thread_id).update({ collaboration_audience: 'organization_private', is_internal: true });
+      if (tokenChange) await owner.table('co_management_customer_reply_tokens').where('token', issued!.token).update({ [change === 'expiry' ? 'expires_at' : 'revoked_at']: new Date(0) });
+      if (change === 'preferences') await owner.table('notification_settings').update({ is_enabled: false });
+      if (change === 'reassigned') await owner.table('tickets').where('ticket_id', resource.id).update({ assigned_to: null });
+      if (change === 'deleted') await owner.table('comments').where('comment_id', request.commentId).update({ deleted_at: new Date() });
+      if (change === 'inactive') await owner.table('users').where('user_id', recipient.userId).update({ is_inactive: true });
+    });
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    return issued;
+  });
+  const send = vi.fn().mockResolvedValue({ status: 'delivered' });
+  try {
+    await processEmail(db, resource.tenant, send); await mutation;
+    expect(send).not.toHaveBeenCalled();
+    expect(await customer.table('co_management_customer_email_deliveries').first()).toMatchObject(change === 'address'
+      ? { status: 'pending', error_code: 'customer_address_changed', attempt_count: 1 }
+      : { status: 'skipped', attempt_count: tokenChange ? 2 : 1 });
+    if (change === 'address') {
+      await customer.table('co_management_customer_email_deliveries').update({ next_attempt_at: new Date(0) });
+      await processEmail(db, resource.tenant, send); expect(send).toHaveBeenCalledTimes(1);
+      expect(send.mock.calls[0][0].email).toBe('between-technician-phases@example.test');
+    }
+  } finally { issue.mockRestore(); await mutation; }
+}));
+
+
+it('reuses committed technician tokens after SMTP acceptance loses its delivery transaction', async () => withCustomerEmailQueueFixture(async ({ customer, resource, request, enqueue, processEmail }) => {
+  await enqueue(db, request);
+  const trigger = `technician_email_commit_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(`CREATE FUNCTION ??() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN
+    IF NEW.status = 'delivered' THEN RAISE EXCEPTION 'simulated delivery commit failure'; END IF;
+    RETURN NEW; END $$`, [trigger]);
+  await db.raw('CREATE TRIGGER ?? BEFORE UPDATE ON co_management_customer_email_deliveries FOR EACH ROW EXECUTE FUNCTION ??()', [trigger, trigger]);
+  const send = vi.fn().mockResolvedValue({ status: 'delivered' });
+  try {
+    await processEmail(db, resource.tenant, send);
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(await customer.table('co_management_customer_email_deliveries').first()).toMatchObject({ status: 'pending', attempt_count: 1, error_code: 'email_processing_failed' });
+    expect(await customer.table('co_management_customer_reply_tokens').where('token', send.mock.calls[0][0].replyToken).first()).toBeTruthy();
+  } finally {
+    await db.raw('DROP TRIGGER ?? ON co_management_customer_email_deliveries', [trigger]); await db.raw('DROP FUNCTION ??()', [trigger]);
+  }
+  await customer.table('co_management_customer_email_deliveries').update({ next_attempt_at: new Date(0) });
+  await processEmail(db, resource.tenant, send);
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(send.mock.calls[1][0]).toMatchObject({ replyToken: send.mock.calls[0][0].replyToken, messageId: send.mock.calls[0][0].messageId });
+  expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(1);
+  expect(await customer.table('co_management_customer_email_deliveries').first()).toMatchObject({ status: 'delivered', attempt_count: 2 });
 }));

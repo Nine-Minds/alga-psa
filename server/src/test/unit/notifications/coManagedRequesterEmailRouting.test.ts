@@ -31,7 +31,7 @@ it('uses configured ticketing From, provider display name, the originating reply
     from: { email: 'helpdesk@example.test', name: 'Customer IT' }, replyTo: { email: 'intake@example.test', name: 'Intake' },
     url: `https://app.example.test/client-portal/tickets/${delivery.message.resource.id}?tenant=${buildTenantPortalSlug(delivery.tenant)}`,
   });
-  expect(runtime.scopes).toEqual([delivery.tenant]);
+  expect(new Set(runtime.scopes)).toEqual(new Set([delivery.tenant]));
 });
 it('uses the configured display name with the default sender and preserves an active customer portal host', async () => {
   runtime.settings.mockResolvedValue({ ticketingFromName: ' Customer support ' });
@@ -58,4 +58,13 @@ it('propagates routing lookup failures so a durable delivery retries instead of 
 it('rejects a malformed active portal host before it can appear in a requester link', async () => {
   runtime.rows.portal_domains = { status: 'active', domain: 'customer.test/path?tenant=other' };
   await expect(resolveCoManagedRequesterEmailRouting(item())).rejects.toThrow('Invalid active portal domain');
+});
+
+it('resolves technician reply mailboxes without consulting a requester portal domain', async () => {
+  const { resolveCoManagedTicketEmailMailbox } = await import('@alga-psa/jobs/handlers/coManagedRequesterEmailRouting');
+  const delivery = item(), providerId = randomUUID();
+  runtime.rows.tickets = { email_metadata: { providerId } };
+  runtime.rows.email_providers = (where: any) => where.id === providerId && where.is_active ? { mailbox: 'inbound@example.test' } : undefined;
+  runtime.rows.portal_domains = () => { throw new Error('Technician routing must not use a requester portal domain'); };
+  expect(await resolveCoManagedTicketEmailMailbox(delivery.tenant, delivery.message.resource.id)).toEqual({ from: undefined, replyTo: { email: 'inbound@example.test', name: undefined } });
 });

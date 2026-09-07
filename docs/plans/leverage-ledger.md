@@ -232,3 +232,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `packages/co-managed/src/conversationAttachments.ts` and `inboundEmailAttachments.ts`.
 - **Gate:** Interactive published comments and drafts already share stable immutable file identities, checksums, reservation and publication. Email is the third real caller; duplicating transport or inventing a session would add authority and retry risk. ACT / bounded-now within the approved mail integration work.
 - **Status:** revised. The transfer engine consumes a retained transaction, owner-qualified actor/source and an explicit write-authority assertion. Interactive wrappers preserve session/lifecycle checks. The worker supplies committed reply provenance, current RBAC/source/audience and a live fenced artifact claim. An optional completion callback runs atomically with ready publication, including exact ready retries. The compiled worker entry uses the licensing runtime surface. Storage-provider composition remains separately marked while its error policy settles.
+
+
+## ticket-email-mailbox-routing — pattern
+- **What:** Customer technicians and requesters reply to the same tenant-configured ticket intake, while their navigation and locale identities differ.
+- **Where:** `packages/jobs/src/lib/handlers/coManagedRequesterEmailRouting.ts` and `coManagedCommentEmailTransport.ts`.
+- **Gate:** Two actual replyable delivery callers, stable existing mailbox resolution, high risk from divergent reply routing; ACT / in-pass.
+- **Status:** extracted the existing mailbox lookup as a shared internal function. Portal-domain selection remains requester-specific, and technicians retain their internal ticket links. The broader native-subscriber routing marker remains; this extraction does not claim to unify native routing.

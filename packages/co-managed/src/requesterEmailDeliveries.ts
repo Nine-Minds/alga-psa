@@ -78,6 +78,7 @@ export async function processCoManagedRequesterEmailDeliveries(db: Knex, tenant:
   for (const candidate of rows) {
     try {
       const recipient = recipientOf(candidate), resource = { tenant, kind: 'ticket' as const, id: candidate.ticket_id };
+      // LEVERAGE: pattern qualified-email-preparation — requester and technician credentials need a committed prepare phase before retained-authority delivery.
       const prepared = await withTransaction(db, async trx => {
         const result = await withCoManagedRequesterCommentEmail(trx, recipient, resource, candidate.comment_id, async (context, message) => {
           const settings = await coManagedCommentEmailSettings(trx, tenant);

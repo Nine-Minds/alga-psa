@@ -1,4 +1,4 @@
-import { resolveCoManagedRequesterEmailRouting } from './coManagedRequesterEmailRouting';
+import { resolveCoManagedRequesterEmailRouting, resolveCoManagedTicketEmailMailbox } from './coManagedRequesterEmailRouting';
 import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult } from '@alga-psa/co-managed';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -25,7 +25,9 @@ export async function sendCoManagedCommentEmail(delivery: CoManagedEmailDelivery
   return sendAuthorizedCommentEmail(delivery, `/msp/co-management/tickets/${source.tenant}/${source.relationshipId}/${source.id}`, 'subject');
 }
 export async function sendCoManagedCustomerCommentEmail(delivery: CoManagedCustomerEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
-  return sendAuthorizedCommentEmail(delivery, `/msp/tickets/${delivery.message.resource.id}`, 'customerSubject');
+  if (!/^cm2:[A-Za-z0-9_-]{43}$/.test(delivery.replyToken)) throw new Error('Invalid customer technician reply token');
+  const routing = await resolveCoManagedTicketEmailMailbox(delivery.tenant, delivery.message.resource.id);
+  return sendAuthorizedCommentEmail(delivery, `/msp/tickets/${delivery.message.resource.id}`, 'customerSubject', routing);
 }
 export async function sendCoManagedRequesterCommentEmail(delivery: CoManagedRequesterEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
   if (!/^cm1:[A-Za-z0-9_-]{43}$/.test(delivery.replyToken)) throw new Error('Invalid requester reply token');
@@ -36,7 +38,7 @@ export async function sendCoManagedRequesterCommentEmail(delivery: CoManagedRequ
  * navigation target. Rendering and caller-owned transport completion are shared. */
 async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoManagedCustomerEmailDelivery | CoManagedRequesterEmailDelivery, path: string,
   subjectKey: 'subject' | 'customerSubject', routing?: { from?: { email: string; name?: string }; replyTo?: { email: string; name?: string } }): Promise<CoManagedEmailDeliveryResult> {
-  const requester = 'replyToken' in delivery;
+  const requester = 'recipient' in delivery;
   const locale = await resolveEmailLocale(delivery.tenant, requester
     ? { email: delivery.email, clientId: delivery.recipient.clientId, userType: 'client' }
     : { email: delivery.email, userId: delivery.recipientUserId, userType: 'internal' });
@@ -51,7 +53,7 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
   const body = extractTicketRichTextPlainText(message.note);
   let html = `<h2>${escape(subject)}</h2>${title ? `<p>${escape(title)}</p>` : ''}<p>${escape(author)}</p><div style="white-space:pre-wrap">${escape(body)}</div><p><a href="${escape(url)}">${escape(copy.open)}</a></p>`;
   let text = [subject, title, author, body, `${copy.open}: ${url}`].filter(Boolean).join('\n\n');
-  if (requester) {
+  if ('replyToken' in delivery) {
     html = `<div data-alga-reply-boundary="true"></div>${html}<div style="display:none" data-alga-reply-token="${delivery.replyToken}"></div>`;
     text = `--- Please reply above this line ---\n\n${text}\n\n[ALGA-REPLY-TOKEN ${delivery.replyToken}]`;
   }

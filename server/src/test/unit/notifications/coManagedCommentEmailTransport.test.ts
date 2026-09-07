@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-const runtime = vi.hoisted(() => ({ send: vi.fn(), locale: vi.fn(), tenant: vi.fn(), routing: vi.fn() }));
+const runtime = vi.hoisted(() => ({ send: vi.fn(), locale: vi.fn(), tenant: vi.fn(), routing: vi.fn(), mailbox: vi.fn() }));
 vi.mock('@alga-psa/email', () => ({ TenantEmailService: { getInstance: (tenant: string) => { runtime.tenant(tenant); return { sendEmail: runtime.send }; } },
   StaticTemplateProcessor: class { constructor(private subject: string, private html: string, private text: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } }));
-vi.mock('@alga-psa/jobs/handlers/coManagedRequesterEmailRouting', () => ({ resolveCoManagedRequesterEmailRouting: runtime.routing }));
+vi.mock('@alga-psa/jobs/handlers/coManagedRequesterEmailRouting', () => ({ resolveCoManagedRequesterEmailRouting: runtime.routing, resolveCoManagedTicketEmailMailbox: runtime.mailbox }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({ resolveEmailLocale: runtime.locale }));
 import { sendCoManagedCommentEmail } from '@alga-psa/jobs/handlers/coManagedCommentEmailTransport';
 import type { CoManagedEmailDelivery } from '@alga-psa/co-managed';
@@ -11,7 +11,7 @@ const delivery = (): CoManagedEmailDelivery => ({ tenant: randomUUID(), recipien
   message: { resource: { tenant: randomUUID(), relationshipId: randomUUID(), kind: 'ticket', id: randomUUID() }, commentId: randomUUID(), threadId: randomUUID(), audience: 'shared_it',
     ticketNumber: 'T-1', ticketTitle: '<img src=x onerror=alert(1)>', note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: '<script>private()</script> & current text', styles: {} }], children: [] }]),
     author: { tenant: randomUUID(), id: randomUUID(), kind: 'user', referenceId: null, displayName: 'A < B', organizationName: 'Customer' } } });
-beforeEach(() => { runtime.send.mockReset().mockResolvedValue({ success: true }); runtime.locale.mockReset().mockResolvedValue('en'); runtime.tenant.mockClear(); });
+beforeEach(() => { runtime.send.mockReset().mockResolvedValue({ success: true }); runtime.locale.mockReset().mockResolvedValue('en'); runtime.tenant.mockClear(); runtime.mailbox.mockReset().mockResolvedValue({ from: { email: 'support@example.test' }, replyTo: { email: 'intake@example.test' } }); });
 it('renders only supplied authorized fields, escapes content, links the qualified source and retains caller-owned retry and stable identity', async () => {
   const item = delivery(); expect(await sendCoManagedCommentEmail(item)).toEqual({ status: 'delivered' });
   expect(runtime.tenant).toHaveBeenCalledWith(item.tenant);
@@ -40,7 +40,7 @@ it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('
   const { sendCoManagedCustomerCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
   runtime.locale.mockResolvedValue(locale);
   const source = delivery();
-  const item = { ...source, message: { ...source.message, audience: 'organization_private' as const,
+  const item = { ...source, replyToken: `cm2:${'b'.repeat(43)}`, message: { ...source.message, audience: 'organization_private' as const,
     resource: { tenant: source.tenant, kind: 'ticket' as const, id: source.message.resource.id } } };
   expect(await sendCoManagedCustomerCommentEmail(item)).toEqual({ status: 'delivered' });
   const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
@@ -48,6 +48,14 @@ it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('
   expect(content.text).toContain(`/msp/tickets/${source.message.resource.id}`);
   expect(content.text).not.toContain('/co-management/');
   expect(content.html).toContain('&lt;script&gt;');
+  expect(runtime.locale).toHaveBeenCalledWith(item.tenant, { email: item.email, userId: item.recipientUserId, userType: 'internal' });
+  expect(params).toMatchObject({ from: { email: 'support@example.test' }, replyTo: { email: 'intake@example.test' } });
+  expect(params).not.toHaveProperty('replyContext'); expect(params).not.toHaveProperty('entityId');
+  const { parseEmailReply } = await import('../../../../../shared/lib/email/replyParser');
+  const textReply = parseEmailReply({ text: `Technician answer\n\n${content.text}` });
+  expect(textReply.tokens?.conversationToken).toBe(item.replyToken); expect(textReply.sanitizedText).toBe('Technician answer');
+  const htmlReply = parseEmailReply({ text: '', html: `<p>Technician answer</p>${content.html}` });
+  expect(htmlReply.tokens?.conversationToken).toBe(item.replyToken); expect(htmlReply.sanitizedHtml).toBe('<p>Technician answer</p>');
   if (locale.startsWith('en')) expect(content.subject).toBe('New comment on a ticket');
 });
 
@@ -80,4 +88,10 @@ it('rejects malformed requester reply markers before rendering or transport', as
   const { sendCoManagedRequesterCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
   await expect(sendCoManagedRequesterCommentEmail({ replyToken: 'cm1:" injected' } as any)).rejects.toThrow('Invalid requester reply token');
   expect(runtime.send).not.toHaveBeenCalled();
+});
+
+it.each([undefined, 'cm2:" injected', `cm1:${'a'.repeat(43)}`])('rejects invalid technician reply token %s before mailbox lookup or transport', async replyToken => {
+  const { sendCoManagedCustomerCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  await expect(sendCoManagedCustomerCommentEmail({ replyToken } as any)).rejects.toThrow('Invalid customer technician reply token');
+  expect(runtime.mailbox).not.toHaveBeenCalled(); expect(runtime.send).not.toHaveBeenCalled();
 });
