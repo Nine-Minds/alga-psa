@@ -121,6 +121,7 @@ async function assertClientCanCreateComment(
  * - Client-visible comment from internal user: Set to 'awaiting_client'
  * - Comment from client: Set to 'awaiting_internal'
  */
+// LEVERAGE: pattern comment-response-state — shared comment production uses the same transition with qualified actors.
 async function updateTicketResponseState(
   trx: Knex.Transaction,
   tenant: string,

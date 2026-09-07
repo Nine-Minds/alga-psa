@@ -183,18 +183,8 @@ const visibilitySchema = z.enum(['public', 'internal']).describe('Message visibi
 const messageChannelSchema = z.enum(['email', 'portal', 'ui', 'api']).describe('Message channel');
 const authorTypeSchema = z.enum(['user', 'contact']).describe('Author type');
 
-export const ticketMessageAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  ticketId: ticketIdSchema,
-  messageId: messageIdSchema,
-  visibility: visibilitySchema,
-  authorId: z.string().uuid().describe('Author ID (user/contact)'),
-  authorType: authorTypeSchema,
-  channel: messageChannelSchema,
-  createdAt: z.string().datetime().optional(),
-  attachmentsCount: z.number().int().nonnegative().optional(),
-}).describe('Payload for TICKET_MESSAGE_ADDED');
-
-export type TicketMessageAddedEventPayload = z.infer<typeof ticketMessageAddedEventPayloadSchema>;
+export { ticketMessageAddedEventPayloadSchema } from '@alga-psa/event-schemas';
+export type { TicketMessageAddedEventPayload } from '@alga-psa/event-schemas';
 
 export const ticketCustomerRepliedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,
@@ -207,15 +197,8 @@ export const ticketCustomerRepliedEventPayloadSchema = BaseDomainEventPayloadSch
 
 export type TicketCustomerRepliedEventPayload = z.infer<typeof ticketCustomerRepliedEventPayloadSchema>;
 
-export const ticketInternalNoteAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
-  ticketId: ticketIdSchema,
-  noteId: noteIdSchema,
-  createdAt: z.string().datetime().optional(),
-}).describe('Payload for TICKET_INTERNAL_NOTE_ADDED');
-
-export type TicketInternalNoteAddedEventPayload = z.infer<
-  typeof ticketInternalNoteAddedEventPayloadSchema
->;
+export { ticketInternalNoteAddedEventPayloadSchema } from '@alga-psa/event-schemas';
+export type { TicketInternalNoteAddedEventPayload } from '@alga-psa/event-schemas';
 
 export const ticketTimeEntryAddedEventPayloadSchema = BaseDomainEventPayloadSchema.extend({
   ticketId: ticketIdSchema,

@@ -96,3 +96,16 @@ describe('buildTicketCommunicationWorkflowEvents', () => {
   });
 });
 
+
+it('preserves shared IT audience and qualified authors through the workflow runtime schemas', () => {
+  const owner = '00000000-0000-4000-8000-000000000001';
+  const reference = { ownerTenantId: owner, referenceId: '00000000-0000-4000-8000-000000000002', tenantId: '00000000-0000-4000-8000-000000000003',
+    userId: '00000000-0000-4000-8000-000000000004', displayName: 'Morgan Provider', organizationName: 'MSP' };
+  const events = buildTicketCommunicationWorkflowEvents({ ticketId: TICKET_ID, messageId: MESSAGE_ID, visibility: 'internal', audience: 'shared_it',
+    author: { authorType: 'collaborator', authorReference: reference }, channel: 'ui', createdAt: '2026-09-06T20:00:00.000Z' });
+  const ctx = { tenantId: owner, occurredAt: '2026-09-06T20:00:00.000Z', actor: { actorType: 'COLLABORATOR' as const, actorReference: reference } };
+  const message = ticketMessageAddedEventPayloadSchema.parse(buildWorkflowPayload(events[0].payload, ctx));
+  expect(message).toMatchObject({ authorType: 'collaborator', authorReference: reference, audience: 'shared_it' });
+  expect(message).not.toHaveProperty('authorId');
+  expect(ticketInternalNoteAddedEventPayloadSchema.parse(buildWorkflowPayload(events[1].payload, ctx)).audience).toBe('shared_it');
+});

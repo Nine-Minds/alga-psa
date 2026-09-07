@@ -88,3 +88,17 @@ describe('qualified comment audience contracts', () => {
     expect(EventSchemas.TICKET_COMMENT_ADDED.safeParse({ ...event, payload: { ...legacy, userId: undefined } }).success).toBe(false);
   });
 });
+
+describe('qualified message workflow authors', () => {
+  const payload = { ...buildWorkflowPayload({ ticketId }, ctx), messageId: ticketId, visibility: 'internal', audience: 'shared_it',
+    authorType: 'collaborator', authorReference: reference, channel: 'ui' };
+  const event = { ...envelope, eventType: 'TICKET_MESSAGE_ADDED', payload };
+  it('preserves the qualified message author independently of owner-local author IDs', () => {
+    expect(EventSchemas.TICKET_MESSAGE_ADDED.parse(event).payload).toMatchObject(payload);
+    expect(EventSchemas.TICKET_INTERNAL_NOTE_ADDED.parse({ ...event, eventType: 'TICKET_INTERNAL_NOTE_ADDED', payload: { ...payload, noteId: ticketId } }).payload.audience).toBe('shared_it');
+  });
+  it.each([{ authorId: reference.userId }, { authorReference: undefined }, { authorType: 'user', authorId: reference.userId },
+    { authorReference: { ...reference, displayName: 'Different author' } }, { audience: 'organization_private' }, { audience: undefined }, { visibility: 'public' }])('rejects flattened, inconsistent or private foreign workflow messages', alteration => {
+    expect(EventSchemas.TICKET_MESSAGE_ADDED.safeParse({ ...event, payload: { ...payload, ...alteration } }).success).toBe(false);
+  });
+});

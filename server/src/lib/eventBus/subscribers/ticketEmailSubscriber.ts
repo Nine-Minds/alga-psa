@@ -2755,8 +2755,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       await sendIfUnique(emailParams, 'Ticket Comment Added');
     }
 
-    // If this ticket is a bundle master, default behavior is to notify all child requesters for public comments.
-    if (isPublicComment && isFromAgent) {
+    // Shared comment authority currently covers the canonical ticket only.
+    // Child fanout requires a separately authorized child set at delivery time.
+    if (isPublicComment && isFromAgent && !commentActor.actorReference && !payload.comment?.audience) {
       const bundleChildren = shouldSendTicketCommentNotification(suppression, 'contact')
         ? await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId)
         : [];

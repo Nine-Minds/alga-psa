@@ -352,6 +352,7 @@ function applyTicketReadAuthorizationSql(
   });
 }
 
+// LEVERAGE: pattern comment-response-state — shared comment production uses the same transition with qualified actors.
 async function updateTicketResponseStateFromComment(
   trx: Knex.Transaction,
   tenant: string,

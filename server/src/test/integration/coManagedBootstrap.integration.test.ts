@@ -4913,10 +4913,17 @@ it('delivers qualified comment names to customer recipients without colliding au
           tenantId: principal.tenant, userId: principal.userId, displayName: comment.actor_display_name, organizationName: comment.actor_organization_name },
         comment: { id: receipt.commentId, content: comment.note, author: comment.actor_display_name, authorType: 'internal', audience, isInternal: audience !== 'requester' } } });
     };
+    const childContactId = randomUUID();
+    await customer.table('contacts').insert({ ...contact, contact_name_id: childContactId, full_name: 'Unshared child requester', email: `child-${randomUUID()}@example.test` });
+    const sourceTicket = await customer.table('tickets').where('ticket_id', resource.id).first();
+    const { title_index: _generated, ...copy } = sourceTicket;
+    await customer.table('tickets').insert({ ...copy, ticket_id: randomUUID(), ticket_number: 'CHILD-NOT-GRANTED', master_ticket_id: resource.id, contact_name_id: childContactId });
+    const childContact = await customer.table('contacts').where('contact_name_id', childContactId).first();
     const publicEvent = await added('requester');
     await email.handleTicketCommentAdded(publicEvent); await internal.handleTicketCommentAdded(publicEvent, { db, propagateErrors: true });
     expect(send.mock.calls.length).toBeGreaterThan(0);
     expect(send.mock.calls.some(([input]: any[]) => input.to === contact.email)).toBe(true);
+    expect(send.mock.calls.every(([input]: any[]) => input.to !== childContact.email)).toBe(true);
     expect(send.mock.calls.every(([input]: any[]) => input.context.comment.author === 'Morgan Provider (MSP)')).toBe(true);
     expect(notify.mock.calls.some(([, input]: any[]) => input.user_id === principal.userId && input.data.authorName === 'Morgan Provider (MSP)' &&
       input.metadata.comment.authorId === null && input.metadata.comment.actorReference.tenantId === principal.tenant)).toBe(true);
@@ -4939,5 +4946,101 @@ it('delivers qualified comment names to customer recipients without colliding au
       tenantId: resource.tenant, ticketId: resource.id, userId: customerPrincipal.userId, oldComment: { id: randomUUID(), content: 'Old', author: 'Local', isInternal: true },
       newComment: { id: randomUUID(), content: mentioned, author: 'Local', isInternal: true } } } as any);
     expect(notify.mock.calls.length).toBeGreaterThan(0); expect(notify.mock.calls.every(([, input]: any[]) => input.user_id !== portalUserId)).toBe(true);
+    send.mockClear();
+    const legacyReceipt = await create(customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Ordinary local bundle reply' });
+    const legacyComment = await customer.table('comments').where('comment_id', legacyReceipt.commentId).first();
+    await email.handleTicketCommentAdded(EventSchemas.TICKET_COMMENT_ADDED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_ADDED', payload: {
+      tenantId: resource.tenant, ticketId: resource.id, userId: customerPrincipal.userId, comment: { id: legacyReceipt.commentId, content: legacyComment.note, author: 'Customer technician', isInternal: false, authorType: 'internal' } } }));
+    expect(send.mock.calls.some(([input]: any[]) => input.to === childContact.email)).toBe(true);
   } finally { notify.mockRestore(); send.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
+}));
+
+it('commits shared comment response state, qualified activity and receipts before publishing production events exactly once', async () => withSharedTicketMutationFixture(async ({
+  principal, resource, customer, publish, workflow,
+}) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { EventSchemas, buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+  const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Production public reply' };
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  const committed: boolean[] = [];
+  publish.mockImplementation(async (event: any) => {
+    committed.push(Boolean(await customer.table('co_management_command_receipts').where('operation_id', request.operationId).first()));
+    expect(await customer.table('comments').where('comment_id', request.operationId).first()).toBeDefined();
+    EventSchemas[event.eventType].parse({ id: randomUUID(), timestamp: new Date().toISOString(), ...event });
+  });
+  const first = await createSharedTicketComment(db, principal, resource, request);
+  const retry = await createSharedTicketComment(db, principal, resource, request);
+  expect(retry).toEqual(first); expect(committed).toEqual([true, true]);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_client' });
+  expect(await customer.table('ticket_audit_logs').where('entity_id', request.operationId).first()).toMatchObject({ actor_user_id: null,
+    actor_reference_id: expect.any(String), actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP', event_type: 'TICKET_MESSAGE_ADDED' });
+  expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_RESPONSE_STATE_CHANGED', 'TICKET_COMMENT_ADDED']);
+  expect(publish.mock.calls[1][0]).toMatchObject({ payload: { actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant }, comment: { audience: 'requester', isInternal: false } } });
+  expect((publish.mock.calls[1][0] as any).payload).not.toHaveProperty('userId');
+  expect(workflow).toHaveBeenCalledTimes(1);
+  const message = workflow.mock.calls[0][0] as any;
+  const parsed = EventSchemas.TICKET_MESSAGE_ADDED.parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: message.eventType, payload: buildWorkflowPayload(message.payload, message.ctx) });
+  expect(parsed.payload).toMatchObject({ authorType: 'collaborator', authorReference: { tenantId: principal.tenant }, audience: 'requester' });
+  expect(parsed.payload).not.toHaveProperty('authorId');
+  expect(publish.mock.calls[1][1]).toMatchObject({ eventId: expect.any(String) });
+  expect(workflow.mock.calls[0][1]).toMatchObject({ eventId: expect.any(String) });
+  expect((publish.mock.calls[1][1] as any).eventId).not.toBe((workflow.mock.calls[0][1] as any).eventId);
+}));
+
+it('rolls back all production comment state and effects with the owning transaction and respects disabled response tracking', async () => withSharedTicketMutationFixture(async ({
+  principal, resource, customer, publish, workflow,
+}) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Rollback production reply' };
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  const before = await customer.table('ticket_audit_logs');
+  await expect(db.transaction(async trx => { await createSharedTicketComment(trx, principal, resource, request); throw new Error('Rollback production comment'); })).rejects.toThrow('Rollback production comment');
+  expect(await customer.table('comments')).toEqual([]); expect(await customer.table('co_management_command_receipts')).toEqual([]);
+  expect(await customer.table('ticket_audit_logs')).toEqual(before);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal' });
+  expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+  await customer.table('tenant_settings').update({ ticket_display_settings: { responseStateTrackingEnabled: false } });
+  await createSharedTicketComment(db, principal, resource, request);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal' });
+  expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_COMMENT_ADDED']);
+}));
+
+it('publishes distinct shared IT and customer-private workflow audiences without changing response state or fabricating local MSP IDs', async () => withSharedTicketMutationFixture(async ({
+  principal, customerPrincipal, resource, customer, publish, workflow,
+}) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { EventSchemas, buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  for (const [actor, audience] of [[principal, 'shared_it'], [customerPrincipal, 'organization_private']] as const) {
+    publish.mockClear(); workflow.mockClear();
+    const receipt = await createSharedTicketComment(db, actor, resource, { operationId: randomUUID(), audience, text: `Production ${audience}` });
+    expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_COMMENT_ADDED']);
+    expect(workflow.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_MESSAGE_ADDED', 'TICKET_INTERNAL_NOTE_ADDED']);
+    for (const [event] of workflow.mock.calls as any[]) {
+      const parsed = EventSchemas[event.eventType].parse({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: event.eventType, payload: buildWorkflowPayload(event.payload, event.ctx) });
+      expect(parsed.payload.audience).toBe(audience);
+      expect(parsed.payload.actorType).toBe(actor.tenant === resource.tenant ? 'USER' : 'COLLABORATOR');
+    }
+    const comment = await customer.table('comments').where('comment_id', receipt.commentId).first();
+    expect(comment.is_internal).toBe(true);
+    expect(comment.user_id).toBe(actor.tenant === resource.tenant ? actor.userId : null);
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal' });
+  }
+}));
+
+it('does not use public comment side effects to mutate a restricted response-state field', async () => withSharedTicketMutationFixture(async ({
+  principal, resource, operation, sponsor, customer, publish, workflow,
+}) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Response side-effect restriction', actorUserId: principal.userId });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: action === 'update' ? ['response_state'] : [] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  await expect(createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'requester', text: 'Forbidden side effect' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('comments')).toEqual([]); expect(await customer.table('co_management_command_receipts')).toEqual([]);
+  expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+  await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Permitted internal note' });
+  expect(await customer.table('comments')).toHaveLength(1);
 }));

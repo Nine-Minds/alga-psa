@@ -15,7 +15,7 @@ export type CoManagedCommentCreateRequest = { operationId: string; text: string 
   { audience: CommentAudience; parent?: never } | { parent: CoManagedCommentReference; audience?: never });
 export interface CoManagedCommentCreateReceipt extends CoManagedCommentReference { operationId: string; appliedAt: string }
 export interface CoManagedCommentCreateContext extends CoManagedSharedWorkContext {
-  actorReferenceId?: string; audience: CommentAudience; assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
+  actorReferenceId?: string; audience: CommentAudience; canUpdateResponseState: boolean; assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
 }
 export interface CoManagedCommentInsert {
   comment_id: string; ticket_id: string; thread_id: string; parent_comment_id: string | null;
@@ -94,7 +94,8 @@ export async function createCoManagedTicketComment(db: Knex, inputActor: CoManag
       if (!audience) throw new CoManagedSharedWorkError();
       const actorReferenceId = foreign ? await ensureCoManagedActorReference(context) : undefined;
       await assertWriteAuthority(trx);
-      await apply({ ...context, actorReferenceId, audience, assertWriteAuthority }, { comment_id: request.operationId, ticket_id: resource.id, thread_id: threadId,
+      await apply({ ...context, actorReferenceId, audience, assertWriteAuthority,
+        canUpdateResponseState: !isCoManagedReadFieldHidden([...context.redactedFields, ...readContext.redactedFields], ['response_state', 'tickets.response_state']) }, { comment_id: request.operationId, ticket_id: resource.id, thread_id: threadId,
         parent_comment_id: request.parent?.commentId ?? null, ...plainTextContent(request.text), is_internal: audience !== 'requester', is_resolution: false,
         author_type: 'internal', user_id: foreign ? null : actor.userId, publish_state: 'published' });
       await assertWriteAuthority(trx);
