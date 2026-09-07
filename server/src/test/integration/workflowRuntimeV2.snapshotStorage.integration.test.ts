@@ -3,6 +3,8 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { encryptActionReplay, decryptActionReplay } from '../../../../shared/workflow/runtime/utils/actionReplayCipher';
+import WorkflowActionInvocationModelV2 from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
 import { getActionRegistryV2 } from '@alga-psa/workflows/runtime/core';
 
 const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', canRead: true }));
@@ -21,7 +23,7 @@ vi.mock('@alga-psa/auth', async importOriginal => {
     hasPermission: async () => state.canRead,
   };
 });
-import { listWorkflowRunStepsAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
+import { listWorkflowRunStepsAction, exportWorkflowRunDetailAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
 import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
 
 let db: Knex;
@@ -131,4 +133,23 @@ it('redacts invocation inputs while preserving the successful result and avoidin
   expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual({ result: 'completed' });
   expect(handler).toHaveBeenCalledOnce();
   expect(handler).toHaveBeenCalledWith({ credentials: { secretRef: 'synthetic-secret-reference' } }, expect.anything());
+});
+
+it.each([['history', listWorkflowRunStepsAction], ['export', exportWorkflowRunDetailAction]] as const)('excludes protected replay fields from %s while preserving internal retry access', async (_name, read) => {
+  const f = await fixture(); state.tenant = f.tenant;
+  const invocationId = randomUUID(), idempotencyKey = randomUUID();
+  const identity = { tenantId: f.tenant, invocationId }, key = 'synthetic-private-replay-key';
+  const envelope = encryptActionReplay({ secretRef: 'private-result' }, key, identity);
+  await state.trx!('workflow_action_invocations').insert({ tenant: f.tenant, invocation_id: invocationId,
+    run_id: f.runId, step_path: f.stepPath, action_id: 'test.private-replay', action_version: 1,
+    idempotency_key: idempotencyKey, status: 'SUCCEEDED', attempt: 1,
+    output_json: { secretRef: '[REDACTED]' }, replay_output_encrypted: envelope,
+  });
+  const internal = await WorkflowActionInvocationModelV2.findByIdempotency(state.trx!, 'test.private-replay', 1, idempotencyKey, f.tenant);
+  expect(decryptActionReplay(internal?.replay_output_encrypted, key, identity)).toEqual({ secretRef: 'private-result' });
+  const result = await read({ runId: f.runId });
+  expect(result.invocations).toHaveLength(1);
+  expect(result.invocations[0]).toMatchObject({ output_json: { secretRef: '[REDACTED]' } });
+  expect(result.invocations[0]).not.toHaveProperty('replay_output_encrypted');
+  expect(JSON.stringify(result)).not.toContain(envelope.ciphertext);
 });
