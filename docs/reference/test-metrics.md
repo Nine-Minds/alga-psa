@@ -60,14 +60,22 @@ the denominator and steps the totals on that day.
 
 `pass_pct` over a run that never reached most of its tests is arithmetic, not
 information: on 2026-08-21 `infrastructure-full` executed 5 of its 354 tests and
-recorded **100%**. The recorder marks a run `partial` when either
+recorded **100%**. The recorder marks a run `partial` when any
 signal shows in the vitest JSON report:
 
 - an assertion left in `pending` — vitest maps a test still in `run`/`queued`
   state there when the process is cut short, while an intentional `describe.skip`
   maps to `skipped` and `it.todo` to `todo`;
 - fewer than half the collected tests executed (`MIN_EXECUTED_RATIO` in the
-  recorder), which is what a dead bootstrap looks like.
+  recorder), which is what a dead bootstrap looks like;
+- a suite failed without a failed assertion, indicating collection, setup or
+  teardown failure. Successful sibling assertions cannot make that lifecycle
+  successful;
+- an execution manifest explicitly reports incomplete required execution.
+
+`complete` describes this legacy report check, not release readiness. It does
+not prove that every required test was discovered or that intentional skips
+are acceptable. Required execution reconciliation must establish those facts.
 
 Partial rows keep their raw counts but leave `pass_pct` blank, so no average or
 trendline silently absorbs them. Three rows predate the check and still carry a

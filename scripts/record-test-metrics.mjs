@@ -68,7 +68,13 @@ export function runStatus(results) {
     (f) => (f.assertionResults ?? []).some((a) => a.status === 'pending'),
   );
   const noShow = total > 0 && executed < total * MIN_EXECUTED_RATIO;
-  return cutShort || noShow ? 'partial' : 'complete';
+  // Collection/setup/teardown can fail a suite without failing an assertion.
+  // Successful sibling tests must not turn that failed lifecycle into 100%.
+  const lifecycleFailure = (results.testResults ?? []).some(
+    (file) => file.status === 'failed'
+      && !(file.assertionResults ?? []).some((assertion) => assertion.status === 'failed'),
+  ) || ((results.numFailedTestSuites ?? 0) > 0 && (results.numFailedTests ?? 0) === 0);
+  return cutShort || noShow || lifecycleFailure ? 'partial' : 'complete';
 }
 
 export function testCounts(results) {

@@ -1,0 +1,33 @@
+{
+  "status": "local behavioral repair verified; native pending",
+  "defect": "A failed suite bootstrap with no failed assertions produced complete/100% from passing siblings. The df9b native report has 2059 passing assertions and 51 skipped, including two assertions in a failed mention suite.",
+  "change": "Classify failed suites without failed assertions as partial and suppress pass_pct. Preserve existing Sheet columns and raw counts.",
+  "tests": {
+    "file": "scripts/tests/test-metrics-lifecycle.test.mjs",
+    "before": {
+      "passed": 2,
+      "failed": 2,
+      "log": "/tmp/alga-metrics-lifecycle-before.log"
+    },
+    "after": {
+      "passed": 4,
+      "failed": 0,
+      "skipped": 0,
+      "log": "/tmp/alga-metrics-lifecycle-after.log"
+    }
+  },
+  "actualReportReplay": {
+    "run": 34078331083,
+    "passed": 2059,
+    "failed": 0,
+    "skipped": 51,
+    "total": 2110,
+    "runStatus": "partial",
+    "passPct": ""
+  },
+  "scopeLimits": [
+    "Does not establish complete inventory or release readiness.",
+    "No historical Sheet rows were rewritten.",
+    "F024/F025 remain incomplete: versioned schema, journey/retry/artifact reporting and workbook readiness still required."
+  ]
+}
