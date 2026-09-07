@@ -1,14 +1,28 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getEligibleContractLinesForUI } from 'server/src/lib/utils/contractLineDisambiguation';
+import { getEligibleContractLines as billingEligibility } from '@alga-psa/billing/lib/contractLineDisambiguation';
+import { getEligibleContractLines as schedulingEligibility } from '@alga-psa/scheduling/lib/contractLineDisambiguation';
 
 // Only database I/O is substituted. SQL eligibility and browser selection have
 // separate DB/E2E suites; these assertions exercise the real UI projection.
 vi.mock('server/src/lib/db', () => ({ createTenantKnex: vi.fn() }));
+vi.mock('@alga-psa/user-composition/actions', () => ({ getCurrentUser: vi.fn() }));
 const line = (overrides: Record<string, unknown> = {}) => ({
   client_contract_line_id: 'line-1', contract_line_name: 'Support hours',
   contract_line_type: 'Hourly', contract_name: 'Managed services',
   start_date: new Date('2026-01-01T00:00:00Z'), end_date: null, ...overrides,
+});
+
+describe.each([
+  ['billing', billingEligibility],
+  ['scheduling', schedulingEligibility],
+] as const)('%s contract eligibility without a client', (_name, eligible) => {
+  it.each(['', '   ', null, undefined])('returns no candidates without querying (%s)', async clientId => {
+    const database = vi.fn(() => { throw new Error('No client scope: database must not be queried'); });
+    expect(await eligible(database as never, 'tenant-1', clientId as string, 'service-1')).toEqual([]);
+    expect(database).not.toHaveBeenCalled();
+  });
 });
 
 describe('Contract line choices returned to the UI', () => {
@@ -71,8 +85,12 @@ describe('Contract line choices returned to the UI', () => {
     expect(choices[1].has_bucket_overlay).toBe(false);
   });
 
-  // Retain the pre-existing input-validation backlog until its DB behavior is verified.
-  it.todo('should handle the case when no client ID is available');
+  it.each(['', '   ', null, undefined])('returns no choices without a client ID (%s)', async clientId => {
+    rows.mockResolvedValue([line()]);
+    expect(await getEligibleContractLinesForUI(clientId as string, 'service-1')).toEqual([]);
+    // No client scope exists, so eligibility must not issue a database query.
+    expect(database).not.toHaveBeenCalled();
+  });
 
   it('returns no choices when no eligible rows exist', async () => {
     expect(await getEligibleContractLinesForUI('client-1', 'service-1')).toEqual([]);
@@ -85,9 +103,9 @@ describe('Contract line choices returned to the UI', () => {
     expect(await getEligibleContractLinesForUI('client-1', 'unknown-service')).toEqual([]);
   });
 
-  it('rejects missing tenant context before touching tenant data', async () => {
+  it.each(['client-1', ''])('rejects missing tenant context before touching tenant data (%s)', async clientId => {
     vi.mocked(createTenantKnex).mockResolvedValue({ knex: database, tenant: undefined } as never);
-    await expect(getEligibleContractLinesForUI('client-1', 'service-1')).rejects.toThrow('Tenant context not found');
+    await expect(getEligibleContractLinesForUI(clientId, 'service-1')).rejects.toThrow('Tenant context not found');
     expect(database).not.toHaveBeenCalled();
   });
 
