@@ -2259,3 +2259,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Consumer-owned floors require both runtime files and all six tenant database files even if a producer collection/configuration drops one. Read failures are accumulated so both bundles receive diagnostics; CLI always overwrites the aggregate verdict on failure.
 - Actual CLI fixture regression exercises passing artifacts, omitted files in each lane, skipped assertions, filtered selection, malformed/missing reports, unsuccessful job states, stale candidate and dirty checkout. Focused Citus/workspace database gate tests and actionlint pass. Evidence: evidence/citus-independent-gate.json.
 - Workflow remains path-triggered; native execution, effective protection and global gate completeness remain open. No broad plan flags changed.
+
+### 2026-09-07 — complete tooling lane including Citus aggregate
+
+- Canonical run-node-tooling-tests passes all 501 tests in 52 required files at clean 8063cf6db70942bcbeee2a4bca3a8a7467c038b4. Discovery passes; no failures, skips, TODOs or cancellations. Before/after revision is identical and clean.
+- Includes the actual-Vitest Citus runner collection regression and independent two-bundle Citus CLI gate. Existing manual localization baseline exclusion remains explicit. Evidence: evidence/node-tooling-local-8063cf.json.
+- Local Node 25 results do not establish native CI or application journey execution. No broad plan flags changed.
