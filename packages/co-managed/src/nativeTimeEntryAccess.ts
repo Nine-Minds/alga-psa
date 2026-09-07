@@ -3,8 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import type { AuthorizationRecord } from '@alga-psa/authorization';
 import type { IWorkItem } from '@alga-psa/types';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
-import { snapshotCoManagedSessionActor, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired,
-  authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
+import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
+import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
@@ -16,17 +16,17 @@ export interface CoManagedNativeTimeAccess { workItem: IWorkItem; subjectUserId:
 
 /** Retain actual local work, entry ownership and editable sheets through the
  * native save. Source locators are hints until their parent and entry locks
- * confirm them. No trust or MSP actor can substitute for this home session. */
-export async function admitCoManagedNativeTimeSave(trx: Knex.Transaction, inputActor: CoManagedSessionActor,
+ * confirm them. No trust or MSP actor can substitute for this home credential. */
+export async function admitCoManagedNativeTimeSave(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
   input: TimeSaveInput): Promise<CoManagedNativeTimeAccess> {
-  const actor = snapshotCoManagedSessionActor(inputActor), owner = tenantDb(trx, actor.tenant);
+  const actor = snapshotCoManagedAuthenticatedActor(inputActor), owner = tenantDb(trx, actor.tenant);
   input = { ...input };
   if (!trx.isTransaction || (input.entry_id && !isCoManagedUuid(input.entry_id)) ||
     (input.time_sheet_id && !isCoManagedUuid(input.time_sheet_id))) throw new CoManagedSharedWorkError();
   await assertCoManagedOperationalWrite(trx, actor.tenant);
   const workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
   if (!workspace || !['psa', 'co_managed'].includes(workspace.product_code) || workspace.suspended_at) throw new CoManagedSharedWorkError();
-  const subject = await lockCoManagedSessionIdentity(trx, actor);
+  const { subject, assertCurrent: assertAuthenticationCurrent } = await lockCoManagedLocalAuthentication(trx, actor);
   const hint = input.entry_id ? await owner.table('time_entries').where('entry_id', input.entry_id).first() : null;
   if (input.entry_id && !hint) throw new CoManagedSharedWorkError();
   const subjectUserId = hint?.user_id || input.user_id || actor.userId;
@@ -127,7 +127,7 @@ export async function admitCoManagedNativeTimeSave(trx: Knex.Transaction, inputA
     const current = await owner.table('time_entries').where('entry_id', input.entry_id).forUpdate().first();
     if (!current || ['work_item_id', 'work_item_type', 'user_id', 'time_sheet_id', 'approval_status', 'billing_mode', 'invoiced'].some(field => current[field] !== hint[field])) throw new CoManagedSharedWorkError();
   }
-  const assertCurrent = async () => { await assertCoManagedSessionUnexpired(trx, actor); await assertCoManagedOperationalWrite(trx, actor.tenant); };
+  const assertCurrent = async () => { await assertAuthenticationCurrent(); await assertCoManagedOperationalWrite(trx, actor.tenant); };
   await assertCurrent();
   return { subjectUserId, workItem: projections.get(`${input.work_item_type}:${input.work_item_id}`)!, assertCurrent };
 }

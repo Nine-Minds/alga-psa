@@ -25,10 +25,19 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
+import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
+import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
+  CoManagedSharedWorkError, TimeEntryBillingModeError, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+import { CoManagedLifecycleError } from '@alga-psa/licensing';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+
+interface TimeApiAdmission {
+  operational: boolean; access: CoManagedNativeTimeAccess | null; existing: any; source: any;
+  fields: ReturnType<typeof operationalTimeEntryFields> | null;
+}
 
 export class TimeEntryService extends BaseService<any> {
-  constructor() {
+  constructor(private readonly retainedConnection?: { knex: Knex.Transaction; tenant: string }) {
     super({
       tableName: 'time_entries',
       primaryKey: 'entry_id',
@@ -37,6 +46,92 @@ export class TimeEntryService extends BaseService<any> {
       defaultSort: 'start_time',
       defaultOrder: 'desc'
     });
+  }
+
+  protected async getKnex(): Promise<{ knex: Knex; tenant: string }> {
+    return this.retainedConnection ?? super.getKnex();
+  }
+
+  async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
+    return this.withTimeWrite(undefined, data, context, (service, admission, payload, home) => service.createAdmitted(payload, home, admission));
+  }
+  async update(id: string, data: UpdateTimeEntryData, context: ServiceContext): Promise<any> {
+    return this.withTimeWrite(id, data, context, (service, admission, payload, home) => service.updateAdmitted(id, payload, home, admission));
+  }
+  /** Each mutation has a fresh connection-bound service. Native helper queries
+   * and after-commit events cannot escape the transaction or mutate a shared
+   * service instance used concurrently by another request. */
+  private async withTimeWrite(id: string | undefined, input: any, inputContext: ServiceContext,
+    work: (service: TimeEntryService, admission: TimeApiAdmission, data: any, context: ServiceContext) => Promise<any>) {
+    const context = { ...inputContext, user: inputContext.user ? { ...inputContext.user } : undefined }, data = { ...input };
+    const { knex } = await this.getKnex();
+    try {
+      return await withTransaction(knex, async trx => {
+        const currentMode = await lockTimeEntryBillingMode(trx, context.tenant), owner = tenantDb(trx, context.tenant);
+        const existing = id ? await owner.table('time_entries').where('entry_id', id).first() : null;
+        if (id && !existing) throw new NotFoundError('Time entry not found');
+        const guarded = currentMode === 'operational' || existing?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, context.tenant);
+        const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
+        let access: CoManagedNativeTimeAccess | null = null, source: any = null;
+        if (guarded) {
+          if (!context.apiKeyId || context.user?.user_id !== context.userId || context.user?.tenant !== context.tenant || context.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
+          // Serializes the API's overlap and automatic-sheet checks
+          // before taking shared identity locks. It never locks a foreign user.
+          if (!await owner.table('users').where({ user_id: context.userId, user_type: 'internal', is_inactive: false }).forUpdate().first('user_id')) throw new CoManagedSharedWorkError();
+          const actor = { kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId };
+          const credential = await lockCoManagedLocalAuthentication(trx, actor);
+          source = { ...existing, ...data, entry_id: id, user_id: existing?.user_id || context.userId, approval_status: existing?.approval_status || 'DRAFT' };
+          if (source.user_id !== context.userId) throw new CoManagedSharedWorkError();
+          source.start_time = truncateToMinute(source.start_time);
+          source.end_time = truncateToMinute(source.end_time);
+          if (!(source.end_time > source.start_time)) throw new ValidationError('End time must be after start time');
+          const zone = await resolveUserTimeZone(trx, context.tenant, source.user_id);
+          Object.assign(source, computeWorkDateFields(source.start_time, zone));
+          if (!source.time_sheet_id || data.start_time) source.time_sheet_id = await service.getOrCreateTimeSheetForWorkDate(source.work_date, source.user_id, context);
+          const workId = source.work_item_type === 'non_billable_category' && !source.work_item_id ? '__non_billable__' : source.work_item_id;
+          access = await admitCoManagedNativeTimeSave(trx, actor, { ...source, work_item_id: workId });
+          source.work_item_id = workId === '__non_billable__' ? null : workId;
+          const sheet = owner.table('time_sheets as sheet').where('sheet.id', source.time_sheet_id);
+          owner.tenantJoin(sheet, 'time_periods as period', 'sheet.period_id', 'period.period_id');
+          const period = await sheet.first('period.start_date', 'period.end_date');
+          const dateOnly = (value: Date | string) => value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+          const endDate = source.end_time ? computeWorkDateFields(source.end_time, zone).work_date : source.work_date;
+          if (!period || source.work_date < dateOnly(period.start_date) || source.work_date >= dateOnly(period.end_date) || endDate < dateOnly(period.start_date) || endDate >= dateOnly(period.end_date)) throw new ValidationError('Time entry must fall within the time sheet period');
+          await credential.assertCurrent();
+        }
+        const mode = await lockTimeEntryBillingMode(trx, context.tenant, id), operational = mode === 'operational';
+        const fields = operational ? operationalTimeEntryFields(data) : null;
+        const result = await work(service, { existing, source, access, operational, fields }, data, context);
+        await access?.assertCurrent();
+        return result;
+      });
+    } catch (error) {
+      if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
+      if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError('Permission denied: Cannot access this time entry');
+      if (error instanceof TimeEntryBillingModeError) {
+        if (error.code === 'OPERATIONAL_TIME_COMMERCIAL_FIELDS') throw new ValidationError('Operational time cannot include billing selections');
+        if (error.code === 'TIME_ENTRY_NOT_FOUND') throw new NotFoundError('Time entry not found');
+        throw new ForbiddenError('Time entry is not available for this product');
+      }
+      throw error;
+    }
+  }
+
+  private admittedPersistFields(admission: TimeApiAdmission) {
+    const { start_time, end_time, work_date, work_timezone, time_sheet_id, work_item_id, work_item_type } = admission.source;
+    return { start_time, end_time, work_date, work_timezone, time_sheet_id, work_item_id, work_item_type };
+  }
+
+  private presentAdmittedTime(entry: any, admission: TimeApiAdmission) {
+    const item = admission.access!.workItem;
+    const minutes = entry.end_time ? Math.max(0, Math.round((new Date(entry.end_time).getTime() - new Date(entry.start_time).getTime()) / 60000)) : 0;
+    return { ...entry, duration_hours: Math.round(minutes / 60 * 100) / 100, is_billable: entry.billable_duration > 0,
+      work_item: { id: entry.work_item_id, type: entry.work_item_type, title: item.name }, work_item_title: item.name };
+  }
+
+  private async afterTimeCommit(work: () => Promise<void>) {
+    if (!this.retainedConnection) throw new Error('Time mutation events require their owning transaction');
+    registerAfterCommit(this.retainedConnection.knex, work, 'api-time-entry');
   }
 
   private assertServiceIdPresent(serviceId: string | null | undefined): void {
@@ -223,10 +318,10 @@ export class TimeEntryService extends BaseService<any> {
     };
   }
 
-  async create(data: CreateTimeEntryData, context: ServiceContext): Promise<any> {
+  private async createAdmitted(data: CreateTimeEntryData, context: ServiceContext, admission: TimeApiAdmission): Promise<any> {
     const { knex } = await this.getKnex();
 
-    this.assertServiceIdPresent(data.service_id);
+    if (!admission.operational) this.assertServiceIdPresent(data.service_id);
 
     if (data.work_item_type === 'ticket') {
       if (!data.work_item_id) {
@@ -327,13 +422,16 @@ export class TimeEntryService extends BaseService<any> {
       updated_at: new Date()
     };
 
+    if (admission.source) Object.assign(timeEntryData, this.admittedPersistFields(admission));
+    if (admission.fields) Object.assign(timeEntryData, admission.fields);
+
     // Get billing information if billable
-    if (data.is_billable !== false) {
+    if (!admission.operational && data.is_billable !== false) {
       const billingInfo = await this.calculateBillingInfo(timeEntryData, context);
       Object.assign(timeEntryData, billingInfo);
     }
 
-    const timeEntry = await knex.transaction(async (trx) => {
+    const timeEntry = await withTransaction(knex, async (trx) => {
       const [created] = await tenantDb(trx, context.tenant).table('time_entries')
         .insert(timeEntryData)
         .returning('*');
@@ -342,7 +440,7 @@ export class TimeEntryService extends BaseService<any> {
     });
 
     // Publish event
-    await publishEvent({
+    await this.afterTimeCommit(() => publishEvent({
       eventType: 'TIME_ENTRY_CREATED',
       payload: {
         tenantId: context.tenant,
@@ -353,7 +451,7 @@ export class TimeEntryService extends BaseService<any> {
         duration: billableDuration,
         timestamp: new Date().toISOString()
       }
-    });
+    }));
 
     const ticketTimeEntryAdded = buildTicketTimeEntryAddedWorkflowEvent({
       workItemType: timeEntry.work_item_type,
@@ -364,7 +462,7 @@ export class TimeEntryService extends BaseService<any> {
       createdAt: timeEntry.created_at,
     });
     if (ticketTimeEntryAdded) {
-      await publishWorkflowEvent({
+      await this.afterTimeCommit(() => publishWorkflowEvent({
         eventType: ticketTimeEntryAdded.eventType,
         payload: ticketTimeEntryAdded.payload,
         ctx: {
@@ -372,15 +470,15 @@ export class TimeEntryService extends BaseService<any> {
           occurredAt: timeEntry.created_at,
           actor: { actorType: 'USER', actorUserId: context.userId },
         },
-      });
+      }));
     }
 
-    return this.getWithDetails(timeEntry.entry_id, context);
+    return admission.access ? this.presentAdmittedTime(timeEntry, admission) : this.getWithDetails(timeEntry.entry_id, context);
   }
 
-  async update(id: string, data: UpdateTimeEntryData, context: ServiceContext): Promise<any> {
+  private async updateAdmitted(id: string, data: UpdateTimeEntryData, context: ServiceContext, admission: TimeApiAdmission): Promise<any> {
     const { knex } = await this.getKnex();
-    const existing = await this.getById(id, context);
+    const existing = admission.existing;
     if (!existing) {
       return null;
     }
@@ -395,7 +493,7 @@ export class TimeEntryService extends BaseService<any> {
       throw new ConflictError('Cannot modify approved time entries');
     }
 
-    this.assertServiceIdPresent(data.service_id ?? existing.service_id);
+    if (!admission.operational) this.assertServiceIdPresent(data.service_id ?? existing.service_id);
 
     // Extract is_billable from data as it's not a database column
     const { is_billable, ...dataWithoutBillable } = data;
@@ -442,33 +540,36 @@ export class TimeEntryService extends BaseService<any> {
     }
 
     // Recalculate billing if relevant fields changed
-    if (data.service_id !== undefined || updateData.billable_duration !== undefined) {
+    if (!admission.operational && (data.service_id !== undefined || updateData.billable_duration !== undefined)) {
       const billingInfo = await this.calculateBillingInfo({ ...existing, ...updateData }, context);
       Object.assign(updateData, billingInfo);
     }
 
-    await knex.transaction(async (trx) => {
+    if (admission.source) Object.assign(updateData, this.admittedPersistFields(admission));
+    if (admission.fields) Object.assign(updateData, admission.fields);
+    const saved = await withTransaction(knex, async (trx) => {
       const [updated] = await tenantDb(trx, context.tenant).table('time_entries')
         .where({ [this.primaryKey]: id })
         .update(updateData)
         .returning('*');
       if (!updated) throw new NotFoundError('Time entry not found');
       await recalculateProjectTaskActualHoursForEntryChange(trx, context.tenant, existing, updated);
+      return updated;
     });
 
     // Publish event
-    await publishEvent({
+    await this.afterTimeCommit(() => publishEvent({
       eventType: 'TIME_ENTRY_UPDATED',
       payload: {
         tenantId: context.tenant,
         timeEntryId: id,
         userId: context.userId,
-        changes: data,
+        changes: admission.access ? undefined : data,
         timestamp: new Date().toISOString()
       }
-    });
+    }));
 
-    return this.getById(id, context);
+    return admission.access ? this.presentAdmittedTime(saved, admission) : this.getById(id, context);
   }
 
   async delete(id: string, context: ServiceContext): Promise<void> {

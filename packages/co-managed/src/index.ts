@@ -59,3 +59,5 @@ export * from './taskCommentRecipients';
 export * from './timeEntryBillingMode';
 
 export * from './nativeTimeEntryAccess';
+
+export * from './localAuthentication';

@@ -120,7 +120,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -151,11 +151,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Search within tenant context
         const results = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.searchTimeEntries(searchParams, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.searchTimeEntries(searchParams, apiRequest.context);
         });
 
         const page = 1; // Search doesn't support pagination
@@ -207,7 +203,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -228,11 +224,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Get statistics within tenant context
         const stats = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.getTimeEntryStatistics(queryParams, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.getTimeEntryStatistics(queryParams, apiRequest.context);
         });
 
         return createSuccessResponse(stats);
@@ -277,7 +269,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -308,11 +300,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Export within tenant context
         const exportData = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.exportTimeEntries(exportParams, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.exportTimeEntries(exportParams, apiRequest.context);
         });
 
         // Return appropriate response based on format
@@ -367,7 +355,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -396,11 +384,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Start tracking within tenant context
         const session = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.startTimeTracking(trackingData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.startTimeTracking(trackingData, apiRequest.context);
         });
 
         return createSuccessResponse(session, 201);
@@ -445,7 +429,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Extract session ID from path
         const pathParts = req.url.split('/');
@@ -479,11 +463,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Stop tracking within tenant context
         const timeEntry = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.stopTimeTracking(sessionId, stopData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.stopTimeTracking(sessionId, stopData, apiRequest.context);
         });
 
         return createSuccessResponse(timeEntry, 201);
@@ -528,15 +508,11 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Get active session within tenant context
         const session = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.getActiveSession(user.user_id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.getActiveSession(user.user_id, apiRequest.context);
         });
 
         return createSuccessResponse(session);
@@ -581,7 +557,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -610,11 +586,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Approve entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.approveTimeEntries(approvalData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.approveTimeEntries(approvalData, apiRequest.context);
         });
 
         return createSuccessResponse(result);
@@ -659,7 +631,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -688,11 +660,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Request changes within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.requestChanges(changeData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.requestChanges(changeData, apiRequest.context);
         });
 
         return createSuccessResponse(result);
@@ -737,15 +705,11 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Get templates within tenant context
         const templates = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.getTimeEntryTemplates({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.getTimeEntryTemplates(apiRequest.context);
         });
 
         return createSuccessResponse(templates);
@@ -790,7 +754,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -819,11 +783,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Create entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.bulkCreateTimeEntries(bulkData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.bulkCreateTimeEntries(bulkData, apiRequest.context);
         });
 
         return createSuccessResponse({ created_count: result.filter(r => r.success).length }, 201);
@@ -868,7 +828,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -897,11 +857,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Update entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.bulkUpdateTimeEntries(bulkData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.bulkUpdateTimeEntries(bulkData, apiRequest.context);
         });
 
         return createSuccessResponse({ updated_count: result.filter(r => r.success).length });
@@ -946,7 +902,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -975,11 +931,7 @@ export class ApiTimeEntryController extends ApiBaseController {
 
         // Delete entries within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          return await this.timeEntryService.bulkDeleteTimeEntries(bulkData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeEntryService.bulkDeleteTimeEntries(bulkData, apiRequest.context);
         });
 
         return new NextResponse(null, { status: 204 });

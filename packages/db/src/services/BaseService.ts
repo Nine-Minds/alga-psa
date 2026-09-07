@@ -23,6 +23,8 @@ export interface ListOptions {
 export interface ServiceContext {
   userId: string;
   tenant: string;
+  /** Set by the verified API transport, never from a request body. */
+  apiKeyId?: string;
   user?: any;
   db?: Knex;
 }

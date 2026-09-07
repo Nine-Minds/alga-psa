@@ -12369,3 +12369,165 @@ it('native operational time checks actual schedule ownership and supports local 
   await customer.table('interactions').insert({ tenant: resource.tenant, interaction_id: interactionId, type_id: typeId, user_id: user.user_id, title: 'Local IT call' });
   expect(await save({ work_item_type: 'interaction', work_item_id: interactionId })).toMatchObject({ billing_mode: 'operational', workItem: { name: 'Local IT call' } });
 }));
+
+async function withOperationalTimeApiFixture(work: (fixture: any) => Promise<void>) {
+  await withNativeOperationalTimeFixture(async (fixture: any) => {
+    const { customer, resource, user } = fixture;
+    const apiKeyId = randomUUID();
+    await customer.table('api_keys').insert({ tenant: resource.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: user.user_id, active: true });
+    const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService');
+    const schemas = await import('../../lib/api/schemas/timeEntry'), service = new TimeEntryService();
+    const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+    const context = { tenant: resource.tenant, userId: user.user_id, user, apiKeyId };
+    const input = { work_item_type: 'project_task', work_item_id: resource.id, start_time: fixture.input.start_time, end_time: fixture.input.end_time, notes: 'Private API effort' };
+    const create = (extra: any = {}, ctx = context) => service.create(schemas.createTimeEntrySchema.parse({ ...input, ...extra }), ctx);
+    const update = (id: string, data: any, ctx = context) => service.update(id, schemas.updateTimeEntrySchema.parse(data), ctx);
+    try { await work({ ...fixture, service, schemas, context, apiKeyId, apiInput: input, create, update }); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it('operational time API creates and edits service-free entries with actual duration and private source projections', async () => withOperationalTimeApiFixture(async ({ create, update, customer, resource, publish }: any) => {
+  const entry = await create({ is_billable: true });
+  expect(entry).toMatchObject({ billing_mode: 'operational', billable_duration: 0, service_id: null, contract_line_id: null, tax_rate_id: null,
+    duration_hours: 1.5, work_item: { title: 'Verify rollout' } });
+  const edited = await update(entry.entry_id, { end_time: '2026-09-07T09:30:00Z', notes: 'Edited private API effort', is_billable: true });
+  expect(edited).toMatchObject({ billing_mode: 'operational', duration_hours: 0.5, billable_duration: 0, notes: 'Edited private API effort' });
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(30);
+  expect(JSON.stringify(publish.mock.calls)).not.toContain('Edited private API effort');
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('operational time API cannot substitute a browser identity, unknown key or foreign key for its credential', async () => withOperationalTimeApiFixture(async ({ create, context, customer, sponsor, sponsorActor, apiKeyId, session, user }: any) => {
+  const foreignKeyId = randomUUID();
+  await sponsor.table('api_keys').insert({ tenant: sponsorActor.tenant, api_key_id: foreignKeyId, api_key: randomUUID(), user_id: sponsorActor.userId, active: true });
+  await expect(create({}, { ...context, apiKeyId: foreignKeyId })).rejects.toMatchObject({ statusCode: 403 });
+  for (const apiKeyId of [undefined, randomUUID()]) await expect(create({}, { ...context, apiKeyId })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+  await expect(create()).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: true, expires_at: new Date(0) });
+  await expect(create()).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: null });
+  session.mockResolvedValue(null); expect(await create()).toMatchObject({ user_id: user.user_id, billing_mode: 'operational' });
+}));
+
+it('operational time API applies key-specific work restrictions independently of the same user browser grants', async () => withOperationalTimeApiFixture(async ({ create, save, customer, resource, user, apiKeyId }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API work scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(create()).rejects.toMatchObject({ statusCode: 403 });
+  expect(await save()).toMatchObject({ billing_mode: 'operational' });
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('operational time API rolls automatic sheets back with rejected commercial fields or source authority', async () => withOperationalTimeApiFixture(async ({ create, customer, publish }: any) => {
+  await customer.table('time_sheets').del();
+  await expect(create({ service_id: randomUUID() })).rejects.toThrow(/billing selections/);
+  expect(await customer.table('time_sheets')).toHaveLength(0);
+  await expect(create({ work_item_id: randomUUID() })).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_sheets')).toHaveLength(0);
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('operational time API rolls entry, task total, automatic sheet and events back on key expiry at commit admission', async () => withOperationalTimeApiFixture(async ({ create, customer, resource, apiKeyId, publish }: any) => {
+  await customer.table('time_sheets').del();
+  await db.raw(`CREATE FUNCTION expire_api_time_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_api_time_key AFTER INSERT ON time_entries FOR EACH ROW EXECUTE FUNCTION expire_api_time_key()');
+  try {
+    await expect(create()).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_entries')).toHaveLength(0); expect(await customer.table('time_sheets')).toHaveLength(0);
+    expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(123);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_api_time_key ON time_entries'); await db.raw('DROP FUNCTION expire_api_time_key()'); }
+}));
+
+it('operational time API serializes overlapping creates and automatic sheet allocation for one user', async () => withOperationalTimeApiFixture(async ({ create, customer }: any) => {
+  await customer.table('time_sheets').del();
+  const attempts = await Promise.allSettled([create(), create()]);
+  expect(attempts.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(attempts.filter(result => result.status === 'rejected')).toHaveLength(1);
+  expect(await customer.table('time_entries')).toHaveLength(1); expect(await customer.table('time_sheets')).toHaveLength(1);
+}));
+
+it('operational time API keeps historical mode after PSA upgrade and still requires a service for new commercial work', async () => withOperationalTimeApiFixture(async ({ create, update, customer }: any) => {
+  const entry = await create();
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await update(entry.entry_id, { end_time: '2026-09-07T09:45:00Z', is_billable: true })).toMatchObject({ billing_mode: 'operational', duration_hours: 0.75, billable_duration: 0, service_id: null });
+  await expect(create({ start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z' })).rejects.toThrow(/Validation failed/);
+  await expect(update(entry.entry_id, { service_id: randomUUID() })).rejects.toThrow(/billing selections/);
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('operational time API rejects invalid duration, submitted sheets and key-specific time mutation denial', async () => withOperationalTimeApiFixture(async ({ create, update, customer, sheetId, resource, user, apiKeyId }: any) => {
+  const entry = await create();
+  await expect(update(entry.entry_id, { end_time: '2026-09-07T08:00:00Z' })).rejects.toThrow(/End time/);
+  await expect(update(entry.entry_id, { end_time: '2026-09-15T10:00:00Z' })).rejects.toThrow(/period/);
+  await customer.table('time_sheets').where('id', sheetId).update({ approval_status: 'SUBMITTED' });
+  await expect(update(entry.entry_id, { notes: 'Cannot reopen' })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('time_sheets').where('id', sheetId).update({ approval_status: 'DRAFT' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API time scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'update', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(update(entry.entry_id, { notes: 'Denied by key bundle' })).rejects.toMatchObject({ statusCode: 403 });
+  expect((await customer.table('time_entries').where('entry_id', entry.entry_id).first()).notes).toBe('Private API effort');
+}));
+
+it('operational time API applies current source masks before returning work-item detail', async () => withOperationalTimeApiFixture(async ({ create, resource, operation, user, apiKeyId }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API time source masks', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['values.task_name', 'project_name', 'description'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  const entry = await create(); expect(entry.work_item).toMatchObject({ title: '' });
+  expect(JSON.stringify(entry)).not.toMatch(/Verify rollout|Joint rollout|Private detailed work/);
+  expect(entry.notes).toBe('Private API effort');
+}));
+
+it('operational time API connection binding preserves ordinary commercial PSA creation and details', async () => withOperationalTimeApiFixture(async ({ service, sponsor, sponsorActor }: any) => {
+  const user = await sponsor.table('users').where('user_id', sponsorActor.userId).first(), context = { tenant: sponsorActor.tenant, userId: sponsorActor.userId, user };
+  const typeId = randomUUID(), serviceId = randomUUID();
+  await sponsor.table('service_types').insert({ tenant: sponsorActor.tenant, id: typeId, name: 'PSA API time' });
+  await sponsor.table('service_catalog').insert({ tenant: sponsorActor.tenant, service_id: serviceId, service_name: 'PSA API hourly', billing_method: 'hourly', custom_service_type_id: typeId });
+  await sponsor.table('time_periods').insert({ tenant: sponsorActor.tenant, period_id: randomUUID(), start_date: '2026-09-07', end_date: '2026-09-14' });
+  const input = { work_item_type: 'non_billable_category', start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:00:00Z', notes: 'PSA internal effort', service_id: serviceId, is_billable: false };
+  const entry = await service.create(input, context);
+  expect(entry).toMatchObject({ tenant: sponsorActor.tenant, billing_mode: 'commercial', service_id: serviceId, user: { user_id: sponsorActor.userId }, service: { service_name: 'PSA API hourly' } });
+  expect(await sponsor.table('time_entries')).toHaveLength(1); expect(await sponsor.table('time_sheets')).toHaveLength(1);
+}));
+
+it('operational time API reports license read-only admission as forbidden without leaving work', async () => withOperationalTimeApiFixture(async ({ create, customer, principal, publish }: any) => {
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(create()).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('operational time API bulk controllers retain the verified key through native create and update dispatch', async () => withOperationalTimeApiFixture(async ({ service, customer, context, user, apiInput, apiKeyId }: any) => {
+  const { ApiTimeEntryController } = await import('../../lib/api/controllers/ApiTimeEntryController');
+  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
+  const users = await import('@alga-psa/users/actions'), dbModule = await import('@alga-psa/db'), rbac = await import('../../lib/auth/rbac');
+  const key = await customer.table('api_keys').where('api_key_id', apiKeyId).first();
+  const validate = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyForTenant').mockResolvedValue(key);
+  const findUser = vi.spyOn(users, 'findUserByIdForApi').mockResolvedValue(user);
+  const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+  const permission = vi.spyOn(rbac, 'hasPermission').mockResolvedValue(true);
+  const controller = new ApiTimeEntryController();
+  (controller as any).timeEntryService = service;
+  const product = vi.spyOn(controller as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+  const request = (body: any) => ({ url: 'http://localhost/api/v1/time-entries/bulk', headers: new Headers({ 'x-api-key': 'fixture-key', 'x-tenant-id': context.tenant }), json: async () => body }) as any;
+  try {
+    const created = await controller.bulkCreate()(request({ entries: [apiInput], apiKeyId: randomUUID() }));
+    expect(created.status).toBe(201); expect(await created.json()).toMatchObject({ data: { created_count: 1 } });
+    const entry = await customer.table('time_entries').first(); expect(entry.billing_mode).toBe('operational');
+    const changed = await controller.bulkUpdate()(request({ entries: [{ entry_id: entry.entry_id, data: { notes: 'HTTP bulk change' } }] }));
+    expect(changed.status).toBe(200);
+    expect((await customer.table('time_entries').first()).notes).toBe('HTTP bulk change');
+    await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+    await controller.bulkUpdate()(request({ entries: [{ entry_id: entry.entry_id, data: { notes: 'Revoked HTTP key' } }] }));
+    expect((await customer.table('time_entries').first()).notes).toBe('HTTP bulk change');
+  } finally { product.mockRestore(); permission.mockRestore(); connection.mockRestore(); findUser.mockRestore(); validate.mockRestore(); }
+}));

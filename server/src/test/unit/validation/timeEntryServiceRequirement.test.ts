@@ -28,10 +28,9 @@ describe('time entry service requirement validation', () => {
     approval_status: 'DRAFT',
   } as const;
 
-  it('rejects API time entry creation without service_id', () => {
+  it('leaves product-dependent API service requirements to retained save admission', () => {
     const result = createTimeEntrySchema.safeParse(baseCreatePayload);
-    expect(result.success).toBe(false);
-    expect(result.error?.issues.some(issue => issue.path[0] === 'service_id')).toBe(true);
+    expect(result.success).toBe(true);
   });
 
   it('rejects scheduling time entry saves without service_id', () => {

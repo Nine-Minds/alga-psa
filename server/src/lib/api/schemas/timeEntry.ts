@@ -34,16 +34,8 @@ const baseTimeEntrySchema = z.object({
 function validateTimeEntryWrite(
   data: { start_time?: string; end_time?: string; service_id?: string },
   ctx: z.RefinementCtx,
-  options: { requireServiceId: boolean; rejectClearingServiceId?: boolean }
+  options: { rejectClearingServiceId?: boolean } = {}
 ): void {
-  if (options.requireServiceId && !data.service_id) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ['service_id'],
-      message: 'service_id is required for time entries'
-    });
-  }
-
   if (options.rejectClearingServiceId && Object.prototype.hasOwnProperty.call(data, 'service_id') && !data.service_id) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
@@ -63,12 +55,13 @@ function validateTimeEntryWrite(
 
 // Create time entry schema
 export const createTimeEntrySchema = baseTimeEntrySchema.superRefine((data, ctx) => {
-  validateTimeEntryWrite(data, ctx, { requireServiceId: true });
+  // Product-dependent requirements belong to the retained service admission.
+  validateTimeEntryWrite(data, ctx);
 });
 
 // Update time entry schema (all fields optional except validation)
 export const updateTimeEntrySchema = createUpdateSchema(baseTimeEntrySchema).superRefine((data, ctx) => {
-  validateTimeEntryWrite(data, ctx, { requireServiceId: false, rejectClearingServiceId: true });
+  validateTimeEntryWrite(data, ctx, { rejectClearingServiceId: true });
 });
 
 // Time entry filter schema
@@ -97,6 +90,7 @@ export const timeEntryListQuerySchema = createListQuerySchema(timeEntryFilterSch
 
 // Time entry response schema
 export const timeEntryResponseSchema = z.object({
+  billing_mode: z.enum(['commercial', 'operational']).optional(),
   entry_id: uuidSchema,
   work_item_id: uuidSchema.nullable(),
   work_item_type: workItemTypeSchema,

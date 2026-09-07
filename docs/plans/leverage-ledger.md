@@ -381,9 +381,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 
 ## operational-time-billing-mode — friction
 - **What:** Native time forms and API validators require a service even for non-billable entries, and product changes alone cannot preserve the non-invoiceable nature of customer history.
-- **Where:** Product capability/mode resolver, `timeEntryBillingMode.ts`, `time_entries`, invoice source links; native browser save/form now connected; API and remaining time paths pending.
+- **Where:** Product capability/mode resolver, `timeEntryBillingMode.ts`, `time_entries`, invoice source links; native browser save/form and API create/edit now connected; remaining time paths pending.
 - **Gate:** Two live write stacks need one explicit distinction and durable financial invariant. ACT / bounded-now.
-- **Status:** partially connected. Native browser saves now retain actor, work, sheet and product authority around the existing mutation; form defaults use actual mode and historical entries preserve their stored mode. API and remaining native read/approval paths still need the same boundary. Operational time has an explicit capability, immutable stored billing mode and price/invoice exclusions. The internal mode helper retains product/lifecycle locks; field normalization preserves elapsed effort while excluding billable minutes. This is billing-mode admission, not actor/work-item authorization. Native adapters must retain their own current principal, source and timesheet authority when connecting it.
+- **Status:** partially connected. Native browser and API create/edit saves now retain actor, work, sheet and product authority around existing mutations; form defaults use actual mode and historical entries preserve their stored mode. Remaining timer/read/approval paths still need the same boundary. Operational time has an explicit capability, immutable stored billing mode and price/invoice exclusions. The internal mode helper retains product/lifecycle locks; field normalization preserves elapsed effort while excluding billable minutes. This is billing-mode admission, not actor/work-item authorization. Native adapters must retain their own current principal, source and timesheet authority when connecting it.
 
 ## project-task-effort-aggregate — friction
 - **What:** Summing entries before locking the task lets concurrent committed saves overwrite each other's actual-minute totals.
@@ -396,3 +396,21 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `sharedWorkIdentity.ts`, native operational time admission.
 - **Gate:** The existing evaluator already owns this stable decision; allowing a concrete resource/action avoids another subtly different kernel. ACT / bounded-now.
 - **Status:** extracted. `authorizeCoManagedLocalRecord` owns the existing evaluator; the typed ticket/project entry point delegates unchanged. Native time uses actual source projections and owner-qualified time records, without interpreting browser mode hints as authority.
+
+## local-credential-admission — pattern
+- **What:** Project API search and operational time must bind current home roles/bundles to the actual retained session or API key and recheck expiry after waits.
+- **Where:** `localAuthentication.ts`, local project search and native time admission.
+- **Gate:** Two stable, security-sensitive callers need identical credential semantics. ACT / bounded-now.
+- **Status:** extracted. A validated credential snapshot, retained active identity/key and final-expiry callback are shared; resource/lifecycle authority remains with each caller.
+
+## api-time-transaction-ownership — friction
+- **What:** API time helpers opened fresh connections, so automatic sheets and detail reads could escape the save transaction. Manual controllers also reconstructed incomplete credential contexts.
+- **Where:** `TimeEntryService`, manual time API dispatch.
+- **Gate:** Atomic effort, scope and sheet admission require every native helper to use the retained connection. ACT / bounded-now.
+- **Status:** revised. Each create/edit gets a fresh connection-bound service with private admitted mutation methods; no shared service instance is mutated. Controllers forward their verified context. Timer methods remain a separate migration because their unfinished-entry representation conflicts with the schema.
+
+## running-time-storage — friction
+- **What:** Running timers have no end instant, while completed time entries and their consumers require one.
+- **Where:** REST `startTimeTracking`/`stopTimeTracking`, initial `time_entries` schema.
+- **Gate:** The existing representation cannot satisfy its own persistence contract. ACT / staged-migration in the co-managed time plan.
+- **Status:** planned. Store active clocks separately, then atomically create completed effort on stop under current authority and the original billing mode. Preserve native timesheet, task-effort and invoicing assumptions.
