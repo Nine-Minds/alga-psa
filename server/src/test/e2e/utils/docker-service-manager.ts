@@ -131,7 +131,9 @@ export class DockerServiceManager {
     
     while (Date.now() - startTime < timeoutMs) {
       try {
-        const response = await axios.get('http://localhost:4001/health');
+        const response = await axios.get('http://localhost:4001/health', {
+          timeout: Math.max(1, Math.min(5000, timeoutMs - (Date.now() - startTime))),
+        });
         const currentEventCount = response.data.eventsProcessed || 0;
         
         // If we've processed more events than before, consider it successful
@@ -148,8 +150,7 @@ export class DockerServiceManager {
       }
     }
     
-    // For initial implementation, we'll just wait a fixed amount and assume processing completed
-    console.log('⏳ Workflow processing timeout reached, assuming completion');
+    throw new Error(`Workflow processing was not observed within ${timeoutMs}ms`);
   }
 
   async getServiceStatus(): Promise<Record<string, any>> {
