@@ -1948,3 +1948,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Complete tooling runner passed 486 cases across 46 required files, zero failures/skips/cancellations, 122.26 seconds on clean c704e97ad5. This includes newly added aggregate/artifact/source-capture tests and all existing tooling fixtures. Evidence: evidence/node-tooling-local-c704.json; /tmp/alga-node-tooling-c704.log.
 - actionlint passed both edited workflows with shellcheck disabled. Native integration job 101729712868 remains in_progress as of 13:40 UTC; pending publication is intentionally preserving its terminal evidence. No full-plan completion claim.
+
+### 2026-09-07 — preserved terminal full integration timeout
+
+- Run 34118118987 / job 101729712868 reached terminal cancelled at 13:44 UTC after its 120-minute limit. Downloaded logs/artifacts to /tmp/alga-integration-terminal-d8cf and /tmp/alga-integration-terminal-d8cf.log before any push.
+- Actual progress journal: 118/287 files completed and 794/2080 cases finished; final report and execution evidence are null. Last completed file clientTypeEnumMigration, next queued accounting/batchLifecycle. Evidence: evidence/integration-native-d8cf-timeout.json. This is incomplete execution, not green.
+- Next required repair before publishing: isolated full-integration CI shards with combined file/assertion reconciliation. A modest timeout increase cannot fit this measured workload; do not weaken or exclude required tests. Tooling/fixture follow-ups remain locally committed pending this repair and publication.
