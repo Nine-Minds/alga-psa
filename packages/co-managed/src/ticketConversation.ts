@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
@@ -35,10 +36,6 @@ export interface CoManagedTicketConversation {
   items: CoManagedConversationItem[];
   nextBefore: CoManagedConversationCursor | null;
 }
-const historySources = ['conversation',
-  'note', 'markdown_content', 'created_at', 'updated_at', 'thread_id', 'parent_comment_id', 'collaboration_audience'];
-const authorSources = ['author', 'actor', 'user_id', 'contact_id', 'users', 'contacts', 'actor_reference_id', 'actor_display_name', 'actor_organization_name',
-  'actor_tenant', 'actor_user_id', 'first_name', 'last_name', 'full_name', 'display_name', 'organization_name'];
 const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
 function snapshotCursor(input?: CoManagedConversationCursor): CoManagedConversationCursor | undefined {
   if (input === undefined) return undefined;

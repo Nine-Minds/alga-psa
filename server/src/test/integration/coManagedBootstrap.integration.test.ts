@@ -5208,3 +5208,82 @@ it('retains recipient identity, membership and resource grant locks through the 
   expect(deliver).not.toHaveBeenCalled();
   expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).grant_revoked_at).toBeNull();
 }));
+
+it('loads current shared comment content for independent MSP recipients with qualified author self-suppression', async () => withConversationFixture(async ({
+  principal, customerPrincipal, resource, sponsor, addCustomer,
+}) => {
+  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  // The recipient deliberately shares a UUID with the customer author. Only
+  // tenant-qualified equality may suppress a notification to this home user.
+  const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: customerPrincipal.userId };
+  const sourceUser = await sponsor.table('users').where('user_id', principal.userId).first();
+  await sponsor.table('users').insert({ ...sourceUser, user_id: recipient.userId, username: `recipient-${randomUUID()}`, email: 'recipient@example.test' });
+  const roles = await sponsor.table('user_roles').where('user_id', principal.userId);
+  await sponsor.table('user_roles').insert(roles.map(role => ({ ...role, user_id: recipient.userId })));
+  const staff = await sponsor.table('co_management_staff_assignments').where('principal_id', principal.userId).first();
+  await sponsor.table('co_management_staff_assignments').insert({ ...staff, principal_id: recipient.userId, relationship_role: 'viewer' });
+  const own = await addCustomer({ note: 'Customer public reply' });
+  const shared = await addCustomer({ note: 'MSP shared IT reply', foreign: true, internal: true, audience: 'shared_it' });
+  const deliver = vi.fn(async (_context: any, message: any) => message);
+  expect(await notify(db, recipient, resource, own.id, deliver)).toMatchObject({ resource, note: 'Customer public reply', audience: 'requester',
+    author: { tenant: resource.tenant, id: recipient.userId, kind: 'user', referenceId: null } });
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Renamed', is_inactive: true });
+  expect(await notify(db, recipient, resource, shared.id, deliver)).toMatchObject({ note: 'MSP shared IT reply', audience: 'shared_it',
+    author: { tenant: principal.tenant, id: principal.userId, displayName: 'Morgan Provider', organizationName: 'MSP', referenceId: expect.any(String) } });
+  await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: false });
+  expect(await notify(db, { ...recipient, userId: principal.userId }, resource, shared.id, deliver)).toBeNull();
+  expect(deliver).toHaveBeenCalledTimes(2);
+  expect(deliver.mock.calls.every(([, message]) => !('metadata' in message) && !('email' in message.author) && !('sessionId' in message))).toBe(true);
+}));
+
+it('excludes private, unpublished and deleted notification content and respects the recipient content and author redactions', async () => withConversationFixture(async ({
+  principal, resource, sponsor, operation, addCustomer, addPrivate,
+}) => {
+  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
+  const root = await addCustomer({ note: 'Visible notification' });
+  const privateRoot = await addCustomer({ note: 'Customer private', internal: true });
+  const draftRoot = await addCustomer({ note: 'Scheduled root', state: 'scheduled' });
+  const hidden = [privateRoot, draftRoot, await addPrivate({ note: 'MSP private' }),
+    await addCustomer({ note: 'Deleted', deleted: true }),
+    await addCustomer({ note: 'Public-flag private reply', parent: privateRoot }),
+    await addCustomer({ note: 'Published child of draft', parent: draftRoot })];
+  const deliver = vi.fn(async (_context: any, message: any) => message);
+  for (const comment of hidden) expect(await notify(db, recipient, resource, comment.id, deliver)).toBeNull();
+  expect(deliver).not.toHaveBeenCalled();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Notification content scope', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['actor', 'tickets.title', 'ticket_number'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const message = await notify(db, recipient, resource, root.id, deliver);
+  expect(message).toEqual({ resource, commentId: root.id, threadId: root.threadId, audience: 'requester', note: 'Visible notification' });
+  for (const field of ['comments.note', 'fields.conversation', 'thread_id', 'comment_id']) {
+    await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' })
+      .update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
+    expect(await notify(db, recipient, resource, root.id, deliver)).toBeNull();
+  }
+  expect(deliver).toHaveBeenCalledOnce();
+}));
+
+it('holds comment audience and body locks through delivery and reads current content again on retry', async () => withConversationFixture(async ({
+  principal, resource, customer, addCustomer,
+}) => {
+  const { withCoManagedTicketCommentNotification: notify } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
+  const comment = await addCustomer({ note: 'Initial body' });
+  await notify(db, recipient, resource, comment.id, async (_context, message) => {
+    expect(message.note).toBe('Initial body');
+    for (const change of [
+      (trx: Knex.Transaction) => tenantDb(trx, resource.tenant).table('comment_threads').where('thread_id', comment.threadId).update({ is_internal: true }),
+      (trx: Knex.Transaction) => tenantDb(trx, resource.tenant).table('comments').where('comment_id', comment.id).update({ note: 'Concurrent body' }),
+    ]) await expect(db.transaction(async trx => { await trx.raw("SET LOCAL lock_timeout = '50ms'"); await change(trx); })).rejects.toMatchObject({ code: '55P03' });
+  });
+  await customer.table('comments').where('comment_id', comment.id).update({ note: 'Current body' });
+  expect(await notify(db, recipient, resource, comment.id, async (_context, message) => message.note)).toBe('Current body');
+  await customer.table('comment_threads').where('thread_id', comment.threadId).update({ is_internal: true });
+  const deliver = vi.fn();
+  expect(await notify(db, recipient, resource, comment.id, deliver)).toBeNull();
+  expect(deliver).not.toHaveBeenCalled();
+}));
