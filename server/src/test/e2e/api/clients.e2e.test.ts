@@ -609,7 +609,7 @@ describe('Clients API E2E Tests', () => {
       expect(stillInactiveUserResponse.data.data.is_inactive).toBe(true);
     });
 
-    it('should allow reactivating client and all contacts/users together', async () => {
+    it('supports explicit API reactivation of a client, contacts and users', async () => {
       // Create a test client
       const clientData = createClientTestData();
       const createClientResponse = await env.apiClient.post('/api/v1/clients', clientData);
@@ -630,8 +630,10 @@ describe('Clients API E2E Tests', () => {
         email: `contact2-${Date.now()}@test.com`
       };
 
-      const createContact1Response = await env.apiClient.post('/api/v1/contacts', contact1Data);
-      const createContact2Response = await env.apiClient.post('/api/v1/contacts', contact2Data);
+      const [createContact1Response, createContact2Response] = await Promise.all([
+        env.apiClient.post('/api/v1/contacts', contact1Data),
+        env.apiClient.post('/api/v1/contacts', contact2Data),
+      ]);
 
       expect(createContact1Response.status).toBe(201);
       expect(createContact2Response.status).toBe(201);
@@ -653,8 +655,10 @@ describe('Clients API E2E Tests', () => {
         user_type: 'client'
       });
 
-      const createUser1Response = await env.apiClient.post('/api/v1/users', user1Data);
-      const createUser2Response = await env.apiClient.post('/api/v1/users', user2Data);
+      const [createUser1Response, createUser2Response] = await Promise.all([
+        env.apiClient.post('/api/v1/users', user1Data),
+        env.apiClient.post('/api/v1/users', user2Data),
+      ]);
 
       expect(createUser1Response.status).toBe(201);
       expect(createUser2Response.status).toBe(201);
@@ -668,45 +672,40 @@ describe('Clients API E2E Tests', () => {
       });
 
       // Verify everything is inactive
-      const inactiveContact1 = await env.apiClient.get(`/api/v1/contacts/${contact1Id}`);
-      const inactiveContact2 = await env.apiClient.get(`/api/v1/contacts/${contact2Id}`);
+      const [inactiveContact1, inactiveContact2] = await Promise.all([
+        env.apiClient.get(`/api/v1/contacts/${contact1Id}`),
+        env.apiClient.get(`/api/v1/contacts/${contact2Id}`),
+      ]);
       expect(inactiveContact1.data.data.is_inactive).toBe(true);
       expect(inactiveContact2.data.data.is_inactive).toBe(true);
 
-      // Use the reactivate endpoint to reactivate client and all contacts
-      // This would typically be done via a server action, but for API testing we need an endpoint
-      // For now, we'll test by manually reactivating everything
-      await env.apiClient.put(`/api/v1/clients/${clientId}`, {
-        is_inactive: false
-      });
-
-      // Manually reactivate contacts (simulating what the server action does)
-      await env.apiClient.put(`/api/v1/contacts/${contact1Id}`, {
-        is_inactive: false
-      });
-      await env.apiClient.put(`/api/v1/contacts/${contact2Id}`, {
-        is_inactive: false
-      });
-
-      // Manually reactivate users (simulating what the server action does)
-      await env.apiClient.put(`/api/v1/users/${user1Id}`, {
-        is_inactive: false
-      });
-      await env.apiClient.put(`/api/v1/users/${user2Id}`, {
-        is_inactive: false
-      });
+      // These API endpoints reactivate individual records. The UI's atomic
+      // client/contact reactivation server action requires separate coverage.
+      const reactivatedClient = await env.apiClient.put(`/api/v1/clients/${clientId}`, { is_inactive: false });
+      expect(reactivatedClient.status).toBe(200);
+      const reactivatedRecords = await Promise.all([
+        env.apiClient.put(`/api/v1/contacts/${contact1Id}`, { is_inactive: false }),
+        env.apiClient.put(`/api/v1/contacts/${contact2Id}`, { is_inactive: false }),
+        env.apiClient.put(`/api/v1/users/${user1Id}`, { is_inactive: false }),
+        env.apiClient.put(`/api/v1/users/${user2Id}`, { is_inactive: false }),
+      ]);
+      expect(reactivatedRecords.map(response => response.status)).toEqual([200, 200, 200, 200]);
 
       // Verify everything is now active
       const activeClientResponse = await env.apiClient.get(`/api/v1/clients/${clientId}`);
       expect(activeClientResponse.data.data.is_inactive).toBe(false);
 
-      const activeContact1Response = await env.apiClient.get(`/api/v1/contacts/${contact1Id}`);
-      const activeContact2Response = await env.apiClient.get(`/api/v1/contacts/${contact2Id}`);
+      const [activeContact1Response, activeContact2Response] = await Promise.all([
+        env.apiClient.get(`/api/v1/contacts/${contact1Id}`),
+        env.apiClient.get(`/api/v1/contacts/${contact2Id}`),
+      ]);
       expect(activeContact1Response.data.data.is_inactive).toBe(false);
       expect(activeContact2Response.data.data.is_inactive).toBe(false);
 
-      const activeUser1Response = await env.apiClient.get(`/api/v1/users/${user1Id}`);
-      const activeUser2Response = await env.apiClient.get(`/api/v1/users/${user2Id}`);
+      const [activeUser1Response, activeUser2Response] = await Promise.all([
+        env.apiClient.get(`/api/v1/users/${user1Id}`),
+        env.apiClient.get(`/api/v1/users/${user2Id}`),
+      ]);
       expect(activeUser1Response.data.data.is_inactive).toBe(false);
       expect(activeUser2Response.data.data.is_inactive).toBe(false);
     });

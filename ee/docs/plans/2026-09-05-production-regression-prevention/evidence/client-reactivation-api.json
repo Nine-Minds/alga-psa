@@ -1,0 +1,27 @@
+{
+  "status": "local_api_verified_native_pending",
+  "native_before": {
+    "head": "c5d608d6dee7b89f90dbe9e812ec2e639de52ac2",
+    "job": 101637360612,
+    "browser_passed": 22,
+    "api_passed": 334,
+    "api_failed": 1,
+    "failure": "Client/contact/user explicit reactivation exceeded 20-second test timeout",
+    "log": "/tmp/alga-browser-ce-c5d608.log"
+  },
+  "change": "Batch independent per-record requests, assert update statuses, accurately name explicit API reactivation without claiming atomic server-action coverage",
+  "local_after": {
+    "passed": 1,
+    "test_duration_ms": 1369,
+    "targeted_typescript": "passed",
+    "logs": [
+      "/tmp/alga-client-reactivation-verified.log",
+      "/tmp/alga-client-reactivation-types.log"
+    ]
+  },
+  "limits": [
+    "Local validation used the existing built application, not a newly built current-HEAD image",
+    "CI runner load validation pending; local timing alone does not prove the native timeout fixed",
+    "UI atomic client/contact reactivation still requires separate coverage"
+  ]
+}
