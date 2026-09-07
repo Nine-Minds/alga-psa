@@ -62,9 +62,19 @@ it('continues rejecting unauthenticated requests', async () => {
   expect((await post()).status).toBe(401);
   expect(mocks.install).not.toHaveBeenCalled();
 });
-it('retains the session product gate for community requests with an API-key header', async () => {
+it('returns CE unavailability only after API-key and product validation', async () => {
   vi.stubEnv('EDITION', 'ce');
   vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
-  expect((await post('valid')).status).toBe(401);
+  expect((await post('valid')).status).toBe(501);
+  expect(mocks.product).toHaveBeenCalledWith('tenant-a');
+  expect(mocks.install).not.toHaveBeenCalled();
+});
+
+it.each(['invalid-key', 'disallowed-product'])('denies community %s before reporting availability', async (reason) => {
+  vi.stubEnv('EDITION', 'ce');
+  vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
+  if (reason === 'invalid-key') mocks.key.mockResolvedValue(null);
+  else mocks.product.mockResolvedValue('algadesk');
+  expect((await post('key')).status).toBe(reason === 'invalid-key' ? 401 : 403);
   expect(mocks.install).not.toHaveBeenCalled();
 });

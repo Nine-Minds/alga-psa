@@ -1,5 +1,6 @@
-import type { NextRequest, NextResponse } from 'next/server';
+import { NextResponse, type NextRequest } from 'next/server';
 import { assertSessionProductAccess } from '@/lib/api/standaloneProductGuards';
+import { withApiKeyAuth } from '@/lib/api/middleware/apiAuthMiddleware';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,8 +32,8 @@ async function loadEeRoute(): Promise<EeRouteModule | null> {
   return eeRouteModulePromise;
 }
 
-function eeUnavailable(): Response {
-  return new Response(
+function eeUnavailable(): NextResponse {
+  return new NextResponse(
     JSON.stringify({
       error: 'Extension installation API is only available in the Enterprise Edition.'
     }),
@@ -44,6 +45,9 @@ function eeUnavailable(): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
+  if (!isEnterpriseEdition && request.headers.get('x-api-key')) {
+    return (await withApiKeyAuth(async () => eeUnavailable()))(request);
+  }
   // The EE handler validates API keys and enforces the tenant product gate.
   // Requiring a browser session first prevents authenticated API clients from
   // reaching that handler. CE and session requests retain their existing gate.

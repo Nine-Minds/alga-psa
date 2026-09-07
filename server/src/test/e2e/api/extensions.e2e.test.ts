@@ -32,7 +32,7 @@ describe('Extensions API – Install endpoint', () => {
 
     extensionsTablesAvailable = hasRegistry && hasVersion && hasInstall && hasInstallConfig;
     if (!extensionsTablesAvailable) {
-      console.warn('[extensions-api-e2e] Extension tables not present; skipping install endpoint test');
+      if (process.env.E2E_EDITION !== 'community') throw new Error('Enterprise extension tables are required');
     }
   }, 120_000);
 
@@ -72,11 +72,14 @@ describe('Extensions API – Install endpoint', () => {
     await stopApiServerIfStarted();
   }, 60_000);
 
-  it('installs an extension version and returns accepted response', async () => {
-    if (!extensionsTablesAvailable) {
-      expect(true).toBe(true);
+  it('enforces edition availability and installs an enterprise extension version', async () => {
+    if (process.env.E2E_EDITION === 'community') {
+      const response = await env.apiClient.post('/api/v1/extensions/install', { registryId: randomUUID(), version: '1.0.0' });
+      expect(response.status, JSON.stringify(response.data)).toBe(501);
+      expect(response.data).toEqual({ error: 'Extension installation API is only available in the Enterprise Edition.' });
       return;
     }
+    expect(extensionsTablesAvailable).toBe(true);
 
     const registryId = randomUUID();
     const versionId = randomUUID();
