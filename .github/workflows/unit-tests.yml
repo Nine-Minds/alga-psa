@@ -160,11 +160,11 @@ jobs:
   coverage-report:
     name: Server unit suite + coverage
     runs-on: ubuntu-latest
-    # Backstop like the sibling unit-tests job: without this the 6h runner
-    # default applies, and a hung apt mirror in "Install ripgrep" once stalled
-    # this job for ~6h before it was cancelled. An hour comfortably covers the
-    # full server suite while still catching a hang 6x sooner.
-    timeout-minutes: 60
+    # Native run 34118119027 hit 60 minutes while still making progress:
+    # 2544/2692 files and 13843/14550 cases had finished in the execution
+    # journal. Collection/import plus isolated per-file coverage needs more
+    # headroom; retain a bounded job and per-file progress diagnostics.
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
