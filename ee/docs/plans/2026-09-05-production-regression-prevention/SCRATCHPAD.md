@@ -2277,3 +2277,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Ran canonical additional-workspace temporal-database lane without filters against task-owned migrated citus_runtime_82cc. All six files and 27 assertions pass, zero failures/skips/TODOs/pending, in 16.20 seconds. Includes actual Temporal tenant creation, password verification, persisted tenant/admin/client/role records and cleanup, plus the configured admin connection query absent from older reports.
 - Discovery passes and before/after checkout remains clean at cc1e6f9f9c03635c8c1ea193e81702c24e9c87dc. Evidence: evidence/temporal-database-citus-local-cc1e6f.json.
 - Local single-node migrated-schema verification does not establish supported-release upgrade or native execution. Existing invoice/workflow runtime evidence is a different revision; do not combine these into a same-candidate passing aggregate. No broad flags changed.
+
+### 2026-09-07 — both Citus lanes and independent aggregate pass together
+
+- Executed canonical runtime then complete Temporal database suite sequentially at clean 2acda405cb76ac2ab35dc9eeffb94463a333a1d4. Runtime: eight passed; tenant database: 27 passed. Zero failures/skips/TODOs/pending. Both actual discoveries pass and source before/after remains identical and clean.
+- Copied raw bundles to the aggregate input and ran verify-citus-execution CLI at the same revision; aggregate passes both requirements. Terminal process exit 0 confirmed. Evidence: evidence/citus-complete-local-2acda4.json with raw-report hashes.
+- Verified all 1,138 combined migration/utility files match current sources. Quiet migration and cleanup phases were observed as live database queries; run was never restarted. Local single-node evidence does not close supported-release/multi-node upgrades, native CI or effective protections. No broad flags changed.
