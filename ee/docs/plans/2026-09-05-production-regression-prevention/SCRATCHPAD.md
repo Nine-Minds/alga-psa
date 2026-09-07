@@ -2213,3 +2213,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Recollected current production browser and server unit files using their real runners. Updated partial inventory with those collections, the completed 60-file workspace DB run and latest 496-test tooling events.
 - Audit remains failed with 86 unmatched files, including 74 legacy Playwright files. Recent portal/locale migrations and tax DB coverage are accounted for. Some unmatched entries are assigned tests missing from older collections (new database gate Node test, Temporal tenant creation, newer integration cases); this is not a current orphan count.
 - Evidence: evidence/inventory-after-db-browser.json includes remaining identities and artifact hashes. Global inventory remains incomplete and requires further current collections plus legacy suite migration/assignment. No broad flags changed.
+
+### 2026-09-07 — verify rejected Microsoft callbacks through production browser messages
+
+- Legacy email OAuth tests primarily simulate provider records. Added canonical browser coverage for missing code/state, malformed state and unsigned state. Assertions inspect the actual callback postMessage received by its same-origin opener, popup closure and absence of an authenticated session, rather than generated HTML strings.
+- Four headed enterprise cases pass without retries (9.0 seconds), using only synthetic invalid callback parameters against the existing local production app. Community collects all four. Evidence: evidence/microsoft-oauth-rejection-browser.json.
+- Cached build verification is not native candidate evidence. Provider success/refresh and DB non-mutation are not established by these rejection cases; legacy email test assignment remains open. No broad flags changed.
