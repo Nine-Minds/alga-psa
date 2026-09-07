@@ -9,3 +9,5 @@ export * from './ticketCollaboration';
 export * from './actorReferences';
 
 export * from './ticketEditing';
+
+export * from './ticketQueue';

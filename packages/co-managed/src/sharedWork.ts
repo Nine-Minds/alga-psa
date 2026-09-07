@@ -43,6 +43,7 @@ export async function withCoManagedSharedWork<T>(db: Knex, inputActor: CoManaged
       !['ticket', 'project', 'project_task'].includes(resource.kind) || actor.tenant === resource.tenant ||
       ![resource.tenant, resource.relationshipId, resource.id].every(isCoManagedUuid)) deny();
   return withTransaction(db, async trx => {
+    // LEVERAGE: pattern co-managed-read-admission — detail and federated query paths share trust/session locks but need distinct record projections.
     const owner = tenantDb(trx, resource.tenant), home = tenantDb(trx, actor.tenant);
     const found = await owner.table('co_management_relationships').where({ relationship_id: resource.relationshipId, sponsor_tenant: actor.tenant }).first();
     if (!found) deny();

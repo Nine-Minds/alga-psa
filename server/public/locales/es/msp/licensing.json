@@ -460,6 +460,47 @@
         "closeRules": "El ticket debe cumplir los requisitos de cierre de su tablero antes de poder cerrarse.",
         "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar."
       }
+    },
+    "queue": {
+      "title": "Colas de tickets cogestionados",
+      "workingDescription": "Tickets del MSP y de clientes que su equipo gestiona actualmente.",
+      "oversightDescription": "Tickets de clientes dentro del acceso aprobado, incluidos los gestionados por su equipo de TI.",
+      "view": "Vista",
+      "working": "Cola de trabajo",
+      "oversight": "Supervisión de clientes",
+      "workspace": "Espacio de trabajo",
+      "allWorkspaces": "Todos los espacios",
+      "state": "Estado",
+      "open": "Abiertos",
+      "closed": "Cerrados",
+      "all": "Todos los estados",
+      "sort": "Ordenar por",
+      "direction": "Orden",
+      "asc": "Ascendente",
+      "desc": "Descendente",
+      "search": "Buscar tickets",
+      "loadError": "No se pudieron cargar los tickets. Actualice para comprobar su acceso.",
+      "counts": "{{total}} tickets · {{open}} abiertos · {{closed}} cerrados",
+      "empty": "Ningún ticket permitido coincide con estos filtros.",
+      "page": "Página {{page}}",
+      "sortFields": {
+        "updated": "Última actualización",
+        "created": "Creación",
+        "title": "Título",
+        "number": "Número de ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Espacio de trabajo",
+        "state": "Estado",
+        "priority": "Prioridad",
+        "responsibility": "Organización responsable",
+        "updated": "Actualización"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "TI del cliente"
+      }
     }
   }
 }

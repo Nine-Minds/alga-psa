@@ -458,6 +458,47 @@
         "closeRules": "Das Ticket muss die Abschlussbedingungen seines Boards erfüllen, bevor es geschlossen werden kann.",
         "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu."
       }
+    },
+    "queue": {
+      "title": "Co-Managed-Ticketwarteschlangen",
+      "workingDescription": "MSP-Tickets und Kundentickets, die Ihr Team derzeit bearbeitet.",
+      "oversightDescription": "Kundentickets in Ihrem genehmigten Zugriff, einschließlich der Arbeit der Kunden-IT.",
+      "view": "Ansicht",
+      "working": "Arbeitswarteschlange",
+      "oversight": "Kundenübersicht",
+      "workspace": "Arbeitsbereich",
+      "allWorkspaces": "Alle Arbeitsbereiche",
+      "state": "Status",
+      "open": "Offen",
+      "closed": "Geschlossen",
+      "all": "Alle Status",
+      "sort": "Sortieren nach",
+      "direction": "Reihenfolge",
+      "asc": "Aufsteigend",
+      "desc": "Absteigend",
+      "search": "Tickets suchen",
+      "loadError": "Tickets konnten nicht geladen werden. Aktualisieren Sie die Ansicht, um Ihren Zugriff zu prüfen.",
+      "counts": "{{total}} Tickets · {{open}} offen · {{closed}} geschlossen",
+      "empty": "Keine zugänglichen Tickets entsprechen diesen Filtern.",
+      "page": "Seite {{page}}",
+      "sortFields": {
+        "updated": "Zuletzt aktualisiert",
+        "created": "Erstellt",
+        "title": "Titel",
+        "number": "Ticketnummer"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Arbeitsbereich",
+        "state": "Status",
+        "priority": "Priorität",
+        "responsibility": "Zuständige Organisation",
+        "updated": "Aktualisiert"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Kunden-IT"
+      }
     }
   }
 }

@@ -460,6 +460,47 @@
         "closeRules": "Le ticket doit satisfaire aux conditions de clôture de son tableau avant de pouvoir être fermé.",
         "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez."
       }
+    },
+    "queue": {
+      "title": "Files de tickets cogérés",
+      "workingDescription": "Tickets du MSP et tickets clients actuellement pris en charge par votre équipe.",
+      "oversightDescription": "Tickets clients accessibles selon les autorisations accordées, y compris ceux traités par leur équipe informatique.",
+      "view": "Vue",
+      "working": "File de travail",
+      "oversight": "Supervision des clients",
+      "workspace": "Espace de travail",
+      "allWorkspaces": "Tous les espaces",
+      "state": "Statut",
+      "open": "Ouverts",
+      "closed": "Fermés",
+      "all": "Tous les statuts",
+      "sort": "Trier par",
+      "direction": "Ordre",
+      "asc": "Croissant",
+      "desc": "Décroissant",
+      "search": "Rechercher des tickets",
+      "loadError": "Impossible de charger les tickets. Actualisez pour vérifier votre accès.",
+      "counts": "{{total}} tickets · {{open}} ouverts · {{closed}} fermés",
+      "empty": "Aucun ticket autorisé ne correspond à ces filtres.",
+      "page": "Page {{page}}",
+      "sortFields": {
+        "updated": "Dernière modification",
+        "created": "Création",
+        "title": "Titre",
+        "number": "Numéro du ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Espace de travail",
+        "state": "Statut",
+        "priority": "Priorité",
+        "responsibility": "Organisation responsable",
+        "updated": "Modification"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Équipe informatique du client"
+      }
     }
   }
 }

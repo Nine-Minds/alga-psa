@@ -1,3 +1,4 @@
+import CoManagedTicketQueueLink from '@/components/co-managed/CoManagedTicketQueueLink';
 import { getConsolidatedTicketListData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getCurrentUser, getCurrentUserPermissions, getUserPreference } from '@alga-psa/user-composition/actions';
 import { getTicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
@@ -348,6 +349,7 @@ export default async function TicketsPage({ searchParams }: TicketsPageProps) {
 
     return (
       <div id="tickets-page-container" className="bg-[rgb(var(--color-app-ground))]">
+        {productCode === 'psa' && <CoManagedTicketQueueLink />}
         <MspTicketsPageClient
           consolidatedData={consolidatedData}
           initialFormOptions={consolidatedData.options}

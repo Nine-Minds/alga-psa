@@ -460,6 +460,47 @@
         "closeRules": "O chamado deve atender aos requisitos de encerramento do seu quadro antes de ser encerrado.",
         "unknownOutcome": "Não foi possível confirmar o salvamento. Tente novamente com a mesma solicitação ou descarte as alterações e recarregue."
       }
+    },
+    "queue": {
+      "title": "Filas de tickets cogeridos",
+      "workingDescription": "Tickets do MSP e de clientes atualmente tratados pela sua equipa.",
+      "oversightDescription": "Tickets de clientes dentro do acesso aprovado, incluindo os tratados pelas equipas de TI dos clientes.",
+      "view": "Vista",
+      "working": "Fila de trabalho",
+      "oversight": "Supervisão de clientes",
+      "workspace": "Espaço de trabalho",
+      "allWorkspaces": "Todos os espaços",
+      "state": "Estado",
+      "open": "Abertos",
+      "closed": "Fechados",
+      "all": "Todos os estados",
+      "sort": "Ordenar por",
+      "direction": "Ordem",
+      "asc": "Ascendente",
+      "desc": "Descendente",
+      "search": "Pesquisar tickets",
+      "loadError": "Não foi possível carregar os tickets. Atualize para verificar o seu acesso.",
+      "counts": "{{total}} tickets · {{open}} abertos · {{closed}} fechados",
+      "empty": "Nenhum ticket permitido corresponde a estes filtros.",
+      "page": "Página {{page}}",
+      "sortFields": {
+        "updated": "Última atualização",
+        "created": "Criação",
+        "title": "Título",
+        "number": "Número do ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Espaço de trabalho",
+        "state": "Estado",
+        "priority": "Prioridade",
+        "responsibility": "Organização responsável",
+        "updated": "Atualização"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "TI do cliente"
+      }
     }
   }
 }

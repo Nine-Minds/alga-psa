@@ -458,6 +458,47 @@
         "closeRules": "Het ticket moet voldoen aan de sluitingsvereisten van het bord voordat het kan worden gesloten.",
         "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw."
       }
+    },
+    "queue": {
+      "title": "Wachtrijen voor gezamenlijk beheerde tickets",
+      "workingDescription": "MSP-tickets en klanttickets die je team momenteel behandelt.",
+      "oversightDescription": "Klanttickets binnen je goedgekeurde toegang, inclusief werk van de IT-afdeling van de klant.",
+      "view": "Weergave",
+      "working": "Werkwachtrij",
+      "oversight": "Klantoverzicht",
+      "workspace": "Werkruimte",
+      "allWorkspaces": "Alle werkruimten",
+      "state": "Status",
+      "open": "Open",
+      "closed": "Gesloten",
+      "all": "Alle statussen",
+      "sort": "Sorteren op",
+      "direction": "Volgorde",
+      "asc": "Oplopend",
+      "desc": "Aflopend",
+      "search": "Tickets zoeken",
+      "loadError": "Tickets kunnen niet worden geladen. Vernieuw om je toegang te controleren.",
+      "counts": "{{total}} tickets · {{open}} open · {{closed}} gesloten",
+      "empty": "Geen toegankelijke tickets komen overeen met deze filters.",
+      "page": "Pagina {{page}}",
+      "sortFields": {
+        "updated": "Laatst bijgewerkt",
+        "created": "Aangemaakt",
+        "title": "Titel",
+        "number": "Ticketnummer"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Werkruimte",
+        "state": "Status",
+        "priority": "Prioriteit",
+        "responsibility": "Verantwoordelijke organisatie",
+        "updated": "Bijgewerkt"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "IT-afdeling van de klant"
+      }
     }
   }
 }

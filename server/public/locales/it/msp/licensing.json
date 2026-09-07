@@ -460,6 +460,47 @@
         "closeRules": "Il ticket deve soddisfare i requisiti di chiusura della sua bacheca prima di poter essere chiuso.",
         "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica."
       }
+    },
+    "queue": {
+      "title": "Code dei ticket cogestiti",
+      "workingDescription": "Ticket del MSP e dei clienti attualmente gestiti dal tuo team.",
+      "oversightDescription": "Ticket dei clienti entro gli accessi approvati, inclusi quelli gestiti dal loro team IT.",
+      "view": "Vista",
+      "working": "Coda di lavoro",
+      "oversight": "Supervisione clienti",
+      "workspace": "Spazio di lavoro",
+      "allWorkspaces": "Tutti gli spazi",
+      "state": "Stato",
+      "open": "Aperti",
+      "closed": "Chiusi",
+      "all": "Tutti gli stati",
+      "sort": "Ordina per",
+      "direction": "Ordine",
+      "asc": "Crescente",
+      "desc": "Decrescente",
+      "search": "Cerca ticket",
+      "loadError": "Impossibile caricare i ticket. Aggiorna per verificare il tuo accesso.",
+      "counts": "{{total}} ticket · {{open}} aperti · {{closed}} chiusi",
+      "empty": "Nessun ticket consentito corrisponde a questi filtri.",
+      "page": "Pagina {{page}}",
+      "sortFields": {
+        "updated": "Ultimo aggiornamento",
+        "created": "Creazione",
+        "title": "Titolo",
+        "number": "Numero ticket"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Spazio di lavoro",
+        "state": "Stato",
+        "priority": "Priorità",
+        "responsibility": "Organizzazione responsabile",
+        "updated": "Aggiornamento"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "IT del cliente"
+      }
     }
   }
 }

@@ -462,6 +462,47 @@
         "closeRules": "Przed zamknięciem zgłoszenie musi spełnić wymagania zamknięcia określone na jego tablicy.",
         "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież."
       }
+    },
+    "queue": {
+      "title": "Kolejki współzarządzanych zgłoszeń",
+      "workingDescription": "Zgłoszenia MSP i klientów obsługiwane obecnie przez Twój zespół.",
+      "oversightDescription": "Zgłoszenia klientów w zatwierdzonym zakresie dostępu, także obsługiwane przez ich zespoły IT.",
+      "view": "Widok",
+      "working": "Kolejka pracy",
+      "oversight": "Nadzór nad klientami",
+      "workspace": "Obszar roboczy",
+      "allWorkspaces": "Wszystkie obszary",
+      "state": "Status",
+      "open": "Otwarte",
+      "closed": "Zamknięte",
+      "all": "Wszystkie statusy",
+      "sort": "Sortuj według",
+      "direction": "Kolejność",
+      "asc": "Rosnąco",
+      "desc": "Malejąco",
+      "search": "Szukaj zgłoszeń",
+      "loadError": "Nie udało się wczytać zgłoszeń. Odśwież, aby sprawdzić dostęp.",
+      "counts": "{{total}} zgłoszeń · {{open}} otwartych · {{closed}} zamkniętych",
+      "empty": "Brak dostępnych zgłoszeń pasujących do tych filtrów.",
+      "page": "Strona {{page}}",
+      "sortFields": {
+        "updated": "Ostatnia aktualizacja",
+        "created": "Utworzenie",
+        "title": "Tytuł",
+        "number": "Numer zgłoszenia"
+      },
+      "columns": {
+        "ticket": "Zgłoszenie",
+        "workspace": "Obszar roboczy",
+        "state": "Status",
+        "priority": "Priorytet",
+        "responsibility": "Odpowiedzialna organizacja",
+        "updated": "Aktualizacja"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "IT klienta"
+      }
     }
   }
 }

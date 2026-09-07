@@ -547,6 +547,47 @@
         "closeRules": "The ticket must meet its board’s closing requirements before it can be closed.",
         "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload."
       }
+    },
+    "queue": {
+      "title": "Co-managed ticket queues",
+      "workingDescription": "MSP tickets and customer tickets currently handled by your team.",
+      "oversightDescription": "Customer tickets within your approved access, including work handled by customer IT.",
+      "view": "View",
+      "working": "Working queue",
+      "oversight": "Customer oversight",
+      "workspace": "Workspace",
+      "allWorkspaces": "All workspaces",
+      "state": "Status",
+      "open": "Open",
+      "closed": "Closed",
+      "all": "All statuses",
+      "sort": "Sort by",
+      "direction": "Order",
+      "asc": "Ascending",
+      "desc": "Descending",
+      "search": "Search tickets",
+      "loadError": "Unable to load tickets. Refresh to check your current access.",
+      "counts": "{{total}} tickets · {{open}} open · {{closed}} closed",
+      "empty": "No permitted tickets match these filters.",
+      "page": "Page {{page}}",
+      "sortFields": {
+        "updated": "Last updated",
+        "created": "Created",
+        "title": "Title",
+        "number": "Ticket number"
+      },
+      "columns": {
+        "ticket": "Ticket",
+        "workspace": "Workspace",
+        "state": "Status",
+        "priority": "Priority",
+        "responsibility": "Responsible organization",
+        "updated": "Updated"
+      },
+      "organizations": {
+        "msp": "MSP",
+        "customer": "Customer IT"
+      }
     }
   }
 }
