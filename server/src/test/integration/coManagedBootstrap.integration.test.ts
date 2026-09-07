@@ -5378,3 +5378,21 @@ it('continues independent recipient delivery after a channel failure and surface
   expect(deliver).not.toHaveBeenCalled();
   await expect(fanout(db, { ...request, channel: 'sms' as any }, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
 }));
+
+it('qualifies production comment event identities by owner when different tenants reuse the same operation UUID', async () => {
+  const operationId = randomUUID();
+  const eventIds: string[] = [], owners: string[] = [];
+  for (let i = 0; i < 2; i++) await withSharedTicketMutationFixture(async ({ principal, resource, customer, publish, workflow }) => {
+    const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+    const request = { operationId, audience: 'shared_it' as const, text: 'Same operation UUID in another owner' };
+    publish.mockClear(); workflow.mockClear();
+    const first = await createSharedTicketComment(db, principal, resource, request);
+    expect(await createSharedTicketComment(db, principal, resource, request)).toEqual(first);
+    expect(await customer.table('comments').where('comment_id', operationId)).toHaveLength(1);
+    expect(publish).toHaveBeenCalledOnce(); expect(workflow).toHaveBeenCalledTimes(2);
+    owners.push(resource.tenant);
+    eventIds.push((publish.mock.calls[0][1] as any).eventId, ...workflow.mock.calls.map(([, options]: any[]) => options.eventId));
+  });
+  expect(new Set(owners).size).toBe(2);
+  expect(new Set(eventIds).size).toBe(6);
+});

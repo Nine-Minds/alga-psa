@@ -27,7 +27,7 @@ export async function createSharedTicketComment(db: Knex, actor: CoManagedSessio
       actor: reference ? { actorType: 'COLLABORATOR', actorReference: reference } : { actorType: 'USER', actorUserId: context.actor.userId } };
     const publish = (eventType: 'TICKET_COMMENT_ADDED' | 'TICKET_RESPONSE_STATE_CHANGED', payload: Record<string, unknown>) => {
       const complete = buildWorkflowPayload(payload, workflowContext);
-      const eventId = uuidv5(eventType, comment.comment_id);
+      const eventId = uuidv5(`${context.resource.tenant}:${eventType}`, comment.comment_id);
       EventSchemas[eventType].parse({ id: eventId, timestamp: occurredAt, eventType, payload: complete });
       registerAfterCommit(trx, () => publishEvent({ eventType, payload: complete } as any, { eventId }), `${eventType} comment=${comment.comment_id}`);
     };
@@ -55,7 +55,7 @@ export async function createSharedTicketComment(db: Knex, actor: CoManagedSessio
     for (const event of buildTicketCommunicationWorkflowEvents({ ticketId: context.resource.id, messageId: comment.comment_id,
       visibility: comment.is_internal ? 'internal' : 'public', audience: context.audience,
       author: reference ? { authorType: 'collaborator', authorReference: reference } : { authorType: 'user', authorId: context.actor.userId }, channel: 'ui', createdAt: occurredAt })) {
-      const eventId = uuidv5(event.eventType, comment.comment_id);
+      const eventId = uuidv5(`${context.resource.tenant}:${event.eventType}`, comment.comment_id);
       EventSchemas[event.eventType].parse({ id: eventId, timestamp: occurredAt, eventType: event.eventType, payload: buildWorkflowPayload(event.payload, workflowContext) });
       registerAfterCommit(trx, () => publishWorkflowEvent({ ...event, ctx: workflowContext, idempotencyKey: `co-managed-comment:${context.resource.tenant}:${comment.comment_id}:${event.eventType}` }, { eventId }), `${event.eventType} comment=${comment.comment_id}`);
     }
