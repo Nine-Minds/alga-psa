@@ -2759,7 +2759,7 @@ async function sharedWorkFixture() {
   await sponsor.table('sessions').insert({ tenant: sponsorActor.tenant, user_id: sponsorActor.userId, session_id: sessionId,
     expires_at: new Date(Date.now() + 3600000) });
   const ticketId = randomUUID();
-  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket' }).first();
+  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
   const priority = await customer.table('priorities').where('item_type', 'ticket').first();
   await customer.table('tickets').insert({ tenant: actor.tenant, ticket_id: ticketId, ticket_number: 'SHARED-1', title: 'Customer issue',
     client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id,
@@ -4711,5 +4711,146 @@ it('rechecks the actual session after waiting for a private thread lock before a
     expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
     expect(await sponsor.table('co_management_private_comments').where('comment_id', note.id).first()).toMatchObject({ note: 'Unchanged', revision: 1 });
     expect(await sponsor.table('co_management_private_command_receipts')).toEqual([]);
+  } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));
+
+async function withCommentCreationFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
+  create: (actor: Awaited<ReturnType<typeof ticketHandoffFixture>>['principal'], request: import('../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateRequest, connection?: Knex) => Promise<import('../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateReceipt>;
+}) => Promise<void>) {
+  await withConversationFixture(async fixture => {
+    const { createCoManagedTicketComment } = await import('../../../../packages/co-managed/src/ticketCommentCreation');
+    const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+    const create = (actor: Awaited<ReturnType<typeof ticketHandoffFixture>>['principal'], request: import('../../../../packages/co-managed/src/ticketCommentCreation').CoManagedCommentCreateRequest, connection: Knex = db) =>
+      createCoManagedTicketComment(connection, actor, fixture.resource, request, async (context, comment) => {
+        await Comment.insert(context.trx, context.resource.tenant, comment, { ticketId: context.resource.id, actorTenant: context.actor.tenant, actorUserId: context.actor.userId,
+          actorReferenceId: context.actorReferenceId, audience: context.audience, assertWriteAuthority: context.assertWriteAuthority });
+      });
+    await work({ ...fixture, create });
+  });
+}
+
+it('creates canonical customer-owned public/shared IT comments with qualified MSP actors and inherited reply audiences', async () => withCommentCreationFixture(async ({
+  principal, customerPrincipal, resource, customer, sponsor, create, read,
+}) => {
+  const publicRoot = await create(principal, { operationId: randomUUID(), audience: 'requester', text: 'MSP public reply' });
+  const sharedRoot = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'MSP IT note' });
+  const parent = { storeTenant: resource.tenant, threadId: sharedRoot.threadId, commentId: sharedRoot.commentId };
+  const localReply = await create(customerPrincipal, { operationId: randomUUID(), parent, text: 'Customer IT reply' });
+  const foreignReply = await create(principal, { operationId: randomUUID(), parent: { ...parent, commentId: localReply.commentId }, text: 'MSP nested reply' });
+  expect(foreignReply.threadId).toBe(sharedRoot.threadId);
+  const rows = await customer.table('comments');
+  expect(rows).toHaveLength(4);
+  expect(rows.find(row => row.comment_id === publicRoot.commentId)).toMatchObject({ tenant: resource.tenant, user_id: null, contact_id: null,
+    is_internal: false, actor_reference_id: expect.any(String), actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP' });
+  expect(rows.find(row => row.comment_id === localReply.commentId)).toMatchObject({ user_id: customerPrincipal.userId, actor_reference_id: null, is_internal: true });
+  expect(await customer.table('comment_threads').where('thread_id', sharedRoot.threadId).first()).toMatchObject({ collaboration_audience: 'shared_it', is_internal: true, reply_count: 2, created_by: null });
+  expect((await read(db, principal, resource)).items.map(item => item.commentId).sort()).toEqual(rows.map(row => row.comment_id).sort());
+  expect((await read(db, customerPrincipal, resource)).items).toHaveLength(4);
+  expect(await sponsor.table('comments')).toEqual([]);
+  expect(await sponsor.table('co_management_command_receipts')).toEqual([]);
+  expect(await customer.table('users').where('user_id', principal.userId).first()).toBeUndefined();
+}));
+
+it('keeps customer-private and legacy notes private and rejects unpublished, deleted or inconsistent reply branches', async () => withCommentCreationFixture(async ({
+  principal, customerPrincipal, resource, customer, create, addCustomer, read,
+}) => {
+  const privateRoot = await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private root' });
+  const privateParent = { storeTenant: resource.tenant, threadId: privateRoot.threadId, commentId: privateRoot.commentId };
+  await create(customerPrincipal, { operationId: randomUUID(), parent: privateParent, text: 'Customer private reply' });
+  await expect(create(principal, { operationId: randomUUID(), parent: privateParent, text: 'Not permitted' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(create(principal, { operationId: randomUUID(), audience: 'organization_private', text: 'Wrong store' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await read(db, principal, resource)).items).toEqual([]);
+  expect((await read(db, customerPrincipal, resource)).items).toHaveLength(2);
+  const legacy = await addCustomer({ note: 'Legacy private', internal: true });
+  await expect(create(principal, { operationId: randomUUID(), parent: { storeTenant: resource.tenant, threadId: legacy.threadId, commentId: legacy.id }, text: 'Not shared' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  for (const options of [{ state: 'scheduled' }, { deleted: true }, { internal: true, audience: 'shared_it' as const }]) {
+    const root = await addCustomer({ note: 'Restricted root', ...options });
+    if (options.audience) await customer.table('comments').where('comment_id', root.id).update({ is_internal: false });
+    await expect(create(principal, { operationId: randomUUID(), parent: { storeTenant: resource.tenant, threadId: root.threadId, commentId: root.id }, text: 'Denied branch' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+}));
+
+it('binds shared comment receipts to immutable requests and rolls back content, thread counts and attribution together', async () => withCommentCreationFixture(async ({ principal, resource, customer, create }) => {
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Once' };
+  const [first, retry] = await Promise.all([create(principal, request), create(principal, request)]);
+  expect(first).toEqual(retry);
+  await expect(create(principal, { ...request, text: 'Reused' })).rejects.toMatchObject({ code: 'COMMENT_CREATE_OPERATION_CONFLICT' });
+  const parent = { storeTenant: resource.tenant, threadId: first.threadId, commentId: first.commentId };
+  await expect(db.transaction(async trx => { await create(principal, { operationId: randomUUID(), parent, text: 'Rollback reply' }, trx); throw new Error('Rollback shared comment'); })).rejects.toThrow('Rollback shared comment');
+  expect(await customer.table('comments')).toHaveLength(1);
+  expect(await customer.table('comment_threads').first()).toMatchObject({ reply_count: 0 });
+  expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+  const second = { operationId: randomUUID(), audience: 'requester' as const, text: 'Snapshot' };
+  const attempt = create(principal, second); second.text = 'Changed after call';
+  const result = await attempt;
+  expect(JSON.parse((await customer.table('comments').where('comment_id', result.commentId).first()).note)[0].content[0].text).toBe('Snapshot');
+  expect(await create(principal, { ...second, text: 'Snapshot' })).toEqual(result);
+}));
+
+it('rejects forged shared comment targets, implicit audience changes and mixed attribution before canonical insertion', async () => withCommentCreationFixture(async ({
+  principal, resource, customer, create, addPrivate,
+}) => {
+  const privateRoot = await addPrivate({ note: 'MSP private' });
+  await expect(create(principal, { operationId: randomUUID(), parent: { storeTenant: principal.tenant, threadId: privateRoot.threadId, commentId: privateRoot.id }, text: 'Cross-store reply' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const base = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Invalid' };
+  for (const request of [{ ...base, actorReferenceId: randomUUID() }, { ...base, text: '' }, { ...base, text: 'nul\0' },
+    { ...base, parent: { storeTenant: resource.tenant, threadId: randomUUID(), commentId: randomUUID() } }]) {
+    await expect(create(principal, request as any)).rejects.toMatchObject({ code: 'INVALID_COMMENT_CREATE' });
+  }
+  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const reference = await customer.table('collaboration_actor_references').first();
+  const context = { ticketId: resource.id, actorTenant: principal.tenant, actorUserId: principal.userId, actorReferenceId: reference.actor_reference_id,
+    audience: 'shared_it' as const, assertWriteAuthority: async () => {} };
+  const comment = { ticket_id: resource.id, author_type: 'internal' as const, note: 'Qualified', is_internal: true };
+  await expect(Comment.insert(db, resource.tenant, comment, context)).rejects.toThrow('owning transaction');
+  const cases: Array<[Parameters<typeof Comment.insert>[2], NonNullable<Parameters<typeof Comment.insert>[3]>]> = [[{ ...comment, user_id: principal.userId }, context], [comment, { ...context, actorUserId: randomUUID() }],
+    [comment, { ...context, ticketId: randomUUID() }], [{ ...comment, author_type: 'unknown' as const }, context], [{ ...comment, is_internal: false }, context]];
+  for (const [data, authority] of cases) {
+    await expect(db.transaction(trx => Comment.insert(trx, resource.tenant, data, authority))).rejects.toThrow(/collaboration/);
+  }
+  expect(await customer.table('comments')).toEqual([]); expect(await customer.table('co_management_command_receipts')).toEqual([]);
+}));
+
+it('denies shared comment creation and replay after read/write scope loss, license lapse or grant revocation', async () => withCommentCreationFixture(async ({
+  principal, resource, operation, sponsor, customer, create,
+}) => {
+  const request = { operationId: randomUUID(), audience: 'requester' as const, text: 'Before restriction' };
+  await create(principal, request);
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(create(principal, request)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  const entitlement = await sponsor.table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, principal.tenant, entitlement.source_reference, async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 86400000) }));
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Create comment scope', actorUserId: principal.userId });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: action === 'read' ? ['comments'] : [] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  await expect(create(principal, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [] } });
+  await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'update' }).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: ['markdown_content'] } });
+  await expect(create(principal, { ...request, operationId: randomUUID() })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  await expect(create(principal, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('comments')).toHaveLength(1); expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
+}));
+
+it('rechecks shared comment session authority after waiting on its root thread without leaving a reply or receipt', async () => withCommentCreationFixture(async ({
+  principal, resource, sponsor, customer, create,
+}) => {
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Before expiry' });
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 1000) });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('comment_threads').where('thread_id', root.threadId).forUpdate().first();
+  let onQuery!: (query: { sql: string }) => void;
+  const waiting = new Promise<void>(resolve => { onQuery = query => { if (query.sql.includes('comment_threads') && query.sql.includes('for update')) resolve(); }; db.on('query', onQuery); });
+  const attempt = create(principal, { operationId: randomUUID(), parent: { storeTenant: resource.tenant, threadId: root.threadId, commentId: root.commentId }, text: 'Expired reply' }).then(() => null, error => error);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Shared comment did not wait for root thread'); })]);
+    await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('comments')).toHaveLength(1);
+    expect(await customer.table('comment_threads').first()).toMatchObject({ reply_count: 0 });
+    expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
   } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));

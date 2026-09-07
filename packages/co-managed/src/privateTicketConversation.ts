@@ -1,3 +1,4 @@
+import { plainTextContent } from './conversationContent';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -47,13 +48,6 @@ function assertVisible(context: CoManagedSharedWorkContext) {
 function receipt(row: any): CoManagedPrivateCommentReceipt {
   return { storeTenant: row.tenant, operationId: row.operation_id, threadId: row.thread_id, commentId: row.comment_id,
     revision: row.revision, appliedAt: row.applied_at instanceof Date ? row.applied_at.toISOString() : String(row.applied_at) };
-}
-function plainTextContent(text: string) {
-  // This command accepts text, never caller-supplied HTML, block IDs, uploads or
-  // embedded URLs. Encode text nodes so JSON-looking input stays literal text.
-  const lines = text.replace(/\r\n?/g, '\n').split('\n');
-  return { note: JSON.stringify(lines.map(line => ({ type: 'paragraph', content: [{ type: 'text', text: line, styles: {} }] }))),
-    markdown_content: lines.map(line => line.replace(/([\\`*_{}\[\]()#+\-.!|~>])/g, '\\$1').replace(/&/g, '&amp;').replace(/</g, '&lt;')).join('\n\n') };
 }
 
 /** MSP-private notes stay entirely in the verified home store, including retry

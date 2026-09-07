@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import type { IComment } from '@alga-psa/types';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
-import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudience';
+import { assertCommentThreadAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import logger from '@alga-psa/core/logger';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
@@ -11,6 +11,35 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   tenant: string
 ): Knex.QueryBuilder<Row, Row[]> {
   return tenantDb(conn, tenant).table<Row>(table);
+}
+
+/** Internal command context, never part of a browser-supplied comment DTO. */
+export interface CommentCollaborationContext {
+  ticketId: string;
+  actorTenant: string;
+  actorUserId: string;
+  actorReferenceId?: string;
+  audience: CommentAudience;
+  assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
+}
+async function collaborationAttribution(trx: Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>,
+  context: CommentCollaborationContext) {
+  if (!trx.isTransaction || comment.ticket_id !== context.ticketId || !['requester', 'shared_it', 'organization_private'].includes(context.audience) ||
+      comment.author_type !== 'internal' || comment.contact_id != null || Boolean(comment.is_internal) !== (context.audience !== 'requester') ||
+      comment.is_resolution || (comment as any).is_system_generated || (comment.publish_state != null && comment.publish_state !== 'published') ||
+      comment.scheduled_publish_at || comment.metadata != null) throw new Error('Invalid collaboration comment context');
+  await context.assertWriteAuthority(trx);
+  if (context.actorTenant === tenant) {
+    if (context.actorReferenceId || comment.user_id !== context.actorUserId) throw new Error('Invalid local collaboration author');
+    const user = await tenantScopedTable(trx, 'users', tenant).where({ user_id: context.actorUserId, user_type: 'internal', is_inactive: false }).forShare().first('user_id');
+    if (!user) throw new Error('Invalid local collaboration author');
+    return {};
+  }
+  if (context.audience === 'organization_private' || comment.user_id != null || !context.actorReferenceId) throw new Error('Invalid foreign collaboration author');
+  const reference = await tenantScopedTable(trx, 'collaboration_actor_references', tenant)
+    .where({ actor_reference_id: context.actorReferenceId, actor_tenant: context.actorTenant, actor_user_id: context.actorUserId }).forShare().first();
+  if (!reference) throw new Error('Invalid foreign collaboration author');
+  return { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name };
 }
 
 const Comment = {
@@ -40,12 +69,17 @@ const Comment = {
     }
   },
 
-  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>): Promise<string> => {
+  insert: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, input: Omit<IComment, 'tenant'>, inputCollaboration?: CommentCollaborationContext): Promise<string> => {
+    const collaboration = inputCollaboration ? { ...inputCollaboration } : undefined;
+    const comment = collaboration ? { ...input } : input;
+    if (collaboration && !knexOrTrx.isTransaction) throw new Error('Collaboration comments require the owning transaction');
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async trx => {
       try {
         for (const field of ['actor_reference_id', 'actor_display_name', 'actor_organization_name']) {
           if ((comment as any)[field] != null) throw new Error('Qualified comment authors require a collaboration command');
         }
+
+        const attribution = collaboration ? await collaborationAttribution(trx, tenant, comment, collaboration) : {};
 
         // Ensure author_type is valid
         if (!['internal', 'client', 'unknown'].includes(comment.author_type)) {
@@ -53,7 +87,7 @@ const Comment = {
         }
 
         // Validate user_id is present for non-unknown authors
-        if (comment.author_type !== 'unknown' && !comment.user_id) {
+        if (comment.author_type !== 'unknown' && !comment.user_id && !collaboration) {
           throw new Error('user_id is required for internal and client authors');
         }
 
@@ -133,6 +167,7 @@ const Comment = {
             project_task_id: null,
             root_comment_id: commentId,
             is_internal: Boolean(comment.is_internal),
+            ...(collaboration ? { collaboration_audience: collaboration.audience } : {}),
             reply_count: 0,
             last_activity_at: now,
             created_at: now,
@@ -144,13 +179,16 @@ const Comment = {
           throw new Error('Failed to generate comment/thread identifiers');
         }
 
-        await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: comment.ticket_id, isInternal: Boolean(comment.is_internal), parentCommentId });
+        const audience = await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: comment.ticket_id, isInternal: Boolean(comment.is_internal), parentCommentId });
+        if (collaboration && audience !== collaboration.audience) throw new Error('Collaboration reply audience changed');
+        if (collaboration) await collaboration.assertWriteAuthority(trx);
 
         await assertCoManagedOperationalWrite(trx, tenant);
         // Explicitly include markdown_content in the insert operation
         const result = await tenantScopedTable<IComment>(trx, 'comments', tenant)
           .insert({
             ...comment,
+            ...attribution,
             comment_id: commentId,
             thread_id: threadId,
             parent_comment_id: parentCommentId,
