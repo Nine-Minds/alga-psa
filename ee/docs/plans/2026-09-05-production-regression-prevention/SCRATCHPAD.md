@@ -1599,3 +1599,9 @@
 - Published a02bfb4136 Citus job101714987332 failed collecting the new Temporal database lane: @alga-psa/email/providerConfig resolves to unbuilt dist in clean CI. Prior Citus runtime lane passed all8 workflow/invoice tests.
 - Added exact providerConfig source alias to the shared Temporal Vitest config, consistent with existing workspace aliases. Real provider defaults remain executed, not mocked. All11 database tests pass against owned invoice_citus_82cc (7.33s). Native verification pending.
 - Published Temporal run34113539264: engine job101714986881, readiness101714987097 and aggregate101715882515 all completed success. Docker parity legitimately skipped on PR. Native browser run34113539423 still builds CE/EE images. Keep local bus fix and alias follow-up queued until browser run terminal.
+
+### 2026-09-07 — Isolated reader timeout recovery verified
+
+- Strengthened existing hard-timeout regression with a distinct leased reader whose pending read rejects on disconnect. Parent reset checks all leased readers are closed; final assertions require reader interruption, replacement parent and closed leases after bus shutdown.
+- Updated test passes (0.853s). Temporarily removed only stopBlockingRead from hard-timeout recovery; regression fails because reader is never disconnected. Production code restored in finally; diff confirms no mutation retained. This supplements prior real-Redis publication/blocked-close/recreation tests.
+- Browser run34113539423 remains active; local follow-up commits remain queued. Full plan still incomplete.
