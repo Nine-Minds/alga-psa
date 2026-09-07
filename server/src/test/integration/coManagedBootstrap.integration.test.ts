@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -13863,4 +13863,99 @@ it('customer sheet reporting preserves masked totals and withholds free text acr
     if (format === 'xlsx') { const ExcelJS = await import('exceljs'), workbook = new ExcelJS.default.Workbook(); await workbook.xlsx.load(result.data); text = JSON.stringify(workbook.worksheets[0].getSheetValues()); }
     expect(text).not.toContain('Invisible'); expect(text).not.toContain('Private API effort');
   }
+}));
+
+it('customer time periods share calendar views and authorized CRUD across native and API surfaces', async () => withTimeSheetApiFixture(async ({ sheetService, context }: any) => {
+  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const schemas = await import('../../lib/api/schemas/timeSheet');
+  const created = await sheetService.createTimePeriod(schemas.createTimePeriodSchema.parse({ start_date: '2026-10-01', end_date: '2026-10-08' }), context);
+  expect(created).toMatchObject({ start_date: '2026-10-01', end_date: '2026-10-08', duration_days: 7 });
+  schemas.timePeriodResponseSchema.parse(created);
+  expect(await native.getLatestTimePeriod()).toMatchObject({ period_id: created.period_id });
+  expect(await sheetService.getCurrentTimePeriod(context, '2026-10-07')).toMatchObject({ period_id: created.period_id });
+  expect(await sheetService.getCurrentTimePeriod(context, '2026-10-08')).toBeNull();
+  expect(await native.updateTimePeriod(created.period_id, { end_date: '2026-10-09' })).toMatchObject({ end_date: '2026-10-09' });
+  expect(await sheetService.getTimePeriod(created.period_id, context)).toMatchObject({ duration_days: 8 });
+  await native.deleteTimePeriod(created.period_id);
+  expect(await sheetService.getTimePeriod(created.period_id, context)).toBeNull();
+  const browserCreated = await native.createTimePeriod({ start_date: '2026-10-09', end_date: '2026-10-16' });
+  expect(browserCreated).toMatchObject({ start_date: '2026-10-09' });
+  await sheetService.deleteTimePeriod(browserCreated.period_id, context);
+}));
+
+it('customer time periods serialize overlap checks with background model writes', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
+  const { TimePeriod } = await import('../../../../packages/scheduling/src/models/timePeriod');
+  const results = await Promise.allSettled([
+    sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-10' }, context),
+    TimePeriod.create(db, context.tenant, { start_date: '2026-10-05', end_date: '2026-10-15' } as any),
+  ]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.filter(result => result.status === 'rejected')).toHaveLength(1);
+  expect(await customer.table('time_periods').where('start_date', '>=', '2026-10-01')).toHaveLength(1);
+  await expect(sheetService.createTimePeriod({ start_date: '2026-02-30', end_date: '2026-03-10' }, context)).rejects.toMatchObject({ statusCode: 400 });
+}));
+
+it('customer time periods refuse to alter used periods and preserve per-item native removal', async () => withTimeSheetApiFixture(async ({ sheetService, context, entry, customer }: any) => {
+  const sheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first();
+  await expect(sheetService.updateTimePeriod(sheet.period_id, { end_date: '2026-09-13' }, context)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(sheetService.deleteTimePeriod(sheet.period_id, context)).rejects.toMatchObject({ statusCode: 409 });
+  const empty = await sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-08' }, context);
+  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  expect(await native.deleteTimePeriods([sheet.period_id, empty.period_id, empty.period_id])).toMatchObject({ deletedIds: [empty.period_id], failed: [{ periodId: sheet.period_id }] });
+  expect(await customer.table('time_periods').where('period_id', sheet.period_id)).toHaveLength(1);
+}));
+
+it('customer time periods generate contiguous full periods and roll back overlapping batches', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
+  const { generateTimePeriodCalendar } = await import('../../../../packages/co-managed/src/nativeTimePeriod');
+  expect(generateTimePeriodCalendar({ start_date: '2027-01-31', end_date: '2027-04-01', frequency: 'monthly' })).toEqual([
+    { start_date: '2027-01-31', end_date: '2027-02-28' }, { start_date: '2027-02-28', end_date: '2027-03-31' },
+  ]);
+  const periods = await sheetService.generateTimePeriods({ start_date: '2026-10-01', end_date: '2026-10-22', frequency: 'weekly', frequency_unit: 1 }, context);
+  expect(periods.map((period: any) => [period.start_date, period.end_date])).toEqual([
+    ['2026-10-01', '2026-10-08'], ['2026-10-08', '2026-10-15'], ['2026-10-15', '2026-10-22'],
+  ]);
+  await expect(sheetService.generateTimePeriods({ start_date: '2026-09-24', end_date: '2026-10-08', frequency: 'weekly', frequency_unit: 1 }, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('time_periods').where('start_date', '2026-09-24')).toHaveLength(0);
+}));
+
+it('customer time periods use actual key permission and retain readable history after write expiry', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer, principal, user }: any) => {
+  const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_period', action: 'create' }).select('permission_id'));
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  await expect(sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-08' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await sheetService.getTimePeriods(context)).toHaveLength(1);
+  await expect(sheetService.getTimePeriods({ ...context, apiKeyId: undefined })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('role_permissions').insert(permissions);
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await sheetService.getTimePeriods(context)).toHaveLength(1);
+  await expect(sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-08' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  // Ordinary technician time picking continues under sheet-read authority,
+  // without granting tenant-wide calendar administration.
+  const technician = await customer.table('roles').where('role_name', 'Technician').first();
+  await customer.table('user_roles').where('user_id', user.user_id).update({ role_id: technician.role_id });
+  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const own = await native.getCurrentTimePeriod();
+  expect(own === null || typeof own.period_id === 'string').toBe(true);
+  await expect(sheetService.getTimePeriods(context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer time periods roll back calendar insertion when its key expires before commit', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer }: any) => {
+  await db.raw(`CREATE FUNCTION expire_calendar_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_calendar_key AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION expire_calendar_key()');
+  try {
+    await expect(sheetService.createTimePeriod({ start_date: '2026-10-01', end_date: '2026-10-08' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_periods').where('start_date', '2026-10-01')).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_calendar_key ON time_periods'); await db.raw('DROP FUNCTION expire_calendar_key()'); }
+}));
+
+it('customer time periods admit native settings generation before reading its configuration and include an exact end boundary', async () => withTimeSheetApiFixture(async ({ context, customer }: any) => {
+  await customer.table('time_period_settings').insert({ tenant: context.tenant, time_period_settings_id: randomUUID(), start_day: 1, end_day: 7, frequency: 1, frequency_unit: 'week', is_active: true, effective_from: '2026-10-01', created_at: db.fn.now(), updated_at: db.fn.now() });
+  const native = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_period', action: 'create' }).select('permission_id'));
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  await expect(native.generateAndSaveTimePeriods('2026-10-05', '2026-10-19')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('time_periods').where('start_date', '>=', '2026-10-01')).toHaveLength(0);
+  await customer.table('role_permissions').insert(permissions);
+  expect(await native.generateAndSaveTimePeriods('2026-10-05', '2026-10-19')).toMatchObject([
+    { start_date: '2026-10-05', end_date: '2026-10-12' }, { start_date: '2026-10-12', end_date: '2026-10-19' },
+  ]);
 }));

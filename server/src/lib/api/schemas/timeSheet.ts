@@ -120,8 +120,8 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
 
 // Time period schemas
 export const createTimePeriodSchema = z.object({
-  start_date: dateSchema,
-  end_date: dateSchema,
+  start_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema,
   is_current: z.boolean().optional().default(false)
 });
 
@@ -129,11 +129,11 @@ export const updateTimePeriodSchema = createUpdateSchema(createTimePeriodSchema)
 
 export const timePeriodResponseSchema = z.object({
   period_id: uuidSchema,
-  start_date: dateSchema,
-  end_date: dateSchema,
-  is_current: z.boolean(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  start_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema,
+  is_current: z.boolean().optional(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema,
   
   // Computed fields
@@ -270,10 +270,10 @@ export const timeSheetExportQuerySchema = z.object({
 
 // Time period generation
 export const generateTimePeriodsSchema = z.object({
-  start_date: dateSchema,
-  end_date: dateSchema,
+  start_date: timeSheetCalendarDateSchema,
+  end_date: timeSheetCalendarDateSchema,
   frequency: timePeriodFrequencySchema,
-  frequency_unit: z.number().min(1).optional().default(1)
+  frequency_unit: z.number().int().min(1).optional().default(1)
 });
 
 // Base schedule entry schema (without refinements)

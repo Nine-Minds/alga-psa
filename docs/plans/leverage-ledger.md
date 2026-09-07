@@ -489,3 +489,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `TimeSheetService`, `timeSheetCollection`, search/export/statistics handlers in `ApiTimeSheetController`.
 - **Gate:** Existing admitted collection supplies authoritative visible rows; pure projections support statistics and all export formats. ACT / bounded-now.
 - **Status:** Reporting derives exclusively from admitted fields; unknown metrics stay null, exports include all permitted rows with explicit filters/fields/groups, and real XLSX/escaped CSV retain private-content masks. Three focused scenarios pass in 10.22 seconds, with direct Node filter/calendar checks. Collection scale, HTTP/browser and wider validation remain deferred.
+
+## native-time-period-calendar-engine — friction
+- **What:** API, browser and background model period writers used separate unheld overlap/emptiness checks; locking existing rows cannot serialize creation in an empty calendar. Generic API generation also introduced one-day gaps.
+- **Where:** `db/timePeriodCalendar`, `co-managed/nativeTimePeriod`, `TimePeriod` model, native period actions and `TimeSheetService`.
+- **Gate:** Three concrete mutation paths share stable calendar invariants and meaningful concurrency risk. ACT / bounded-now in the approved operational-time workstream: centralize storage invariants below feature authority, with a tenant lock table registered/distributed through the existing infrastructure.
+- **Status:** Model and customer commands share serialized calendar writes; feature commands retain current credentials and permissions above that engine. Native/API generation uses contiguous boundaries and atomic insertion. Seven focused scenarios verified across the six-case core run and corrected generator follow-up. Period settings and explicit background-job authority/lifecycle remain pending, as do broader regression, Citus and lock-order checks.

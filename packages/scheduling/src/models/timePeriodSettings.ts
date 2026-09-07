@@ -16,6 +16,14 @@ export class TimePeriodSettings {
 
       return settings.map((setting): ITimePeriodSettings => ({
         ...setting,
+        // Database NULL denotes an unused calendar component; native settings
+        // interfaces use absent optional values rather than numeric nulls.
+        start_day: setting.start_day ?? undefined,
+        end_day: setting.end_day ?? undefined,
+        start_month: setting.start_month ?? undefined,
+        start_day_of_month: setting.start_day_of_month ?? undefined,
+        end_month: setting.end_month ?? undefined,
+        end_day_of_month: setting.end_day_of_month ?? undefined,
         effective_from: this.toISO8601(setting.effective_from),
         effective_to: setting.effective_to ? this.toISO8601(setting.effective_to) : undefined,
         created_at: this.toISO8601(setting.created_at),

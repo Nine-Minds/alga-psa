@@ -4,6 +4,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { TimePeriod } from '../models/timePeriod'
+import { readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, listCoManagedNativeTimeSheets, CoManagedSharedWorkError } from '@alga-psa/co-managed';
+import { TimePeriodCalendarError } from '@alga-psa/db';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { TimePeriodSettings } from '../models/timePeriodSettings';
 import type { ISO8601String } from '@alga-psa/types';
 import {
@@ -119,9 +122,11 @@ function timePeriodActionErrorFrom(error: unknown, fallback = ''): TimePeriodAct
   return actionError(message);
 }
 
-export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
+export const getLatestTimePeriod = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView | null>> => {
   try {
     const { knex } = await createTenantKnex();
+    const current = await readCoManagedNativeTimePeriods(knex, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { latest: true });
+    if (current.handled) return current.periods[0] ?? null;
     const latestPeriod = await TimePeriod.getLatest(knex, tenant);
     if (!latestPeriod) {
       return null;
@@ -139,7 +144,7 @@ export const getLatestTimePeriod = withAuth(async (_user, { tenant }): Promise<T
   }
 });
 
-export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
+export const getTimePeriodSettings = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodSettings[]>> => {
   try {
     const { knex } = await createTenantKnex();
     const settings = await TimePeriodSettings.getActiveSettings(knex, tenant);
@@ -155,7 +160,7 @@ export const getTimePeriodSettings = withAuth(async (_user, { tenant }): Promise
 });
 
 export const createTimePeriod = withAuth(async (
-  _user,
+  user,
   { tenant },
   input: TimePeriodInput
 ): Promise<TimePeriodActionResult<ITimePeriodView>> => {
@@ -172,6 +177,8 @@ export const createTimePeriod = withAuth(async (
 
   const { knex: db } = await createTenantKnex();
   try {
+    const current = await commandCoManagedNativeTimePeriods(db, tenant, { action: 'create', periods: [input] }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) { safeRevalidate('/msp/time-entry'); return current.periods[0]; }
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       const settings = await TimePeriodSettings.getActiveSettings(trx, tenant);
@@ -204,11 +211,13 @@ export const createTimePeriod = withAuth(async (
   }
 });
 
-export const fetchAllTimePeriods = withAuth(async (_user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+export const fetchAllTimePeriods = withAuth(async (user, { tenant }): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
   try {
     console.log('Fetching all time periods...');
 
     const { knex } = await createTenantKnex();
+    const current = await readCoManagedNativeTimePeriods(knex, tenant, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.periods;
     const timePeriods = await TimePeriod.getAll(knex, tenant);
 
     // Convert model types to view types
@@ -297,6 +306,12 @@ export const getCurrentTimePeriod = withAuth(async (user, { tenant }): Promise<T
     const userTimeZone = tenant && userId ? await resolveUserTimeZone(knex, tenant, userId) : 'UTC';
 
     const currentDate = getCurrentDate(userTimeZone).toString();
+    const current = await listCoManagedNativeTimeSheets(knex, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { userId: user.user_id, periods: true });
+    if (current.handled) {
+      const period = current.periods.find(period => period.start_date <= currentDate && period.end_date > currentDate);
+      return period ? { tenant, period_id: period.period_id, start_date: period.start_date, end_date: period.end_date } : null;
+    }
+
     const currentPeriod = await TimePeriod.findByDate(knex, tenant, currentDate);
     if (!currentPeriod) return null;
 
@@ -433,13 +448,13 @@ export async function generateTimePeriods(
 
       const periodEndDate = getEndOfPeriod(currentDate.toString(), setting);
 
-      if (Temporal.PlainDate.compare(periodEndDate, endDate) >= 0) {
+      if (Temporal.PlainDate.compare(periodEndDate, endDate) > 0) {
         break;
       }
 
       if (setting.effective_to) {
         const effectiveTo = toPlainDate(setting.effective_to);
-        if (Temporal.PlainDate.compare(periodEndDate, effectiveTo) >= 0) {
+        if (Temporal.PlainDate.compare(periodEndDate, effectiveTo) > 0) {
           break;
         }
       }
@@ -490,9 +505,11 @@ function alignToMonthDay(dateStr: string, targetDay: number): string {
   return alignedDate.toString();
 }
 
-export const deleteTimePeriod = withAuth(async (_user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
+export const deleteTimePeriod = withAuth(async (user, { tenant }, periodId: string): Promise<TimePeriodActionResult<void>> => {
   try {
     const { knex } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimePeriods(knex, tenant, { action: 'delete', id: periodId }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) { safeRevalidate('/msp/time-entry'); return; }
     // Check if period exists and has no associated time records
     const period = await TimePeriod.findById(knex, tenant, periodId);
     if (!period) {
@@ -537,6 +554,21 @@ export const deleteTimePeriods = withAuth(async (
   periodIds: string[]
 ): Promise<{ deletedIds: string[]; failed: Array<{ periodId: string; message: string }> }> => {
   const { knex } = await createTenantKnex();
+  const customerResult = { deletedIds: [] as string[], failed: [] as Array<{ periodId: string; message: string }> };
+  let customerHandled = false;
+  for (const periodId of [...new Set(periodIds ?? [])]) {
+    try {
+      const current = await commandCoManagedNativeTimePeriods(knex, tenant, { action: 'delete', id: periodId, preserveDate: new Date().toISOString().slice(0, 10) }, () => resolveNativeTimeBrowserActor(user, tenant));
+      if (!current.handled) break;
+      customerHandled = true; customerResult.deletedIds.push(periodId);
+    } catch (error) {
+      if (!(error instanceof CoManagedSharedWorkError) && !(error instanceof TimePeriodCalendarError)) throw error;
+      customerHandled = true;
+      customerResult.failed.push({ periodId, message: error instanceof CoManagedSharedWorkError ? 'Access denied: Cannot remove time period' : error.message });
+    }
+  }
+  if (customerHandled) { if (customerResult.deletedIds.length) safeRevalidate('/msp/time-entry'); return customerResult; }
+
 
   // Manager gate: mirrors how the Time Entry page derives isManager (manages any team).
   const managedTeam = await tenantDb(knex, tenant).table('teams')
@@ -602,7 +634,7 @@ export const deleteTimePeriods = withAuth(async (
 });
 
 export const updateTimePeriod = withAuth(async (
-  _user,
+  user,
   { tenant },
   periodId: string,
   input: Partial<TimePeriodInput>
@@ -618,6 +650,8 @@ export const updateTimePeriod = withAuth(async (
 
   const { knex: db } = await createTenantKnex();
   try {
+    const current = await commandCoManagedNativeTimePeriods(db, tenant, { action: 'update', id: periodId, dates: input }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) { safeRevalidate('/msp/time-entry'); return current.periods[0]; }
     return await withTransaction(db, async (trx: Knex.Transaction) => {
     try {
       // Check if period exists and has no associated time records
@@ -669,10 +703,17 @@ export const updateTimePeriod = withAuth(async (
   }
 });
 
-export const generateAndSaveTimePeriods = withAuth(async (_user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
+export const generateAndSaveTimePeriods = withAuth(async (user, { tenant }, startDate: ISO8601String, endDate: ISO8601String): Promise<TimePeriodActionResult<ITimePeriodView[]>> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
+      const current = await commandCoManagedNativeTimePeriods(trx, tenant, { action: 'create', periods: async calendar => {
+        await tenantDb(calendar, tenant).table('time_period_settings').where('is_active', true).forShare().select('time_period_settings_id');
+        const settings = validateArray(timePeriodSettingsSchema, await TimePeriodSettings.getActiveSettings(calendar, tenant));
+        return generateTimePeriods(settings, startDate, endDate);
+      } }, () => resolveNativeTimeBrowserActor(user, tenant));
+      if (current.handled) { safeRevalidate('/msp/time-entry'); return current.periods; }
+
       const settings = await getTimePeriodSettings();
       if (isActionMessageError(settings) || isActionPermissionError(settings)) {
         return settings;

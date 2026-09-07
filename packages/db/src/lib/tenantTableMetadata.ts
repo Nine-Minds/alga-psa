@@ -555,6 +555,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   native_time_tracking_sessions: { scope: 'tenant' },
   time_entry_change_requests: { scope: 'tenant' },
   time_periods: { scope: 'tenant' },
+  time_period_calendar_locks: { scope: 'tenant' },
   time_period_settings: { scope: 'tenant' },
   time_period_types: { scope: 'tenant' },
   time_sheets: { scope: 'tenant' },

@@ -4,7 +4,7 @@
  */
 
 import { Knex } from 'knex';
-import { withTransaction } from '@alga-psa/db';
+import { withTransaction, TimePeriodCalendarError } from '@alga-psa/db';
 import { BaseService, ServiceContext, ListOptions, ListResult, tenantDb } from '@alga-psa/db';
 import { 
   CreateTimeSheetData,
@@ -30,7 +30,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
-import { NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { exportTimeSheetProjections, timeSheetStatistics, timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
@@ -80,6 +80,11 @@ export class TimeSheetService extends BaseService<any> {
     try { return await work(); } catch (error) {
       if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError('Permission denied: Cannot access this time sheet');
       if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
+      if (error instanceof TimePeriodCalendarError) {
+        if (error.code === 'PERIOD_INVALID_DATES') throw new BadRequestError(error.message);
+        if (error.code === 'PERIOD_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
       if (error instanceof NativeTimeSheetError) {
         if (error.code === 'SHEET_INVALID_INPUT') throw new BadRequestError(error.message);
         throw new ConflictError(error.message);
@@ -757,6 +762,8 @@ export class TimeSheetService extends BaseService<any> {
   // Time periods management
   async getTimePeriods(context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods;
       
       return tenantDb(knex, context.tenant).table('time_periods')
         .orderBy('start_date', 'desc');
@@ -765,6 +772,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getCurrentTimePeriod(context: ServiceContext, date?: string): Promise<any | null> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context), { date: date ?? new Date().toISOString().slice(0, 10) }));
+      if (current.handled) return current.periods[0] ?? null;
 
       const targetDate = date ?? new Date().toISOString().slice(0, 10);
       const period = await TimePeriod.findByDate(knex, context.tenant, targetDate);
@@ -775,6 +784,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getTimePeriod(id: string, context: ServiceContext): Promise<any | null> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => readCoManagedNativeTimePeriods(knex, context.tenant, async () => this.sheetActor(context), { id }));
+      if (current.handled) return current.periods[0] ?? null;
       
       const period = await tenantDb(knex, context.tenant).table('time_periods')
         .where({ period_id: id })
@@ -801,6 +812,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async createTimePeriod(data: CreateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'create', periods: [data] }, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods[0];
       
       return withTransaction(knex, async (trx) => {
         const startDate = data.start_date ? new Date(data.start_date) : null;
@@ -841,6 +854,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async updateTimePeriod(id: string, data: UpdateTimePeriodData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'update', id, dates: data }, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods[0];
       
       return withTransaction(knex, async (trx) => {
         const existingPeriod = await tenantDb(trx, context.tenant).table('time_periods')
@@ -894,6 +909,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async deleteTimePeriod(id: string, context: ServiceContext): Promise<void> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'delete', id }, async () => this.sheetActor(context)));
+      if (current.handled) return;
       
       return withTransaction(knex, async (trx) => {
         const period = await tenantDb(trx, context.tenant).table('time_periods')
@@ -926,6 +943,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async generateTimePeriods(data: GenerateTimePeriodsData, context: ServiceContext): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => commandCoManagedNativeTimePeriods(knex, context.tenant, { action: 'create', periods: generateTimePeriodCalendar(data) }, async () => this.sheetActor(context)));
+      if (current.handled) return current.periods;
       
       return withTransaction(knex, async (trx) => {
         const periods: any[] = [];
