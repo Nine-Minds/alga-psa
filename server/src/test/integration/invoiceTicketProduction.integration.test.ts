@@ -630,13 +630,22 @@ it.runIf(Boolean(process.env.INVOICE_TICKET_REVIEW_LAYOUT))('saves and verifies 
   } finally { await db.destroy(); }
 }, 180000);
 
-it.runIf(process.env.INVOICE_TICKET_DIAGNOSTICS === '1')('surfaces declared scalar and missing collection diagnostics through production preview and PDF', async () => {
+it('surfaces declared scalar and missing collection diagnostics through production preview and PDF', async () => {
   const dir = `${evidenceDir}/diagnostics`; fs.mkdirSync(dir, { recursive: true });
-  const env = dotenv.parse(fs.readFileSync('.env.local')); Object.assign(process.env, env, { DB_PORT: '5472' });
-  const db = knex({ client: 'pg', connection: { host: env.DB_HOST, port: 5472, database: env.DB_NAME_SERVER, user: env.DB_USER_ADMIN, password: env.DB_PASSWORD_ADMIN } });
+  const db = await createTestDbConnection();
   try {
-    state.user = await db('users').where({ email: 'invoice-draft-verifier@example.invalid' }).first(); state.tenant = state.user.tenant;
-    const generated = JSON.parse(fs.readFileSync(`${evidenceDir}/multi-tax-long/generated.json`, 'utf8'));
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
+    state.tenant = state.user.tenant;
+    const ids = await createSourceFixture(db);
+    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const invoice = await generateInvoice(ids.cycleId) as any;
+    expect(invoice.invoice_id, JSON.stringify(invoice)).toBeTruthy();
+    const generated = { invoiceId: invoice.invoice_id, invoiceNumber: invoice.invoice_number };
     const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
     const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
     const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
