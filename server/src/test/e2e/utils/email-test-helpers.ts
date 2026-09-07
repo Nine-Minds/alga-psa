@@ -1,3 +1,4 @@
+import { readTicketsForEmailMessage } from './email-message-tickets';
 import { waitForEmailMessage } from './wait-for-email-message';
 import { PersistentE2ETestContext } from './persistent-test-context';
 import { tenantDb } from '@alga-psa/db';
@@ -149,13 +150,13 @@ export class EmailTestHelpers {
       waitForProcessing: async (timeout: number = 15000) => {
         await waitForEmailMessage({
           messageId: sentMessageId, timeout,
-          readTickets: () => this.getTicketsForContact(tenant.tenant, unknownEmail),
+          readTickets: () => readTicketsForEmailMessage(this.context.db, tenant.tenant, sentMessageId),
           readComments: ticketId => this.getCommentsForTicket(tenant.tenant, ticketId),
         });
       },
 
       getTickets: async () => {
-        return await this.getTicketsForContact(tenant.tenant, unknownEmail);
+        return await readTicketsForEmailMessage(this.context.db, tenant.tenant, sentMessageId);
       }
     };
   }
