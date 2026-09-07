@@ -1890,3 +1890,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - DockerServiceManager.waitForWorkflowProcessing previously logged that timeout implied completion. It now throws when no processing is observed and bounds each HTTP health request by the remaining wait budget. This remains an aggregate worker-counter check; callers still need ticket/content assertions and it does not prove correlation to a specific event.
 - Three controlled-polling behavioral tests cover healthy/no-progress timeout, unreachable worker timeout and observed-progress success. Before fix: two failed/one passed; after fix: all three passed. Combined unit testing directory passes 9/9 (/tmp/alga-email-wait-before.log, /tmp/alga-email-wait-fixed.log). No Docker services or database touched. Native execution awaits publication.
+
+### 2026-09-07 — use current checkout for legacy email Docker commands
+
+- Removed hardcoded /Users/robertisaacs/alga-psa from DockerServiceManager start/stop. All lifecycle/diagnostic commands use the module-derived worktree root as cwd and docker compose argument arrays via execFile; no shell interpolation. This fixes checkout targeting and Compose v2 command availability, but fixed container names/ports in the legacy compose file still prevent full parallel isolation.
+- Command-boundary behavioral test captures actual manager calls for start/stop/logs/restart/status and expected cwd/arguments. It failed before the change; combined testing fixture suite now passes 10/10 (/tmp/alga-email-docker-before.log, /tmp/alga-email-docker-fixed.log). Child-process execution is substituted: no Docker service was started/stopped and this is not full service integration evidence.

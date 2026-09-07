@@ -1,9 +1,9 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { promisify } from 'util';
 import axios from 'axios';
 import * as path from 'path';
 
-const execAsync = promisify(exec);
+const execAsync = promisify(execFile);
 
 export interface ServiceHealthCheck {
   name: string;
@@ -44,12 +44,9 @@ export class DockerServiceManager {
 
   async startE2EServices(): Promise<void> {
     try {
-      // Use absolute path to ensure we're in the right directory
-      const absoluteProjectRoot = '/Users/robertisaacs/alga-psa';
-      // Change to project root and start services
       const { stdout, stderr } = await execAsync(
-        `cd ${absoluteProjectRoot} && docker-compose -f ${this.composeFile} up -d`,
-        { timeout: 120000 }
+        'docker', ['compose', '-f', this.composeFile, 'up', '-d'],
+        { cwd: this.projectRoot, timeout: 120000 }
       );
       
       if (stderr && !stderr.includes('WARNING')) {
@@ -66,10 +63,9 @@ export class DockerServiceManager {
     console.log('🛑 Stopping E2E Docker services...');
     
     try {
-      const absoluteProjectRoot = '/Users/robertisaacs/alga-psa';
       await execAsync(
-        `cd ${absoluteProjectRoot} && docker-compose -f ${this.composeFile} down`,
-        { timeout: 60000 }
+        'docker', ['compose', '-f', this.composeFile, 'down'],
+        { cwd: this.projectRoot, timeout: 60000 }
       );
       
       console.log('✅ E2E Docker services stopped');
@@ -178,8 +174,8 @@ export class DockerServiceManager {
   async getContainerLogs(serviceName: string, lines: number = 50): Promise<string> {
     try {
       const { stdout } = await execAsync(
-        `cd ${this.projectRoot} && docker-compose -f ${this.composeFile} logs --tail=${lines} ${serviceName}`,
-        { timeout: 10000 }
+        'docker', ['compose', '-f', this.composeFile, 'logs', `--tail=${lines}`, serviceName],
+        { cwd: this.projectRoot, timeout: 10000 }
       );
       
       return stdout;
@@ -193,8 +189,8 @@ export class DockerServiceManager {
     
     try {
       await execAsync(
-        `cd ${this.projectRoot} && docker-compose -f ${this.composeFile} restart ${serviceName}`,
-        { timeout: 30000 }
+        'docker', ['compose', '-f', this.composeFile, 'restart', serviceName],
+        { cwd: this.projectRoot, timeout: 30000 }
       );
       
       console.log(`✅ ${serviceName} restarted`);
@@ -206,8 +202,8 @@ export class DockerServiceManager {
   async isServiceRunning(serviceName: string): Promise<boolean> {
     try {
       const { stdout } = await execAsync(
-        `cd ${this.projectRoot} && docker-compose -f ${this.composeFile} ps ${serviceName}`,
-        { timeout: 10000 }
+        'docker', ['compose', '-f', this.composeFile, 'ps', serviceName],
+        { cwd: this.projectRoot, timeout: 10000 }
       );
       
       return stdout.includes('Up') || stdout.includes('running');
