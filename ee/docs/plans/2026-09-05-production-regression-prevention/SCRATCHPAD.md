@@ -2265,3 +2265,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Canonical run-node-tooling-tests passes all 501 tests in 52 required files at clean 8063cf6db70942bcbeee2a4bca3a8a7467c038b4. Discovery passes; no failures, skips, TODOs or cancellations. Before/after revision is identical and clean.
 - Includes the actual-Vitest Citus runner collection regression and independent two-bundle Citus CLI gate. Existing manual localization baseline exclusion remains explicit. Evidence: evidence/node-tooling-local-8063cf.json.
 - Local Node 25 results do not establish native CI or application journey execution. No broad plan flags changed.
+
+### 2026-09-07 — current gate rejects incomplete historical Citus evidence
+
+- Refreshed PR3343: still OPEN at d8cf; server-colocated and its aggregate fail, unit/infrastructure runs cancelled. The four legacy Redis-double failures are already locally repaired and full-lane verified; no new defect inferred from stale checks.
+- Downloaded native Citus run34118119105 artifacts and passed them unchanged through the current aggregate at their original merge revision. It correctly fails: old runtime evidence has no explicit full selection, and the 25 passing tenant assertions omit tenant-creation-workflow and database-connection files now required. Evidence: evidence/citus-historical-native-gate-audit.json.
+- Next verification is the complete current six-file Temporal database lane against owned migrated Citus, followed by authorized publication/native execution. Prior green historical counts cannot close current requirements. Tax cap and service-period policy TODOs remain pending concrete product rules; no invented assertions or TODO removals. No broad flags changed.
