@@ -1758,3 +1758,13 @@ method to all three legacy doubles; preserved all assertions and timeouts.
 All four cases pass with the actual server-colocated config. These doubles do not
 claim real transport isolation; the package/real-Redis regressions cover that.
 Evidence: `evidence/legacy-event-bus-fixtures.json`.
+
+Native Citus run34118119105 completed successfully. Downloaded artifacts show
+25 Temporal DB cases and8 workflow/invoice runtime cases passed, zero skips,
+at merge revision3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f for d8cf. This verifies
+the providerConfig alias fix in native CI; topology/upgrade gaps remain.
+Evidence: `evidence/citus-native-d8cf.json`.
+
+Full server-colocated runner passed381 tests across76 files at11810e8d14 with
+complete execution reconciliation and clean source. This includes the four
+repaired legacy event-bus cases; native publication is still pending.

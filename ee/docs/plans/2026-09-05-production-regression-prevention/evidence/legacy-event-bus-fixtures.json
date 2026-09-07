@@ -10,7 +10,19 @@
   "validation": {
     "focusedFiles": 3,
     "focusedTestsPassed": 4,
-    "config": "server/vitest.server-colocated.config.ts"
+    "config": "server/vitest.server-colocated.config.ts",
+    "fullLane": {
+      "revision": "11810e8d147a5674e878fb7ffed03e88e499d73c",
+      "status": "passed",
+      "counts": {
+        "passed": 381,
+        "failed": 0,
+        "skipped": 0,
+        "todo": 0,
+        "pending": 0
+      },
+      "workingTreeDirty": false
+    }
   },
   "limits": [
     "These doubles exercise legacy entry-point recovery logic, not real Redis isolation",
