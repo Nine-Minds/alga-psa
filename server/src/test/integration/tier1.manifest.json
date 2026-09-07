@@ -44,6 +44,7 @@
     "src/test/integration/webhookDelivery.tenantIsolation.test.ts",
     "../ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts",
     "src/test/integration/invoiceTicketImmutable.integration.test.ts",
-    "src/test/integration/workflowRuntimeV2TriggerLaunch.integration.test.ts"
+    "src/test/integration/workflowRuntimeV2TriggerLaunch.integration.test.ts",
+    "src/test/integration/microsoftEmailOAuthCallbackRoute.integration.test.ts"
   ]
 }
