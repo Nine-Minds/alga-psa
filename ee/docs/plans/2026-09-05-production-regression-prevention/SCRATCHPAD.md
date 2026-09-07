@@ -1309,3 +1309,9 @@
 - New native standalone browser collection passed in 13 seconds, confirming the browser dependency repair.
 - Env-backup guard job 101678731400 failed with ENOBUFS because git ls-files exceeded the default 1 MiB buffer. Replaced buffered execution with streaming NUL-delimited filenames; no filename rules relaxed.
 - Real 9000-entry Git index reproduces the old failure; new guard passes large clean index and catches a prohibited late entry. Git-error fail-closed coverage and actual worktree guard also pass. Evidence: evidence/env-backup-guard-large-index.json.
+
+### 2026-09-07 — Native Citus execution verified
+
+- Native run 34102126219, job 101678729376 completed successfully for PR head e55139a737; tested merge checkout df2c988ca0742d4d19d7048353dc4416703c4063 remained clean and unchanged.
+- Downloaded artifact 10011134709 confirms both mandatory files and all eight collected/executed identities match, with eight passes and no incomplete cases. Durable evidence: evidence/citus-native-runtime.json.
+- F022 remains incomplete: previous-release upgrade and production topology parity are still unverified. Production browser image jobs remain live; local env guard repair is awaiting publication without cancelling those builds.
