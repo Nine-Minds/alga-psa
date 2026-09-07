@@ -1630,3 +1630,18 @@
 - Added explicit application seeder (confidential secret or public PKCE, exact redirect URIs). Unknown applications, wrong callback and unsupported response type reject authorization. Confidential code/refresh exchange validates secret; registered PKCE type requires challenge even when request omits all PKCE fields. Reset clears registrations and tokens. Seeder response excludes secret.
 - Wrong-secret wire regression reproduced200vs401 before repair. Full11wiretests now pass, including wrong refresh secret preserving valid token and reset cleanup; package typecheck passes. Browser Xero fixture seeds synthetic application and still collects. README documents mandatory fixture setup.
 - Prior PKCE/client-binding evidence limitations about missing registration are superseded by evidence/xero-application-registration.json; per-client organisation consent, live drift and native browser verification remain outstanding. F037 not complete.
+
+### Xero application organisation consent (2026-09-07)
+
+Closed the emulator gap where all seeded organisations were accessible to every
+application. Access tokens now retain client identity; connections and accounting
+routes require explicit consent set by a control action. Added wire regressions
+for denied reads/writes without side effects, atomic invalid changes, independent
+application grants, revocation, and restoration. The first regression failed
+before the fix because an unconsented organisation appeared in /connections.
+All 13 wire tests and emulator typecheck pass; enterprise browser collection
+passes with explicit fixture consent. Evidence: `evidence/xero-organisation-consent.json`.
+This supersedes the consent limitation in earlier Xero evidence; real-provider
+parity and native execution of the updated fixture remain outstanding (F037 open).
+Browser run 34113539423 remains live in both editions, executing Playwright;
+queued commits remain local to avoid cancelling it.

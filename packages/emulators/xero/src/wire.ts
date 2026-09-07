@@ -53,7 +53,7 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   };
 
   router.get('/connections', authenticate, (_req, res) => {
-    res.json(core.connections());
+    res.json(core.connections(res.locals.access.clientId));
   });
 
   const api = express.Router();
@@ -62,7 +62,7 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   api.use(authenticate);
   api.use((req, res, next) => {
     const xeroTenantId = String(req.headers['xero-tenant-id'] ?? '');
-    core.org(xeroTenantId); // 403 when the header names an unconnected tenant
+    core.assertConnection(res.locals.access.clientId, xeroTenantId);
     res.locals.xeroTenantId = xeroTenantId;
     next();
   });

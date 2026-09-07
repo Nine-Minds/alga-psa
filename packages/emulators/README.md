@@ -547,5 +547,10 @@ Basic authentication. Invalid secrets, client/code identity and callback mismatc
 are rejected without consuming a valid grant. Reset removes registrations and tokens.
 
 The application seeder returns only client ID and type. It does not register a real
-Xero application. Per-client organisation consent and live-provider drift checks
-remain outside this emulator's current coverage.
+Xero application. After seeding organisations, call `set-connections` with
+`{ clientId, xeroTenantIds }` to set the exact consent list for that application.
+Seeded organisations are invisible to the vendor API until granted; the control
+`organisations` view still lists all seeded organisations. An empty consent list
+revokes access immediately, including for existing tokens. Invalid changes leave
+existing consent intact. Reset clears consent. Live-provider drift checks remain
+outside this emulator's current coverage.

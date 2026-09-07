@@ -24,6 +24,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     const organisation = await emulators.seed('xero', 'organisation', { tenantName: 'Browser selected organisation' }) as Organisation;
     // The shipped integration uses the first connected organisation. Choose
     // that provider response before OAuth; Alga must persist and display it.
+    await emulators.action('xero', 'set-connections', { clientId: 'browser-xero-client', xeroTenantIds: [unselected.tenantId, organisation.tenantId] });
     await emulators.action('xero', 'select-organisation', { xeroTenantId: organisation.tenantId });
     const customer = await emulators.seed('xero', 'contact', {
       xeroTenantId: organisation.tenantId, name: 'Browser accounting customer',

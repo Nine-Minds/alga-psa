@@ -14,6 +14,13 @@ export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
   });
 
   reg.action({
+    name: 'set-connections',
+    description: 'Set the exact organisations consented to a registered application; an empty list revokes all access',
+    params: z.object({ clientId: z.string().min(1), xeroTenantIds: z.array(z.string().min(1)) }),
+    run: ({ clientId, xeroTenantIds }) => core.setConnections(clientId, xeroTenantIds),
+  });
+
+  reg.action({
     name: 'select-organisation',
     description: 'Place a connected organisation first in /connections, selecting Alga\'s supported default live context',
     params: z.object({ xeroTenantId: z.string().min(1) }),
@@ -22,7 +29,7 @@ export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
 
   reg.seeder({
     name: 'organisation',
-    description: 'Connect an additional Xero organisation (a second tenant in /connections)',
+    description: 'Seed an organisation; grant application access with set-connections',
     params: z.object({ tenantId: z.string().optional(), tenantName: z.string() }),
     run: (params) => core.seedOrganisation(params),
   });
@@ -86,7 +93,7 @@ export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
 
   reg.stateView({
     name: 'organisations',
-    description: 'Connected Xero organisations as served by GET /connections',
+    description: 'All seeded organisations, including those without application consent',
     get: () => core.connections(),
   });
 

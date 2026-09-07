@@ -188,6 +188,10 @@ describe('xero emulator', { shuffle: false }, () => {
     const seeded = await controlPost('/control/xero/seed/organisation', { tenantName: 'Second Org Ltd' });
     expect(seeded.ok).toBe(true);
 
+    const inventory = (await (await fetch(`${control}/control/xero/state/organisations`)).json()).result;
+    expect((await controlPost('/control/xero/actions/set-connections', {
+      clientId: 'alga-app', xeroTenantIds: inventory.map((org: any) => org.tenantId),
+    })).ok).toBe(true);
     const response = await fetch(`${base}/connections`, {
       headers: { authorization: `Bearer ${accessToken}` },
     });
@@ -210,6 +214,41 @@ describe('xero emulator', { shuffle: false }, () => {
     expect((await controlPost('/control/xero/actions/select-organisation', { xeroTenantId: 'unconnected' })).ok).toBe(false);
     expect(await readConnections()).toEqual(reordered);
     tenantId = reordered[0].tenantId;
+  });
+
+  it('denies reads and writes to seeded organisations without application consent', async () => {
+    const hidden = (await controlPost('/control/xero/seed/organisation', { tenantName: 'Unconsented Org' })).result;
+    const connections = await (await fetch(`${base}/connections`, { headers: authed() })).json();
+    expect(connections.map((org: any) => org.tenantId)).not.toContain(hidden.tenantId);
+    const before = await (await fetch(`${control}/control/xero/state/contacts`)).json();
+    for (const method of ['GET', 'POST']) {
+      const response = await fetch(api('/Contacts'), {
+        method, headers: authed({ 'xero-tenant-id': hidden.tenantId }),
+        ...(method === 'POST' ? { body: JSON.stringify({ Contacts: [{ Name: 'Must not be written' }] }) } : {}),
+      });
+      expect(response.status).toBe(403);
+      expect(await response.json()).toMatchObject({ Title: 'Forbidden', Status: 403 });
+    }
+    expect(await (await fetch(`${control}/control/xero/state/contacts`)).json()).toEqual(before);
+  });
+
+  it('applies consent revocation to existing tokens and rejects invalid changes atomically', async () => {
+    const read = () => fetch(api('/Accounts'), { headers: authed() });
+    const set = (clientId: string, xeroTenantIds: string[]) => controlPost('/control/xero/actions/set-connections', { clientId, xeroTenantIds });
+    expect((await read()).status).toBe(200);
+    expect((await set('bound-app', [])).ok).toBe(true);
+    expect((await read()).status).toBe(200);
+    expect((await set('alga-app', [tenantId, 'unknown-organisation'])).ok).toBe(false);
+    expect((await read()).status).toBe(200);
+    expect((await set('unknown-app', [tenantId])).ok).toBe(false);
+    expect((await set('alga-app', [])).ok).toBe(true);
+    expect((await read()).status).toBe(403);
+    expect(await (await fetch(`${base}/connections`, { headers: authed() })).json()).toEqual([]);
+    expect((await set('alga-app', [tenantId])).ok).toBe(true);
+    expect((await read()).status).toBe(200);
+    expect(await (await fetch(`${base}/connections`, { headers: authed() })).json()).toEqual([
+      expect.objectContaining({ tenantId }),
+    ]);
   });
 
   it('serves the read-only settings collections', async () => {
@@ -337,12 +376,12 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(rejected.status).toBe(401);
 
     const tokensView = (await (await fetch(`${control}/control/xero/state/tokens`)).json()) as any;
-    const refreshRecord = tokensView.result.refreshTokens.at(-1);
+    const refreshRecord = tokensView.result.refreshTokens.find((record: any) => record.clientId === 'alga-app');
     const refreshToken = refreshRecord.token;
     const refreshed = await fetch(`${base}/connect/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: refreshRecord.clientId }),
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: refreshRecord.clientId, client_secret: 'alga-secret' }),
     });
     expect(refreshed.status).toBe(200);
     accessToken = (await refreshed.json()).access_token;

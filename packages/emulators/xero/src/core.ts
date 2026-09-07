@@ -54,10 +54,11 @@ export type XeroApplication = { clientId: string; redirectUris: string[] } &
 
 export class XeroEmulatorCore implements EmulatorCore {
   private applications = new Map<string, XeroApplication>();
+  private clientConnections = new Map<string, Set<string>>();
   accessTokenTtlSeconds = 1800;
   authorizeRequests: XeroAuthorizeRequest[] = [];
   private codes = new Map<string, { clientId: string; redirectUri: string; scope: string; codeChallenge?: string }>();
-  private accessTokens = new Map<string, { expiresAt: number; scope: string }>();
+  private accessTokens = new Map<string, { expiresAt: number; scope: string; clientId: string }>();
   private refreshTokens = new Map<string, { clientId: string; scope: string }>();
   private organisations: XeroOrganisation[] = [];
   private orgData = new Map<string, OrgData>();
@@ -70,6 +71,7 @@ export class XeroEmulatorCore implements EmulatorCore {
 
   reset(): void {
     this.applications.clear();
+    this.clientConnections.clear();
     this.authorizeRequests = [];
     this.codes.clear();
     this.accessTokens.clear();
@@ -78,8 +80,7 @@ export class XeroEmulatorCore implements EmulatorCore {
     this.orgData.clear();
     this.invoiceNumberCounter = 0;
     this.accessTokenTtlSeconds = 1800;
-    // One organisation out of the box so the callback's non-empty connections
-    // requirement holds without seeding; seed more for multi-org flows.
+    // Seed an organisation; fixtures must explicitly grant application consent.
     this.seedOrganisation({ tenantName: 'Alga Emulated Org' });
   }
 
@@ -167,7 +168,7 @@ export class XeroEmulatorCore implements EmulatorCore {
   private issueTokens(scope: string, clientId: string): XeroTokenResponse {
     const accessToken = this.newId('access');
     const refreshToken = this.newId('refresh');
-    this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope });
+    this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope, clientId });
     this.refreshTokens.set(refreshToken, { scope, clientId });
     return {
       access_token: accessToken,
@@ -178,7 +179,7 @@ export class XeroEmulatorCore implements EmulatorCore {
     };
   }
 
-  authenticate(bearerToken: string): { scope: string } {
+  authenticate(bearerToken: string): { scope: string; clientId: string } {
     const record = this.accessTokens.get(bearerToken);
     if (!record || record.expiresAt <= this.nowMs()) {
       throw new XeroWireError(401, { Type: null, Title: 'Unauthorized', Status: 401, Detail: 'AuthenticationUnsuccessful' });
@@ -218,8 +219,22 @@ export class XeroEmulatorCore implements EmulatorCore {
     return organisation;
   }
 
-  connections(): XeroOrganisation[] {
-    return [...this.organisations];
+  connections(clientId?: string): XeroOrganisation[] {
+    return this.organisations.filter(org => clientId === undefined || this.clientConnections.get(clientId)?.has(org.tenantId));
+  }
+
+  setConnections(clientId: string, xeroTenantIds: string[]): { clientId: string; xeroTenantIds: string[] } {
+    if (!this.applications.has(clientId)) throw new XeroWireError(400, { error: 'invalid_client' });
+    for (const tenantId of xeroTenantIds) this.org(tenantId);
+    this.clientConnections.set(clientId, new Set(xeroTenantIds));
+    return { clientId, xeroTenantIds: [...this.clientConnections.get(clientId)!] };
+  }
+
+  assertConnection(clientId: string, xeroTenantId: string): void {
+    if (!this.clientConnections.get(clientId)?.has(xeroTenantId)) {
+      throw new XeroWireError(403, { Type: null, Title: 'Forbidden', Status: 403, Detail: `Tenant ${xeroTenantId} is not connected` });
+    }
+    this.org(xeroTenantId);
   }
 
   /** Alga's supported live context is the first returned connection. */
