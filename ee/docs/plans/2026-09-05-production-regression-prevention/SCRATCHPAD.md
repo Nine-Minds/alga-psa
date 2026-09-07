@@ -2009,3 +2009,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Audited eight unassigned lightweight suites. Seven source-contract suites passed 18 existing assertions; worker-registration initially failed during import. Aligned Vitest aliases with the worker's enterprise domain entry, workDate and EE db paths, and its real worker-side notification implementation (confirmed in built output). No production behavior changed and no replacement no-op was introduced.
 - Assigned all eight existing suites to readiness config and independent discovery. Source-text checks remain supplemental rather than proof of customer outcomes; existing/new engine and database tests supply runtime coverage separately.
 - Full readiness runner passes 42 files / 263 cases, zero skips, in 12.87 seconds (/tmp/alga-temporal-readiness-registration.log). This run included uncommitted harness changes, so its source metadata is dirty and cannot establish candidate readiness. Native publication remains awaiting approval.
+
+### 2026-09-07 — refresh complete Temporal evidence and remaining discovery
+
+- Clean fedfeffee8 readiness run passes 42 files / 263 assertions (13.65s); engine passes nine files / 38 assertions (13.82s), zero skips and complete execution reconciliation. Evidence: evidence/temporal-discovery-refresh-fedfe.json.
+- Refreshed the mixed-revision repository inventory with actual current Temporal collections. Only two Temporal files remain unmatched: email-only.e2e.test.ts and tenant-creation-workflow.e2e.test.ts. Overall mixed-artifact unmatched count is 100, but other lanes' older artifacts omit newer assigned tests, so this is not a current-CI orphan count. Global discovery remains failed/incomplete. Report: /tmp/alga-inventory-after-temporal-result.json.
+- No external publication attempted; push approval remains pending.
