@@ -1747,3 +1747,14 @@ execution. Evidence: `evidence/product-bootstrap-engine.json`.
 CI34118119105 remains active, running workflow/invoice Citus regressions. No early
 PR failures reported at inspection. Follow-up remains local while published
 candidate d8cf156c73 continues verification.
+
+### Legacy event-bus fixture repair from native CI (2026-09-07)
+
+Native additional-workspace run34118119064 job101729601177 failed four
+server-colocated recovery assertions. Its logs show executeIsolated is missing
+from legacy server Redis doubles. Package-level doubles were updated with the
+transport change, but the separate legacy entry-point suites were not. Added the
+method to all three legacy doubles; preserved all assertions and timeouts.
+All four cases pass with the actual server-colocated config. These doubles do not
+claim real transport isolation; the package/real-Redis regressions cover that.
+Evidence: `evidence/legacy-event-bus-fixtures.json`.

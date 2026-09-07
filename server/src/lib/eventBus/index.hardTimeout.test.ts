@@ -6,6 +6,7 @@ import { EventEmitter } from 'node:events';
 vi.mock('@alga-psa/core/secrets', () => ({ getSecret: vi.fn(async () => undefined) }));
 
 type FakeRedisClient = EventEmitter & {
+  executeIsolated: <T>(callback: (reader: FakeRedisClient) => Promise<T>) => Promise<T>;
   connect: () => Promise<void>;
   disconnect: () => void;
   quit: () => Promise<void>;
@@ -38,6 +39,7 @@ describe('EventBus Redis consumer hard-timeout', () => {
       return {
         createClient: () => {
           const client = new EventEmitter() as FakeRedisClient;
+          client.executeIsolated = async callback => callback(client);
 
           client.connect = vi.fn(async () => {
             client.emit('connect');

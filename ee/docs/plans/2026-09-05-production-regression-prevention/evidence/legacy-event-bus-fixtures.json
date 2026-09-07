@@ -1,0 +1,20 @@
+{
+  "nativeFailure": {
+    "runId": 34118119064,
+    "jobId": 101729601177,
+    "lane": "server-colocated",
+    "failedTests": 4,
+    "cause": "Legacy Redis doubles did not implement executeIsolated, so event processing threw TypeError before recovery assertions"
+  },
+  "change": "Add executeIsolated callback support to the three legacy entry-point Redis doubles without changing assertions or timeouts",
+  "validation": {
+    "focusedFiles": 3,
+    "focusedTestsPassed": 4,
+    "config": "server/vitest.server-colocated.config.ts"
+  },
+  "limits": [
+    "These doubles exercise legacy entry-point recovery logic, not real Redis isolation",
+    "Real Redis isolation and leased-reader cleanup have separate package/infrastructure regressions",
+    "Native execution of fixture update pending publication"
+  ]
+}
