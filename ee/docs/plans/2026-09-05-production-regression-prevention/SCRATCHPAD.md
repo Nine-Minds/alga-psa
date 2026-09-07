@@ -1266,3 +1266,23 @@
 - Tenant-routed FOR UPDATE fixes the two observed Citus runtime failures. PostgreSQL remains seven of seven; targeted types and six reconciliation tests passed.
 - Nine seeded relation tables passed readback on both backends. Initial Citus readback selected a runtime test tenant via unordered fallback; corrected the checker to explicitly select seeded Oz, then both backends passed. No fixture change was needed.
 - Native enterprise integration, affected typecheck and EE workflow build guard passed on published 23c841b44c. New Citus gate native execution remains pending publication; broader plan status stays unchanged.
+
+### 2026-09-07 — Extend Citus runtime validation to invoicing
+
+- Started the existing immutable invoice-generation regression against a separate fresh Citus scratch DB invoice_citus_82cc. Added actual billing-table distribution assertions and a Citus-only bootstrap time budget. Existing billing/PDF/credit/duplicate assertions remain intact.
+- Filtered collection contains the intended single case. Live session 56282, log /tmp/alga-invoice-citus-runtime.log. Native Citus billing lane wiring depends on execution results; no completion claimed.
+- Native production browser jobs 101670277218/101670277273 are still preparing images. Keep the completed Citus workflow commit local while these jobs run.
+
+### 2026-09-07 — Complete invoice case gets its own mandatory file
+
+- Moved the immutable invoice regression into invoiceTicketImmutable.integration.test.ts without removing billing assertions; added it to the Tier-1 floor. Actual collection retains nine enabled invoice cases across the two files. Extracted case passes PostgreSQL, including real PDF text checks.
+- Renamed Citus runner to run-citus-runtime-tests.mjs and prepared workflow plus invoice execution with complete-file collection; CI installs Poppler. New combined gate remains unverified.
+- Initial Citus invoice run failed the added topology assertion: invoices/charges/tickets are distributed, while time_entries and invoice_time_entries are local in the fresh migration chain. Corrected that unsupported expectation; the case records all five table states and requires core billing distribution. This does not establish production topology parity.
+- Full extracted case rerunning from a fresh Citus database in session 80701; log /tmp/alga-invoice-citus-immutable.log. Prior run 56282 is terminal.
+
+### 2026-09-07 — Citus invoice passes; native browser dependency failure reproduced
+
+- Extracted invoice case passed from a fresh Citus DB in 319 seconds, with no skipped cases. PostgreSQL extracted case also passed. Mixed topology captured in evidence/citus-invoice-runtime.json. Combined Citus runtime runner remains to be verified.
+- Native browser artifacts show collection failure in invoice-ticket-ownership.spec.ts due to transitive @js-temporal/polyfill dependency missing from standalone browser install. Browser assertions did not run.
+- Replaced the application helper import with explicit API selector fixture data. Reproduced before-failure in /tmp without root dependencies; after-fix collection passes 23 CE and 25 EE cases across 14 files.
+- Added standalone browser collection before image builds and required its success in the stable aggregate check. Native verification pending. Evidence: evidence/browser-standalone-collection.json.

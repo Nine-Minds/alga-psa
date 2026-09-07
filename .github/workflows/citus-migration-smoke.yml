@@ -24,13 +24,14 @@ on:
       - 'server/seeds/**'
       - 'server/test-utils/**'
       - 'server/vitest.config.ts'
+      - 'server/src/test/integration/invoiceTicketImmutable.integration.test.ts'
       - 'ee/temporal-workflows/**'
       - 'shared/**'
       - 'packages/workflows/**'
       - 'packages/db/**'
       - 'packages/types/**'
       - 'server/package.json'
-      - 'scripts/run-citus-workflow-tests.mjs'
+      - 'scripts/run-citus-runtime-tests.mjs'
       - 'scripts/lib/test-execution-evidence.mjs'
       - 'scripts/lib/test-revision.mjs'
       - 'package.json'
@@ -45,13 +46,14 @@ on:
       - 'server/seeds/**'
       - 'server/test-utils/**'
       - 'server/vitest.config.ts'
+      - 'server/src/test/integration/invoiceTicketImmutable.integration.test.ts'
       - 'ee/temporal-workflows/**'
       - 'shared/**'
       - 'packages/workflows/**'
       - 'packages/db/**'
       - 'packages/types/**'
       - 'server/package.json'
-      - 'scripts/run-citus-workflow-tests.mjs'
+      - 'scripts/run-citus-runtime-tests.mjs'
       - 'scripts/lib/test-execution-evidence.mjs'
       - 'scripts/lib/test-revision.mjs'
       - 'package.json'
@@ -173,20 +175,23 @@ jobs:
             fi
           done
 
-      - name: Run workflow persistence regressions on distributed tables
+      - name: Install PDF text extraction tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
+      - name: Run workflow and invoice regressions on distributed tables
         working-directory: server
         env:
           CI: 'true'
           TEST_DB_BACKEND: citus
-          TEST_DB_NAME: workflow_citus_runtime
-          DB_NAME_SERVER: workflow_citus_runtime
+          TEST_DB_NAME: citus_runtime
+          DB_NAME_SERVER: citus_runtime
           TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations
-        run: node ../scripts/run-citus-workflow-tests.mjs
+        run: node ../scripts/run-citus-runtime-tests.mjs
 
       - name: Upload Citus runtime results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: citus-workflow-runtime
+          name: citus-runtime
           path: test-results/citus-runtime/
           if-no-files-found: error

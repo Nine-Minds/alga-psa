@@ -4,7 +4,6 @@ import { createTimeBillingFixture } from '../fixtures/time-billing';
 import { assertInvoiceDownload } from '../fixtures/invoice-document';
 import { createInvoiceTicketSourceFixture } from '../../server/test-utils/invoiceTicketProductionFixtures';
 import { createBrowserApiKey } from '../fixtures/api-key';
-import { buildClientCadenceDueSelectionInput } from '../../shared/billingClients/recurringRunExecutionIdentity';
 
 test('authenticated invoice generation excludes foreign ticket snapshots from reads and downloaded PDF', async ({ page, database, credentials }, testInfo) => {
   test.setTimeout(180000);
@@ -19,8 +18,16 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
     await signIn(page, { email: billing.tenant.admin.email, password: credentials.password });
     const period = await database('recurring_service_periods').where({ tenant, obligation_id: ids.lineId, invoice_window_start: '2026-09-01' }).first();
     expect(period).toBeTruthy();
-    const selector = buildClientCadenceDueSelectionInput({ clientId: ids.clientId, scheduleKey: period.schedule_key,
-      periodKey: period.period_key, windowStart: '2026-09-01', windowEnd: '2026-10-01' });
+    const selector = {
+      clientId: ids.clientId, windowStart: '2026-09-01', windowEnd: '2026-10-01',
+      executionWindow: {
+        kind: 'client_cadence_window', cadenceOwner: 'client', clientId: ids.clientId,
+        scheduleKey: period.schedule_key, periodKey: period.period_key,
+        windowStart: '2026-09-01', windowEnd: '2026-10-01',
+        identityKey: ['client_cadence_window', 'client', ids.clientId, period.schedule_key,
+          period.period_key, '2026-09-01', '2026-10-01'].join(':'),
+      },
+    };
     const generated = await page.request.post('/api/v1/invoices/generate', { headers, data: { selector_input: selector } });
     expect(generated.status(), await generated.text()).toBe(201);
     const invoiceId = (await generated.json()).data.invoice_id;

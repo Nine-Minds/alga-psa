@@ -52,8 +52,30 @@ jobs:
           TIER1_HEAD_SHA: ${{ github.sha }}
         run: node scripts/select-integration-tests.mjs
 
-  build-images:
+  browser-collection:
+    name: Standalone browser collection
     needs: changes
+    if: needs.changes.outputs.run_tests == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: e2e-tests/package-lock.json
+      - name: Install standalone browser dependencies
+        working-directory: e2e-tests
+        run: npm ci
+      - name: Collect both editions without root workspace dependencies
+        working-directory: e2e-tests
+        run: |
+          E2E_EDITION=community npm run test:list
+          E2E_EDITION=enterprise npm run test:list
+
+  build-images:
+    needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -202,6 +224,7 @@ jobs:
         run: |
           test "$CHANGES_RESULT" = success
           if [ "$RUN_TESTS" = true ]; then
+            test "$COLLECTION_RESULT" = success
             test "$BUILD_RESULT" = success
           else
             echo "No application files were modified; skipping fresh-install tests."
@@ -956,7 +979,7 @@ jobs:
 
   # Preserve the required check name while requiring both edition jobs and builds.
   fresh-install-e2e:
-    needs: [changes, build-images, production-browser]
+    needs: [changes, browser-collection, build-images, production-browser]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -965,14 +988,17 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
+          COLLECTION_RESULT: ${{ needs.browser-collection.result }}
           BUILD_RESULT: ${{ needs.build-images.result }}
           BROWSER_RESULT: ${{ needs.production-browser.result }}
         run: |
           test "$CHANGES_RESULT" = success
           test "$BROWSER_RESULT" = success
           if [ "$RUN_TESTS" = true ]; then
+            test "$COLLECTION_RESULT" = success
             test "$BUILD_RESULT" = success
           elif [ "$RUN_TESTS" = false ]; then
+            test "$COLLECTION_RESULT" = skipped
             test "$BUILD_RESULT" = skipped
             echo "Known documentation-only change: production validation is not applicable."
           else
