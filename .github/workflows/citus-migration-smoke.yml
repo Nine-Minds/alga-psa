@@ -188,10 +188,11 @@ jobs:
           TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations
         run: node ../scripts/run-citus-runtime-tests.mjs
 
-      - name: Run tenant product upgrade behavior on migrated Citus
+      - name: Run tenant creation and product upgrade behavior on migrated Citus
         env:
           DB_NAME_SERVER: citus_runtime
           TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1'
+          TEMPORAL_TENANT_E2E_ISOLATED: 'true'
         run: node scripts/run-additional-workspace-tests.mjs temporal-database
 
       - name: Upload tenant product upgrade evidence
