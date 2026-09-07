@@ -1152,3 +1152,9 @@
 - Added parameterized tests using shipped comment/create-ticket/attachment configs, the real mapping/expression resolver and current Temporal action activity. Assertions cover resolved business arguments, tenant-prefixed explicit keys and replay returning stored output without invoking handlers or creating another invocation.
 - Readiness lane: six files, 69 passed, zero failures/skips. Initial create-ticket fixture omitted nullable target fields and failed expression serialization; corrected to explicit nulls matching registerEmailWorkflowActions output. No production behavior changed.
 - Invocation persistence and action handlers remain mocks; real DB effects, concurrent duplicate behavior and live worker execution are still required. The legacy skip count is unchanged. Evidence: temporal-email-action-mapping.json.
+
+### Workflow invocation database concurrency and isolation — 2026-09-07
+- Added an integration test using actual migrated database and persistence models. Concurrent duplicate creation yields one row and one 23505; another tenant's key persists independently. Persisted input/output roundtrip, tenant-scoped lookup/list and cross-tenant update denial pass.
+- One required integration case passed locally in disposable workflow_invocation_82cc (no skips). Evidence: workflow-invocation-persistence.json. This is database uniqueness/isolation coverage, not safe activity retry or live worker execution.
+- Remaining activity risk to investigate: executeActionInvocation only replays SUCCEEDED; existing STARTED/FAILED rows lead back to insert against the unique key. Need behavioral retry/lease/attempt semantics before claiming robust recovery.
+- Current c5d608 full integration job 101633362425 is live (run 34087162034); keep local commits unpushed.
