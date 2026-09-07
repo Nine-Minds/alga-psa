@@ -336,7 +336,11 @@ async function sheetsApi(token, sheetId, pathAndQuery, method = 'GET', body) {
         body: body ? JSON.stringify(body) : undefined,
         ...(method === 'GET' ? { signal: AbortSignal.timeout(30_000) } : {}),
       });
-      const json = await res.json().catch(() => ({}));
+      const json = await res.json().catch(error => {
+        // A successful but unreadable header is not evidence of an empty tab.
+        if (res.ok) throw error;
+        return {};
+      });
       if (![429, 500, 502, 503, 504].includes(res.status) || attempt === attempts - 1) {
         return { ok: res.ok, status: res.status, json };
       }

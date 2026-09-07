@@ -69,7 +69,10 @@ function transientSheet(t, responses) {
     assert.ok(response, 'unexpected extra Sheets request');
     if (response instanceof Error) throw response;
     return { ok: response.status === 200, status: response.status,
-      json: async () => response.status === 200 && options.method === 'GET' ? { values: [HEADER] } : {} };
+      json: async () => {
+        if (response.jsonError) throw response.jsonError;
+        return response.status === 200 && options.method === 'GET' ? { values: [HEADER] } : {};
+      } };
   });
   return { calls, delays };
 }
@@ -107,4 +110,13 @@ test('an ambiguous append failure is never retried into duplicate metric rows', 
   await assert.rejects(appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]), /append.*failed: 503/);
   assert.deepEqual(calls, ['GET', 'POST']);
   assert.deepEqual(delays, []);
+});
+
+test('unreadable successful header responses never trigger header replacement or append', async t => {
+  const { calls, delays } = transientSheet(t, Array.from({ length: 4 }, () => ({
+    status: 200, jsonError: new SyntaxError('truncated JSON'),
+  })));
+  await assert.rejects(appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]), /truncated JSON/);
+  assert.deepEqual(calls, ['GET', 'GET', 'GET', 'GET']);
+  assert.deepEqual(delays, [1000, 2000, 4000]);
 });

@@ -11,14 +11,31 @@
   "nativeReportingFailure": "Sheets header GET returned HTTP 503",
   "fix": "Bounded retries only for read requests; append writes are never automatically retried",
   "focusedTests": {
-    "passed": 32,
+    "passed": 33,
     "failed": 0,
     "skipped": 0,
-    "log": "/tmp/alga-sheets-retry-green.log"
+    "log": "/tmp/alga-sheets-retry-final.log"
   },
   "limitations": [
     "No live workbook mutation or successful native rerun claimed.",
     "Three tax TODOs need product policy; question pending.",
     "Other PR failures and the complete plan remain unresolved."
-  ]
+  ],
+  "initialCompleteTooling": {
+    "revision": "96d869f6bc03598fb75601e49f11bf5102b9039b",
+    "status": "passed",
+    "counts": {
+      "tests": 508,
+      "passed": 508,
+      "failed": 0,
+      "skipped": 0,
+      "todo": 0,
+      "cancelled": 0
+    },
+    "failures": [],
+    "requiredFiles": 53,
+    "durationSeconds": 145.587,
+    "log": "test-results/node-tooling/runner.log"
+  },
+  "additionalFix": "Malformed successful header JSON must never be treated as an empty tab; bounded read retry then fail without any writes. Before-fix mocked probe produced GET, PUT, POST."
 }
