@@ -12861,3 +12861,100 @@ it('native time detail reads preserve permitted manager access to a deactivated 
   await customer.table('time_entries').where('entry_id', saved.entry_id).update({ user_id: formerId, time_sheet_id: formerSheet });
   expect(await service.getWithDetails(saved.entry_id, context)).toMatchObject({ user_id: formerId, notes: 'Private API effort', duration_hours: 1.5 });
 }));
+
+async function withNativeTimeSheetReadFixture(work: (fixture: any) => Promise<void>) {
+  await withOperationalTimeApiFixture(async (fixture: any) => {
+    const entry = await fixture.create();
+    const review = await import('../../../../packages/scheduling/src/actions/timeEntryChangeRequestActions');
+    const addRequest = async (target = entry, comment = 'Please explain the logged effort') => {
+      await review.createTimeEntryChangeRequestRecord(db, { tenant: fixture.context.tenant, timeEntryId: target.entry_id, timeSheetId: target.time_sheet_id, comment, createdBy: fixture.user.user_id });
+    };
+    await work({ ...fixture, entry, addRequest, review, readSheet: () => fixture.actions.fetchTimeEntriesForTimeSheet(entry.time_sheet_id), readRequests: () => review.fetchTimeEntryChangeRequestsForTimeSheet(entry.time_sheet_id) });
+  });
+}
+
+it('native timesheet collections return operational intervals and their admitted change request history', async () => withNativeTimeSheetReadFixture(async ({ entry, addRequest, readSheet, readRequests }: any) => {
+  await addRequest();
+  const [saved] = await readSheet();
+  expect(saved).toMatchObject({ entry_id: entry.entry_id, duration_hours: 1.5, billable_duration: 0, workItem: { name: 'Verify rollout' }, change_request_state: 'unresolved', change_requests: [{ comment: 'Please explain the logged effort' }] });
+  expect(saved.date).toBeInstanceOf(Date); expect(typeof saved.start_time).toBe('string');
+  expect(await readRequests()).toMatchObject([{ time_entry_id: entry.entry_id, comment: 'Please explain the logged effort' }]);
+}));
+
+it('native timesheet collections exclude out-of-scope work and its review comments from both browser readers', async () => withNativeTimeSheetReadFixture(async ({ create, addRequest, readSheet, readRequests, customer, user, resource }: any) => {
+  await addRequest();
+  const ticket = await customer.table('tickets').first(), entry = await create({ work_item_type: 'ticket', work_item_id: ticket.ticket_id, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Visible ticket work' });
+  await addRequest(entry, 'Visible ticket review');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet project restriction', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  const entries = await readSheet(), requests = await readRequests();
+  expect(entries).toHaveLength(1); expect(entries[0]).toMatchObject({ entry_id: entry.entry_id, notes: 'Visible ticket work' });
+  expect(requests).toHaveLength(1); expect(requests[0].comment).toBe('Visible ticket review');
+  expect(JSON.stringify({ entries, requests })).not.toMatch(/Verify rollout|Please explain|Private API effort/);
+}));
+
+it('native timesheet collections mask notes and review history without exposing their state or count', async () => withNativeTimeSheetReadFixture(async ({ addRequest, readSheet, readRequests, user, resource, operation }: any) => {
+  await addRequest();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet private notes', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect(await readSheet()).toMatchObject([{ notes: '', duration_hours: 1.5, change_requests: [], change_request_state: null }]);
+  expect((await readSheet())[0].latest_change_request).toBeUndefined();
+  expect(await readRequests()).toEqual([]);
+}));
+
+it('native timesheet collections reject stale browser credentials and foreign or unpermitted sheets', async () => withNativeTimeSheetReadFixture(async ({ entry, customer, actions, readSheet, session, user }: any) => {
+  await expect(actions.fetchTimeEntriesForTimeSheet(randomUUID())).rejects.toThrow();
+  const original = session.getMockImplementation(); session.mockResolvedValue(null);
+  await expect(readSheet()).rejects.toThrow(); session.mockImplementation(original!);
+  const formerId = randomUUID(), sheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first();
+  await customer.table('users').insert({ ...user, user_id: formerId, email: 'sheet-former@example.test', username: 'sheet-former', is_inactive: true, reports_to: user.user_id });
+  const formerSheet = randomUUID(); await customer.table('time_sheets').insert({ ...sheet, id: formerSheet, user_id: formerId });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ user_id: formerId, time_sheet_id: formerSheet });
+  expect(await actions.fetchTimeEntriesForTimeSheet(formerSheet)).toMatchObject([{ user_id: formerId }]);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_sheet', action: 'approve' }).select('permission_id')).del();
+  await expect(actions.fetchTimeEntriesForTimeSheet(formerSheet)).rejects.toThrow();
+}));
+
+it('native timesheet collections preserve general-time identity and remain readable after entitlement expiry', async () => withNativeTimeSheetReadFixture(async ({ create, entry, readSheet, principal }: any) => {
+  const general = await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Internal planning' });
+  await expireCoManagedEntitlement(principal.tenant);
+  const entries = await readSheet();
+  expect(entries.map((row: any) => row.entry_id)).toEqual([general.entry_id, entry.entry_id]);
+  expect(entries[0]).toMatchObject({ work_item_id: '__non_billable__', workItem: { work_item_id: '__non_billable__', name: 'Internal planning' }, duration_hours: 1 });
+}));
+
+it('native timesheet collections do not upgrade shared sheet locks during concurrent post-upgrade reads', async () => withNativeTimeSheetReadFixture(async ({ entry, customer, context, apiKeyId }: any) => {
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  const domain = await import('../../../../packages/co-managed/src/nativeTimeRead'), left = await db.transaction(), right = await db.transaction();
+  await tenantDb(left, context.tenant).table('time_sheets').where('id', entry.time_sheet_id).forShare().first();
+  await tenantDb(right, context.tenant).table('time_sheets').where('id', entry.time_sheet_id).forShare().first();
+  const identify = async () => ({ kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId });
+  try {
+    const reads = await Promise.all([domain.readCoManagedNativeTimeSheet(left, context.tenant, entry.time_sheet_id, identify), domain.readCoManagedNativeTimeSheet(right, context.tenant, entry.time_sheet_id, identify)]);
+    for (const read of reads) expect(read).toMatchObject({ handled: true, entries: [{ entry_id: entry.entry_id, duration_hours: 1.5 }] });
+  } finally { await left.rollback(); await right.rollback(); }
+}));
+
+it('native timesheet collections reject the whole response when credentials expire during a source lock wait', async () => withNativeTimeSheetReadFixture(async ({ entry, customer, context, resource, apiKeyId }: any) => {
+  const domain = await import('../../../../packages/co-managed/src/nativeTimeRead'), blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
+  let pid: number | undefined;
+  const reading = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return domain.readCoManagedNativeTimeSheet(trx, context.tenant, entry.time_sheet_id, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId }));
+  });
+  const rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await db.raw('SELECT pg_sleep(1.6)');
+  } finally { await blocker.rollback(); }
+  await rejected;
+}));

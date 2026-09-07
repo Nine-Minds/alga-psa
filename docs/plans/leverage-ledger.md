@@ -421,3 +421,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Native `getTimeEntryById`, API `getById` and `getWithDetails`.
 - **Gate:** Two independent adapters share a high-cost authority/projection shape already established by timers and native saves. ACT / bounded-now within the approved time workstream.
 - **Status:** extracted a retained customer-owned detail reader, reusing source/credential admission and projecting native/API DTOs from current records. Collection, export, approval and deletion adapters remain separate pending work.
+
+
+## native-time-collection-authority — pattern
+- **What:** Sheet entry and review-history readers need the same current source/field policy as individual time details; independent joins leak excluded work through review comments or derived totals.
+- **Where:** Native `fetchTimeEntriesForTimeSheet`, `fetchTimeEntryChangeRequestsForTimeSheet`, retained time detail projection.
+- **Gate:** Shared authority/projection shape with high disclosure cost. ACT / bounded-now in the approved time workstream.
+- **Status:** extended the retained reader to independently admit sheet entries and current-sheet review history; reused home ownership/delegation and a tracked-browser identity resolver. Shared read locks preserve concurrent reads. Broader API collections, summaries and exports remain pending.

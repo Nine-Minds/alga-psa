@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import type { AuthorizationRecord } from '@alga-psa/authorization';
+import type { AuthorizationRecord, AuthorizationSubject } from '@alga-psa/authorization';
 import { productTimeEntryMode, type IWorkItem } from '@alga-psa/types';
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState } from '@alga-psa/licensing';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
@@ -33,20 +33,11 @@ export async function admitCoManagedNativeTimeSource(trx: Knex.Transaction, inpu
   return admitNativeTimeAccess(trx, inputActor, input, action);
 }
 
-async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
-  input: TimeSaveInput, action: 'save' | 'read' | 'create' | 'update'): Promise<CoManagedNativeTimeAccess> {
-  const reading = action === 'read', sourceOnly = action !== 'save';
-  const actor = snapshotCoManagedAuthenticatedActor(inputActor), owner = tenantDb(trx, actor.tenant);
-  input = { ...input };
-  if (!trx.isTransaction || (input.entry_id && !isCoManagedUuid(input.entry_id)) ||
-    (input.time_sheet_id && !isCoManagedUuid(input.time_sheet_id))) throw new CoManagedSharedWorkError();
-  if (reading) await getCoManagedOperationalState(trx, actor.tenant); else await assertCoManagedOperationalWrite(trx, actor.tenant);
-  const workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-  if (!workspace || !productTimeEntryMode(workspace.product_code) || workspace.suspended_at) throw new CoManagedSharedWorkError();
-  const { subject, assertCurrent: assertAuthenticationCurrent } = await lockCoManagedLocalAuthentication(trx, actor);
-  const hint = !sourceOnly && input.entry_id ? await owner.table('time_entries').where('entry_id', input.entry_id).first() : null;
-  if (!sourceOnly && input.entry_id && !hint) throw new CoManagedSharedWorkError();
-  const subjectUserId = hint?.user_id || input.user_id || actor.userId;
+/** Home ownership/delegation only; callers still evaluate each concrete
+ * sheet or work record's bundle scope before returning its data. */
+export async function admitCoManagedNativeTimeOwner(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor,
+  subject: AuthorizationSubject, subjectUserId: string, reading: boolean) {
+  const owner = tenantDb(trx, actor.tenant);
   if (!isCoManagedUuid(subjectUserId)) throw new CoManagedSharedWorkError();
   const subjectUser = owner.table('users').where({ user_id: subjectUserId, user_type: 'internal' });
   if (!reading) subjectUser.where('is_inactive', false);
@@ -69,14 +60,33 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
       if (!managed) throw new CoManagedSharedWorkError();
       subject.managedUserIds = [...new Set([...(subject.managedUserIds ?? []), subjectUserId])];
     }
-    await authorizeCoManagedLocalRecord(trx, actor, subject, 'time_entry', 'read', { ownerUserId: subjectUserId, assignedUserIds: [subjectUserId] });
   }
+
+}
+
+async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
+  input: TimeSaveInput, action: 'save' | 'read' | 'create' | 'update'): Promise<CoManagedNativeTimeAccess> {
+  const reading = action === 'read', sourceOnly = action !== 'save';
+  const actor = snapshotCoManagedAuthenticatedActor(inputActor), owner = tenantDb(trx, actor.tenant);
+  input = { ...input };
+  if (!trx.isTransaction || (input.entry_id && !isCoManagedUuid(input.entry_id)) ||
+    (input.time_sheet_id && !isCoManagedUuid(input.time_sheet_id))) throw new CoManagedSharedWorkError();
+  if (reading) await getCoManagedOperationalState(trx, actor.tenant); else await assertCoManagedOperationalWrite(trx, actor.tenant);
+  const workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
+  if (!workspace || !productTimeEntryMode(workspace.product_code) || workspace.suspended_at) throw new CoManagedSharedWorkError();
+  const { subject, assertCurrent: assertAuthenticationCurrent } = await lockCoManagedLocalAuthentication(trx, actor);
+  const hint = !sourceOnly && input.entry_id ? await owner.table('time_entries').where('entry_id', input.entry_id).first() : null;
+  if (!sourceOnly && input.entry_id && !hint) throw new CoManagedSharedWorkError();
+  const subjectUserId = hint?.user_id || input.user_id || actor.userId;
+  await admitCoManagedNativeTimeOwner(trx, actor, subject, subjectUserId, reading);
 
   // Both sheets remain editable when moving an entry. Caller-supplied DRAFT
   // must never reopen submitted or approved work.
   const sheetIds = [...new Set([hint?.time_sheet_id, input.time_sheet_id].filter(Boolean))].sort();
   for (const id of sheetIds) {
-    const sheet = await owner.table('time_sheets').where('id', id).forUpdate().first('user_id', 'approval_status', 'period_id');
+    const sheetQuery = owner.table('time_sheets').where('id', id);
+    if (reading) sheetQuery.forShare(); else sheetQuery.forUpdate();
+    const sheet = await sheetQuery.first('user_id', 'approval_status', 'period_id');
     if (!sheet || sheet.user_id !== subjectUserId || (!reading && !['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status))) throw new CoManagedSharedWorkError();
     if (!await owner.table('time_periods').where('period_id', sheet.period_id).forShare().first('period_id')) throw new CoManagedSharedWorkError();
   }

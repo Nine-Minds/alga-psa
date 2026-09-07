@@ -21,7 +21,7 @@ import {
   type ContractLineSource,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
-import { withAuth, hasPermission, getSession, getApiKeyUserOverride } from '@alga-psa/auth';
+import { withAuth, hasPermission } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import { validateData } from '@alga-psa/validation';
@@ -52,8 +52,9 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, readCoManagedNativeTimeEntry, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
@@ -113,6 +114,9 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   try {
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant) as any;
+
+    const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.entries;
 
   // Check permission for time entry reading
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
@@ -323,9 +327,7 @@ export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<I
       const stored = timeEntry.entry_id ? await tenantDb(trx, tenant).table('time_entries').where('entry_id', timeEntry.entry_id).first('billing_mode') : null;
       let access: CoManagedNativeTimeAccess | null = null;
       if (currentMode === 'operational' || stored?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, tenant)) {
-        const session = await getSession();
-        if (getApiKeyUserOverride() || !session?.session_id || session.user?.tenant !== tenant || session.user?.id !== user.user_id || session.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
-        access = await admitCoManagedNativeTimeSave(trx, { kind: 'session', tenant, userId: user.user_id, sessionId: session.session_id }, timeEntry);
+        access = await admitCoManagedNativeTimeSave(trx, await resolveNativeTimeBrowserActor(user, tenant), timeEntry);
       }
       const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
       const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
@@ -1279,11 +1281,7 @@ export const getTimeEntryById = withAuth(async (
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
   try {
-    const current = await readCoManagedNativeTimeEntry(db, tenant, entryId, async () => {
-      const session = await getSession();
-      if (getApiKeyUserOverride() || !session?.session_id || session.user?.tenant !== tenant || session.user?.id !== user.user_id || session.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
-      return { kind: 'session', tenant, userId: user.user_id, sessionId: session.session_id };
-    });
+    const current = await readCoManagedNativeTimeEntry(db, tenant, entryId, () => resolveNativeTimeBrowserActor(user, tenant));
     if (current.handled) return current.entry;
   // Check permission for time entry reading
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
