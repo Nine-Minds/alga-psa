@@ -28,8 +28,10 @@ function matchesReceipt(notification: any, receipt: any): boolean {
  * are deliberately absent. Interactive callers supply a verified home session.
  * Historical archive access after separation uses a separate archive command. */
 export async function readCoManagedStoredCommentNotification(db: Knex, inputActor: CoManagedSessionActor,
-  notificationId: string): Promise<CoManagedStoredCommentNotification | null> {
+  notificationId: string, options: { notificationLock?: 'share' | 'update' } = {}): Promise<CoManagedStoredCommentNotification | null> {
   const actor = snapshotCoManagedSessionActor(inputActor);
+  const notificationLock = options.notificationLock ?? 'share';
+  if (!['share', 'update'].includes(notificationLock)) throw new CoManagedSharedWorkError();
   if (!isCoManagedUuid(notificationId)) throw new CoManagedSharedWorkError();
   const home = tenantDb(db, actor.tenant);
   const receipt = await home.table('co_management_in_app_receipts').where({ notification_id: notificationId,
@@ -42,8 +44,12 @@ export async function readCoManagedStoredCommentNotification(db: Knex, inputActo
       const current = await lockedHome.table('co_management_in_app_receipts').where({ delivery_key: receipt.delivery_key,
         notification_id: notificationId, recipient_user_id: actor.userId, outcome: 'created' }).forShare().first();
       if (!current || ['customer_tenant', 'relationship_id', 'ticket_id', 'comment_id', 'event_id'].some(key => current[key] !== receipt[key])) return null;
-      const notification = await lockedHome.table('internal_notifications').where({ internal_notification_id: notificationId,
-        user_id: actor.userId }).whereNull('deleted_at').forShare().first('template_name', 'language_code', 'metadata');
+      const notificationQuery = lockedHome.table('internal_notifications').where({ internal_notification_id: notificationId,
+        user_id: actor.userId }).whereNull('deleted_at');
+      // Mark-read callers lock for update initially; upgrading two retained
+      // share locks would deadlock concurrent reads of the same inbox item.
+      if (notificationLock === 'update') notificationQuery.forUpdate(); else notificationQuery.forShare();
+      const notification = await notificationQuery.first('template_name', 'language_code', 'metadata');
       if (!notification || !matchesReceipt(notification, current) || notification.metadata.coManaged.threadId !== message.threadId ||
         notification.metadata.coManaged.audience !== message.audience) return null;
       await assertCoManagedSessionUnexpired(context.trx, actor);

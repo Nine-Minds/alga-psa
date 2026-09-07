@@ -1,5 +1,7 @@
 "use server"
 
+import { coManagedInboxScope } from '../../lib/coManagedInbox';
+
 import { tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -272,11 +274,12 @@ export const getNotificationsAction = withAuth(async (
   });
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scope = await coManagedInboxScope(trx, currentUser, tenant);
     const limit = request.limit || 20;
     const offset = request.offset || 0;
 
     // Build base query
-    let query = tenantScopedTable(trx, 'internal_notifications', tenant)
+    let query = tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId
       })
@@ -301,7 +304,7 @@ export const getNotificationsAction = withAuth(async (
       .offset(offset);
 
     // Get unread count
-    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false
@@ -311,7 +314,7 @@ export const getNotificationsAction = withAuth(async (
 
     // Unread high-priority count so the bell badge can render high-only
     // (task 29.8.46) without a second round-trip.
-    const [{ count: unreadHighCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: unreadHighCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false,
@@ -320,8 +323,9 @@ export const getNotificationsAction = withAuth(async (
       .whereNull('deleted_at')
       .count('* as count');
 
+    await scope.assertCurrent();
     return {
-      notifications,
+      notifications: notifications.map(scope.render).filter((row: InternalNotification | null): row is InternalNotification => row !== null),
       total: Number(totalCount),
       unread_count: Number(unreadCount),
       unread_high: Number(unreadHighCount),
@@ -347,7 +351,8 @@ export const getNotificationByIdAction = withAuth(async (
   const { knex } = await (await import("@alga-psa/db")).createTenantKnex();
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const notification = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const scope = await coManagedInboxScope(trx, currentUser, tenant, { id: internalNotificationId });
+    const notification = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         internal_notification_id: internalNotificationId,
         user_id: currentUser.user_id
@@ -355,7 +360,8 @@ export const getNotificationByIdAction = withAuth(async (
       .whereNull('deleted_at')
       .first();
 
-    return notification || null;
+    await scope.assertCurrent();
+    return notification ? scope.render(notification) : null;
   });
 });
 
@@ -378,8 +384,9 @@ export const getUnreadCountAction = withAuth(async (
   const userId = currentUser.user_id;
 
   return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const scope = await coManagedInboxScope(trx, currentUser, tenant);
     // Get total unread count
-    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: unreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false
@@ -390,7 +397,7 @@ export const getUnreadCountAction = withAuth(async (
     // Split the unread count by priority tier so the bell can render a
     // high-only badge (and a neutral dot for normal/low) without a second
     // round-trip. `total` mirrors `unread_count`; `high` is unread-high.
-    const [{ count: highUnreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const [{ count: highUnreadCount }] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false,
@@ -407,7 +414,7 @@ export const getUnreadCountAction = withAuth(async (
 
     // Get counts by category if requested
     if (byCategory) {
-      const categoryCounts = await tenantScopedTable(trx, 'internal_notifications', tenant)
+      const categoryCounts = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
         .where({
           user_id: userId,
           is_read: false
@@ -424,6 +431,7 @@ export const getUnreadCountAction = withAuth(async (
       }, {});
     }
 
+    await scope.assertCurrent();
     return response;
   });
 });
@@ -449,7 +457,8 @@ export const markAsReadAction = withAuth(async (
   const notification = await (async () => {
     try {
       return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant)
+        const scope = await coManagedInboxScope(trx, currentUser, tenant, { id: notificationId, forUpdate: true });
+        const [notif] = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
           .where({
             internal_notification_id: notificationId,
             user_id: userId
@@ -465,7 +474,10 @@ export const markAsReadAction = withAuth(async (
           throw new Error('Notification not found');
         }
 
-        return notif;
+        await scope.assertCurrent();
+        const visible = scope.render(notif);
+        if (!visible) throw new Error('Notification not found');
+        return visible;
       });
     } catch (error) {
       const expected = notificationActionErrorFrom(error);
@@ -523,7 +535,8 @@ export const markAllAsReadAction = withAuth(async (
   const userId = currentUser.user_id;
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const updatedCount = await tenantScopedTable(trx, 'internal_notifications', tenant)
+    const scope = await coManagedInboxScope(trx, currentUser, tenant, { forUpdate: true });
+    const updatedCount = await tenantScopedTable(trx, 'internal_notifications', tenant).modify(scope.apply)
       .where({
         user_id: userId,
         is_read: false
@@ -535,6 +548,7 @@ export const markAllAsReadAction = withAuth(async (
         updated_at: trx.fn.now()
       });
 
+    await scope.assertCurrent();
     return { updated_count: updatedCount };
   });
 

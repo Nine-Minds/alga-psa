@@ -5572,3 +5572,94 @@ it('rechecks the interactive session after waiting for a stored notification loc
     expect(await attempt).toBeNull();
   } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));
+
+async function withInAppInboxFixture(work: (fixture: Parameters<Parameters<typeof withInAppCommentFixture>[0]>[0] & {
+  actions: typeof import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
+  notificationId: string; apiOverride: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  await withInAppCommentFixture(async fixture => {
+    const { principal, sponsor, persist, event } = fixture;
+    await persist(db, event);
+    const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+    const user = await sponsor.table('users').where('user_id', principal.userId).first();
+    const auth = await import('@alga-psa/auth');
+    const dbModule = await import('@alga-psa/db');
+    const broadcaster = await import('@alga-psa/notifications/realtime/internalNotificationBroadcaster');
+    const apiOverride = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined);
+    const spies = [apiOverride, vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: principal.sessionId,
+      user: { id: principal.userId, tenant: principal.tenant, user_type: 'internal' } } as any),
+      vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: principal.tenant }),
+      vi.spyOn(broadcaster, 'broadcastNotificationRead').mockResolvedValue(undefined),
+      vi.spyOn(broadcaster, 'broadcastAllNotificationsRead').mockResolvedValue(undefined)];
+    try {
+      const actions = await import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
+      await auth.runWithApiKeyUser(user, () => runWithTenant(principal.tenant, () => work({ ...fixture, actions, apiOverride, notificationId: notification.internal_notification_id })));
+    } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
+  });
+}
+
+it('filters actual inbox pages and all counts before pagination, and rerenders detail/read responses with current shared content', async () => withInAppInboxFixture(async ({
+  principal, resource, sponsor, customer, actions, notificationId, event,
+}) => {
+  const ordinaryId = randomUUID(), forgedId = randomUUID();
+  const common = { tenant: principal.tenant, user_id: principal.userId, template_name: 'native-example', language_code: 'en', title: 'Ordinary notice',
+    message: 'Ordinary body', type: 'info', category: 'general' };
+  await sponsor.table('internal_notifications').insert([
+    { ...common, internal_notification_id: ordinaryId, priority: 'normal', created_at: '2020-01-01T00:00:00Z' },
+    { ...common, internal_notification_id: forgedId, priority: 'high', category: 'secret', created_at: '2030-01-01T00:00:00Z', metadata: JSON.stringify({ coManaged: { version: 1 } }) },
+  ]);
+  await sponsor.table('internal_notifications').where('internal_notification_id', notificationId).update({ priority: 'high' });
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Fresh inbox text' });
+  const first = await actions.getNotificationsAction({ tenant: randomUUID(), user_id: randomUUID(), limit: 1, offset: 0 } as any);
+  expect(first).toMatchObject({ total: 2, unread_count: 2, unread_high: 1, has_more: true });
+  expect(first.notifications.map(n => n.internal_notification_id)).toEqual([notificationId]);
+  expect(first.notifications[0].message).toContain('Fresh inbox text');
+  const second = await actions.getNotificationsAction({ limit: 1, offset: 1 } as any);
+  expect(second.notifications.map(n => n.internal_notification_id)).toEqual([ordinaryId]); expect(second.has_more).toBe(false);
+  expect(await actions.getUnreadCountAction(undefined, undefined, true)).toEqual({ unread_count: 2, total: 2, high: 1, by_category: { tickets: 1, general: 1 } });
+  const detail = await actions.getNotificationByIdAction(notificationId, randomUUID(), randomUUID());
+  expect(detail?.message).toContain('Fresh inbox text'); expect(detail?.metadata).not.toHaveProperty('ticketId');
+  const results = await Promise.all([actions.markAsReadAction(randomUUID(), randomUUID(), notificationId), actions.markAsReadAction(randomUUID(), randomUUID(), notificationId)]);
+  const marked = results[0];
+  expect(results.every(result => 'is_read' in result && result.is_read)).toBe(true);
+  expect(marked).toMatchObject({ is_read: true, message: expect.stringContaining('Fresh inbox text') });
+  expect(await actions.getUnreadCountAction(undefined, undefined, true)).toEqual({ unread_count: 1, total: 1, high: 0, by_category: { general: 1 } });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  expect(await actions.getNotificationByIdAction(notificationId)).toBeNull();
+  expect(await actions.getNotificationsAction({ limit: 20 } as any)).toMatchObject({ total: 1, unread_count: 1, unread_high: 0, notifications: [expect.objectContaining({ internal_notification_id: ordinaryId })] });
+  expect(await actions.markAsReadAction(principal.tenant, principal.userId, notificationId)).toHaveProperty('actionError');
+  expect(await actions.markAllAsReadAction(principal.tenant, principal.userId)).toEqual({ updated_count: 1 });
+  expect((await sponsor.table('internal_notifications').where('internal_notification_id', forgedId).first()).is_read).toBe(false);
+}));
+
+it('applies inbox field redactions to rendered text and counts and rejects API override access', async () => withInAppInboxFixture(async ({
+  principal, sponsor, operation, actions, notificationId, apiOverride,
+}) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Inbox action restrictions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['actor', 'ticket_number'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const detail = await actions.getNotificationByIdAction(notificationId);
+  expect(detail?.title).toBe('EN —'); expect(detail?.message).not.toContain('Customer Admin');
+  expect(detail?.metadata?.coManaged).not.toHaveProperty('author');
+  expect((await actions.getNotificationsAction({} as any)).total).toBe(1);
+  apiOverride.mockReturnValue({ user_id: principal.userId, tenant: principal.tenant } as any);
+  expect(await actions.getNotificationByIdAction(notificationId)).toBeNull();
+  expect((await actions.getNotificationsAction({} as any)).total).toBe(0);
+  apiOverride.mockReturnValue(undefined);
+  await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: ['comments.note'] } });
+  expect(await actions.getUnreadCountAction(undefined, undefined, true)).toEqual({ unread_count: 0, total: 0, high: 0, by_category: {} });
+  expect(await actions.getNotificationByIdAction(notificationId)).toBeNull();
+}));
+
+it('does not let removed notification metadata bypass receipt-based inbox classification', async () => withInAppInboxFixture(async ({
+  principal, sponsor, actions, notificationId,
+}) => {
+  await sponsor.table('internal_notifications').where('internal_notification_id', notificationId).update({ metadata: null });
+  expect(await actions.getNotificationByIdAction(notificationId)).toBeNull();
+  expect(await actions.getNotificationsAction({} as any)).toMatchObject({ total: 0, unread_count: 0, unread_high: 0, notifications: [] });
+  expect(await actions.markAsReadAction(principal.tenant, principal.userId, notificationId)).toHaveProperty('actionError');
+  expect((await sponsor.table('internal_notifications').where('internal_notification_id', notificationId).first()).is_read).toBe(false);
+}));

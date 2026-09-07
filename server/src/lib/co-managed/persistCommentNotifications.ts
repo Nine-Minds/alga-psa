@@ -3,7 +3,7 @@ import { tenantDb } from '@alga-psa/db';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { deliverCoManagedTicketCommentToAssignees } from '@alga-psa/co-managed';
 import { createNotificationRowFromTemplate } from '@alga-psa/notifications/actions/internal-notification-actions/createNotificationCore';
-import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
+import { coManagedCommentPresentation } from '@alga-psa/notifications/lib/coManagedCommentPresentation';
 
 /** Transactional in-app storage adapter. Caller/worker transport must separately
  * enforce qualified inbox and broadcast access before connecting this adapter
@@ -25,17 +25,9 @@ export async function persistCoManagedCommentNotifications(db: Knex, inputEvent:
       if (!['created', 'disabled'].includes(prior.outcome)) throw new Error('Co-managed notification receipt is incomplete');
       return;
     }
-    const authorName = message.author?.displayName
-      ? [message.author.displayName, message.author.organizationName ? `(${message.author.organizationName})` : ''].filter(Boolean).join(' ')
-      : '—';
-    const commentPreview = Array.from(extractTicketRichTextPlainText(message.note)).slice(0, 200).join('');
     const notification = await createNotificationRowFromTemplate(context.trx, context.actor.tenant, context.actor.userId, {
       tenant: context.actor.tenant, user_id: context.actor.userId, template_name: 'ticket-comment-added', type: 'info', category: 'tickets',
-      link: `/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`,
-      data: { authorName, ticketId: message.ticketNumber ?? '—', commentPreview },
-      // Never flatten foreign source/author IDs into native ticketId/userId keys.
-      metadata: { coManaged: { version: 1, resource: message.resource, commentId: message.commentId, threadId: message.threadId,
-        audience: message.audience, deliveryKey, eventId: event.id.toLowerCase(), ...(message.author ? { author: message.author } : {}) } },
+      ...coManagedCommentPresentation(message, event.id, deliveryKey),
     });
     await home.table('co_management_in_app_receipts').where('delivery_key', deliveryKey).update({
       outcome: notification ? 'created' : 'disabled', notification_id: notification?.internal_notification_id ?? null,
