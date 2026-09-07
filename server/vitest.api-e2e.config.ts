@@ -9,7 +9,7 @@ export default defineConfig({
   ...serverConfig,
   test: {
     ...serverConfig.test,
-    include: ['src/test/e2e/api/**/*.e2e.test.ts', 'src/test/e2e/serverRenderedLocale.e2e.test.ts'],
+    include: ['src/test/e2e/api/**/*.e2e.test.ts', 'src/test/e2e/serverRenderedLocale.e2e.test.ts', 'src/test/e2e/utils/utilities.test.ts'],
     exclude: ['**/node_modules/**'],
     globalSetup: [],
     setupFiles: [],

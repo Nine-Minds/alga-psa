@@ -66,7 +66,8 @@ export function isAdditionalWorkspaceTest(file, lane) {
   if (lane === 'api-e2e') {
     return (/^server\/src\/test\/e2e\/api\//.test(file)
       && /\.e2e\.test\.ts$/.test(file))
-      || file === 'server/src/test/e2e/serverRenderedLocale.e2e.test.ts';
+      || file === 'server/src/test/e2e/serverRenderedLocale.e2e.test.ts'
+      || file === 'server/src/test/e2e/utils/utilities.test.ts';
   }
   if (lane === 'nx-tooling') {
     return /^tools\/nx-tests\//.test(file) && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);

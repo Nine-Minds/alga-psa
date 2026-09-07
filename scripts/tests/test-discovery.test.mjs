@@ -97,8 +97,9 @@ test('service and SDK inventory assigns unit and runtime suites without counting
   assert.throws(() => isAdditionalWorkspaceTest('sdk/example.test.ts', 'unknown'), /Unknown workspace lane/);
 });
 
-test('HTTP locale rendering joins API execution without absorbing browser suites', () => {
+test('HTTP locale rendering and fixture readback join API execution without absorbing browser suites', () => {
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/serverRenderedLocale.e2e.test.ts', 'api-e2e'), true);
+  assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/utils/utilities.test.ts', 'api-e2e'), true);
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/api/clients.e2e.test.ts', 'api-e2e'), true);
   assert.equal(isAdditionalWorkspaceTest('server/src/test/e2e/document-system.playwright.test.ts', 'api-e2e'), false);
 });
