@@ -4,7 +4,7 @@ import { expect } from '@playwright/test';
 
 /** Parse the bytes downloaded by the shipped UI, not its HTML preview. */
 export async function assertInvoiceDownload(page: Page, testInfo: TestInfo, invoice: {
-  number: string; clientName: string; serviceName: string; amountCents: number;
+  number: string; clientName: string; serviceName: string; amountCents: number; forbiddenText?: string[];
 }) {
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 90000 }),
@@ -21,7 +21,7 @@ export async function assertInvoiceDownload(page: Page, testInfo: TestInfo, invo
   try {
     const document = await task.promise;
     expect(document.numPages).toBeGreaterThan(0);
-    const pages = [];
+    const pages: string[] = [];
     for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber++) {
       const pdfPage = await document.getPage(pageNumber);
       const content = await pdfPage.getTextContent();
@@ -33,6 +33,7 @@ export async function assertInvoiceDownload(page: Page, testInfo: TestInfo, invo
     await testInfo.attach('invoice-pdf', { path: file, contentType: 'application/pdf' });
     // PDF text runs can split identifiers at visual line wraps.
     const compact = text.replace(/\s/g, '');
+    for (const forbidden of invoice.forbiddenText ?? []) expect(compact).not.toContain(forbidden.replace(/\s/g, ''));
     for (const value of [invoice.number, invoice.clientName, invoice.serviceName]) {
       expect(compact).toContain(value.replace(/\s/g, ''));
     }
