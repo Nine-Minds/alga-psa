@@ -247,13 +247,16 @@ export class TaxService {
       return this.calculateThresholdBasedTax(thresholds, netAmount);
     }
 
+    // PostgreSQL numeric columns hydrate as strings even though the domain
+    // interface declares a number. Keep the result contract numeric on every path.
+    const taxPercentage = Number(taxRate.tax_percentage);
     // For negative or zero net amounts, no tax should be applied
     if (netAmount <= 0) {
-      return { taxAmount: 0, taxRate: taxRate.tax_percentage };
+      return { taxAmount: 0, taxRate: taxPercentage };
     }
 
-    const taxAmount = Math.ceil((netAmount * taxRate.tax_percentage) / 100);
-    return { taxAmount, taxRate: taxRate.tax_percentage };
+    const taxAmount = Math.ceil((netAmount * taxPercentage) / 100);
+    return { taxAmount, taxRate: taxPercentage };
   }
 
   private calculateThresholdBasedTax(thresholds: ITaxRateThreshold[], netAmount: number): ITaxCalculationResult {

@@ -351,7 +351,8 @@ describe('TaxService', () => {
         expect(result.taxAmount).toBe(taxAmount);
         expect(result.taxRate).toBe(taxAmount / 100);
     });
-    it.todo('should apply the correct tax rate based on the transaction date');
+    // Transaction-date and currency SQL filtering run against PostgreSQL in
+    // packages/billing/src/services/taxService.rateSelection.db.test.ts.
     it('does not tax an exempt client even when a default rate is available', async () => {
         db.rows['clients'] = { is_tax_exempt: true };
         expect(await taxService.calculateTax('client1', 10000, '2023-06-01')).toEqual({ taxAmount: 0, taxRate: 0 });
@@ -366,7 +367,6 @@ describe('TaxService', () => {
     it.todo('should apply the correct tax rate for international transactions');
     it.todo('should handle tax calculation for multi-item invoices with different tax rates');
     it.todo('should apply tax caps correctly when present');
-    it.todo('should handle tax calculation for different currencies correctly');
     it('applies reverse charge before looking up an otherwise taxable default rate', async () => {
         mockClientTaxSettings.get.mockResolvedValue({
             tenant: 'test_tenant', client_id: 'client1', tax_rate_id: 'rate1',

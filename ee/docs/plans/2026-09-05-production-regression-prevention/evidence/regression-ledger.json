@@ -531,6 +531,32 @@
         "13 pre-existing tax TODOs remain; full-suite readiness still fails until omissions are addressed.",
         "No production incident ID was supplied."
       ]
+    },
+    {
+      "id": "default-tax-rate-postgres-numeric",
+      "classification": "discovered-during-database-regression-testing",
+      "incident": null,
+      "journey": "Return a numeric effective tax percentage when calculating the default client rate",
+      "missingBoundary": "PostgreSQL numeric hydration to the TaxService result contract",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "baseRevision": "aa29040eb95efeee70de0bec2fff8529a6c7b42a",
+      "ci": {
+        "workflow": ".github/workflows/integration-tests.yml",
+        "job": "Workspace database tests",
+        "runner": "scripts/run-workspace-db-tests.mjs",
+        "config": "server/vitest.workspace-db.config.ts"
+      },
+      "evidence": "tax-rate-postgres-regression.json",
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Local focused database run uses the task-owned migrated visual_regression_82cc_test database; it bypasses bootstrap in a temporary config and rolls back every fixture.",
+        "Tenant context and reverse-charge/default-profile provisioning are substituted; rate selection, tenant predicates and PostgreSQL hydration are real.",
+        "Does not verify authentication, international policy selection, invoice orchestration, tax caps or subscription periods.",
+        "Current candidate native CI remains unverified."
+      ]
     }
   ]
 }
