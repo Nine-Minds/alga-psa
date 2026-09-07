@@ -26,7 +26,7 @@ export { getTenantTableScope, parseTableExpression, requireTenantTableScope, ten
 export type { ParsedTableExpression, TenantTableScope } from './lib/tenantTableMetadata';
 
 // After-commit hooks (flushed by the transaction-owning withTransaction frame)
-export { registerAfterCommit } from './lib/afterCommit';
+export { registerAfterCommit, registerAfterCommitWithConnection } from './lib/afterCommit';
 export type { AfterCommitHook } from './lib/afterCommit';
 
 // Read-only error helpers (for callers building their own retry strategies)
@@ -84,7 +84,7 @@ async function runOwnedTransaction<T>(
     return callback(trx);
   });
   if (owned) {
-    await flushAfterCommitHooks(owned);
+    await flushAfterCommitHooks(owned, knex);
   }
   return result;
 }

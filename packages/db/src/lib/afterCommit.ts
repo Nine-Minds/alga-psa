@@ -8,6 +8,10 @@
  * knex.transaction() resolves and before returning to its caller; on
  * rollback the queue is dropped untouched.
  *
+ * Hooks may use the root connection supplied by the owning wrapper for durable
+ * post-commit work. A manually flushed hook may omit it; durable recovery must
+ * remain possible without an immediate dispatch.
+ *
  * Nested withTransaction frames share the caller's `trx` object, so hooks
  * registered anywhere in the nesting attach to the same queue and flush
  * exactly once, when the outermost (owning) frame commits.
@@ -18,10 +22,7 @@ import logger from '@alga-psa/core/logger';
 
 export type AfterCommitHook = () => void | Promise<void>;
 
-interface HookEntry {
-  hook: AfterCommitHook;
-  label?: string;
-}
+type HookEntry = ({ hook: AfterCommitHook } | { connectionHook: (rootConnection: KnexType) => void | Promise<void> }) & { label?: string };
 
 const afterCommitHooks = new WeakMap<object, HookEntry[]>();
 
@@ -34,7 +35,16 @@ export function registerAfterCommit(
   hook: AfterCommitHook,
   label?: string
 ): void {
-  const entry: HookEntry = { hook, label };
+  addHook(trx, { hook, label });
+}
+
+/** Explicit opt-in: ordinary hooks keep their zero-argument contract. A
+ * manual flush without a root connection leaves immediate delivery to recovery. */
+export function registerAfterCommitWithConnection(trx: KnexType.Transaction, connectionHook: (rootConnection: KnexType) => void | Promise<void>, label?: string): void {
+  addHook(trx, { connectionHook, label });
+}
+
+function addHook(trx: object, entry: HookEntry): void {
   const hooks = afterCommitHooks.get(trx);
   if (hooks) {
     hooks.push(entry);
@@ -50,19 +60,20 @@ export function registerAfterCommit(
  * committed, so a failing hook must not fail the operation or stop the
  * remaining hooks.
  */
-export async function flushAfterCommitHooks(trx: object): Promise<void> {
+export async function flushAfterCommitHooks(trx: object, rootConnection?: KnexType): Promise<void> {
   const hooks = afterCommitHooks.get(trx);
   if (!hooks?.length) {
     return;
   }
   afterCommitHooks.delete(trx);
 
-  for (const { hook, label } of hooks) {
+  for (const entry of hooks) {
     try {
-      await hook();
+      if ('connectionHook' in entry) { if (rootConnection) await entry.connectionHook(rootConnection); }
+      else await entry.hook();
     } catch (error) {
       logger.error('[db/afterCommit] after-commit hook failed', {
-        label,
+        label: entry.label,
         error: error instanceof Error ? error.message : String(error),
       });
     }

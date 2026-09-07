@@ -1252,6 +1252,7 @@ export interface InboundOutboxRecord {
  * event_key)` is unique so replay cannot create another logical notification;
  * a duplicate key is ignored.
  */
+// LEVERAGE: pattern transactional-event-intent — co-managed conversation events need the same durable publication semantics without an inbox identity.
 export async function insertOutboxRow(db: DurableDb, input: InboundOutboxInsert): Promise<{ inserted: boolean }> {
   const inserted = await tenantDb(db, input.tenant).table('inbound_email_outbox')
     .insert({

@@ -72,9 +72,13 @@ const tenantsWithAbandonedCoManagedUploads: TenantSelector = async (db) => {
   return [...new Set([...drafts, ...files, ...transfers].map(row => row.tenant))].map(tenant => ({ tenant }));
 };
 
-const tenantsWithPendingCoManagedNotifications: TenantSelector = (db) => db
-  .unscoped<{ tenant: string }>('co_management_notification_deliveries', 'maintenance fanout selects MSPs with pending notification channel deliveries')
-  .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+const tenantsWithPendingCoManagedNotifications: TenantSelector = async db => {
+  const notifications = await db.unscoped<{ tenant: string }>('co_management_notification_deliveries', 'maintenance fanout selects MSPs with pending notification channel deliveries')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const events = await db.unscoped<{ tenant: string }>('co_management_event_outbox', 'maintenance fanout selects customer-owned conversation events awaiting publication')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  return [...new Set([...notifications, ...events].map(row => row.tenant))].map(tenant => ({ tenant }));
+};
 
 const tenantsWithInboundEmail: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('email_providers', 'maintenance fanout narrows inbound-email recovery to tenants with an active provider')

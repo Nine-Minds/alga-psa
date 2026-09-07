@@ -2,10 +2,10 @@ import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory
 import { uploadConversationAttachmentObject } from './conversationAttachments';
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
-import { tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { discloseCoManagedTicketThread, discloseCoManagedPrivateTicketThread, CoManagedAttachmentError, CoManagedThreadDisclosureError, type CoManagedThreadDisclosureContext, type CoManagedThreadDisclosureRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { queueCoManagedConversationEvent } from './conversationEvents';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { collaborationActorReferenceSchema } from '@alga-psa/event-schemas/collaboration';
 
@@ -27,7 +27,8 @@ export async function discloseSharedTicketThread(db: Knex, actor: CoManagedSessi
         isInternal: context.audience !== 'requester', collaborationMutation: { kind: 'audience' as const, threadId: context.threadId, audience: context.audience } };
       const eventId = uuidv5(`${resource.tenant}:thread-audience:${commentId}`, context.operationId);
       EventSchemas.TICKET_COMMENT_UPDATED.parse({ id: eventId, timestamp: context.appliedAt, eventType: 'TICKET_COMMENT_UPDATED', payload });
-      registerAfterCommit(trx, () => publishEvent({ eventType: 'TICKET_COMMENT_UPDATED', payload } as any, { eventId }), `Thread audience comment=${commentId}`);
+      await queueCoManagedConversationEvent(trx, { tenant: resource.tenant, eventId, ticketId: resource.id, commentId, threadId: context.threadId, audience: context.audience,
+        publication: { kind: 'event', eventType: 'TICKET_COMMENT_UPDATED', payload } });
     }
   };
   const customer = resource.tenant.toLowerCase();

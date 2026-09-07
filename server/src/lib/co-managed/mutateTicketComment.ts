@@ -1,10 +1,10 @@
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
-import { tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { tenantDb } from '@alga-psa/db';
 import { mutateCoManagedTicketComment, type CoManagedCommentMutationRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import Comment from '@alga-psa/tickets/models/comment';
 import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { queueCoManagedConversationEvent } from './conversationEvents';
 import { EventSchemas } from '@alga-psa/event-schemas';
 import { collaborationActorReferenceSchema } from '@alga-psa/event-schemas/collaboration';
 
@@ -29,7 +29,8 @@ export async function mutateSharedTicketComment(db: Knex, actor: CoManagedSessio
       isInternal: context.audience !== 'requester', collaborationMutation: { kind: mutation.kind, threadId: context.threadId, audience: context.audience } };
     const eventId = uuidv5(`${context.resource.tenant}:${eventType}`, context.operationId);
     EventSchemas[eventType].parse({ id: eventId, timestamp: context.updatedAt, eventType, payload });
-    registerAfterCommit(trx, () => publishEvent({ eventType, payload } as any, { eventId }), `${eventType} comment=${context.commentId}`);
+    await queueCoManagedConversationEvent(trx, { tenant: context.resource.tenant, eventId, ticketId: context.resource.id, commentId: context.commentId,
+      threadId: context.threadId, audience: context.audience, publication: { kind: 'event', eventType, payload } });
     await context.assertWriteAuthority(trx);
   });
 }

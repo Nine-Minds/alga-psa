@@ -1,0 +1,9 @@
+import type { CoManagedEventPublication } from '@alga-psa/co-managed';
+import { publishEvent, publishWorkflowEvent, type WorkflowEventPublishContext } from '@alga-psa/event-bus/publishers';
+/** Shared immediate/recovery transport. Strict mode must propagate partial
+ * channel failures; every retry retains the producer's event/workflow identity. */
+export async function publishCoManagedConversationEvent(publication: CoManagedEventPublication, eventId: string) {
+  if (publication.kind === 'workflow') await publishWorkflowEvent({ eventType: publication.eventType, payload: publication.payload,
+    ctx: publication.workflowContext as WorkflowEventPublishContext, idempotencyKey: publication.idempotencyKey }, { eventId, strict: true });
+  else await publishEvent({ eventType: publication.eventType, payload: publication.payload } as any, { eventId, strict: true });
+}

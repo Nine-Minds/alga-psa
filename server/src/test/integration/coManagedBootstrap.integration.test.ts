@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6003,10 +6003,10 @@ it('recovers committed channels through the scheduled server job handler without
   await persist(db, event);
   expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
   const { coManagedNotificationRecoveryJobHandler } = await import('../../lib/jobs/handlers/coManagedNotificationRecoveryHandler');
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ examined: 6, processed: 6 });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, notifications: { examined: 6, processed: 6 } });
   expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
   expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ examined: 0, processed: 0 });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, notifications: { examined: 0, processed: 0 } });
 }));
 
 it('honors preferences changed after queue creation without hiding the already authorized inbox history', async () => withInAppCommentFixture(async ({
@@ -7450,4 +7450,128 @@ it('rejects a colliding private-transfer destination without overwriting an exis
   expect(await customer.table('comments').where('comment_id', operationId).first()).toMatchObject({ markdown_content: 'Existing customer conversation', is_internal: true });
   expect(await sponsor.table('co_management_private_threads').where('thread_id', root.threadId).first()).toMatchObject({ disclosure_operation_id: null });
   expect(await sponsor.table('co_management_thread_transfers').where('operation_id', operationId).first()).toMatchObject({ status: 'prepared' });
+}));
+
+it('recovers co-managed event outbox publication failures with current content and stable strict transport identities', async () => withCommentCreationFixture(async ({ principal, resource, customer, sponsor }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const events = await import('@alga-psa/event-bus/publishers');
+  const publish = vi.mocked(events.publishEvent), workflow = vi.mocked(events.publishWorkflowEvent);
+  publish.mockReset().mockRejectedValue(new Error('transport unavailable')); workflow.mockReset().mockRejectedValue(new Error('transport unavailable'));
+  const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Original confidential body' });
+  const rows = await customer.table('co_management_event_outbox');
+  expect(rows).toHaveLength(3);
+  for (const row of rows) expect(row).toMatchObject({ tenant: resource.tenant, status: 'pending', attempts: 1, error_code: 'event_publication_failed' });
+  expect(JSON.stringify(rows)).not.toContain('Original confidential body');
+  expect(await sponsor.table('co_management_event_outbox')).toEqual([]);
+  expect(await customer.table('comments').where('comment_id', receipt.commentId).first()).toBeDefined();
+  const ids = [...publish.mock.calls, ...workflow.mock.calls].map(call => call[1]?.eventId).sort();
+  await customer.table('comments').where('comment_id', receipt.commentId).update({ note: 'Current edited body' });
+  await customer.table('co_management_event_outbox').update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  publish.mockReset().mockResolvedValue(undefined); workflow.mockReset().mockResolvedValue(undefined);
+  const database = await import('@alga-psa/db');
+  const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
+  try {
+    const { coManagedNotificationRecoveryHandler } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
+    const result = await coManagedNotificationRecoveryHandler({ tenantId: resource.tenant });
+    expect(result.events).toEqual({ published: 3, cancelled: 0, failed: 0 });
+  } finally { connection.mockRestore(); }
+  expect(publish.mock.calls[0][0]).toMatchObject({ eventType: 'TICKET_COMMENT_ADDED', payload: { comment: { content: 'Current edited body' } } });
+  expect(workflow.mock.calls.find(call => call[0].eventType === 'TICKET_INTERNAL_NOTE_ADDED')![0]).toMatchObject({ idempotencyKey: `co-managed-comment:${resource.tenant}:${receipt.commentId}:TICKET_INTERNAL_NOTE_ADDED` });
+  const recovered = [...publish.mock.calls, ...workflow.mock.calls];
+  expect(recovered.map(call => call[1]?.eventId).sort()).toEqual(ids);
+  for (const call of recovered) expect(call[1]).toMatchObject({ strict: true });
+  expect((await customer.table('co_management_event_outbox')).every(row => row.status === 'published' && row.completed_at && !row.error_code)).toBe(true);
+}));
+
+it('commits co-managed event outbox intent atomically when the outer owner never flushes hooks and removes it on rollback', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { publishEvent, publishWorkflowEvent } = await import('@alga-psa/event-bus/publishers');
+  vi.mocked(publishEvent).mockClear(); vi.mocked(publishWorkflowEvent).mockClear();
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, text: 'Crash after commit' };
+  await expect(db.transaction(async trx => { await createSharedTicketComment(trx, principal, resource, request); throw new Error('rollback'); })).rejects.toThrow('rollback');
+  expect(await customer.table('co_management_event_outbox')).toEqual([]);
+  expect(await customer.table('comments').where('comment_id', request.operationId)).toEqual([]);
+  const receipt = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, request));
+  expect(receipt.commentId).toBe(request.operationId);
+  expect(publishEvent).not.toHaveBeenCalled(); expect(publishWorkflowEvent).not.toHaveBeenCalled();
+  const publish = vi.fn().mockResolvedValue(undefined);
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 3, cancelled: 0, failed: 0 });
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 0, cancelled: 0, failed: 0 });
+  expect(publish).toHaveBeenCalledTimes(3);
+}));
+
+it.each(['private', 'deleted'] as const)('cancels delayed co-managed event outbox message bodies when the source becomes %s', async mode => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const receipt = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Never dispatch this body' }));
+  if (mode === 'private') await customer.table('comment_threads').where('thread_id', receipt.threadId).update({ collaboration_audience: 'organization_private' });
+  else await customer.table('comments').where('comment_id', receipt.commentId).update({ deleted_at: db.fn.now() });
+  const publish = vi.fn().mockResolvedValue(undefined);
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 0, cancelled: 3, failed: 0 });
+  expect(publish).not.toHaveBeenCalled();
+  expect((await customer.table('co_management_event_outbox')).every(row => row.status === 'cancelled' && row.completed_at)).toBe(true);
+}));
+
+it('retries co-managed event outbox lost acknowledgements, isolates damaged rows and prevents concurrent delivery', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Recoverable' }));
+  const rows = await customer.table('co_management_event_outbox').orderBy('event_id');
+  const publish = vi.fn().mockRejectedValueOnce(new Error('sent but acknowledgement lost')).mockResolvedValue(undefined);
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish, { eventId: rows[0].event_id })).toEqual({ published: 0, cancelled: 0, failed: 1 });
+  await customer.table('co_management_event_outbox').where('event_id', rows[0].event_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  let release!: () => void, started!: () => void;
+  const held = new Promise<void>(resolve => { release = resolve; });
+  const entered = new Promise<void>(resolve => { started = resolve; });
+  publish.mockImplementationOnce(async () => { started(); await held; });
+  const first = dispatchCoManagedConversationEvents(db, resource.tenant, publish, { eventId: rows[0].event_id });
+  try {
+    await entered;
+    expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish, { eventId: rows[0].event_id })).toEqual({ published: 0, cancelled: 0, failed: 0 });
+  } finally { release(); }
+  expect(await first).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(publish.mock.calls[0][1]).toBe(publish.mock.calls[1][1]);
+  await customer.table('co_management_event_outbox').where('event_id', rows[1].event_id).update({ publication: JSON.stringify({ ...rows[1].publication, idempotencyKey: 'corrupted' }) });
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 1, cancelled: 0, failed: 1 });
+  expect(publish).toHaveBeenCalledTimes(3);
+  expect(await customer.table('co_management_event_outbox').where('event_id', rows[1].event_id).first()).toMatchObject({ status: 'pending', error_code: 'event_publication_failed' });
+}));
+
+it('retains metadata-only co-managed event outbox invalidations after source deletion and rejects changed event identities', async () => withCommentMutationFixture(async ({ principal, resource, customer, create, read, mutateComment }) => {
+  const { dispatchCoManagedConversationEvents, enqueueCoManagedConversationEvent } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const receipt = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Delete this content' });
+  const item = (await read(db, principal, resource)).items.find(row => row.commentId === receipt.commentId)!;
+  await db.transaction(trx => mutateComment(trx, principal, resource, { kind: 'delete', operationId: randomUUID(), expectedUpdatedAt: item.updatedAt,
+    comment: { storeTenant: receipt.storeTenant, threadId: receipt.threadId, commentId: receipt.commentId } }));
+  const row = await customer.table('co_management_event_outbox').first();
+  const intent = { tenant: resource.tenant, eventId: row.event_id, ticketId: resource.id, threadId: row.thread_id, commentId: row.comment_id, audience: row.audience, publication: row.publication };
+  await db.transaction(trx => enqueueCoManagedConversationEvent(trx, intent));
+  await expect(db.transaction(trx => enqueueCoManagedConversationEvent(trx, { ...intent, threadId: randomUUID() }))).rejects.toThrow('different intent');
+  const publish = vi.fn().mockResolvedValue(undefined);
+  expect(await dispatchCoManagedConversationEvents(db, randomUUID(), publish)).toEqual({ published: 0, cancelled: 0, failed: 0 });
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish)).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(publish.mock.calls[0][0]).toMatchObject({ eventType: 'TICKET_COMMENT_DELETED' });
+  expect(JSON.stringify(publish.mock.calls)).not.toContain('Delete this content');
+  const migration = require('../../../migrations/20260907010000_create_co_management_event_outbox.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+
+it('holds current source visibility locks through co-managed event outbox transport and recovers after the sender loses its acknowledgement', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const receipt = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Visible at dispatch' }));
+  const row = await customer.table('co_management_event_outbox').where('event_type', 'TICKET_COMMENT_ADDED').first();
+  const publish = vi.fn(async () => {
+    for (const [table, key, id] of [['comments', 'comment_id', receipt.commentId], ['comment_threads', 'thread_id', receipt.threadId]]) {
+      await expect(db.transaction(trx => tenantDb(trx, resource.tenant).table(table).where(key, id).forUpdate().noWait().first())).rejects.toMatchObject({ code: '55P03' });
+    }
+    throw new Error('lost acknowledgement');
+  });
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish, { eventId: row.event_id })).toEqual({ published: 0, cancelled: 0, failed: 1 });
+  await customer.table('comments').where('comment_id', receipt.commentId).update({ deleted_at: db.fn.now() });
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish, { eventId: row.event_id })).toEqual({ published: 0, cancelled: 1, failed: 0 });
+  expect(publish).toHaveBeenCalledTimes(1);
 }));

@@ -156,10 +156,21 @@ describe('runMaintenanceJob', () => {
     listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }]);
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
-    expect(selectorTablesSeen).toEqual([table]);
+    expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
+      ? [table, 'co_management_event_outbox'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
+  });
+
+  it('recovers customer event owners even when they have no MSP notification deliveries', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 'customer' }, { tenant: 'msp' }]);
+    selectTenantsMock.mockImplementation(table => table === 'co_management_event_outbox'
+      ? [{ tenant: 'customer' }, { tenant: 'msp' }] : [{ tenant: 'msp' }]);
+    const result = await runMaintenanceJob('co-managed-notification-recovery');
+    expect(result.total).toBe(2);
+    expect(tenantHandlerMock).toHaveBeenCalledTimes(2);
+    expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-notification-recovery', { tenantId: 'customer' });
   });
 
   it('throws for an unknown job name', async () => {

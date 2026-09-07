@@ -181,7 +181,7 @@ async function ownTransaction<T>(
       return tenantId ? tenantContext.run(tenantId, () => callback(trx)) : callback(trx);
     });
     if (owned) {
-      await flushAfterCommitHooks(owned);
+      await flushAfterCommitHooks(owned, knex);
     }
     return result;
   };
