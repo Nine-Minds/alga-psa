@@ -1,0 +1,169 @@
+{
+  "scope": "Historical native CE/EE production browser and API execution",
+  "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34151013512",
+  "prUrl": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+  "publishedHead": "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc",
+  "testedMergeRevision": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+  "mergeParents": [
+    "9c7890a8a61d02c6d051f6fcb5094e5448f27206",
+    "7b170294a755dfebba34cb8bbfc1069b6d8ba8bc"
+  ],
+  "independentRecheck": {
+    "schemaVersion": 1,
+    "revision": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+    "scope": "fresh-install-execution",
+    "status": "passed",
+    "results": [
+      {
+        "id": "vitest-community",
+        "status": "passed",
+        "counts": {
+          "passed": 349,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      },
+      {
+        "id": "playwright-community",
+        "status": "passed",
+        "counts": {
+          "passed": 37,
+          "failed": 0,
+          "flaky": 0,
+          "skipped": 0,
+          "interrupted": 0,
+          "missing": 0
+        },
+        "failures": []
+      },
+      {
+        "id": "vitest-enterprise",
+        "status": "passed",
+        "counts": {
+          "passed": 349,
+          "failed": 0,
+          "skipped": 0,
+          "todo": 0,
+          "pending": 0
+        },
+        "failures": []
+      },
+      {
+        "id": "playwright-enterprise",
+        "status": "passed",
+        "counts": {
+          "passed": 41,
+          "failed": 0,
+          "flaky": 0,
+          "skipped": 0,
+          "interrupted": 0,
+          "missing": 0
+        },
+        "failures": []
+      }
+    ],
+    "failures": []
+  },
+  "browserProof": {
+    "community": {
+      "source": {
+        "before": {
+          "revision": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selection": {
+        "mode": "full",
+        "filters": []
+      },
+      "files": [
+        "e2e-tests/tests/inbound-email.spec.ts",
+        "e2e-tests/tests/invoice-generation.spec.ts",
+        "e2e-tests/tests/invoice-ticket-ownership.spec.ts",
+        "e2e-tests/tests/login.spec.ts",
+        "e2e-tests/tests/microsoft-calendar.spec.ts",
+        "e2e-tests/tests/microsoft-mailbox.spec.ts",
+        "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+        "e2e-tests/tests/msp-access-redirects.spec.ts",
+        "e2e-tests/tests/portal-discovery.spec.ts",
+        "e2e-tests/tests/portal-identity.spec.ts",
+        "e2e-tests/tests/portal-ticket-roundtrip.spec.ts",
+        "e2e-tests/tests/qbo-export.spec.ts",
+        "e2e-tests/tests/server-rendered-locale.spec.ts",
+        "e2e-tests/tests/stripe-payment.spec.ts",
+        "e2e-tests/tests/tenant-identity.spec.ts",
+        "e2e-tests/tests/time-approval-invoice.spec.ts",
+        "e2e-tests/tests/usage-invoice-preview.spec.ts",
+        "e2e-tests/tests/xero-export.spec.ts"
+      ],
+      "artifacts": {
+        "evidence.json": "2693ced546fc4582fceba904159472fa9f6ed183bc12b0102a456e0f96ad7d03",
+        "collected.json": "16501ee7c39b74dc717bb974c0640aedbc7c1745f8228e84d09caa5433ca1f39",
+        "results.json": "63f451964448d396203450b4db7bddbd43ba0f77ab40d1571266c700801e0381"
+      }
+    },
+    "enterprise": {
+      "source": {
+        "before": {
+          "revision": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+          "dirty": false,
+          "changes": []
+        },
+        "after": {
+          "revision": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+          "dirty": false,
+          "changes": []
+        }
+      },
+      "selection": {
+        "mode": "full",
+        "filters": []
+      },
+      "files": [
+        "e2e-tests/tests/inbound-email.spec.ts",
+        "e2e-tests/tests/invoice-generation.spec.ts",
+        "e2e-tests/tests/invoice-ticket-ownership.spec.ts",
+        "e2e-tests/tests/login.spec.ts",
+        "e2e-tests/tests/microsoft-calendar.spec.ts",
+        "e2e-tests/tests/microsoft-mailbox.spec.ts",
+        "e2e-tests/tests/microsoft-oauth-rejection.spec.ts",
+        "e2e-tests/tests/msp-access-redirects.spec.ts",
+        "e2e-tests/tests/portal-discovery.spec.ts",
+        "e2e-tests/tests/portal-identity.spec.ts",
+        "e2e-tests/tests/portal-ticket-roundtrip.spec.ts",
+        "e2e-tests/tests/qbo-export.spec.ts",
+        "e2e-tests/tests/server-rendered-locale.spec.ts",
+        "e2e-tests/tests/stripe-payment.spec.ts",
+        "e2e-tests/tests/tenant-identity.spec.ts",
+        "e2e-tests/tests/time-approval-invoice.spec.ts",
+        "e2e-tests/tests/usage-invoice-preview.spec.ts",
+        "e2e-tests/tests/xero-export.spec.ts"
+      ],
+      "artifacts": {
+        "evidence.json": "772874bfc9c0495e026f442828713e58cce88b53970e5d58094f496dd8281ed4",
+        "collected.json": "5a96a1ce945b7de1eb76607399d7a0e1362a6e2fe80f10a74de31f2300c62c0e",
+        "results.json": "9ee97b0612a02dccd40b0cb1a969ad6f0060d8601a8cbcb4793a5582b6793960"
+      }
+    }
+  },
+  "method": [
+    "Downloaded original execution reports and full assertion collections from completed successful CE and EE native jobs.",
+    "Loaded an independent recursive Git tree for the exact tested merge candidate and rejected truncated inventories.",
+    "Re-evaluated raw browser/API reports using the current stricter fresh-install verifier, including the four critical browser file requirements.",
+    "Verified clean identical candidate source before and after both browser executions."
+  ],
+  "limits": [
+    "This verifies the historical merge candidate, not current local HEAD or the complete PR.",
+    "Protected-branch enforcement, immutable deployment promotion and real-provider sandbox parity are not established here.",
+    "Provider emulator cases do not imply real SSO coverage."
+  ]
+}
