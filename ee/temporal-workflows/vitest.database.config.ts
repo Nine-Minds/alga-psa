@@ -1,0 +1,13 @@
+import base from './vitest.no-docker.config';
+
+// CI supplies a migrated database; these suites create isolated tenant data.
+export default {
+  ...base,
+  test: {
+    ...base.test,
+    include: ['src/db/__tests__/product-upgrade-operations.integration.test.ts'],
+    coverage: { provider: 'v8', enabled: false },
+    fileParallelism: false,
+    maxWorkers: 1,
+  },
+};

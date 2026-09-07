@@ -14,6 +14,7 @@ const suite = process.argv[2];
 const settings = {
   'api-e2e': { directory: 'server', config: 'vitest.api-e2e.config.ts' },
   'temporal-readiness': { directory: 'ee/temporal-workflows', config: 'vitest.readiness.config.ts' },
+  'temporal-database': { directory: 'ee/temporal-workflows', config: 'vitest.database.config.ts' },
   'temporal-engine': { directory: 'ee/temporal-workflows', config: 'vitest.engine.config.ts' },
   'nx-tooling': { directory: '.', config: 'tools/nx-tests/vitest.config.ts' },
   'ui-kit-showcase': { directory: 'ee/extensions/samples/ui-kit-showcase', config: 'vitest.config.ts',
@@ -45,7 +46,9 @@ const env = {
     ? { REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1', APP_ENV: 'test',
         TEST_DB_NAME: 'alga_ee_integration_test', DB_NAME_SERVER: 'alga_ee_integration_test',
         HUDU_TEST_DB_NAME: 'alga_ee_integration_test' }
-    : { SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '' }),
+    : suite === 'temporal-database'
+      ? { REQUIRE_DB: '1', SKIP_DB_TESTS: '', TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1' }
+      : { SKIP_DB_TESTS: '1', DB_USER_ADMIN: '', DB_PASSWORD_ADMIN: '' }),
   TEST_PROGRESS_PATH: path.join(output, 'progress.jsonl'),
 };
 const filters = process.argv.slice(3);
@@ -60,6 +63,10 @@ let phase = 'Revision inspection';
 try {
   if (filters.length && shardTotal > 1) throw new Error('Sharded execution cannot use file filters');
   before = testRevision(root);
+  if (suite === 'temporal-database' && (!env.DB_NAME_SERVER || !env.DB_USER_ADMIN || !env.DB_PASSWORD_ADMIN
+    || !(env.DB_HOST_ADMIN || env.DB_HOST) || !(env.DB_PORT_ADMIN || env.DB_PORT))) {
+    throw new Error('Temporal database tests require an explicit migrated database and admin connection');
+  }
   if (suite === 'enterprise-integration') {
     phase = 'Enterprise database configuration';
     if (['DB_HOST', 'DB_PORT', 'DB_USER_ADMIN', 'DB_PASSWORD_ADMIN', 'DB_USER_SERVER', 'DB_PASSWORD_SERVER']

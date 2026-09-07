@@ -32,6 +32,10 @@ on:
       - 'packages/types/**'
       - 'server/package.json'
       - 'scripts/run-citus-runtime-tests.mjs'
+      - 'scripts/run-additional-workspace-tests.mjs'
+      - 'scripts/lib/test-discovery.mjs'
+      - 'ee/server/seeds/**'
+      - 'packages/core/**'
       - 'scripts/lib/test-execution-evidence.mjs'
       - 'scripts/lib/test-revision.mjs'
       - 'package.json'
@@ -54,6 +58,10 @@ on:
       - 'packages/types/**'
       - 'server/package.json'
       - 'scripts/run-citus-runtime-tests.mjs'
+      - 'scripts/run-additional-workspace-tests.mjs'
+      - 'scripts/lib/test-discovery.mjs'
+      - 'ee/server/seeds/**'
+      - 'packages/core/**'
       - 'scripts/lib/test-execution-evidence.mjs'
       - 'scripts/lib/test-revision.mjs'
       - 'package.json'
@@ -187,6 +195,20 @@ jobs:
           DB_NAME_SERVER: citus_runtime
           TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations
         run: node ../scripts/run-citus-runtime-tests.mjs
+
+      - name: Run tenant product upgrade behavior on migrated Citus
+        env:
+          DB_NAME_SERVER: citus_runtime
+          TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1'
+        run: node scripts/run-additional-workspace-tests.mjs temporal-database
+
+      - name: Upload tenant product upgrade evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-database-execution
+          path: test-results/temporal-database/
+          if-no-files-found: error
 
       - name: Upload Citus runtime results
         if: always()

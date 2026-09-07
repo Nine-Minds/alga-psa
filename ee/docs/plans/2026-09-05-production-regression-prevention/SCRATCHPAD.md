@@ -1473,3 +1473,10 @@
 - Removed redundant overwrite; dotenv defaults now fill absent settings while respecting explicit environment variables. Added two behavioral configuration cases using a dotenv boundary double. Before: four failed/two passed; after: six passed. Existing connection expectations retained.
 - Reran same real DB suite with explicit test credentials: all ten passed, 6.59 seconds. Covers PSA seed/RBAC/tax/SLA backfill idempotency, preserved roles/users, no-write preflight, guarded product flip, failed verification, and Stripe-failure withholding. No previous-release schema-upgrade claim.
 - Evidence: evidence/explicit-db-precedence.json. Native verification and mandatory DB runner assignment remain outstanding.
+
+### 2026-09-07 — Required database lane and native portal bundle repair
+
+- Native engine job 101700596140 (run 34109001598) ended 26 pass / three portal-registration failures. Its broad workflow-index bundle required unrelated unbuilt workflow package exports. Three test workers now bundle registration.workflow.ts directly; all assertions retained. Exact engine runner passes six files / 29 cases in 10.48 seconds.
+- Added temporal-database config, independent discovery and reconciled runner selection for product-upgrade-operations.integration.test.ts. Runner preserves explicit DB credentials for this lane and rejects missing explicit connection settings. Initial runner attempt exposed its default DB-less credential stripping; corrected lane behavior and exact rerun passes one file / ten cases in 6.55 seconds.
+- Citus workflow now executes database lane against the migrated citus_runtime DB after workflow/invoice regressions, uploads evidence even on failure, and includes runner/seed/core dependency triggers. Native verification pending publication.
+- Evidence: evidence/temporal-database-and-portal-gates.json.
