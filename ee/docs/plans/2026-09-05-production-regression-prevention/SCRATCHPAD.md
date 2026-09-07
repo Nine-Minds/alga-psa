@@ -1237,3 +1237,9 @@
 - Temporary migration directory outside server failed relative dependency/template resolution. Switched to ignored server/combined-migrations, matching CI. That run reached migration 363 but hit the existing 180-second bootstrap limit; its process terminated and active-query count was zero.
 - Restarted with a Citus-only 30-minute migration hook budget. Current live session: 52670; log: /tmp/alga-workflow-citus-runtime-full.log. Scratch DB workflow_citus_82cc and test-only role workflow_citus_82cc_admin are in owned alga-regression-citus; retain while validating.
 - Default PostgreSQL regression suite still passes 7/7, and targeted TypeScript passes. Citus runtime and native-job wiring remain incomplete. Evidence: `evidence/workflow-citus-bootstrap.json`.
+
+### 2026-09-07 — Publish queued fixes without interrupting active integration
+
+- Corrected the earlier publication hold: integration-tests.yml and unit-tests.yml have no cancel-in-progress policy. Only e2e-fresh-install-tests.yaml auto-cancels prior PR runs, and that workflow was terminal. Future pushes need not wait for integration completion on that mistaken premise.
+- Initial push auto-review rejected an unverified/private-destination assumption. Read-only verification confirmed origin is PUBLIC Nine-Minds/alga-psa, viewer ADMIN, and Robert Isaacs owns same-repository PR 3343 on this branch. Retry was approved and published through 23c841b44c. New CI was confirmed dispatched; prior job 101650631428 still remained in progress.
+- Updated PR description to current candidate and explicit verification limits. Local Citus session 52670 remains active; latest read-only progress: 899 migrations complete and 198 hash-distributed tables. No Citus runtime assertion success is claimed yet.
