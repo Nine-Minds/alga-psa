@@ -54,7 +54,17 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
     const invoice = await database('invoices').where({ tenant, invoice_id: invoiceId }).first();
     const client = await database('clients').where({ tenant, client_id: ids.clientId }).first();
     const service = await database('service_catalog').where({ tenant, service_id: ids.serviceId }).first();
-    expect(Number(invoice.subtotal)).toBe(87500);
+    // This API selects the hourly obligation only: four regular hours at $150
+    // plus one overtime hour at $225. Whole-cycle generation also includes usage.
+    expect(Number(invoice.subtotal)).toBe(82500);
+    const charges = await database('invoice_charges').where({ tenant, invoice_id: invoiceId });
+    expect(charges.length).toBeGreaterThan(0);
+    expect(charges.every(charge => charge.service_id === ids.serviceId)).toBe(true);
+    const unselectedUsage = await database('usage_tracking').where({ tenant, contract_line_id: ids.usageLineId });
+    expect(unselectedUsage).toHaveLength(1);
+    expect(unselectedUsage[0].invoiced).toBe(false);
+    const usagePeriod = await database('recurring_service_periods').where({ tenant, obligation_id: ids.usageLineId }).first();
+    expect(usagePeriod).toMatchObject({ lifecycle_state: 'generated', invoice_id: null });
     await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoiceId}`);
     await expect(page.locator('#invoice-download-pdf')).toBeVisible();
     await assertInvoiceDownload(page, testInfo, { number: invoice.invoice_number, clientName: client.client_name,
