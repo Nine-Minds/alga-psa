@@ -8,14 +8,12 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
-  startWorkflowRunAction,
-  listWorkflowRunStepsAction
+  startWorkflowRunAction
 } from '@alga-psa/workflows/actions';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
-  actionCallStep,
-  stateSetStep
+  actionCallStep
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
 vi.mock('server/src/lib/db', () => ({
@@ -76,9 +74,9 @@ afterAll(async () => {
 
 // The remaining cases still invoke the retired synchronous interpreter through
 // startWorkflowRunAction, which now launches Temporal. Invocation output storage
-// and run-studio action reads need a port that preserves runtime behavior.
-// Snapshot redaction, bounds and retention now execute against the real Temporal
-// completion activity in workflowRuntimeV2.snapshotStorage.integration.test.ts.
+// needs a port that preserves successful action retry results.
+// Snapshot redaction, bounds, retention and run-history action reads now execute
+// through real activity writes in workflowRuntimeV2.snapshotStorage.integration.test.ts.
 describe.skip('workflow runtime v2 redaction + snapshot integration tests', () => {
 
   it('Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.', async () => {
@@ -95,18 +93,4 @@ describe.skip('workflow runtime v2 redaction + snapshot integration tests', () =
 
 
 
-  it('Run steps response includes snapshot references without exposing raw secrets. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-
-    const run = await startWorkflowRunAction({
-      workflowId,
-      workflowVersion: 1,
-      payload: { secretRef: 'super-secret' }
-    });
-
-    const result = await listWorkflowRunStepsAction({ runId: run.runId });
-    const lastSnapshot = result.snapshots[result.snapshots.length - 1] as any;
-    expect(lastSnapshot.envelope_json.payload.secretRef).toBe('[REDACTED]');
-  });
 });

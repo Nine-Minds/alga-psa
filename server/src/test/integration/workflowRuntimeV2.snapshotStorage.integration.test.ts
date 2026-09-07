@@ -3,11 +3,23 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 
-const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null }));
+const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', canRead: true }));
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => state.trx,
   retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
 }));
+vi.mock('@alga-psa/db', async importOriginal => {
+  const actual = await importOriginal<typeof import('@alga-psa/db')>();
+  return { ...actual, createTenantKnex: async () => ({ knex: state.trx, tenant: state.tenant }) };
+});
+vi.mock('@alga-psa/auth', async importOriginal => {
+  const actual = await importOriginal<typeof import('@alga-psa/auth')>();
+  return { ...actual,
+    withAuth: (fn: any) => (input: unknown) => fn({ user_id: 'test-user', user_type: 'internal', roles: [] }, { tenant: state.tenant }, input),
+    hasPermission: async () => state.canRead,
+  };
+});
+import { listWorkflowRunStepsAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
 import { projectWorkflowRuntimeV2StepCompletion } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
 
 let db: Knex;
@@ -16,11 +28,12 @@ beforeAll(async () => {
 }, 120_000);
 afterAll(async () => { await db?.destroy(); });
 beforeEach(async () => {
+  state.canRead = true;
   const trx = state.trx = await db.transaction();
   const schema = `workflow_snapshot_${randomUUID().replaceAll('-', '')}`;
   await trx.raw('CREATE SCHEMA ??', [schema]);
   await trx.raw('SET LOCAL search_path TO ??, public', [schema]);
-  for (const table of ['workflow_runs', 'workflow_run_steps', 'workflow_run_snapshots']) {
+  for (const table of ['workflow_runs', 'workflow_run_steps', 'workflow_run_snapshots', 'workflow_action_invocations', 'workflow_run_waits', 'tenant_settings']) {
     await trx.raw('CREATE TABLE ?? (LIKE ?? INCLUDING ALL)', [table, `public.${table}`]);
   }
 });
@@ -74,4 +87,24 @@ it.each([undefined, '7'])('prunes expired snapshots using retention %s without c
   expect(snapshots.filter(row => row.run_id === f.runId).map(row => row.envelope_json.payload.state)).toEqual(['new']);
   expect(snapshots.filter(row => row.run_id !== f.runId)).toHaveLength(2);
   expect(await state.trx!('workflow_run_steps').where({ step_id: f.stepId }).first()).toMatchObject({ snapshot_id: null });
+});
+
+it('reads activity-written snapshot references through the run-history action without exposing secret values', async () => {
+  const f = await fixture();
+  state.tenant = f.tenant;
+  await state.trx!('tenant_settings').insert({ tenant: f.tenant, settings: { workflowRunStudio: { redactionPointers: ['/payload/customerNote'] } } });
+  const snapshot = await complete(f, { payload: { secretRef: 'private-value', visible: 'public-value', customerNote: 'private-note' } });
+  expect(snapshot.envelope_json.payload.customerNote).toBe('private-note');
+  const result = await listWorkflowRunStepsAction({ runId: f.runId });
+  expect(result.steps).toHaveLength(1);
+  expect(result.steps[0]).toMatchObject({ snapshot_id: snapshot.snapshot_id });
+  expect(result.snapshots).toHaveLength(1);
+  expect(result.snapshots[0].envelope_json).toMatchObject({ payload: { secretRef: '[REDACTED]', visible: 'public-value', customerNote: '[REDACTED]' } });
+  expect(JSON.stringify(result)).not.toContain('private-value');
+  expect(JSON.stringify(result)).not.toContain('private-note');
+  state.tenant = randomUUID();
+  await expect(listWorkflowRunStepsAction({ runId: f.runId })).rejects.toThrow('Not found');
+  state.tenant = f.tenant;
+  state.canRead = false;
+  await expect(listWorkflowRunStepsAction({ runId: f.runId })).rejects.toThrow('Forbidden');
 });
