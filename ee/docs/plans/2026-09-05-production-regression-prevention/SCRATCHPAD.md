@@ -1441,3 +1441,10 @@
 - First local run ended two passes/two failures because sandbox denied the tsx subprocess IPC socket. Authorized rerun passed all four; only test-generated temporary dummy secrets were accessed.
 - Added both suites to readiness config and independent inventory selection. Exact runner session 4808 exited zero: 25 files / 188 tests, zero skips/missing identities, 3.65 seconds. Evidence: evidence/temporal-provider-secret-readiness.json. Native CI remains pending.
 - Current PR checks confirm both browser jobs, full integration and server coverage remain in progress; preserve browser run 34104450316 until terminal before publishing queued commits.
+
+### 2026-09-07 — Native browser results isolate invoice fixture failure
+
+- Downloaded run 34104450316 browser artifacts 10013109152 (CE) and 10013131758 (EE). Reports: CE 22 pass / one fail, EE 24 pass / one fail; zero skips or flaky results. Both fail the invoice ticket-ownership fixture at its dynamic server billing import with Cannot use import statement outside a module. API steps remain running, so preserve current run.
+- Shared source fixture now accepts materializeServicePeriods:false while keeping its default real synchronizer for existing DB tests. New standalone browser fixture explicitly seeds the August arrears periods due in September, following existing recurring-billing fixture behavior. Invoice generation, four snapshot links, subtotal, foreign-tenant rejection and PDF assertions remain intact.
+- Temporary standalone Playwright DB check executed fixture against owned invoice_citus_82cc and rolled back. Both hourly/usage periods and four source entries verified. Initial temporary check incorrectly stringified a PostgreSQL Date; corrected to ISO and passed. Temporary diagnostic spec moved to /tmp, not added to CI.
+- Full repaired browser journey requires native rerun. Evidence: evidence/browser-invoice-fixture-boundary.json.

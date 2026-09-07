@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { test, expect, signIn } from '../fixtures/auth';
 import { createTimeBillingFixture } from '../fixtures/time-billing';
 import { assertInvoiceDownload } from '../fixtures/invoice-document';
-import { createInvoiceTicketSourceFixture } from '../../server/test-utils/invoiceTicketProductionFixtures';
+import { createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
 import { createBrowserApiKey } from '../fixtures/api-key';
 
 test('authenticated invoice generation excludes foreign ticket snapshots from reads and downloaded PDF', async ({ page, database, credentials }, testInfo) => {
@@ -10,7 +10,7 @@ test('authenticated invoice generation excludes foreign ticket snapshots from re
   const billing = await createTimeBillingFixture(database, credentials.email);
   const tenant = billing.tenant.tenantId;
   const userId = billing.tenant.admin.userId;
-  const ids = await createInvoiceTicketSourceFixture(database, { tenant, userId });
+  const ids = await createBrowserInvoiceTicketSourceFixture(database, { tenant, userId });
   const key = await createBrowserApiKey(database, userId, tenant);
   const headers = { 'x-api-key': key.api_key, 'x-tenant-id': tenant };
   let foreignLinkId: string | undefined;

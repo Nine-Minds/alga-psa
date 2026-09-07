@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 
 // Creates source records only; invoice generation and rendering remain subjects
 // of the caller test. The caller owns tenant isolation and cleanup.
-export async function createInvoiceTicketSourceFixture(db: Knex, identity: { tenant: string; userId: string }, customize?: (ids: any) => Promise<void>) {
+export async function createInvoiceTicketSourceFixture(db: Knex, identity: { tenant: string; userId: string }, customize?: (ids: any) => Promise<void>, options: { materializeServicePeriods?: boolean } = {}) {
     const { tenant, userId } = identity;
     const clientId = randomUUID(), contractId = randomUUID(), lineId = randomUUID(), serviceId = randomUUID(), cycleId = randomUUID(), profileId = randomUUID(), usageLineId = randomUUID(), usageServiceId = randomUUID();
     await db.transaction(async (tx) => {
@@ -48,9 +48,11 @@ export async function createInvoiceTicketSourceFixture(db: Knex, identity: { ten
     await db('client_tax_settings').insert({ tenant, client_id: clientId, billing_profile_id: profileId, is_reverse_charge_applicable: false });
     await db('service_catalog').where({ tenant }).whereIn('service_id', [serviceId, usageServiceId]).update({ tax_rate_id: taxRateId });
     if (customize) await customize({ tenant, userId, clientId, contractId, lineId, serviceId, cycleId, profileId, usageLineId, usageServiceId, taxRateId, regionCode });
-    const { syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync');
-    await db.transaction((tx) => syncRecurringServicePeriodsForContractLine(tx, { tenant, contractLineId: lineId, sourceRunPrefix: 'invoice-ticket-acceptance' }));
-    await db.transaction((tx) => syncRecurringServicePeriodsForContractLine(tx, { tenant, contractLineId: usageLineId, sourceRunPrefix: 'invoice-ticket-acceptance' }));
+    if (options.materializeServicePeriods !== false) {
+      const { syncRecurringServicePeriodsForContractLine } = await import('@alga-psa/billing/actions/recurringServicePeriodSync');
+      await db.transaction((tx) => syncRecurringServicePeriodsForContractLine(tx, { tenant, contractLineId: lineId, sourceRunPrefix: 'invoice-ticket-acceptance' }));
+      await db.transaction((tx) => syncRecurringServicePeriodsForContractLine(tx, { tenant, contractLineId: usageLineId, sourceRunPrefix: 'invoice-ticket-acceptance' }));
+    }
     return { tenant, userId, clientId, contractId, lineId, serviceId, cycleId, profileId, usageLineId, usageServiceId, taxRateId, regionCode };
 }
 
