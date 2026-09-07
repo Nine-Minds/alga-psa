@@ -1998,3 +1998,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Assigned existing product-upgrade-role-grants.contract.test.ts to the Temporal readiness config and independent discovery. It loads the real CommonJS grant/catalog modules and checks default role exports, resolvable permission keys and retired permission absence; no source-string tests were introduced.
 - All three existing cases pass through the configured Vitest runner (192ms), /tmp/alga-role-grants-assignment.log. No broader native or role-upgrade DB claim; this closes only its local runner assignment gap. Publication approval remains pending.
+
+### 2026-09-07 — exercise production workflow index bundles
+
+- Added an engine test that bundles both source production workflow indexes, starts workers on owned Temporal servers and executes readinessWorkflow and marketingFanoutWorkflow by registered name. It verifies echo identity, per-tenant activity calls and exact fan-out results. Assigned to engine config and independent discovery.
+- Both cases pass in 1.80 seconds (/tmp/alga-production-index-engine.log). This catches bundle/export/dispatch problems missed by individual-workflow imports. Activity implementations are synthetic, so this does not prove production activity-index registration, built-image packaging or provider side effects. Existing unassigned registration/source-contract files are not silently removed or counted as covered.

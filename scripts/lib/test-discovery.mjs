@@ -41,6 +41,7 @@ export function isApplianceNodeTest(file) {
 export function isAdditionalWorkspaceTest(file, lane) {
   if (lane === 'temporal-database') return file === 'ee/temporal-workflows/src/db/__tests__/database-connection.integration.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts' || file === 'ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts' || /^ee\/temporal-workflows\/src\/db\/__tests__\/(product-upgrade-operations|tenant-setup-idempotency)\.integration\.test\.ts$/.test(file);
   if (lane === 'temporal-engine') {
+    if (file === 'ee/temporal-workflows/src/workflows/__tests__/production-index.engine.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/test-utils/test-connection.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.engine.test.ts') return true;
     return file === 'ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts'

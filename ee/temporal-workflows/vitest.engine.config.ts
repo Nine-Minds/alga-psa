@@ -7,6 +7,7 @@ export default {
   test: {
     ...base.test,
     include: [
+      'src/workflows/__tests__/production-index.engine.test.ts',
       'src/test-utils/test-connection.test.ts',
       'src/workflows/__tests__/generic-job-workflow.engine.test.ts',
       'src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts',
