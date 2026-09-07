@@ -9,8 +9,11 @@ vi.mock('@alga-psa/core/logger', () => ({ default: {
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: async () => process.env.REDIS_PASSWORD || undefined,
 }));
+vi.mock('../../lib/utils/getSecret', () => ({
+  getSecret: async () => process.env.REDIS_PASSWORD || undefined,
+}));
 
-it('delivers to subscribers from independently loaded bundles and reconnects after close', async () => {
+it('delivers across package bundles and the legacy server entry point, then reconnects after close', async () => {
   const tenant = randomUUID();
   const prefix = `bundle-test:${tenant}:`;
   const channel = `bundle-${tenant}`;
@@ -34,23 +37,31 @@ it('delivers to subscribers from independently loaded bundles and reconnects aft
     const secondModule = await import('../../../../packages/event-bus/src/eventBus');
     const second = secondModule.getEventBus();
     openBuses.add(second);
+    const legacyModule = await import('../../lib/eventBus/index');
+    const legacy = legacyModule.getEventBus();
+    openBuses.add(legacy);
     const calendar = vi.fn(async (_event: { id: string }) => {});
     const search = vi.fn(async (_event: { id: string }) => {});
+    const legacySearch = vi.fn(async (_event: { id: string }) => {});
     await first.subscribe('CUSTOM_EVENT', calendar, { channel, subscriberId: 'calendar' });
     await second.subscribe('CUSTOM_EVENT', search, { channel, subscriberId: 'search' });
+    await legacy.subscribe('CUSTOM_EVENT', legacySearch, { channel, subscriberId: 'legacy-search' });
     for (let sequence = 0; sequence < 3; sequence++) {
       await second.publish({ eventType: 'CUSTOM_EVENT', payload: { tenantId: tenant } }, { channel, strict: true });
     }
-    await expect.poll(() => [calendar.mock.calls.length, search.mock.calls.length], { timeout: 5000 }).toEqual([3, 3]);
+    await expect.poll(() => [calendar.mock.calls.length, search.mock.calls.length, legacySearch.mock.calls.length], { timeout: 5000 }).toEqual([3, 3, 3]);
     const calendarIds = calendar.mock.calls.map(([event]) => event.id).sort();
     expect(new Set(calendarIds).size).toBe(3);
     expect(search.mock.calls.map(([event]) => event.id).sort()).toEqual(calendarIds);
+    expect(legacySearch.mock.calls.map(([event]) => event.id).sort()).toEqual(calendarIds);
     expect(firstModule.isEventBusConnected()).toBe(true);
     expect(secondModule.isEventBusConnected()).toBe(true);
+    expect(legacyModule.isEventBusConnected()).toBe(true);
 
     await first.close();
     openBuses.delete(first);
     expect(secondModule.isEventBusConnected()).toBe(false);
+    expect(legacyModule.isEventBusConnected()).toBe(false);
     const reopened = firstModule.getEventBus();
     openBuses.add(reopened);
     const replacement = vi.fn(async () => {});
@@ -60,7 +71,7 @@ it('delivers to subscribers from independently loaded bundles and reconnects aft
     // Closing a stale handle must not close the replacement connection.
     await second.close();
     expect(secondModule.isEventBusConnected()).toBe(true);
-    expect([calendar.mock.calls.length, search.mock.calls.length]).toEqual([3, 3]);
+    expect([calendar.mock.calls.length, search.mock.calls.length, legacySearch.mock.calls.length]).toEqual([3, 3, 3]);
   } finally {
     for (const bus of openBuses) await bus.close();
     if (control.isOpen) {
