@@ -3,6 +3,16 @@ import type { ControlRegistry } from '@alga-psa/emulator-host';
 import type { XeroEmulatorCore } from './core';
 
 export function register(reg: ControlRegistry, core: XeroEmulatorCore): void {
+  reg.seeder({
+    name: 'application',
+    description: 'Register an OAuth application with exact callback URLs and confidential secret or required PKCE',
+    params: z.discriminatedUnion('type', [
+      z.object({ type: z.literal('confidential'), clientId: z.string().min(1), clientSecret: z.string().min(1), redirectUris: z.array(z.string().url()).min(1) }),
+      z.object({ type: z.literal('pkce'), clientId: z.string().min(1), redirectUris: z.array(z.string().url()).min(1) }),
+    ]),
+    run: params => core.registerApplication(params),
+  });
+
   reg.action({
     name: 'select-organisation',
     description: 'Place a connected organisation first in /connections, selecting Alga\'s supported default live context',

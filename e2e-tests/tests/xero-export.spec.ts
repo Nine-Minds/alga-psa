@@ -17,6 +17,9 @@ if (process.env.E2E_EDITION !== 'enterprise') {
 } else {
   test('Xero OAuth and UI mapping export to the selected organisation and recover without duplicate invoices', async ({ page, credentials, database, emulators }) => {
     test.setTimeout(300000);
+    await emulators.seed('xero', 'application', { type: 'confidential', clientId: 'browser-xero-client',
+      clientSecret: 'browser-xero-secret', redirectUris: [new URL('/api/integrations/xero/callback',
+        process.env.E2E_BASE_URL || 'http://localhost:3000').toString()] });
     const [unselected] = await emulators.state('xero', 'organisations') as Organisation[];
     const organisation = await emulators.seed('xero', 'organisation', { tenantName: 'Browser selected organisation' }) as Organisation;
     // The shipped integration uses the first connected organisation. Choose

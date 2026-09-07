@@ -535,3 +535,17 @@ Rules that keep the suite coherent:
 
 Add the package to `SUITE_EMULATORS` in [suite/src/index.ts](suite/src/index.ts)
 and to the `PACKAGES` list in [build-image.sh](build-image.sh).
+
+### Xero OAuth application fixtures
+
+After each emulator reset, seed `application` before starting OAuth. Confidential
+applications require `type: "confidential"`, `clientId`, `clientSecret`, and an
+array of exact `redirectUris`. Public applications use `type: "pkce"`, `clientId`
+and `redirectUris`; authorization requires an S256 challenge and token exchange
+requires its matching verifier. Token requests support form credentials or HTTP
+Basic authentication. Invalid secrets, client/code identity and callback mismatches
+are rejected without consuming a valid grant. Reset removes registrations and tokens.
+
+The application seeder returns only client ID and type. It does not register a real
+Xero application. Per-client organisation consent and live-provider drift checks
+remain outside this emulator's current coverage.

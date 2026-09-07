@@ -1624,3 +1624,9 @@
 - Wire regression initially accepted invalid challenge method (302 vs400). Authorization now validates supplied S256 challenge; exchange requires43–128character verifier with matching SHA256 base64url before consuming code. Wrong/missing verifiers preserve the grant, and a successful exchange consumes it.
 - All10Xero wire tests and package typecheck pass. Application registry/secret validation remain outstanding, so absence of PKCE cannot yet be checked against registered application type. F037 remains incomplete. Evidence: evidence/xero-pkce-verification.json.
 - Published browser run34113539423 now executes jobs101721277526(EE) and101721277537(CE); preserve active run before publishing follow-ups.
+
+### 2026-09-07 — Registered Xero applications close credential gap
+
+- Added explicit application seeder (confidential secret or public PKCE, exact redirect URIs). Unknown applications, wrong callback and unsupported response type reject authorization. Confidential code/refresh exchange validates secret; registered PKCE type requires challenge even when request omits all PKCE fields. Reset clears registrations and tokens. Seeder response excludes secret.
+- Wrong-secret wire regression reproduced200vs401 before repair. Full11wiretests now pass, including wrong refresh secret preserving valid token and reset cleanup; package typecheck passes. Browser Xero fixture seeds synthetic application and still collects. README documents mandatory fixture setup.
+- Prior PKCE/client-binding evidence limitations about missing registration are superseded by evidence/xero-application-registration.json; per-client organisation consent, live drift and native browser verification remain outstanding. F037 not complete.

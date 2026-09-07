@@ -49,7 +49,11 @@ const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoic
  * shipped integration touches (Invoices, Contacts, and read-only settings).
  * Time flows through env.clock, randomness through env.rng.
  */
+export type XeroApplication = { clientId: string; redirectUris: string[] } &
+  ({ type: 'confidential'; clientSecret: string } | { type: 'pkce' });
+
 export class XeroEmulatorCore implements EmulatorCore {
+  private applications = new Map<string, XeroApplication>();
   accessTokenTtlSeconds = 1800;
   authorizeRequests: XeroAuthorizeRequest[] = [];
   private codes = new Map<string, { clientId: string; redirectUri: string; scope: string; codeChallenge?: string }>();
@@ -65,6 +69,7 @@ export class XeroEmulatorCore implements EmulatorCore {
   }
 
   reset(): void {
+    this.applications.clear();
     this.authorizeRequests = [];
     this.codes.clear();
     this.accessTokens.clear();
@@ -90,13 +95,29 @@ export class XeroEmulatorCore implements EmulatorCore {
 
   // --- OAuth (identity.xero.com authorize + connect/token) ---
 
+  registerApplication(application: XeroApplication): { clientId: string; type: string } {
+    this.applications.set(application.clientId, structuredClone(application));
+    return { clientId: application.clientId, type: application.type };
+  }
+
+  private authenticateClient(clientId: string, secret: string | undefined): void {
+    const app = this.applications.get(clientId);
+    if (!app || (app.type === 'confidential' && app.clientSecret !== secret)) {
+      throw new XeroWireError(401, { error: 'invalid_client' });
+    }
+  }
+
   authorize(query: Record<string, string>): { redirectUri: string; code: string; state: string } {
     const redirectUri = query.redirect_uri ?? '';
     if (!query.client_id || !redirectUri) {
       throw new XeroWireError(400, { error: 'invalid_request', Detail: 'client_id and redirect_uri are required' });
     }
+    const app = this.applications.get(query.client_id);
+    if (!app || !app.redirectUris.includes(redirectUri) || query.response_type !== 'code') {
+      throw new XeroWireError(400, { error: 'invalid_request' });
+    }
     const codeChallenge = query.code_challenge;
-    if ((codeChallenge !== undefined || query.code_challenge_method !== undefined)
+    if ((app.type === 'pkce' || codeChallenge !== undefined || query.code_challenge_method !== undefined)
       && (query.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(codeChallenge ?? ''))) {
       throw new XeroWireError(400, { error: 'invalid_request' });
     }
@@ -120,6 +141,7 @@ export class XeroEmulatorCore implements EmulatorCore {
       if (!record || record.clientId !== params.client_id || record.redirectUri !== params.redirect_uri) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
+      this.authenticateClient(record.clientId, params.client_secret);
       if (record.codeChallenge) {
         const verifier = params.code_verifier ?? '';
         if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)
@@ -135,6 +157,7 @@ export class XeroEmulatorCore implements EmulatorCore {
       if (!record || record.clientId !== params.client_id) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
+      this.authenticateClient(record.clientId, params.client_secret);
       this.refreshTokens.delete(String(params.refresh_token));
       return this.issueTokens(record.scope, record.clientId);
     }
