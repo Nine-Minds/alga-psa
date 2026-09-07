@@ -24,7 +24,7 @@ vi.mock('@alga-psa/auth', async importOriginal => {
   };
 });
 import { listWorkflowRunStepsAction, exportWorkflowRunDetailAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
-import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep, executeWorkflowRuntimeV2NodeStep } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
+import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep, executeWorkflowRuntimeV2NodeStep, completeWorkflowRuntimeV2Run } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
 
 let db: Knex;
 beforeAll(async () => {
@@ -289,3 +289,116 @@ it.each(['unavailable', 'throws'])('sanitizes HTML even when the reply parser %s
     expect(snapshot.envelope_json.vars.parsedEmail.sanitizedHtml).toBe(parsed.sanitizedHtml);
   } finally { handler.mockRestore(); }
 });
+
+
+it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 'resolution-failure'])('persists the shipped email workflow through Temporal and real activities: %s', async scenario => {
+  const { Worker } = await import('@temporalio/worker');
+  const { TestWorkflowEnvironment } = await import('@temporalio/testing');
+  const { readFileSync } = await import('node:fs');
+  const path = await import('node:path');
+  const root = path.resolve(__dirname, '../../../..');
+  const definition = JSON.parse(readFileSync(path.join(root, 'shared/workflow/runtime/workflows/email-processing-workflow.v2.json'), 'utf8'));
+  const f = await fixture();
+  initializeWorkflowRuntimeV2();
+  const ticketContext = { ticketDefaults: scenario === 'no-defaults' ? null : { board_id: 'board-email', status_id: 'status-email' },
+    matchedClient: { contact_id: 'contact-email', client_id: 'client-email', name: 'Synthetic Contact', email: 'sender@example.invalid' },
+    targetClientId: 'client-email', targetContactId: 'contact-email', targetAuthorUserId: null, targetLocationId: 'location-email' };
+  const handlers: Record<string, ReturnType<typeof vi.spyOn>> = {};
+  const outputs = {
+    resolve_existing_ticket_from_email: { success: scenario === 'reply', ticket: scenario === 'reply' ? { ticketId: 'ticket-existing' } : null, source: scenario === 'reply' ? 'replyToken' : null },
+    resolve_inbound_ticket_context: ticketContext,
+    create_ticket_with_initial_comment: { ticket_id: 'ticket-new', ticket_number: 'T-1', comment_id: 'comment-new' },
+    create_comment_from_parsed_email: { comment_id: 'comment-reply' },
+    process_email_attachments_batch: { processed: 1, failed: 0 },
+    send_ticket_acknowledgement_email: { success: true },
+    create_human_task_for_email_processing_failure: { task_id: 'task-email' },
+  };
+  for (const [id, output] of Object.entries(outputs)) {
+    handlers[id] = vi.spyOn(getActionRegistryV2().get(id, 1)!, 'handler').mockResolvedValue(output);
+  }
+  const failedAction = scenario === 'ack-failure' ? 'send_ticket_acknowledgement_email'
+    : scenario === 'attachment-failure' ? 'process_email_attachments_batch'
+    : scenario === 'resolution-failure' ? 'resolve_existing_ticket_from_email' : null;
+  if (failedAction) handlers[failedAction].mockRejectedValue(new Error(`synthetic ${scenario}`));
+  let environment: Awaited<ReturnType<typeof TestWorkflowEnvironment.createTimeSkipping>> | undefined;
+  try {
+    environment = await TestWorkflowEnvironment.createTimeSkipping();
+    const taskQueue = `email-persistence-${randomUUID()}`;
+    const payload = { tenantId: f.tenant, providerId: 'provider-email', emailData: { id: 'message-email', subject: 'Help with printer',
+      from: { email: 'sender@example.invalid' }, body: { text: 'Please help with the printer.', html: '<p>Please help with the printer.</p>' },
+      attachments: [{ id: 'attachment-email', name: 'example.txt', contentType: 'text/plain', size: 10 }] } };
+    const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue,
+      workflowsPath: path.join(root, 'ee/temporal-workflows/src/workflows/workflow-runtime-v2-run-workflow.ts'),
+      bundlerOptions: { webpackConfigHook: config => ({ ...config, resolve: { ...config.resolve,
+        alias: { ...config.resolve?.alias, '@alga-psa/workflows': path.join(root, 'ee/packages/workflows/src') } } }) },
+      activities: {
+        loadWorkflowRuntimeV2PinnedDefinition: async () => ({ definition, initialScopes: {
+          payload, workflow: {}, lexical: [], meta: {}, error: null,
+          system: { runId: f.runId, tenantId: f.tenant, workflowId: definition.id, workflowVersion: definition.version, definitionHash: null, runtimeSemanticsVersion: null } } }),
+        // Seed step starts without quota accounting; completions and all action/node
+        // activity behavior use production persistence against the isolated schema.
+        projectWorkflowRuntimeV2StepStart: async ({ runId, stepPath, definitionStepId }: any) => {
+          const stepId = randomUUID();
+          await state.trx!('workflow_run_steps').insert({ step_id: stepId, tenant: f.tenant, run_id: runId, step_path: stepPath,
+            definition_step_id: definitionStepId, status: 'RUNNING' });
+          return { stepId };
+        },
+        projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2NodeStep, executeWorkflowRuntimeV2ActionStep, completeWorkflowRuntimeV2Run,
+      } });
+    await worker.runUntil(() => environment!.client.workflow.execute('workflowRuntimeV2RunWorkflow', {
+      taskQueue, workflowId: randomUUID(), workflowExecutionTimeout: '30s',
+      args: [{ runId: f.runId, tenantId: f.tenant, workflowId: definition.id, workflowVersion: definition.version }],
+    }));
+    expect(await state.trx!('workflow_runs').where({ run_id: f.runId }).first()).toMatchObject({ status: 'SUCCEEDED' });
+    const snapshots = await state.trx!('workflow_run_snapshots').where({ run_id: f.runId }).orderBy('created_at', 'desc');
+    const final = snapshots[0].envelope_json;
+    expect(final.payload).toEqual(payload);
+    expect(Number.isNaN(Date.parse(final.vars.processedAt))).toBe(false);
+    expect(final.vars.parsedEmail.metadata.parser).toBeDefined();
+    const invocations = await state.trx!('workflow_action_invocations').where({ run_id: f.runId });
+    expect(invocations.filter(row => row.status === 'FAILED').map(row => row.action_id)).toEqual(failedAction ? [failedAction] : []);
+    if (scenario === 'no-defaults') {
+      expect(final.meta.state).toBe('ERROR_NO_TICKET_DEFAULTS');
+      expect(final.vars.createdTicket).toBeUndefined();
+      expect(handlers.create_ticket_with_initial_comment).not.toHaveBeenCalled();
+      expect(handlers.process_email_attachments_batch).not.toHaveBeenCalled();
+      return;
+    }
+    if (scenario === 'resolution-failure') {
+      expect(final.meta.state).toBe('AWAITING_MANUAL_RESOLUTION');
+      expect(snapshots.some(row => row.envelope_json.meta?.state === 'ERROR_PROCESSING_EMAIL')).toBe(true);
+      expect(handlers.create_human_task_for_email_processing_failure).toHaveBeenCalledWith(expect.objectContaining({
+        contextData: expect.objectContaining({ emailId: payload.emailData.id, providerId: payload.providerId,
+          senderEmail: payload.emailData.from.email, errorMessage: expect.stringContaining('synthetic resolution-failure') }),
+      }), expect.anything());
+      expect(handlers.create_ticket_with_initial_comment).not.toHaveBeenCalled();
+      return;
+    }
+    expect(handlers.create_human_task_for_email_processing_failure).not.toHaveBeenCalled();
+    const target = scenario === 'reply' ? 'ticket-existing' : 'ticket-new';
+    expect(invocations.find(row => row.action_id === 'process_email_attachments_batch')?.idempotency_key)
+      .toBe(`${f.tenant}:message-email:${target}:attachments`);
+    if (scenario === 'reply') {
+      expect(final.vars.ticketContext).toBeUndefined();
+      expect(handlers.create_ticket_with_initial_comment).not.toHaveBeenCalled();
+      expect(handlers.create_comment_from_parsed_email).toHaveBeenCalledWith(expect.objectContaining({
+        author_type: 'contact', parsedEmail: expect.objectContaining({ metadata: final.vars.parsedEmail.metadata }),
+      }), expect.anything());
+      expect(invocations.find(row => row.action_id === 'create_comment_from_parsed_email')?.idempotency_key)
+        .toBe(`${f.tenant}:message-email:ticket-existing`);
+    } else {
+      expect(final.meta.state).toBe('EMAIL_PROCESSED');
+      expect(final.vars.ticketContext).toEqual(ticketContext);
+      expect(handlers.resolve_inbound_ticket_context).toHaveBeenCalledWith({ tenantId: f.tenant, providerId: payload.providerId, senderEmail: payload.emailData.from.email }, expect.anything());
+      expect(final.vars.createdTicket).toMatchObject({ ticket_id: 'ticket-new' });
+      expect(handlers.create_ticket_with_initial_comment).toHaveBeenCalledWith(expect.objectContaining({
+        ticketDefaults: ticketContext.ticketDefaults, targetLocationId: 'location-email', parsedEmail: final.vars.parsedEmail,
+      }), expect.anything());
+      expect(handlers.send_ticket_acknowledgement_email).toHaveBeenCalledOnce();
+      expect(invocations.find(row => row.action_id === 'create_ticket_with_initial_comment')?.idempotency_key)
+        .toBe(`${f.tenant}:provider-email:message-email`);
+    }
+  } finally {
+    try { await environment?.teardown(); } finally { Object.values(handlers).forEach(handler => handler.mockRestore()); }
+  }
+}, 60_000);
