@@ -2237,3 +2237,31 @@ describe('project email subscriber rich text formatting', () => {
     expect(processed.html).not.toContain('[{');
   });
 });
+
+describe('durable caller email outcomes', () => {
+  it('preserves caller retry policy and reports accepted, queued and intentionally skipped outcomes', async () => {
+    const { sendEventEmailWithOutcome } = await import('../../lib/notifications/sendEventEmail');
+    const template = `template-${randomUUID()}`;
+    seedTemplate(template, 'Notice {{body}}', '<p>{{body}}</p>');
+    const params = { tenantId: randomUUID(), to: 'recipient@example.test', subject: 'Notice', template, context: { body: 'Current authorized content' }, retryPolicy: 'caller' as const };
+    sendEmailMock.mockResolvedValueOnce({ success: true });
+    expect(await sendEventEmailWithOutcome(params)).toBe('sent');
+    expect(sendEmailMock.mock.calls[0][0]).toMatchObject({ retryPolicy: 'caller' });
+    sendEmailMock.mockResolvedValueOnce({ success: true, queued: true } as any);
+    const token = randomUUID();
+    expect(await sendEventEmailWithOutcome({ ...params, retryPolicy: 'queue', replyContext: { ticketId: randomUUID(), conversationToken: token } })).toBe('queued');
+    expect(tokenStore.has(token)).toBe(true);
+    sendEmailMock.mockResolvedValueOnce({ success: false, error: 'Email service is disabled or not configured' } as any);
+    expect(await sendEventEmailWithOutcome(params)).toBe('skipped');
+  });
+  it('propagates the retryable provider result for the durable caller without recording a reply token', async () => {
+    const { sendEventEmailWithOutcome } = await import('../../lib/notifications/sendEventEmail');
+    const template = `template-${randomUUID()}`;
+    seedTemplate(template, 'Notice', '<p>{{body}}</p>');
+    sendEmailMock.mockResolvedValueOnce({ success: false, error: 'Rate limit exceeded: tenant_limit', metadata: { retryable: true, errorCode: 'rate_limited', retryAfterMs: 45000 } } as any);
+    const token = randomUUID();
+    await expect(sendEventEmailWithOutcome({ tenantId: randomUUID(), to: 'recipient@example.test', subject: 'Notice', template, context: { body: 'Authorized now' },
+      retryPolicy: 'caller', replyContext: { ticketId: randomUUID(), conversationToken: token } })).rejects.toMatchObject({ name: 'EmailProviderError', isRetryable: true, errorCode: 'rate_limited' });
+    expect(tokenStore.has(token)).toBe(false);
+  });
+});

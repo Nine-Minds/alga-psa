@@ -137,3 +137,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: event-bus publisher/stream processing, co-managed search and internal-notification completion recovery.
 - Gate: high duplicate/lost-delivery cost, stable subscriber/channel identities, two concrete transactional consumers; ACT / bounded engine revision with regression coverage.
 - Status: revised (2026-09-07). Explicit targeted force replay bypasses fanout/workflow publication and only dispatches its named subscriber. Processed event/handler tuples include the channel. Existing untargeted publication semantics remain covered by pending/poison tests; durable consumer effects and completion stay in their own source-owned transaction.
+
+## Authorization-aware email retries — friction
+- What: the generic tenant email rate-limit path serializes rendered messages into a delayed queue; co-managed retries must reload current content, recipients and grants instead.
+- Where: TenantEmailService rate limiting, sendEventEmail outcome handling, upcoming co-managed recipient delivery queue.
+- Gate: high stale-content disclosure cost and a stable existing send boundary; ACT / bounded opt-in engine revision.
+- Status: revised (2026-09-07). Explicit caller-owned retry returns rate-limit metadata without enqueueing rendered content. A result-returning event-email entry point distinguishes sent, queued and skipped outcomes; the existing void entry point preserves its contract and queued reply tokens. The co-managed recipient queue remains the next integration step.

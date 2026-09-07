@@ -86,6 +86,8 @@ export interface SendEmailParams {
    * If provided, the system will attempt to use this provider instead of the tenant default.
    */
   providerId?: string;
+  /** Retry authority stays with a caller that must revalidate access. */
+  retryPolicy?: 'queue' | 'caller';
 }
 
 function applyReplyMarkers(
@@ -176,6 +178,12 @@ async function persistReplyToken(
 // Template lookup and sending are handled below using DatabaseTemplateProcessor
 
 export async function sendEventEmail(params: SendEmailParams): Promise<void> {
+  await sendEventEmailWithOutcome(params);
+}
+
+/** Distinguishes transport acceptance from intentional skips and generic queue
+ * acceptance. Durable callers use retryPolicy=caller and own retry scheduling. */
+export async function sendEventEmailWithOutcome(params: SendEmailParams): Promise<'sent' | 'skipped' | 'queued'> {
   try {
     logger.info('[SendEventEmail] 🚀 NEW EMAIL PROVIDER MANAGER VERSION - Preparing to send email:', {
       to: params.to,
@@ -445,6 +453,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       headers: { ...AUTO_GENERATED_MAIL_HEADERS, ...params.headers },
       attachments: params.attachments,
       providerId: params.providerId,
+      retryPolicy: params.retryPolicy,
       from: params.from,
       userId: params.recipientUserId  // For rate limiting
     });
@@ -459,7 +468,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
           template: params.template,
           providerId: params.providerId
         });
-        return;
+        return 'skipped';
       }
 
       const providerId = result.providerId || params.providerId || 'unknown';
@@ -526,6 +535,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
       tenantId: params.tenantId,
       template: params.template
     });
+    return result.queued ? 'queued' : 'sent';
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     if (isEmailServiceDisabledErrorMessage(errorMessage)) {
@@ -536,7 +546,7 @@ export async function sendEventEmail(params: SendEmailParams): Promise<void> {
         template: params.template,
         providerId: params.providerId
       });
-      return;
+      return 'skipped';
     }
 
     logger.error('[SendEventEmail] Failed to publish email event:', {

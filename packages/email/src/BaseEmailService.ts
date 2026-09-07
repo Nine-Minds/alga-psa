@@ -72,6 +72,9 @@ export interface BaseEmailParams {
   headers?: Record<string, string>;
   providerId?: string;
   userId?: string;  // For per-user rate limiting (optional)
+  /** A durable authorization-aware caller must re-load content and recipients
+   * before retrying. Do not put its rendered message in a generic retry queue. */
+  retryPolicy?: 'queue' | 'caller';
   /**
    * Optional entity association context for downstream logging/analytics.
    * These are persisted to `email_sending_logs` when available.
