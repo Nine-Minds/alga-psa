@@ -4,9 +4,15 @@ import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import WorkflowDefinition from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
 import WorkflowRun from '@alga-psa/workflows/persistence/workflowRunModelV2';
-import Invocation from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
+import Invocation, { type WorkflowActionInvocationRecord } from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
 
 const actionHandler = vi.hoisted(() => vi.fn());
+const registeredAction = vi.hoisted(() => ({ current: null as any }));
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...await importOriginal<any>(),
+  withAdminTransaction: async (fn: any) => db.transaction(fn),
+}));
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishEvent: vi.fn(), publishWorkflowEvent: vi.fn() }));
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => db,
   retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
@@ -14,7 +20,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 vi.mock('@alga-psa/workflows/runtime/core', async (importOriginal) => ({
   ...await importOriginal<any>(),
   initializeWorkflowRuntimeV2: () => {},
-  getActionRegistryV2: () => ({ get: () => ({
+  getActionRegistryV2: () => ({ get: () => registeredAction.current ?? ({
     inputSchema: { parse: (value: unknown) => value },
     outputSchema: { parse: (value: unknown) => value },
     handler: actionHandler,
@@ -26,7 +32,7 @@ beforeAll(async () => { db = await createTestDbConnection(); }, 180_000);
 afterAll(async () => { await db?.destroy(); });
 it('persists one concurrent invocation per tenant key and isolates lookup and updates', async () => {
   const tenants = [randomUUID(), randomUUID()];
-  const records = [];
+  const records: Array<Pick<WorkflowActionInvocationRecord, 'tenant' | 'run_id' | 'step_path' | 'action_id' | 'action_version' | 'idempotency_key' | 'status' | 'attempt' | 'input_json'>> = [];
   for (const tenant of tenants) {
     const workflow = await WorkflowDefinition.create(db, tenant, {
       name: 'Invocation persistence regression', payload_schema_ref: 'payload.EmailWorkflowPayload.v1',
@@ -86,4 +92,39 @@ it('retries a failed activity on its persisted row and replays success without a
     input_json: { messageId: 'message-retry' }, output_json: { commentId: 'comment-recovered' } });
   expect(actionHandler).toHaveBeenCalledTimes(2);
   expect(actionHandler).toHaveBeenLastCalledWith({ messageId: 'message-retry' }, expect.objectContaining({ attempt: 2, idempotencyKey: `${tenant}:message-retry` }));
+});
+
+it('persists one real email comment and ticket response state across activity replay', async () => {
+  const { createTestEnvironment } = await import('../../../test-utils/testDataFactory');
+  const env = await createTestEnvironment(db);
+  const tenant = env.tenantId;
+  const ticketId = randomUUID();
+  await db('tickets').insert({ tenant, ticket_id: ticketId, ticket_number: 'EMAIL-REPLAY', title: 'Email reply', client_id: env.clientId, entered_at: db.fn.now(), updated_at: db.fn.now() });
+  const { registerEmailWorkflowActionsV2 } = await import('@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions');
+  const { getActionRegistryV2 } = await import('@alga-psa/shared/workflow/runtime/registries/actionRegistry');
+  registerEmailWorkflowActionsV2();
+  registeredAction.current = getActionRegistryV2().get('create_comment_from_parsed_email', 1);
+  expect(registeredAction.current).toBeDefined();
+  try {
+    const workflow = await WorkflowDefinition.create(db, tenant, { name: 'Real email reply', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
+    const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+    const input: any = {
+      runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
+      step: { type: 'action.call', config: { actionId: 'create_comment_from_parsed_email', version: 1,
+        inputMapping: { ticketId, emailData: { id: 'persisted-email', subject: 'Re: Email reply', from: { email: 'sender@example.com' }, body: { text: 'Customer reply' } },
+          parsedEmail: { sanitizedText: 'Customer reply' }, author_type: 'contact', source: 'email' },
+        idempotencyKey: { $expr: 'payload.messageId' } } },
+      scopes: { payload: { messageId: 'persisted-email' }, workflow: {}, lexical: [], meta: {}, error: null,
+        system: { runId: run.run_id, workflowId: workflow.workflow_id, workflowVersion: 1, tenantId: tenant } },
+    };
+    const first = await executeWorkflowRuntimeV2ActionStep(input);
+    expect(await executeWorkflowRuntimeV2ActionStep(input)).toEqual(first);
+    const comments = await db('comments').where({ tenant, ticket_id: ticketId });
+    expect(comments).toHaveLength(1);
+    expect(first.output).toEqual({ comment_id: comments[0].comment_id });
+    expect(comments[0].note).toContain('Customer reply');
+    expect((await db('tickets').where({ tenant, ticket_id: ticketId }).first()).response_state).toBe('awaiting_internal');
+    expect(await Invocation.listByRun(db, run.run_id, tenant)).toHaveLength(1);
+  } finally { registeredAction.current = null; }
 });
