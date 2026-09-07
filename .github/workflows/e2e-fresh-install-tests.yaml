@@ -199,7 +199,7 @@ jobs:
 
   production-browser:
     name: Production browser (${{ matrix.edition }})
-    needs: [changes, build-images]
+    needs: [changes, browser-collection, build-images]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -220,6 +220,7 @@ jobs:
         env:
           CHANGES_RESULT: ${{ needs.changes.result }}
           RUN_TESTS: ${{ needs.changes.outputs.run_tests }}
+          COLLECTION_RESULT: ${{ needs.browser-collection.result }}
           BUILD_RESULT: ${{ needs.build-images.result }}
         run: |
           test "$CHANGES_RESULT" = success

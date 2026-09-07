@@ -1346,3 +1346,9 @@
 - Session 42692 terminated successfully (exit 0). Actual Vitest test-name collection contains 14539 identities, representing all 2692 files. Updated evidence/server-unit-collection-artifacts.json; no active local collection session remains.
 - Mobile CI previously ran npm test without retaining raw execution or collection artifacts. Added generated-editor preparation before actual Vitest file/name collection, empty-collection rejection, and JSON execution reporting while retaining npm test. Always upload test-results/mobile as mobile-execution.
 - Local mobile file collection found all 134 files using the root Vitest installation; emitted missing expo/tsconfig.base warning because mobile-local dependencies are absent. This proves file discovery only, not mobile execution. Native exact mobile collection/execution verification is pending. Workflow YAML parsed and Bash syntax checked.
+
+### 2026-09-07 — Native browser prerequisite wiring repair
+
+- Native browser jobs 101685165287 (CE) and 101685165359 (EE), run 34102126365, both failed before checkout/application startup. Their shell gate reads COLLECTION_RESULT but the step omitted that env variable and the job omitted browser-collection from direct needs.
+- Added the direct dependency and needs.browser-collection.result env binding. Executed the actual YAML shell step with simulated GitHub needs resolution: original exits 1 with all producers successful; repaired exits 0; missing/failed/cancelled/skipped mandatory collection exits 1; documented no-application-change selection exits 0. Temporary reproduction: /tmp/alga-verify-browser-prerequisite.cjs.
+- Both browser jobs and aggregate are terminal, so publication can proceed without cancelling a live browser build. Updated native application/API outcomes are still unverified because no browser runtime started in this run.
