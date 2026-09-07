@@ -1068,3 +1068,7 @@
 - Initial run session 52282 terminated failure due to sandbox EPERM on loopback servers and an owned generated Next debug directory being scanned by Graph endpoint guard. Preserved that directory at /tmp/alga-accounting-api-dev-82cc-preserved, outside source discovery.
 - Escalated rerun session 21793 completed successfully: 37 required files, 456 passed assertions, zero failed/skipped/todo/cancelled, 117.45 seconds. Discovery and execution reconciliation passed, before/after revision 8e61f221a7 both clean. Existing one manual localization baseline exclusion remains visible. Evidence: node-tooling-metrics-full.json.
 - Native candidate remains 2de93c8492; these newer metrics commits are not yet natively verified. Calendar browser source audit reconfirms outbound UI create/delete coverage is still missing; current test covers vendor create/delete and UI edit only.
+
+### Microsoft calendar outbound browser expansion — 2026-09-07
+- Extended the existing isolated Microsoft OAuth journey with UI create/delete, persisted mapping and schedule checks, vendor state readback, reload checks and successful POST/DELETE request evidence. No server-action interception or auth bypass added.
+- Focused TypeScript check passed. Collection passed using the e2e-tests-local Playwright binary (the root binary initially produced a duplicate Playwright instance error). The expanded browser journey has NOT executed; native candidate 2de93 predates it. Evidence: calendar-outbound-browser-expansion.json. F034 stays incomplete.

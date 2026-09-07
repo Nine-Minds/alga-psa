@@ -61,6 +61,41 @@ if (process.env.E2E_EDITION !== 'enterprise') {
       expect(subscriptions).toContainEqual(expect.objectContaining({ id: config.webhook_subscription_id,
         notificationUrl: 'https://calendar-callback:3443/api/calendar/webhooks/microsoft', resource: '/me/calendar/events' }));
 
+      // Exercise outbound creation and deletion through the shipped calendar,
+      // before the separate inbound event/recovery journey below.
+      const outboundTitle = `@alga UI-created visit ${actors.runId}`;
+      await page.goto('/msp/schedule');
+      await page.locator('.rbc-day-slot.rbc-today .rbc-time-slot').nth(24).click();
+      const newEntryDialog = page.getByRole('dialog', { name: 'New Entry', exact: true });
+      await newEntryDialog.locator('#title').fill(outboundTitle);
+      await newEntryDialog.locator('#save-entry-btn').click();
+      await expect(newEntryDialog).toBeHidden();
+      await expect.poll(async () => (await database('schedule_entries').where({ ...scope, title: outboundTitle })).length).toBe(1);
+      const outboundEntry = await database('schedule_entries').where({ ...scope, title: outboundTitle }).first();
+      const outboundMappingScope = { ...providerScope, schedule_entry_id: outboundEntry.entry_id };
+      await expect.poll(async () => (await database('calendar_event_mappings').where(outboundMappingScope)).length,
+        { timeout: 60000 }).toBe(1);
+      const outboundMapping = await database('calendar_event_mappings').where(outboundMappingScope).first();
+      await expect.poll(async () => await emulators.state<GraphEvent[]>('msgraph', 'calendar-events'),
+        { timeout: 60000 }).toEqual([expect.objectContaining({ id: outboundMapping.external_event_id, subject: outboundTitle })]);
+      await page.reload();
+      const outboundEvent = page.locator('.rbc-event').filter({ hasText: outboundTitle });
+      await expect(outboundEvent).toHaveCount(1);
+      await outboundEvent.getByText(outboundTitle, { exact: true }).click();
+      await page.getByRole('dialog', { name: 'Edit Entry', exact: true }).locator('#delete-entry-btn').click();
+      await page.locator(`#delete-entry-${outboundEntry.entry_id}-confirm`).click();
+      await expect.poll(async () => (await database('schedule_entries').where({ ...scope, entry_id: outboundEntry.entry_id })).length,
+        { timeout: 60000 }).toBe(0);
+      await expect.poll(async () => await emulators.state('msgraph', 'calendar-events'), { timeout: 60000 }).toEqual([]);
+      expect(await database('calendar_event_mappings').where(outboundMappingScope)).toEqual([]);
+      await page.reload();
+      await expect(outboundEvent).toHaveCount(0);
+      const outboundHistory = await emulators.requests('msgraph');
+      expect(outboundHistory.complete).toBe(true);
+      expect(outboundHistory.requests).toContainEqual(expect.objectContaining({ method: 'POST', status: 201, path: '/v1.0/me/calendar/events' }));
+      expect(outboundHistory.requests).toContainEqual(expect.objectContaining({ method: 'DELETE', status: 204,
+        path: `/v1.0/me/calendar/events/${outboundMapping.external_event_id}` }));
+
       const start = new Date(); start.setUTCHours(12, 0, 0, 0);
       const end = new Date(start.getTime() + 3600000);
       const created = await emulators.action<CalendarChange>('msgraph', 'calendar-change', { changeType: 'created', event: {
