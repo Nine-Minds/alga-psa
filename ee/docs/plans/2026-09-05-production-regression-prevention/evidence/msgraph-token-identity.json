@@ -1,0 +1,48 @@
+{
+  "status": "native failure reproduced deterministically and repaired locally; new candidate native rerun pending",
+  "nativeBefore": {
+    "runId": 34070160256,
+    "jobId": 101585957827,
+    "revision": "af96daf0bfe1a905f856249d748241f14bfbe89a",
+    "conclusion": "failure",
+    "passedFiles": 275,
+    "failedFiles": 1,
+    "skippedFiles": 4,
+    "passedTests": 2023,
+    "failedTests": 2,
+    "skippedTests": 49,
+    "failures": "Shared and enterprise Microsoft calendar adapters: refresh expected a newly issued access token.",
+    "logLocal": "/tmp/alga-integration-af96.log"
+  },
+  "defect": "Emulator access-token JWT payload lacked a unique grant identity. Tokens issued with equal scopes/roles and second-precision expiry collided, even across clients, overwriting the stored token owner.",
+  "repair": "Include a deterministic host-seeded unique grant ID in each access-token JWT.",
+  "regression": {
+    "file": "packages/emulators/msgraph/tests/tokenIdentity.test.ts",
+    "clock": "Fixed 2026-09-07T00:00:00Z",
+    "beforeFailed": 1,
+    "afterPassed": 1,
+    "assertions": "Three same-second grants remain distinct and authenticate as their original clients.",
+    "beforeLogLocal": "/tmp/alga-msgraph-token-identity-before.log"
+  },
+  "emulatorSuite": {
+    "files": 5,
+    "passed": 54,
+    "durationSeconds": 1.09,
+    "logLocal": "/tmp/alga-msgraph-token-identity-after-v2.log"
+  },
+  "calendarAdapters": {
+    "file": "server/src/test/integration/microsoftCalendarEmulator.integration.test.ts",
+    "passed": 12,
+    "durationSeconds": 1.51,
+    "logLocal": "/tmp/alga-calendar-token-identity-after.log"
+  },
+  "types": {
+    "status": "passed",
+    "logLocal": "/tmp/alga-msgraph-token-identity-types.log"
+  },
+  "localHarnessObservation": {
+    "initialRun": "45 passed, 9 failed in callRecords suite; isolated callRecords passed, full unchanged rerun passed 54.",
+    "evidence": "Initial host chose control port 59500. lsof confirmed an existing SSH listener on IPv4 127.0.0.1:59500. Emulator host uses app.listen(port) while fixtures fetch 127.0.0.1; address-family collision is the suspected cause. Native rerun still required.",
+    "logLocal": "/tmp/alga-msgraph-token-identity-after.log"
+  }
+}

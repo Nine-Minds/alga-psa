@@ -571,6 +571,9 @@ export class MsGraphCore implements EmulatorCore {
     // and no `scp`; delegated tokens are the other way round. Setup probes
     // read `roles` straight off the token, exactly as Entra issues it.
     const accessToken = this.encodeJwt({
+      // Expiry has second precision. Distinguish every grant so simultaneous
+      // refreshes and clients cannot overwrite another token's stored identity.
+      jti: this.newId('access'),
       tid: tenantId,
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
       ...(claims?.appOnly
