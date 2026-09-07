@@ -2308,3 +2308,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Canonical workspace DB runner used fresh disposable pgvector/pg16 and Redis containers, real bootstrap/migrations, no filters or setup bypass. All 455 tests across 60 files pass in 341.03 seconds; no skips/TODOs/pending/failures. Includes the persisted tax threshold-boundary regression.
 - Discovery and independent workspace DB aggregate pass at clean e1a0295918af8420e8cea10328b593aa18160a5a. Source before/after matches and remains clean. Evidence: evidence/workspace-db-local-e1a029.json.
 - Removed alga-workspace-db-pg-e1a029 and alga-workspace-db-redis-e1a029 only after terminal exit 0. Native CI and supported-release upgrade remain unverified. No broad flags changed.
+
+### 2026-09-07 — complete tooling after unit and browser gate changes
+
+- Canonical tooling suite passes 503 tests across 53 required files. Discovery passes, zero failures/skips/TODOs/cancellations, before/after source identical and clean at 346a1c6292e4cca012aecc8126a630604ae42110.
+- Includes independent server unit CLI gate and critical browser journey deletion regression. Evidence: evidence/node-tooling-local-346a1c.json. Existing manual localization baseline exclusion remains explicit. Native CI and full plan completion remain unverified; no broad flags changed.
