@@ -39,10 +39,14 @@ export function isApplianceNodeTest(file) {
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
+  if (lane === 'temporal-engine') {
+    return file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts';
+  }
   if (lane === 'temporal-readiness') {
     return /^ee\/temporal-workflows\/src\/config\/__tests__\/.*\.test\.ts$/.test(file)
       || file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts'
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/workflow-runtime-v2-(interpreter|run-workflow|simulator-contract)\.test\.ts$/.test(file)
+      || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(marketing-fanout-workflow|ninjaone-token-refresh-workflow)\.test\.ts$/.test(file)
       || /^ee\/temporal-workflows\/src\/schedules\/__tests__\/.*\.test\.ts$/.test(file)
       || file === 'ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts'

@@ -36,6 +36,28 @@ on:
     - cron: '0 6 * * *'
 
 jobs:
+  engine-tests:
+    name: Temporal engine execution complete
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - name: Collect and execute isolated Temporal engine workflows
+        run: node scripts/run-additional-workspace-tests.mjs temporal-engine
+      - name: Preserve Temporal engine execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-engine-execution
+          path: test-results/temporal-engine/
+          if-no-files-found: error
+          retention-days: 30
+
   fast-readiness:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest

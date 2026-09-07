@@ -14,6 +14,7 @@ const suite = process.argv[2];
 const settings = {
   'api-e2e': { directory: 'server', config: 'vitest.api-e2e.config.ts' },
   'temporal-readiness': { directory: 'ee/temporal-workflows', config: 'vitest.readiness.config.ts' },
+  'temporal-engine': { directory: 'ee/temporal-workflows', config: 'vitest.engine.config.ts' },
   'nx-tooling': { directory: '.', config: 'tools/nx-tests/vitest.config.ts' },
   'ui-kit-showcase': { directory: 'ee/extensions/samples/ui-kit-showcase', config: 'vitest.config.ts',
     vitest: 'ee/extensions/samples/ui-kit-showcase/node_modules/vitest/vitest.mjs' },

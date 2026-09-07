@@ -1401,3 +1401,10 @@
 - Three previously unassigned portal suites passed unchanged: rendered resource shape and configured portal URL (six cases), plus Git helpers using injected command runner and temporary files (23 cases). No production Git or Kubernetes changes performed.
 - Added all three to fast-readiness config and independent candidate classifier. Actual required runner: 21 files / 180 passes, no skips, matching discovery/execution. Evidence: evidence/temporal-portal-readiness.json.
 - Live custom-domain deployment and remaining worker/browser assignment gaps are still incomplete; these helper tests do not establish deployed behavior.
+
+### 2026-09-07 — Dedicated Temporal engine execution lane
+
+- Marketing fan-out and NinjaOne refresh workflow seams pass unchanged; assigned both to fast readiness. Reconciled fast runner now passes 23 files / 184 tests.
+- Product-upgrade workflow requires a real Temporal test server. Sandbox run failed to download the ephemeral binary; approved network-enabled run passed all four actual workflow cases. No external application state used: activities are stubbed and server is ephemeral.
+- Added vitest.engine.config.ts, temporal-engine runner/discovery assignment, and a separate Temporal engine execution complete CI job with required raw artifacts. Exact local CI entry point passed four collected/executed cases in 1.85 seconds. Evidence: evidence/temporal-engine-upgrade.json.
+- Native execution and branch protection remain pending. This does not substitute for previous-release schema upgrade tests.

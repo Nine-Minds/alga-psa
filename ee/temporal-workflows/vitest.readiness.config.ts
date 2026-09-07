@@ -25,6 +25,8 @@ export default defineConfig({
       'src/activities/__tests__/portal-domain-activities.test.ts',
       'src/activities/__tests__/portal-domain-activities.git.test.ts',
       'src/activities/__tests__/portal-domain-nextauth-url.test.ts',
+      'src/workflows/__tests__/marketing-fanout-workflow.test.ts',
+      'src/workflows/__tests__/ninjaone-token-refresh-workflow.test.ts',
       'src/db/__tests__/product-bootstrap-resolver.test.ts',
       'src/schedules/__tests__/**/*.test.ts',
     ],
