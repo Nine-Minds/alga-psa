@@ -150,6 +150,12 @@ describe('Time Entries API E2E Tests', () => {
         assertSuccess(response, 201);
         expect(response.data.data.work_date).toBe('2024-07-01');
         expect(response.data.data.work_timezone).toBe('America/Los_Angeles');
+        const reopened = await env.apiClient.get(`${API_BASE}/${response.data.data.entry_id}`);
+        assertSuccess(reopened);
+        expect(reopened.data.data).toMatchObject({
+          work_date: '2024-07-01', work_timezone: 'America/Los_Angeles',
+          start_time: '2024-07-02T06:30:00.000Z',
+        });
 
         // Verify the server attached the entry to the period containing work_date (period1).
         const sheet = await tenantTable('time_sheets')
