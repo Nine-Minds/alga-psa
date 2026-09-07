@@ -5,6 +5,15 @@ import type { CoManagedEventPublication } from './conversationEventOutbox';
 import { enqueueCoManagedConversationEvent, dispatchCoManagedConversationEvents } from './conversationEventOutbox';
 import { isCoManagedUuid } from './sharedWorkIdentity';
 
+/** Retained customer ownership survives departure and a paid PSA upgrade. */
+export async function hasCoManagedConversationOwnership(trx: Knex.Transaction, tenantId: string): Promise<boolean> {
+  if (!trx.isTransaction || !isCoManagedUuid(tenantId)) throw new Error('Invalid conversation owner scope');
+  const owner = tenantDb(trx, tenantId);
+  const tenant = await owner.table('tenants').forShare().first('product_code');
+  const relationship = await owner.table('co_management_relationships').forShare().first('relationship_id');
+  return tenant?.product_code === 'co_managed' || Boolean(relationship);
+}
+
 /** Called inside the already-admitted native comment write. Current tenant and
  * canonical source determine ownership/audience, never a supplied internal flag.
  * This adapter is not an independently callable comment-write authorization. */
@@ -13,9 +22,7 @@ export async function retainCoManagedNativeCommentEvent(trx: Knex.Transaction,
   publish: (event: CoManagedEventPublication, eventId: string) => Promise<void>): Promise<boolean> {
   if (!trx.isTransaction || ![input.tenant, input.eventId, input.ticketId, input.commentId].every(isCoManagedUuid)) throw new Error('Invalid native conversation event scope');
   const owner = tenantDb(trx, input.tenant);
-  const tenant = await owner.table('tenants').forShare().first('product_code');
-  const relationship = await owner.table('co_management_relationships').forShare().first('relationship_id');
-  if (tenant?.product_code !== 'co_managed' && !relationship) return false;
+  if (!await hasCoManagedConversationOwnership(trx, input.tenant)) return false;
   const locator = await owner.table('comments').where({ comment_id: input.commentId, ticket_id: input.ticketId }).first('thread_id');
   if (!locator?.thread_id || !await owner.table('comment_threads').where({ thread_id: locator.thread_id, ticket_id: input.ticketId }).forShare().first()) throw new Error('Native conversation event has no canonical thread');
   const query = owner.table('comments as c').where({ 'c.comment_id': input.commentId, 'c.ticket_id': input.ticketId, 'c.thread_id': locator.thread_id });

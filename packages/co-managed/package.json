@@ -22,6 +22,10 @@
       "types": "./src/inboundRequesterReply.ts",
       "import": "./dist/inboundRequesterReply.js"
     },
+    "./scheduledCommentPublication": {
+      "types": "./src/scheduledCommentPublication.ts",
+      "import": "./dist/scheduledCommentPublication.js"
+    },
     "./nativeConversationEvents": {
       "types": "./src/nativeConversationEvents.ts",
       "import": "./dist/nativeConversationEvents.js"

@@ -29,6 +29,7 @@ vi.mock('@alga-psa/db/admin', () => ({
       where: () => selector,
       whereNull: () => selector,
       whereNotNull: () => selector,
+      whereRaw: () => selector,
       distinct: (_col: string) => Promise.resolve(selectTenantsMock(table)),
     };
     return selector;
@@ -157,10 +158,17 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries'] : [table]);
+      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'comments'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
+  });
+
+  it('discovers customers whose only pending work is a scheduled comment', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 'scheduled-customer' }, { tenant: 'msp' }]);
+    selectTenantsMock.mockImplementation((table: string) => table === 'comments' ? [{ tenant: 'scheduled-customer' }] : []);
+    expect((await runMaintenanceJob('co-managed-notification-recovery')).total).toBe(1);
+    expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-notification-recovery', { tenantId: 'scheduled-customer' });
   });
 
   it('recovers customer event owners even when they have no MSP notification deliveries', async () => {

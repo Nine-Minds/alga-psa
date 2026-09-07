@@ -48,6 +48,7 @@
     "./lib/ticketChecklists/index.js": "./dist/lib/ticketChecklists/index.js",
     "./lib/ticketCloseRules": "./dist/lib/ticketCloseRules/index.js",
     "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
+    "./lib/tickets/responseStateSettings": "./dist/lib/tickets/responseStateSettings.js",
     "./lib/tickets/clientPortalVisibility": "./dist/lib/tickets/clientPortalVisibility.js",
     "./lib/tickets/clientPortalVisibility.server": "./dist/lib/tickets/clientPortalVisibility.server.js",
     "./*": "./dist/*",

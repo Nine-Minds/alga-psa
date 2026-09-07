@@ -252,3 +252,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Generic/optimized/simple ticket actions, API TicketService, and the inbound retention adapter.
 - **Gate:** Four native writers plus inbound share one stable event ownership, source audience and commit boundary. ACT / staged-migration within the approved conversation integration; scheduled and model/workflow producers remain separate stages.
 - **Status:** revised. A domain retainer derives canonical source metadata for ordinary events, workflow events and content-free edit/delete invalidations. The inbound callback delegates to it. A native ticket composition supplies strict stable-ID delivery for co-managed intent and preserves ordinary PSA after-commit transport. Construction/retention errors propagate to the owning writer; transport failures are recoverable. Tests inject real PostgreSQL outbox constraints, including failures after an earlier event was retained, and verify rollback with no publication or orphan consumer obligations.
+
+## scheduled-publication-authority — friction
+- **What:** Scheduled comments bypassed current author and lifecycle authority, then depended on finite job retries and boot-only event recovery.
+- **Where:** Scheduled publication handler, co-managed notification maintenance, and conversation event transport.
+- **Gate:** This is a deferred write with the same stable source, current permission and commit requirements as interactive/inbound comments. ACT / bounded-now within the approved scheduled conversation integration.
+- **Status:** revised. Current worker authority is explicit and session-free; publication and event handoff commit together. Persisted retry time allows maintenance to resume withheld sources and make progress past denied ones. Recovery of already-visible content uses its original requester intent and current source checks without reapplying operational write admission.
+
+## scheduled-worker-composition — friction
+- **What:** The scheduled writer and response-setting reader lived behind server/vertical entry points unavailable to maintenance worker composition.
+- **Where:** Server scheduled handler, jobs publication engine, shared ticket response settings, and server co-managed event queue adapter.
+- **Gate:** Server queue delivery and recurring maintenance are two concrete callers. Stable transport and settings logic should not be copied or require server-only module imports. ACT / bounded-now.
+- **Status:** revised. The jobs package owns the publication engine and common after-commit conversation queue transport; the server adapter re-exports that transport and supplies queue connections/boot scheduling. Response settings moved unchanged to a compiled shared subpath, with the ticket helper retaining its existing export. Domain scheduled authority also has a compiled worker entry point.

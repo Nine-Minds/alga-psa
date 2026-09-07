@@ -804,7 +804,7 @@ export const rescheduleScheduledComment = withAuth(async (user, { tenant }, id: 
       { singletonKey: `publish-comment:${id}`, metadata: { scheduledPublishTz } },
     );
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
-      scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz, schedule_job_id: scheduled.jobId, updated_at: trx.fn.now(),
+      scheduled_publish_retry_at: null, scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz, schedule_job_id: scheduled.jobId, updated_at: trx.fn.now(),
     });
     await writeTicketActivity(trx, {
       tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_RESCHEDULED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
@@ -823,7 +823,7 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be canceled');
     if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only cancel your own comments');
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
-      publish_state: 'canceled', deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
+      publish_state: 'canceled', scheduled_publish_retry_at: null, deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });
     if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
     await writeTicketActivity(trx, {

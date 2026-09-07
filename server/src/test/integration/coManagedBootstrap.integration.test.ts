@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6008,10 +6008,10 @@ it('recovers committed channels through the scheduled server job handler without
   await persist(db, event);
   expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
   const { coManagedNotificationRecoveryJobHandler } = await import('../../lib/jobs/handlers/coManagedNotificationRecoveryHandler');
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
   expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
   expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 0, processed: 0 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 0, processed: 0 } });
 }));
 
 it('honors preferences changed after queue creation without hiding the already authorized inbox history', async () => withInAppCommentFixture(async ({
@@ -9993,4 +9993,185 @@ it.each(['edit', 'delete'])('rolls back native %s when its invalidation cannot b
   expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toEqual(comment);
   expect(await customer.table('co_management_event_outbox').whereNot('event_type', 'TICKET_COMMENT_ADDED')).toHaveLength(0);
   expect(publish).not.toHaveBeenCalled();
+}));
+
+async function withScheduledCommentFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeCommentFixture(async (fixture: any) => {
+    const { customer, resource, addCustomer } = fixture;
+    const comment = await addCustomer({ note: 'Withheld scheduled body', state: 'scheduled' });
+    await customer.table('comments').where('comment_id', comment.id).update({ scheduled_publish_at: new Date(Date.now() - 1000), scheduled_publish_tz: 'UTC' });
+    await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+    const { publishScheduledComment, recoverCoManagedScheduledComments } = await import('../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
+    const run = () => publishScheduledComment(db, { tenantId: resource.tenant, ticketId: resource.id, commentId: comment.id });
+    const recover = (limit?: number) => recoverCoManagedScheduledComments(db, resource.tenant, limit);
+    await work({ ...fixture, comment, run, recover });
+  });
+}
+
+it('publishes a scheduled co-managed comment once with atomic state, workflow and notification intent', async () => withScheduledCommentFixture(async ({ customer, resource, comment, run, publish, workflow }: any) => {
+  const observed: any[] = [];
+  publish.mockImplementation(async (event: any) => { if (event.eventType === 'TICKET_COMMENT_ADDED') observed.push(await customer.table('comments').where('comment_id', comment.id).first()); });
+  await run(); await run();
+  const current = await customer.table('comments').where('comment_id', comment.id).first();
+  expect(current).toMatchObject({ publish_state: 'published', scheduled_publish_retry_at: null });
+  expect(current.scheduled_publish_dispatched_at).not.toBeNull(); expect(current.scheduled_response_dispatched_at).not.toBeNull();
+  expect(observed).toEqual([expect.objectContaining({ publish_state: 'published' })]);
+  const rows = await customer.table('co_management_event_outbox').where('comment_id', comment.id);
+  expect(rows.map((row: any) => row.event_type).sort()).toEqual(['TICKET_COMMENT_ADDED', 'TICKET_MESSAGE_ADDED', 'TICKET_RESPONSE_STATE_CHANGED']);
+  expect(rows.every((row: any) => row.status === 'published' && row.audience === 'requester')).toBe(true);
+  expect(JSON.stringify(rows)).not.toContain('Withheld scheduled body');
+  expect(workflow.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_MESSAGE_ADDED')).toHaveLength(1);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_client' });
+}));
+
+it('serializes duplicate scheduled co-managed publication workers without duplicate events', async () => withScheduledCommentFixture(async ({ customer, comment, run, publish }: any) => {
+  publish.mockClear(); await Promise.all([run(), run()]);
+  expect(await customer.table('co_management_event_outbox').where('comment_id', comment.id)).toHaveLength(3);
+  expect(publish.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_COMMENT_ADDED')).toHaveLength(1);
+}));
+
+it.each(['inactive_author', 'missing_role', 'private_audience', 'client_author', 'deleted_source', 'lapsed_license'] as const)(
+  'retains a scheduled co-managed comment without publication when current authority changes: %s', async change => withScheduledCommentFixture(async ({ customer, resource, operation, customerPrincipal, comment, run, recover, publish }: any) => {
+    if (change === 'inactive_author') await customer.table('users').where('user_id', customerPrincipal.userId).update({ is_inactive: true });
+    if (change === 'missing_role') await customer.table('user_roles').where('user_id', customerPrincipal.userId).del();
+    if (change === 'private_audience') await customer.table('comment_threads').where('thread_id', comment.threadId).update({ collaboration_audience: 'organization_private', is_internal: true });
+    if (change === 'client_author') await customer.table('comments').where('comment_id', comment.id).update({ author_type: 'client' });
+    if (change === 'deleted_source') await customer.table('comments').where('comment_id', comment.id).update({ deleted_at: new Date() });
+    if (change === 'lapsed_license') await expireCoManagedEntitlement(operation.tenant);
+    publish.mockClear(); await expect(run()).rejects.toThrow();
+    const row = await customer.table('comments').where('comment_id', comment.id).first();
+    expect(row).toMatchObject({ publish_state: 'scheduled', published_at: null, scheduled_publish_event_id: null });
+    expect(new Date(row.scheduled_publish_retry_at).getTime()).toBeGreaterThan(Date.now());
+    expect(await customer.table('co_management_event_outbox').where('comment_id', comment.id)).toHaveLength(0);
+    expect(await recover()).toEqual({ processed: 0, failed: 0 });
+    expect(publish).not.toHaveBeenCalled();
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal' });
+  }));
+
+it('rolls scheduled state and earlier response intent back when comment intent cannot commit', async () => withScheduledCommentFixture(async ({ customer, resource, comment, run, publish }: any) => {
+  const constraint = `scheduled_outbox_failure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type <> 'TICKET_COMMENT_ADDED')", [constraint, resource.tenant]).toQuery());
+  publish.mockClear();
+  try { await expect(run()).rejects.toThrow(); }
+  finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'scheduled', scheduled_publish_event_id: null });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal' });
+  expect(await customer.table('co_management_event_outbox').where('comment_id', comment.id)).toHaveLength(0);
+  expect(await customer.table('co_management_event_consumers')).toHaveLength(0);
+  expect(publish).not.toHaveBeenCalled();
+}));
+
+it('recovers a scheduled comment after license restoration without re-creating the original queue job', async () => withScheduledCommentFixture(async ({ customer, sponsor, operation, comment, run, recover }: any) => {
+  const entitlement = await sponsor.table('co_managed_entitlements').first();
+  await expireCoManagedEntitlement(operation.tenant); await expect(run()).rejects.toThrow();
+  await sponsor.table('co_managed_entitlements').update({ valid_until: entitlement.valid_until, lapse_started_at: entitlement.lapse_started_at, read_only_after: entitlement.read_only_after });
+  await customer.table('comments').where('comment_id', comment.id).update({ scheduled_publish_retry_at: new Date(0) });
+  expect(await recover()).toEqual({ processed: 1, failed: 0 });
+  expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'published', scheduled_publish_retry_at: null });
+}));
+
+it('recovers scheduled notification transport from the current body after the workspace becomes read-only', async () => withScheduledCommentFixture(async ({ customer, resource, operation, comment, run, publish }: any) => {
+  publish.mockRejectedValue(new Error('Redis unavailable')); await run();
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.id, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  expect(row.status).toBe('pending');
+  await customer.table('comments').where('comment_id', comment.id).update({ note: 'Current published body' });
+  await expireCoManagedEntitlement(operation.tenant);
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const send = vi.fn(); expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current published body' }) }) }), row.event_id]);
+}));
+
+it.each(['deleted', 'restricted'] as const)('cancels old scheduled content during legacy handoff when its source is %s', async change => withScheduledCommentFixture(async ({ customer, operation, comment, run, publish, workflow }: any) => {
+  await customer.table('comments').where('comment_id', comment.id).update({ publish_state: 'published', published_at: new Date(),
+    scheduled_publish_event_id: randomUUID(), scheduled_response_event_id: randomUUID(), scheduled_previous_response_state: 'awaiting_internal' });
+  if (change === 'deleted') await customer.table('comments').where('comment_id', comment.id).update({ deleted_at: new Date() });
+  else {
+    await customer.table('comment_threads').where('thread_id', comment.threadId).update({ is_internal: true, collaboration_audience: 'organization_private' });
+    await customer.table('comments').where('comment_id', comment.id).update({ is_internal: true });
+  }
+  await expireCoManagedEntitlement(operation.tenant); publish.mockClear(); workflow.mockClear(); await run();
+  const rows = await customer.table('co_management_event_outbox').where('comment_id', comment.id);
+  expect(rows.filter((row: any) => row.status === 'cancelled').map((row: any) => row.event_type).sort()).toEqual(['TICKET_COMMENT_ADDED', 'TICKET_MESSAGE_ADDED']);
+  expect(rows.find((row: any) => row.event_type === 'TICKET_RESPONSE_STATE_CHANGED').status).toBe('published');
+  expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_RESPONSE_STATE_CHANGED']);
+  expect(workflow).not.toHaveBeenCalled();
+}));
+
+it('continues scheduled maintenance past denied authors instead of starving later due comments', async () => withScheduledCommentFixture(async ({ customer, resource, comment, addCustomer, recover }: any) => {
+  await customer.table('comments').where('comment_id', comment.id).update({ author_type: 'client', scheduled_publish_at: new Date(Date.now() - 2000) });
+  const next = await addCustomer({ note: 'Next eligible schedule', state: 'scheduled' });
+  await customer.table('comments').where('comment_id', next.id).update({ scheduled_publish_at: new Date(Date.now() - 1000), scheduled_publish_tz: 'UTC' });
+  expect(await recover(1)).toEqual({ processed: 0, failed: 1 });
+  expect(await recover(1)).toEqual({ processed: 1, failed: 0 });
+  expect(await customer.table('comments').where('comment_id', next.id).first()).toMatchObject({ publish_state: 'published' });
+  expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'scheduled' });
+}));
+
+it('retains scheduled author, role and source locks until publication authority completes', async () => withScheduledCommentFixture(async ({ customer, resource, customerPrincipal, comment }: any) => {
+  const { assertCoManagedScheduledCommentPublication } = await import('../../../../packages/co-managed/src/scheduledCommentPublication');
+  await db.transaction(async trx => {
+    expect(await assertCoManagedScheduledCommentPublication(trx, { tenant: resource.tenant, ticketId: resource.id, commentId: comment.id })).toEqual({ canUpdateResponseState: true });
+    for (const [table, key, value] of [['users', 'user_id', customerPrincipal.userId], ['user_roles', 'user_id', customerPrincipal.userId],
+      ['comments', 'comment_id', comment.id], ['comment_threads', 'thread_id', comment.threadId], ['tickets', 'ticket_id', resource.id]]) {
+      await expect(db.transaction(other => tenantDb(other, resource.tenant).table(table).where(key, value).forUpdate().noWait().first())).rejects.toMatchObject({ code: '55P03' });
+    }
+  });
+}));
+
+it('preserves ordinary PSA scheduled publication and stable native retries', async () => withScheduledCommentFixture(async ({ customer, resource, comment, publish }: any) => {
+  const tenant = randomUUID(), ordinary = tenantDb(db, tenant);
+  await ordinary.table('tenants').insert({ tenant, client_name: 'Ordinary PSA', email: `${tenant}@example.test`, product_code: 'psa', plan: 'pro' });
+  // Copy only this test's minimal operational fixtures with fresh identities.
+  const tables = [['clients', 'client_id'], ['contacts', 'contact_name_id'], ['boards', 'board_id'], ['statuses', 'status_id'],
+    ['priorities', 'priority_id'], ['users', 'user_id'], ['tickets', 'ticket_id'], ['comment_threads', 'thread_id'], ['comments', 'comment_id']];
+  const records = new Map<string, any[]>(), identities = new Map<string, string>([[resource.tenant, tenant]]);
+  for (const [table, key] of tables) {
+    const rows = await customer.table(table); records.set(table, rows);
+    for (const row of rows) identities.set(row[key], randomUUID());
+  }
+  for (const [table] of tables) {
+    const rows = records.get(table)!;
+    const generated = await db('information_schema.columns').where({ table_schema: 'public', table_name: table }).whereNot('is_generated', 'NEVER').pluck('column_name');
+    if (rows.length) await ordinary.table(table).insert(rows.map(row => {
+      const copy = Object.fromEntries(Object.entries(row).map(([key, value]) => [key, typeof value === 'string' ? identities.get(value) ?? value : value]));
+      for (const key of generated) delete copy[key];
+      if (table === 'users') { copy.username = `ordinary-${copy.user_id}`; copy.email = `${copy.user_id}@example.test`; }
+      return copy;
+    }));
+  }
+  const ordinaryTicketId = identities.get(resource.id)!, ordinaryCommentId = identities.get(comment.id)!;
+  const { publishScheduledComment } = await import('../../../../packages/jobs/src/lib/handlers/publishScheduledComment');
+  const run = () => publishScheduledComment(db, { tenantId: tenant, ticketId: ordinaryTicketId, commentId: ordinaryCommentId });
+  let fail = true; publish.mockClear(); publish.mockImplementation(async (event: any) => {
+    if (event.eventType === 'TICKET_COMMENT_ADDED' && fail) { fail = false; throw new Error('Native dispatch crash'); }
+  });
+  await expect(run()).rejects.toThrow('Native dispatch crash');
+  expect(await ordinary.table('comments').where('comment_id', ordinaryCommentId).first()).toMatchObject({ publish_state: 'published', scheduled_publish_dispatched_at: null });
+  await run(); await run();
+  const row = await ordinary.table('comments').where('comment_id', ordinaryCommentId).first();
+  expect(row.scheduled_publish_dispatched_at).not.toBeNull();
+  expect(publish.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_COMMENT_ADDED').map(([, options]: any[]) => options.eventId))
+    .toEqual([row.scheduled_publish_event_id, row.scheduled_publish_event_id]);
+  expect(await ordinary.table('co_management_event_outbox')).toHaveLength(0);
+}));
+
+it.each(['body', 'response', 'response_disabled'] as const)('applies scheduled publication field authority for %s', async field => withScheduledCommentFixture(async ({ customer, resource, customerPrincipal, comment, run }: any) => {
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('client_id');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Scheduled publication policy', actorUserId: customerPrincipal.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId,
+    resourceType: 'ticket', action, templateKey: 'selected_clients', config: { selectedClientIds: [ticket.client_id], redactedFields: [field === 'body' ? 'comments.note' : 'response_state'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: customerPrincipal.userId });
+  if (field === 'response_disabled') {
+    const display = { responseStateTrackingEnabled: false };
+    await customer.table('tenant_settings').insert({ tenant: resource.tenant, settings: {}, ticket_display_settings: display }).onConflict('tenant').merge({ ticket_display_settings: display });
+    await run();
+    expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'published', scheduled_response_event_id: null });
+  } else {
+    await expect(run()).rejects.toThrow();
+    expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'scheduled' });
+    expect(await customer.table('co_management_event_outbox').where('comment_id', comment.id)).toHaveLength(0);
+  }
 }));
