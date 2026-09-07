@@ -2234,3 +2234,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Citus runner previously wrote its configured two-file list as collected before invoking Vitest. It now calls list --filesOnly, records that real output and independently reconciles the two required candidates before collecting assertions or executing. Also rejects CLI filters and records full-selection/working-tree metadata.
 - Actual installed-Vitest regression in a temporary checkout passes: two files execute, a config omission records only one and fails before execution with cleared results, and CLI filters fail with cleared collection. Evidence: evidence/citus-runner-real-collection.json. Fixture arithmetic verifies runner behavior only; no Citus runtime/topology claim. No broad flags changed.
+
+### 2026-09-07 — complete real Citus runtime lane after collection fix
+
+- Ran canonical Citus runner against owned citus_runtime_82cc with combined CE/EE migrations. First attempt placed the overlay under test-results and failed migration-relative template paths; corrected to server/.ee-combined-migrations-citus-5c3b84, then reran only after confirmed terminal failure. PDF extraction used the existing owned PDF-tools container through a bounded stdin wrapper.
+- Final run passes both required files and all eight assertions, zero failures/skips/TODOs/pending, in 728.62 seconds. Discovery passes; source remained identical and clean at 5c3b84448b3287a7a5e59be9a9e630e90a0548c7. Invoice immutability and workflow idempotency/redaction checks execute against required distributed tables. Evidence: evidence/citus-runtime-local-5c3b84.json.
+- Long quiet periods were verified as active migration catalog queries, not treated as terminal hangs or restarted. Single-node topology does not establish multi-node or previous-supported-release upgrade coverage. No new persistent service was created; existing owned Citus and PDF tools remain available. No broad plan flags changed.
