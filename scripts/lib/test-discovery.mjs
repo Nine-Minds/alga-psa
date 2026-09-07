@@ -64,8 +64,9 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|comment-recovery-forwarding|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
-    return /^server\/src\/test\/e2e\/api\//.test(file)
-      && /\.e2e\.test\.ts$/.test(file);
+    return (/^server\/src\/test\/e2e\/api\//.test(file)
+      && /\.e2e\.test\.ts$/.test(file))
+      || file === 'server/src/test/e2e/serverRenderedLocale.e2e.test.ts';
   }
   if (lane === 'nx-tooling') {
     return /^tools\/nx-tests\//.test(file) && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
