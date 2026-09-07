@@ -1404,7 +1404,7 @@ export class TicketModel {
         });
       } catch (error) {
         console.error('Failed to publish comment created event:', error);
-        if (eventPublisher && (eventPublisher as any).__inboundOutboxPublisher === true) {
+        if (eventPublisher.transactionalCommentEvents || (eventPublisher as any).__inboundOutboxPublisher === true) {
           throw error;
         }
       }

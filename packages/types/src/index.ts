@@ -156,6 +156,8 @@ export interface TenantScopedEntity extends AuditFields {
  * This allows different contexts (server actions, workflows) to provide their own event publishers
  */
 export interface IEventPublisher {
+  /** Comment intent failures must abort the owning write transaction. */
+  readonly transactionalCommentEvents?: true;
   publishTicketCreated(data: {
     tenantId: string;
     ticketId: string;

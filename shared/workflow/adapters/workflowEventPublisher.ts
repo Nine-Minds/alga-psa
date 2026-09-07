@@ -5,7 +5,9 @@
  */
 
 import type { IEventPublisher } from '@alga-psa/types';
-import { registerAfterCommit } from '@alga-psa/db';
+import { randomUUID } from 'node:crypto';
+import { getWorkflowConversationRetainer, type WorkflowConversationEventRetainer } from '../runtime/registries/workflowConversationRegistry';
+import { registerAfterCommit, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import type { PublishOptions } from '@alga-psa/event-bus/publishers';
 
@@ -39,12 +41,19 @@ async function publishNotificationEvent(
 }
 
 export class WorkflowEventPublisher implements IEventPublisher {
+  readonly transactionalCommentEvents = true as const;
+  private readonly workflowRunId?: string;
+  private readonly ticketAction?: 'create' | 'update';
+  private readonly retainConversationEvent?: WorkflowConversationEventRetainer;
   private readonly suppressCommentEmail: boolean;
   private readonly trx?: Knex.Transaction;
 
   // suppressCommentEmail keeps comment events on the in-app channel only. Used for the
   // first comment on a new inbound-email ticket, which the TICKET_CREATED email already covers.
-  constructor(options?: { suppressCommentEmail?: boolean; transaction?: Knex.Transaction }) {
+  constructor(options?: { suppressCommentEmail?: boolean; transaction?: Knex.Transaction; workflowRunId?: string; ticketAction?: 'create' | 'update'; retainConversationEvent?: WorkflowConversationEventRetainer }) {
+    this.workflowRunId = options?.workflowRunId;
+    this.ticketAction = options?.ticketAction;
+    this.retainConversationEvent = options?.retainConversationEvent;
     this.suppressCommentEmail = options?.suppressCommentEmail ?? false;
     this.trx = options?.transaction;
   }
@@ -125,14 +134,17 @@ export class WorkflowEventPublisher implements IEventPublisher {
     userId?: string;
     metadata?: Record<string, any>;
   }): Promise<void> {
+    if (!this.trx?.isTransaction) throw new Error('Comment publication requires its owning transaction');
     const payload = {
       tenantId: data.tenantId,
       ticketId: data.ticketId,
+      commentId: data.commentId,
       userId: data.userId || data.ticketId, // fallback for schema validation
       comment: {
         id: data.commentId,
         content: data.metadata?.content || '',
         author: data.metadata?.author || 'System',
+        authorType: data.metadata?.author_type,
         isInternal: data.metadata?.isInternal || false
       }
     };
@@ -145,6 +157,22 @@ export class WorkflowEventPublisher implements IEventPublisher {
     const options = this.suppressCommentEmail
       ? { channel: 'internal-notifications' }
       : undefined;
+    const retain = this.retainConversationEvent ?? getWorkflowConversationRetainer();
+    if (retain) {
+      const retained = await retain(this.trx, { tenant: data.tenantId, ticketId: data.ticketId, commentId: data.commentId,
+        eventId: randomUUID(), payload, workflowRunId: this.workflowRunId, actorUserId: data.userId, ticketAction: this.ticketAction,
+        ...(this.suppressCommentEmail ? { channel: 'internal-notifications' as const } : {}) }, async (event, eventId) => {
+        const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+        await publishEvent({ eventType: event.eventType, payload: event.payload } as any,
+          { eventId, strict: true, ...(event.channel ? { channel: event.channel } : {}) });
+      });
+      if (retained) return;
+    } else {
+      const owner = tenantDb(this.trx, data.tenantId);
+      const tenant = await owner.table('tenants').first('product_code');
+      if (tenant?.product_code === 'co_managed' || await owner.table('co_management_relationships').first('relationship_id'))
+        throw new Error('Co-managed workflow conversation retention is not configured');
+    }
     await this.publish('TICKET_COMMENT_ADDED', payload, options);
   }
 

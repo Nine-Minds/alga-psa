@@ -264,3 +264,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Server scheduled handler, jobs publication engine, shared ticket response settings, and server co-managed event queue adapter.
 - **Gate:** Server queue delivery and recurring maintenance are two concrete callers. Stable transport and settings logic should not be copied or require server-only module imports. ACT / bounded-now.
 - **Status:** revised. The jobs package owns the publication engine and common after-commit conversation queue transport; the server adapter re-exports that transport and supplies queue connections/boot scheduling. Response settings moved unchanged to a compiled shared subpath, with the ticket helper retaining its existing export. Domain scheduled authority also has a compiled worker entry point.
+
+## workflow-conversation-composition — friction
+- **What:** Shared workflow code could only publish best-effort events, while co-managed comment writes need domain admission and durable intent in their owning transaction.
+- **Where:** WorkflowEventPublisher, email and business-operation actions, server/workflow-worker startup, and TicketModel event error handling.
+- **Gate:** Native, inbound, scheduled and workflow producers share the stable commit/retention boundary. Domain imports from shared would create a cycle; process composition is already established for workflow email. ACT / bounded-now as a staged producer migration.
+- **Status:** revised. A typed runtime registry injects domain retention without a reverse package dependency. The model declares transaction-critical comment publishers; business actions use the transaction engine's after-commit owner, and email initial ticket/comment creation shares that owner. Workflow context resolves the exact executing version and current authority. Publisher-less import/system paths remain explicit follow-up contracts, avoiding accidental notification behavior changes.

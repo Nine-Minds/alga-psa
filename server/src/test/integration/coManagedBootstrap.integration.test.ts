@@ -7,7 +7,7 @@ import knex, { type Knex } from 'knex';
 import { assertCoManagedSeatAdmission, changeCoManagedAllocation, countCoManagedCommittedSeats } from '@alga-psa/licensing';
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState, withCoManagedOperationalTransaction,
   reconcileHostedCoManagedEntitlement } from '@alga-psa/licensing';
-import { tenantDb, runWithTenant } from '@alga-psa/db';
+import { tenantDb, runWithTenant, withTransaction } from '@alga-psa/db';
 import { getSecret } from '../../lib/utils/getSecret';
 import { prepareCoManagedProvisioning } from '../../../../packages/co-managed/src/provisioning';
 import { requestCoManagedProvisioningCleanup } from '../../../../packages/co-managed/src/provisioning';
@@ -10174,4 +10174,135 @@ it.each(['body', 'response', 'response_disabled'] as const)('applies scheduled p
     expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'scheduled' });
     expect(await customer.table('co_management_event_outbox').where('comment_id', comment.id)).toHaveLength(0);
   }
+}));
+
+async function withWorkflowCommentFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeCommentFixture(async (fixture: any) => {
+    const { customer, resource, customerPrincipal } = fixture;
+    const workflowId = randomUUID(), runId = randomUUID();
+    await customer.table('workflow_definitions').insert({ tenant: resource.tenant, workflow_id: workflowId, name: 'Conversation workflow', payload_schema_ref: 'schema://test', draft_definition: {}, created_by: customerPrincipal.userId });
+    await customer.table('workflow_definition_versions').insert({ tenant: resource.tenant, workflow_id: workflowId, version: 1, definition_json: {}, published_by: customerPrincipal.userId });
+    await customer.table('workflow_runs').insert({ tenant: resource.tenant, run_id: runId, workflow_id: workflowId, workflow_version: 1, status: 'RUNNING', lease_expires_at: new Date(Date.now() + 600_000) });
+    const registry = await import('../../../../shared/workflow/runtime/registries/workflowConversationRegistry');
+    const { retainCoManagedWorkflowCommentEvent } = await import('../../../../packages/co-managed/src/workflowConversationEvents');
+    registry.registerWorkflowConversationRetainer(retainCoManagedWorkflowCommentEvent);
+    const { TicketModel } = await import('../../../../shared/models/ticketModel');
+    const { WorkflowEventPublisher } = await import('../../../../shared/workflow/adapters/workflowEventPublisher');
+    const createModel = (options: any = {}) => withTransaction(db, async trx => {
+      const publisher = options.native
+        ? new (await import('../../../../packages/tickets/src/lib/adapters/TicketModelEventPublisher')).TicketModelEventPublisher(trx)
+        : new WorkflowEventPublisher({ transaction: trx, workflowRunId: options.missingRun ? undefined : runId, suppressCommentEmail: options.suppress });
+      return TicketModel.createComment({ ticket_id: resource.id, content: 'Workflow comment body', author_type: 'internal', author_id: options.authorId ?? customerPrincipal.userId,
+        collaboration_audience: options.audience ?? 'requester', is_internal: options.audience && options.audience !== 'requester', is_resolution: false }, resource.tenant, trx, publisher, undefined, customerPrincipal.userId);
+    });
+    const { getActionRegistryV2 } = await import('../../../../shared/workflow/runtime/registries/actionRegistry');
+    const actions = getActionRegistryV2();
+    if (!actions.get('tickets.add_comment', 1)) (await import('../../../../shared/workflow/runtime/actions/businessOperations/tickets')).registerTicketActions();
+    if (!actions.get('create_comment_from_email', 1)) (await import('../../../../shared/workflow/runtime/actions/registerEmailWorkflowActions')).registerEmailWorkflowActionsV2();
+    const ctx = { tenantId: resource.tenant, runId, knex: db, stepPath: 'test.comment', attempt: 1, idempotencyKey: randomUUID(), env: {}, nowIso: () => new Date().toISOString() };
+    const act = (id: string, input: any) => { const action = actions.get(id, 1)!; return action.handler(action.inputSchema.parse(input), ctx); };
+    try { await work({ ...fixture, workflowId, runId, createModel, act, registry }); }
+    finally { registry.resetWorkflowConversationRetainer(); }
+  });
+}
+
+it.each(['requester', 'shared_it', 'organization_private'])('retains workflow model comments under canonical %s audience and recovers current content', async audience => withWorkflowCommentFixture(async ({ customer, resource, publish, createModel }: any) => {
+  publish.mockRejectedValue(new Error('Lost acknowledgement'));
+  const comment = await createModel({ audience });
+  const row = await customer.table('co_management_event_outbox').where('comment_id', comment.comment_id).first();
+  expect(row).toMatchObject({ status: 'pending', audience, event_type: 'TICKET_COMMENT_ADDED' });
+  expect(JSON.stringify(row.publication)).not.toContain('Workflow comment body');
+  expect(publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TICKET_COMMENT_ADDED' }), expect.objectContaining({ eventId: row.event_id, strict: true }));
+  await customer.table('comments').where('comment_id', comment.comment_id).update({ note: 'Current workflow body', markdown_content: 'Current workflow body' });
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  const send = vi.fn();
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(JSON.stringify(send.mock.calls)).toContain('Current workflow body'); expect(JSON.stringify(send.mock.calls)).not.toContain('Workflow comment body');
+}));
+
+it.each(['inactive_actor', 'missing_role', 'missing_run', 'cancelled_run', 'expired_lease', 'missing_version', 'lapsed_license', 'missing_composition'])(
+  'rolls back workflow model comments when current admission fails: %s', async reason => withWorkflowCommentFixture(async ({ customer, customerPrincipal, operation, runId, workflowId, registry, createModel, publish }: any) => {
+    if (reason === 'inactive_actor') await customer.table('users').where('user_id', customerPrincipal.userId).update({ is_inactive: true });
+    if (reason === 'missing_role') await customer.table('user_roles').where('user_id', customerPrincipal.userId).del();
+    if (reason === 'cancelled_run') await customer.table('workflow_runs').where('run_id', runId).update({ status: 'CANCELLED' });
+    if (reason === 'expired_lease') await customer.table('workflow_runs').where('run_id', runId).update({ lease_expires_at: new Date(0) });
+    if (reason === 'missing_version') await customer.table('workflow_runs').where('run_id', runId).update({ workflow_version: 99 });
+    if (reason === 'lapsed_license') await expireCoManagedEntitlement(operation.tenant);
+    if (reason === 'missing_composition') registry.resetWorkflowConversationRetainer();
+    const before = await customer.table('comments'); publish.mockClear();
+    await expect(createModel({ missingRun: reason === 'missing_run' })).rejects.toThrow();
+    expect(await customer.table('comments')).toEqual(before); expect(await customer.table('co_management_event_outbox')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+  }));
+
+it('executes workflow business comments with the exact published version actor and owning commit', async () => withWorkflowCommentFixture(async ({ customer, resource, customerPrincipal, workflowId, act, publish }: any) => {
+  // The unrelated newer version must not change the authority of this run.
+  await customer.table('workflow_definition_versions').insert({ tenant: resource.tenant, workflow_id: workflowId, version: 2, definition_json: {}, published_by: randomUUID() });
+  publish.mockClear();
+  const result = await act('tickets.add_comment', { ticket_id: resource.id, body: 'Business workflow body', visibility: 'public' });
+  expect(await customer.table('comments').where('comment_id', result.comment_id).first()).toMatchObject({ user_id: customerPrincipal.userId });
+  expect(await customer.table('co_management_event_outbox').where('comment_id', result.comment_id).first()).toMatchObject({ status: 'published' });
+  expect(publish).toHaveBeenCalledTimes(1);
+}));
+
+it.each(['model', 'business', 'email'])('rolls back %s workflow comments if durable intent insertion fails', async writer => withWorkflowCommentFixture(async ({ customer, resource, customerPrincipal, createModel, act, publish }: any) => {
+  const constraint = `workflow_retention_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type <> 'TICKET_COMMENT_ADDED')", [constraint, resource.tenant]).toQuery());
+  const before = await customer.table('comments'); publish.mockClear();
+  try {
+    const execute = () => writer === 'model' ? createModel() : writer === 'business'
+      ? act('tickets.add_comment', { ticket_id: resource.id, body: 'Must roll back', visibility: 'public' })
+      : act('create_comment_from_email', { ticket_id: resource.id, content: 'Must roll back', author_type: 'internal', author_id: customerPrincipal.userId });
+    await expect(execute()).rejects.toBeDefined();
+  } finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('comments')).toEqual(before); expect(await customer.table('co_management_event_outbox')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('retains the native ticket model adapter intent in its owning transaction', async () => withWorkflowCommentFixture(async ({ customer, createModel, publish }: any) => {
+  publish.mockRejectedValue(new Error('Unavailable'));
+  const comment = await createModel({ native: true });
+  expect(await customer.table('co_management_event_outbox').where('comment_id', comment.comment_id).first()).toMatchObject({ status: 'pending' });
+}));
+
+it.each(['comments.note', 'response_state'])('denies workflow comment side effects hidden by current %s field policy', async field => withWorkflowCommentFixture(async ({ customer, resource, customerPrincipal, createModel }: any) => {
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Workflow comment policy', actorUserId: customerPrincipal.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients', config: { selectedClientIds: [ticket.client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: customerPrincipal.userId });
+  const before = await customer.table('comments'); await expect(createModel()).rejects.toThrow();
+  expect(await customer.table('comments')).toEqual(before); expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+}));
+
+it.each([false, true])('creates email workflow ticket and initial comment in one transaction (retention failure=%s)', async fail => withWorkflowCommentFixture(async ({ customer, resource, customerPrincipal, act, publish }: any) => {
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const input = { emailData: { id: `workflow-${randomUUID()}`, subject: 'Workflow initial ticket', body: { text: 'Workflow initial body' }, from: { email: 'requester@example.com' } },
+    parsedEmail: { sanitizedText: 'Workflow initial body' }, ticketDefaults: { board_id: ticket.board_id, status_id: ticket.status_id, priority_id: ticket.priority_id, entered_by: customerPrincipal.userId },
+    targetClientId: ticket.client_id, targetContactId: ticket.contact_name_id ?? ticket.contact_id, targetLocationId: null };
+  const contact = await customer.table('contacts').where('client_id', ticket.client_id).first(); input.targetContactId = contact.contact_name_id;
+  const beforeTickets = await customer.table('tickets'), beforeComments = await customer.table('comments');
+  const constraint = `workflow_initial_${randomUUID().replaceAll('-', '')}`;
+  if (fail) await db.raw(db.raw("ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type <> 'TICKET_COMMENT_ADDED')", [constraint, resource.tenant]).toQuery());
+  publish.mockClear();
+  try {
+    if (fail) await expect(act('create_ticket_with_initial_comment', input)).rejects.toThrow();
+    else {
+      const result = await act('create_ticket_with_initial_comment', input);
+      expect(await customer.table('tickets').where('ticket_id', result.ticket_id).first()).toBeDefined();
+      const row = await customer.table('co_management_event_outbox').where('comment_id', result.comment_id).first();
+      expect(row).toMatchObject({ status: 'published', publication: { channel: 'internal-notifications' } });
+      expect(publish.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_COMMENT_ADDED')?.[1]).toMatchObject({ channel: 'internal-notifications', eventId: row.event_id, strict: true });
+    }
+  } finally { if (fail) await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+  if (fail) {
+    expect(await customer.table('tickets')).toEqual(beforeTickets); expect(await customer.table('comments')).toEqual(beforeComments);
+    expect(await customer.table('co_management_event_outbox')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+  }
+}));
+
+it('rejects a workflow comment whose internal author differs from the executing version actor', async () => withWorkflowCommentFixture(async ({ customer, principal, createModel }: any) => {
+  const before = await customer.table('comments');
+  await expect(createModel({ authorId: principal.userId })).rejects.toThrow();
+  expect(await customer.table('comments')).toEqual(before); expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
 }));

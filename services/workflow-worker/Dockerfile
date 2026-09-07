@@ -26,6 +26,8 @@ COPY shared/package.json ./shared/
 COPY services/workflow-worker/package.json ./services/workflow-worker/
 COPY server/package.json ./server/
 COPY packages/core/package.json ./packages/core/
+COPY packages/co-managed/package.json ./packages/co-managed/
+COPY packages/licensing/package.json ./packages/licensing/
 COPY packages/authorization/package.json ./packages/authorization/
 COPY packages/db/package.json ./packages/db/
 COPY packages/event-bus/package.json ./packages/event-bus/
@@ -48,6 +50,8 @@ RUN npm config set legacy-peer-deps true && PUPPETEER_SKIP_DOWNLOAD=true npm ins
   --workspace=server \
   --workspace=@alga-psa/core \
   --workspace=@alga-psa/authorization \
+  --workspace=@alga-psa/co-managed \
+  --workspace=@alga-psa/licensing \
   --workspace=@alga-psa/db \
   --workspace=@alga-psa/event-bus \
   --workspace=@alga-psa/event-schemas \
@@ -117,6 +121,12 @@ RUN npm run build
 
 # Build temporal workflows so workflow-worker can host authored queue polling.
 WORKDIR /app/ee/temporal-workflows
+RUN npm run build
+
+WORKDIR /app/packages/licensing
+RUN npm run build
+
+WORKDIR /app/packages/co-managed
 RUN npm run build
 
 # Copy workflow worker source code and build

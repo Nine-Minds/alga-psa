@@ -1,3 +1,5 @@
+import { registerWorkflowConversationRetainer } from '@alga-psa/shared/workflow/runtime';
+import { retainCoManagedWorkflowCommentEvent } from '@alga-psa/co-managed/workflowConversationEvents';
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
 import { logger, registerFeatureFlagChecker, registerJobEnqueuer, registerScheduledJobEnqueuer, registerScheduledJobCanceler } from '@alga-psa/core';
@@ -147,6 +149,7 @@ export async function initializeApp() {
       getSystemEmailService: async () => getSystemEmailService(),
       getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
     });
+    registerWorkflowConversationRetainer(retainCoManagedWorkflowCommentEvent);
     registerWorkflowEmailProvider({
       TenantEmailService: TenantEmailService as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,

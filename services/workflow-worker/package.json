@@ -15,6 +15,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@alga-psa/co-managed": "*",
     "@alga-psa/shared": "^1.0.0",
     "@alga-psa/storage": "*",
     "@alga-psa/workflow-streams": "*",

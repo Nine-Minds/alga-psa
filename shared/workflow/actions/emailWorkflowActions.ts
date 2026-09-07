@@ -62,6 +62,9 @@ const EMPTY_FALLBACK_COMMENT =
  */
 export interface InboundEmailExecutionOptions {
   existingConnection?: Knex.Transaction | Knex;
+  /** Trusted workflow runtime context; not email payload authorship. */
+  workflowRunId?: string;
+  workflowTicketAction?: 'create' | 'update';
   /** Inbox id the helper's outbox rows belong to (durable path). */
   inboxId?: string;
   eventPublisher?: import('@alga-psa/types').IEventPublisher;
@@ -1528,6 +1531,8 @@ export async function createCommentFromEmail(
         new WorkflowEventPublisher({
           suppressCommentEmail: commentData.suppressTechEmailNotification ?? false,
           transaction: trx,
+          workflowRunId: executionOptions?.workflowRunId,
+          ticketAction: executionOptions?.workflowTicketAction,
         });
       // The durable outbox publisher distinguishes the initial comment (in-app
       // only) from a reply comment; drive that from this call's flag.

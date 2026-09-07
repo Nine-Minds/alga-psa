@@ -1,3 +1,4 @@
+import { WorkflowEventPublisher } from '../../../adapters/workflowEventPublisher';
 import { z } from 'zod';
 import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
@@ -657,7 +658,7 @@ export function registerTicketActions(): void {
             },
             tx.tenantId,
             tx.trx,
-            undefined,
+            new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId, ticketAction: 'create' }),
             undefined,
             tx.actorUserId
           );
@@ -741,7 +742,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
@@ -1125,7 +1126,7 @@ export function registerTicketActions(): void {
             },
             tx.tenantId,
             tx.trx,
-            undefined,
+            new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
             undefined,
             tx.actorUserId
           );
@@ -1280,7 +1281,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
@@ -1299,7 +1300,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
@@ -1524,7 +1525,7 @@ export function registerTicketActions(): void {
           },
           tx.tenantId,
           tx.trx,
-          undefined,
+          new WorkflowEventPublisher({ transaction: tx.trx, workflowRunId: ctx.runId }),
           undefined,
           tx.actorUserId
         );
