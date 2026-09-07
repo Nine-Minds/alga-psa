@@ -504,6 +504,15 @@ describe('Billing Invoice Tax Calculations', () => {
       // NY Service: $10.00 * 8.875% = $0.89 (rounded up)
       // CA Service: $5.00 * 8.0% = $0.40
       // Total tax should be $1.29
+      expect(invoiceItems).toHaveLength(2);
+      expect(invoiceItems.map(item => ({
+        serviceId: item.service_id,
+        netAmount: Number(item.net_amount),
+        taxAmount: Number(item.tax_amount),
+      }))).toEqual(expect.arrayContaining([
+        { serviceId: serviceNY, netAmount: 1000, taxAmount: 89 },
+        { serviceId: serviceCA, netAmount: 500, taxAmount: 40 },
+      ]));
       expect(Number(invoiceRow!.subtotal)).toBe(1500); // $15.00
       expect(Number(invoiceRow!.tax)).toBe(129); // $1.29
       expect(Number(invoiceRow!.total_amount)).toBe(1629); // $16.29

@@ -39,6 +39,7 @@ try {
   const floor = [
     'server/src/test/infrastructure/billing/invoices/invoiceDueDate.test.ts',
     'server/src/test/infrastructure/billing/invoices/manualInvoice.test.ts',
+    'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts',
     'server/src/test/infrastructure/billing/tax/taxRoundingBehavior.test.ts',
     'server/src/test/infrastructure/billing/credits/creditApplication.test.ts',
   ].sort();

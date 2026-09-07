@@ -21,6 +21,7 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   write('.gitignore', 'node_modules/\ntest-results/\n');
   write('server/vitest.config.mjs', `export default ${JSON.stringify({ test: { globals: true, include: ['src/test/infrastructure/**/*.test.ts'], fileParallelism: false, maxWorkers: 1 } })};`);
   const files = ['billing/invoices/invoiceDueDate.test.ts', 'billing/invoices/manualInvoice.test.ts',
+    'billing/invoices/billingInvoiceGeneration_tax.test.ts',
     'billing/tax/taxRoundingBehavior.test.ts', 'billing/credits/creditApplication.test.ts', 'extra.test.ts'];
   for (const file of files) write(`server/src/test/infrastructure/${file}`, "test('observes the result', () => expect(2 + 3).toBe(5));\n");
   symlinkSync(path.join(source, 'server/node_modules'), path.join(root, 'server/node_modules'), 'dir');
@@ -38,12 +39,12 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
     const evidence = read('test-results/infrastructure/evidence.json');
     assert.equal(evidence.status, 'passed');
     assert.equal(evidence.workingTreeDirty, false);
-    assert.equal(evidence.expectedFiles.length, index === 3 ? 1 : 2);
+    assert.equal(evidence.expectedFiles.length, 2);
     cpSync(path.join(root, 'test-results/infrastructure'), path.join(root, `test-results/infrastructure-shards/shard-${index}`), { recursive: true });
   }
   let combined = run('verify-infrastructure-shards.mjs');
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
-  assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, 5);
+  assert.equal(read('test-results/infrastructure/aggregate.json').counts.passed, 6);
   assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'complete');
 
   const rawFiles = ['collected', 'collected-tests', 'results'];
@@ -71,7 +72,9 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
 
   const tier1 = run('run-infrastructure-tests.mjs', 1, 'tier1', 1);
   assert.equal(tier1.status, 0, tier1.stdout + tier1.stderr);
-  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, 4);
+  assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, 5);
+  assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
+    'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts'));
   write('server/src/test/infrastructure/omitted.spec.ts', "test('new test', () => expect(true).toBe(true));\n");
   assert.equal(run('run-infrastructure-tests.mjs', 1, 'tier1', 1).status, 1);
   assert.deepEqual(read('test-results/infrastructure/discovery.json').unmatched, ['server/src/test/infrastructure/omitted.spec.ts']);

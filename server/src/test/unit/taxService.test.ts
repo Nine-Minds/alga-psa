@@ -365,7 +365,8 @@ describe('TaxService', () => {
         expect(await taxService.calculateTax('client1', amount, '2023-06-01')).toEqual({ taxAmount, taxRate: 10 });
     });
     it.todo('should apply the correct tax rate for international transactions');
-    it.todo('should handle tax calculation for multi-item invoices with different tax rates');
+    // Multi-item invoice tax persistence is exercised in the infrastructure
+    // billing/invoices/billingInvoiceGeneration_tax.test.ts suite.
     it.todo('should apply tax caps correctly when present');
     it('applies reverse charge before looking up an otherwise taxable default rate', async () => {
         mockClientTaxSettings.get.mockResolvedValue({
