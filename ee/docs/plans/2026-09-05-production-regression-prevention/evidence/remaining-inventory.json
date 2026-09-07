@@ -1,7 +1,8 @@
 {
   "scope": "Partial mixed-revision runner collection audit; not release readiness",
-  "candidateCount": 3944,
-  "unmatchedCount": 110,
+  "auditedRevision": "83d9e03506a9978ea8fda2f05b420b07a9601840",
+  "candidateCount": 3949,
+  "unmatchedCount": 98,
   "unmatched": [
     "ee/server/src/__tests__/deploy/workflows-ee-deploy-no-stub.playwright.test.ts",
     "ee/server/src/__tests__/integration/alga-psa-login.playwright.test.ts",
@@ -68,21 +69,10 @@
     "ee/temporal-workflows/src/__tests__/e2e/tenant-creation-workflow.e2e.test.ts",
     "ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts",
     "ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts",
-    "ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts",
     "ee/temporal-workflows/src/__tests__/worker-registration.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/email-activities-standalone.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts",
     "ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts",
     "ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/tenant-activities-simple.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/tenant-activities.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/test-file-check.test.ts",
-    "ee/temporal-workflows/src/activities/__tests__/user-activities-simple.test.ts",
-    "ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts",
-    "ee/temporal-workflows/src/db/__tests__/product-upgrade-operations.integration.test.ts",
     "ee/temporal-workflows/src/db/__tests__/product-upgrade-role-grants.contract.test.ts",
-    "ee/temporal-workflows/src/scripts/__tests__/upgrade-tenant-product.test.ts",
     "ee/temporal-workflows/src/test-utils/test-connection.test.ts",
     "ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts",
     "ee/temporal-workflows/src/workflows/__tests__/tenant-creation-product-bootstrap.contract.test.ts",
@@ -111,13 +101,203 @@
     "server/src/test/e2e/ticket-response-state-ui.playwright.test.ts",
     "server/src/test/e2e/utils/utilities.test.ts",
     "server/src/test/e2e/workflowRuntimeV2.e2e.test.ts",
-    "server/src/test/visual/invoiceTemplateGolden.test.ts",
-    "tools/i18n/tests/baseline.test.mjs"
+    "server/src/test/visual/invoiceTemplateGolden.test.ts"
+  ],
+  "documentedExclusions": [
+    {
+      "file": "tools/i18n/tests/baseline.test.mjs",
+      "owner": "Localization maintainers",
+      "reason": "Optional local comparison against gitignored baseline.json files. The existing validate-translations workflow explicitly replaces these baselines with zero-regression glossary, placeholder and parity gates; its three mandatory tooling suites also run in node-tooling. This file provides no CI execution coverage and must remain visible as a manual exclusion.",
+      "issue": "https://github.com/Nine-Minds/alga-psa/pull/3343",
+      "expires": "2026-12-06"
+    }
+  ],
+  "sources": [
+    {
+      "runner": "ai-gateway-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "4b5c525c1f5c159436c1ca2569de6cf7fcb0f931143c46cb96830c63bb924a7e",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "enterprise-integration-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "83b806c7b3a982da18aeb82662e1c0212da72a6d90a58b328a6946d5f17aba79",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "enterprise-unit-shard-1",
+      "artifact": "collected.json",
+      "sha256": "a6f78143263f537cf9128677f805b79ec2fdb17a326305c24914d306f1275d47",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "enterprise-unit-shard-2",
+      "artifact": "collected.json",
+      "sha256": "62188b4890e07df242acb4b7cdeffd62951babc90dcaa4372dd932c41edb7c2d",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "enterprise-unit-shard-3",
+      "artifact": "collected.json",
+      "sha256": "be7fe0b22badd746e4e0955f312671fa9458d6c4503059c67d244843ad37e8cb",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "nx-tooling-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "be20d50470ad73a29f25f826bd4eb5cf60e8c53440ee3d8c0973b21ea6160243",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "server-colocated-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "8ec05b75fe86974d5857c0cb52209addc1fc227e5ca723eecb0dc20281d053b1",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "ui-kit-showcase-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "2fc24b6a3709d992d403dc65a0699036a209cfb56272059b367408b2eeb2acaa",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "workspace-runtime-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "61939c4d6ae25e7479def87fd80bde9fa4a0b1ecfb2b3cb0db08fe30b93c724a",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "workspace-unit-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "collected.json",
+      "sha256": "1d1260ced603c046eec6eab655413dac5da0485eb5ecc42673795321b767d383",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "infrastructure-shard-1",
+      "artifact": "collected.json",
+      "sha256": "f54fcaa8fdc32ecb60f9f18f62749ca29581c0b9dda234fe98093dde933cf747",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "infrastructure-shard-2",
+      "artifact": "collected.json",
+      "sha256": "231a7d76b7e035c77f8c32e50a9a3a654fb423fa21bf09bec3691e7f07aa4f00",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "infrastructure-shard-3",
+      "artifact": "collected.json",
+      "sha256": "ae4156809da87f132d6b15c3cb54e09852051aa5ecb5101ad49eac04df052e21",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "workspace-db-evidence",
+      "artifact": "collected.json",
+      "sha256": "91cc013409463acc63339ec252a17979fa606d1dbbc1334efe4a1ddf922887d3",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "appliance-node-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "events.jsonl",
+      "sha256": "b57056229f3a4e9298bb87785ecbc91ae981ba23e4dd16638251ea9b3c1bf2a9",
+      "format": "node-events",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "node-tooling-3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+      "artifact": "events.jsonl",
+      "sha256": "177690a390822cc602bb9d0a9c29abfb53580015415e544a1d285b902ba0cc24",
+      "format": "node-events",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "server-unit-local-collection",
+      "artifact": "alga-server-unit-collected-82cc.json",
+      "sha256": "767fef502c22c999de0a551b6bc17eb8656330d15d9de8dedf30299bd98809ce",
+      "format": "file-list",
+      "sourceRoot": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa"
+    },
+    {
+      "runner": "mobile",
+      "artifact": "collected.json",
+      "sha256": "b91e6e11f3f47abb5d2ad4315a03996118abc8085287abe9cccc0e033af81f17",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "integration",
+      "artifact": "alga-integration-collected-82cc.json",
+      "sha256": "3bd4fda39d6bd074dc54bb124af0006b76275035ef32d0b13bbf852d64bcab23",
+      "format": "file-list",
+      "sourceRoot": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa"
+    },
+    {
+      "runner": "api",
+      "artifact": "alga-api-collected-82cc.json",
+      "sha256": "31aeae916842c2979adcf3a0d53b1a61dfd6d2d16a25c9d5965dd1b4ee7b9e78",
+      "format": "file-list",
+      "sourceRoot": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa"
+    },
+    {
+      "runner": "production-browser",
+      "artifact": "collected.json",
+      "sha256": "bc2593139e3ebf802b037e3eda27d558aba8cbe1093cafdce5a11856c62233d9",
+      "format": "playwright",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    },
+    {
+      "runner": "temporal-readiness",
+      "artifact": "collected.json",
+      "sha256": "7ee42ddafdbe229a8cac2c93f31d493c3801b6965426fd8669b73ca2149a2c29",
+      "format": "file-list",
+      "sourceRoot": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa"
+    },
+    {
+      "runner": "temporal-engine",
+      "artifact": "collected.json",
+      "sha256": "fb6572ad6ab224d944763514e3d63db4588f729d373476455ea2cd2243e6118b",
+      "format": "file-list",
+      "sourceRoot": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa"
+    },
+    {
+      "runner": "temporal-database",
+      "artifact": "collected.json",
+      "sha256": "f51381bb6d8bdec18e6d16b5d72f5f216c9471855c77cc5433247792d8576116",
+      "format": "file-list",
+      "sourceRoot": "/Users/roberisaacs/.codex/worktrees/82cc/alga-psa"
+    },
+    {
+      "runner": "citus-runtime",
+      "artifact": "collected.json",
+      "sha256": "40edc10bfdc4711565c6204df45d087a06db28f00ca85b4c6d36377e6570d987",
+      "format": "file-list",
+      "sourceRoot": "/home/runner/work/alga-psa/alga-psa"
+    }
   ],
   "limits": [
-    "Runner owner assignments pending.",
-    "Local and prior native collections are mixed.",
-    "This audit remains failed; no exclusions added to hide orphaned tests.",
-    "Unmatched means absent from these collection artifacts; it does not prove no current runner assignment. For example, tools/i18n/tests/baseline.test.mjs is selected by the current Node tooling classifier."
+    "Older server-unit, full-integration, mobile, browser and API collections remain mixed with current artifacts",
+    "Individual runner-owner assignments remain unresolved",
+    "Collection does not prove execution, required status protections or release readiness"
+  ],
+  "nextActions": [
+    "Reconcile 76 legacy Playwright files with production-build fixtures and actual runtime requirements",
+    "Classify 13 Temporal source-only/legacy environment files without inventing execution coverage",
+    "Assign remaining nine server email/collaboration/workflow/visual tests to real service fixtures",
+    "Change invoice visual baseline handling to fail when missing unless explicitly updating reviewed baselines"
   ]
 }

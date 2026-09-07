@@ -1783,3 +1783,21 @@ Evidence: `evidence/kb-import-engine-policy.json`.
 Native workspace aggregate failure is downstream of the legacy Redis fixture
 failure repaired at11810e8d14. Published browser builds remain active; follow-up
 commits are intentionally local until the run is terminal.
+
+### Refreshed repository collection gap audit (2026-09-07)
+
+Re-ran verify-test-inventory with25 actual collection artifacts. Refreshed native
+workspace34118119064, infrastructure34118118987 and Node34118119081 inputs,
+local Temporal collections and native Citus; retained explicitly older inputs
+where fresh full-run artifacts are unavailable. Carried the existing localization
+manual exclusion from scripts/node-test-exclusions.json (not a new quarantine).
+Result:3949 candidates,98 unmatched (76legacy Playwright,13Temporal,9other server),
+plus the one documented localization exclusion. No non-unmatched verification
+failures. This supersedes the110-file snapshot but remains mixed-revision discovery
+only. F004 and global execution requirements remain open.
+
+Evidence includes collection hashes and the exact unmatched list in
+`evidence/remaining-inventory.json`. Next work should prioritize legacy browser
+fixture migration, remaining server service tests and classification of source-only
+Temporal contracts. The visual invoice suite currently writes a missing baseline
+and passes, so it needs explicit update mode before becoming mandatory.
