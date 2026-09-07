@@ -217,6 +217,7 @@ jobs:
         env:
           TEST_METRICS_SUITE: integration-tier1
           TEST_METRICS_RESULTS: server/test-results-integration.json
+          TEST_METRICS_EXECUTION: test-results/integration/evidence.json
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
@@ -227,6 +228,7 @@ jobs:
         env:
           TEST_METRICS_SUITE: integration-full
           TEST_METRICS_RESULTS: server/test-results-integration.json
+          TEST_METRICS_EXECUTION: test-results/integration/evidence.json
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 

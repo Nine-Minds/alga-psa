@@ -1059,3 +1059,7 @@
 - Appended schema_version=2, run_kind, event_name and coverage_methodology to summary and directory rows, preserving all existing positions. GitHub event context distinguishes PR/main/branch/nightly/manual/local/other without inferring readiness. Historical rows remain unversioned.
 - Documented source-inventory-v1 restricted denominator (server/src, shared, packages/*/src), explicitly excluding whole-repository claims. This metadata does not silently expand coverage scope or enable currently disabled PR reporting.
 - Before: seven pass/two intended failures. After: 14 combined lifecycle/schema cases pass, zero skips; subprocess cases exercise actual row generation. Evidence: metrics-versioned-rows.json. F024/F025 remain false pending remaining fields, comprehensive inventory, live workbook and cancellation reconciliation.
+
+### Bind integration metrics to execution evidence — 2026-09-07
+- Strict integration execution could reject skips/missing identities while the raw Vitest report still appeared green to the recorder. Added TEST_METRICS_EXECUTION to Tier-1/full recording and fail-closed diagnostic downgrading for missing, unsupported, failed or stale-revision evidence. Passing evidence does not override raw lifecycle checks.
+- Behavioral failure reproduced before repair; final 16 metrics cases pass with zero skips, including a real subprocess loading an absent configured evidence file. Integration workflow actionlint passes. Evidence: metrics-execution-binding.json. These checks do not substitute for independent gate verification.

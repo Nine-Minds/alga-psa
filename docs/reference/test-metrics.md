@@ -91,6 +91,12 @@ signal shows in the vitest JSON report:
   successful;
 - an execution manifest explicitly reports incomplete required execution.
 
+The integration metrics steps set `TEST_METRICS_EXECUTION` to the runner's
+execution evidence. Missing, unsupported, failed, or wrong-revision evidence
+suppresses the percentage even if the raw Vitest assertions passed. This is a
+reporting safeguard; the execution gate remains responsible for independently
+reconciling the required identities and raw results.
+
 Missing or malformed requested test reports also produce a partial row, with
 blank test counts and pass percentage. A coverage report does not hide a
 missing test report. Intentional coverage-only invocations omit

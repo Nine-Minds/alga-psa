@@ -47,12 +47,33 @@ test('a fully passing suite keeps legacy counts and percentage', () => {
   assert.equal(result.passPct, 100);
 });
 
-function buildIsolatedRow({ results, coverage, requestResults = true, context = {} } = {}) {
+test('required execution evidence can reject a superficially passing raw report', () => {
+  const revision = 'a'.repeat(40);
+  const raw = report([{ status: 'passed', assertionResults: [assertion('passed')] }],
+    { numPassedTests: 1, numPendingTests: 0, numTotalTests: 1, numFailedTestSuites: 0 });
+  for (const evidence of [null, {},
+    { schemaVersion: 1, revision, status: 'failed', failures: ['Missing required file'] },
+    { schemaVersion: 1, revision: 'b'.repeat(40), status: 'passed', failures: [] },
+    { schemaVersion: 1, revision, status: 'passed', failures: ['Unexpected skip'] },
+  ]) {
+    const result = testCounts(raw, evidence, revision);
+    assert.equal(result.runStatus, 'partial');
+    assert.equal(result.passPct, '');
+    assert.equal(result.passed, 1);
+  }
+  assert.equal(testCounts(raw, { schemaVersion: 1, revision, status: 'passed', failures: [] }, revision).passPct, 100);
+});
+
+function buildIsolatedRow({ results, coverage, execution, requestResults = true, context = {} } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'metrics-report-'));
   try {
     const env = { PATH: process.env.PATH, TEST_METRICS_SUITE: 'required-tests', ...context };
     if (requestResults) env.TEST_METRICS_RESULTS = join(dir, 'results.json');
     if (results !== undefined) writeFileSync(env.TEST_METRICS_RESULTS, results);
+    if (execution !== undefined) {
+      env.TEST_METRICS_EXECUTION = join(dir, 'execution.json');
+      if (execution !== null) writeFileSync(env.TEST_METRICS_EXECUTION, JSON.stringify(execution));
+    }
     if (coverage) {
       env.TEST_METRICS_COVERAGE = join(dir, 'coverage.json');
       writeFileSync(env.TEST_METRICS_COVERAGE, JSON.stringify(coverage));
@@ -120,4 +141,16 @@ test('coverage-only rows identify their measured-source methodology', () => {
   assert.equal(row.schema_version, 2);
   assert.equal(row.run_kind, 'local');
   assert.equal(row.coverage_methodology, 'v8-loaded-files/source-inventory-v1');
+});
+
+test('the recorder loads required execution evidence from its configured path', () => {
+  const row = buildIsolatedRow({
+    results: JSON.stringify(report([{ status: 'passed', assertionResults: [assertion('passed')] }],
+      { numPassedTests: 1, numTotalTests: 1, numPendingTests: 0, numFailedTestSuites: 0 })),
+    execution: null,
+    context: { GITHUB_SHA: 'a'.repeat(40) },
+  });
+  assert.equal(row.run_status, 'partial');
+  assert.equal(row.pass_pct, '');
+  assert.equal(row.passed, 1);
 });

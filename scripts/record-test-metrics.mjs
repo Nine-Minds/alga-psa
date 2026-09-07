@@ -8,6 +8,7 @@
  *   TEST_METRICS_SUITE      required — suite label (unit-coverage, integration-full, ...)
  *   TEST_METRICS_RESULTS    path to a vitest --reporter=json output file
  *   TEST_METRICS_COVERAGE   path to a coverage-summary.json (optional)
+ *   TEST_METRICS_EXECUTION  required execution evidence path for reconciled lanes (optional)
  *   GOOGLE_SA_KEY           service-account key JSON (raw or base64)
  *   TEST_METRICS_SHEET_ID   spreadsheet id from the sheet URL
  *   TEST_METRICS_SHEET_TAB  tab name (default "metrics")
@@ -95,7 +96,7 @@ export function runStatus(results) {
   return cutShort || noShow || lifecycleFailure ? 'partial' : 'complete';
 }
 
-export function testCounts(results) {
+export function testCounts(results, execution, revision) {
   if (!results) return null;
   const passed = results.numPassedTests ?? 0;
   const failed = results.numFailedTests ?? 0;
@@ -103,7 +104,14 @@ export function testCounts(results) {
   const todo = results.numTodoTests ?? 0;
   const total = results.numTotalTests ?? passed + failed + skipped + todo;
   const executed = passed + failed;
-  const status = runStatus(results);
+  const evidenceRejected = execution !== undefined && (
+    execution?.schemaVersion !== 1 || execution?.status !== 'passed'
+    || !Array.isArray(execution?.failures) || execution.failures.length > 0
+    || (revision && execution?.revision !== revision)
+  );
+  // Evidence can only downgrade this diagnostic. It does not replace raw
+  // report checks or independently prove release readiness.
+  const status = evidenceRejected ? 'partial' : runStatus(results);
   // Blank on partial runs so sheet formulas cannot average a vacuous green.
   const passPct = executed > 0 && status !== 'partial'
     ? Math.round((passed / executed) * 10000) / 100
@@ -237,7 +245,9 @@ export function buildRow() {
     console.error('test-metrics: TEST_METRICS_SUITE is required');
     process.exit(1);
   }
-  const counts = testCounts(readJson(process.env.TEST_METRICS_RESULTS));
+  const execution = process.env.TEST_METRICS_EXECUTION
+    ? readJson(process.env.TEST_METRICS_EXECUTION) : undefined;
+  const counts = testCounts(readJson(process.env.TEST_METRICS_RESULTS), execution, process.env.GITHUB_SHA);
   const summary = readJson(process.env.TEST_METRICS_COVERAGE);
   const cov = coveragePcts(summary);
   const files = coverageFileCounts(summary);
