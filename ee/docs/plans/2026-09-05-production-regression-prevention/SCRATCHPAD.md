@@ -1911,3 +1911,7 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Unknown-sender scenario now reads tenant-scoped tickets by the captured Message-ID (canonical and bracketed forms), avoiding the inner contact join that hid no-contact tickets. Its legacy E2E assertion now requires exactly one matching-title/tenant ticket rather than the vacuous length >= 0 and an unasserted cross-tenant task scan.
 - Added migrated-PostgreSQL behavioral coverage with own/foreign tenants, a no-contact ticket, unrelated message and foreign same-ID ticket. Exact own ticket returned; missing ID yields none; no send rejects. Passed 1/1 in 14.84 seconds on task-owned visual_regression_82cc_test (/tmp/alga-email-message-db.log). Added this DB suite to Tier-1 floor. Full legacy SMTP/manual-fallback workflow execution remains unverified; this proves lookup/isolation only.
+
+### 2026-09-07 — combined changed DB suite validation
+
+- Ran Microsoft callback, workflow trigger dispatch and email message lookup suites together with per-file fork isolation/maxWorkers=1 on the owned disposable database. All 3 files / 22 cases passed, zero skips, 45.59 seconds. Evidence: evidence/local-db-followups-combined.json; /tmp/alga-combined-new-db-suites.log. This validates the changed suites together, not complete integration CI. Plan validator passes 37 features/31 test entries and git diff check is clean.
