@@ -56,3 +56,4 @@ export { retainCoManagedTaskCommentEvent } from './projectTaskEvents';
 
 export * from './taskCommentNotification';
 export * from './taskCommentRecipients';
+export * from './timeEntryBillingMode';

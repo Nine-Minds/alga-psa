@@ -378,3 +378,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `commentEmailDeliveries.ts`, email consumer catalog/subscriber, maintenance recovery and `coManagedCommentEmailTransport.ts`.
 - **Gate:** Two concrete source families; task delivery needs the same transaction-owned discovery, preference checks and current-source send boundary. ACT / bounded-now.
 - **Status:** revised. Task recipients from both organizations enter the existing queue through one retained-identity helper. Resource-specific readers and routing checks feed the existing completion engine; task preferences select the existing task subtype. The current renderer accepts admitted task names/owner paths and shares escaping, locale resolution, caller-owned retries and stable Message-ID handling. No task-specific SMTP queue or maintenance scanner was introduced. Ticket customer/requester reply-token preparation remains separate; task mail does not manufacture ticket reply authority.
+
+## operational-time-billing-mode — friction
+- **What:** Native time forms and API validators require a service even for non-billable entries, and product changes alone cannot preserve the non-invoiceable nature of customer history.
+- **Where:** Product capability/mode resolver, `timeEntryBillingMode.ts`, `time_entries`, invoice source links; native form/API integration is still pending.
+- **Gate:** Two live write stacks need one explicit distinction and durable financial invariant. ACT / bounded-now.
+- **Status:** prepared. Operational time has an explicit capability, immutable stored billing mode and price/invoice exclusions. The internal mode helper retains product/lifecycle locks; field normalization preserves elapsed effort while excluding billable minutes. This is billing-mode admission, not actor/work-item authorization. Native adapters must retain their own current principal, source and timesheet authority when connecting it.
+
+## project-task-effort-aggregate — friction
+- **What:** Summing entries before locking the task lets concurrent committed saves overwrite each other's actual-minute totals.
+- **Where:** The existing DB recalculation service used by native time creation, edits, deletion and work-item removal.
+- **Gate:** One existing shared service already owns all relevant local projections. ACT / bounded-now.
+- **Status:** corrected. Lock affected tasks in sorted order before taking the aggregate snapshot, inside the caller's transaction (or an owned transaction for root callers). Continue deriving actual minutes from elapsed instants, including service-free operational entries; billable duration remains separate. Shared organization-qualified contributions still need their planned resolver and visibility rules.

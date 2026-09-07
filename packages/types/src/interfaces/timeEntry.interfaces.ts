@@ -30,6 +30,8 @@ export interface ITimePeriodSettings extends TenantEntity {
 }
 
 export interface ITimeEntry extends TenantEntity  {
+  /** Persisted owner-side billing semantics; operational history cannot become invoiceable after an upgrade. */
+  billing_mode?: 'commercial' | 'operational';
   entry_id?: string | null;
   created_by?: string | null;
   updated_by?: string | null;

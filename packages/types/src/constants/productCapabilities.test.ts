@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { productHasCapability, type ProductCapability } from './productCapabilities';
+import { productHasCapability, productTimeEntryMode, type ProductCapability } from './productCapabilities';
 
 describe('co-managed product capabilities', () => {
   it.each<ProductCapability>([
     'tickets', 'knowledge_base', 'documents', 'credentials', 'projects', 'scheduling',
-    'time_entry', 'assets', 'sla', 'workflows', 'directory_connections',
+    'time_entry', 'operational_time', 'assets', 'sla', 'workflows', 'directory_connections',
   ])('includes customer operation: %s', (capability) => {
     expect(productHasCapability('co_managed', capability)).toBe(true);
   });
@@ -22,4 +22,6 @@ describe('co-managed product capabilities', () => {
     expect(productHasCapability('algadesk', 'projects')).toBe(false);
     expect(productHasCapability('unknown', 'tickets')).toBe(false);
   });
+  it.each([['co_managed', 'operational'], ['psa', 'commercial'], [null, 'commercial'], ['algadesk', null], ['unknown', null]])(
+    'resolves the time-entry product mode for %s', (product, expected) => expect(productTimeEntryMode(product)).toBe(expected));
 });

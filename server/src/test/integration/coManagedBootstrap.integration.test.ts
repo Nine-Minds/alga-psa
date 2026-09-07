@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -12101,4 +12101,114 @@ it('task email retains source and recipient locks through SMTP and recovers an u
   await sponsor.table('co_management_email_deliveries').update({ next_attempt_at: new Date(0) });
   const retry = vi.fn(async () => ({ status: 'delivered' as const })); await processEmail(db, principal.tenant, retry);
   expect((retry.mock.calls[0] as any)[0].messageId).toBe(send.mock.calls[0][0].messageId);
+}));
+
+async function withOperationalTimeFixture(work: (fixture: any) => Promise<void>) {
+  await withSharedProjectTaskFixture(async fixture => {
+    const fields = { user_id: fixture.customerPrincipal.userId, work_item_type: 'project_task', work_item_id: fixture.resource.id,
+      start_time: '2026-09-07T09:00:00Z', end_time: '2026-09-07T10:30:00Z', work_date: '2026-09-07', work_timezone: 'UTC', billable_duration: 0, notes: 'Private operational effort' };
+    const policy = await import('../../../../packages/co-managed/src/timeEntryBillingMode');
+    const insert = async (extra: any = {}) => (await fixture.customer.table('time_entries').insert({ tenant: fixture.resource.tenant, ...fields, ...extra }).returning('*'))[0];
+    await work({ ...fixture, fields, policy, insert });
+  });
+}
+
+it('operational time stores customer effort without services or contracts and contributes actual task minutes', async () => withOperationalTimeFixture(async ({ customer, resource, policy, insert }: any) => {
+  const mode = await db.transaction(trx => policy.lockTimeEntryBillingMode(trx, resource.tenant)); expect(mode).toBe('operational');
+  const entry = await insert(policy.operationalTimeEntryFields({}));
+  expect(entry).toMatchObject({ billing_mode: 'operational', billable_duration: 0, service_id: null, contract_line_id: null, invoiced: false });
+  const { recalculateProjectTaskActualHoursForEntryChange: recalculate } = await import('@alga-psa/db');
+  await db.transaction(trx => recalculate(trx, resource.tenant, null, entry));
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(90);
+  const [edited] = await customer.table('time_entries').where('entry_id', entry.entry_id).update({ end_time: '2026-09-07T09:30:00Z' }).returning('*');
+  await db.transaction(trx => recalculate(trx, resource.tenant, entry, edited));
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(30);
+  await customer.table('time_entries').where('entry_id', entry.entry_id).del(); await db.transaction(trx => recalculate(trx, resource.tenant, edited, null));
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(0);
+}));
+
+it.each(['billable_duration', 'service_id', 'contract_line_id', 'tax_rate_id', 'tax_region', 'invoiced'])(
+  'operational time storage rejects commercial %s even through legacy writes', async field => withOperationalTimeFixture(async ({ customer, insert }: any) => {
+    const value = field === 'billable_duration' ? 45 : field === 'invoiced' ? true : field === 'tax_region' ? 'US' : randomUUID();
+    await expect(insert({ [field]: value })).rejects.toMatchObject({ constraint: 'time_entries_billing_mode_check' });
+    expect(await customer.table('time_entries')).toHaveLength(0);
+  }));
+
+it('operational time keeps its non-invoiceable identity after separation and paid PSA upgrade', async () => withOperationalTimeFixture(async ({ customer, resource, insert, policy }: any) => {
+  const entry = await insert(); await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await db.transaction(trx => policy.lockTimeEntryBillingMode(trx, resource.tenant, entry.entry_id))).toBe('operational');
+  expect(await db.transaction(trx => policy.lockTimeEntryBillingMode(trx, resource.tenant))).toBe('commercial');
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ notes: 'Retained private time note' });
+  await expect(customer.table('time_entries').where('entry_id', entry.entry_id).update({ billing_mode: 'commercial', billable_duration: 90 })).rejects.toMatchObject({ constraint: 'time_entries_operational_mode_immutable' });
+  await expect(customer.table('time_entries').where('entry_id', entry.entry_id).update({ billable_duration: 90 })).rejects.toMatchObject({ constraint: 'time_entries_billing_mode_check' });
+  await expect(customer.table('invoice_time_entries').insert({ tenant: resource.tenant, invoice_time_entry_id: randomUUID(), invoice_id: randomUUID(), entry_id: entry.entry_id })).rejects.toMatchObject({ constraint: 'operational_time_not_invoiceable' });
+}));
+
+it('operational time policy retains lifecycle and product locks through mutation and rejects license expiry', async () => withOperationalTimeFixture(async ({ customer, sponsor, principal, resource, policy }: any) => {
+  let start!: () => void, resume!: () => void;
+  const ready = new Promise<void>(resolve => { start = resolve; }), paused = new Promise<void>(resolve => { resume = resolve; });
+  const mutation = db.transaction(async trx => { expect(await policy.lockTimeEntryBillingMode(trx, resource.tenant)).toBe('operational'); start(); await paused; });
+  await Promise.race([ready, mutation.then(() => { throw new Error('Mode admission did not wait'); })]);
+  try { await expect(db.transaction(async trx => { await trx.raw("SET LOCAL lock_timeout = '75ms'"); await tenantDb(trx, resource.tenant).table('tenants').update({ product_code: 'psa' }); })).rejects.toMatchObject({ code: '55P03' }); }
+  finally { resume(); await mutation; }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(db.transaction(trx => policy.lockTimeEntryBillingMode(trx, resource.tenant))).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+}));
+
+it('operational time migration preserves history on repeat and refuses destructive rollback', async () => withOperationalTimeFixture(async ({ customer, insert }: any) => {
+  const migration = require('../../../migrations/20260907192000_preserve_operational_time_entries.cjs'), entry = await insert();
+  await migration.up(db); await migration.up(db);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ billing_mode: 'operational', notes: entry.notes, billable_duration: 0 });
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained operational time history');
+}));
+
+it('operational time migration refuses pre-existing billing evidence instead of rewriting commercial minutes', async () => withOperationalTimeFixture(async ({ sponsor, principal, fields }: any) => {
+  const migration = require('../../../migrations/20260907192000_preserve_operational_time_entries.cjs');
+  const [entry] = await sponsor.table('time_entries').insert({ tenant: principal.tenant, ...fields, user_id: principal.userId, work_item_id: null, work_item_type: 'ad_hoc', billable_duration: 45 }).returning('*');
+  await sponsor.table('tenants').update({ product_code: 'co_managed' });
+  try { await expect(migration.up(db)).rejects.toThrow('Existing co-managed time has billing evidence'); }
+  finally { await sponsor.table('tenants').update({ product_code: 'psa' }); }
+  expect(await sponsor.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ billing_mode: 'commercial', billable_duration: 45 });
+}));
+
+it('operational time fields reject explicit pricing and preserve actual effort inputs', async () => withOperationalTimeFixture(async ({ policy }: any) => {
+  const input = Object.freeze({ service_id: '', contract_line_id: null, tax_region: undefined, billable_duration: 90, start_time: '2026-09-07T09:00:00Z' });
+  expect(policy.operationalTimeEntryFields(input)).toMatchObject({ billing_mode: 'operational', billable_duration: 0, service_id: null, invoiced: false });
+  expect(input.billable_duration).toBe(90);
+  for (const key of ['service_id', 'contract_line_id', 'tax_rate_id', 'tax_region']) expect(() => policy.operationalTimeEntryFields({ [key]: randomUUID() })).toThrow('OPERATIONAL_TIME_COMMERCIAL_FIELDS');
+}));
+
+it('operational time does not lose effort when concurrent entries update the same task total', async () => withOperationalTimeFixture(async ({ customer, resource, fields }: any) => {
+  const { recalculateProjectTaskActualHoursForEntryChange: recalculate } = await import('@alga-psa/db');
+  const first = await db.transaction();
+  const [entry] = await tenantDb(first, resource.tenant).table('time_entries').insert({ tenant: resource.tenant, ...fields }).returning('*');
+  await recalculate(first, resource.tenant, null, entry);
+  let parentQuery!: () => void;
+  const atParent = new Promise<void>(resolve => { parentQuery = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('project_tasks')) parentQuery(); };
+  db.on('query', listener);
+  const second = db.transaction(async trx => {
+    const [next] = await tenantDb(trx, resource.tenant).table('time_entries').insert({ tenant: resource.tenant, ...fields, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T11:45:00Z' }).returning('*');
+    await recalculate(trx, resource.tenant, null, next);
+  });
+  try {
+    await Promise.race([atParent, second.then(() => { throw new Error('Concurrent total did not retain the task lock'); })]);
+    await first.commit(); await second;
+    expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(135);
+  } finally { db.removeListener('query', listener); if (!first.isCompleted()) await first.rollback(); await second.catch(() => {}); }
+}));
+
+it('operational time moves recalculate both affected task totals without duplicating effort', async () => withOperationalTimeFixture(async ({ customer, resource, insert }: any) => {
+  const { recalculateProjectTaskActualHoursForEntryChange: recalculate } = await import('@alga-psa/db');
+  const task = await customer.table('project_tasks').where('task_id', resource.id).first(), nextTaskId = randomUUID();
+  await customer.table('project_tasks').insert({ ...task, task_id: nextTaskId, wbs_code: `${task.wbs_code}.moved`, task_name: 'Other operational task', actual_hours: 0 });
+  const entry = await insert(); await db.transaction(trx => recalculate(trx, resource.tenant, null, entry));
+  await db.transaction(async trx => {
+    const [moved] = await tenantDb(trx, resource.tenant).table('time_entries').where('entry_id', entry.entry_id).update({ work_item_id: nextTaskId }).returning('*');
+    await recalculate(trx, resource.tenant, entry, moved);
+  });
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(0);
+  expect(Number((await customer.table('project_tasks').where('task_id', nextTaskId).first()).actual_hours)).toBe(90);
+  expect(await customer.table('time_entries')).toHaveLength(1);
 }));

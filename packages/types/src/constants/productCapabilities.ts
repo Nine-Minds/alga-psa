@@ -11,7 +11,7 @@ export const PRODUCT_CAPABILITIES = {
   co_managed: [
     'dashboard', 'tickets', 'clients', 'contacts', 'knowledge_base', 'reports',
     'settings', 'client_portal', 'email_to_ticket', 'documents', 'credentials',
-    'projects', 'scheduling', 'time_entry', 'assets', 'sla', 'workflows',
+    'projects', 'scheduling', 'time_entry', 'operational_time', 'assets', 'sla', 'workflows',
     'directory_connections',
   ],
 } as const satisfies Record<ProductCode, readonly string[]>;
@@ -29,4 +29,14 @@ export function productHasCapability(
   if (resolved.isMisconfigured) return false;
   const capabilities: readonly string[] = PRODUCT_CAPABILITIES[resolved.productCode];
   return capabilities.includes('*') || capabilities.includes(capability);
+}
+
+export type TimeEntryBillingMode = 'commercial' | 'operational';
+
+/** Operational effort is an explicit product capability; commercial PSA time
+ * retains service/contract semantics even when an individual entry is unbillable. */
+export function productTimeEntryMode(productCode: string | null | undefined): TimeEntryBillingMode | null {
+  if (!productHasCapability(productCode, 'time_entry')) return null;
+  if (productHasCapability(productCode, 'billing')) return 'commercial';
+  return productHasCapability(productCode, 'operational_time') ? 'operational' : null;
 }
