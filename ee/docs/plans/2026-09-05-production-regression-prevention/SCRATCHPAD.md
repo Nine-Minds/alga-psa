@@ -2190,3 +2190,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Added open-ended-overlap and asynchronous-action-error records to the regression ledger with base/fix revisions, behavioral reproduction commands, evidence and verification limits. Both have null production incident IDs; neither is counted as an attributed production escape.
 - Recollected the canonical workspace DB file inventory and verified the shared tax regression file is included. The integration workflow invokes that runner in Workspace database tests and uploads its evidence. Recorded this assignment separately from execution readiness in evidence/tax-regression-runner-assignment.json.
 - Added a subsequent-coverage note to the original PostgreSQL numeric defect record so its historical mock limitations remain accurate while the later real-settings coverage is discoverable. No broad plan flags changed; current native CI remains unverified.
+
+### 2026-09-07 — full canonical workspace database lane passes
+
+- Ran scripts/run-workspace-db-tests.mjs without filters at clean 7922859ee79f7f5006e053a27be5c4494bc9e43c against fresh task-owned pgvector PostgreSQL and Redis containers. Used normal collection, bootstrap, migrations/seeding, execution and reconciliation; no focused bootstrap bypass.
+- All 60 files and 454 assertions pass, zero failures/skips/TODOs/pending, in 375.21 seconds of Vitest execution. Discovery passes; source before/after is identical and clean. Evidence: evidence/workspace-db-local-7922859.json with raw artifact hashes. Both disposable containers removed after terminal exit zero.
+- Read-only PR refresh still reports published d8cf156c731bdfb9414ee6435152a676e0bcecf4 with 59 successful, two failed, two cancelled and one skipped checks. This local Node 25 validation does not replace native Node 22 CI. No broad plan flags changed.
