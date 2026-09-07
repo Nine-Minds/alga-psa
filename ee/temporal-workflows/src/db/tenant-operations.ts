@@ -101,9 +101,9 @@ export async function createTenantInDB(
   input: CreateTenantActivityInput
 ): Promise<CreateTenantActivityResult> {
   const log = logger();
-  log.info('Creating tenant in database', { 
+  log.info('Creating tenant in database', {
     tenantName: input.tenantName,
-    licenseCount: input.licenseCount 
+    licenseCount: input.licenseCount
   });
 
   try {
@@ -333,7 +333,7 @@ export async function createTenantInDB(
           .returning('client_id');
         clientId = clientResult[0].client_id;
         log.info('Client created', { clientId, clientName, tenantId });
-        
+
         // Create default location for the MSP client with email from the tenant
         // setup and the billing address captured from Stripe when available.
         // Fields still unknown fall back to placeholders ('N/A'/'XX'/'Unknown')
@@ -381,7 +381,7 @@ export async function createTenantInDB(
           hasBillingAddress: !!billing,
           countryCode,
         });
-        
+
         // Note: Not updating tenant with client_id as column doesn't exist in schema
       }
 
@@ -448,22 +448,26 @@ export async function setupTenantDataInDB(
     const setupSteps: string[] = [];
 
     await withAdminTransactionRetryReadOnly(async (trx: Knex.Transaction) => {
-      const db = tenantDb(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
-        const emailProvider = input.emailProvider ?? 'resend';
-        await db.table('tenant_email_settings')
-          .insert({
-            tenant: input.tenantId,
-            email_provider: emailProvider,
-            provider_configs: JSON.stringify([
-              createDefaultProviderConfig(emailProvider, { isEnabled: false }),
-            ]),
-            fallback_enabled: true,
-            tracking_enabled: false
-          });
-        setupSteps.push('email_settings');
-        log.info('Tenant email settings created successfully', { tenantId: input.tenantId });
+        // Keep a caught SQL error from aborting other setup steps.
+        await trx.transaction(async (stepTrx) => {
+          const trx = stepTrx;
+          const db = tenantDb(trx, input.tenantId);
+          const emailProvider = input.emailProvider ?? 'resend';
+          await db.table('tenant_email_settings')
+            .insert({
+              tenant: input.tenantId,
+              email_provider: emailProvider,
+              provider_configs: JSON.stringify([
+                createDefaultProviderConfig(emailProvider, { isEnabled: false }),
+              ]),
+              fallback_enabled: true,
+              tracking_enabled: false
+            });
+          setupSteps.push('email_settings');
+          log.info('Tenant email settings created successfully', { tenantId: input.tenantId });
+        });
       } catch (error) {
         // If it already exists, that's fine - log but don't block tenant creation
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -475,18 +479,23 @@ export async function setupTenantDataInDB(
 
       // Initialize tenant settings with onboarding flags set to false
       try {
-        await db.table('tenant_settings')
-          .insert({
-            tenant: input.tenantId,
-            onboarding_completed: false,
-            onboarding_skipped: false,
-            onboarding_data: null,
-            settings: null,
-            created_at: knex.fn.now(),
-            updated_at: knex.fn.now()
-          });
-        setupSteps.push('tenant_settings');
-        log.info('Tenant settings created successfully', { tenantId: input.tenantId });
+        // Keep a caught SQL error from aborting other setup steps.
+        await trx.transaction(async (stepTrx) => {
+          const trx = stepTrx;
+          const db = tenantDb(trx, input.tenantId);
+          await db.table('tenant_settings')
+            .insert({
+              tenant: input.tenantId,
+              onboarding_completed: false,
+              onboarding_skipped: false,
+              onboarding_data: null,
+              settings: null,
+              created_at: knex.fn.now(),
+              updated_at: knex.fn.now()
+            });
+          setupSteps.push('tenant_settings');
+          log.info('Tenant settings created successfully', { tenantId: input.tenantId });
+        });
       } catch (error) {
         // If it already exists, that's fine - log but don't block tenant creation
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -499,14 +508,19 @@ export async function setupTenantDataInDB(
       // Create tenant-client association if we have a client/company id
       if (input.clientId) {
         try {
-          await db.table('tenant_companies')
-            .insert({
-              tenant: input.tenantId,
-              client_id: input.clientId,
-              is_default: true
-            });
-          setupSteps.push('tenant_client_association');
-          log.info('Tenant-client association created successfully', { tenantId: input.tenantId, clientId: input.clientId });
+          // Keep a caught SQL error from aborting other setup steps.
+          await trx.transaction(async (stepTrx) => {
+            const trx = stepTrx;
+            const db = tenantDb(trx, input.tenantId);
+            await db.table('tenant_companies')
+              .insert({
+                tenant: input.tenantId,
+                client_id: input.clientId,
+                is_default: true
+              });
+            setupSteps.push('tenant_client_association');
+            log.info('Tenant-client association created successfully', { tenantId: input.tenantId, clientId: input.clientId });
+          });
         } catch (error) {
           // If it already exists, that's fine - log but don't block tenant creation
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -520,76 +534,81 @@ export async function setupTenantDataInDB(
 
       // Initialize tenant notification settings from global defaults
       try {
-        // Seed email notification category settings
-        const categories = await db.table('notification_categories')
-          .select('id', 'is_enabled', 'is_default_enabled');
+        // Keep a caught SQL error from aborting other setup steps.
+        await trx.transaction(async (stepTrx) => {
+          const trx = stepTrx;
+          const db = tenantDb(trx, input.tenantId);
+          // Seed email notification category settings
+          const categories = await db.table('notification_categories')
+            .select('id', 'is_enabled', 'is_default_enabled');
 
-        if (categories.length > 0) {
-          await db.table('tenant_notification_category_settings')
-            .insert(categories.map(category => ({
-              tenant: input.tenantId,
-              tenant_notification_category_setting_id: trx.raw('gen_random_uuid()'),
-              category_id: category.id,
-              is_enabled: category.is_enabled,
-              is_default_enabled: category.is_default_enabled,
-              created_at: knex.fn.now(),
-              updated_at: knex.fn.now()
-            })));
-        }
+          if (categories.length > 0) {
+            await db.table('tenant_notification_category_settings')
+              .insert(categories.map(category => ({
+                tenant: input.tenantId,
+                tenant_notification_category_setting_id: trx.raw('gen_random_uuid()'),
+                category_id: category.id,
+                is_enabled: category.is_enabled,
+                is_default_enabled: category.is_default_enabled,
+                created_at: knex.fn.now(),
+                updated_at: knex.fn.now()
+              })));
+          }
 
-        // Seed email notification subtype settings
-        const subtypes = await db.table('notification_subtypes')
-          .select('id', 'is_enabled', 'is_default_enabled');
+          // Seed email notification subtype settings
+          const subtypes = await db.table('notification_subtypes')
+            .select('id', 'is_enabled', 'is_default_enabled');
 
-        if (subtypes.length > 0) {
-          await db.table('tenant_notification_subtype_settings')
-            .insert(subtypes.map(subtype => ({
-              tenant: input.tenantId,
-              tenant_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
-              subtype_id: subtype.id,
-              is_enabled: subtype.is_enabled,
-              is_default_enabled: subtype.is_default_enabled,
-              created_at: knex.fn.now(),
-              updated_at: knex.fn.now()
-            })));
-        }
+          if (subtypes.length > 0) {
+            await db.table('tenant_notification_subtype_settings')
+              .insert(subtypes.map(subtype => ({
+                tenant: input.tenantId,
+                tenant_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
+                subtype_id: subtype.id,
+                is_enabled: subtype.is_enabled,
+                is_default_enabled: subtype.is_default_enabled,
+                created_at: knex.fn.now(),
+                updated_at: knex.fn.now()
+              })));
+          }
 
-        // Seed internal notification category settings
-        const internalCategories = await db.table('internal_notification_categories')
-          .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
+          // Seed internal notification category settings
+          const internalCategories = await db.table('internal_notification_categories')
+            .select('internal_notification_category_id', 'is_enabled', 'is_default_enabled');
 
-        if (internalCategories.length > 0) {
-          await db.table('tenant_internal_notification_category_settings')
-            .insert(internalCategories.map(category => ({
-              tenant: input.tenantId,
-              tenant_internal_notification_category_setting_id: trx.raw('gen_random_uuid()'),
-              category_id: category.internal_notification_category_id,
-              is_enabled: category.is_enabled,
-              is_default_enabled: category.is_default_enabled,
-              created_at: knex.fn.now(),
-              updated_at: knex.fn.now()
-            })));
-        }
+          if (internalCategories.length > 0) {
+            await db.table('tenant_internal_notification_category_settings')
+              .insert(internalCategories.map(category => ({
+                tenant: input.tenantId,
+                tenant_internal_notification_category_setting_id: trx.raw('gen_random_uuid()'),
+                category_id: category.internal_notification_category_id,
+                is_enabled: category.is_enabled,
+                is_default_enabled: category.is_default_enabled,
+                created_at: knex.fn.now(),
+                updated_at: knex.fn.now()
+              })));
+          }
 
-        // Seed internal notification subtype settings
-        const internalSubtypes = await db.table('internal_notification_subtypes')
-          .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
+          // Seed internal notification subtype settings
+          const internalSubtypes = await db.table('internal_notification_subtypes')
+            .select('internal_notification_subtype_id', 'is_enabled', 'is_default_enabled');
 
-        if (internalSubtypes.length > 0) {
-          await db.table('tenant_internal_notification_subtype_settings')
-            .insert(internalSubtypes.map(subtype => ({
-              tenant: input.tenantId,
-              tenant_internal_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
-              subtype_id: subtype.internal_notification_subtype_id,
-              is_enabled: subtype.is_enabled,
-              is_default_enabled: subtype.is_default_enabled,
-              created_at: knex.fn.now(),
-              updated_at: knex.fn.now()
-            })));
-        }
+          if (internalSubtypes.length > 0) {
+            await db.table('tenant_internal_notification_subtype_settings')
+              .insert(internalSubtypes.map(subtype => ({
+                tenant: input.tenantId,
+                tenant_internal_notification_subtype_setting_id: trx.raw('gen_random_uuid()'),
+                subtype_id: subtype.internal_notification_subtype_id,
+                is_enabled: subtype.is_enabled,
+                is_default_enabled: subtype.is_default_enabled,
+                created_at: knex.fn.now(),
+                updated_at: knex.fn.now()
+              })));
+          }
 
-        setupSteps.push('notification_settings');
-        log.info('Tenant notification settings created successfully', { tenantId: input.tenantId });
+          setupSteps.push('notification_settings');
+          log.info('Tenant notification settings created successfully', { tenantId: input.tenantId });
+        });
       } catch (error) {
         // Log but don't block tenant creation - notifications will fall back to global settings
         const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -602,9 +621,9 @@ export async function setupTenantDataInDB(
       log.info('Tenant data setup steps completed', { tenantId: input.tenantId, setupSteps });
     });
 
-    log.info('Tenant data setup completed', { 
-      tenantId: input.tenantId, 
-      setupSteps: setupSteps.length 
+    log.info('Tenant data setup completed', {
+      tenantId: input.tenantId,
+      setupSteps: setupSteps.length
     });
 
     return {

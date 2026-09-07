@@ -1504,3 +1504,10 @@
 - Verified actual temporal-database runner with missing connection settings: exits one and records explicit configuration failure. Added scripts/tests/temporal-database-runner.test.mjs, automatically selected by Node tooling inventory.
 - Behavioral test copies the runner/libs into a temporary Git repository, removes each of five mandatory settings in turn, seeds stale passed evidence and verifies nonzero exit, failed replacement evidence and cleared raw results. All five scenarios pass; no network/database access or source-string assertion.
 - Remaining legacy tenant-activities.test.ts is not promoted: it directly calls activities without context, expects obsolete setup roles/statuses and includes an empty connection-failure case. Requires substantive behavioral repair rather than counting nominal cases.
+
+### 2026-09-07 — Tenant setup retry no longer loses remaining work
+
+- Added real Citus regression using MockActivityEnvironment: initial setup, remove tenant_settings to represent incomplete setup, repeat with existing email settings, verify missing settings are recreated and original email settings preserved. Before fix second setup returned empty steps and failed recovery assertion.
+- Each of four optional setup groups now executes in a nested transaction/savepoint. Caught duplicate SQL errors roll back that group without leaving the parent transaction aborted. No broad conflict suppression or changed defaults. Updated existing email-settings mock to support savepoints.
+- Required temporal-database runner passes two files / 11 tests; readiness passes 29 files / 213 tests. Evidence: evidence/tenant-setup-savepoint-recovery.json. Initial harness attempts needed activity context and current result shape; one incomplete synthetic tenant from that attempt was explicitly removed (one fixture). Subsequent fixture cleanup completed.
+- Native verification remains pending.
