@@ -1,8 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, signIn } from '../fixtures/auth';
+import { createTimeBillingFixture } from '../fixtures/time-billing';
+import { createBrowserInvoiceTicketSourceFixture } from '../fixtures/invoice-ticket';
+import { createBrowserApiKey } from '../fixtures/api-key';
+import { readInvoiceDownload } from '../fixtures/invoice-document';
 
-test('an administrator authors a billed-time date sort and reopens its persisted invoice layout', async ({ page, actors, credentials, database }, testInfo) => {
-  const tenant = actors.primary;
+test('an administrator authors a billed-time date sort and reopens its persisted invoice layout', async ({ page, credentials, database }, testInfo) => {
+  const { tenant } = await createTimeBillingFixture(database, credentials.email);
   const name = `Billed time sort ${randomUUID()}`;
   const outputBinding = 'billedTimeByDate';
   const choose = async (selector: string, label: string | RegExp) => {
@@ -42,7 +46,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('[data-automation-id="invoice-designer-design-tab"]').click();
   // Keep a primary charges table, then author a separate informational detail
   // table so billed time does not replace the invoice's charge presentation.
-  await page.locator('#designer-palette-add-dynamic-table').click();
+  await page.locator('#designer-palette-add-table').click();
   await page.locator('#designer-palette-add-dynamic-table').click();
   await choose('#designer-table-source-binding', `${outputBinding} (Transforms output)`);
   const removeColumns = page.locator('button[id^="designer-remove-column-"]');
@@ -52,6 +56,7 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   for (const preset of ['entry-date', 'entry-ticket', 'entry-title', 'entry-hours', 'entry-rate', 'entry-amount']) {
     await page.locator(`#designer-add-column-preset-${preset}`).click();
   }
+  await page.locator('#designer-palette-add-totals').click();
   await page.locator('#save-template-button').click();
   await expect(page).not.toHaveURL(/templateId=/);
 
@@ -94,4 +99,48 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await expect(page.locator('input[id^="column-header-"]')).toHaveCount(6);
   expect((await database('invoice_templates').where({ tenant: tenant.tenantId, template_id: saved.template_id }).first()).templateAst)
     .toEqual(persistedAst);
+
+  // Seed approved source work only. The authenticated API generates the invoice;
+  // the downloaded document must consume the layout authored above through UI.
+  const ids = await createBrowserInvoiceTicketSourceFixture(database, { tenant: tenant.tenantId, userId: tenant.admin.userId });
+  await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
+    .update({ invoice_template_id: saved.template_id });
+  const key = await createBrowserApiKey(database, tenant.admin.userId, tenant.tenantId);
+  try {
+    const period = await database('recurring_service_periods')
+      .where({ tenant: tenant.tenantId, obligation_id: ids.lineId, invoice_window_start: '2026-09-01' }).first();
+    expect(period).toBeTruthy();
+    const selector = {
+      clientId: ids.clientId, windowStart: '2026-09-01', windowEnd: '2026-10-01',
+      executionWindow: {
+        kind: 'client_cadence_window', cadenceOwner: 'client', clientId: ids.clientId,
+        scheduleKey: period.schedule_key, periodKey: period.period_key,
+        windowStart: '2026-09-01', windowEnd: '2026-10-01',
+        identityKey: ['client_cadence_window', 'client', ids.clientId, period.schedule_key,
+          period.period_key, '2026-09-01', '2026-10-01'].join(':'),
+      },
+    };
+    const generated = await page.request.post('/api/v1/invoices/generate', {
+      headers: { 'x-api-key': key.api_key, 'x-tenant-id': tenant.tenantId }, data: { selector_input: selector },
+    });
+    expect(generated.status(), await generated.text()).toBe(201);
+    const invoiceId = (await generated.json()).data.invoice_id;
+    const invoice = await database('invoices').where({ tenant: tenant.tenantId, invoice_id: invoiceId }).first();
+    const readSnapshots = () => database('invoice_time_entries')
+      .where({ tenant: tenant.tenantId, invoice_id: invoiceId }).orderBy('invoice_time_entry_id');
+    const snapshots = await readSnapshots();
+    expect(snapshots).toHaveLength(4);
+    await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoiceId}`);
+    const text = await readInvoiceDownload(page, testInfo, invoice.invoice_number);
+    const compact = text.replace(/\s/g, '');
+    for (const value of ['Date', 'Ticket', 'Description', 'Hours', 'Rate', 'Amount', 'Public ticket 0', 'Public ticket 1', 'Mixed rates', '$375.00', '$150.00']) {
+      expect(compact).toContain(value.replace(/\s/g, ''));
+    }
+    expect(compact).toContain(`Total$${(Number(invoice.total_amount) / 100).toFixed(2)}`);
+    expect(text.match(/8\/\d+\/2026/g)).toEqual(['8/16/2026', '8/16/2026', '8/15/2026', '8/15/2026']);
+    expect(compact).not.toContain('PRIVATE');
+    expect(await readSnapshots()).toEqual(snapshots);
+  } finally {
+    await database('api_keys').where({ tenant: tenant.tenantId, api_key_id: key.api_key_id }).delete();
+  }
 });

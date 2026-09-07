@@ -1,6 +1,6 @@
 {
   "suite": "e2e-tests/tests/invoice-designer-persistence.spec.ts",
-  "status": "Host EE development execution passed; CE/EE production execution pending",
+  "status": "Host EE production build passed including generated invoice PDF; CE/EE container/native execution pending",
   "executionPassed": false,
   "prerequisite": "Rebuild and run the isolated CE/EE production images; fresh-install CI now passes NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true to both server Dockerfiles.",
   "coverageIntended": [
@@ -13,10 +13,9 @@
     "UI-added Date column and reopened inspector binding"
   ],
   "limitations": [
-    "Host development pass does not prove production artifact behavior",
-    "No generated invoice or PDF layout assertion",
-    "Both remaining invoice layout acceptance cases remain outstanding",
-    "No native CI proof"
+    "Host production build does not validate container packaging or native CI",
+    "Full nested-group and locale acceptance remains outstanding",
+    "Development server memory stability remains unresolved"
   ],
   "buildConfiguration": {
     "override": "release-v1-6-feature:true",
@@ -25,12 +24,19 @@
     "reportedBy": "E2E_BUILD_FEATURE_FLAGS -> Playwright config metadata",
     "verification": "EE host browser verifies visible billed-time authoring; 19 related component/hook tests passed; production build/browser execution pending"
   },
-  "executionScope": "production installation",
+  "executionScope": "CE/EE production container installation",
   "developmentExecution": {
     "passed": true,
     "testsPassed": 1,
     "retries": 0,
     "durationSeconds": 96.360456,
     "evidence": "host-designer-table-persistence.json"
+  },
+  "hostProductionExecution": {
+    "passed": true,
+    "testsPassed": 1,
+    "retries": 0,
+    "durationSeconds": 6.896053,
+    "evidence": "host-production-designer-pdf.json"
   }
 }

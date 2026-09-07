@@ -34,6 +34,19 @@ its threshold, briefly dropping the listener. Size `NODE_OPTIONS` for the host's
 available memory and reuse the compilation cache; the local runner keeps retries
 disabled so these interruptions remain visible.
 
+For repeated browser acceptance runs, a production build directly on the host
+can avoid development-server compilation and refresh interruptions without a
+Docker build. From `server`, with the isolated database, edition and feature
+flags configured, build once with
+`NEXT_DIST_DIR=.next/host-production node ../node_modules/next/dist/bin/next build --webpack`,
+then start with
+`NEXT_DIST_DIR=.next/host-production node ../node_modules/next/dist/bin/next start --port 53010 --hostname ::`.
+Use `playwright.config.ts` for production timeouts and keep output under
+`test-results/host-production/`. Reuse that application while editing tests;
+rebuild when application code or build-time configuration changes. Record this
+as host production-build evidence: it does not validate container packaging,
+installation or the native CI candidate.
+
 Start an isolated production installation first. Set `E2E_USER_EMAIL` and
 `E2E_USER_PASSWORD` to its credentials, then use Node 22.13 or later (through Node 26). The tenant fixtures
 also require `E2E_DATABASE_ISOLATED=true`, `E2E_DB_NAME`, and `E2E_DB_PASSWORD`.
