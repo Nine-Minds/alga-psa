@@ -5,6 +5,7 @@ import React from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
+import userEvent from '@testing-library/user-event';
 
 let mockDueWorkResponse: any;
 let mockRecurringInvoiceHistoryResponse: any;
@@ -207,6 +208,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
   beforeEach(() => {
     cleanup();
     mockGetAvailableRecurringDueWork.mockReset();
+    mockUpsertUsagePeriodTotal.mockReset();
     mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
     mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
     mockDueWorkResponse = {
@@ -1176,6 +1178,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByRole('button', {name: 'Generate Invoice'})).toBeDisabled();
   });
   it.each(['billable', 'explicit_zero', 'minimum_raised_zero'])('corrects a reported %s total with the displayed revision and re-previews', async status => {
+    const user = userEvent.setup();
     const original = mockPreviewGroupedInvoicesForSelectionInputs.getMockImplementation()!;
     mockPreviewGroupedInvoicesForSelectionInputs.mockImplementationOnce(async groups => {
       const response = await original(groups);
@@ -1183,9 +1186,13 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     mockUpsertUsagePeriodTotal.mockResolvedValueOnce({total: {quantity: 7, revision: 4}});
     await openSelectedPreview();
-    fireEvent.change(await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'}), {target: {value: '7'}});
-    fireEvent.click(screen.getByRole('button', {name: 'Save correction'}));
+    const quantity = await screen.findByRole('spinbutton', {name: 'Period count for Reported seats'});
+    await user.clear(quantity);
+    await user.type(quantity, '7');
+    expect(quantity).toHaveValue(7);
+    await user.click(screen.getByRole('button', {name: 'Save correction'}));
     await waitFor(() => expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledWith(expect.objectContaining({quantity: 7, expected_revision: 3, request_id: expect.any(String)})));
+    expect(mockUpsertUsagePeriodTotal).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(2));
   });
   it('navigates with the selected service, line, configuration and full half-open service period', async () => {

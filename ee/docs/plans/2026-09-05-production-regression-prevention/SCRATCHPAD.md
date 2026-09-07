@@ -1377,3 +1377,9 @@
 
 - Added tenant-email-ingestion activities (seven provider pause/resume/teardown cases) and tenant email-settings defaults (two cases) to readiness and its independent candidate classifier. Both existing suites passed without assertion changes.
 - Expanded direct suite: 14 files, 115 passes. Then ran the actual CI entry point `node scripts/run-additional-workspace-tests.mjs temporal-readiness` to verify independent discovery plus assertion/execution reconciliation: all passed, exact 14-file execution, 115 passes, no skips. Evidence: evidence/temporal-email-readiness.json. Local source records the uncommitted additions; no claim of final native readiness.
+
+### 2026-09-07 — Native correction input mismatch and mock isolation
+
+- Nx job 101686141225 failed one of 1271 billing assertions: grouped invoice correction expected quantity 7, received 0. Native log also retained a prior quantity-12 save call because upsert mock was never cleared between cases.
+- Full file passes locally before change (37), so the native input mismatch remains intermittent/unproven. Reset the upsert mock per test and use awaited user clear/type/click, assert displayed 7, preserve revision-3/quantity-7 payload checks, and require exactly one save. No production fix inferred.
+- After change full file passes all 37 in 4.20 seconds. Native verification remains pending. Evidence: evidence/billing-correction-test-isolation.json; logs /tmp/alga-billing-grouped-{82cc,after-82cc}.log.
