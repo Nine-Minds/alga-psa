@@ -257,6 +257,7 @@ jobs:
         env:
           TEST_METRICS_SUITE: unit-coverage
           TEST_METRICS_RESULTS: server/test-results.json
+          TEST_METRICS_EXECUTION: test-results/server-coverage/evidence.json
           TEST_METRICS_COVERAGE: server/coverage/coverage-summary.json
           TEST_METRICS_DETAIL: '1'
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}

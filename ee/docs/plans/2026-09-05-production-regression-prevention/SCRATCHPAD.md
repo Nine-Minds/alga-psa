@@ -1859,3 +1859,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Exact scripts/run-node-tooling-tests.mjs selected 43 required files plus the existing explicit localization manual exclusion; complete run passed 475 cases, zero failures/cancellations/skips/todos in 117.32 seconds at clean revision 8b1c4dcdd4. Evidence summary/hash: evidence/node-tooling-local-8b1c.json; /tmp/alga-node-tooling-8b1c-network.log. New server-unit verifier test was included by actual Node runner discovery.
 - Initial sandbox run finished with local listener EPERM failures; rerun after approval for local HTTP/TLS services passed with no code changes. This does not establish native CI or complete global inventory.
+
+### 2026-09-07 — propagate unit execution completeness to metrics
+
+- Connected the unit coverage metrics uploader to test-results/server-coverage/evidence.json via TEST_METRICS_EXECUTION. Existing row logic rejects missing/mismatched/failed evidence, marks the run partial and suppresses its pass percentage, while preserving existing sheet columns/history. This ensures the new CI reconciliation result also reaches the metrics view.
+- Existing lifecycle and sheet-schema behavioral tests passed 18/18 (/tmp/alga-unit-metrics-wiring.log); workflow YAML parse and diff checks passed. No direct external sheet write was performed. Native uploader behavior remains to be verified on the next CI revision.
