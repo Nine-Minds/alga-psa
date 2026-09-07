@@ -107,8 +107,11 @@ if (process.env.E2E_EDITION !== 'enterprise') {
         .toEqual([{ id: mapping.id, schedule_entry_id: mapping.schedule_entry_id }]);
       expect(await emulators.state<GraphEvent[]>('msgraph', 'calendar-events')).toEqual([expect.objectContaining({ id: created.event.id })]);
 
+      expect((await database('microsoft_calendar_provider_config').where(providerScope).first()).webhook_subscription_id)
+        .toBe(config.webhook_subscription_id);
       const vendorTitle = `@alga Vendor correction ${actors.runId}`;
-      await emulators.action('msgraph', 'calendar-change', { changeType: 'updated', eventId: created.event.id, event: { subject: vendorTitle } });
+      const changed = await emulators.action<CalendarChange>('msgraph', 'calendar-change', { changeType: 'updated', eventId: created.event.id, event: { subject: vendorTitle } });
+      expect(changed.deliveries).toEqual([expect.objectContaining({ delivered: true, status: 200 })]);
       await expect.poll(async () => (await database('schedule_entries').where(entryScope).first())?.title, { timeout: 60000 }).toBe(vendorTitle);
       await page.goto('/msp/schedule');
       await expect(calendarEvent(vendorTitle)).toBeVisible();
