@@ -61,7 +61,8 @@ export type SurveyInvitationView = {
 type ResponseRow = {
   response_id: string;
   tenant: string;
-  ticket_id: string;
+  ticket_id: string | null;
+  project_id: string | null;
   client_id: string | null;
   contact_id: string | null;
   template_id: string;
@@ -77,7 +78,8 @@ type InvitationRow = {
   invitation_id: string;
   tenant: string;
   survey_token_hash: string;
-  ticket_id: string;
+  ticket_id: string | null;
+  project_id: string | null;
   client_id: string | null;
   contact_id: string | null;
   template_id: string;
@@ -85,9 +87,9 @@ type InvitationRow = {
   responded: boolean;
 };
 
-type TicketRow = {
-  ticket_id: string;
-  ticket_number: string | null;
+type SubjectRow = {
+  subject_id: string;
+  subject_number: string | null;
   client_id: string | null;
   contact_name_id: string | null;
   assigned_to: string | null;
@@ -210,7 +212,7 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
 
   const hashedToken = hashSurveyToken(parsed.token);
 
-  const { response, ticket } = await runWithTenant(tenant, async () => {
+  const { response, subject } = await runWithTenant(tenant, async () => {
     const { knex } = await createTenantKnex();
 
     return withTransaction(knex, async (trx) => {
@@ -238,7 +240,8 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
         .insert({
           tenant,
           template_id: invitation.templateId,
-          ticket_id: invitation.ticketId,
+          ticket_id: invitationRow.ticket_id,
+          project_id: invitationRow.project_id,
           client_id: invitation.clientId ?? invitationRow.client_id,
           contact_id: invitation.contactId ?? invitationRow.contact_id,
           rating: parsed.rating,
@@ -260,39 +263,44 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
           responded_at: trx.fn.now(),
         });
 
-      const ticketQuery = db.table<TicketRow>(`${TICKETS_TABLE} as t`);
-      db.tenantJoin(ticketQuery, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
+      const isProject = Boolean(invitationRow.project_id);
+      const subjectTable = isProject ? 'projects' : TICKETS_TABLE;
+      const idColumn = isProject ? 'project_id' : 'ticket_id';
+      const numberColumn = isProject ? 'project_number' : 'ticket_number';
+      const subjectQuery = db.table<SubjectRow>(`${subjectTable} as t`);
+      db.tenantJoin(subjectQuery, `${CLIENTS_TABLE} as c`, 't.client_id', 'c.client_id', {
         type: 'left',
         rootTenantColumn: 't.tenant',
       });
-      db.tenantJoin(ticketQuery, `${CONTACTS_TABLE} as co`, 't.contact_name_id', 'co.contact_name_id', {
+      db.tenantJoin(subjectQuery, `${CONTACTS_TABLE} as co`, 't.contact_name_id', 'co.contact_name_id', {
         type: 'left',
         rootTenantColumn: 't.tenant',
       });
 
-      const ticketRow = await ticketQuery
+      const subjectRow = await subjectQuery
         .select(
-          't.ticket_id',
-          't.ticket_number',
+          `t.${idColumn} as subject_id`,
+          `t.${numberColumn} as subject_number`,
           't.client_id',
           't.contact_name_id',
           't.assigned_to',
           'c.client_name',
           'co.full_name as contact_name'
         )
-        .where('t.ticket_id', invitation.ticketId)
+        .where(`t.${idColumn}`, invitationRow.project_id ?? invitationRow.ticket_id)
         .first();
 
-      return { response: responseRow, ticket: ticketRow ?? null };
+      return { response: responseRow, subject: subjectRow ?? null };
     });
   });
 
+  const subjectIds = response.project_id ? { projectId: response.project_id } : { ticketId: response.ticket_id! };
   await publishEvent({
     eventType: 'SURVEY_RESPONSE_SUBMITTED',
     payload: {
       tenantId: tenant,
       responseId: response.response_id,
-      ticketId: response.ticket_id,
+      ...subjectIds,
       companyId: response.client_id ?? undefined,
       rating: response.rating,
       hasComment: Boolean(response.comment),
@@ -305,14 +313,16 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
       payload: {
         tenantId: tenant,
         responseId: response.response_id,
-        ticketId: response.ticket_id,
-        ticketNumber: ticket?.ticket_number ?? response.ticket_id,
+        ...subjectIds,
+        ...(response.project_id
+          ? { projectNumber: subject?.subject_number ?? response.project_id }
+          : { ticketNumber: subject?.subject_number ?? response.ticket_id! }),
         companyId: response.client_id ?? undefined,
-        companyName: ticket?.client_name ?? undefined,
-        contactName: ticket?.contact_name ?? undefined,
+        companyName: subject?.client_name ?? undefined,
+        contactName: subject?.contact_name ?? undefined,
         rating: response.rating,
         comment: response.comment ?? undefined,
-        assignedTo: ticket?.assigned_to ?? undefined,
+        assignedTo: subject?.assigned_to ?? undefined,
       },
     });
   }
@@ -327,7 +337,7 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
         surveyId: invitation.invitationId,
         responseId: response.response_id,
         recipientId,
-        ticketId: invitation.ticketId,
+        ...subjectIds,
         respondedAt,
         score: response.rating,
         ...(response.comment ? { comment: response.comment } : {}),
@@ -343,7 +353,7 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
     });
 
     if (response.rating <= NEGATIVE_RATING_THRESHOLD) {
-      const assignedTo = ticket?.assigned_to ?? undefined;
+      const assignedTo = subject?.assigned_to ?? undefined;
       await publishWorkflowEvent({
         eventType: 'CSAT_ALERT_TRIGGERED',
         payload: buildCsatAlertTriggeredPayload({
