@@ -2224,3 +2224,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Shared candidate artifact reader now rejects filtered/affected/missing mode even when the producer provides an empty filters list. The mandatory consumers require full execution; current browser, database and Node producers already declare it.
 - Twelve focused reader/candidate/database/fresh-install tests pass. New regression covers all three report formats. Evidence: evidence/candidate-explicit-full-selection.json. This strengthens evidence ingestion but does not establish global assertion coverage or native CI. No broad flags changed.
+
+### 2026-09-07 — full tooling lane passes with independent DB aggregate
+
+- Complete canonical tooling runner at clean 4832fc3152505800f683c9f13026558eae5c7c58 passed 499 tests across all 50 required files. Zero failures/skips/TODOs/cancellations; discovery passes and before/after revision remains identical and clean.
+- Includes the new database CLI/gate tests and explicit-full-selection contract alongside actual Vitest runner regressions. Duration 153.35 seconds. Evidence: evidence/node-tooling-local-4832fc.json with artifact hashes. Local Node 25 execution does not establish native CI. No broad flags changed.
