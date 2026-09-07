@@ -14,11 +14,11 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     await page.getByRole('option', { name: label, exact: typeof label === 'string' }).click();
   };
 
-  const dynamicTables = (value: any): any[] => {
+  const collectAstNodes = (value: any, type = 'dynamic-table'): any[] => {
     if (!value || typeof value !== 'object') return [];
     return [
-      ...(value.type === 'dynamic-table' ? [value] : []),
-      ...Object.values(value).flatMap(dynamicTables),
+      ...(value.type === type ? [value] : []),
+      ...Object.values(value).flatMap(child => collectAstNodes(child, type)),
     ];
   };
   const openTransforms = async () => {
@@ -57,6 +57,12 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     await page.locator(`#designer-add-column-preset-${preset}`).click();
   }
   await page.locator('#designer-palette-add-totals').click();
+  await page.getByRole('button', { name: 'PRESETS', exact: true }).click();
+  await page.locator('#designer-palette-add-preset-billed-time-by-ticket').click();
+  await page.getByRole('button', { name: 'OUTLINE', exact: true }).click();
+  await page.getByText('Entries in this ticket group', { exact: true }).and(page.locator('span')).click();
+  await expect(page.locator('#designer-table-source-binding')).toContainText('group.entries');
+  await page.locator('#designer-add-column-preset-entry-title').click();
   await page.locator('#save-template-button').click();
   await expect(page).not.toHaveURL(/templateId=/);
 
@@ -68,11 +74,16 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     sourceBindingId: 'timeEntries', outputBindingId: outputBinding,
     operations: [{ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }],
   });
-  const tables = dynamicTables(saved.templateAst.layout);
-  expect(tables).toHaveLength(2);
+  const tables = collectAstNodes(saved.templateAst.layout);
+  expect(tables).toHaveLength(3);
   const detailTable = tables.find(table => table.repeat.sourceBinding.bindingId.includes(outputBinding));
   expect(detailTable).toBeTruthy();
-  const primaryTable = tables.find(table => table.id !== detailTable.id);
+  const group = collectAstNodes(saved.templateAst.layout, 'stack').find(node => node.repeat?.itemBinding === 'group');
+  expect(saved.templateAst.bindings.collections[group.repeat.sourceBinding.bindingId].path).toBe('ticketGroups');
+  const nestedTable = collectAstNodes(group)[0];
+  expect(saved.templateAst.bindings.collections[nestedTable.repeat.sourceBinding.bindingId].path).toBe('group.entries');
+  expect(nestedTable.columns).toHaveLength(6);
+  const primaryTable = tables.find(table => table.id !== detailTable.id && table.id !== nestedTable.id);
   expect(primaryTable.repeat.sourceBinding.bindingId).toContain('items');
   expect(detailTable.columns.map((column: any) => column.value)).toEqual([
     'date', 'ticketNumber', 'title', 'hours', 'rateDisplay', 'amount',
@@ -137,9 +148,36 @@ test('an administrator authors a billed-time date sort and reopens its persisted
       expect(compact).toContain(value.replace(/\s/g, ''));
     }
     expect(compact).toContain(`Total$${(Number(invoice.total_amount) / 100).toFixed(2)}`);
-    expect(text.match(/8\/\d+\/2026/g)).toEqual(['8/16/2026', '8/16/2026', '8/15/2026', '8/15/2026']);
+    const dates = text.match(/8\/\d+\/2026/g) ?? [];
+    expect(dates).toHaveLength(8); // Four flat entries and four entries scoped to ticket groups.
+    expect(dates.filter(date => date === '8/15/2026')).toHaveLength(4);
+    expect(dates.filter(date => date === '8/16/2026')).toHaveLength(4);
+    expect(dates.some((_, index) => dates.slice(index, index + 4).join(',') === '8/16/2026,8/16/2026,8/15/2026,8/15/2026')).toBe(true);
     expect(compact).not.toContain('PRIVATE');
     expect(await readSnapshots()).toEqual(snapshots);
+    const client = await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId }).first();
+    try {
+      for (const locale of ['fr', 'zz-unavailable']) {
+        await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
+          .update({ properties: { ...client.properties, defaultLocale: locale } });
+        await page.reload();
+        const localized = (await readInvoiceDownload(page, testInfo, invoice.invoice_number, `${invoice.invoice_number}-${locale}`))
+          .replace(/\s/g, '');
+        const french = locale === 'fr';
+        expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
+        expect(localized).toContain(french ? '375,00' : '$375.00');
+        expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
+          minimumFractionDigits: 2, maximumFractionDigits: 2,
+        }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
+        expect(localized).toContain('Publicticket0');
+        expect(localized).toContain('Publicticket1');
+        expect(localized).not.toContain('PRIVATE');
+        expect(await readSnapshots()).toEqual(snapshots);
+      }
+    } finally {
+      await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
+        .update({ properties: client.properties });
+    }
   } finally {
     await database('api_keys').where({ tenant: tenant.tenantId, api_key_id: key.api_key_id }).delete();
   }

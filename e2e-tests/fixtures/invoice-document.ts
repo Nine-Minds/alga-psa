@@ -3,14 +3,14 @@ import type { Page, TestInfo } from '@playwright/test';
 import { expect } from '@playwright/test';
 
 /** Parse the bytes downloaded by the shipped UI, not its HTML preview. */
-export async function readInvoiceDownload(page: Page, testInfo: TestInfo, number: string): Promise<string> {
+export async function readInvoiceDownload(page: Page, testInfo: TestInfo, number: string, artifactName = number): Promise<string> {
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 90000 }),
     page.locator('#invoice-download-pdf').click(),
   ]);
   expect(await download.failure()).toBeNull();
   expect(download.suggestedFilename()).toBe(`${number}.pdf`);
-  const file = testInfo.outputPath(`${number}.pdf`);
+  const file = testInfo.outputPath(`${artifactName}.pdf`);
   await download.saveAs(file);
   const bytes = await readFile(file);
   expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
