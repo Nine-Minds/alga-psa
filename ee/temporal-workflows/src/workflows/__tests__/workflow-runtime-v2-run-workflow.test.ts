@@ -191,7 +191,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
         stepId: 'step-1',
         stepPath: 'root.steps[0]',
         status: 'SUCCEEDED',
-        scopes: expect.objectContaining({ payload: { ticketId: 't_1' }, workflow: { lastAction: { updated: true } } }),
+        snapshot: expect.objectContaining({ payload: { ticketId: 't_1' }, vars: { lastAction: { updated: true } } }),
       })
     );
     expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).toHaveBeenNthCalledWith(

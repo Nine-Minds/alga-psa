@@ -127,3 +127,17 @@ export function enforceSnapshotSize<T>(value: T, maxBytes: number): T | { trunca
     max: maxBytes
   } as { truncated: true; size: number; max: number };
 }
+
+
+/** Build diagnostic data before crossing an activity boundary; never mutate execution state. */
+export function buildWorkflowDiagnosticSnapshot(scopes: {
+  payload: Record<string, unknown>; workflow: Record<string, unknown>;
+  lexical: Array<Record<string, unknown>>; meta?: Record<string, unknown>;
+  error?: Record<string, unknown> | null;
+}): Record<string, unknown> {
+  const pointers = Array.isArray(scopes.meta?.redactions)
+    ? scopes.meta.redactions.filter((path): path is string => typeof path === 'string') : [];
+  const envelope = { payload: scopes.payload, vars: scopes.workflow, lexical: scopes.lexical,
+    meta: scopes.meta ?? {}, error: scopes.error ?? null };
+  return enforceSnapshotSize(applyRedactions(safeSerialize(envelope), pointers), 256 * 1024) as Record<string, unknown>;
+}

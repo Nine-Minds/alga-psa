@@ -1,3 +1,4 @@
+import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/utils/redactionUtils';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin';
 import { getFormValidationService } from '@shared/task-inbox';
 import { tenantDb } from '@alga-psa/db';
@@ -226,6 +227,7 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
   errorMessage?: string;
   scopes?: WorkflowRuntimeV2ScopeState;
+  snapshot?: Record<string, unknown>;
 }): Promise<void> {
   return retryOnAdminReadOnly(
     async () => {
@@ -248,14 +250,11 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
         const durationMs = Math.max(Date.now() - startedAt, 0);
 
         let snapshotId = step.snapshot_id;
-        if (input.scopes && !snapshotId) {
+        if ((input.snapshot || input.scopes) && !snapshotId) {
           const configuredDays = Number(process.env.WORKFLOW_SNAPSHOT_RETENTION_DAYS ?? 30);
           if (!Number.isFinite(configuredDays) || configuredDays <= 0) throw new Error('Invalid workflow snapshot retention');
-          const redactions = Array.isArray(input.scopes.meta?.redactions)
-            ? input.scopes.meta.redactions.filter((path): path is string => typeof path === 'string') : [];
-          const envelope = { payload: input.scopes.payload, vars: input.scopes.workflow,
-            lexical: input.scopes.lexical, meta: input.scopes.meta ?? {}, error: input.scopes.error ?? null };
-          const bounded = enforceSnapshotSize(applyRedactions(safeSerialize(envelope), redactions), 256 * 1024) as Record<string, unknown>;
+          const diagnostic = input.snapshot ?? buildWorkflowDiagnosticSnapshot(input.scopes!);
+          const bounded = enforceSnapshotSize(applyRedactions(safeSerialize(diagnostic)), 256 * 1024) as Record<string, unknown>;
           const snapshot = await WorkflowRunSnapshotModelV2.create(trx, {
             tenant, run_id: input.runId, step_path: input.stepPath, envelope_json: bounded,
             size_bytes: Buffer.byteLength(JSON.stringify(bounded), 'utf8'),

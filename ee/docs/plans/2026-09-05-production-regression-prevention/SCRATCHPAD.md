@@ -1200,3 +1200,8 @@
 - Real database behavior: 7/7 passed; Temporal readiness: 72/72 passed; targeted TypeScript passed. Fixed mock state leakage exposed by shuffled test order. Evidence: `evidence/temporal-snapshot-persistence.json`.
 - Keep legacy redaction skips visible until output storage and full run-studio parity are verified. Citus runtime and real Temporal-server replay verification remain outstanding.
 - Native full integration job `101650631428` remains running; workspace DB and all three infrastructure shards completed successfully. Do not cancel it to publish these local changes.
+
+### 2026-09-07 — Sanitize snapshots before the activity boundary
+
+- Extracted a pure diagnostic snapshot builder and call it before each completion activity. The activity receives bounded/redacted diagnostic data rather than a raw duplicate of execution scopes; it still sanitizes at persistence and accepts older scopes-based inputs. This does not redact all Temporal history.
+- Validated seven DB cases, 72 Temporal readiness cases, four utility cases and targeted TypeScript. Added the utility directory to shared Vitest collection after the normal config reported no matching test file. Evidence: `evidence/snapshot-activity-boundary.json`.

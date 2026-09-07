@@ -1,0 +1,21 @@
+{
+  "status": "implemented_local_verification_native_pending",
+  "change": "Build a redacted, 256 KiB-bounded diagnostic envelope before scheduling completion activities; retain activity-side sanitization and compatibility with earlier scopes-based inputs.",
+  "reason": "Avoid adding unredacted or oversized diagnostic copies of execution state to completion activity arguments in Temporal history. This does not claim to redact all existing workflow history or arbitrary unresolved output secrets.",
+  "validation": {
+    "database": "7/7 passed, exercising sanitized snapshot inputs and earlier scopes-based inputs",
+    "temporalReadiness": "72/72 passed with updated scope values asserted in the diagnostic snapshot",
+    "utilityTests": "4/4 passed through shared/vitest.config.ts",
+    "typescript": "targeted check passed",
+    "logs": [
+      "/tmp/alga-snapshot-boundary-db.log",
+      "/tmp/alga-snapshot-boundary-readiness.log",
+      "/tmp/alga-snapshot-boundary-utils-verified.log"
+    ]
+  },
+  "executionGapFixed": "The shared Vitest configuration previously excluded workflow/runtime/utils/redactionUtils.test.ts; runtime utility tests are now explicitly included.",
+  "limits": [
+    "Real Temporal server and Citus runtime validation remain outstanding.",
+    "Invocation output storage and complete legacy redaction suite parity remain unfinished."
+  ]
+}

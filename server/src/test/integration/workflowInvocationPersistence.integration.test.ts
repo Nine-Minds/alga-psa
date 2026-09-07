@@ -1,3 +1,4 @@
+import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/utils/redactionUtils';
 import { beforeAll, beforeEach, afterAll, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -39,7 +40,7 @@ it('stores redacted bounded step snapshots with idempotent writes and retention'
   const scopes: any = { payload: { secretRef: 'private', nested: [{ $secret: 'private' }], token: 'resolved', public: 'visible' }, workflow: {}, lexical: [], meta: { redactions: ['/payload/token'] } };
   const original = structuredClone(scopes);
   const step = await Step.create(db, { tenant, run_id: run.run_id, step_path: 'first', definition_step_id: 'first', status: 'STARTED', attempt: 1 });
-  const completion = { runId: run.run_id, stepId: step.step_id, stepPath: step.step_path, status: 'SUCCEEDED' as const, scopes };
+  const completion = { runId: run.run_id, stepId: step.step_id, stepPath: step.step_path, status: 'SUCCEEDED' as const, snapshot: buildWorkflowDiagnosticSnapshot(scopes) };
   await complete(completion);
   await complete(completion);
   const [snapshot] = await Snapshot.listByRun(db, run.run_id, tenant);
@@ -52,7 +53,7 @@ it('stores redacted bounded step snapshots with idempotent writes and retention'
   const otherRun = await WorkflowRun.create(db, { workflow_id: definition.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
   const unrelated = await Snapshot.create(db, { tenant, run_id: otherRun.run_id, step_path: 'old', envelope_json: {}, size_bytes: 2, created_at: new Date(Date.now() - 40 * 86400000).toISOString() });
   const next = await Step.create(db, { tenant, run_id: run.run_id, step_path: 'second', definition_step_id: 'second', status: 'STARTED', attempt: 1 });
-  await complete({ ...completion, stepId: next.step_id, stepPath: next.step_path, scopes: { ...scopes, payload: { big: '💡'.repeat(100000) } } });
+  await complete({ ...completion, stepId: next.step_id, stepPath: next.step_path, snapshot: undefined, scopes: { ...scopes, payload: { big: '💡'.repeat(100000) } } });
   const remaining = await Snapshot.listByRun(db, run.run_id, tenant);
   expect(remaining).toHaveLength(1);
   expect((await Snapshot.listByRun(db, otherRun.run_id, tenant)).map(row => row.snapshot_id)).toEqual([unrelated.snapshot_id]);

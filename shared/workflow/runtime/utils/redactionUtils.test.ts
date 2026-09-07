@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyRedactions, enforceSnapshotSize, maskResolvedSecrets, safeSerialize } from './redactionUtils';
+import { buildWorkflowDiagnosticSnapshot, applyRedactions, enforceSnapshotSize, maskResolvedSecrets, safeSerialize } from './redactionUtils';
 
 describe('workflow diagnostic redaction', () => {
   it('redacts both reference formats through nested arrays while preserving ordinary values', () => {
@@ -36,4 +36,18 @@ describe('workflow diagnostic redaction', () => {
     expect(JSON.parse(JSON.stringify(truncated))).toEqual(truncated);
     expect(snapshot.message).toBe('💡漢字'.repeat(100));
   });
+});
+
+
+it('bounds and redacts the diagnostic activity payload without modifying live scopes', () => {
+  const scopes = { payload: { secretRef: 'private', token: 'resolved', keep: 'public' },
+    workflow: {}, lexical: [], meta: { redactions: ['/payload/token'] } };
+  const original = structuredClone(scopes);
+  expect(buildWorkflowDiagnosticSnapshot(scopes)).toMatchObject({
+    payload: { secretRef: '[REDACTED]', token: '[REDACTED]', keep: 'public' },
+  });
+  expect(scopes).toEqual(original);
+  const large = buildWorkflowDiagnosticSnapshot({ ...scopes, payload: { big: '💡'.repeat(100000) } });
+  expect(large).toMatchObject({ truncated: true, max: 256 * 1024 });
+  expect(new TextEncoder().encode(JSON.stringify(large)).length).toBeLessThan(256 * 1024);
 });
