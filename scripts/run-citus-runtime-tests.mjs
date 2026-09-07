@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
+import { reconcileDiscovery } from './lib/test-discovery.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const server = path.join(root, 'server');
@@ -15,16 +16,22 @@ const files = [
 const output = path.join(root, 'test-results/citus-runtime');
 mkdirSync(output, { recursive: true });
 const save = (name, value) => writeFileSync(path.join(output, `${name}.json`), JSON.stringify(value, null, 2) + '\n');
-for (const name of ['collected-tests', 'results', 'evidence']) save(name, null);
-const collected = files.map(file => ({ file: path.join(root, file) }));
-save('collected', collected);
+for (const name of ['collected', 'collected-tests', 'results', 'evidence', 'discovery']) save(name, null);
 let evidence;
 try {
+  if (process.argv.length !== 2) throw new Error('Citus runtime requires complete execution without CLI filters');
   if (process.env.TEST_DB_BACKEND !== 'citus') throw new Error('This gate requires TEST_DB_BACKEND=citus');
   const before = testRevision(root);
   const run = args => spawnSync(process.execPath, [path.join(server, 'node_modules/vitest/vitest.mjs'),
     ...args], { cwd: server, stdio: 'inherit' });
-  const selection = collected.map(entry => path.relative(server, entry.file));
+  const selection = files.map(file => path.relative(server, path.join(root, file)));
+  const fileCollection = run(['list', ...selection, '--filesOnly', `--json=${path.join(output, 'collected.json')}`]);
+  if (fileCollection.status !== 0) throw new Error('Citus runtime file collection failed');
+  const collected = JSON.parse(readFileSync(path.join(output, 'collected.json'), 'utf8'));
+  const discovery = reconcileDiscovery({ root, candidates: files,
+    collections: [{ runner: 'citus-runtime', status: 'passed', files: collected }] });
+  save('discovery', discovery);
+  if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
   const collection = run(['list', ...selection, `--json=${path.join(output, 'collected-tests.json')}`]);
   if (collection.status !== 0) throw new Error('Citus runtime collection failed');
   const collectedTests = JSON.parse(readFileSync(path.join(output, 'collected-tests.json'), 'utf8'));
@@ -36,6 +43,8 @@ try {
     revision: before.revision, exitCode: result.status });
   const after = testRevision(root);
   evidence.source = { before, after };
+  evidence.workingTreeDirty = before.dirty || after.dirty;
+  evidence.selection = { mode: 'full', filters: [] };
   if (before.revision !== after.revision) evidence.failures.push('Repository revision changed during Citus execution');
   evidence.status = evidence.failures.length ? 'failed' : 'passed';
 } catch (error) {

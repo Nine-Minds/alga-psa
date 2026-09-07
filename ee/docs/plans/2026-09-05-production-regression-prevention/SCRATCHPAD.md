@@ -2229,3 +2229,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Complete canonical tooling runner at clean 4832fc3152505800f683c9f13026558eae5c7c58 passed 499 tests across all 50 required files. Zero failures/skips/TODOs/cancellations; discovery passes and before/after revision remains identical and clean.
 - Includes the new database CLI/gate tests and explicit-full-selection contract alongside actual Vitest runner regressions. Duration 153.35 seconds. Evidence: evidence/node-tooling-local-4832fc.json with artifact hashes. Local Node 25 execution does not establish native CI. No broad flags changed.
+
+### 2026-09-07 — derive Citus file evidence from Vitest
+
+- Citus runner previously wrote its configured two-file list as collected before invoking Vitest. It now calls list --filesOnly, records that real output and independently reconciles the two required candidates before collecting assertions or executing. Also rejects CLI filters and records full-selection/working-tree metadata.
+- Actual installed-Vitest regression in a temporary checkout passes: two files execute, a config omission records only one and fails before execution with cleared results, and CLI filters fail with cleared collection. Evidence: evidence/citus-runner-real-collection.json. Fixture arithmetic verifies runner behavior only; no Citus runtime/topology claim. No broad flags changed.
