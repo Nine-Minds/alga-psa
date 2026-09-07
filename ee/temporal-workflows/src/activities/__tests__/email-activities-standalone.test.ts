@@ -19,8 +19,8 @@ vi.mock('@temporalio/activity', () => ({
 
 describe('Email Activities - Standalone Tests', () => {
   describe('Password Generation', () => {
-    it('should generate secure passwords with default length', () => {
-      const password = generateTemporaryPassword();
+    it('should generate secure passwords with default length', async () => {
+      const password = await generateTemporaryPassword();
       expect(password).toHaveLength(12);
       
       // Check for required character types
@@ -33,8 +33,8 @@ describe('Email Activities - Standalone Tests', () => {
       expect(password).not.toMatch(/[0O1lI]/);
     });
 
-    it('should generate passwords with custom length', () => {
-      const password = generateTemporaryPassword(16);
+    it('should generate passwords with custom length', async () => {
+      const password = await generateTemporaryPassword(16);
       expect(password).toHaveLength(16);
       
       // Should still meet security requirements
@@ -44,8 +44,8 @@ describe('Email Activities - Standalone Tests', () => {
       expect(password).toMatch(/[!@#$%^&*]/);
     });
 
-    it('should generate unique passwords', () => {
-      const passwords = Array.from({ length: 10 }, () => generateTemporaryPassword(12));
+    it('should generate unique passwords', async () => {
+      const passwords = await Promise.all(Array.from({ length: 10 }, () => generateTemporaryPassword(12)));
       const uniquePasswords = new Set(passwords);
       expect(uniquePasswords.size).toBe(10);
     });

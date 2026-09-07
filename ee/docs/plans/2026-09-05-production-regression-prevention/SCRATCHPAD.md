@@ -1486,3 +1486,9 @@
 - Existing two cases failed because they depended on implicit service-host defaults and mocked the obsolete Kubernetes client path; current application uses Git/kubectl commands. Replaced obsolete transport mock with existing command-runner injection, explicit dummy Git/service configuration and temporary manifest files. No real Git or Kubernetes effects.
 - Preserved routing and stale-resource deletion assertions. New harness parses the actual multidocument YAML passed to apply, simulates stale manifest deletion and checks generated VirtualService host. Added admin retry boundary double used by current implementation. No production changes.
 - Focused cases pass; exact readiness runner session 86809 passes 27 files / 194 cases, zero skipped/missing, 9.21 seconds. Added file to readiness config and independent discovery. Evidence: evidence/portal-resource-reconciliation.json. Certificate issuance itself remains outside these simulated command checks.
+
+### 2026-09-07 — Standalone email async assertions restored
+
+- Existing standalone email suite: initial run two failed/six passed. Password assertions were inspecting Promises, and the uniqueness case falsely passed by comparing Promise identities. Awaited actual generated passwords, retaining all content/length/uniqueness checks and all email cases.
+- Added suite to readiness selection and independent discovery. Exact runner session 49374 exited zero: 28 files / 202 tests, zero missing/skipped, 9.04 seconds. Evidence: evidence/email-standalone-readiness.json. No production changes.
+- Current published head remains 9180b2a9c8. Browser image build jobs 101701349398/101701349408 still live; known native engine failure is repaired in queued commit 9ed8b450a3.
