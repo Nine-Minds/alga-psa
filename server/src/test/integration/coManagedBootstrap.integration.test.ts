@@ -5134,3 +5134,77 @@ it('redacts retained portal tombstone bodies and hidden parent IDs while preserv
   await customer.table('user_roles').where('user_id', requester.user_id).del();
   expect(await portalRead()).toMatchObject({ permissionError: expect.any(String) });
 }));
+
+it('admits background recipients under their own home authority without a browser session or mutation capability', async () => withConversationFixture(async ({
+  principal, customerPrincipal, resource, sponsor, customer,
+}) => {
+  const { withCoManagedNotificationRecipient: notify, withCoManagedSharedWork: interactive } = await import('../../../../packages/co-managed/src/sharedWork');
+  const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
+  const deliver = vi.fn(async (context: any) => ({ actor: context.actor, action: context.action, sessionId: context.sessionId }));
+  await sponsor.table('sessions').where('user_id', principal.userId).del();
+  await sponsor.table('co_management_staff_assignments').where('principal_id', principal.userId).update({ relationship_role: 'viewer' });
+  expect(await notify(db, recipient, resource, deliver)).toEqual({ actor: { tenant: principal.tenant, userId: principal.userId }, action: 'read', sessionId: undefined });
+  for (const action of ['read', 'update'] as const) {
+    await expect(interactive(db, recipient as any, resource, action, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  await expect(notify(db, principal as any, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(notify(db, { ...recipient, tenant: customerPrincipal.tenant, userId: customerPrincipal.userId }, resource, deliver))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: false, user_type: 'client' });
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ user_type: 'internal' });
+  const permission = await sponsor.table('permissions').where({ resource: 'ticket', action: 'read', msp: true }).first();
+  await sponsor.table('role_permissions').where('permission_id', permission.permission_id).del();
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(deliver).toHaveBeenCalledOnce();
+  expect(await customer.table('co_management_private_comments')).toEqual([]);
+}));
+
+it('applies recipient-specific home bundle scope and redactions while retaining reads during lapse and rechecking revoked grants', async () => withConversationFixture(async ({
+  principal, resource, sponsor, customer, operation,
+}) => {
+  const { withCoManagedNotificationRecipient: notify } = await import('../../../../packages/co-managed/src/sharedWork');
+  const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
+  const deliver = vi.fn(async (context: any) => context.redactedFields);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Recipient restrictions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['comments.note', 'actor'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect(await notify(db, recipient, resource, deliver)).toEqual(expect.arrayContaining(['comments.note', 'actor']));
+  await expireCoManagedEntitlement(operation.tenant);
+  expect(await notify(db, recipient, resource, deliver)).toEqual(expect.arrayContaining(['comments.note', 'actor']));
+  const rules = sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' });
+  await rules.clone().update({ config: { selectedClientIds: [operation.customer_client_id] } });
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await rules.clone().update({ config: { selectedClientIds: [operation.request.clientId], constraints: [{ field: 'unknown', operator: 'eq', value: null }] } });
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await rules.clone().update({ config: { selectedClientIds: [operation.request.clientId] } });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(deliver).toHaveBeenCalledTimes(2);
+}));
+
+it('retains recipient identity, membership and resource grant locks through the delivery callback', async () => withConversationFixture(async ({
+  principal, resource, sponsor, customer,
+}) => {
+  const { withCoManagedNotificationRecipient: notify } = await import('../../../../packages/co-managed/src/sharedWork');
+  const recipient = { kind: 'notification_recipient' as const, tenant: principal.tenant, userId: principal.userId };
+  await notify(db, recipient, resource, async () => {
+    for (const change of [
+      (trx: Knex.Transaction) => tenantDb(trx, principal.tenant).table('users').where('user_id', principal.userId).update({ is_inactive: true }),
+      (trx: Knex.Transaction) => tenantDb(trx, principal.tenant).table('user_roles').where('user_id', principal.userId).del(),
+      (trx: Knex.Transaction) => tenantDb(trx, principal.tenant).table('co_management_staff_assignments').where('principal_id', principal.userId).del(),
+      (trx: Knex.Transaction) => tenantDb(trx, resource.tenant).table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() }),
+    ]) await expect(db.transaction(async trx => { await trx.raw("SET LOCAL lock_timeout = '50ms'"); await change(trx); }))
+      .rejects.toMatchObject({ code: '55P03' });
+  });
+  await sponsor.table('co_management_staff_assignments').where('principal_id', principal.userId).del();
+  const deliver = vi.fn();
+  await expect(notify(db, recipient, resource, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(deliver).not.toHaveBeenCalled();
+  expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).grant_revoked_at).toBeNull();
+}));
