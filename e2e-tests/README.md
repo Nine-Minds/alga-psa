@@ -18,6 +18,14 @@ database and real sign-in credentials described below. A host dev server can set
 billed-time designer journey. Reserve full production image builds for final
 packaging and installation validation.
 
+Match the database schema to the application edition. An EE host app needs the
+merged CE+EE migrations, with EE files overriding same-named CE files, as in
+`scripts/run-additional-workspace-tests.mjs` for `enterprise-integration`.
+`createTestDbConnection` accepts that directory through `TEST_MIGRATIONS_DIR`;
+without it, the helper defaults to CE migrations. Use a separate disposable
+database when changing editions. A CE-only database can pass billing tests yet
+fail unrelated EE calls because tables such as `teams_integrations` are absent.
+
 Keep the browser base URL and the application's authentication origin identical:
 cookies set on `127.0.0.1` do not follow a redirect to `localhost`. If a host test
 reports `ERR_CONNECTION_REFUSED`, check the server log before adding retries.
