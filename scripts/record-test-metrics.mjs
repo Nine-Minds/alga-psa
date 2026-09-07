@@ -325,13 +325,27 @@ export async function getAccessToken(sa) {
 }
 
 async function sheetsApi(token, sheetId, pathAndQuery, method = 'GET', body) {
-  const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}${pathAndQuery}`, {
-    method,
-    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, json };
+  // A header read can safely recover from a transient Sheets outage. Writes
+  // remain single-attempt: a lost append response does not prove no row landed.
+  const attempts = method === 'GET' ? 4 : 1;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}${pathAndQuery}`, {
+        method,
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+        ...(method === 'GET' ? { signal: AbortSignal.timeout(30_000) } : {}),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (![429, 500, 502, 503, 504].includes(res.status) || attempt === attempts - 1) {
+        return { ok: res.ok, status: res.status, json };
+      }
+    } catch (error) {
+      if (attempt === attempts - 1) throw error;
+    }
+    // Truncated exponential backoff with jitter; at most three waits.
+    await new Promise(resolve => setTimeout(resolve, 1000 * 2 ** attempt + Math.floor(Math.random() * 1000)));
+  }
 }
 
 async function ensureHeaderRow(token, sheetId, tab, header) {

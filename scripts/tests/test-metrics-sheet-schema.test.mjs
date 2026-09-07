@@ -54,3 +54,57 @@ test('schema extension beyond column Z writes the suffix at AA', async t => {
   assert.match(calls[1].url, /metrics!AA1\?valueInputOption=RAW$/);
   assert.deepEqual(calls[1].body.values, [header.slice(26)]);
 });
+
+function transientSheet(t, responses) {
+  const calls = [];
+  const delays = [];
+  t.mock.method(Math, 'random', () => 0);
+  t.mock.method(globalThis, 'setTimeout', (callback, delay) => {
+    delays.push(delay);
+    queueMicrotask(callback);
+  });
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    calls.push(options.method);
+    const response = responses.shift();
+    assert.ok(response, 'unexpected extra Sheets request');
+    if (response instanceof Error) throw response;
+    return { ok: response.status === 200, status: response.status,
+      json: async () => response.status === 200 && options.method === 'GET' ? { values: [HEADER] } : {} };
+  });
+  return { calls, delays };
+}
+
+test('a transient Sheets read outage recovers before exactly one metrics append', async t => {
+  const { calls, delays } = transientSheet(t, [{ status: 503 }, { status: 429 }, { status: 200 }, { status: 200 }]);
+  await appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]);
+  assert.deepEqual(calls, ['GET', 'GET', 'GET', 'POST']);
+  assert.deepEqual(delays, [1000, 2000]);
+});
+
+test('persistent read outages exhaust a bounded retry budget without writing', async t => {
+  const { calls, delays } = transientSheet(t, Array.from({ length: 4 }, () => ({ status: 503 })));
+  await assert.rejects(appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]), /could not read sheet: 503/);
+  assert.deepEqual(calls, ['GET', 'GET', 'GET', 'GET']);
+  assert.deepEqual(delays, [1000, 2000, 4000]);
+});
+
+test('permanent read failures are surfaced immediately', async t => {
+  const { calls, delays } = transientSheet(t, [{ status: 403 }]);
+  await assert.rejects(appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]), /could not read sheet: 403/);
+  assert.deepEqual(calls, ['GET']);
+  assert.deepEqual(delays, []);
+});
+
+test('an interrupted read can recover before the append', async t => {
+  const { calls, delays } = transientSheet(t, [new TypeError('connection reset'), { status: 200 }, { status: 200 }]);
+  await appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]);
+  assert.deepEqual(calls, ['GET', 'GET', 'POST']);
+  assert.deepEqual(delays, [1000]);
+});
+
+test('an ambiguous append failure is never retried into duplicate metric rows', async t => {
+  const { calls, delays } = transientSheet(t, [{ status: 200 }, { status: 503 }]);
+  await assert.rejects(appendRows('synthetic-token', 'test-sheet', 'metrics', HEADER, [[]]), /append.*failed: 503/);
+  assert.deepEqual(calls, ['GET', 'POST']);
+  assert.deepEqual(delays, []);
+});

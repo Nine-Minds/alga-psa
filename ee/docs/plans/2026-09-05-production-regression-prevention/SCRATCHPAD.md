@@ -2567,3 +2567,10 @@ The initial browser run failed downloading a no-snapshot PDF: the designer saves
 A subsequent run exposed raw minor-unit values in the primary charges table: the workspace exporter fallback columns omitted currency format. Earlier detail-table amounts masked this issue. Added export/evaluate/render regression showing 37500 instead of $375.00 before the correction, and assigned number/currency formats to the default quantity/amount columns. Five focused suites pass86 tests in1.37s. Host rebuild and final browser outcome are recorded in evidence/host-historical-designer-pdf.json. Full plan/native CI/container validation remain outstanding. No Docker builds.
 
 Final host build94726 passed; rebuilt app44735 now serves both fixes on53010. Headed browser45254 passed1 journey in20.2s, retries0, with12 generated PDFs covering4 snapshot states ×3 locales. Evidence records build ID, application file hashes and PDF hashes. No application/container/native CI equivalence claim. PRD now explicitly permits reuse of host production builds for test-only iteration.
+
+
+### Sheets reporting outage recovery and refreshed PR failure inventory
+
+Read PR3343 again: published head remains7b170294, checks59success10failure1skipped (one extra rollup entry has no conclusion). Local fixes are still unpublished. Native unit log confirms header GET503; this is separate from the three pending tax-policy TODOs and coverage diagnostics. Asked user for approved international/cap/multi-period rules; do not invent them.
+
+Added four-attempt exponential backoff+jitter for Sheets GET reads on transient HTTP/transport failures, with30s per-read timeout. POST/PUT remain single-attempt to avoid duplicate append rows. Behavioral tests reproduce the missing recovery before the fix and verify recovery, bounded exhaustion, permanent403 failure, interrupted reads and no append retry. Four metrics suites pass32 tests in864ms. Updated stale metrics documentation to match actual always()/PR/readiness conditions and distinguish recording errors from required gates. No live Sheets write, Docker build or native-success claim. Evidence: evidence/sheets-transient-read-recovery.json.

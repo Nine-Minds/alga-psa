@@ -3,31 +3,36 @@
 CI appends one row per test run to a shared Google Sheet, so you can watch
 pass rates and coverage move over time instead of opening individual Actions
 runs. `scripts/record-test-metrics.mjs` does the recording, and also writes
-the same numbers as a table on the Actions run summary page. It never fails a
-build: the step runs with `continue-on-error` and exits quietly when the
-Google credentials are not configured.
+the same numbers as a table on the Actions run summary page. The writer reports errors with a nonzero exit; current workflow recording steps
+use `continue-on-error`, keeping reporting availability separate from required
+execution gates. Without Google credentials, the writer still produces its job
+summary and skips the external write.
+
+Transient header reads (HTTP 429/500/502/503/504 or transport failures) have four
+attempts, each with a 30-second timeout and exponential backoff with jitter.
+Persistent failures remain visible. Writes are attempted once: retrying an
+append after an uncertain response could duplicate rows. This follows Google's
+[Sheets error guidance](https://developers.google.com/workspace/sheets/api/troubleshoot-api-errors).
 
 ## Which runs record
 
-| Suite label | Workflow | When |
+| Suite label | Workflow | Recording condition |
 |---|---|---|
-| `unit-coverage` | `unit-tests.yml` (coverage job) | every push to main |
-| `integration-tier1` | `integration-tests.yml` | push to main |
-| `integration-full` | `integration-tests.yml` | nightly cron, manual `suite: full` dispatch |
-| `infrastructure-full` | `integration-tests.yml` | nightly cron, manual `suite: full` dispatch |
+| `unit-coverage` | `unit-tests.yml` | Always after the coverage job's steps, including PR runs |
+| `integration-tier1` | `integration-tests.yml` | Selected integration lane on push |
+| `integration-full` | `integration-tests.yml` | Selected full integration lane |
+| `infrastructure-full` | `integration-tests.yml` | Selected full infrastructure lane |
+| Browser readiness | `e2e-fresh-install-tests.yaml` | After successful installation setup, including failed browser execution; excluded under ACT |
 
-PR runs are not recorded. They would flood the sheet, and fork PRs cannot read
-the secret anyway.
+Credentials must be available for an external write; fork PRs generally cannot
+access them. Unit and integration recording use `always()` so failed or incomplete
+execution can remain visible. This cannot guarantee a row after a hard runner
+termination or a reporting outage. Missing data must not be interpreted as a
+passing run. Browser reporting still requires successful installation setup;
+its absence after setup failure is not browser success.
 
-Red runs still record — a drop in pass rate is the signal the sheet exists to
-show. Cancelled runs do not: each recording step is gated on the suite step's
-`outcome` being `success` or `failure`, so a run the job timeout killed leaves
-no row instead of a row covering the fraction of the suite that finished.
-
-The integration and infrastructure suites run in separate jobs. They shared one
-job until 2026-08-21, when their combined runtime hit the 90-minute job timeout
-and the cancellation of the integration suite produced the fake green described
-below.
+The integration and infrastructure suites run in separate jobs. Their reports
+and execution gates remain authoritative independently of Sheets availability.
 
 ## Column schema
 
