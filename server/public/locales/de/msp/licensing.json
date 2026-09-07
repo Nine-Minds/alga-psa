@@ -537,7 +537,10 @@
         "uploading": "{{completed}} von {{total}} Dateien hochgeladen…",
         "publishing": "Nachricht und Dateien werden veröffentlicht…",
         "notReady": "Einige Dateien sind noch nicht bereit. Versuchen Sie es erneut, um den Upload abzuschließen und dieselbe Nachricht zu senden.",
-        "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch."
+        "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch.",
+        "abandoned": "Dieser Entwurf wurde verworfen. Speichern Sie erneut, um eine neue Nachricht mit den ausgewählten Dateien zu erstellen.",
+        "cancelUnknownOutcome": "Die Stornierung konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Anfrage zu prüfen.",
+        "canceling": "Wird abgebrochen…"
       }
     },
     "attachments": {

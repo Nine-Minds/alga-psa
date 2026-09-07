@@ -104,7 +104,7 @@ function visibleAttachmentQuery(context: CoManagedAttachmentReadContext) {
       'd.ticket_id': context.resource.id, 'd.thread_id': context.comment.threadId, 'd.operation_id': context.comment.commentId })
     .whereRaw('d.operation_id = co_management_conversation_attachments.draft_operation_id')
     .whereRaw('d.relationship_id = co_management_conversation_attachments.relationship_id');
-  return attachmentQuery(context).where(query => query.whereNull('draft_operation_id').orWhereExists(published));
+  return attachmentQuery(context).whereNull('discarded_at').where(query => query.whereNull('draft_operation_id').orWhereExists(published));
 }
 
 /** Reserve an immutable upload before transport. Lost acknowledgements leave a
@@ -142,7 +142,7 @@ export async function transferCoManagedAttachment(db: Knex, inputActor: CoManage
     assertContext(context);
     const owner = tenantDb(context.trx, comment.storeTenant);
     const previous = await owner.table(TABLE).where('attachment_id', attachmentId).forUpdate().first();
-    if (previous) { if (previous.request_hash !== hash || previous.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); return; }
+    if (previous) { if (previous.discarded_at) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); if (previous.request_hash !== hash || previous.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT'); await owner.table(TABLE).where('attachment_id', attachmentId).update({ last_activity_at: context.trx.raw('clock_timestamp()') }); return; }
     await owner.table(TABLE).insert({ tenant: comment.storeTenant, attachment_id: attachmentId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
       ticket_id: resource.id, thread_id: comment.threadId, comment_id: comment.commentId, actor_tenant: actor.tenant, actor_user_id: actor.userId,
       file_name: fileName, mime_type: mimeType, file_size: content.length, content_hash: contentHash, request_hash: hash,
@@ -153,12 +153,12 @@ export async function transferCoManagedAttachment(db: Knex, inputActor: CoManage
   return withAuthority(async context => {
     assertContext(context);
     const row = await attachmentQuery(context).where('attachment_id', attachmentId).forUpdate().first();
-    if (!row || row.request_hash !== hash || row.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT');
+    if (!row || row.discarded_at || row.request_hash !== hash || row.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT');
     if (row.storage_path !== `co-management/${comment.storeTenant}/${attachmentId}`) deny();
     if (row.status === 'ready') return summary(row, context.audience);
     await upload(row.storage_path, content, mimeType);
     await assertCoManagedSessionUnexpired(context.trx, actor); await assertCoManagedOperationalWrite(context.trx, resource.tenant);
-    await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()') });
+    await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()'), last_activity_at: context.trx.raw('clock_timestamp()') });
     return summary(row, context.audience);
   });
 }

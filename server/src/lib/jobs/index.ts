@@ -1,3 +1,4 @@
+import { coManagedUploadCleanupJobHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB, type CoManagedUploadCleanupJobData } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
 import { Job } from 'pg-boss';
 import { JobScheduler, JobFilter, IJobScheduler, DummyJobScheduler } from './jobScheduler';
@@ -258,6 +259,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
       await emailWebhookMaintenanceHandler(job);
     });
 
+    jobScheduler.registerJobHandler<CoManagedUploadCleanupJobData>(CO_MANAGED_UPLOAD_CLEANUP_JOB, async job => { await coManagedUploadCleanupJobHandler(job); });
     jobScheduler.registerJobHandler<CoManagedNotificationRecoveryJobData>(CO_MANAGED_NOTIFICATION_RECOVERY_JOB, async job => { await coManagedNotificationRecoveryJobHandler(job); });
 
     // Register inbound email recovery handler (per-tenant durable sweep/backfill/mirror)
@@ -1057,4 +1059,10 @@ export const scheduleSearchReconcileJob = async (
     cronExpression,
     { tenantId }
   );
+};
+
+export const scheduleCoManagedUploadCleanupJob = async (tenantId?: string, cronExpression = '*/15 * * * *'): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) return null;
+  const scheduler = await initializeScheduler();
+  return scheduler.scheduleRecurringJob<CoManagedUploadCleanupJobData>(CO_MANAGED_UPLOAD_CLEANUP_JOB, cronExpression, { tenantId });
 };

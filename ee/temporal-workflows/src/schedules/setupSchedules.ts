@@ -492,6 +492,7 @@ export async function setupSchedules() {
       { jobName: 'cleanup-ai-session-keys', cron: '*/10 * * * *' },
       { jobName: 'workflow-quota-resume-scan', cron: '*/5 * * * *' },
       { jobName: 'inbound-email-recovery', cron: '*/1 * * * *' },
+      { jobName: 'co-managed-upload-cleanup', cron: '*/15 * * * *' },
       { jobName: 'co-managed-notification-recovery', cron: '*/1 * * * *' },
     ];
 

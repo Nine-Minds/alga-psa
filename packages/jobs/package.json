@@ -67,6 +67,7 @@
     "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
+    "@alga-psa/co-managed": "*",
     "@alga-psa/db": "*",
     "@alga-psa/event-bus": "*",
     "@alga-psa/integrations": "*",

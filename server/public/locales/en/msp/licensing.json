@@ -626,7 +626,10 @@
         "uploading": "Uploaded {{completed}} of {{total}} files…",
         "publishing": "Publishing message and files…",
         "notReady": "Some files are not ready. Retry to finish uploading and send the same message.",
-        "preparationFailed": "Could not read the selected files. Select them again or remove them before retrying."
+        "preparationFailed": "Could not read the selected files. Select them again or remove them before retrying.",
+        "abandoned": "This draft was discarded. Save again to create a new message with the selected files.",
+        "cancelUnknownOutcome": "We could not confirm cancellation. Retry to check the same cancellation request.",
+        "canceling": "Canceling…"
       }
     },
     "attachments": {

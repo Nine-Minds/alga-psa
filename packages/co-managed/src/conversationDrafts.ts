@@ -1,16 +1,17 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { commentAudienceSql, resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
-import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
+import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, lockCoManagedSessionIdentity, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationBodySources, coManagedConversationAttachmentSources } from './conversationPolicy';
 import { snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import type { CoManagedCommentReference, CoManagedCommentCreateRequest, CoManagedCommentCreateReceipt } from './ticketCommentCreation';
 import { mutateCoManagedPrivateTicketComment, type CoManagedPrivateCommentReceipt } from './privateTicketConversation';
+import { discardCoManagedDraft } from './uploadCleanup';
 import { transferCoManagedAttachment, type CoManagedAttachmentContext } from './conversationAttachments';
 
 const TABLE = 'co_management_conversation_drafts', FILES = 'co_management_conversation_attachments';
@@ -21,8 +22,9 @@ export interface CoManagedConversationDraftReference { storeTenant: string; oper
 export interface CoManagedConversationDraftProgress extends CoManagedConversationDraftReference { status: 'draft' | 'published'; uploadedAttachmentIds: string[] }
 export type CoManagedConversationDraftReceipt = CoManagedCommentCreateReceipt | CoManagedPrivateCommentReceipt;
 export class CoManagedConversationDraftError extends Error {
-  constructor(public readonly code: 'INVALID_CONVERSATION_DRAFT' | 'CONVERSATION_DRAFT_CONFLICT' | 'CONVERSATION_DRAFT_NOT_READY') {
+  constructor(public readonly code: 'INVALID_CONVERSATION_DRAFT' | 'CONVERSATION_DRAFT_CONFLICT' | 'CONVERSATION_DRAFT_NOT_READY' | 'CONVERSATION_DRAFT_ABANDONED') {
     super({ INVALID_CONVERSATION_DRAFT: 'The message draft is not valid.', CONVERSATION_DRAFT_CONFLICT: 'This draft operation was already used for another message.',
+      CONVERSATION_DRAFT_ABANDONED: 'This message draft has been discarded.',
       CONVERSATION_DRAFT_NOT_READY: 'All message attachments must finish uploading before publication.' }[code]); this.name = 'CoManagedConversationDraftError';
   }
 }
@@ -113,9 +115,13 @@ async function withDraft<T>(db: Knex, actor: CoManagedSessionActor, resource: Co
     const row = await tenantDb(context.trx, reference.storeTenant).table(TABLE).where({ operation_id: reference.operationId, customer_tenant: resource.tenant,
       relationship_id: resource.relationshipId, ticket_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId }).forUpdate().first();
     if (!row) deny();
+    if (row.abandoned_at) throw new CoManagedConversationDraftError('CONVERSATION_DRAFT_ABANDONED');
+    if (row.status === 'draft') await tenantDb(context.trx, reference.storeTenant).table(TABLE).where('operation_id', row.operation_id).update({ last_activity_at: context.trx.raw('clock_timestamp()') });
     const request = snapshotRequest({ ...row.request, files: row.manifest });
     const admitted = await destination(context, request, reference.storeTenant);
     if (admitted.audience !== row.audience || admitted.comment.threadId !== row.thread_id) deny();
+    await assertCoManagedSessionUnexpired(context.trx, actor);
+    await assertCoManagedOperationalWrite(context.trx, resource.tenant);
     return work(admitted, row);
   });
 }
@@ -146,6 +152,8 @@ export async function beginCoManagedConversationDraft(db: Knex, inputActor: CoMa
       row = await owner.table(TABLE).where('operation_id', request.operationId).forUpdate().first();
     }
     if (row.request_hash !== hash || row.audience !== context.audience) conflict();
+    if (row.abandoned_at) throw new CoManagedConversationDraftError('CONVERSATION_DRAFT_ABANDONED');
+    if (row.status === 'draft') await owner.table(TABLE).where('operation_id', row.operation_id).update({ last_activity_at: base.trx.raw('clock_timestamp()') });
     return progress(context, row);
   });
 }
@@ -196,5 +204,24 @@ export async function publishCoManagedConversationDraft(db: Knex, inputActor: Co
     checkedReceipt(receipt, context);
     await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'published', receipt: JSON.stringify(receipt), published_at: context.trx.raw('clock_timestamp()') });
     return receipt;
+  });
+}
+
+/** An active author may discard their own unpublished draft even after content
+ * grants or the license lapse. Cancellation neither reads nor modifies live work. */
+export async function abandonCoManagedConversationDraft(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
+  inputReference: CoManagedConversationDraftReference): Promise<{ status: 'abandoned' | 'published' }> {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = targetSnapshot(inputResource), reference = draftReference(inputReference);
+  if (reference.storeTenant !== resource.tenant && reference.storeTenant !== actor.tenant) deny();
+  return withTransaction(db, async trx => {
+    await lockCoManagedSessionIdentity(trx, actor);
+    const row = await tenantDb(trx, reference.storeTenant).table(TABLE).where({ operation_id: reference.operationId, customer_tenant: resource.tenant,
+      relationship_id: resource.relationshipId, ticket_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId }).forUpdate().first();
+    if (!row) deny();
+    await assertCoManagedSessionUnexpired(trx, actor);
+    if (row.status === 'published') return { status: 'published' as const };
+    await discardCoManagedDraft(trx, reference.storeTenant, row);
+    await assertCoManagedSessionUnexpired(trx, actor);
+    return { status: 'abandoned' as const };
   });
 }

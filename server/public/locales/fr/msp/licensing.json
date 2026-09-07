@@ -539,7 +539,10 @@
         "uploading": "{{completed}} fichiers sur {{total}} téléversés…",
         "publishing": "Publication du message et des fichiers…",
         "notReady": "Certains fichiers ne sont pas prêts. Réessayez pour terminer le téléversement et envoyer le même message.",
-        "preparationFailed": "Impossible de lire les fichiers sélectionnés. Sélectionnez-les à nouveau ou retirez-les avant de réessayer."
+        "preparationFailed": "Impossible de lire les fichiers sélectionnés. Sélectionnez-les à nouveau ou retirez-les avant de réessayer.",
+        "abandoned": "Ce brouillon a été supprimé. Enregistrez à nouveau pour créer un nouveau message avec les fichiers sélectionnés.",
+        "cancelUnknownOutcome": "Nous n’avons pas pu confirmer l’annulation. Réessayez pour vérifier la même demande d’annulation.",
+        "canceling": "Annulation…"
       }
     },
     "attachments": {

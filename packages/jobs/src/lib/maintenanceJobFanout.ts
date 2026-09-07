@@ -1,3 +1,5 @@
+import { CO_MANAGED_UPLOAD_RETENTION_DAYS } from '@alga-psa/co-managed';
+import { coManagedUploadCleanupHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB } from './handlers/coManagedNotificationRecoveryHandler';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
@@ -46,7 +48,7 @@ const WORKFLOW_QUOTA_RESUME_BATCH_SIZE = 100;
 type TenantSelector = (db: TenantDb) => PromiseLike<Array<{ tenant: string }>>;
 
 type MaintenanceJobDef =
-  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number }
+  | { scope: 'tenant'; run: (tenantId: string) => Promise<unknown>; tenants?: TenantSelector; concurrency?: number; includeSuspended?: boolean }
   | { scope: 'system'; run: () => Promise<unknown> };
 
 const DEFAULT_CONCURRENCY = 10;
@@ -56,6 +58,16 @@ const tenantsWithActiveTeams: TenantSelector = (db) => db
   .where('install_status', 'active')
   .whereNotNull('selected_profile_id')
   .distinct('tenant');
+
+const tenantsWithAbandonedCoManagedUploads: TenantSelector = async (db) => {
+  const drafts = await db.unscoped<{ tenant: string }>('co_management_conversation_drafts', 'upload cleanup discovers owners of abandoned drafts')
+    .where('status', 'draft').whereNull('cleanup_completed_at')
+    .where(query => query.whereNotNull('abandoned_at').orWhereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS])).distinct('tenant');
+  const files = await db.unscoped<{ tenant: string }>('co_management_conversation_attachments', 'upload cleanup discovers owners of discarded or stale pending files')
+    .whereNull('purged_at').where(query => query.whereNotNull('discarded_at').orWhere(pending => pending.where('status', 'pending').whereNull('draft_operation_id')
+      .whereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS]))).distinct('tenant');
+  return [...new Set([...drafts, ...files].map(row => row.tenant))].map(tenant => ({ tenant }));
+};
 
 const tenantsWithPendingCoManagedNotifications: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('co_management_notification_deliveries', 'maintenance fanout selects MSPs with pending notification channel deliveries')
@@ -102,6 +114,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
+  [CO_MANAGED_UPLOAD_CLEANUP_JOB]: { scope: 'tenant', run: tenantId => coManagedUploadCleanupHandler({ tenantId }), tenants: tenantsWithAbandonedCoManagedUploads, concurrency: 3, includeSuspended: true },
   [CO_MANAGED_NOTIFICATION_RECOVERY_JOB]: { scope: 'tenant', run: tenantId => coManagedNotificationRecoveryHandler({ tenantId }), tenants: tenantsWithPendingCoManagedNotifications, concurrency: 3 },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
@@ -151,10 +164,9 @@ export async function runMaintenanceJob(
   }
 
   const db = tenantDb(await getAdminConnection(), '__maintenance_job_fanout_tenant_enumeration__');
-  const active = await db
-    .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
-    .whereNull('suspended_at')
-    .select('tenant');
+  const tenantQuery = db.unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs');
+  if (!def.includeSuspended) tenantQuery.whereNull('suspended_at');
+  const active = await tenantQuery.select('tenant');
   let tenants = active;
   if (def.tenants) {
     const eligible = new Set((await def.tenants(db)).map((row) => String(row.tenant)));

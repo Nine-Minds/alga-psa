@@ -4,10 +4,11 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketConversation from '../../../components/co-managed/CoManagedTicketConversation';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
 vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/conversationDraftSubmission', () => ({ prepareConversationDraft: mocks.prepare, submitConversationDraft: mocks.submitDraft }));
+vi.mock('../../../lib/actions/coManagedConversationDraftActions', () => ({ abandonCoManagedConversationDraftAction: mocks.abandon }));
 vi.mock('next/dynamic', () => ({ default: () => ({ id, label, document, editable, onChange }: any) => label
   ? <label>{label}<textarea id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} /></label>
@@ -36,8 +37,9 @@ const deferred = () => { let resolve!: (value: any) => void; const promise = new
 beforeEach(() => {
   vi.resetAllMocks(); mocks.session = { user: { tenant: 'msp', id: 'technician' } };
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(data());
-  mocks.prepare.mockImplementation(async input => ({ resource: input.resource, request: { operationId: input.operationId }, files: input.files }));
+  mocks.prepare.mockImplementation(async input => ({ resource: input.resource, storeTenant: input.resource.tenant, request: { operationId: input.operationId }, files: input.files }));
   mocks.submitDraft.mockResolvedValue({ ok: true, receipt: {} });
+  mocks.abandon.mockResolvedValue({ ok: true, result: { status: 'abandoned' } });
   for (const action of [mocks.create, mocks.mutate, mocks.private]) action.mockResolvedValue({ ok: true, receipt: {} });
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -204,4 +206,23 @@ it.each(['forbidden', 'readOnly'])('clears an attachment draft immediately when 
   chooseFiles(new File(['secret'], 'secret.txt')); fireEvent.click(button('send'));
   await waitFor(() => expect(screen.queryByText('secret.txt')).toBeNull());
   expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
+});
+
+it('retries an uncertain cancellation with the same draft identity without publishing it', async () => {
+  mocks.submitDraft.mockResolvedValueOnce({ ok: false, code: 'notReady' }); mocks.abandon.mockRejectedValueOnce(new Error('Lost cancellation acknowledgement'));
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('new')); fireEvent.change(message(), { target: { value: 'Cancel this message' } });
+  chooseFiles(new File(['a'], 'a')); fireEvent.click(button('send')); await screen.findByText('coManaged.conversation.files.notReady');
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })); await screen.findByText('coManaged.conversation.files.cancelUnknownOutcome');
+  expect(message()).toBeDisabled(); expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' })); await waitFor(() => expect(mocks.abandon).toHaveBeenCalledTimes(2));
+  expect(mocks.abandon.mock.calls[1]).toEqual(mocks.abandon.mock.calls[0]); expect(mocks.submitDraft).toHaveBeenCalledOnce();
+  await waitFor(() => expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull());
+});
+it('retains local content after expiration and starts a new draft only on explicit resubmission', async () => {
+  mocks.submitDraft.mockResolvedValueOnce({ ok: false, code: 'abandoned' });
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('new')); fireEvent.change(message(), { target: { value: 'Still wanted' } });
+  chooseFiles(new File(['a'], 'a')); fireEvent.click(button('send')); await screen.findByText('coManaged.conversation.files.abandoned');
+  expect(message()).toHaveValue('Still wanted'); expect(message()).not.toBeDisabled(); expect(mocks.prepare).toHaveBeenCalledOnce();
+  fireEvent.click(button('send')); await waitFor(() => expect(mocks.prepare).toHaveBeenCalledTimes(2));
+  expect(mocks.prepare.mock.calls[1][0].operationId).not.toBe(mocks.prepare.mock.calls[0][0].operationId);
 });

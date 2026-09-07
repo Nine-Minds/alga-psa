@@ -3,7 +3,7 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
-import { beginCoManagedConversationDraft, uploadCoManagedDraftAttachment, publishCoManagedConversationDraft,
+import { beginCoManagedConversationDraft, abandonCoManagedConversationDraft, uploadCoManagedDraftAttachment, publishCoManagedConversationDraft,
   CoManagedConversationDraftError, CoManagedAttachmentError, CoManagedSharedWorkError, CoManagedCommentCreateError, CoManagedPrivateCommentError,
   type CoManagedSharedResource, type CoManagedConversationDraftReference, type CoManagedConversationDraftRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
@@ -15,7 +15,7 @@ function failure(error: unknown) {
   if (error instanceof CoManagedSharedWorkError) return { ok: false as const, code: 'forbidden' as const };
   if (error instanceof CoManagedLifecycleError) return { ok: false as const, code: 'readOnly' as const };
   if (error instanceof CoManagedConversationDraftError) return { ok: false as const,
-    code: error.code === 'CONVERSATION_DRAFT_NOT_READY' ? 'notReady' as const : error.code === 'CONVERSATION_DRAFT_CONFLICT' ? 'operationConflict' as const : 'invalid' as const };
+    code: error.code === 'CONVERSATION_DRAFT_ABANDONED' ? 'abandoned' as const : error.code === 'CONVERSATION_DRAFT_NOT_READY' ? 'notReady' as const : error.code === 'CONVERSATION_DRAFT_CONFLICT' ? 'operationConflict' as const : 'invalid' as const };
   if (error instanceof CoManagedAttachmentError || error instanceof CoManagedCommentCreateError || error instanceof CoManagedPrivateCommentError)
     return { ok: false as const, code: error.code.includes('CONFLICT') ? 'operationConflict' as const : 'invalid' as const };
   return { ok: false as const, code: 'unknownOutcome' as const };
@@ -42,5 +42,12 @@ export const publishCoManagedConversationDraftAction = withAuth(async (user, { t
   try {
     const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
     return { ok: true as const, receipt: await publishCoManagedConversationDraft(knex, actor, resource, reference, createSharedTicketComment) };
+  } catch (error) { return failure(error); }
+});
+
+export const abandonCoManagedConversationDraftAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, reference: CoManagedConversationDraftReference) => {
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    return { ok: true as const, result: await abandonCoManagedConversationDraft(knex, actor, resource, reference) };
   } catch (error) { return failure(error); }
 });

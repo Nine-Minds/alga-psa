@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6823,5 +6823,159 @@ it('rechecks requester session expiry after comment lock waits before opening st
     await Promise.race([waiting, attempt.then(() => { throw new Error('Requester read completed without waiting'); })]);
     await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
     expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(download).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));
+
+it('cancels an author draft idempotently, hides files immediately and keeps tombstones after scrubbing its bytes and content', async () => withConversationDraftFixture(async ({
+  principal, customerPrincipal, resource, customer, drafts, publishCustomer, file, upload, objects,
+}) => {
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const part = file('Private evidence'), request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Unpublished private body' }, files: [part.descriptor] };
+  const begun = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(begun), part.descriptor.attachmentId, part.content, upload);
+  const original = await customer.table('co_management_conversation_drafts').where('operation_id', begun.operationId).first();
+  await expect(drafts.abandonCoManagedConversationDraft(db, customerPrincipal, resource, draftRef(begun))).rejects.toBeDefined();
+  expect(await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(begun))).toEqual({ status: 'abandoned' });
+  expect(await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(begun))).toEqual({ status: 'abandoned' });
+  expect(await customer.table('co_management_conversation_attachments').where('attachment_id', part.descriptor.attachmentId).first()).toMatchObject({ discarded_at: expect.any(Date), purged_at: null });
+  const remove = vi.fn(async path => { objects.delete(path); });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ purgedFiles: 1, completedDrafts: 1, failedFiles: 0 });
+  expect(objects.size).toBe(0); expect(remove).toHaveBeenCalledWith(`co-management/${resource.tenant}/${part.descriptor.attachmentId}`);
+  const cleaned = await customer.table('co_management_conversation_drafts').where('operation_id', begun.operationId).first();
+  expect(cleaned).toMatchObject({ request_hash: original.request_hash, request: { operationId: begun.operationId }, manifest: [{ attachmentId: part.descriptor.attachmentId }], cleanup_completed_at: expect.any(Date) });
+  for (const attempt of [() => drafts.beginCoManagedConversationDraft(db, principal, resource, request),
+    () => drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(begun), part.descriptor.attachmentId, part.content, upload),
+    () => drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(begun), publishCustomer)])
+    await expect(attempt()).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_ABANDONED' });
+  expect(await customer.table('comments').where('comment_id', begun.operationId).first()).toBeUndefined();
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ purgedFiles: 0, completedDrafts: 0 });
+  expect(remove).toHaveBeenCalledOnce();
+  const migration = require('../../../migrations/20260906220000_add_co_managed_upload_cleanup.cjs'); await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+it('expires idle drafts and standalone pending uploads while retaining fresh work and every published file', async () => withConversationDraftFixture(async ({
+  principal, resource, customer, drafts, publishCustomer, create, attachments, file, upload, objects,
+}) => {
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const prepared = [];
+  for (const name of ['Idle', 'Fresh', 'Published', 'Retry']) {
+    const part = file(name), request = { operationId: randomUUID(), audience: 'requester' as const, content: { text: name }, files: [part.descriptor] };
+    const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+    await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+    if (name === 'Published') await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer);
+    if (name !== 'Fresh') await customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
+    if (name === 'Retry') await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+    prepared.push({ name, draft, part });
+  }
+  const root = await create(principal, { operationId: randomUUID(), audience: 'requester', text: 'Standalone parent' });
+  const standalone = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Unfinished.txt', mimeType: 'text/plain', content: Buffer.from('Unfinished') };
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, standalone, async (...args) => { await upload(...args); throw new Error('Lost upload acknowledgement'); })).rejects.toThrow();
+  await customer.table('co_management_conversation_attachments').where('attachment_id', standalone.attachmentId).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
+  const remove = vi.fn(async path => { objects.delete(path); });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ abandonedDrafts: 1, discardedFiles: 1, purgedFiles: 2, completedDrafts: 1 });
+  expect(remove.mock.calls.map(call => call[0]).sort()).toEqual([`co-management/${resource.tenant}/${prepared[0].part.descriptor.attachmentId}`, `co-management/${resource.tenant}/${standalone.attachmentId}`].sort());
+  for (const entry of prepared.slice(1)) expect(objects.has(`co-management/${resource.tenant}/${entry.part.descriptor.attachmentId}`)).toBe(true);
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, standalone, upload)).rejects.toMatchObject({ code: 'ATTACHMENT_OPERATION_CONFLICT' });
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, standalone.comment)).toEqual([]);
+  expect(await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(prepared[2].draft))).toEqual({ status: 'published' });
+}));
+it('retries failed or lost delete acknowledgements at the same path and rejects corrupted cleanup paths without blocking other files', async () => withConversationDraftFixture(async ({
+  principal, resource, customer, drafts, file, upload, objects,
+}) => {
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const parts = [file('Lost acknowledgement'), file('Corrupt path'), file('Independent')];
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Cleanup' }, files: parts.map(part => part.descriptor) });
+  for (const part of parts) await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+  await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(draft));
+  await customer.table('co_management_conversation_attachments').where('attachment_id', parts[1].descriptor.attachmentId).update({ storage_path: 'another/tenant/object' });
+  const lostPath = `co-management/${resource.tenant}/${parts[0].descriptor.attachmentId}`;
+  const remove = vi.fn(async path => { objects.delete(path); if (path === lostPath) throw new Error('Acknowledgement lost'); });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ failedFiles: 2, purgedFiles: 1, completedDrafts: 0 });
+  expect(remove).not.toHaveBeenCalledWith('another/tenant/object'); expect(objects.has(lostPath)).toBe(false);
+  expect(await customer.table('co_management_conversation_attachments').where('attachment_id', parts[0].descriptor.attachmentId).first()).toMatchObject({ purged_at: null, cleanup_attempts: 1, cleanup_error_code: 'attachment_cleanup_failed' });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ failedFiles: 0, purgedFiles: 0 });
+  await customer.table('co_management_conversation_attachments').where('attachment_id', parts[1].descriptor.attachmentId).update({ storage_path: `co-management/${resource.tenant}/${parts[1].descriptor.attachmentId}` });
+  await customer.table('co_management_conversation_attachments').whereNull('purged_at').update({ cleanup_next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  remove.mockImplementation(async path => { objects.delete(path); });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ failedFiles: 0, purgedFiles: 2, completedDrafts: 1 });
+  expect(remove.mock.calls.filter(call => call[0] === lostPath)).toHaveLength(2);
+}));
+it('allows authors to discard their own drafts after grant loss and lapse without granting access to live content', async () => withConversationDraftFixture(async ({
+  principal, resource, customer, drafts, file,
+}) => {
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Old draft' }, files: [file('Not uploaded').descriptor] });
+  await expireCoManagedEntitlement(principal.tenant);
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: db.fn.now() });
+  expect(await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(draft))).toEqual({ status: 'abandoned' });
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const remove = vi.fn(); expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ completedDrafts: 1, purgedFiles: 0 }); expect(remove).not.toHaveBeenCalled();
+}));
+it('serializes cancellation after an in-flight upload and never publishes or resurrects its completed object', async () => withConversationDraftFixture(async ({
+  principal, resource, customer, drafts, publishCustomer, file, upload, objects,
+}) => {
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const part = file('Concurrent'), draft = await drafts.beginCoManagedConversationDraft(db, principal, resource,
+    { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Canceled during transfer' }, files: [part.descriptor] });
+  let entered!: () => void, release!: () => void;
+  const started = new Promise<void>(resolve => { entered = resolve; }), gate = new Promise<void>(resolve => { release = resolve; });
+  const transfer = drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, async (...args) => { entered(); await gate; await upload(...args); });
+  await started;
+  const cancel = drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(draft));
+  try { release(); await transfer; expect(await cancel).toEqual({ status: 'abandoned' }); }
+  finally { release(); await Promise.allSettled([transfer, cancel]); }
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_ABANDONED' });
+  const remove = vi.fn(async path => { objects.delete(path); });
+  const results = await Promise.all([cleanupCoManagedUploads(db, resource.tenant, remove), cleanupCoManagedUploads(db, resource.tenant, remove)]);
+  expect(results.reduce((sum, row) => sum + row.purgedFiles, 0)).toBe(1); expect(remove).toHaveBeenCalledOnce();
+  expect(await customer.table('comments').where('comment_id', draft.operationId).first()).toBeUndefined();
+}));
+
+it('cleans only the owning store and invokes the production scheduled handler with idempotent provider deletion', async () => withConversationDraftFixture(async ({
+  principal, resource, sponsor, customer, drafts, file, upload, objects,
+}) => {
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const prepared = [];
+  for (const audience of ['shared_it', 'organization_private'] as const) {
+    const part = file(audience), draft = await drafts.beginCoManagedConversationDraft(db, principal, resource,
+      { operationId: randomUUID(), audience, content: { text: audience }, files: [part.descriptor] });
+    await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+    await drafts.abandonCoManagedConversationDraft(db, principal, resource, draftRef(draft)); prepared.push({ part, draft });
+  }
+  const remove = vi.fn(async path => { objects.delete(path); });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove, 1)).toMatchObject({ purgedFiles: 1, completedDrafts: 1 });
+  expect(objects.has(`co-management/${principal.tenant}/${prepared[1].part.descriptor.attachmentId}`)).toBe(true);
+  const dbModule = await import('@alga-psa/db'), connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+  artifactStorage.delete.mockReset().mockImplementation(async path => { objects.delete(path); });
+  try {
+    const { coManagedUploadCleanupJobHandler } = await import('../../lib/jobs/handlers/coManagedUploadCleanupHandler');
+    expect(await coManagedUploadCleanupJobHandler({ data: { tenantId: principal.tenant, limit: 1 } } as any)).toMatchObject({ purgedFiles: 1, completedDrafts: 1 });
+    expect(artifactStorage.delete).toHaveBeenCalledWith(`co-management/${principal.tenant}/${prepared[1].part.descriptor.attachmentId}`);
+    expect(await coManagedUploadCleanupJobHandler({ data: { tenantId: principal.tenant, limit: 1 } } as any)).toMatchObject({ purgedFiles: 0 });
+    expect(artifactStorage.delete).toHaveBeenCalledOnce();
+  } finally { connection.mockRestore(); }
+  expect(objects.size).toBe(0);
+  expect(await sponsor.table('co_management_conversation_drafts').where('operation_id', prepared[1].draft.operationId).first()).toMatchObject({ cleanup_completed_at: expect.any(Date) });
+  expect(await customer.table('co_management_conversation_drafts').where('operation_id', prepared[0].draft.operationId).first()).toMatchObject({ cleanup_completed_at: expect.any(Date) });
+  await expect(db.transaction(trx => cleanupCoManagedUploads(trx, resource.tenant, remove))).rejects.toThrow('Invalid co-managed upload cleanup request');
+}));
+
+it('rechecks draft session expiry after cleanup lock contention before uploading any bytes', async () => withConversationDraftFixture(async ({
+  principal, resource, customer, sponsor, drafts, file, upload,
+}) => {
+  const part = file('Expired lock wait'), draft = await drafts.beginCoManagedConversationDraft(db, principal, resource,
+    { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Wait for draft lock' }, files: [part.descriptor] });
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('co_management_conversation_drafts').where('operation_id', draft.operationId).forUpdate().first();
+  let signal!: () => void;
+  const waiting = new Promise<void>(resolve => { signal = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('co_management_conversation_drafts') && query.sql.includes('for update')) signal(); };
+  db.on('query', listener);
+  const attempt = drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload).catch(error => error);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Draft upload completed without waiting'); })]);
+    await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(upload).not.toHaveBeenCalled();
+    expect(await customer.table('co_management_conversation_attachments').where('draft_operation_id', draft.operationId)).toEqual([]);
   } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));

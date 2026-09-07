@@ -537,7 +537,10 @@
         "uploading": "{{completed}} van {{total}} bestanden geüpload…",
         "publishing": "Bericht en bestanden publiceren…",
         "notReady": "Sommige bestanden zijn nog niet klaar. Probeer opnieuw om de upload te voltooien en hetzelfde bericht te verzenden.",
-        "preparationFailed": "De geselecteerde bestanden konden niet worden gelezen. Selecteer ze opnieuw of verwijder ze voordat u het opnieuw probeert."
+        "preparationFailed": "De geselecteerde bestanden konden niet worden gelezen. Selecteer ze opnieuw of verwijder ze voordat u het opnieuw probeert.",
+        "abandoned": "Dit concept is verwijderd. Sla opnieuw op om een nieuw bericht met de geselecteerde bestanden te maken.",
+        "cancelUnknownOutcome": "We konden de annulering niet bevestigen. Probeer opnieuw om hetzelfde annuleringsverzoek te controleren.",
+        "canceling": "Annuleren…"
       }
     },
     "attachments": {

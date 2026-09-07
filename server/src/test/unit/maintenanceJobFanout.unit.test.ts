@@ -6,6 +6,7 @@ const listTenantsMock = vi.fn();
 // Rows returned for the per-job tenant selector tables (teams_integrations, email_providers).
 const selectTenantsMock = vi.fn();
 const selectorTablesSeen: string[] = [];
+const suspendedFilter = vi.fn();
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -16,7 +17,7 @@ vi.mock('@alga-psa/db/admin', () => ({
     if (table === 'tenants') {
       const builder = {
         whereNull: (column: string) => {
-          expect(column).toBe('suspended_at');
+          expect(column).toBe('suspended_at'); suspendedFilter(column);
           return builder;
         },
         select: (_col: string) => Promise.resolve(listTenantsMock()),
@@ -50,6 +51,7 @@ vi.mock('@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler', () => ({ cleanupA
 vi.mock('@alga-psa/jobs/handlers/cleanupTemporaryFormsJob', () => ({ cleanupTemporaryFormsJob: (...a: unknown[]) => systemHandlerMock('cleanup-temporary-workflow-forms', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliveriesJob: (...a: unknown[]) => systemHandlerMock('cleanup-webhook-deliveries', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETING_SWEEP_JOB: 'sweep-teams-online-meetings', teamsMeetingSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-teams-online-meetings', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/coManagedUploadCleanupHandler', () => ({ CO_MANAGED_UPLOAD_CLEANUP_JOB: 'co-managed-upload-cleanup', coManagedUploadCleanupHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-upload-cleanup', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler', () => ({ CO_MANAGED_NOTIFICATION_RECOVERY_JOB: 'co-managed-notification-recovery', coManagedNotificationRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-notification-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
@@ -63,7 +65,7 @@ describe('runMaintenanceJob', () => {
     systemHandlerMock.mockReset();
     listTenantsMock.mockReset();
     selectTenantsMock.mockReset();
-    selectorTablesSeen.length = 0;
+    selectorTablesSeen.length = 0; suspendedFilter.mockClear();
     tenantHandlerMock.mockResolvedValue(undefined);
     systemHandlerMock.mockResolvedValue(undefined);
   });
@@ -168,4 +170,14 @@ describe('runMaintenanceJob', () => {
     expect(isKnownMaintenanceJob('search:reconcile')).toBe(true);
     expect(isKnownMaintenanceJob('sla-timer')).toBe(false);
   });
+});
+
+it('cleans only eligible upload owners, including suspended tenants, while other maintenance keeps its suspension gate', async () => {
+  tenantHandlerMock.mockClear(); suspendedFilter.mockClear();
+  listTenantsMock.mockReturnValue([{ tenant: 'active' }, { tenant: 'suspended' }, { tenant: 'unrelated' }]);
+  selectTenantsMock.mockImplementation(table => table === 'co_management_conversation_drafts' ? [{ tenant: 'active' }] : [{ tenant: 'suspended' }, { tenant: 'active' }]);
+  expect(await runMaintenanceJob('co-managed-upload-cleanup')).toMatchObject({ total: 2, succeeded: 2, failed: 0 });
+  expect(suspendedFilter).not.toHaveBeenCalled();
+  expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-upload-cleanup', { tenantId: 'suspended' });
+  await runMaintenanceJob('auto-close-tickets'); expect(suspendedFilter).toHaveBeenCalledWith('suspended_at');
 });

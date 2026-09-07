@@ -537,7 +537,10 @@
         "uploading": "22222 {{completed}} {{total}}",
         "publishing": "22222",
         "notReady": "22222",
-        "preparationFailed": "22222"
+        "preparationFailed": "22222",
+        "abandoned": "22222",
+        "cancelUnknownOutcome": "22222",
+        "canceling": "22222"
       }
     },
     "attachments": {

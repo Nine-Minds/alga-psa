@@ -539,7 +539,10 @@
         "uploading": "{{completed}} de {{total}} arquivos enviados…",
         "publishing": "Publicando mensagem e arquivos…",
         "notReady": "Alguns arquivos não estão prontos. Tente novamente para concluir o envio e publicar a mesma mensagem.",
-        "preparationFailed": "Não foi possível ler os arquivos selecionados. Selecione-os novamente ou remova-os antes de tentar de novo."
+        "preparationFailed": "Não foi possível ler os arquivos selecionados. Selecione-os novamente ou remova-os antes de tentar de novo.",
+        "abandoned": "Este rascunho foi descartado. Salve novamente para criar uma nova mensagem com os arquivos selecionados.",
+        "cancelUnknownOutcome": "Não foi possível confirmar o cancelamento. Tente novamente para verificar a mesma solicitação de cancelamento.",
+        "canceling": "Cancelando…"
       }
     },
     "attachments": {

@@ -28,9 +28,11 @@ describe('tenant suspension chokepoint gates', () => {
     expect(source).toContain('running job anyway');
   });
 
-  it('T018: EE maintenance fan-out enumeration excludes suspended tenants', () => {
+  it('T018: EE maintenance excludes suspended tenants by default, with an explicit upload-cleanup exception', () => {
     const source = read('packages/jobs/src/lib/maintenanceJobFanout.ts');
-    expect(source).toMatch(/unscoped[^;]*tenants[^;]*\.whereNull\('suspended_at'\)/s);
+    expect(source).toContain("if (!def.includeSuspended) tenantQuery.whereNull('suspended_at')");
+    expect(source).toMatch(/\[CO_MANAGED_UPLOAD_CLEANUP_JOB\]:[^\n]*includeSuspended: true/);
+    expect(source.match(/includeSuspended: true/g)).toHaveLength(1);
   });
 
   it('T019: marketing tenant enumeration excludes suspended tenants', () => {

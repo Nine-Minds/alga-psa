@@ -539,7 +539,10 @@
         "uploading": "Caricati {{completed}} di {{total}} file…",
         "publishing": "Pubblicazione del messaggio e dei file…",
         "notReady": "Alcuni file non sono pronti. Riprova per completare il caricamento e inviare lo stesso messaggio.",
-        "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare."
+        "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare.",
+        "abandoned": "Questa bozza è stata eliminata. Salva di nuovo per creare un nuovo messaggio con i file selezionati.",
+        "cancelUnknownOutcome": "Impossibile confermare l’annullamento. Riprova per verificare la stessa richiesta di annullamento.",
+        "canceling": "Annullamento…"
       }
     },
     "attachments": {

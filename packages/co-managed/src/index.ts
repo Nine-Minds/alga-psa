@@ -22,3 +22,5 @@ export { assertCoManagedSessionUnexpired, isCoManagedUuid, snapshotCoManagedSess
 export * from './ticketCommentMutation';
 export * from './conversationAttachments';
 export * from './conversationDrafts';
+
+export * from './uploadCleanup';

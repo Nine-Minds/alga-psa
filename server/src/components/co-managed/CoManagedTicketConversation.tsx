@@ -11,6 +11,7 @@ import { prepareConversationDraft, submitConversationDraft, type PreparedConvers
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
+import { abandonCoManagedConversationDraftAction } from '@/lib/actions/coManagedConversationDraftActions';
 import { createCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentActions';
 import { mutateCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentMutationActions';
 import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManagedPrivateTicketCommentActions';
@@ -37,13 +38,14 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
   const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<Array<{ key: string; file: File }>>([]);
   const [progress, setProgress] = useState<ConversationDraftProgress | null>(null);
+  const cancellation = useRef(false);
   const submission = useRef<Submission | null>(null), inFlight = useRef(false), mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const permitted = audiences.includes(audience);
   const canAttach = (draft.kind === 'new' || draft.kind === 'reply') && draftAttachments.audiences.includes(audience);
   const filesInvalid = files.length > draftAttachments.maxFiles || files.some(({ file }) => file.size > draftAttachments.maxBytes);
-  const uncertain = error === 'unknownOutcome', retryable = uncertain || error === 'notReady';
-  const rejected = error && !['unknownOutcome', 'notReady', 'invalid', 'preparationFailed'].includes(error);
+  const uncertain = error === 'unknownOutcome' || error === 'cancelUnknownOutcome', retryable = uncertain || error === 'notReady';
+  const rejected = error && !['unknownOutcome', 'cancelUnknownOutcome', 'notReady', 'invalid', 'abandoned', 'preparationFailed'].includes(error);
   const frozen = busy || retryable || Boolean(rejected) || !permitted;
   const allowed = useRef(false);
   allowed.current = permitted && (!files.length || canAttach);
@@ -53,7 +55,23 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
     // Never turn an interrupted attachment submission into a second, text-only message.
     if (files.length && !canAttach) onCancel();
   }, [canAttach, files.length, onCancel]);
+  async function cancel() {
+    if (inFlight.current) return;
+    const saved = submission.current;
+    if (saved?.store !== 'draft') { onCancel(); return; }
+    inFlight.current = true; cancellation.current = true; setBusy(true); setError(null);
+    try {
+      const outcome = await abandonCoManagedConversationDraftAction(saved.prepared.resource,
+        { storeTenant: saved.prepared.storeTenant, operationId: saved.prepared.request.operationId });
+      if (!mounted.current) return;
+      if (outcome.ok) { if (outcome.result.status === 'published') onSaved(); else onCancel(); }
+      else if (outcome.code === 'unknownOutcome') setError('cancelUnknownOutcome');
+      else onCancel();
+    } catch { if (mounted.current) setError('cancelUnknownOutcome'); }
+    finally { inFlight.current = false; if (mounted.current) setBusy(false); }
+  }
   async function submit() {
+    if (cancellation.current) { await cancel(); return; }
     if (inFlight.current || rejected || !allowed.current || filesInvalid || (draft.kind !== 'delete' && !validDocument)) return;
     inFlight.current = true; setBusy(true); setError(null);
     let dispatched = false;
@@ -87,7 +105,7 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
       if (!current()) return;
       if (result.ok) onSaved();
       else if (saved.store === 'draft' && ['forbidden', 'readOnly'].includes(result.code)) onCancel();
-      else if (result.code !== 'aborted') { setError(result.code); if (result.code === 'invalid') submission.current = null; }
+      else if (result.code !== 'aborted') { setError(result.code); if (result.code === 'invalid' || result.code === 'abandoned') submission.current = null; }
     } catch { if (current()) setError(dispatched ? 'unknownOutcome' : 'preparationFailed'); }
     finally { inFlight.current = false; if (mounted.current) { setBusy(false); setProgress(null); } }
   }
@@ -119,11 +137,11 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
     </div>}
     {progress && <p role="status">{t(`coManaged.conversation.files.${progress.phase}`, { completed: progress.completed, total: progress.total })}</p>}
     {!permitted && <p role="status">{t('coManaged.ticket.readOnly')}</p>}
-    {error && <p role="alert" className="text-destructive">{t(error === 'unknownOutcome' ? 'coManaged.conversation.unknownOutcome' : ['notReady', 'preparationFailed'].includes(error) ? `coManaged.conversation.files.${error}` : `coManaged.editor.errors.${error}`)}</p>}
+    {error && <p role="alert" className="text-destructive">{t(error === 'unknownOutcome' ? 'coManaged.conversation.unknownOutcome' : ['notReady', 'abandoned', 'cancelUnknownOutcome', 'preparationFailed'].includes(error) ? `coManaged.conversation.files.${error}` : `coManaged.editor.errors.${error}`)}</p>}
     <div className="flex flex-wrap gap-2">
       <Button id="co-conversation-submit" type="submit" disabled={busy || Boolean(rejected) || !allowed.current || filesInvalid || (draft.kind !== 'delete' && !validDocument)}>
-        {t(busy ? 'coManaged.ticket.saving' : retryable ? 'coManaged.ticket.retry' : `coManaged.conversation.${draft.kind === 'delete' ? 'delete' : 'send'}`)}</Button>
-      <Button id="co-conversation-cancel" type="button" variant="outline" disabled={busy || uncertain} onClick={onCancel}>{t('coManaged.ticket.cancel')}</Button>
+        {t(busy ? (cancellation.current ? 'coManaged.conversation.files.canceling' : 'coManaged.ticket.saving') : retryable ? 'coManaged.ticket.retry' : `coManaged.conversation.${draft.kind === 'delete' ? 'delete' : 'send'}`)}</Button>
+      <Button id="co-conversation-cancel" type="button" variant="outline" disabled={busy || uncertain} onClick={() => void cancel()}>{t('coManaged.ticket.cancel')}</Button>
     </div>
   </form>;
 }

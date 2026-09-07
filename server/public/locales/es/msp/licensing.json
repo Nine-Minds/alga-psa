@@ -539,7 +539,10 @@
         "uploading": "Se han subido {{completed}} de {{total}} archivos…",
         "publishing": "Publicando el mensaje y los archivos…",
         "notReady": "Algunos archivos no están listos. Reintente para terminar la carga y enviar el mismo mensaje.",
-        "preparationFailed": "No se pudieron leer los archivos seleccionados. Selecciónelos de nuevo o quítelos antes de reintentar."
+        "preparationFailed": "No se pudieron leer los archivos seleccionados. Selecciónelos de nuevo o quítelos antes de reintentar.",
+        "abandoned": "Se descartó este borrador. Guarde de nuevo para crear un mensaje nuevo con los archivos seleccionados.",
+        "cancelUnknownOutcome": "No pudimos confirmar la cancelación. Reintente para comprobar la misma solicitud de cancelación.",
+        "canceling": "Cancelando…"
       }
     },
     "attachments": {
