@@ -10,7 +10,7 @@ import { testRevision } from './lib/test-revision.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'test-results/integration-aggregate');
 const total = Number(process.env.INTEGRATION_SHARD_TOTAL || '1');
-const failures = [], shards = [], reports = [];
+const failures = [], shards = [], reports = [], verifiedReports = [];
 let result;
 try {
   const source = testRevision(root);
@@ -29,6 +29,7 @@ try {
       reports.push(report);
       const verified = reconcileExecution({ root, suite: 'integration', revision: source.revision,
         collected: read('collected'), collectedTests: read('collected-tests'), report, exitCode: evidence.status === 'passed' ? 0 : 1 });
+      verifiedReports.push(verified);
       failures.push(...verified.failures, ...compareExecutionEvidence(evidence, verified, `Shard ${index}`));
       if (evidence.source?.before?.dirty !== false || evidence.source?.after?.dirty !== false || evidence.workingTreeDirty !== false) failures.push(`Shard ${index} source is dirty or missing`);
       for (const phase of ['before', 'after']) {
@@ -49,6 +50,8 @@ try {
   for (const file of result.executedFiles) if (!candidates.includes(file)) failures.push(`Unexpected integration file: ${file}`);
   if (!required.length) failures.push('Mandatory integration inventory is empty');
 } catch (error) { result = { schemaVersion: 1, status: 'failed', failures: [] }; failures.push(error.message); }
+result.expectedTests = verifiedReports.flatMap(evidence => evidence.expectedTests);
+result.executedTests = verifiedReports.flatMap(evidence => evidence.executedTests);
 result.failures.push(...failures);
 result.status = result.failures.length ? 'failed' : 'passed';
 mkdirSync(output, { recursive: true });

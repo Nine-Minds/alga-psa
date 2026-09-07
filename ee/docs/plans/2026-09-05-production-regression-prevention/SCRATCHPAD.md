@@ -1966,3 +1966,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - While external push approval remains pending, strengthened local integration aggregation: require explicit full/Tier-1 selection, reject extra shard directories, require empty source change lists and explicit unfiltered execution metadata.
 - Extended the actual Vitest shard fixture to reject extra directories, cleared raw results behind a passing manifest and inconsistent source change records, then recover after restoring valid evidence. Four shard tests pass in 5.75 seconds; git diff check passes.
 - Publication remains pending explicit approval after automatic review rejected the combined commit/push to origin. Verified origin URL is https://github.com/nine-minds/alga-psa.git; no push workaround was attempted.
+
+### 2026-09-07 — preserve combined assertion inventory for metrics
+
+- Found the combined integration evidence omitted expectedTests, which the existing metrics reader requires before presenting complete execution. Aggregate now carries expected/executed assertion identities from independently reverified raw reports.
+- Actual three-shard Vitest fixture now feeds aggregate artifacts through testCounts: valid execution reports complete / five passing / 100%; extra shard evidence downgrades to partial with blank pass percentage. Fixture passes in 5.74 seconds. This validates local report projection only, with no Sheets writes or external publication.

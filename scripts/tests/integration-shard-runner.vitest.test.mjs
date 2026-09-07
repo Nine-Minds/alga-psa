@@ -1,4 +1,5 @@
 import { test } from 'node:test';
+import { testCounts } from '../record-test-metrics.mjs';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -46,9 +47,15 @@ test('actual integration runner partitions, executes and rejects missing or stal
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
   assert.equal(read('test-results/integration-aggregate/aggregate.json').counts.passed, 5);
 
+  const metrics = () => testCounts(read('test-results/integration-aggregate/results.json'), read('test-results/integration-aggregate/aggregate.json'), git('rev-parse', 'HEAD').trim());
+  assert.equal(metrics().runStatus, 'complete');
+  assert.equal(metrics().passed, 5);
+  assert.equal(metrics().passPct, 100);
   const duplicateDirectory = path.join(root, 'test-results/integration-shards/unexpected-shard');
   mkdirSync(duplicateDirectory);
   assert.equal(run('verify-integration-shards.mjs').status, 1);
+  assert.equal(metrics().runStatus, 'partial');
+  assert.equal(metrics().passPct, '');
   rmSync(duplicateDirectory, { recursive: true });
   const reportFile = 'test-results/integration-shards/server-integration-shard-1/results.json';
   const originalReport = read(reportFile);
