@@ -19,6 +19,8 @@ export default defineConfig({
       'src/activities/__tests__/tenant-suspension-activities.test.ts',
       'src/activities/__tests__/tenant-email-ingestion-activities.test.ts',
       'src/db/__tests__/tenant-operations.email-settings.test.ts',
+      'src/activities/__tests__/product-upgrade-activities.test.ts',
+      'src/db/__tests__/product-bootstrap-resolver.test.ts',
       'src/schedules/__tests__/**/*.test.ts',
     ],
     coverage: { provider: 'v8', enabled: false },

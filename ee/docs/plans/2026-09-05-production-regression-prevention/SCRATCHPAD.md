@@ -1383,3 +1383,9 @@
 - Nx job 101686141225 failed one of 1271 billing assertions: grouped invoice correction expected quantity 7, received 0. Native log also retained a prior quantity-12 save call because upsert mock was never cleared between cases.
 - Full file passes locally before change (37), so the native input mismatch remains intermittent/unproven. Reset the upsert mock per test and use awaited user clear/type/click, assert displayed 7, preserve revision-3/quantity-7 payload checks, and require exactly one save. No production fix inferred.
 - After change full file passes all 37 in 4.20 seconds. Native verification remains pending. Evidence: evidence/billing-correction-test-isolation.json; logs /tmp/alga-billing-grouped-{82cc,after-82cc}.log.
+
+### 2026-09-07 — Product upgrade seams enter required readiness
+
+- Existing product-upgrade activity tests cover invalid subscription/price refusal, no-op target detection, seat quantity preservation, annual mapping and fallback price configuration. Product-bootstrap resolver tests cover unsupported products and actual temporary-directory seed enumeration. Eleven cases pass unchanged.
+- Added both suites to readiness config and independent discovery classifier. Actual run-additional-workspace-tests temporal-readiness entry point passes 16 files / 126 cases with complete discovery and execution reconciliation. Evidence: evidence/temporal-product-readiness.json.
+- Does not satisfy previous-release schema upgrade or live Stripe parity requirements. Native expanded readiness verification is still pending.
