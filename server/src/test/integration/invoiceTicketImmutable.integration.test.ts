@@ -133,6 +133,56 @@ it('generates immutable ticket presentation from approved source records', async
       await db('invoice_time_entries').where({ tenant: foreignTenant, invoice_time_entry_id: foreignLinkId }).delete();
     }
 
+    // Run historical locale rendering without relying on another test's files
+    // or a manually authored template. Designer authoring still requires separate coverage.
+    const clientBeforeLocales = await db('clients').where({ tenant, client_id: clientId }).first();
+    try {
+      for (const history of ['v1', 'partial', 'none']) {
+        for (const [index, link] of links.entries()) {
+          const workItemSnapshot = history === 'none' || (history === 'partial' && index === 0)
+            ? null : history === 'v1' ? { ...link.work_item_snapshot, version: 1 } : link.work_item_snapshot;
+          await db('invoice_time_entries').where({ tenant, invoice_time_entry_id: link.invoice_time_entry_id }).update({ work_item_snapshot: workItemSnapshot });
+        }
+        const historicalVm = mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenant, result.invoice_id))!;
+        const frozenHistorical = JSON.stringify(historicalVm);
+        const persistedHistory = await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).orderBy('invoice_time_entry_id');
+        for (const locale of ['en', 'fr', 'zz-unavailable']) {
+          const effectiveLocale = locale === 'fr' ? 'fr' : 'en';
+          await db('clients').where({ tenant, client_id: clientId }).update({ properties: { ...clientBeforeLocales.properties, defaultLocale: locale } });
+          const localizedPdf = new PDFGenerationService(tenant);
+          expect(await localizedPdf.resolveRenderLocale({ invoiceId: result.invoice_id })).toBe(effectiveLocale);
+          const localizedPreview = await localizedPdf.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: template.template_id });
+          const prefix = `${evidenceDir}/history-${history}-${locale}`;
+          fs.writeFileSync(`${prefix}.html`, localizedPreview.html);
+          fs.writeFileSync(`${prefix}.pdf`, await localizedPdf.generatePDF({ invoiceId: result.invoice_id, userId, templateId: template.template_id }));
+          // Content order keeps wrapped table-cell labels together; geometric
+          // reading order can insert the adjacent amount between label words.
+          const text = execFileSync('pdftotext', ['-raw', `${prefix}.pdf`, '-'], { encoding: 'utf8' });
+          fs.writeFileSync(`${prefix}.txt`, text);
+          const compact = (value: string) => value.replace(/\s/g, '');
+          // Labels are asserted against the actual locale dictionary below;
+          // this also keeps fallback locales tied to the English document.
+          const { localizeTemplateAstForLocale } = await import('@alga-psa/billing/lib/invoice-template-ast/i18nLabels');
+          const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
+          const { localizeTimePresentation } = await import('@alga-psa/billing/lib/invoice-template-ast/timePresentationLocalization');
+          const { formatBoundValue } = await import('@alga-psa/billing/components/invoice-designer/preview/previewBindings');
+          const localized = await localizeTemplateAstForLocale(getStandardTemplateAstByCode('standard-invoice-by-ticket')!, locale);
+          const display = localizeTimePresentation(historicalVm, localized.t);
+          const expected = history === 'v1' ? (locale === 'fr' ? 'Tarif indisponible' : 'Rate unavailable') : display.ticketCoverageNote;
+          expect(expected, `${history}/${locale}`).toBeTruthy();
+          expect(compact(text)).toContain(compact(expected!));
+          expect(compact(localizedPreview.html)).toContain(compact(expected!));
+          expect(compact(text)).toContain(compact(formatBoundValue(historicalVm.total, 'currency', historicalVm.currencyCode, effectiveLocale)!));
+          expect(text).not.toMatch(/PRIVATE|EDITED/);
+          expect(JSON.stringify(historicalVm)).toBe(frozenHistorical);
+          expect(await db('invoice_time_entries').where({ tenant, invoice_id: result.invoice_id }).orderBy('invoice_time_entry_id')).toEqual(persistedHistory);
+          expect(await db('invoice_charges').where({ tenant, invoice_id: result.invoice_id })).toEqual(persistedCharges);
+        }
+      }
+    } finally {
+      await db('clients').where({ tenant, client_id: clientId }).update({ properties: clientBeforeLocales.properties });
+      for (const link of links) await db('invoice_time_entries').where({ tenant, invoice_time_entry_id: link.invoice_time_entry_id }).update({ work_item_snapshot: link.work_item_snapshot });
+    }
     const frozen = JSON.stringify(vm);
     // Invoiced fields are locked in the UI. Deliberate fixture-only source edits
     // test immutable historical rendering, not a supported edit workflow.
