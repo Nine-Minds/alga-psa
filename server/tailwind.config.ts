@@ -1,4 +1,6 @@
 import type { Config } from "tailwindcss";
+import typography from '@tailwindcss/typography';
+import containerQueries from '@tailwindcss/container-queries';
 
 const config: Config = {
   darkMode: 'class',
@@ -206,9 +208,8 @@ const config: Config = {
   },
 
   plugins: [
-    // require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-    require('@tailwindcss/container-queries'),
+    typography,
+    containerQueries,
   ],
 };
 export default config;

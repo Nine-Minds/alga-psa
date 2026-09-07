@@ -17,6 +17,7 @@ import {
 import { createTestTicket } from '../utils/ticketTestData';
 import { v4 as uuidv4 } from 'uuid';
 import { ApiTestClient } from '../utils/apiTestHelpers';
+import { grantTestUserPermission } from '../utils/simpleRoleSetup';
 
 const API_BASE = '/api/v1/time-entries';
 
@@ -736,17 +737,7 @@ describe('Time Entries API E2E Tests', () => {
 
   describe('Approval Workflow', () => {
     beforeEach(async () => {
-      const role = await tenantTable('user_roles').where({ user_id: env.userId }).first();
-      expect(role).toBeDefined();
-      let permission = await tenantTable('permissions').where({ resource: 'time_entry', action: 'approve' }).first();
-      if (!permission) {
-        [permission] = await tenantTable('permissions').insert({
-          tenant: env.tenant, permission_id: uuidv4(), resource: 'time_entry', action: 'approve',
-        }).returning('*');
-      }
-      await tenantTable('role_permissions').insert({
-        tenant: env.tenant, role_id: role.role_id, permission_id: permission.permission_id,
-      }).onConflict(['tenant', 'role_id', 'permission_id']).ignore();
+      await grantTestUserPermission(env.db, env.userId, env.tenant, 'time_entry', 'approve');
     });
 
     it('should approve time entries', async () => {
