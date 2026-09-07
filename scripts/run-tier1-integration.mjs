@@ -10,11 +10,14 @@
 // Every manifest entry must exist on disk — a missing path is a hard error, so
 // a moved or deleted suite breaks the gate instead of silently leaving it.
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, readFileSync, mkdtempSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
+import { reconcileExecution } from './lib/test-execution-evidence.mjs';
+import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
+import { testRevision } from './lib/test-revision.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const serverDir = path.join(repoRoot, 'server');
@@ -63,6 +66,17 @@ function coveredByManifest(file, manifestPaths) {
   return manifestPaths.some((entry) => file === entry || file.startsWith(`${entry}/`));
 }
 
+const extraArgs = process.argv.slice(2);
+const output = path.join(repoRoot, 'test-results/integration');
+mkdirSync(output, { recursive: true });
+const save = (name, value) => writeFileSync(path.join(output, `${name}.json`), JSON.stringify(value, null, 2) + '\n');
+for (const name of ['collected', 'collected-tests', 'discovery', 'evidence']) save(name, null);
+// Preserve the existing metrics/report destination supplied by CI or developers.
+const reportArg = extraArgs.findLast(arg => /^--outputFile(?:\.json)?=/.test(arg));
+const reportPath = path.resolve(serverDir, reportArg ? reportArg.slice(reportArg.indexOf('=') + 1) : 'test-results-integration.json');
+mkdirSync(path.dirname(reportPath), { recursive: true });
+writeFileSync(reportPath, 'null\n');
+
 const { paths } = JSON.parse(readFileSync(manifestPath, 'utf8'));
 if (!Array.isArray(paths) || !paths.length || paths.some((entry) => typeof entry !== 'string' || !entry.startsWith(`${integrationDir}/`) || entry.split('/').includes('..'))) {
   throw new Error('tier1.manifest.json requires a nonempty floor of paths inside src/test/integration');
@@ -108,10 +122,42 @@ if (decision.full) {
 }
 console.log(`tier1 gate: ${mode}`);
 
-const extraArgs = process.argv.slice(2);
-const result = spawnSync(
-  process.execPath,
-  [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...selection, '--coverage.enabled=false', ...extraArgs],
-  { cwd: serverDir, stdio: 'inherit' },
-);
-process.exit(result.status ?? 1);
+const before = testRevision(repoRoot);
+let evidence;
+try {
+  const collected = collectIntegrationFiles(selection).map(file => ({ file: path.join(serverDir, file) }));
+  save('collected', collected);
+  const candidates = repositoryTestFiles(repoRoot).filter(file => file.startsWith('server/')
+    && coveredByManifest(file.slice('server/'.length), selection));
+  const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: collected }] });
+  save('discovery', discovery);
+  if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
+  const testPath = path.join(output, 'collected-tests.json');
+  const collection = spawnSync(process.execPath,
+    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', ...selection, `--json=${testPath}`],
+    { cwd: serverDir, stdio: 'inherit' });
+  if (collection.status !== 0) throw new Error('Integration test collection failed');
+  const collectedTests = JSON.parse(readFileSync(testPath, 'utf8'));
+  const args = extraArgs.filter(arg => !/^--outputFile(?:\.json)?=/.test(arg) && arg !== '--reporter=json');
+  if (!args.some(arg => arg.startsWith('--reporter'))) args.push('--reporter=default');
+  const result = spawnSync(process.execPath,
+    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...selection, '--coverage.enabled=false', ...args,
+      '--reporter=json', `--outputFile.json=${reportPath}`],
+    { cwd: serverDir, stdio: 'inherit' });
+  const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+  evidence = reconcileExecution({ collected, collectedTests, report, root: repoRoot,
+    suite: 'integration', revision: before.revision, exitCode: result.status });
+} catch (error) {
+  evidence = { schemaVersion: 1, suite: 'integration', revision: before.revision, status: 'failed', failures: [error.message] };
+}
+const after = testRevision(repoRoot);
+evidence.selection = { mode, paths: selection, manifest: paths };
+evidence.source = { before, after };
+evidence.workingTreeDirty = Boolean(before.dirty || after.dirty);
+if (before.revision !== after.revision) {
+  evidence.status = 'failed';
+  evidence.failures.push('Repository revision changed during integration execution');
+}
+save('evidence', evidence);
+for (const failure of evidence.failures) console.error(failure);
+process.exit(evidence.status === 'passed' ? 0 : 1);

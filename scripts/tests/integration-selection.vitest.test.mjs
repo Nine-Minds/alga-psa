@@ -19,7 +19,7 @@ test('workflow selector and real integration runner agree on git changes and wid
   // Exercise the production entry points in a disposable repository. The
   // runner shim delegates every invocation to the installed Vitest binary;
   // its optional failure models an unavailable affected-test graph only.
-  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs']) {
+  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs']) {
     write(file, '');
     copyFileSync(path.join(repository, file), path.join(root, file));
   }
@@ -27,11 +27,12 @@ test('workflow selector and real integration runner agree on git changes and wid
 import { existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 const args = process.argv.slice(2);
+if (args[0] === 'run' && existsSync(${JSON.stringify(path.join(root, 'report-failure'))})) process.exit(0);
 if (args[0] === 'list' && args.includes('--changed') && existsSync(${JSON.stringify(path.join(root, 'graph-failure'))})) process.exit(1);
 const result = spawnSync(process.execPath, [${JSON.stringify(vitest)}, ...args], { cwd: process.cwd(), env: process.env, stdio: 'inherit' });
 process.exit(result.status ?? 1);
 `);
-  write('.gitignore', 'node_modules/\noutput/\ngraph-failure\n');
+  write('.gitignore', 'node_modules/\noutput/\ngraph-failure\nreport-failure\ntest-results/\nserver/test-results-integration.json\n');
   write('server/vitest.config.mjs', 'export default {test:{include:["src/test/integration/**/*.test.js"],globals:true,maxWorkers:1,fileParallelism:false}};');
   write('server/package.json', '{"type":"module"}');
   write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/floor.test.js'] }));
@@ -67,6 +68,10 @@ process.exit(result.status ?? 1);
     const execution = JSON.parse(readFileSync(report, 'utf8'));
     assert.equal(execution.success, true);
     assert.equal(execution.numPendingTests, 0);
+    const evidence = JSON.parse(readFileSync(path.join(root, 'test-results/integration/evidence.json'), 'utf8'));
+    assert.equal(evidence.status, 'passed');
+    assert.equal(evidence.counts.passed, execution.numTotalTests);
+    assert.equal(evidence.expectedTests.length, execution.numTotalTests);
     return execution.testResults.map((file) => path.basename(file.name)).sort();
   };
   const full = ['affected.test.js', 'floor.test.js', 'other.test.js'];
@@ -108,10 +113,25 @@ process.exit(result.status ?? 1);
   write('docs/testing.md', 'Documentation change'); commit();
   assert.equal(select().shouldRun, false);
   assert.deepEqual(execute(), ['floor.test.js']); // direct invocation preserves the floor
+  write('server/src/test/integration/floor.test.js', "test('critical floor', () => expect(2 + 2).toBe(4)); test.skip('unexecuted safety check', () => expect(true).toBe(true));");
+  const skipped = run('scripts/run-tier1-integration.mjs', {});
+  assert.equal(skipped.status, 1, skipped.stdout + skipped.stderr);
+  const evidence = JSON.parse(readFileSync(path.join(root, 'test-results/integration/evidence.json'), 'utf8'));
+  assert.equal(evidence.status, 'failed');
+  assert.equal(evidence.counts.passed, 1);
+  assert.equal(evidence.counts.skipped + evidence.counts.pending, 1);
+  assert.ok(evidence.failures.some(message => /skipped:|pending:/.test(message)));
+  write('report-failure', 'runner exits successfully without an execution report');
+  const noReport = run('scripts/run-tier1-integration.mjs', {});
+  assert.equal(noReport.status, 1);
+  const missingEvidence = JSON.parse(readFileSync(path.join(root, 'test-results/integration/evidence.json'), 'utf8'));
+  assert.ok(missingEvidence.failures.includes('Missing execution report'));
+  rmSync(path.join(root, 'report-failure'));
   git('mv', 'server/src/test/integration/floor.test.js', 'server/src/test/integration/moved.test.js');
   const moved = run('scripts/run-tier1-integration.mjs', {});
   assert.notEqual(moved.status, 0);
   assert.match(moved.stderr, /entries not found/);
+  assert.equal(JSON.parse(readFileSync(path.join(root, 'test-results/integration/evidence.json'), 'utf8')), null);
   write('server/src/test/integration/tier1.manifest.json', '{"paths":[]}');
   assert.notEqual(run('scripts/run-tier1-integration.mjs', {}).status, 0);
   mkdirSync(path.join(root, 'server/src/test/integration/empty'));

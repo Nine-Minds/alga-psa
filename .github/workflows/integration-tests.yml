@@ -190,6 +190,7 @@ jobs:
           path: |
             server/test-progress-integration.jsonl
             server/test-results-integration.json
+            test-results/integration/
           retention-days: 30
 
       # Append this run's numbers to the shared metrics sheet
