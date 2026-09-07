@@ -354,3 +354,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `projectTaskEditing.ts`, `projectTaskAssignments.ts`, `projectTaskQueue.ts`, `projectSearchAccess.ts`.
 - **Gate:** Repeated stable names, but projections expose different dependencies (e.g. project names versus navigable parent IDs). WATCH before combining whole maps.
 - **Status:** watching. Search now honors task value aliases and project/phase display aliases; retain source-specific masks and test derived search effects before extracting a field dependency map.
+
+## qualified-conversation-composer — pattern
+- **What:** Ticket and task conversation screens share rich-text rendering, explicit audience choice, immutable operation retries and access-refresh behavior.
+- **Where:** `CoManagedTicketConversation.tsx`, `CoManagedProjectTaskConversation.tsx`.
+- **Gate:** Two callers; attachment/disclosure orchestration, revision contracts and task recipient capabilities are still different and evolving. WATCH.
+- **Status:** watching. Reuse the validated document control and text renderer now. Keep task commands explicit rather than stretching the ticket attachment pipeline with resource flags; revisit a shared composer controller when task attachments/disclosure and consumer authority are connected.

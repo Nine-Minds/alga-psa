@@ -11612,3 +11612,100 @@ it('project search retains customer-owned history after separation and applies p
   await restrict({ selectedClientIds: [operation.customer_client_id], redactedFields: ['conversation'] });
   expect((await full()).totalCount).toBe(3);
 }));
+
+async function withTaskConversationActionsFixture(work: (fixture: any) => Promise<void>) {
+  await withNativeTaskCommentsFixture(async fixture => {
+    const actions = await import('../../lib/actions/coManagedProjectTaskConversationActions'), auth = await import('@alga-psa/auth');
+    const asMsp = async (command: () => Promise<any>) => {
+      const user = await fixture.sponsor.table('users').where('user_id', fixture.principal.userId).first();
+      const previous = fixture.session.getMockImplementation();
+      fixture.session.mockResolvedValue({ session_id: fixture.principal.sessionId, user: { id: fixture.principal.userId, tenant: fixture.principal.tenant, user_type: 'internal' } });
+      try { return await auth.runWithApiKeyUser(user, () => runWithTenant(fixture.principal.tenant, command)); }
+      finally { fixture.session.mockImplementation(previous); }
+    };
+    await work({ ...fixture, actions, asMsp });
+  });
+}
+
+it('task conversation actions write through the canonical outbox and keep customer and MSP-private stores separate', async () => withTaskConversationActionsFixture(async ({ customer, sponsor, principal, resource, actions, asMsp, publish }: any) => {
+  const local = await actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'organization_private', text: 'Customer private action' });
+  const shared = await asMsp(() => actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'MSP shared action' }));
+  const privateNote = await asMsp(() => actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'organization_private', text: 'MSP private action' }));
+  expect(local.ok).toBe(true); expect(shared.ok).toBe(true); expect(privateNote.ok).toBe(true);
+  expect(shared.receipt.storeTenant).toBe(resource.tenant); expect(privateNote.receipt.storeTenant).toBe(principal.tenant);
+  const localScreen = await actions.getSharedProjectTaskConversationAction(resource), mspScreen = await asMsp(() => actions.getSharedProjectTaskConversationAction(resource));
+  expect(localScreen.items.map((item: any) => item.markdown).sort()).toEqual(['Customer private action', 'MSP shared action']);
+  expect(mspScreen.items.map((item: any) => item.markdown).sort()).toEqual(['MSP private action', 'MSP shared action']);
+  expect(localScreen.writeAudiences).toEqual(['requester', 'shared_it', 'organization_private']); expect(mspScreen.actor).toEqual({ tenant: principal.tenant, userId: principal.userId });
+  expect(await customer.table('co_management_event_outbox')).toHaveLength(2); expect(await sponsor.table('co_management_event_outbox')).toHaveLength(0);
+  expect(publish).toHaveBeenCalledTimes(2); for (const [event, options] of publish.mock.calls) {
+    expect(event.eventType).toBe('PROJECT_TASK_COMMENT_CREATED'); expect(options).toMatchObject({ eventId: expect.any(String), strict: true });
+    expect(event.payload).not.toHaveProperty('commentContent');
+  }
+}));
+
+it.each(['expired_session', 'revoked_session', 'api_override', 'wrong_session_user'])(
+  'task conversation actions reject %s without reading or retaining a mutation', async reason => withTaskConversationActionsFixture(async ({ customer, customerPrincipal, user, resource, actions, session, override, publish }: any) => {
+    if (reason === 'expired_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+    if (reason === 'revoked_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    if (reason === 'api_override') override.mockReturnValue(user);
+    if (reason === 'wrong_session_user') session.mockResolvedValue({ session_id: customerPrincipal.sessionId, user: { id: randomUUID(), tenant: resource.tenant, user_type: 'internal' } });
+    await expect(actions.getSharedProjectTaskConversationAction(resource)).rejects.toThrow();
+    expect(await actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Denied' })).toEqual({ ok: false, code: 'forbidden' });
+    expect(await customer.table('project_task_comments')).toHaveLength(0); expect(await customer.table('co_management_event_outbox')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+  }));
+
+it('task conversation actions preserve exact retry receipts and report stale edits as conflicts', async () => withTaskConversationActionsFixture(async ({ resource, actions, publish, customer }: any) => {
+  const request = { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Exactly once' };
+  const first = await actions.saveSharedProjectTaskCommentAction(resource, request), retry = await actions.saveSharedProjectTaskCommentAction(resource, request);
+  expect(retry).toEqual(first); expect(await customer.table('project_task_comments')).toHaveLength(1); expect(publish).toHaveBeenCalledTimes(1);
+  const comment = { storeTenant: first.receipt.storeTenant, threadId: first.receipt.threadId, commentId: first.receipt.commentId };
+  const edit = { kind: 'edit', operationId: randomUUID(), expectedRevision: 1, comment, text: 'Edited once' };
+  expect((await actions.saveSharedProjectTaskCommentAction(resource, edit)).ok).toBe(true);
+  expect(await actions.saveSharedProjectTaskCommentAction(resource, { ...edit, operationId: randomUUID() })).toEqual({ ok: false, code: 'conflict' });
+  expect(await actions.saveSharedProjectTaskCommentAction(resource, { ...edit, text: 'Different operation payload' })).toEqual({ ok: false, code: 'operationConflict' });
+}));
+
+it('task conversation actions retain recoverable publication after transport failure and retry its original event ID', async () => withTaskConversationActionsFixture(async ({ resource, actions, publish, customer }: any) => {
+  publish.mockRejectedValueOnce(new Error('Transport unavailable'));
+  const request = { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Retained publication' };
+  expect((await actions.saveSharedProjectTaskCommentAction(resource, request)).ok).toBe(true);
+  expect((await customer.table('co_management_event_outbox').where('event_id', request.operationId).first()).status).toBe('pending');
+  expect((await actions.saveSharedProjectTaskCommentAction(resource, request)).ok).toBe(true);
+  expect(publish).toHaveBeenCalledTimes(1);
+  await customer.table('co_management_event_outbox').where('event_id', request.operationId).update({ next_attempt_at: new Date(0) });
+  expect((await actions.saveSharedProjectTaskCommentAction(resource, request)).ok).toBe(true);
+  expect(publish).toHaveBeenCalledTimes(2); expect(publish.mock.calls[0][1].eventId).toBe(publish.mock.calls[1][1].eventId);
+  expect(await customer.table('project_task_comments')).toHaveLength(1);
+}));
+
+it.each(['customer', 'msp'])('task conversation actions suppress replies beneath deleted %s-private roots while retaining child history', async side => withTaskConversationActionsFixture(async ({ resource, actions, asMsp }: any) => {
+  const run = (command: () => Promise<any>) => side === 'msp' ? asMsp(command) : command();
+  const root = await run(() => actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'organization_private', text: 'Root' }));
+  const parent = { storeTenant: root.receipt.storeTenant, commentId: root.receipt.commentId, threadId: root.receipt.threadId };
+  const reply = await run(() => actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), parent, expectedAudience: 'organization_private', text: 'Reply' }));
+  expect(reply.ok).toBe(true);
+  expect((await run(() => actions.saveSharedProjectTaskCommentAction(resource, { kind: 'delete', operationId: randomUUID(), comment: parent, expectedRevision: 1 }))).ok).toBe(true);
+  const page = await run(() => actions.getSharedProjectTaskConversationAction(resource));
+  expect(page.items).toHaveLength(2); expect(page.items.every((item: any) => !item.canReply)).toBe(true);
+  expect(page.items.find((item: any) => item.commentId === reply.receipt.commentId).markdown).toBe('Reply');
+}));
+
+it('task conversation actions retain read-only history after license expiry and reject further submissions', async () => withTaskConversationActionsFixture(async ({ operation, resource, actions }: any) => {
+  expect((await actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Retained body' })).ok).toBe(true);
+  await expireCoManagedEntitlement(operation.tenant);
+  const screen = await actions.getSharedProjectTaskConversationAction(resource); expect(screen.writeAudiences).toEqual([]); expect(screen.items[0].markdown).toBe('Retained body');
+  expect(await actions.saveSharedProjectTaskCommentAction(resource, { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'No longer licensed' })).toEqual({ ok: false, code: 'readOnly' });
+}));
+
+it('task conversation actions recheck session expiry after assembling the screen and roll back the expired read', async () => withTaskConversationActionsFixture(async ({ resource, customer, customerPrincipal, actions }: any) => {
+  const domain = await import('@alga-psa/co-managed'), original = domain.getCoManagedProjectTaskConversation;
+  const read = vi.spyOn(domain, 'getCoManagedProjectTaskConversation').mockImplementation(async (...args) => {
+    const page = await original(...args);
+    await tenantDb(args[0], resource.tenant).table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+    return page;
+  });
+  try { await expect(actions.getSharedProjectTaskConversationAction(resource)).rejects.toThrow(); }
+  finally { read.mockRestore(); }
+  expect(new Date((await customer.table('sessions').where('session_id', customerPrincipal.sessionId).first()).expires_at).getTime()).toBeGreaterThan(Date.now());
+}));

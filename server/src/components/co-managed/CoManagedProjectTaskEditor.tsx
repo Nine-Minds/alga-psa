@@ -9,6 +9,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedProjectTaskEditorAction, getSharedProjectTaskStatusesAction, editSharedProjectTaskAction } from '@/lib/actions/coManagedProjectTaskActions';
 
 import CoManagedProjectTaskAssignment from './CoManagedProjectTaskAssignment';
+import CoManagedProjectTaskConversation from './CoManagedProjectTaskConversation';
 import CoManagedProjectTaskHistory from './CoManagedProjectTaskHistory';
 
 function localTime(value: string | null | undefined) {
@@ -85,6 +86,7 @@ function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
     {pending && <Button id="co-project-task-discard" variant="outline" disabled={busy} onClick={() => { setPending(null); setState(null); setRefresh(value => value + 1); }}>{t('coManaged.projects.discard')}</Button>}
     <Button id="co-project-task-reload" variant="outline" disabled={busy || pending !== null} onClick={() => { setState(null); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button>
     {state && <CoManagedProjectTaskAssignment key={`assignment-${collaborationRefresh}`} resource={resource} onUnavailable={historyUnavailable} onChanged={assignmentChanged} />}
+    {state && <CoManagedProjectTaskConversation resource={resource} onUnavailable={historyUnavailable} />}
     {state && <CoManagedProjectTaskHistory key={`history-${collaborationRefresh}`} resource={resource} onUnavailable={historyUnavailable} />}
   </section>;
 }

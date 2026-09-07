@@ -572,6 +572,68 @@
       "pending": "O envio de um anexo está pendente. Conclua o envio antes de alterar o público.",
       "unknownOutcome": "O resultado é desconhecido. Tente novamente para verificar a mesma alteração.",
       "transferHelp": "A partilha transfere esta conversa e os seus anexos para o espaço de trabalho do cliente. A conversa privada original do MSP é mantida como histórico só de leitura."
+    },
+    "projects": {
+      "queue": {
+        "title": "Filas de tarefas de projetos",
+        "workingDescription": "Tarefas no seu espaço de trabalho e tarefas de clientes atribuídas ao seu MSP.",
+        "oversightDescription": "Tarefas de clientes dentro do seu acesso aprovado aos projetos.",
+        "customerDescription": "Tarefas no seu espaço de trabalho, incluindo projetos compartilhados com seu MSP.",
+        "assignment": "Atribuição",
+        "all": "Todas as atribuições",
+        "mine": "Atribuídas a mim",
+        "my_teams": "Atribuídas às minhas equipes",
+        "counts": "{{total}} tarefas · {{open}} abertas · {{closed}} fechadas",
+        "empty": "Nenhuma tarefa permitida corresponde a estes filtros.",
+        "loadError": "Não foi possível carregar as tarefas. Atualize para verificar seu acesso atual.",
+        "sort": {
+          "updated": "Última atualização",
+          "due": "Data de vencimento",
+          "name": "Nome da tarefa",
+          "project": "Projeto"
+        },
+        "columns": {
+          "task": "Tarefa de projeto",
+          "project": "Projeto",
+          "workspace": "Espaço de trabalho",
+          "state": "Status",
+          "assignee": "Responsável",
+          "due": "Data de vencimento"
+        }
+      },
+      "assignment": {
+        "title": "Atribuição ao MSP",
+        "unassigned": "Não atribuída ao MSP",
+        "kind": "Atribuir a",
+        "user": "Técnico",
+        "team": "Equipe",
+        "assignee": "Responsável",
+        "more": "Mais responsáveis",
+        "assign": "Atribuir",
+        "clear": "Remover atribuição ao MSP"
+      },
+      "history": {
+        "title": "Histórico de alterações",
+        "empty": "Nenhuma alteração em tarefas cogerenciadas para exibir.",
+        "updated": "Atualizado",
+        "cleared": "Removido"
+      },
+      "tasks": "Tarefas de projeto",
+      "empty": "Nenhuma tarefa disponível neste projeto.",
+      "task": "Tarefa de projeto",
+      "name": "Nome da tarefa",
+      "due": "Vence em {{date}}",
+      "moreStatuses": "Mais status",
+      "errors": {
+        "invalid": "Alguns valores são inválidos. Verifique suas alterações e tente novamente.",
+        "conflict": "Esta tarefa foi alterada. Recarregue antes de salvar.",
+        "operationConflict": "Esta solicitação de salvamento foi usada para outra edição. Recarregue a tarefa.",
+        "forbidden": "Seu acesso a esta tarefa mudou. Recarregue para continuar.",
+        "readOnly": "Este espaço de trabalho está em modo somente leitura. Recarregue para ver o estado atual.",
+        "unknownOutcome": "Não foi possível confirmar se a edição foi salva. Tente salvar novamente ou descarte suas alterações e recarregue."
+      },
+      "loadError": "Não foi possível carregar este projeto ou tarefa.",
+      "discard": "Descartar alterações e recarregar"
     }
   }
 }

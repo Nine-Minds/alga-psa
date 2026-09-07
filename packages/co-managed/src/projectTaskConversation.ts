@@ -17,6 +17,9 @@ import { projectTaskAudienceSql, projectTaskAudience as audienceOf } from './pro
 export { projectTaskAudienceSql } from './projectTaskAudience';
 import type { CoManagedConversationCursor, CoManagedConversationItem } from './ticketConversation';
 
+/** Structural reply eligibility; the screen also requires a current write audience. */
+export interface CoManagedTaskConversationItem extends CoManagedConversationItem { canReply: boolean }
+
 export type CoManagedTaskCommentCommand = { operationId: string } & (
   ({ kind: 'create'; audience?: CommentAudience; parent?: CoManagedCommentReference; expectedAudience?: CommentAudience } & CoManagedConversationContent) |
   ({ kind: 'edit'; comment: CoManagedCommentReference; expectedRevision: number } & CoManagedConversationContent) |
@@ -150,7 +153,7 @@ export async function getCoManagedProjectTaskConversation(db: Knex, inputActor: 
       if (foreign) query.whereRaw('? IN (?, ?)', [audience, 'requester', 'shared_it']);
       query.select({ store_tenant: 'c.tenant', comment_id: 'c.task_comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.task_comment_id', audience,
         created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
-        deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: 'c.collaboration_revision',
+        root_deleted_at: 'root.deleted_at', deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: 'c.collaboration_revision',
         actor_tenant: trx.raw('COALESCE(a.actor_tenant, c.tenant)'), actor_id: trx.raw('COALESCE(a.actor_user_id, c.user_id)'), actor_reference_id: 'c.actor_reference_id',
         actor_display_name: trx.raw("COALESCE(c.actor_display_name, NULLIF(CONCAT_WS(' ', u.first_name, u.last_name), ''), u.email)"),
         actor_organization_name: trx.raw('COALESCE(c.actor_organization_name, ?::text)', [organization?.client_name ?? null]) });
@@ -159,20 +162,21 @@ export async function getCoManagedProjectTaskConversation(db: Knex, inputActor: 
     if (foreign && !hidePrivate) {
       const home = tenantDb(trx, actor.tenant), query = home.table('co_management_private_comments as c');
       home.tenantJoin(query, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
+      home.tenantJoin(query, 'co_management_private_comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.thread_id', '=', 'c.thread_id') });
       home.tenantJoin(query, 'co_management_private_comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left', on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
       query.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'project_task', 't.resource_id': resource.id }).whereNull('t.disclosure_operation_id');
       query.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id', audience: trx.raw("'organization_private'::text"),
-        created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'), deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content',
+        created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'), root_deleted_at: 'root.deleted_at', deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content',
         revision: 'c.revision', actor_tenant: 'c.tenant', actor_id: 'c.actor_user_id', actor_reference_id: trx.raw('NULL::uuid'), actor_display_name: 'c.actor_display_name', actor_organization_name: 'c.actor_organization_name' });
       queries.push(query);
     }
-    if (!queries.length) { await current(context); return { resource, items: [] as CoManagedConversationItem[], nextBefore: null }; }
+    if (!queries.length) { await current(context); return { resource, items: [] as CoManagedTaskConversationItem[], nextBefore: null }; }
     const query = trx.from(trx.queryBuilder().unionAll(queries, true).as('conversation')).orderBy('created_at', 'desc').orderBy('store_tenant', 'desc').orderBy('comment_id', 'desc').limit(26);
     if (cursor) query.whereRaw('(created_at, store_tenant, comment_id) < (?::timestamptz, ?::uuid, ?::uuid)', [cursor.createdAt, cursor.storeTenant, cursor.commentId]);
     const rows = await query; await current(context);
     const hideAuthor = isCoManagedReadFieldHidden(redactedFields, coManagedConversationAuthorSources), hideRevision = isCoManagedReadFieldHidden(redactedFields, ['revision']);
-    const items: CoManagedConversationItem[] = rows.slice(0, 25).map(row => ({ storeTenant: row.store_tenant, commentId: row.comment_id, threadId: row.thread_id, parentCommentId: row.parent_comment_id,
-      audience: row.audience, createdAt: row.created_at_exact, updatedAt: row.updated_at_exact, deleted: row.deleted_at != null, revision: hideRevision ? null : row.revision,
+    const items: CoManagedTaskConversationItem[] = rows.slice(0, 25).map(row => ({ storeTenant: row.store_tenant, commentId: row.comment_id, threadId: row.thread_id, parentCommentId: row.parent_comment_id,
+      canReply: row.deleted_at == null && row.root_deleted_at == null && !hideRevision, audience: row.audience, createdAt: row.created_at_exact, updatedAt: row.updated_at_exact, deleted: row.deleted_at != null, revision: hideRevision ? null : row.revision,
       note: row.deleted_at ? null : row.note, markdown: row.deleted_at ? null : row.markdown,
       ...(hideAuthor ? {} : { author: { tenant: row.actor_tenant, kind: 'user' as const, id: row.actor_id, displayName: row.actor_display_name, organizationName: row.actor_organization_name, referenceId: row.actor_reference_id } }) }));
     const last = items.at(-1);

@@ -27,6 +27,7 @@ type Draft = { kind: 'new' } | { kind: 'reply' | 'edit' | 'delete'; item: CoMana
 type Submission = { store: 'draft'; prepared: PreparedConversationDraft } | { store: 'private'; request: CoManagedPrivateCommentCommand } | { store: 'create'; request: CoManagedCommentCreateRequest } | { store: 'mutate'; request: CoManagedCommentMutationRequest };
 const reference = (item: CoManagedConversationItem) => ({ storeTenant: item.storeTenant, threadId: item.threadId, commentId: item.commentId });
 
+// LEVERAGE: pattern qualified-conversation-composer — rich-text audience/retry controls recur, while ticket attachment/disclosure and task revision commands differ.
 function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved, onCancel }: {
   resource: CoManagedSharedResource; actor: Screen['actor']; audiences: Audience[]; draftAttachments: Screen['draftAttachments']; draft: Draft; onSaved: () => void; onCancel: () => void;
 }) {
