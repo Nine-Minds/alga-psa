@@ -2246,3 +2246,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Inspected debug-login and debug-failed-login: both only captured screenshots/printed page content, counts and errors, without asserting regression outcomes. Replaced them with an actual canonical browser test for anonymous root routing, credential-form visibility, unknown-account rejection and session absence across reload.
 - Headed enterprise test passes without retries (5.5 seconds) using a unique reserved invalid-domain account. Shared production Playwright diagnostics retain failure screenshots/traces. Evidence: evidence/login-diagnostics-replacement.json.
 - Other legacy diagnostics remain for separate review. Cached local image validation does not establish candidate native execution. No broad flags changed.
+
+### 2026-09-07 — retire remaining non-asserting login diagnostics
+
+- Reviewed and removed debug-login-details, debug-successful-login and debug-tenant-auth. They printed credentials, request payloads or observations but asserted no login outcome. Canonical login and portal-identity suites assert success, rejection, session persistence and tenant boundaries. Duplicate-email behavior is not claimed as covered.
+- Preserved basic-browser: it has synthetic-page harness assertions and requires separate classification. Historical evidence files remain unchanged.
+- Current canonical Playwright collection succeeds for both editions: community 37 tests/18 files, enterprise 41 tests/18 files. This is collection evidence only, not a new runtime pass. Mapping and artifact hashes: evidence/login-diagnostics-retirement.json. No broad plan flags changed.
