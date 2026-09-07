@@ -216,6 +216,48 @@ describe('TransformsWorkspace', () => {
     });
   });
 
+  it('authors descending billed-time dates and preserves evaluated row order after reopening', async () => {
+    const sample = getPreviewSampleScenarioById('sample-ticket-time-detail')!.data;
+    const previewData = {
+      ...sample,
+      timeEntries: [
+        { ...sample.timeEntries![0], id: 'middle', date: '2026-01-01' },
+        { ...sample.timeEntries![0], id: 'oldest', date: '2025-12-31' },
+        { ...sample.timeEntries![0], id: 'newest', date: '2026-02-01' },
+      ],
+    };
+    const originalEntries = structuredClone(previewData.timeEntries);
+    const view = renderTransformsWorkspace(previewData);
+    await selectCustomOption('invoice-designer-transforms-source-binding', 'Billed Time Entries');
+    fireEvent.click(screen.getAllByRole('button', { name: '+ Sort' })[0]!);
+    const operationId = useInvoiceDesignerStore.getState().transforms.operations[0].id;
+    await selectCustomOption(`transform-sort-field-${operationId}-0`, 'date');
+    await selectCustomOption(`transform-sort-direction-${operationId}-0`, 'Descending');
+
+    const assertPreviewOrder = async () => {
+      await waitFor(() => {
+        const output = screen.getByText('Output preview').closest('section')!;
+        const rows = Array.from(output.querySelectorAll('pre')).map((element) => JSON.parse(element.textContent!));
+        expect(rows.map((row) => row.id)).toEqual(['newest', 'middle', 'oldest']);
+        expect(rows.map((row) => row.date)).toEqual(['2026-02-01', '2026-01-01', '2025-12-31']);
+      });
+      expect(previewData.timeEntries).toEqual(originalEntries);
+    };
+    await assertPreviewOrder();
+    const savedAst = exportWorkspaceToTemplateAst(useInvoiceDesignerStore.getState().exportWorkspace());
+    expect(savedAst.transforms).toMatchObject({
+      sourceBindingId: 'timeEntries',
+      operations: [{ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }],
+    });
+    view.unmount();
+    act(() => {
+      useInvoiceDesignerStore.getState().resetWorkspace();
+      useInvoiceDesignerStore.getState().loadWorkspace(importTemplateAstToWorkspace(savedAst));
+    });
+    renderTransformsWorkspace(previewData);
+    await assertPreviewOrder();
+  });
+
   it('duplicates and deletes operations while keeping a valid selected inspector target', async () => {
     act(() => {
       useInvoiceDesignerStore.getState().setTransforms({

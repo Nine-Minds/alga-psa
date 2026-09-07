@@ -185,6 +185,7 @@ jobs:
           tags: ${{ matrix.image }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
+            NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true
           outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.service }}.tar
           no-cache: ${{ inputs.no_cache == true }}
           # The server/email workspace layers are huge; exporting them to the
@@ -797,6 +798,7 @@ jobs:
           E2E_BASE_URL: http://localhost:3000
           E2E_EDITION: ${{ matrix.edition }}
           E2E_REVISION: ${{ github.sha }}
+          E2E_BUILD_FEATURE_FLAGS: release-v1-6-feature:true
           E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
           E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
           E2E_DATABASE_ISOLATED: 'true'

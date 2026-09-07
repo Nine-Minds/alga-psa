@@ -31,6 +31,16 @@ web application; it does not provide Temporal, extension-runner, or Citus proof.
 `E2E_REVISION` to the tested checkout for local report attribution; CI supplies
 its actual checkout SHA. This metadata does not prove image digest provenance.
 
+The fresh-install CE and EE images enable `release-v1-6-feature` using the
+existing client build override `NEXT_PUBLIC_FORCE_FEATURE_FLAGS`. Both server
+Dockerfiles accept that build argument and default to an empty override for
+normal builds. Local runs of the billed-time designer journey require an image
+built with `--build-arg NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true`.
+Set `E2E_BUILD_FEATURE_FLAGS=release-v1-6-feature:true` when running that image to
+record its declared configuration. The variable records metadata; it does not
+enable a feature in an already built image or override server-side flag checks.
+The designer journey verifies that the enabled controls are actually available.
+
 ## Add a journey
 
 The raw email journey additionally requires `E2E_EMAIL_TRANSPORT_ISOLATED=true`,

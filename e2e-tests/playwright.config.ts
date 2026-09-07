@@ -26,6 +26,9 @@ export default defineConfig({
   ],
   metadata: {
     edition,
+    // Declared image build configuration; the journeys verify visible behavior.
+    // This label alone does not attest to the contents of a prebuilt image.
+    buildFeatureFlags: process.env.E2E_BUILD_FEATURE_FLAGS || 'unspecified',
     sourceRevision: process.env.E2E_REVISION || process.env.GITHUB_SHA || 'unrecorded-local-revision',
     authentication: 'real-credentials',
     serverLifecycle: 'externally-started-production-build',
