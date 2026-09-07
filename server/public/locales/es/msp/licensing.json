@@ -572,6 +572,24 @@
       "pending": "Hay una carga de adjunto pendiente. Complétela antes de cambiar la audiencia.",
       "unknownOutcome": "Se desconoce el resultado. Reintente para comprobar el mismo cambio de audiencia.",
       "transferHelp": "Al compartir, este hilo y sus adjuntos se transfieren al espacio de trabajo del cliente. El hilo privado original del MSP se conserva como historial de solo lectura."
+    },
+    "projects": {
+      "tasks": "Tareas del proyecto",
+      "empty": "No hay tareas disponibles en este proyecto.",
+      "task": "Tarea del proyecto",
+      "name": "Nombre de la tarea",
+      "due": "Vence el {{date}}",
+      "moreStatuses": "Más estados",
+      "errors": {
+        "invalid": "Algunos valores no son válidos. Revise los cambios e inténtelo de nuevo.",
+        "conflict": "Esta tarea ha cambiado. Vuelva a cargarla antes de guardar.",
+        "operationConflict": "Esta solicitud se usó para otra edición. Vuelva a cargar la tarea.",
+        "forbidden": "Su acceso a esta tarea ha cambiado. Vuelva a cargarla para continuar.",
+        "readOnly": "Este espacio es de solo lectura. Vuelva a cargarlo para ver su estado actual.",
+        "unknownOutcome": "No pudimos confirmar si se guardó la modificación. Reintente el mismo guardado o descarte los cambios y vuelva a cargar."
+      },
+      "loadError": "No se pudo cargar este proyecto o tarea.",
+      "discard": "Descartar cambios y volver a cargar"
     }
   }
 }

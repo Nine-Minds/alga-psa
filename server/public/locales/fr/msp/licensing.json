@@ -572,6 +572,24 @@
       "pending": "Une pièce jointe est en cours d’envoi. Terminez l’envoi avant de modifier la visibilité.",
       "unknownOutcome": "Le résultat est inconnu. Réessayez pour vérifier la même modification.",
       "transferHelp": "Le partage transfère ce fil et ses pièces jointes dans l’espace de travail du client. Le fil privé d’origine du MSP est conservé en lecture seule."
+    },
+    "projects": {
+      "tasks": "Tâches du projet",
+      "empty": "Aucune tâche disponible dans ce projet.",
+      "task": "Tâche du projet",
+      "name": "Nom de la tâche",
+      "due": "Échéance : {{date}}",
+      "moreStatuses": "Plus de statuts",
+      "errors": {
+        "invalid": "Certaines valeurs ne sont pas valides. Vérifiez vos modifications et réessayez.",
+        "conflict": "Cette tâche a changé. Rechargez avant de sauvegarder.",
+        "operationConflict": "Cette demande a servi à une autre modification. Rechargez la tâche.",
+        "forbidden": "Votre accès à cette tâche a changé. Rechargez pour continuer.",
+        "readOnly": "Cet espace est en lecture seule. Rechargez pour consulter son état actuel.",
+        "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement. Réessayez avec la même demande ou abandonnez vos modifications et rechargez."
+      },
+      "loadError": "Impossible de charger ce projet ou cette tâche.",
+      "discard": "Abandonner les modifications et recharger"
     }
   }
 }

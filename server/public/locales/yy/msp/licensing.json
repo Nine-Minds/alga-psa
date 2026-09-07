@@ -570,6 +570,24 @@
       "pending": "22 2222222222 222222 22 22222 22222222 222222 222 222222 222222 22222222 222 222222222",
       "unknownOutcome": "222 222222 22 22222222 22222 22 22222 222 2222 22222222 2222222",
       "transferHelp": "2222222 222222222 2222 222222 222 222 22222222222 2222 222 22222222 2222222222 222 22222222 22222222222 222222 22 22222222 22 222222222 22222222"
+    },
+    "projects": {
+      "tasks": "[Project tasks]",
+      "empty": "[No tasks are available in this project.]",
+      "task": "[Project task]",
+      "name": "[Task name]",
+      "due": "[Due {{date}}]",
+      "moreStatuses": "[More statuses]",
+      "errors": {
+        "invalid": "〖Şȯḿḗ ṽȧŀŭḗş ȧřḗ ƞȯŧ ṽȧŀīḓ. Ƈħḗƈķ ẏȯŭř ƈħȧƞɠḗş ȧƞḓ ŧřẏ ȧɠȧīƞ. ························〗",
+        "conflict": "This task changed. Reload before saving.",
+        "operationConflict": "This save request was used for a different edit. Reload the task.",
+        "forbidden": "Your access to this task changed. Reload to continue.",
+        "readOnly": "〖Ŧħīş ẇȯřķşƥȧƈḗ īş řḗȧḓ-ȯƞŀẏ. Řḗŀȯȧḓ ŧȯ şḗḗ īŧş ƈŭřřḗƞŧ şŧȧŧḗ. ·························〗",
+        "unknownOutcome": "〖Ẇḗ ƈȯŭŀḓ ƞȯŧ ƈȯƞƒīřḿ ẇħḗŧħḗř ŧħḗ ḗḓīŧ ẇȧş şȧṽḗḓ. Řḗŧřẏ ŧħḗ şȧḿḗ şȧṽḗ, ȯř ḓīşƈȧřḓ ẏȯŭř ƈħȧƞɠḗş ȧƞḓ řḗŀȯȧḓ. ··········································〗"
+      },
+      "loadError": "Could not load this project or task.",
+      "discard": "Discard changes and reload"
     }
   }
 }

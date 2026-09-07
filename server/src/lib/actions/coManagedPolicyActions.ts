@@ -70,7 +70,7 @@ export const getCoManagedPolicyScreen = withAuth(async (user, { tenant }, operat
         labels[kind] = (await query.whereIn(id, ids)).map(toOption);
       }
     }
-    return { side: resolved.side, counterpartName: other?.client_name as string | undefined, policy, labels, canExpand: lifecycle.canWrite };
+    return { side: resolved.side, target: resolved.target, counterpartName: other?.client_name as string | undefined, policy, labels, canExpand: lifecycle.canWrite };
   });
 });
 

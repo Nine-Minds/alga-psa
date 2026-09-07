@@ -276,3 +276,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Native comment creation, rescheduling and cancellation actions.
 - **Gate:** Three callers share a stable committed-source queue handoff; a queue call cannot roll back with PostgreSQL. ACT / bounded-now.
 - **Status:** revised. Committed schedule state owns publication. Queue cancellation and arming run as independent after-commit hooks; arming checks the current scheduled instant before submission and conditionally attaches the returned job. A stale response cancels its own job. Existing maintenance recovers due co-managed sources after queue failures. Browser command authority is distinct from deferred author authority, allowing current technicians to cancel a departed author's work.
+
+## customer-resource-admission — friction
+- **What:** Customer-local authorization only supported tickets despite the shared boundary already recognizing projects and tasks.
+- **Where:** Customer work admission, shared project/task admission, and the task editor/list.
+- **Gate:** Two actual resource families need the same current session, relationship, lifecycle and home-policy boundary, with deliberately different record projections. ACT / bounded-now.
+- **Status:** revised. The customer engine resolves ticket or parent-project policy records behind resource-specific entry points. Project/task paths lock the project before its task/phase and revalidate the parent, so task lists and concurrent edits use a consistent order. No session-tenant switching or implicit task assignment is introduced.
+
+## explicit-audit-ownership — friction
+- **What:** The legacy audit trigger replaced an explicit owner tenant with app.current_tenant, breaking shared-task attribution and potentially routing a record to the wrong organization.
+- **Where:** Audit trigger migration and the canonical project-task edit adapter.
+- **Gate:** A real PostgreSQL failure proved that explicit owner-qualified writes could not survive the storage engine. ACT / bounded-now.
+- **Status:** revised. The trigger preserves explicit ownership and uses connection context only when ownership is absent. Tests cover both forms, foreign connection context, replay and guarded rollback. The migration uses ordinary CREATE OR REPLACE FUNCTION; modern Citus documents function DDL propagation in its [changelog](https://github.com/citusdata/citus/blob/main/CHANGELOG.md). Actual Citus execution remains an explicit validation gap.

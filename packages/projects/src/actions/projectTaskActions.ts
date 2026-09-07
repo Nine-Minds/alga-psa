@@ -215,6 +215,7 @@ async function resolveProjectStatusInfo(
 }
 
 
+// LEVERAGE: pattern project-effective-status-scope — shared task choices must preserve this phase-over-project fallback rule.
 async function getEffectiveProjectStatusMappings(
   trx: Knex.Transaction,
   tenant: string,

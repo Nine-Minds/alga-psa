@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -10426,4 +10426,145 @@ it.each(['deleted', 'unpublished'])('allows cancellation but denies rescheduling
   await actions.cancelScheduledComment(reply.id);
   expect(await customer.table('comments').where('comment_id', reply.id).first()).toMatchObject({ publish_state: 'canceled' });
   expect(schedule).not.toHaveBeenCalled();
+}));
+
+async function withSharedProjectTaskFixture(work: (fixture: any) => Promise<void>) {
+  const fixture = await sharedWorkFixture();
+  const { principal, sponsorActor, actor, target, customer, operation } = fixture;
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const { ProjectModel: model } = await import('@alga-psa/projects/models');
+  const status = await customer.table('statuses').where({ status_type: 'project', is_default: true }).first();
+  const project = await model.create(db, actor.tenant, { project_name: 'Joint rollout', project_number: 'JOINT-1', client_id: operation.customer_client_id,
+    status: status.status_id, wbs_code: '1' } as any);
+  const phase = await model.addPhase(db, actor.tenant, { project_id: project.project_id, phase_name: 'Delivery', wbs_code: '1.1', status: 'planning', order_number: 1 } as any);
+  for (const name of ['Ready', 'Verified']) await model.addStatusToProject(db, actor.tenant, project.project_id, { name, status_type: 'project_task', item_type: 'project_task', order_number: name === 'Ready' ? 100 : 200, is_closed: name === 'Verified', is_default: false } as any);
+  const mappings = await model.getProjectStatusMappings(db, actor.tenant, project.project_id), taskId = randomUUID();
+  await customer.table('project_tasks').insert({ tenant: actor.tenant, task_id: taskId, phase_id: phase.phase_id, task_name: 'Verify rollout', wbs_code: '1.1.1',
+    project_status_mapping_id: mappings[0].project_status_mapping_id, task_type_key: 'task', description: 'Private detailed work', actual_hours: 123 });
+  await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+  const initial = await policy.getCoManagedCollaborationPolicy(db, actor, target);
+  await policy.replaceCoManagedCustomerScope(db, actor, target, 3, { ...initial, projects: [{ id: project.project_id, canCollaborate: true }] });
+  const customerPrincipal = { ...actor, kind: 'session' as const, sessionId: randomUUID() };
+  await customer.table('sessions').insert({ tenant: actor.tenant, user_id: actor.userId, session_id: customerPrincipal.sessionId, expires_at: new Date(Date.now() + 3600_000) });
+  const resource = { tenant: actor.tenant, relationshipId: target.relationshipId, kind: 'project_task' as const, id: taskId };
+  const domain = await import('../../../../packages/co-managed/src/projectTaskEditing');
+  const { editSharedProjectTask: edit } = await import('../../lib/co-managed/editProjectTask');
+  await work({ ...fixture, project, phase, mappings, customerPrincipal, resource, domain, edit });
+}
+
+it('lets both organizations edit one canonical task and retains foreign attribution without copied users or assignments', async () => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, mappings, domain, edit }: any) => {
+  const beforeUsers = await customer.table('users');
+  const first = await domain.getCoManagedProjectTaskEditor(db, principal, resource);
+  expect(first.editableFields).toEqual(['task_name', 'due_date', 'project_status_mapping_id']);
+  expect(JSON.stringify(first)).not.toMatch(/Private detailed work|actual_hours|service_id|assigned_to/);
+  const options = await domain.getCoManagedProjectTaskStatuses(db, principal, resource);
+  expect(options.options.map((option: any) => option.id)).toContain(mappings[1].project_status_mapping_id);
+  const request = { operationId: randomUUID(), expected: { task_name: first.values.task_name }, patch: { task_name: 'MSP verified rollout' } };
+  const receipt = await runWithTenant(principal.tenant, () => edit(db, principal, resource, request));
+  expect(await edit(db, principal, resource, request)).toEqual(receipt);
+  const local = await domain.getCoManagedProjectTaskEditor(db, customerPrincipal, resource);
+  expect(local.values.task_name).toBe('MSP verified rollout');
+  await edit(db, customerPrincipal, resource, { operationId: randomUUID(), expected: { project_status_mapping_id: local.values.project_status_mapping_id }, patch: { project_status_mapping_id: mappings[1].project_status_mapping_id } });
+  const row = await customer.table('project_tasks').where('task_id', resource.id).first();
+  expect(row).toMatchObject({ task_name: 'MSP verified rollout', project_status_mapping_id: mappings[1].project_status_mapping_id, assigned_to: null, actual_hours: '123' });
+  expect(await customer.table('users')).toEqual(beforeUsers); expect(await sponsor.table('project_tasks')).toHaveLength(0);
+  const audit = await customer.table('audit_logs').where({ table_name: 'project_tasks', record_id: resource.id, operation: 'co_managed_project_task_update' });
+  expect(audit).toHaveLength(2); expect(audit.find((entry: any) => entry.details.actor_tenant === principal.tenant)).toMatchObject({ user_id: null, details: { actor_reference_id: expect.any(String) } });
+  const foreignAudit = audit.find((entry: any) => entry.details.actor_tenant === principal.tenant);
+  expect(foreignAudit.details.actor_display_name).toEqual(expect.any(String));
+  await customer.table('collaboration_actor_references').where('actor_reference_id', foreignAudit.details.actor_reference_id).update({ display_name: 'Renamed actor', organization_name: 'Renamed organization' });
+  expect((await customer.table('audit_logs').where('audit_id', foreignAudit.audit_id).first()).details).toEqual(foreignAudit.details);
+  expect(await customer.table('co_management_command_receipts').where({ resource_type: 'project_task', resource_id: resource.id })).toHaveLength(2);
+}));
+
+it('serializes competing shared task edits and rejects stale baselines or reused operation IDs', async () => withSharedProjectTaskFixture(async ({ customer, principal, customerPrincipal, resource, edit }: any) => {
+  const one = { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'First edit' } };
+  const two = { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Second edit' } };
+  const results = await Promise.allSettled([edit(db, principal, resource, one), edit(db, customerPrincipal, resource, two)]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TASK_EDIT_CONFLICT' } });
+  const winner = results[0].status === 'fulfilled' ? one : two, author = results[0].status === 'fulfilled' ? principal : customerPrincipal;
+  await expect(edit(db, author, resource, { ...winner, patch: { task_name: 'Reused id' } })).rejects.toMatchObject({ code: 'TASK_EDIT_OPERATION_CONFLICT' });
+  expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(1);
+}));
+
+it.each(['revoked_project', 'viewer_staff', 'read_only_grant', 'inactive_actor', 'expired_session', 'lapsed_license'])(
+  'denies shared task mutations under current %s authority', async reason => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, operation, resource, domain, edit }: any) => {
+    if (reason === 'revoked_project') await customer.table('co_management_project_scopes').del();
+    if (reason === 'viewer_staff') await sponsor.table('co_management_staff_assignments').update({ relationship_role: 'viewer' });
+    if (reason === 'read_only_grant') await customer.table('co_management_project_scopes').update({ can_collaborate: false });
+    if (reason === 'inactive_actor') await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+    if (reason === 'expired_session') await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+    if (reason === 'lapsed_license') await expireCoManagedEntitlement(operation.tenant);
+    const before = await customer.table('project_tasks');
+    await expect(edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Denied' } })).rejects.toThrow();
+    expect(await customer.table('project_tasks')).toEqual(before); expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
+    if (['viewer_staff','read_only_grant','lapsed_license'].includes(reason)) expect((await domain.getCoManagedProjectTaskEditor(db, principal, resource)).editableFields).toEqual([]);
+  }));
+
+it('rejects shared task status mappings from a different customer phase', async () => withSharedProjectTaskFixture(async ({ customer, principal, resource, phase, mappings, domain, edit }: any) => {
+  const otherPhaseId = randomUUID(), current = await customer.table('project_phases').where('phase_id', phase.phase_id).first();
+  await customer.table('project_phases').insert({ ...current, phase_id: otherPhaseId, wbs_code: '1.2' });
+  await customer.table('project_status_mappings').where('project_status_mapping_id', mappings[1].project_status_mapping_id).update({ phase_id: otherPhaseId });
+  expect((await domain.getCoManagedProjectTaskStatuses(db, principal, resource)).options.map((option: any) => option.id)).not.toContain(mappings[1].project_status_mapping_id);
+  await expect(edit(db, principal, resource, { operationId: randomUUID(), expected: { project_status_mapping_id: mappings[0].project_status_mapping_id }, patch: { project_status_mapping_id: mappings[1].project_status_mapping_id } })).rejects.toMatchObject({ code: 'INVALID_TASK_EDIT' });
+}));
+
+it('rolls back the canonical task and foreign attribution when its receipt cannot commit', async () => withSharedProjectTaskFixture(async ({ customer, principal, resource, edit }: any) => {
+  const constraint = `task_receipt_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_command_receipts ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR resource_type <> 'project_task')", [constraint, resource.tenant]).toQuery());
+  const before = await customer.table('project_tasks');
+  try { await expect(edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Rollback' } })).rejects.toMatchObject({ constraint }); }
+  finally { await db.raw('ALTER TABLE co_management_command_receipts DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('project_tasks')).toEqual(before); expect(await customer.table('collaboration_actor_references')).toHaveLength(0);
+  expect(await customer.table('audit_logs').where({ record_id: resource.id, table_name: 'project_tasks' })).toHaveLength(0);
+}));
+
+it('pages shared project tasks without copying assignments, and loses access immediately on unsharing', async () => withSharedProjectTaskFixture(async ({ customer, principal, customerPrincipal, resource, project, domain }: any) => {
+  const source = await customer.table('project_tasks').where('task_id', resource.id).first();
+  for (let index = 2; index <= 30; index++) await customer.table('project_tasks').insert({ ...source, task_id: randomUUID(), task_name: `Task ${index}`, wbs_code: `1.1.${index}` });
+  const projectRef = { ...resource, kind: 'project', id: project.project_id };
+  const one = await domain.listCoManagedProjectTasks(db, principal, projectRef);
+  const two = await domain.listCoManagedProjectTasks(db, principal, projectRef, one.nextAfterId);
+  expect(one.items).toHaveLength(25); expect(two.items).toHaveLength(5); expect(two.nextAfterId).toBeNull();
+  expect(new Set([...one.items, ...two.items].map((item: any) => item.resource.id)).size).toBe(30);
+  expect(JSON.stringify([one, two])).not.toMatch(/Private detailed work|actual_hours|assigned_to|service_id/);
+  await customer.table('co_management_project_scopes').del();
+  await expect(domain.listCoManagedProjectTasks(db, principal, projectRef)).rejects.toThrow();
+  expect((await domain.listCoManagedProjectTasks(db, customerPrincipal, projectRef)).items).toHaveLength(25);
+}));
+
+it('uses phase-specific task statuses instead of project fallback statuses when an override exists', async () => withSharedProjectTaskFixture(async ({ customer, principal, resource, phase, mappings, domain, edit }: any) => {
+  await customer.table('project_status_mappings').where('project_status_mapping_id', mappings[1].project_status_mapping_id).update({ phase_id: phase.phase_id });
+  const options = await domain.getCoManagedProjectTaskStatuses(db, principal, resource);
+  expect(options.options.map((option: any) => option.id)).toEqual([mappings[1].project_status_mapping_id]);
+  await expect(edit(db, principal, resource, { operationId: randomUUID(), expected: { project_status_mapping_id: mappings[0].project_status_mapping_id }, patch: { project_status_mapping_id: mappings[0].project_status_mapping_id } })).rejects.toMatchObject({ code: 'INVALID_TASK_EDIT' });
+}));
+
+it.each(['customer', 'sponsor'])('applies %s bundle field redactions to shared task reads and edits', async side => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, project, operation, domain, edit }: any) => {
+  const actor = side === 'customer' ? customerPrincipal : principal, owner = side === 'customer' ? customer : sponsor;
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: actor.tenant, name: 'Task field policy', actorUserId: actor.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: actor.tenant, bundleId, revisionId, resourceType: 'project', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [side === 'customer' ? operation.customer_client_id : operation.request.clientId], redactedFields: ['project_tasks.task_name', 'project_status_mappings'] } });
+  await bundles.publishBundleRevision(db, { tenant: actor.tenant, bundleId, revisionId, actorUserId: actor.userId });
+  await bundles.createBundleAssignment(db, { tenant: actor.tenant, bundleId, targetType: 'user', targetId: actor.userId });
+  const state = await domain.getCoManagedProjectTaskEditor(db, actor, resource);
+  expect(state.values.task_name).toBeUndefined(); expect(state.values.project_status_mapping_id).toBeUndefined(); expect(state.selectedStatus).toBeNull();
+  await expect(edit(db, actor, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Hidden edit' } })).rejects.toThrow();
+  await expect(domain.getCoManagedProjectTaskStatuses(db, actor, resource)).rejects.toThrow();
+  expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
+}));
+
+it('preserves explicit audit ownership across foreign connection context and retains legacy context fallback', async () => withSharedProjectTaskFixture(async ({ principal, customer, sponsor, resource, edit }: any) => {
+  await withTransaction(db, async trx => {
+    await trx.raw("select set_config('app.current_tenant', ?, true)", [principal.tenant]);
+    await edit(trx, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Explicit owner' } });
+    await trx('audit_logs').insert({ audit_id: randomUUID(), user_id: principal.userId, operation: 'legacy_context_test', table_name: 'test', record_id: 'test', changed_data: {}, details: {} });
+  });
+  expect(await customer.table('audit_logs').where('record_id', resource.id)).toHaveLength(1);
+  expect(await sponsor.table('audit_logs').where('record_id', resource.id)).toHaveLength(0);
+  expect(await sponsor.table('audit_logs').where('operation', 'legacy_context_test')).toHaveLength(1);
+  const migration = require('../../../migrations/20260907150600_preserve_explicit_audit_tenant.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('shared project history');
 }));

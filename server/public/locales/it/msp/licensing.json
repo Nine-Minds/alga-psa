@@ -572,6 +572,24 @@
       "pending": "Il caricamento di un allegato è in sospeso. Completalo prima di modificare il pubblico.",
       "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica.",
       "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura."
+    },
+    "projects": {
+      "tasks": "Attività del progetto",
+      "empty": "Nessuna attività disponibile in questo progetto.",
+      "task": "Attività del progetto",
+      "name": "Nome attività",
+      "due": "Scadenza: {{date}}",
+      "moreStatuses": "Altri stati",
+      "errors": {
+        "invalid": "Alcuni valori non sono validi. Controlla le modifiche e riprova.",
+        "conflict": "Questa attività è cambiata. Ricarica prima di salvare.",
+        "operationConflict": "Questa richiesta è stata usata per una modifica diversa. Ricarica l’attività.",
+        "forbidden": "Il tuo accesso a questa attività è cambiato. Ricarica per continuare.",
+        "readOnly": "Questo spazio è di sola lettura. Ricarica per visualizzarne lo stato attuale.",
+        "unknownOutcome": "Non è stato possibile confermare il salvataggio. Riprova con la stessa richiesta oppure scarta le modifiche e ricarica."
+      },
+      "loadError": "Impossibile caricare questo progetto o questa attività.",
+      "discard": "Scarta le modifiche e ricarica"
     }
   }
 }

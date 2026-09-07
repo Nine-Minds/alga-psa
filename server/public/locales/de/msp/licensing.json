@@ -570,6 +570,24 @@
       "pending": "Ein Anhang wird noch hochgeladen. Schließen Sie den Upload ab, bevor Sie die Sichtbarkeit ändern.",
       "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen.",
       "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten."
+    },
+    "projects": {
+      "tasks": "Projektaufgaben",
+      "empty": "In diesem Projekt sind keine Aufgaben verfügbar.",
+      "task": "Projektaufgabe",
+      "name": "Aufgabenname",
+      "due": "Fällig am {{date}}",
+      "moreStatuses": "Weitere Status",
+      "errors": {
+        "invalid": "Einige Werte sind ungültig. Prüfen Sie Ihre Änderungen und versuchen Sie es erneut.",
+        "conflict": "Diese Aufgabe wurde geändert. Laden Sie sie vor dem Speichern neu.",
+        "operationConflict": "Diese Anfrage wurde für eine andere Änderung verwendet. Laden Sie die Aufgabe neu.",
+        "forbidden": "Ihr Zugriff auf diese Aufgabe hat sich geändert. Laden Sie sie neu.",
+        "readOnly": "Dieser Arbeitsbereich ist schreibgeschützt. Laden Sie den aktuellen Stand neu.",
+        "unknownOutcome": "Es konnte nicht bestätigt werden, ob die Änderung gespeichert wurde. Wiederholen Sie dieselbe Speicherung oder verwerfen Sie Ihre Änderungen und laden Sie neu."
+      },
+      "loadError": "Projekt oder Aufgabe konnte nicht geladen werden.",
+      "discard": "Änderungen verwerfen und neu laden"
     }
   }
 }

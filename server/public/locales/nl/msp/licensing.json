@@ -570,6 +570,24 @@
       "pending": "Er staat nog een bijlage-upload open. Voltooi de upload voordat u de zichtbaarheid wijzigt.",
       "unknownOutcome": "Het resultaat is onbekend. Probeer opnieuw om dezelfde wijziging te controleren.",
       "transferHelp": "Delen verplaatst dit gesprek en de bijlagen naar de werkruimte van de klant. Het oorspronkelijke privégesprek van de MSP blijft bewaard als alleen-lezen geschiedenis."
+    },
+    "projects": {
+      "tasks": "Projecttaken",
+      "empty": "Er zijn geen taken beschikbaar in dit project.",
+      "task": "Projecttaak",
+      "name": "Taaknaam",
+      "due": "Uiterlijk {{date}}",
+      "moreStatuses": "Meer statussen",
+      "errors": {
+        "invalid": "Sommige waarden zijn ongeldig. Controleer uw wijzigingen en probeer het opnieuw.",
+        "conflict": "Deze taak is gewijzigd. Laad opnieuw voordat u opslaat.",
+        "operationConflict": "Dit verzoek is gebruikt voor een andere wijziging. Laad de taak opnieuw.",
+        "forbidden": "Uw toegang tot deze taak is gewijzigd. Laad opnieuw om door te gaan.",
+        "readOnly": "Deze werkruimte is alleen-lezen. Vernieuw om de huidige status te bekijken.",
+        "unknownOutcome": "We konden niet bevestigen of de wijziging is opgeslagen. Probeer hetzelfde verzoek opnieuw of verwerp uw wijzigingen en vernieuw."
+      },
+      "loadError": "Dit project of deze taak kon niet worden geladen.",
+      "discard": "Wijzigingen verwerpen en opnieuw laden"
     }
   }
 }

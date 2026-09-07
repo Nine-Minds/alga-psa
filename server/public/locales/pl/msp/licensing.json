@@ -574,6 +574,24 @@
       "pending": "Przesyłanie załącznika oczekuje na zakończenie. Zakończ je przed zmianą widoczności.",
       "unknownOutcome": "Wynik jest nieznany. Ponów próbę, aby sprawdzić tę samą zmianę.",
       "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu."
+    },
+    "projects": {
+      "tasks": "Zadania projektu",
+      "empty": "W tym projekcie nie ma dostępnych zadań.",
+      "task": "Zadanie projektu",
+      "name": "Nazwa zadania",
+      "due": "Termin: {{date}}",
+      "moreStatuses": "Więcej statusów",
+      "errors": {
+        "invalid": "Niektóre wartości są nieprawidłowe. Sprawdź zmiany i spróbuj ponownie.",
+        "conflict": "To zadanie zostało zmienione. Odśwież je przed zapisaniem.",
+        "operationConflict": "To żądanie zostało użyte do innej zmiany. Odśwież zadanie.",
+        "forbidden": "Twój dostęp do tego zadania uległ zmianie. Odśwież, aby kontynuować.",
+        "readOnly": "Ten obszar jest tylko do odczytu. Odśwież, aby zobaczyć jego obecny stan.",
+        "unknownOutcome": "Nie udało się potwierdzić zapisu. Ponów to samo żądanie albo odrzuć zmiany i odśwież."
+      },
+      "loadError": "Nie udało się wczytać tego projektu lub zadania.",
+      "discard": "Odrzuć zmiany i odśwież"
     }
   }
 }

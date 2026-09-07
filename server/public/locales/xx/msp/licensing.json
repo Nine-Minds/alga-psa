@@ -570,6 +570,24 @@
       "pending": "11 1111111111 111111 11 11111 11111111 111111 111 111111 111111 11111111 111 111111111",
       "unknownOutcome": "111 111111 11 11111111 11111 11 11111 111 1111 11111111 1111111",
       "transferHelp": "1111111 111111111 1111 111111 111 111 11111111111 1111 111 11111111 1111111111 111 11111111 11111111111 111111 11 11111111 11 111111111 11111111"
+    },
+    "projects": {
+      "tasks": "[Project tasks]",
+      "empty": "[No tasks are available in this project.]",
+      "task": "[Project task]",
+      "name": "[Task name]",
+      "due": "[Due {{date}}]",
+      "moreStatuses": "[More statuses]",
+      "errors": {
+        "invalid": "⟦Şȯḿḗ ṽȧŀŭḗş ȧřḗ ƞȯŧ ṽȧŀīḓ. Ƈħḗƈķ ẏȯŭř ƈħȧƞɠḗş ȧƞḓ ŧřẏ ȧɠȧīƞ.⟧",
+        "conflict": "This task changed. Reload before saving.",
+        "operationConflict": "This save request was used for a different edit. Reload the task.",
+        "forbidden": "Your access to this task changed. Reload to continue.",
+        "readOnly": "⟦Ŧħīş ẇȯřķşƥȧƈḗ īş řḗȧḓ-ȯƞŀẏ. Řḗŀȯȧḓ ŧȯ şḗḗ īŧş ƈŭřřḗƞŧ şŧȧŧḗ.⟧",
+        "unknownOutcome": "⟦Ẇḗ ƈȯŭŀḓ ƞȯŧ ƈȯƞƒīřḿ ẇħḗŧħḗř ŧħḗ ḗḓīŧ ẇȧş şȧṽḗḓ. Řḗŧřẏ ŧħḗ şȧḿḗ şȧṽḗ, ȯř ḓīşƈȧřḓ ẏȯŭř ƈħȧƞɠḗş ȧƞḓ řḗŀȯȧḓ.⟧"
+      },
+      "loadError": "Could not load this project or task.",
+      "discard": "Discard changes and reload"
     }
   }
 }

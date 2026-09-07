@@ -152,7 +152,10 @@ export default function CoManagedPolicyPanel({ operationId }: { operationId?: st
             <p>{t(state.policy.visibilityMode === 'board_scope' ? 'coManaged.provisioning.board_scope' : 'coManaged.provisioning.escalation_only')}</p>
             {(['board', 'project'] as const).map(kind => <div key={kind}><h3 className="font-medium">{t(`coManaged.policy.kinds.${kind}`)}</h3>
               {(kind === 'board' ? state.policy.boards : state.policy.projects).map(grant => <p key={grant.id}>
-                {state.labels[kind].find(label => label.id === grant.id)?.name || t('coManaged.policy.unavailable')}: {t(grant.canCollaborate ? 'coManaged.policy.collaborate' : 'coManaged.policy.view')}
+                {kind === 'project' ? <Link id={`co-policy-open-project-${grant.id}`} className="text-primary underline"
+                  href={`/msp/co-management/projects/${state.target.customerTenant}/${state.target.relationshipId}/${grant.id}`}>
+                  {state.labels[kind].find(label => label.id === grant.id)?.name || t('coManaged.policy.unavailable')}</Link>
+                  : state.labels[kind].find(label => label.id === grant.id)?.name || t('coManaged.policy.unavailable')}: {t(grant.canCollaborate ? 'coManaged.policy.collaborate' : 'coManaged.policy.view')}
               </p>)}</div>)}
           </div>
           {(['user', 'team'] as const).map(kind => <PolicyEntries key={kind} kind={kind} operationId={operationId}

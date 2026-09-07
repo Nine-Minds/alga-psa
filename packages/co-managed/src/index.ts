@@ -41,3 +41,6 @@ export * from './requesterReplyTokens';
 export * from './requesterEmailDeliveries';
 
 export * from './customerReplyTokens';
+export { getCoManagedProjectTaskEditor, getCoManagedProjectTaskStatuses, editCoManagedProjectTask, CoManagedTaskEditError } from './projectTaskEditing';
+export type { CoManagedTaskEditField, CoManagedTaskEditPatch, CoManagedTaskEditRequest, CoManagedTaskEditReceipt, CoManagedTaskEditorState } from './projectTaskEditing';
+export { listCoManagedProjectTasks } from './projectTaskEditing';

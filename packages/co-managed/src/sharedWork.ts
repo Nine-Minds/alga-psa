@@ -110,13 +110,19 @@ async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrinc
       if (resource.kind === 'project_task') {
         const taskQuery = owner.table('project_tasks').where('project_tasks.task_id', resource.id);
         owner.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
-        const task = await taskQuery.forShare().first('project_phases.project_id');
+        const task = await taskQuery.first('project_phases.project_id');
         if (!task) deny();
         projectId = task.project_id;
       }
       const projectQuery = owner.table('projects').where('project_id', projectId);
       if (action === 'update') projectQuery.forUpdate(); else projectQuery.forShare();
       if (!await projectQuery.first('project_id')) deny();
+      if (resource.kind === 'project_task') {
+        const taskQuery = owner.table('project_tasks').where('project_tasks.task_id', resource.id);
+        owner.tenantJoin(taskQuery, 'project_phases', 'project_tasks.phase_id', 'project_phases.phase_id');
+        if (action === 'update') taskQuery.forUpdate('project_tasks', 'project_phases'); else taskQuery.forShare('project_tasks', 'project_phases');
+        if ((await taskQuery.first('project_phases.project_id'))?.project_id !== projectId) deny();
+      }
       const grant = await owner.table('co_management_project_scopes').where({ relationship_id: resource.relationshipId, project_id: projectId }).forShare().first();
       if (!grant) deny();
       canCollaborate = grant.can_collaborate;

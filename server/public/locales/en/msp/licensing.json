@@ -659,6 +659,24 @@
       "pending": "An attachment upload is still pending. Finish the upload before changing the audience.",
       "unknownOutcome": "The result is unknown. Retry to check the same audience change.",
       "transferHelp": "Sharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history."
+    },
+    "projects": {
+      "tasks": "Project tasks",
+      "empty": "No tasks are available in this project.",
+      "task": "Project task",
+      "name": "Task name",
+      "due": "Due {{date}}",
+      "moreStatuses": "More statuses",
+      "errors": {
+        "invalid": "Some values are not valid. Check your changes and try again.",
+        "conflict": "This task changed. Reload before saving.",
+        "operationConflict": "This save request was used for a different edit. Reload the task.",
+        "forbidden": "Your access to this task changed. Reload to continue.",
+        "readOnly": "This workspace is read-only. Reload to see its current state.",
+        "unknownOutcome": "We could not confirm whether the edit was saved. Retry the same save, or discard your changes and reload."
+      },
+      "loadError": "Could not load this project or task.",
+      "discard": "Discard changes and reload"
     }
   }
 }
