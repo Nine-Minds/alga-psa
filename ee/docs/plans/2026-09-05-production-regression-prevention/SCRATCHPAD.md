@@ -1180,3 +1180,9 @@
 - Added an unconditional browser journey for authenticated invoice generation, tenant-isolated reads with an injected foreign snapshot, mismatched-tenant rejection, and a real UI PDF download checked for identity, total and private-data exclusion. Shared source fixtures exercise the same billing inputs as restored integration cases.
 - Revalidated collection with the e2e workspace Playwright binary and targeted TypeScript checking. Runtime remains unverified; retain the legacy manual case until execution and complete behavioral parity are established. Local temporary-account setup remains pending explicit authorization following automatic approval review rejection; no secret extraction or account creation was performed. Native CI uses its existing disposable installation setup.
 - `git merge-base --is-ancestor origin/main HEAD` passed against the current local remote-tracking ref. This is not a claim that the remote main tip has been freshly fetched.
+
+### 2026-09-07 — Combined invoice verification and project survey scope
+
+- Executed the entire invoice production integration file at published revision `9a0ea31e57`: nine cases passed together in 108.39 seconds; three explicitly manual cases remain skipped. Evidence: `evidence/invoice-combined-9a0ea.json`.
+- Audited the project survey skip through subscriber, invitation service, both storage tables, token resolution, response persistence and analytics. A dispatch-only fix is insufficient. Recorded the full restoration requirements in `evidence/project-survey-restoration-scope.json`; no requirement or skip was removed.
+- Native integration run `34093073754`, full-suite job `101650631428`, was verified in progress. Keep it running; these local evidence updates need not cancel or replace the published execution.
