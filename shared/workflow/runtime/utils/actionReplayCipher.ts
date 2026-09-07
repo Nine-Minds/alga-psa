@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 /** Private retry material. Keep this envelope out of run-history/API results. */
 export type EncryptedActionReplay = {
   version: 1;
+  keyId?: string;
   nonce: string;
   tag: string;
   ciphertext: string;

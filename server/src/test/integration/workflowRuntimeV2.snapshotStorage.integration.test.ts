@@ -33,6 +33,8 @@ beforeAll(async () => {
 afterAll(async () => { await db?.destroy(); });
 beforeEach(async () => {
   state.canRead = true;
+  vi.stubEnv('NEXTAUTH_SECRET', 'synthetic-workflow-replay-secret');
+  vi.stubEnv('WORKFLOW_REPLAY_KEYS', '');
   const trx = state.trx = await db.transaction();
   const schema = `workflow_snapshot_${randomUUID().replaceAll('-', '')}`;
   await trx.raw('CREATE SCHEMA ??', [schema]);
@@ -152,4 +154,66 @@ it.each([['history', listWorkflowRunStepsAction], ['export', exportWorkflowRunDe
   expect(result.invocations[0]).toMatchObject({ output_json: { secretRef: '[REDACTED]' } });
   expect(result.invocations[0]).not.toHaveProperty('replay_output_encrypted');
   expect(JSON.stringify(result)).not.toContain(envelope.ciphertext);
+});
+
+it('stores redacted output diagnostics and preserves sensitive results across successful retries and key rotation', async () => {
+  const f = await fixture(); state.tenant = f.tenant;
+  const actionId = `test.protected-output.${randomUUID()}`;
+  const output = { secretRef: 'synthetic-sensitive-result', value: 'keep' };
+  const handler = vi.fn(async () => output);
+  getActionRegistryV2().register({ id: actionId, version: 1, inputSchema: z.object({}), outputSchema: z.object({ secretRef: z.string(), value: z.string() }),
+    sideEffectful: true, idempotency: { mode: 'engineProvided' }, ui: { label: 'Protected output probe', category: 'Test' }, handler });
+  const input = { runId: f.runId, stepId: f.stepId, stepPath: f.stepPath, tenantId: f.tenant,
+    step: { type: 'action.call' as const, config: { actionId, version: 1 } },
+    scopes: { payload: {}, workflow: {}, lexical: [], system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1, tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } } };
+  expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual(output);
+  const row = await state.trx!('workflow_action_invocations').where({ run_id: f.runId }).first();
+  expect(row.output_json).toEqual({ secretRef: '[REDACTED]', value: 'keep' });
+  expect(JSON.stringify(row)).not.toContain(output.secretRef);
+  vi.stubEnv('WORKFLOW_REPLAY_KEYS', JSON.stringify({ activeKeyId: 'rotated', keys: { nextauth: 'synthetic-workflow-replay-secret', rotated: 'synthetic-next-key' } }));
+  expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual(output);
+  expect(handler).toHaveBeenCalledOnce();
+  const history = await listWorkflowRunStepsAction({ runId: f.runId });
+  expect(history.invocations[0]).not.toHaveProperty('replay_output_encrypted');
+  expect(history.invocations[0].output_json).toEqual({ secretRef: '[REDACTED]', value: 'keep' });
+  const rotatedInput = { ...input, stepPath: 'rotated-step' };
+  expect((await executeWorkflowRuntimeV2ActionStep(rotatedInput)).output).toEqual(output);
+  const rotatedRow = await state.trx!('workflow_action_invocations').where({ run_id: f.runId, step_path: 'rotated-step' }).first();
+  expect(rotatedRow.replay_output_encrypted.keyId).toBe('rotated');
+  vi.stubEnv('WORKFLOW_REPLAY_KEYS', JSON.stringify({ activeKeyId: 'rotated', keys: { rotated: 'synthetic-next-key' } }));
+  await expect(executeWorkflowRuntimeV2ActionStep(input)).rejects.toThrow('key is unavailable');
+  expect((await executeWorkflowRuntimeV2ActionStep(rotatedInput)).output).toEqual(output);
+  expect(handler).toHaveBeenCalledTimes(2);
+});
+
+async function replayProbe() {
+  const f = await fixture(), actionId = `test.replay-preflight.${randomUUID()}`;
+  const handler = vi.fn(async () => ({ value: 'new-result' }));
+  getActionRegistryV2().register({ id: actionId, version: 1, inputSchema: z.object({}), outputSchema: z.object({ value: z.string() }),
+    sideEffectful: true, idempotency: { mode: 'engineProvided' }, ui: { label: 'Replay preflight probe', category: 'Test' }, handler });
+  const input = { runId: f.runId, stepId: f.stepId, stepPath: f.stepPath, tenantId: f.tenant,
+    step: { type: 'action.call' as const, config: { actionId, version: 1, idempotencyKey: { $expr: '"stable-probe"' } } },
+    scopes: { payload: {}, workflow: {}, lexical: [], system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1, tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } } };
+  return { f, actionId, handler, input };
+}
+
+it.each(['missing-key', 'invalid-key-config', 'missing-schema'])('rejects %s before invoking an action or reserving an invocation', async condition => {
+  const { handler, input } = await replayProbe();
+  if (condition === 'missing-key') vi.stubEnv('NEXTAUTH_SECRET', '');
+  if (condition === 'invalid-key-config') vi.stubEnv('WORKFLOW_REPLAY_KEYS', '{invalid-json');
+  if (condition === 'missing-schema') await state.trx!.schema.alterTable('workflow_action_invocations', table => table.dropColumn('replay_output_encrypted'));
+  await expect(executeWorkflowRuntimeV2ActionStep(input)).rejects.toThrow(/replay/i);
+  expect(handler).not.toHaveBeenCalled();
+  expect(await state.trx!('workflow_action_invocations')).toHaveLength(0);
+});
+
+it('replays legacy completed invocations without a replay key and without repeating the action', async () => {
+  const { f, actionId, handler, input } = await replayProbe();
+  await state.trx!('workflow_action_invocations').insert({ tenant: f.tenant, run_id: f.runId, step_path: f.stepPath,
+    action_id: actionId, action_version: 1, idempotency_key: `${f.tenant}:stable-probe`, status: 'SUCCEEDED', attempt: 1,
+    output_json: { value: 'legacy-result' },
+  });
+  vi.stubEnv('NEXTAUTH_SECRET', '');
+  expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual({ value: 'legacy-result' });
+  expect(handler).not.toHaveBeenCalled();
 });

@@ -22,6 +22,11 @@ const mocks = vi.hoisted(() => ({
   reserveStepStart: vi.fn(),
 }));
 
+vi.mock('../workflow-action-replay-keys', async importOriginal => {
+  const actual = await importOriginal<typeof import('../workflow-action-replay-keys')>();
+  return { ...actual, loadWorkflowReplayKeys: async () => ({ activeKeyId: 'test', keys: { test: 'synthetic-worker-replay-key' } }) };
+});
+
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: mocks.getAdminConnection,
   retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
@@ -96,6 +101,7 @@ describe('workflow-runtime-v2 activities', () => {
       if (table === 'workflow_run_waits') return waitsQuery;
       throw new Error(`Unexpected table ${table}`);
     }) as any;
+    knex.schema = { hasColumn: vi.fn().mockResolvedValue(true) };
     mocks.getAdminConnection.mockResolvedValue(knex);
     mocks.resolveInputMapping.mockResolvedValue({});
     mocks.resolveExpressionsWithSecrets.mockResolvedValue(null);

@@ -1,3 +1,5 @@
+import { encryptActionReplay, decryptActionReplay } from '@alga-psa/shared/workflow/runtime/utils/actionReplayCipher';
+import { loadWorkflowReplayKeys, workflowReplayKey } from './workflow-action-replay-keys';
 import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/utils/redactionUtils';
 import { getAdminConnection, retryOnAdminReadOnly } from '@alga-psa/db/admin';
 import { getFormValidationService } from '@shared/task-inbox';
@@ -911,7 +913,19 @@ async function executeActionInvocation(input: {
     input.tenantId
   );
   if (existing?.status === 'SUCCEEDED') {
+    if (existing.replay_output_encrypted) {
+      const keys = await loadWorkflowReplayKeys();
+      return action.outputSchema.parse(decryptActionReplay(existing.replay_output_encrypted,
+        workflowReplayKey(keys, existing.replay_output_encrypted.keyId),
+        { tenantId: existing.tenant ?? null, invocationId: existing.invocation_id }));
+    }
     return action.outputSchema.parse(existing.output_json ?? {});
+  }
+
+  // Fail before effects if the deployment cannot durably store/replay results.
+  const replayKeys = await loadWorkflowReplayKeys();
+  if (!(await input.knex.schema.hasColumn('workflow_action_invocations', 'replay_output_encrypted'))) {
+    throw new Error('Workflow replay storage migration is required before executing an action');
   }
 
   // Reuse a failed invocation under its stable key. The conditional update
@@ -950,7 +964,12 @@ async function executeActionInvocation(input: {
     const parsedOutput = action.outputSchema.parse(output);
     await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
       status: 'SUCCEEDED',
-      output_json: parsedOutput as Record<string, unknown>,
+      output_json: applyRedactions(parsedOutput) as Record<string, unknown>,
+      replay_output_encrypted: {
+        ...encryptActionReplay(parsedOutput, workflowReplayKey(replayKeys, replayKeys.activeKeyId),
+          { tenantId: input.tenantId ?? null, invocationId: invocation.invocation_id }),
+        keyId: replayKeys.activeKeyId,
+      },
       completed_at: new Date().toISOString(),
       // A recovered invocation must not retain its previous failure. Only
       // write the optional column when the fetched row proves it exists,
