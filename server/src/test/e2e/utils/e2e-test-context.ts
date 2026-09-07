@@ -369,7 +369,7 @@ export class E2ETestContext extends TestContext {
       }
     }
 
-    console.log('⏳ Workflow processing timeout reached, assuming completion');
+    throw new Error(`Email-to-ticket processing was not observed within ${timeout}ms`);
   }
 
   /**

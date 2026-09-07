@@ -1895,3 +1895,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Removed hardcoded /Users/robertisaacs/alga-psa from DockerServiceManager start/stop. All lifecycle/diagnostic commands use the module-derived worktree root as cwd and docker compose argument arrays via execFile; no shell interpolation. This fixes checkout targeting and Compose v2 command availability, but fixed container names/ports in the legacy compose file still prevent full parallel isolation.
 - Command-boundary behavioral test captures actual manager calls for start/stop/logs/restart/status and expected cwd/arguments. It failed before the change; combined testing fixture suite now passes 10/10 (/tmp/alga-email-docker-before.log, /tmp/alga-email-docker-fixed.log). Child-process execution is substituted: no Docker service was started/stopped and this is not full service integration evidence.
+
+### 2026-09-07 — fix timeout in the actual email scenario context
+
+- Caller tracing showed legacy scenarios call E2ETestContext.waitForWorkflowProcessing, not DockerServiceManager.waitForWorkflowProcessing. The context also silently succeeded after timeout; changed that actual caller path to reject when ticket processing is unobserved.
+- Direct context-method tests substitute DB query responses and service dependencies: no ticket now rejects, observed ticket still completes. Before: one failed/one passed; after: both pass; combined fixture tests 12/12 (/tmp/alga-ticket-wait-before.log, /tmp/alga-ticket-wait-fixed.log).
+- Remaining semantic gap: the context looks for a ticket entered after wait start, rather than correlating the sent message. This can miss already-completed processing or accept unrelated same-tenant activity. Full legacy email CI assignment still requires replacing this with message-specific persisted outcomes; do not count polling tests as complete end-to-end coverage.
