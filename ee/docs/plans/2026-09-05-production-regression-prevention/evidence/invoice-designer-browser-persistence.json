@@ -8,7 +8,9 @@
     "UI authored billed-time date sort",
     "UI template save and tenant-scoped persisted AST verification",
     "Local cache cleared before reload/reopen",
-    "Evaluated preview order retained and persisted AST unchanged"
+    "Evaluated preview order retained and persisted AST unchanged",
+    "UI-created dynamic table bound to transform output",
+    "UI-added Date column and reopened inspector binding"
   ],
   "limitations": [
     "Host development pass does not prove production artifact behavior",
@@ -28,7 +30,7 @@
     "passed": true,
     "testsPassed": 1,
     "retries": 0,
-    "durationSeconds": 36.4,
-    "evidence": "host-development-action-manifest.json"
+    "durationSeconds": 96.360456,
+    "evidence": "host-designer-table-persistence.json"
   }
 }
