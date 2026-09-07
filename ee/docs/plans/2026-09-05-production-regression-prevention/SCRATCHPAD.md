@@ -1864,3 +1864,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Connected the unit coverage metrics uploader to test-results/server-coverage/evidence.json via TEST_METRICS_EXECUTION. Existing row logic rejects missing/mismatched/failed evidence, marks the run partial and suppresses its pass percentage, while preserving existing sheet columns/history. This ensures the new CI reconciliation result also reaches the metrics view.
 - Existing lifecycle and sheet-schema behavioral tests passed 18/18 (/tmp/alga-unit-metrics-wiring.log); workflow YAML parse and diff checks passed. No direct external sheet write was performed. Native uploader behavior remains to be verified on the next CI revision.
+
+### 2026-09-07 — release baseline clarification and rule refresh
+
+- GitHub latest release metadata: v1.5.0 published 2026-08-28. Asked the user asynchronously to identify the previous supported upgrade release and deployment target; latest tag alone does not resolve supported upgrade policy or authorize a guessed deployment target. Requirements F020–F023 remain open. Refreshed effective main rules via GitHub API without mutations; evidence/release-and-rule-refresh-sep7.json.
+- Native integration job 101729712868 still live on recheck. Preserve its terminal evidence before pushing queued fixes; do not declare it stopped on elapsed time alone.
