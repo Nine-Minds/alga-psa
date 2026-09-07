@@ -1,6 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect, readSession, signIn, submitCredentials } from '../fixtures/auth';
 
+test('anonymous root navigation reaches sign-in and rejects an unknown account without a session', async ({ page }) => {
+  await page.goto('/');
+  await expect(page).toHaveURL(/\/auth\/(?:msp\/)?signin(?:[/?#]|$)/);
+  const email = page.locator('[data-automation-id="msp-email-field"]');
+  const password = page.locator('[data-automation-id="msp-password-field"]');
+  await expect(email).toBeVisible();
+  await expect(password).toBeVisible();
+  await email.fill(`unknown-${randomUUID()}@example.invalid`);
+  await password.fill(`invalid-${randomUUID()}`);
+  await page.locator('#msp-sign-in-button').click();
+  await expect(page.getByText('Invalid email or password. Please try again.', { exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/auth\/(?:msp\/)?signin(?:[/?#]|$)/);
+  expect(await readSession(page.request)).toBeUndefined();
+  await page.reload();
+  await expect(email).toBeVisible();
+  expect(await readSession(page.request)).toBeUndefined();
+});
+
 test('real sign-in renders the dashboard and preserves the tenant session after reload', async ({ page, browser, credentials, baseURL }, testInfo) => {
   await signIn(page, credentials);
   const title = testInfo.project.metadata.edition === 'enterprise'
