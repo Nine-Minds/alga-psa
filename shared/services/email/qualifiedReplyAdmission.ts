@@ -10,8 +10,8 @@ export type AdmittedEmailReply = AdmittedRequesterReply | (Omit<AdmittedRequeste
 });
 /** Trusted composition supplies identity and current read/write authority. The
  * engine does not resolve a privileged user from a sender address or token ID. */
-export type EmailReplyAdmission = <T>(trx: Knex.Transaction, input: {
-  tenant: string; token: string; senderEmail: string; senderAuth: SenderAuthResults | null;
+export type EmailReplyAdmission = <T extends { outcome: string; ticketId?: string; commentId?: string }>(trx: Knex.Transaction, input: {
+  tenant: string; inboxId: string; sourceSha256?: string; token: string; senderEmail: string; senderAuth: SenderAuthResults | null;
 }, write: (reply: AdmittedEmailReply) => Promise<T>) => Promise<{ admitted: true; result: T } | { admitted: false }>;
 
 export function isQualifiedReplyToken(token: unknown): token is string {

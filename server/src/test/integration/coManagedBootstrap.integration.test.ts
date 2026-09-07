@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -9260,12 +9260,19 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('processes 
   expect(comment.note).toContain('Technician diagnostic reply.'); expect(comment.note).not.toContain('ALGA-REPLY-TOKEN');
   expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ attributes: original.attributes,
     response_state: audience === 'requester' ? 'awaiting_client' : 'awaiting_internal' });
+  const receipt = await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first();
+  expect(receipt).toMatchObject({ ticket_id: resource.id, comment_id: comment.comment_id, thread_id: source.thread_id,
+    source_ticket_id: resource.id, source_thread_id: source.thread_id, source_comment_id: request.commentId,
+    actor_tenant: resource.tenant, actor_user_id: recipient.userId, audience, source_sha256: inbox.source_sha256 });
+  expect(receipt.reply_token_hash).toMatch(/^[a-f0-9]{64}$/);
+  expect(JSON.stringify(receipt)).not.toContain('cm2:'); expect(JSON.stringify(receipt)).not.toContain(emailData.from.email);
   const outbox = await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id);
   expect(outbox.find(row => row.event_type === 'TICKET_COMMENT_ADDED')?.payload).toMatchObject({ userId: recipient.userId, comment: { isInternal: audience !== 'requester' } });
   expect(outbox.map(row => row.event_type)).toEqual(expect.arrayContaining(['TICKET_COMMENT_ADDED', 'INBOUND_EMAIL_REPLY_RECEIVED']));
   expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
   expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
   expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(outbox.length);
+  expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
   expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
 }, audience));
 
@@ -9295,6 +9302,7 @@ it.each(['sender', 'spf_only', 'missing_auth', 'no_update', 'inactive', 'disclos
     expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ source_object_key: inbox.source_object_key, ticket_id: null, comment_id: null });
@@ -9316,6 +9324,7 @@ it('rolls actual technician comment and outbox writes back before quarantining a
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
   } finally { writer.mockRestore(); }
 }));
 
@@ -9357,6 +9366,9 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('preserves 
     const comment = await customer.table('comments').where('comment_id', (result as any).commentId).first();
     expect(comment).toMatchObject({ ticket_id: ticket.ticket_id, user_id: recipient.userId, contact_id: null, author_type: 'internal', is_internal: audience !== 'requester' });
     expect(comment.note).toContain('Technician diagnostic reply.');
+    expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first()).toMatchObject({
+      ticket_id: ticket.ticket_id, comment_id: comment.comment_id, thread_id: comment.thread_id,
+      source_ticket_id: resource.id, actor_user_id: recipient.userId, audience });
     expect(await customer.table('comment_threads').where('thread_id', comment.thread_id).first()).toMatchObject({ collaboration_audience: audience, is_internal: audience !== 'requester' });
     if (audience !== 'requester') {
       expect(ticket.title).toBe('Original public ticket title'); expect(ticket.attributes?.description).toBeUndefined();
@@ -9473,4 +9485,27 @@ it('rejects conflicting explicit comment audience and visibility or a different 
     author_type: 'internal', author_id: recipient.userId, collaboration_audience: 'requester', is_internal: false }, resource.tenant, trx)))
     .rejects.toThrow('Reply audience changed');
   expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+}));
+
+
+it('retains technician reply receipts independently of editable metadata and expired credentials', async () => withTechnicianInboundFixture(async ({ customer, inbox, run }) => {
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  const receipt = await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first();
+  await customer.table('comments').where('comment_id', receipt.comment_id).update({ metadata: {} });
+  await customer.table('co_management_customer_reply_tokens').del();
+  const migration = require('../../../migrations/20260907122957_create_co_management_inbound_reply_receipts.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained inbound reply receipts');
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
+  expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first()).toEqual(receipt);
+}));
+
+it('rolls technician canonical writes back when durable MIME identity disagrees', async () => withTechnicianInboundFixture(async ({ customer, resource, inbox, emailData, run }) => {
+  emailData.sourceSha256 = 'f'.repeat(64);
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  expect(await run()).toMatchObject({ disposition: 'retry' });
+  expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+  expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
 }));

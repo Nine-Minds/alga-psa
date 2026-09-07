@@ -390,6 +390,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_customer_email_deliveries',
   'co_management_requester_reply_tokens',
   'co_management_customer_reply_tokens',
+  'co_management_inbound_reply_receipts',
   'co_management_requester_email_deliveries',
   'co_management_notification_deliveries',
   'co_management_in_app_receipts',

@@ -2014,7 +2014,8 @@ export async function processInboundEmailInApp(
   if (isQualifiedReplyToken(token)) {
     if (!durableExecution?.qualifiedReplyAdmission) throw new Error('Qualified reply requires durable inbox admission');
     const admitted = await durableExecution.qualifiedReplyAdmission(durableExecution.trx, {
-      tenant: tenantId, token, senderEmail: senderEmail ?? '', senderAuth: senderAuthResults,
+      tenant: tenantId, inboxId: durableExecution.inboxId, sourceSha256: emailData.sourceSha256,
+      token, senderEmail: senderEmail ?? '', senderAuth: senderAuthResults,
     }, async qualifiedReply => {
       if (diagnostics) {
         diagnostics.threading.tokenLookupMatched = true;
