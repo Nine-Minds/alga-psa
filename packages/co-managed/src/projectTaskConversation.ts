@@ -1,3 +1,4 @@
+import { retainCoManagedTaskCommentEvent } from './projectTaskEvents';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -12,6 +13,8 @@ import { coManagedConversationBodySources, coManagedConversationAuthorSources } 
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { mutateCoManagedPrivateTaskComment } from './privateTicketConversation';
 import type { CoManagedCommentReference } from './ticketCommentCreation';
+import { projectTaskAudienceSql, projectTaskAudience as audienceOf } from './projectTaskAudience';
+export { projectTaskAudienceSql } from './projectTaskAudience';
 import type { CoManagedConversationCursor, CoManagedConversationItem } from './ticketConversation';
 
 export type CoManagedTaskCommentCommand = { operationId: string } & (
@@ -32,15 +35,6 @@ const boundary = (actor: CoManagedSessionActor, resource: CoManagedSharedResourc
 async function current(context: CoManagedSharedWorkContext, write = false) {
   await assertCoManagedSessionUnexpired(context.trx, { ...context.actor, kind: 'session', sessionId: context.sessionId });
   if (write) await assertCoManagedOperationalWrite(context.trx, context.resource.tenant);
-}
-/** Native task comments were internal-only even when the legacy thread flag
- * was false. Only explicit, consistent metadata can make them shared. */
-export function projectTaskAudienceSql(db: Knex, alias: string) {
-  return db.raw("CASE WHEN ??.collaboration_audience = 'requester' AND ??.is_internal = false THEN 'requester' WHEN ??.collaboration_audience = 'shared_it' AND ??.is_internal = true THEN 'shared_it' ELSE 'organization_private' END", [alias, alias, alias, alias]);
-}
-function audienceOf(thread: any): CommentAudience {
-  return thread.collaboration_audience === 'requester' && thread.is_internal === false ? 'requester' :
-    thread.collaboration_audience === 'shared_it' && thread.is_internal === true ? 'shared_it' : 'organization_private';
 }
 function commandSnapshot(input: CoManagedTaskCommentCommand): CoManagedTaskCommentCommand {
   const invalid = () => { throw new CoManagedTaskCommentError('INVALID_TASK_COMMENT'); };
@@ -120,6 +114,7 @@ export async function mutateCoManagedProjectTaskComment(db: Knex, inputActor: Co
     }
     await owner.table('comment_threads').where('thread_id', threadId).update({ last_activity_at: write.trx.raw('clock_timestamp()'),
       ...(request.kind === 'create' && target ? { reply_count: write.trx.raw('reply_count + 1') } : {}) });
+    await retainCoManagedTaskCommentEvent(write.trx, { tenant: resource.tenant, eventId: request.operationId, taskId: resource.id, commentId, kind: request.kind });
     await current(write, true);
     const [saved] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,
       relationship_id: resource.relationshipId, resource_type: 'project_task', resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,

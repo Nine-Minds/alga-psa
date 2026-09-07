@@ -4,7 +4,7 @@ const TABLE = 'co_management_event_consumers';
 export type CoManagedEventConsumer = 'search-index' | 'internal-notifications' | 'co-managed-email' | 'customer-internal-email' | 'requester-email';
 export function coManagedConversationEventConsumers(eventType: string): CoManagedEventConsumer[] {
   if (eventType === 'TICKET_COMMENT_ADDED') return ['search-index', 'internal-notifications', 'co-managed-email', 'customer-internal-email', 'requester-email'];
-  return ['TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED'].includes(eventType) ? ['search-index'] : [];
+  return ['TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED', 'PROJECT_TASK_COMMENT_CREATED', 'PROJECT_TASK_COMMENT_UPDATED', 'PROJECT_TASK_COMMENT_DELETED'].includes(eventType) ? ['search-index'] : [];
 }
 export function coManagedConsumerAllowedForChannel(channel: string | undefined, consumer: CoManagedEventConsumer): boolean {
   return channel !== 'internal-notifications' || consumer === 'internal-notifications';

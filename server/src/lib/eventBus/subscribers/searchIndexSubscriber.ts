@@ -399,7 +399,7 @@ export async function unregisterSearchIndexSubscriber(): Promise<void> {
 
 async function handleSearchIndexEvent(event: Event): Promise<void> {
   const indexers = resolveSearchIndexersForEvent(event.eventType);
-  if (['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED'].includes(event.eventType) &&
+  if (['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED', 'PROJECT_TASK_COMMENT_CREATED', 'PROJECT_TASK_COMMENT_UPDATED', 'PROJECT_TASK_COMMENT_DELETED'].includes(event.eventType) &&
     isCoManagedUuid(event.id) && isCoManagedUuid(extractTenant(event))) {
     const tenant = extractTenant(event);
     if (!tenant) throw new Error('Missing co-managed search event owner');

@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -11333,4 +11333,137 @@ it('native task comments snapshot command and batch inputs before awaiting their
   const ids = [root], third = pauseConnection(), reading = reactions.getTaskCommentsReactionsBatch(ids);
   await third.started; ids.push(randomUUID()); third.release();
   expect(await reading).toEqual({ reactions: {}, userNames: {} });
+}));
+
+it('task events retain metadata-only qualified intent and consumer work atomically with each canonical revision', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, resource, write, add, ref }: any) => {
+  const command = { operationId: randomUUID(), kind: 'create', audience: 'shared_it', text: 'Never retain this body in the outbox' };
+  const root = await write(principal, command); await write(principal, command);
+  await write(principal, { operationId: randomUUID(), kind: 'edit', comment: ref(root), expectedRevision: 1, text: 'Changed body' });
+  await write(principal, { operationId: randomUUID(), kind: 'delete', comment: ref(root), expectedRevision: 2 });
+  await add(principal, 'organization_private', 'MSP private content');
+  const rows = await customer.table('co_management_event_outbox').where('resource_id', resource.id).orderBy('created_at');
+  expect(rows).toHaveLength(3);
+  expect(rows.map((row: any) => row.event_type)).toEqual(['PROJECT_TASK_COMMENT_CREATED', 'PROJECT_TASK_COMMENT_UPDATED', 'PROJECT_TASK_COMMENT_DELETED']);
+  expect(rows.map((row: any) => row.publication.payload.collaboration.revision)).toEqual([1, 2, 3]);
+  expect(rows.every((row: any) => row.ticket_id === null && row.resource_type === 'project_task' && row.resource_id === resource.id)).toBe(true);
+  expect(JSON.stringify(rows)).not.toMatch(/Never retain|Changed body|MSP private content|actor_display_name/);
+  expect(await customer.table('co_management_event_consumers')).toHaveLength(3);
+  expect(await sponsor.table('co_management_event_outbox')).toHaveLength(0);
+  const { EventSchemas } = await import('@alga-psa/event-schemas');
+  for (const row of rows) {
+    const event = { id: row.event_id, eventType: row.event_type, timestamp: new Date().toISOString(), payload: row.publication.payload };
+    expect(EventSchemas[row.event_type as keyof typeof EventSchemas].safeParse(event).success).toBe(true);
+    expect(EventSchemas[row.event_type as keyof typeof EventSchemas].safeParse({ ...event, payload: { ...event.payload, projectId: randomUUID(), userId: randomUUID(), taskName: 'Injected', commentContent: 'Cached body', oldCommentContent: 'Cached', newCommentContent: 'Cached' } }).success).toBe(false);
+  }
+}));
+
+it('task events roll back the comment, thread, receipts and attribution when intent retention fails', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
+  const name = `task_event_failure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [name, resource.tenant]).toQuery());
+  try { await expect(add(principal, 'shared_it', 'Rollback task event')).rejects.toMatchObject({ constraint: name }); }
+  finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [name]); }
+  for (const table of ['project_task_comments', 'comment_threads', 'collaboration_actor_references', 'co_management_command_receipts', 'co_management_event_outbox', 'co_management_event_consumers']) expect(await customer.table(table)).toHaveLength(0);
+}));
+
+it('task events cancel stale creates but preserve metadata invalidations after audience restriction or deletion', async () => withTaskConversationFixture(async ({ customer, principal, resource, add, write, ref }: any) => {
+  const root = await add(principal, 'shared_it', 'Restrict before dispatch');
+  const other = await add(principal, 'shared_it', 'Delete before dispatch');
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'organization_private' });
+  await write(principal, { operationId: randomUUID(), kind: 'delete', comment: ref(other), expectedRevision: 1 });
+  const { dispatchCoManagedConversationEvents: dispatch } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const send = vi.fn();
+  expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 2, failed: 0 });
+  expect(send.mock.calls[0][0]).toMatchObject({ eventType: 'PROJECT_TASK_COMMENT_DELETED' });
+  expect(JSON.stringify(send.mock.calls)).not.toMatch(/Restrict before|Delete before/);
+}));
+
+it('task events replay stable identities after transport loss and recover incomplete consumers', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
+  const root = await add(principal, 'shared_it', 'Current task source');
+  const { dispatchCoManagedConversationEvents: dispatch } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { consumeCoManagedConversationEvent: consume, recoverCoManagedEventConsumers: recover } = await import('../../../../packages/co-managed/src/conversationEventConsumers');
+  const send = vi.fn().mockRejectedValueOnce(new Error('Redis unavailable')).mockResolvedValue(undefined);
+  expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 0, cancelled: 0, failed: 1 });
+  await customer.table('co_management_event_outbox').update({ next_attempt_at: new Date(0) });
+  expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(send.mock.calls[0][1]).toBe(root.operationId); expect(send.mock.calls[1]).toEqual(send.mock.calls[0]);
+  await customer.table('co_management_event_consumers').update({ next_attempt_at: new Date(0) });
+  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 1, cancelled: 0, failed: 0 });
+  expect(replay.mock.calls[0][2]).toBe('search-index');
+  const event = { id: root.operationId, eventType: 'PROJECT_TASK_COMMENT_CREATED', payload: { tenantId: resource.tenant, taskId: randomUUID(), taskCommentId: randomUUID(), commentContent: 'Forged transport body' } };
+  const effect = vi.fn();
+  await Promise.all([consume(db, event, 'search-index', effect), consume(db, event, 'search-index', effect)]);
+  expect(effect).toHaveBeenCalledTimes(1);
+  expect(effect.mock.calls[0][1].payload).toMatchObject({ taskId: resource.id, taskCommentId: root.commentId });
+  expect(JSON.stringify(effect.mock.calls[0][1])).not.toContain('Forged transport body');
+  expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 0, cancelled: 0, failed: 0 });
+}));
+
+it('task events update actual search state and cannot resurrect deleted comments through delayed edits or backfills', async () => withTaskConversationFixture(async ({ customer, principal, resource, add, write, ref }: any) => {
+  const { handleSearchIndexEventForTest: handle } = await import('../../lib/eventBus/subscribers/searchIndexSubscriber');
+  const { projectTaskCommentIndexer } = await import('../../../../packages/search/src/indexers/project_task_comment');
+  const database = await import('@alga-psa/db'), connection = vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+  vi.stubEnv('SEARCH_INDEX_LIVE', 'true');
+  try {
+    const root = await add(principal, 'shared_it', 'Current indexed task body');
+    const event = async (id: string) => { const row = await customer.table('co_management_event_outbox').where('event_id', id).first(); return { id, eventType: row.event_type, payload: row.publication.payload, timestamp: new Date().toISOString() } as any; };
+    await Promise.all([handle(await event(root.operationId)), handle(await event(root.operationId))]);
+    expect(await customer.table('app_search_index').where({ object_type: 'project_task_comment', object_id: root.commentId }).first()).toMatchObject({ body: 'Current indexed task body' });
+    const edit = await write(principal, { operationId: randomUUID(), kind: 'edit', comment: ref(root), expectedRevision: 1, text: 'Edited task body' });
+    const deletion = await write(principal, { operationId: randomUUID(), kind: 'delete', comment: ref(root), expectedRevision: 2 });
+    await handle(await event(deletion.operationId)); await handle(await event(edit.operationId));
+    expect(await customer.table('app_search_index').where('object_id', root.commentId)).toHaveLength(0);
+    expect(await projectTaskCommentIndexer.loadOne(db, resource.tenant, root.commentId)).toBeNull();
+    expect(await projectTaskCommentIndexer.loadBatch(db, resource.tenant, undefined, 100)).toEqual([]);
+    expect((await customer.table('co_management_event_consumers')).every((row: any) => row.status === 'completed')).toBe(true);
+  } finally { vi.unstubAllEnvs(); connection.mockRestore(); }
+}));
+
+it('task events migration supports rolling ticket producers and refuses loss of retained task history', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
+  const migration = require('../../../migrations/20260907171500_qualify_co_managed_conversation_events.cjs'); await migration.up(db);
+  const ticketId = randomUUID(), eventId = randomUUID();
+  await customer.table('co_management_event_outbox').insert({ tenant: resource.tenant, event_id: eventId, ticket_id: ticketId, comment_id: randomUUID(), thread_id: randomUUID(), event_type: 'TICKET_COMMENT_DELETED', audience: 'organization_private', publication: {}, request_hash: 'a'.repeat(64) });
+  expect(await customer.table('co_management_event_outbox').where('event_id', eventId).first()).toMatchObject({ resource_type: 'ticket', resource_id: ticketId });
+  await add(principal, 'shared_it', 'Retained task event');
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained task conversation event history');
+  await expect(customer.table('co_management_event_outbox').where('event_id', eventId).update({ resource_type: 'project_task' })).rejects.toMatchObject({ constraint: 'co_management_event_outbox_resource_check' });
+}));
+
+it('task events recover native project publications through the actual maintenance handler after transport failure', async () => withNativeTaskCommentsFixture(async ({ customer, resource, comments, publish }: any) => {
+  const database = await import('@alga-psa/db'), connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
+  try {
+    publish.mockImplementation(async (event: any) => { if (event.eventType === 'PROJECT_TASK_COMMENT_CREATED') throw new Error('Task transport offline'); });
+    const id = await comments.createTaskComment({ taskId: resource.id, note: 'Native recoverable body' });
+    const row = await customer.table('co_management_event_outbox').where('comment_id', id).first();
+    expect(row).toMatchObject({ status: 'pending', attempts: 1, resource_type: 'project_task', resource_id: resource.id });
+    expect(JSON.stringify(row.publication)).not.toContain('Native recoverable body');
+    publish.mockResolvedValue(undefined);
+    await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+    const { coManagedNotificationRecoveryHandler } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
+    await coManagedNotificationRecoveryHandler({ tenantId: resource.tenant });
+    const calls = publish.mock.calls.filter(([event]: any[]) => event.eventType === 'PROJECT_TASK_COMMENT_CREATED');
+    expect(calls).toHaveLength(2); expect(calls.every(([, options]: any[]) => options.eventId === row.event_id && options.strict === true)).toBe(true);
+    expect(await customer.table('co_management_event_outbox').where('event_id', row.event_id).first()).toMatchObject({ status: 'published' });
+    expect(await customer.table('co_management_event_consumers').where('event_id', row.event_id).first()).toMatchObject({ status: 'pending', consumer: 'search-index' });
+  } finally { connection.mockRestore(); }
+}));
+
+it('task events roll native comments and legacy notification hooks back if canonical event retention fails', async () => withNativeTaskCommentsFixture(async ({ customer, resource, comments, publish }: any) => {
+  const name = `native_task_event_failure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [name, resource.tenant]).toQuery());
+  try { await expect(comments.createTaskComment({ taskId: resource.id, note: 'Native event rollback' })).rejects.toMatchObject({ constraint: name }); }
+  finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [name]); }
+  expect(await customer.table('project_task_comments')).toHaveLength(0); expect(await customer.table('comment_threads')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('task events reject cached content and mismatched resource identities instead of publishing a corrupted intent', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
+  const root = await add(principal, 'shared_it', 'Protected task body');
+  const { enqueueCoManagedConversationEvent: enqueue, dispatchCoManagedConversationEvents: dispatch } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const row = await customer.table('co_management_event_outbox').where('event_id', root.operationId).first();
+  const intent = { tenant: resource.tenant, eventId: root.operationId, resource: { kind: 'project_task' as const, id: resource.id }, commentId: root.commentId, threadId: root.threadId, audience: row.audience, publication: row.publication };
+  await withTransaction(db, trx => enqueue(trx, intent));
+  await expect(withTransaction(db, trx => enqueue(trx, { ...intent, publication: { ...intent.publication, payload: { ...intent.publication.payload, commentContent: 'Cached secret' } } }))).rejects.toThrow();
+  await expect(withTransaction(db, trx => enqueue(trx, { ...intent, ticketId: randomUUID() } as any))).rejects.toThrow();
+  await customer.table('co_management_event_outbox').where('event_id', root.operationId).update({ resource_id: randomUUID() });
+  const send = vi.fn(); expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 0, cancelled: 0, failed: 1 });
+  expect(send).not.toHaveBeenCalled();
 }));

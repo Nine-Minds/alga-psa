@@ -57,6 +57,7 @@ function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
   tenantJoinIndexerTable(knex, tenant, query, 'projects as p', 'p.project_id', 'ph.project_id');
 
   return query
+    .whereNull('pc.deleted_at')
     .select(
       'pc.task_comment_id',
       'pc.task_id',

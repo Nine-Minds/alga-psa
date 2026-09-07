@@ -46,6 +46,7 @@ function createFirstRowKnex(row: unknown) {
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
     whereNotNull: vi.fn().mockReturnThis(),
+    whereNull: vi.fn().mockReturnThis(),
     andWhere: vi.fn().mockReturnThis(),
     groupBy: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),

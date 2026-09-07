@@ -756,6 +756,15 @@ export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
   timestamp: z.string().datetime().optional(),
 });
 
+/** Body-free qualified task invalidations. Local legacy producers retain their
+ * existing schemas; this variant never fabricates a customer-local user ID. */
+export const CoManagedTaskCommentChangePayloadSchema = z.object({
+  tenantId: z.string().uuid(),
+  taskId: z.string().uuid(), taskCommentId: z.string().uuid(),
+  collaboration: z.object({ kind: z.literal('project_task_comment'), threadId: z.string().uuid(),
+    audience: z.enum(['requester', 'shared_it', 'organization_private']), revision: z.number().int().positive().max(2147483647) }).strict(),
+}).strict();
+
 const ticketCommentMutationSchema = z.object({
   kind: z.enum(['edit', 'delete', 'audience']), threadId: z.string().uuid(),
   audience: z.enum(['requester', 'shared_it', 'organization_private']),
@@ -1328,9 +1337,9 @@ export const EventPayloadSchemas = {
   PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED: ProjectTaskAdditionalAgentPayloadSchema,
   TASK_COMMENT_ADDED: TaskCommentAddedPayloadSchema,
   TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
-  PROJECT_TASK_COMMENT_CREATED: TaskCommentAddedPayloadSchema,
-  PROJECT_TASK_COMMENT_UPDATED: TaskCommentUpdatedPayloadSchema,
-  PROJECT_TASK_COMMENT_DELETED: TaskCommentDeletedPayloadSchema,
+  PROJECT_TASK_COMMENT_CREATED: z.union([CoManagedTaskCommentChangePayloadSchema, TaskCommentAddedPayloadSchema.extend({ collaboration: z.never().optional() })]),
+  PROJECT_TASK_COMMENT_UPDATED: z.union([CoManagedTaskCommentChangePayloadSchema, TaskCommentUpdatedPayloadSchema.extend({ collaboration: z.never().optional() })]),
+  PROJECT_TASK_COMMENT_DELETED: z.union([CoManagedTaskCommentChangePayloadSchema, TaskCommentDeletedPayloadSchema.extend({ collaboration: z.never().optional() })]),
 
   // Projects (domain expansion)
   PROJECT_STATUS_CHANGED: projectStatusChangedEventPayloadSchema,

@@ -1,9 +1,11 @@
 'use server';
 
-import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, registerAfterCommit, registerAfterCommitWithConnection } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { assertNativeTaskNote, withTaskCommentAccess } from '../lib/taskCommentAccess';
-import { projectTaskAudienceSql } from '@alga-psa/co-managed';
+import { randomUUID } from 'node:crypto';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { projectTaskAudienceSql, retainCoManagedTaskCommentEvent, dispatchCoManagedConversationEvents } from '@alga-psa/co-managed';
 import { withAuth } from '@alga-psa/auth';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
@@ -22,7 +24,16 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-function publishCommentEventAfterCommit(trx: Knex.Transaction, event: Parameters<typeof publishEvent>[0]): void {
+async function publishCommentEventAfterCommit(trx: Knex.Transaction, event: Parameters<typeof publishEvent>[0]): Promise<void> {
+  const kinds: Record<string, 'create' | 'edit' | 'delete' | undefined> = { PROJECT_TASK_COMMENT_CREATED: 'create', PROJECT_TASK_COMMENT_UPDATED: 'edit', PROJECT_TASK_COMMENT_DELETED: 'delete' };
+  const kind = kinds[event.eventType];
+  if (kind && await hasCoManagedConversationOwnership(trx, event.payload.tenantId)) {
+    const payload = event.payload as { tenantId: string; taskId: string; taskCommentId: string }, eventId = randomUUID();
+    await retainCoManagedTaskCommentEvent(trx, { tenant: payload.tenantId, eventId, taskId: payload.taskId, commentId: payload.taskCommentId, kind });
+    registerAfterCommitWithConnection(trx, root => dispatchCoManagedConversationEvents(root, payload.tenantId,
+      (publication, id) => publishEvent({ eventType: publication.eventType, payload: publication.payload } as any, { eventId: id, strict: true }), { eventId }).then(() => {}), 'native task conversation delivery');
+    return;
+  }
   registerAfterCommit(trx, () => publishEvent(event), event.eventType);
 }
 
@@ -259,7 +270,7 @@ export const createTaskComment = withAuth(async (
     }
 
     // Publish event (mention extraction happens in event handler)
-    publishCommentEventAfterCommit(trx, {
+    await publishCommentEventAfterCommit(trx, {
       eventType: 'TASK_COMMENT_ADDED',
       payload: {
         tenantId: tenant,
@@ -279,7 +290,7 @@ export const createTaskComment = withAuth(async (
       }
     });
 
-    publishCommentEventAfterCommit(trx, {
+    await publishCommentEventAfterCommit(trx, {
       eventType: 'PROJECT_TASK_COMMENT_CREATED',
       payload: {
         tenantId: tenant,
@@ -431,7 +442,7 @@ export const updateTaskComment = withAuth(async (
 
     // Publish event for smart mention notifications
     // Event handler will compare old vs new mentions and only notify NEW ones
-    publishCommentEventAfterCommit(trx, {
+    await publishCommentEventAfterCommit(trx, {
       eventType: 'TASK_COMMENT_UPDATED',
       payload: {
         tenantId: tenant,
@@ -446,7 +457,7 @@ export const updateTaskComment = withAuth(async (
       }
     });
 
-    publishCommentEventAfterCommit(trx, {
+    await publishCommentEventAfterCommit(trx, {
       eventType: 'PROJECT_TASK_COMMENT_UPDATED',
       payload: {
         tenantId: tenant,
@@ -524,7 +535,7 @@ export const deleteTaskComment = withAuth(async (
           updated_at: now,
         });
 
-      publishCommentEventAfterCommit(trx, {
+      await publishCommentEventAfterCommit(trx, {
         eventType: 'PROJECT_TASK_COMMENT_DELETED',
         payload: {
           tenantId: tenant,
@@ -560,7 +571,7 @@ export const deleteTaskComment = withAuth(async (
         .del();
     }
 
-    publishCommentEventAfterCommit(trx, {
+    await publishCommentEventAfterCommit(trx, {
       eventType: 'PROJECT_TASK_COMMENT_DELETED',
       payload: {
         tenantId: tenant,

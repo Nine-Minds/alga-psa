@@ -330,3 +330,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `customerWork.ts`, `nativeTaskCommentAccess.ts`.
 - **Gate:** Two callers share the record shape; live shared relationships and retained owner-local batches have distinct admission and lifetime requirements. WATCH.
 - **Status:** watching. Keep projections aligned; reconsider a common local-resource admission layer when export and paid-upgrade paths settle. Do not force post-termination customer reads through an active-trust requirement.
+
+## qualified-conversation-event-outbox — friction
+- **What:** The durable conversation engine assumed every source was a ticket, preventing task producers from using the existing claim/retry/consumer-completion machinery.
+- **Where:** Conversation outbox, task writers, native project event publication, maintenance recovery, search subscriber.
+- **Gate:** Two concrete source families, stable retry machinery, high duplication and disclosure costs. ACT / bounded-now.
+- **Status:** revised. The existing outbox now retains qualified resource type/ID. Ticket identities and hashes remain compatible, including rolling older ticket writers; task events carry strict metadata and resolve current source independently. Existing dispatch and consumer recovery remain the only engine. Canonical task changes enroll search work atomically; private MSP notes enroll none. Task notification and workflow authority remain separate unfinished consumers.
+
+## task-conversation-audience — pattern
+- **What:** Task writers, native access and background delivery all need explicit task audience rules; legacy task flags have different semantics from ticket flags.
+- **Where:** `projectTaskAudience.ts`, task conversation reader/writer, native actions and task event source resolver.
+- **Gate:** Three live callers and stable compatibility rules. ACT / bounded-now.
+- **Status:** extracted. Pure task audience SQL/value helpers preserve legacy privacy without importing the task mutation engine into event delivery.
