@@ -30,7 +30,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
-import { CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
@@ -80,6 +80,11 @@ export class TimeSheetService extends BaseService<any> {
     try { return await work(); } catch (error) {
       if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError('Permission denied: Cannot access this time sheet');
       if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
+      if (error instanceof NativeTimeSheetError) {
+        if (error.code === 'SHEET_INVALID_INPUT') throw new BadRequestError(error.message);
+        throw new ConflictError(error.message);
+      }
+      if (error instanceof Error && error.message === 'Time period not found') throw new NotFoundError(error.message);
       if (error instanceof NativeTimeReviewError) {
         if (error.code === 'TIME_REVIEW_NOT_FOUND') throw new NotFoundError(error.message);
         throw new ConflictError(error.message);
@@ -299,6 +304,14 @@ export class TimeSheetService extends BaseService<any> {
 
   async create(data: CreateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => withTransaction(knex, async trx => {
+        const result = await createCoManagedNativeTimeSheet(trx, context.tenant, { userId: data.user_id ?? context.userId, periodId: data.period_id, notes: data.notes }, async () => this.sheetActor(context));
+        if (!result.handled) return result;
+        const response = await this.currentSheet(trx, result.sheet.id, context);
+        if (!response.handled) throw new CoManagedSharedWorkError();
+        return response;
+      }));
+      if (current.handled) return current.sheet;
       
       const created = await withTransaction(knex, async (trx) => {
         const timeSheetData = {
@@ -336,6 +349,13 @@ export class TimeSheetService extends BaseService<any> {
 
   async update(id: string, data: UpdateTimeSheetData, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.withSheetErrors(() => withTransaction(knex, async trx => {
+        if (!await editCoManagedNativeTimeSheet(trx, context.tenant, id, data, async () => this.sheetActor(context), event => publishEvent(event))) return { handled: false as const };
+        const response = await this.currentSheet(trx, id, context);
+        if (!response.handled) throw new CoManagedSharedWorkError();
+        return response;
+      }));
+      if (current.handled) return current.sheet;
       
       await withTransaction(knex, async (trx) => {
         const existing = await this.getById(id, context);

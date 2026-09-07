@@ -138,6 +138,8 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
     if (options.view) {
       if (hidden(['id', 'tenant', 'user_id', 'period_id', 'approval_status'])) throw new CoManagedSharedWorkError();
       view = { ...sheet };
+      // Persistent sheet notes can mention every source, just like comments.
+      if (!completeContent) delete view.notes;
       for (const field of Object.keys(view)) if (hidden([field])) delete view[field];
       for (const field of ['submitted_at', 'approved_at', 'created_at', 'updated_at']) if (field in view) view[field] = view[field] ? new Date(view[field]).toISOString() : undefined;
       if (!view.approved_by) delete view.approved_by;

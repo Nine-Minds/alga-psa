@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -13730,4 +13730,80 @@ it('customer sheet API honors metric and comment aliases and keeps history reada
   await expireCoManagedEntitlement(principal.tenant);
   expect(await sheetService.getWithDetails(entry.time_sheet_id, context)).toEqual(detail);
   await expect(sheetService.submitTimeSheet(entry.time_sheet_id, {}, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer sheet edits persist notes and serialize explicit creation without changing an existing sheet', async () => withTimeSheetApiFixture(async ({ sheetService, context, customer, operations }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  const results = await Promise.allSettled([
+    sheetService.create({ period_id: periodId, notes: 'Initial private notes' }, context),
+    sheetService.create({ period_id: periodId, notes: 'Other private notes' }, context),
+  ]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { statusCode: 409 } });
+  const [stored] = await customer.table('time_sheets').where('period_id', periodId);
+  expect(stored.notes).toMatch(/private notes/);
+  expect(await sheetService.update(stored.id, { notes: 'Replacement notes' }, context)).toMatchObject({ notes: 'Replacement notes', approval_status: 'DRAFT' });
+  expect(await sheetService.update(stored.id, { notes: '' }, context)).toMatchObject({ notes: '' });
+  expect(await operations.fetchOrCreateTimeSheet(context.userId, periodId)).toMatchObject({ id: stored.id, notes: '' });
+  expect(await customer.table('time_sheet_comments').where('time_sheet_id', stored.id)).toHaveLength(0);
+}));
+
+it('customer sheet edits use real workflow permissions and reject arbitrary approval assignments', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, publish }: any) => {
+  expect(await sheetService.update(entry.time_sheet_id, { notes: 'Private submission context', approval_status: 'SUBMITTED' }, context)).toMatchObject({ notes: 'Private submission context', approval_status: 'SUBMITTED' });
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+  await expect(sheetService.update(entry.time_sheet_id, { notes: 'Late edit' }, context)).rejects.toMatchObject({ statusCode: 409 });
+  const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_sheet', action: 'approve' }).select('permission_id'));
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  await expect(sheetService.update(entry.time_sheet_id, { approval_status: 'APPROVED' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('role_permissions').insert(permissions);
+  expect(await sheetService.update(entry.time_sheet_id, { approval_status: 'APPROVED' }, context)).toMatchObject({ approval_status: 'APPROVED', approved_by: context.userId });
+  await expect(sheetService.update(entry.time_sheet_id, { approval_status: 'DRAFT' }, context)).rejects.toMatchObject({ statusCode: 409 });
+  await expect(sheetService.update(entry.time_sheet_id, { approval_status: 'CHANGES_REQUESTED' }, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+  expect(JSON.stringify(publish.mock.calls)).not.toContain('Private submission context');
+}));
+
+it('customer sheet edits hide whole-sheet notes under partial source visibility and reject blind replacements', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, resource, user, customer }: any) => {
+  await sheetService.update(entry.time_sheet_id, { notes: 'Private notes about the whole project' }, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet notes source scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect((await sheetService.getWithDetails(entry.time_sheet_id, context)).notes).toBeUndefined();
+  expect(await sheetService.search({ query: 'whole project', fields: ['notes'], limit: 10 }, context)).toEqual([]);
+  await expect(sheetService.update(entry.time_sheet_id, { notes: '' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ notes: 'Private notes about the whole project' });
+}));
+
+it('customer sheet edits honor create and update masks and block writes after entitlement expiry', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, resource, user, customer, principal }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet notes masks', actorUserId: user.user_id });
+  for (const action of ['create', 'update']) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_sheet', action, templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(sheetService.create({ period_id: periodId, notes: 'Masked create' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(0);
+  await expect(sheetService.update(entry.time_sheet_id, { notes: '' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  const created = await sheetService.create({ period_id: periodId }, context);
+  expect(created).toMatchObject({ approval_status: 'DRAFT' });
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(sheetService.update(created.id, {}, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await sheetService.getById(created.id, context)).toMatchObject({ id: created.id });
+}));
+
+it('customer sheet edits roll notes creation and workflow events back on final key expiry', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, publish }: any) => {
+  const periodId = await newSheetPeriod(customer, context.tenant);
+  await db.raw(`CREATE FUNCTION expire_sheet_edit_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_sheet_edit_key AFTER INSERT OR UPDATE ON time_sheets FOR EACH ROW EXECUTE FUNCTION expire_sheet_edit_key()');
+  publish.mockClear();
+  try {
+    await expect(sheetService.create({ period_id: periodId, notes: 'Must roll back creation' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(0);
+    await expect(sheetService.update(entry.time_sheet_id, { notes: 'Must roll back edit', approval_status: 'SUBMITTED' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ notes: null, approval_status: 'DRAFT' });
+    expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_sheet_edit_key ON time_sheets'); await db.raw('DROP FUNCTION expire_sheet_edit_key()'); }
 }));

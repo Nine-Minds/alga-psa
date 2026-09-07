@@ -80,6 +80,9 @@ export async function commandCoManagedNativeTimeSheets(db: Knex, tenant: string,
         created_at: trx.fn.now(), is_approver: true,
       });
       const fields = policies.get(sheet.id)!;
+      // A command receipt does not disclose sheet-wide free text; detail reads
+      // admit its complete content before projecting persistent notes.
+      delete updated.notes;
       returned.push(Object.fromEntries(Object.entries(updated).map(([field, value]) => [field, isNativeTimeFieldHidden(fields, [field]) ? null : value])));
     }
     for (const { entry } of entries) {

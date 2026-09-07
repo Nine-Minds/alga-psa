@@ -477,3 +477,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `TimeSheetService`, manual `ApiTimeSheetController` handlers, shared native sheet read/list/command/comment/lifecycle domains.
 - **Gate:** The existing domains already own the same permission, visibility and transition invariants. ACT / bounded-now as API adapters, with a pure projection-to-DTO/filter/sort helper.
 - **Status:** Sheet reads/list/search/comments/workflow/removal now reuse current domains and actual API credentials. Command feedback and safe response reads share the mutation transaction. Five focused source-mode scenarios verified across the initial and corrected three-case follow-up. Generic create/update/notes, statistics, export fidelity, period/schedule adapters and broader verification remain pending.
+
+## native-time-sheet-create-edit — friction
+- **What:** The generic API create/update contract had no persistent notes storage and could directly assign approval state, while lazy sheet opening already owned user-period creation serialization.
+- **Where:** `nativeTimeSheetLifecycle`, `nativeTimeRead`, `nativeTimeSheetCommand`, `TimeSheetService`, additive timesheet notes migration.
+- **Gate:** Extend the existing lifecycle engine with distinct explicit-create and lazy-open entry points; compose existing workflow commands instead of duplicating transitions. ACT / bounded-now.
+- **Status:** Explicit creation rejects duplicates under the existing user lock; retained note edits require complete sheet content and current update authority. Status assignments use review commands. Read projections and command receipts protect sheet-wide free text. Five focused source-mode scenarios pass in 9.40 seconds; broad validation remains deferred.
