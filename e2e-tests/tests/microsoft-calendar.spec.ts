@@ -65,7 +65,18 @@ if (process.env.E2E_EDITION !== 'enterprise') {
       // before the separate inbound event/recovery journey below.
       const outboundTitle = `@alga UI-created visit ${actors.runId}`;
       await page.goto('/msp/schedule');
-      await page.locator('.rbc-day-slot.rbc-today .rbc-time-slot').nth(24).click();
+      const todayColumn = page.locator('.rbc-day-slot.rbc-today');
+      const noonSlot = todayColumn.locator('.rbc-time-slot').nth(24);
+      await noonSlot.scrollIntoViewIfNeeded();
+      const slotBounds = await noonSlot.boundingBox();
+      const columnBounds = await todayColumn.boundingBox();
+      if (!slotBounds || !columnBounds) throw new Error('Today calendar column and noon slot must be visible');
+      // The event layer covers the visual slot grid. Click its owning day
+      // column at noon so the real calendar selection handler receives input.
+      await todayColumn.click({ position: {
+        x: slotBounds.x + slotBounds.width / 2 - columnBounds.x,
+        y: slotBounds.y + slotBounds.height / 2 - columnBounds.y,
+      } });
       const newEntryDialog = page.getByRole('dialog', { name: 'New Entry', exact: true });
       await newEntryDialog.locator('#title').fill(outboundTitle);
       await newEntryDialog.locator('#save-entry-btn').click();
