@@ -13308,3 +13308,94 @@ it('native time review rejects draft approval and lapsed writes and serializes r
   expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Reopen after expiry' }, context)).toMatchObject([{ success: false }]);
   expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
 }));
+
+async function withNativeTimeSheetCommandFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeTimeSheetReadFixture(async (fixture: any) => {
+    const sheets = await import('../../../../packages/scheduling/src/actions/timeSheetActions');
+    const operations = await import('../../../../packages/scheduling/src/actions/timeSheetOperations');
+    const events = await import('@alga-psa/event-bus/publishers');
+    await work({ ...fixture, sheets, operations, emitted: vi.mocked(events.publishEvent) });
+  });
+}
+
+it('native time sheet commands support submission review approval and explicit reversal with private audit text', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, sheets, operations, emitted }: any) => {
+  emitted.mockClear();
+  expect(await operations.submitTimeSheet(entry.time_sheet_id)).toMatchObject({ approval_status: 'SUBMITTED' });
+  await sheets.requestChangesForTimeSheet(entry.time_sheet_id, context.userId);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
+  await operations.submitTimeSheet(entry.time_sheet_id);
+  await sheets.approveTimeSheet(entry.time_sheet_id, context.userId);
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'APPROVED', approved_by: context.userId });
+  await sheets.reverseTimeSheetApproval(entry.time_sheet_id, context.userId, 'Private reversal explanation');
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED', billing_mode: 'operational', billable_duration: 0 });
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_by: null });
+  expect((await customer.table('time_sheet_comments').select('comment')).map((row: any) => row.comment)).toContain('Approval reversed: Private reversal explanation');
+  expect(emitted).toHaveBeenCalledTimes(5); expect(JSON.stringify(emitted.mock.calls)).not.toMatch(/Private reversal|Private API/);
+}));
+
+it('native time sheet commands let technicians submit and preserve approved entries on a returned sheet', async () => withNativeTimeSheetCommandFixture(async ({ entry, create, context, customer, sheets, operations }: any) => {
+  const next = await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Pending planning' });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'APPROVED' });
+  await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'CHANGES_REQUESTED' });
+  const permissions = await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('action', 'approve').select('permission_id'));
+  await customer.table('role_permissions').whereIn('permission_id', permissions.map((row: any) => row.permission_id)).del();
+  await operations.submitTimeSheet(entry.time_sheet_id);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+  expect(await customer.table('time_entries').where('entry_id', next.entry_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+  await customer.table('role_permissions').insert(permissions);
+  await sheets.requestChangesForTimeSheet(entry.time_sheet_id, context.userId);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+  expect(await customer.table('time_entries').where('entry_id', next.entry_id).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
+}));
+
+it('native time sheet commands cannot act on a whole sheet with an excluded source or forged approver', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, sheets, operations, user, resource, emitted }: any) => {
+  await operations.submitTimeSheet(entry.time_sheet_id); emitted.mockClear();
+  await expect(sheets.approveTimeSheet(entry.time_sheet_id, randomUUID())).rejects.toThrow();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Whole sheet scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  await expect(sheets.approveTimeSheet(entry.time_sheet_id, context.userId)).rejects.toThrow();
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+  expect(await customer.table('time_sheet_comments')).toHaveLength(0); expect(emitted).not.toHaveBeenCalled();
+}));
+
+it('native time sheet commands validate bulk members before committing and approve all admitted sheets atomically', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, sheets, operations, emitted }: any) => {
+  await operations.submitTimeSheet(entry.time_sheet_id); emitted.mockClear();
+  expect(await sheets.bulkApproveTimeSheets([entry.time_sheet_id, randomUUID()], context.userId)).toMatchObject({ messageKey: 'msp/time-entry:errors.timeSheet.notFoundRefresh' });
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+  expect(emitted).not.toHaveBeenCalled();
+  const periodId = randomUUID(), sheetId = randomUUID(), entryId = randomUUID();
+  const originalSheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first(), originalEntry = await customer.table('time_entries').where('entry_id', entry.entry_id).first();
+  await customer.table('time_periods').insert({ tenant: context.tenant, period_id: periodId, start_date: '2026-09-14', end_date: '2026-09-21' });
+  await customer.table('time_sheets').insert({ ...originalSheet, id: sheetId, period_id: periodId });
+  await customer.table('time_entries').insert({ ...originalEntry, entry_id: entryId, time_sheet_id: sheetId, work_date: '2026-09-15', start_time: '2026-09-15T09:00:00Z', end_time: '2026-09-15T10:30:00Z' });
+  expect(await sheets.bulkApproveTimeSheets([entry.time_sheet_id, sheetId], context.userId)).toEqual({ success: true });
+  expect((await customer.table('time_sheets').select('approval_status')).every((row: any) => row.approval_status === 'APPROVED')).toBe(true);
+  expect((await customer.table('time_entries').select('approval_status')).every((row: any) => row.approval_status === 'APPROVED')).toBe(true);
+  expect(emitted).toHaveBeenCalledTimes(2);
+}));
+
+it('native time sheet commands roll back entries and sheet state when the session expires at commit admission', async () => withNativeTimeSheetCommandFixture(async ({ entry, customer, operations, sessionId, emitted }: any) => {
+  emitted.mockClear();
+  await db.raw(`CREATE FUNCTION expire_sheet_command_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND session_id = '${sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_sheet_command_session AFTER UPDATE ON time_sheets FOR EACH ROW EXECUTE FUNCTION expire_sheet_command_session()');
+  try {
+    await expect(operations.submitTimeSheet(entry.time_sheet_id)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+    expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+    expect(emitted).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_sheet_command_session ON time_sheets'); await db.raw('DROP FUNCTION expire_sheet_command_session()'); }
+}));
+
+it('native time sheet commands refuse reversal when any entry has been invoiced after PSA upgrade', async () => withTimeAllocationFixture(async ({ entry, commercial, context, customer }: any) => {
+  const sheets = await import('../../../../packages/scheduling/src/actions/timeSheetActions');
+  await customer.table('time_entries').update({ approval_status: 'APPROVED' });
+  await customer.table('time_entries').where('entry_id', commercial.entry_id).update({ invoiced: true });
+  await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'APPROVED' });
+  await expect(sheets.reverseTimeSheetApproval(entry.time_sheet_id, context.userId, 'Cannot reopen invoiced history')).rejects.toThrow('Invoiced time');
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+  expect(await customer.table('time_sheet_comments')).toHaveLength(0);
+}));

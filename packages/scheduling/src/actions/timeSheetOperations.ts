@@ -1,5 +1,8 @@
 'use server'
 
+import { commandCoManagedNativeTimeSheets } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { Knex } from 'knex'; // Import Knex type
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
@@ -130,6 +133,9 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
   const {knex: db} = await createTenantKnex();
 
   try {
+    const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [validatedParams.timeSheetId], command: 'submit' },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return current.sheets[0] as ITimeSheet;
     if (!await hasPermission(user, 'time_sheet', 'submit', db)) {
       throw new Error('Permission denied: Cannot submit timesheets');
     }

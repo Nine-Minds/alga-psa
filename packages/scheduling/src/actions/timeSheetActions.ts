@@ -11,6 +11,9 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
+import { commandCoManagedNativeTimeSheets } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { formatISO } from 'date-fns';
 import { toPlainDate } from '@alga-psa/core';
@@ -241,6 +244,9 @@ export const addCommentToTimeSheet = withAuth(async (
 export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheetIds: string[], managerId: string): Promise<{ success: true } | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: timeSheetIds, command: 'approve', actingUserId: managerId },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return { success: true };
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot approve timesheets');
@@ -507,6 +513,9 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
 export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [timeSheetId], command: 'approve', actingUserId: approverId },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return;
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot approve timesheets');
@@ -598,6 +607,9 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
 export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [timeSheetId], command: 'request_changes', actingUserId: approverId },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return;
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {
       throw new Error('Permission denied: Cannot request changes for timesheets');
@@ -659,6 +671,9 @@ export const reverseTimeSheetApproval = withAuth(async (
 ): Promise<void | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await commandCoManagedNativeTimeSheets(db, tenant, { sheetIds: [timeSheetId], command: 'reverse', reason, actingUserId: approverId },
+      () => resolveNativeTimeBrowserActor(user, tenant), event => publishEvent(event));
+    if (current.handled) return;
 
     if (!await hasPermission(user, 'time_sheet', 'reverse', db)) {
       throw new Error('Permission denied: Cannot reverse timesheet approvals');

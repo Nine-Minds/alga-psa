@@ -30,7 +30,7 @@ export async function admitCoManagedNativeTimeSave(trx: Knex.Transaction, inputA
  * caller confirms the canonical row under lock. Deletion and review check
  * transitions after this boundary so conflicts cannot reveal out-of-scope state. */
 export async function admitCoManagedNativeTimeSource(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
-  input: TimeSaveInput, action: 'read' | 'create' | 'update' | 'delete' | 'review'): Promise<CoManagedNativeTimeAccess> {
+  input: TimeSaveInput, action: 'read' | 'create' | 'update' | 'delete' | 'review' | 'submit'): Promise<CoManagedNativeTimeAccess> {
   return admitNativeTimeAccess(trx, inputActor, input, action);
 }
 
@@ -66,7 +66,7 @@ export async function admitCoManagedNativeTimeOwner(trx: Knex.Transaction, actor
 }
 
 async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
-  input: TimeSaveInput, action: 'save' | 'read' | 'create' | 'update' | 'delete' | 'review'): Promise<CoManagedNativeTimeAccess> {
+  input: TimeSaveInput, action: 'save' | 'read' | 'create' | 'update' | 'delete' | 'review' | 'submit'): Promise<CoManagedNativeTimeAccess> {
   const reading = action === 'read', sourceOnly = action !== 'save';
   const actor = snapshotCoManagedAuthenticatedActor(inputActor), owner = tenantDb(trx, actor.tenant);
   input = { ...input };
@@ -88,10 +88,10 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
     const sheetQuery = owner.table('time_sheets').where('id', id);
     if (reading) sheetQuery.forShare(); else sheetQuery.forUpdate();
     const sheet = await sheetQuery.first('user_id', 'approval_status', 'period_id');
-    if (!sheet || sheet.user_id !== subjectUserId || (!reading && action !== 'delete' && action !== 'review' && !['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status))) throw new CoManagedSharedWorkError();
+    if (!sheet || sheet.user_id !== subjectUserId || (!reading && action !== 'delete' && action !== 'review' && action !== 'submit' && !['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status))) throw new CoManagedSharedWorkError();
     if (!await owner.table('time_periods').where('period_id', sheet.period_id).forShare().first('period_id')) throw new CoManagedSharedWorkError();
   }
-  if (!reading && action !== 'delete' && action !== 'review' && input.approval_status && input.approval_status !== 'DRAFT' && input.approval_status !== 'CHANGES_REQUESTED') throw new CoManagedSharedWorkError();
+  if (!reading && action !== 'delete' && action !== 'review' && action !== 'submit' && input.approval_status && input.approval_status !== 'DRAFT' && input.approval_status !== 'CHANGES_REQUESTED') throw new CoManagedSharedWorkError();
   if (hint && (hint.invoiced || !['DRAFT', 'CHANGES_REQUESTED'].includes(hint.approval_status))) throw new CoManagedSharedWorkError();
 
   const sources = [input, ...(hint ? [hint] : [])];
@@ -148,14 +148,14 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
     const sourceId = source.work_item_type === 'project_task' ? 'task_id' : source.work_item_type === 'ticket' ? 'ticket_id' : source.work_item_type === 'interaction' ? 'interaction_id' : 'entry_id';
     if (isCoManagedReadFieldHidden(fields, ['time_entries', 'work_item_id', sourceId, `values.${sourceId}`])) throw new CoManagedSharedWorkError();
     const timeRecord = { ...record, id: input.entry_id || undefined, ownerUserId: subjectUserId, assignedUserIds: [subjectUserId] };
-    const timeAction = action === 'review' ? 'approve' : sourceOnly ? action : input.entry_id ? 'update' : 'create';
+    const timeAction = action === 'review' ? 'approve' : action === 'submit' ? 'update' : sourceOnly ? action : input.entry_id ? 'update' : 'create';
     const timePolicy = await authorizeCoManagedLocalRecord(trx, actor, subject, 'time_entry', timeAction, timeRecord);
     const timeFields = [...timePolicy.redactedFields];
     // These commands also require current read scope. Response-producing writes must
     // admit that response, including stored notes omitted from a partial edit.
     if (!reading) timeFields.push(...(await authorizeCoManagedLocalRecord(trx, actor, subject, 'time_entry', 'read', timeRecord)).redactedFields);
     redactedTimeFields.push(...timeFields);
-    if (!reading && action !== 'delete' && action !== 'review' && isNativeTimeFieldHidden(timeFields, ['notes', 'start_time', 'end_time', 'work_item_id', 'work_item_type', 'time_sheet_id', 'user_id'])) throw new CoManagedSharedWorkError();
+    if (!reading && action !== 'delete' && action !== 'review' && action !== 'submit' && isNativeTimeFieldHidden(timeFields, ['notes', 'start_time', 'end_time', 'work_item_id', 'work_item_type', 'time_sheet_id', 'user_id'])) throw new CoManagedSharedWorkError();
     const hidden = (names: string[]) => isCoManagedReadFieldHidden(fields, names.flatMap(name => [name, `values.${name}`, `project_tasks.${name}`, `projects.${name}`, `project_phases.${name}`, `tickets.${name}`]));
     if (hidden(['name', 'title', 'task_name'])) workItem.name = '';
     if (hidden(['description', 'url'])) workItem.description = '';

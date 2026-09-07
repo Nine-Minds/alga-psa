@@ -447,3 +447,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `updateTimeEntryApprovalStatus`, REST `approveTimeEntries` / `requestChanges`, `nativeTimeReview`.
 - **Gate:** Shared authorization, financial-state and feedback-transaction invariants across two adapters. ACT / bounded-now in the approved time workstream.
 - **Status:** Shared per-entry review command implemented with actual credential, delegation, source/entry/sheet policy, mutation guards, transition checks, billing evidence rejection and after-commit identity-only events. Six focused source checks passed. Whole-sheet commands, bulk sheet operations, optional approval-note storage and broader mutation/lock verification remain pending.
+
+## native-time-sheet-command-authority — pattern
+- **What:** Submission, single/bulk approval, return and reversal must authorize every affected entry under one retained sheet transaction; filtered views cannot authorize hidden work.
+- **Where:** `timeSheetOperations.submitTimeSheet`, four review actions in `timeSheetActions`, shared `nativeTimeSheetCommand`.
+- **Gate:** Five adapters share high-cost scope, state, financial and atomicity invariants. ACT / bounded-now in the approved time workstream.
+- **Status:** shared all-or-nothing engine retains owner/sheet/source/entry policy and state, checks all billing evidence, stores audit comments and queues identity events after commit. Six focused source-mode scenarios validated, including a two-case follow-up for localized bulk errors and actual session-expiry rollback. Broader sheet/comment readers, related comment writes/deletion, API sheet commands and wider concurrent lock ordering remain pending.
