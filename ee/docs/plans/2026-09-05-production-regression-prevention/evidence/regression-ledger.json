@@ -643,6 +643,40 @@
         "Current candidate native CI remains unverified.",
         "Auth, RBAC and product-access guards are substituted. Transaction/savepoint, validation and persistence behavior are real."
       ]
+    },
+    {
+      "id": "tax-threshold-minimum-and-gaps",
+      "journey": "Calculate tax using configured threshold bounds",
+      "missingBoundary": "Nonzero first minimum and untaxed gaps between brackets",
+      "baseRevision": "5732b3284c",
+      "evidence": "tax-threshold-boundaries.json",
+      "before": {
+        "failed": 4,
+        "passed": 14
+      },
+      "after": {
+        "unitPassed": 57,
+        "unitTodo": 3,
+        "databasePassed": 30
+      },
+      "classification": "discovered-during-regression-testing",
+      "incident": null,
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/tests/tax/taxService.thresholdsAndComposite.test.ts",
+        "packages/billing/src/services/taxService.rateSelection.db.test.ts"
+      ],
+      "ci": {
+        "unitWorkflow": ".github/workflows/unit-tests.yml",
+        "databaseWorkflow": ".github/workflows/integration-tests.yml",
+        "databaseRunner": "scripts/run-workspace-db-tests.mjs"
+      },
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Existing three tax policy TODOs remain unresolved.",
+        "Local focused runs, not full candidate native execution.",
+        "Database fixture substitutes tenant connection context and rolls back each test."
+      ]
     }
   ]
 }

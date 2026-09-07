@@ -66,6 +66,24 @@ beforeEach(async () => {
 afterEach(async () => { await context.db?.rollback(); context.db = undefined; });
 
 describe('TaxService PostgreSQL rate selection', () => {
+  it('honors persisted threshold minima and gaps with PostgreSQL numeric values', async () => {
+    const first = randomUUID(), second = randomUUID();
+    await context.db!('tax_rate_thresholds').insert([
+      { tax_rate_threshold_id: first, tax_rate_id: defaultRateId, min_amount: 10000, max_amount: 20000, rate: 5 },
+      { tax_rate_threshold_id: second, tax_rate_id: defaultRateId, min_amount: 30000, max_amount: null, rate: 10 },
+    ]);
+    const service = new TaxService();
+    for (const [amount, expectedTax, ids] of [
+      [5000, 0, []], [10000, 0, []], [15000, 250, [first]],
+      [25000, 500, [first]], [35000, 1000, [first, second]],
+    ] as const) {
+      const result = await service.calculateTax(clientId, amount, '2026-06-01');
+      expect(result.taxAmount).toBe(expectedTax);
+      expect(result.taxRate).toBeCloseTo(expectedTax / amount * 100);
+      expect(result.appliedThresholds?.map(threshold => threshold.tax_rate_threshold_id)).toEqual(ids);
+    }
+  });
+
   it('create and update actions persist a valid rate through their real transactions', async () => {
     const saved = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
     const { tax_rate_id: omitted, ...data } = saved;

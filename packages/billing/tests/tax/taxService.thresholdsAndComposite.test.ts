@@ -111,6 +111,31 @@ describe('TaxService threshold-based tax', () => {
     expect((result as any).appliedThresholds).toHaveLength(1);
   });
 
+  it.each([[5000, 0], [10000, 0], [15000, 500], [25000, 1000]])(
+    'only taxes the portion inside a bracket with a nonzero minimum (%s cents)', async (amount, expectedTax) => {
+      setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false });
+      vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+        { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 10000, max_amount: 20000, rate: 10 },
+      ] as any);
+      const result = await new TaxService().calculateTax('client-1', amount, DATE);
+      expect(result.taxAmount).toBe(expectedTax);
+      expect(result.taxRate).toBeCloseTo(expectedTax / amount * 100);
+      expect(result.appliedThresholds?.map(threshold => threshold.tax_rate_threshold_id))
+        .toEqual(amount > 10000 ? ['t1'] : []);
+    },
+  );
+
+  it('does not shift later brackets down over an untaxed gap', async () => {
+    setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false });
+    vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([
+      { tax_rate_threshold_id: 't1', tax_rate_id: 'rate-1', min_amount: 0, max_amount: 10000, rate: 5 },
+      { tax_rate_threshold_id: 't2', tax_rate_id: 'rate-1', min_amount: 20000, max_amount: null, rate: 10 },
+    ] as any);
+    const result = await new TaxService().calculateTax('client-1', 25000, DATE);
+    expect(result.taxAmount).toBe(1000);
+    expect(result.taxRate).toBe(4);
+  });
+
   it('ceils fractional cents within each bracket', async () => {
     setupDefaultRate({ tax_rate_id: 'rate-1', tax_percentage: 0, is_composite: false });
     vi.mocked(ClientTaxSettings.getTaxRateThresholds).mockResolvedValue([

@@ -2296,3 +2296,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Fresh-install gate already automatically requires landed browser files, but deleting a critical file could remove it from both producer and consumer inventories. Added consumer-owned minimum for login, usage invoice preview, portal ticket round-trip and invoice generation, required independently for CE and EE. Other landed files remain automatically discovered.
 - Behavioral artifact regression removes each of four required files from candidate inventory and one edition’s otherwise green collection/results. All eight scenarios fail with the missing journey named. Fresh-install and shared candidate gate tests pass; evidence: evidence/browser-critical-floor.json.
 - Does not claim full product runtime or semantic assertion coverage, native CI or effective protections. Broad F018 remains open until current native execution proves the landed journey set. No broad flags changed.
+
+### 2026-09-07 — fix tax bracket minima and gaps
+
+- Found an incidental calculation bug: sequential remaining-amount allocation ignored a nonzero first min_amount and shifted later brackets across untaxed gaps. UI/schema permit nonzero minima; the editor surfaces gaps. Added boundary/gap behavioral cases before changing code: four fail, 14 pass.
+- Compute taxable intersection of each configured bracket with the original positive amount. Existing contiguous brackets and per-bracket rounding remain intact. Focused tax suites: 57 pass, three pre-existing policy TODOs remain. Real PostgreSQL threshold persistence/readback suite: 30 pass with rollback cleanup.
+- Recorded discovered defect in regression-ledger.json, without claiming a production incident. Evidence: evidence/tax-threshold-boundaries.json. No full native CI claim or broad flags changed.

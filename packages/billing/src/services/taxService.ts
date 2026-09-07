@@ -260,19 +260,15 @@ export class TaxService {
 
     if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, appliedThresholds: [] };
     let taxAmount = 0;
-    let remainingAmount = netAmount;
     const appliedThresholds: ITaxRateThreshold[] = [];
 
     for (const threshold of thresholds) {
       console.log(`Processing threshold: ${JSON.stringify(threshold)}`);
-      if (remainingAmount <= 0) {
-        console.log('Remaining amount is 0 or less. Breaking out of threshold loop.');
-        break;
-      }
-
-      const taxableAmount = threshold.max_amount
-        ? Math.min(remainingAmount, threshold.max_amount - threshold.min_amount)
-        : remainingAmount;
+      // Bounds refer to the original base, not the remainder after earlier
+      // brackets. A nonzero first minimum or a gap must stay untaxed.
+      const taxableAmount = Math.max(0,
+        Math.min(netAmount, threshold.max_amount ?? netAmount) - threshold.min_amount);
+      if (taxableAmount === 0) continue;
 
       console.log(`Taxable amount for this threshold: ${taxableAmount}`);
 
@@ -280,11 +276,9 @@ export class TaxService {
       console.log(`Tax amount for this threshold: ${thresholdTax}`);
 
       taxAmount += thresholdTax;
-      remainingAmount -= taxableAmount;
       appliedThresholds.push(threshold);
 
       console.log(`Cumulative tax amount: ${taxAmount}`);
-      console.log(`Remaining amount: ${remainingAmount}`);
     }
 
     const effectiveTaxRate = (taxAmount / netAmount) * 100;
