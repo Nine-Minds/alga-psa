@@ -1768,3 +1768,18 @@ Evidence: `evidence/citus-native-d8cf.json`.
 Full server-colocated runner passed381 tests across76 files at11810e8d14 with
 complete execution reconciliation and clean source. This includes the four
 repaired legacy event-bus cases; native publication is still pending.
+
+### Real Temporal KB import retry policy (2026-09-07)
+
+Added three engine cases for genericJobWorkflow, supplementing source-only KB
+wiring checks. Actual activity attempts verify KB stops at2, generic jobs at3,
+and KB can recover on attempt2 with stable execution identity and returned totals.
+Failure status cannot be mistaken for completed. Changing KB policy to3 caused
+the intended attempt-count failure; production source restored. Focused3 pass.
+Assigned new file to engine config and independent discovery. These activity
+stubs do not establish article persistence or browser polling-budget behavior.
+Evidence: `evidence/kb-import-engine-policy.json`.
+
+Native workspace aggregate failure is downstream of the legacy Redis fixture
+failure repaired at11810e8d14. Published browser builds remain active; follow-up
+commits are intentionally local until the run is terminal.
