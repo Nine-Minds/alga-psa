@@ -2325,3 +2325,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Reproduced native engine job101833124603 failure with workflows dist temporarily parked: full index fails, non-authored index passes. Temporal webpack does not inherit Vitest aliases; local cached package output concealed this.
 - Added source mapping for workflows package to the production-index engine test’s real Worker bundler, matching worker tsconfig while preserving actual workflow execution/assertions. With cached dist absent, both tests pass. Build directory restored in finally.
 - Complete canonical engine lane: 44 tests/10 files passed, zero omissions, discovery passed, 44.02 seconds. Working-tree validation is explicitly dirty; no native candidate claim. Evidence: evidence/temporal-workflow-source-bundling.json. Integration shard failure still needs inspection. No broad flags changed.
+
+### 2026-09-07 — native integration shard exposes project survey product gap
+
+- Native run34151013496 job101833204291 completed 602 assertions across 73 files but failed reconciliation for one skipped project-completion survey case. The gate correctly prevents the skipped capability from appearing ready. Evidence: evidence/project-survey-native-gap.json.
+- Source audit confirms project subscriber passes ticketId: projectId while surveyService loads tickets and invitation storage requires ticket_id. Token/response actions, analytics joins and response UI also assume tickets. A dispatch-only mock fix would not repair the user journey.
+- Required next work: project subject persistence/migration, invitation content and token/response handling, analytics/UI subject links, real-email-boundary DB regression and cross-tenant checks, then remove the skip. Preserve existing ticket survey behavior and test migrations on PostgreSQL/Citus. No skip-policy relaxation, broad flags or false runtime claims.
