@@ -134,6 +134,10 @@ export async function setupE2ETestEnvironment(options: {
         await tenantTable('user_preferences').delete();
           
         // Clean up users
+        // API operations can enqueue jobs owned by the test user. Remove their
+        // dependent steps before deleting jobs and users, scoped to this tenant.
+        await tenantTable('job_details').delete();
+        await tenantTable('jobs').delete();
         await tenantTable('users').delete();
           
         // Clean up permissions
