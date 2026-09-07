@@ -1448,7 +1448,14 @@
     "addFailed": "Error al agregar el comentario",
     "submitting": "Enviando...",
     "loading": "Cargando...",
-    "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!"
+    "empty": "Aún no hay comentarios. ¡Sé el primero en comentar!",
+    "audiences": {
+      "requester": "Solicitante y equipos de TI",
+      "shared_it": "Equipos de TI compartidos",
+      "organization_private": "Solo mi organización"
+    },
+    "authorUnavailable": "Autor no disponible",
+    "loadError": "No se puede cargar la conversación. Actualiza para comprobar tu acceso."
   },
   "clientPortal": {
     "clientsWillSee": "Los clientes verán:",

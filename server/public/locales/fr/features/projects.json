@@ -1448,7 +1448,14 @@
     "addFailed": "Échec de l'ajout du commentaire",
     "submitting": "Envoi...",
     "loading": "Chargement...",
-    "empty": "Pas encore de commentaires. Soyez le premier à commenter !"
+    "empty": "Pas encore de commentaires. Soyez le premier à commenter !",
+    "audiences": {
+      "requester": "Demandeur et équipes informatiques",
+      "shared_it": "Équipes informatiques partagées",
+      "organization_private": "Mon organisation uniquement"
+    },
+    "authorUnavailable": "Auteur indisponible",
+    "loadError": "Impossible de charger cette conversation. Actualisez pour vérifier vos accès."
   },
   "clientPortal": {
     "clientsWillSee": "Les clients verront :",

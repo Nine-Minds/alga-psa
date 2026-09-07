@@ -1472,7 +1472,14 @@
     "addFailed": "Nie udało się dodać komentarza",
     "submitting": "Wysyłanie...",
     "loading": "Ładowanie...",
-    "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!"
+    "empty": "Brak komentarzy. Bądź pierwszym, który skomentuje!",
+    "audiences": {
+      "requester": "Zgłaszający i zespoły IT",
+      "shared_it": "Wspólne zespoły IT",
+      "organization_private": "Tylko moja organizacja"
+    },
+    "authorUnavailable": "Autor niedostępny",
+    "loadError": "Nie można wczytać rozmowy. Odśwież, aby sprawdzić dostęp."
   },
   "clientPortal": {
     "clientsWillSee": "Klienci zobaczą:",

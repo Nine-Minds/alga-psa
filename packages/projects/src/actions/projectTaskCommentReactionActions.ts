@@ -1,7 +1,9 @@
 'use server';
 
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { withTaskCommentAccess } from '../lib/taskCommentAccess';
+import { CoManagedSharedWorkError } from '@alga-psa/co-managed';
 import { withAuth } from '@alga-psa/auth';
 import { aggregateReactions, validateEmoji } from '@alga-psa/types';
 import type { IReactionsBatchResult } from '@alga-psa/types';
@@ -41,8 +43,10 @@ export const toggleTaskCommentReaction = withAuth(async (
   const { knex: db } = await createTenantKnex();
   const userId = user.user_id;
 
-  return withTransaction(db, async (trx) => {
+  return withTaskCommentAccess(db, user, tenant, { commentIds: [taskCommentId] }, 'update', async ({ trx, collaboration }) => {
     await assertCoManagedOperationalWrite(trx, tenant);
+    const comment = await tenantScopedTable(trx, 'project_task_comments', tenant).where('task_comment_id', taskCommentId).first('task_id', 'deleted_at');
+    if (!comment || comment.deleted_at || collaboration?.hidden(comment.task_id, ['author', 'reactions', 'project_task_comment_reactions'])) throw new CoManagedSharedWorkError();
     const existing = await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
       .where({ task_comment_id: taskCommentId, user_id: userId, emoji })
       .first();
@@ -70,12 +74,18 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   { tenant },
   taskCommentIds: string[]
 ): Promise<IReactionsBatchResult> => {
+  taskCommentIds = [...taskCommentIds];
   if (taskCommentIds.length === 0) return { reactions: {}, userNames: {} };
 
   const { knex: db } = await createTenantKnex();
   const currentUserId = user.user_id;
 
-  const rows = await tenantScopedTable(db, 'project_task_comment_reactions', tenant)
+  return withTaskCommentAccess(db, user, tenant, { commentIds: taskCommentIds }, 'read', async ({ trx, collaboration }) => {
+    if (collaboration) {
+      const comments = await tenantScopedTable(trx, 'project_task_comments', tenant).whereIn('task_comment_id', taskCommentIds).select('task_id');
+      if (comments.some(comment => collaboration.hidden(comment.task_id, ['author', 'reactions', 'project_task_comment_reactions']))) throw new CoManagedSharedWorkError();
+    }
+  const rows = await tenantScopedTable(trx, 'project_task_comment_reactions', tenant)
     .whereIn('task_comment_id', taskCommentIds)
     .select('task_comment_id', 'emoji', 'user_id')
     .orderBy('created_at', 'asc') as TaskCommentReactionRow[];
@@ -86,7 +96,7 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   const allUserIds = [...new Set(rows.map(r => r.user_id))];
   const userNames: Record<string, string> = {};
   if (allUserIds.length > 0) {
-    const users = await tenantScopedTable(db, 'users', tenant)
+    const users = await tenantScopedTable(trx, 'users', tenant)
       .whereIn('user_id', allUserIds)
       .select('user_id', 'first_name', 'last_name') as ReactionUserRow[];
     for (const u of users) {
@@ -95,4 +105,5 @@ export const getTaskCommentsReactionsBatch = withAuth(async (
   }
 
   return { reactions, userNames };
+  });
 });

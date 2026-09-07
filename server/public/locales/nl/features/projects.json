@@ -1448,7 +1448,14 @@
     "addFailed": "Kan opmerking niet toevoegen",
     "submitting": "Verzenden...",
     "loading": "Laden...",
-    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!"
+    "empty": "Nog geen opmerkingen. Wees de eerste om te reageren!",
+    "audiences": {
+      "requester": "Aanvrager en IT-teams",
+      "shared_it": "Gedeelde IT-teams",
+      "organization_private": "Alleen mijn organisatie"
+    },
+    "authorUnavailable": "Auteur niet beschikbaar",
+    "loadError": "Het gesprek kan niet worden geladen. Vernieuw om je toegang te controleren."
   },
   "clientPortal": {
     "clientsWillSee": "Klanten zullen zien:",

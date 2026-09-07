@@ -1998,7 +1998,7 @@ describe('co-managed task comments and reactions', () => {
     expect(publish).not.toHaveBeenCalled();
   }));
 
-  it('keeps threaded comments and reactions atomic, publishes after commit, and resumes after renewal', async () => withProjectActionsFixture(async ({ operation, actor, input, customer, actions: projects, publish }) => {
+  it('keeps threaded comments and reactions atomic, publishes after commit, and resumes after renewal', async () => withProjectCommentActionsFixture(async ({ operation, actor, input, customer, actions: projects, publish }) => {
     await acceptCoManagedRelationship(db, actor, input);
     const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
     const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
@@ -2048,16 +2048,17 @@ describe('co-managed task comments and reactions', () => {
     await reconcileHostedCoManagedEntitlement(db, operation.tenant, entitlement.source_reference,
       async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 3600000) }));
     snapshots.length = 0;
-    await comments.updateTaskComment(reply, { note: 'Revised answer' });
+    await comments.updateTaskComment(reply, { note: 'Revised answer' }, 1);
     expect(snapshots).toEqual([expect.objectContaining({ note: 'Revised answer' }), expect.objectContaining({ note: 'Revised answer' })]);
-    await comments.deleteTaskComment(root);
+    await comments.deleteTaskComment(root, (await customer.table('project_task_comments').where('task_comment_id', root).first()).collaboration_revision);
     expect((await customer.table('project_task_comments').where('task_comment_id', root).first()).deleted_at).not.toBeNull();
-    await comments.deleteTaskComment(reply);
-    expect(await customer.table('project_task_comment_reactions')).toEqual([]);
-    expect((await customer.table('comment_threads').first()).reply_count).toBe(0);
-    await comments.deleteTaskComment(root);
-    expect(await customer.table('project_task_comments')).toEqual([]);
-    expect(await customer.table('comment_threads')).toEqual([]);
+    await comments.deleteTaskComment(reply, 2);
+    expect(await customer.table('project_task_comment_reactions')).toHaveLength(1);
+    expect((await customer.table('comment_threads').first()).reply_count).toBe(1);
+    await comments.deleteTaskComment(root, (await customer.table('project_task_comments').where('task_comment_id', root).first()).collaboration_revision);
+    expect(await customer.table('project_task_comments').whereNull('deleted_at')).toEqual([]);
+    expect(await customer.table('project_task_comments')).toHaveLength(2);
+    expect(await customer.table('comment_threads')).toHaveLength(1);
   }));
 });
 
@@ -11140,4 +11141,196 @@ it('task conversations roll back a write when its browser session expires after 
   expect(await customer.table('collaboration_actor_references')).toHaveLength(0);
   expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
   expect((await sponsor.table('sessions').where('session_id', principal.sessionId).first()).expires_at.getTime()).toBeGreaterThan(Date.now());
+}));
+
+async function withTrackedTaskBrowser(actor: any, customer: ReturnType<typeof tenantDb>, work: (auth: any) => Promise<void>) {
+  const auth = await import('@alga-psa/auth'), sessionId = actor.sessionId ?? randomUUID();
+  if (!actor.sessionId) await customer.table('sessions').insert({ tenant: actor.tenant, session_id: sessionId, user_id: actor.userId, expires_at: new Date(Date.now() + 3600000) });
+  const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: sessionId, user: { id: actor.userId, tenant: actor.tenant, user_type: 'internal' } } as any);
+  const override = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined);
+  try { await work({ session, override, sessionId }); } finally { override.mockRestore(); session.mockRestore(); }
+}
+async function withProjectCommentActionsFixture(work: (fixture: any) => Promise<void>) {
+  await withProjectActionsFixture(fixture => withTrackedTaskBrowser(fixture.actor, fixture.customer, () => work(fixture)));
+}
+async function withNativeTaskCommentsFixture(work: (fixture: any) => Promise<void>) {
+  await withTaskConversationFixture(async fixture => {
+    const { customer, customerPrincipal, resource } = fixture, auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+    const user = await customer.table('users').where('user_id', customerPrincipal.userId).first();
+    const events = await import('@alga-psa/event-bus/publishers'), avatars = await import('@alga-psa/formatting/avatarUtils');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+    const publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+    const avatar = vi.spyOn(avatars, 'getEntityImageUrlsBatch').mockResolvedValue(new Map());
+    const comments = await import('../../../../packages/projects/src/actions/projectTaskCommentActions');
+    const reactions = await import('../../../../packages/projects/src/actions/projectTaskCommentReactionActions');
+    try { await withTrackedTaskBrowser(customerPrincipal, customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(resource.tenant,
+      () => work({ ...fixture, ...browser, user, comments, reactions, publish, avatar, connection })))); }
+    finally { avatar.mockRestore(); publish.mockRestore(); connection.mockRestore(); }
+  });
+}
+
+it('native task comments retain private audiences, immutable local names, revision checks, and deleted history', async () => withNativeTaskCommentsFixture(async ({ customer, user, resource, comments, read, customerPrincipal, publish }: any) => {
+  const root = await comments.createTaskComment({ taskId: resource.id, note: 'Native private root' });
+  const reply = await comments.createTaskComment({ taskId: resource.id, note: 'Native private reply', parentCommentId: root });
+  expect(await customer.table('comment_threads').first()).toMatchObject({ collaboration_audience: 'organization_private', is_internal: true, reply_count: 1 });
+  const initial = await comments.getTaskComments(resource.id);
+  expect(initial).toHaveLength(2); expect(initial[0]).toMatchObject({ userId: user.user_id, collaborationRevision: 1, canEdit: true, canReply: true });
+  await customer.table('users').where('user_id', user.user_id).update({ first_name: 'New name' });
+  expect((await comments.getTaskComments(resource.id))[0].firstName).toBe(initial[0].firstName);
+  await expect(comments.updateTaskComment(root, { note: 'Missing revision' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await comments.updateTaskComment(root, { note: 'Revised native private' }, 1);
+  await expect(comments.updateTaskComment(root, { note: 'Stale revision' }, 1)).rejects.toThrow();
+  await comments.deleteTaskComment(root, 2);
+  await expect(comments.createTaskComment({ taskId: resource.id, note: 'Reply through surviving child', parentCommentId: reply })).rejects.toThrow();
+  const page = await comments.getTaskComments(resource.id);
+  expect(page.find((item: any) => item.taskCommentId === root)).toMatchObject({ note: '', markdownContent: '', collaborationRevision: 3, canReply: false, canEdit: false });
+  expect(page.find((item: any) => item.taskCommentId === reply)).toMatchObject({ note: 'Native private reply', canReply: false });
+  expect((await read(customerPrincipal)).items.find((item: any) => item.commentId === root)).toMatchObject({ deleted: true, revision: 3 });
+  expect(await customer.table('project_task_comments')).toHaveLength(2); expect(publish).toHaveBeenCalled();
+}));
+
+it('native task comments show shared attribution but cannot silently reply to or overwrite shared contributions', async () => withNativeTaskCommentsFixture(async ({ principal, customerPrincipal, resource, comments, add, publish }: any) => {
+  const foreign = await add(principal, 'shared_it', 'MSP shared contribution');
+  const local = await add(customerPrincipal, 'requester', 'Customer shared contribution');
+  const page = await comments.getTaskComments(resource.id);
+  expect(page).toHaveLength(2);
+  expect(page.find((item: any) => item.taskCommentId === foreign.commentId)).toMatchObject({ userId: null, email: '', firstName: expect.any(String), organizationName: expect.any(String), audience: 'shared_it', canEdit: false, canReply: false });
+  for (const comment of [foreign, local]) {
+    await expect(comments.createTaskComment({ taskId: resource.id, note: 'Implicit sharing', parentCommentId: comment.commentId })).rejects.toThrow();
+    await expect(comments.updateTaskComment(comment.commentId, { note: 'Overwritten' }, 1)).rejects.toThrow();
+    await expect(comments.deleteTaskComment(comment.commentId, 1)).rejects.toThrow();
+  }
+  expect(publish).not.toHaveBeenCalled();
+}));
+
+it.each(['expired_session', 'revoked_session', 'api_override', 'wrong_session_user', 'missing_project_role'])(
+  'native task comments enforce %s on bodies, counts, reactions and writes', async reason => withNativeTaskCommentsFixture(async ({ customer, resource, user, customerPrincipal, session, override, comments, reactions }: any) => {
+    const root = await comments.createTaskComment({ taskId: resource.id, note: 'Protected native note' });
+    if (reason === 'expired_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+    if (reason === 'revoked_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    if (reason === 'api_override') override.mockReturnValue(user);
+    if (reason === 'wrong_session_user') session.mockResolvedValue({ session_id: customerPrincipal.sessionId, user: { id: randomUUID(), tenant: resource.tenant, user_type: 'internal' } });
+    if (reason === 'missing_project_role') await customer.table('user_roles').where('user_id', user.user_id).del();
+    for (const call of [() => comments.getTaskComments(resource.id), () => comments.getTaskCommentCount(resource.id), () => comments.getTaskCommentCountsBatch([resource.id]),
+      () => reactions.getTaskCommentsReactionsBatch([root]), () => reactions.toggleTaskCommentReaction(root, '👍'),
+      () => comments.createTaskComment({ taskId: resource.id, note: 'Denied' }), () => comments.updateTaskComment(root, { note: 'Denied' }, 1), () => comments.deleteTaskComment(root, 1)])
+      await expect(call()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('project_task_comment_reactions')).toHaveLength(0);
+    expect(await customer.table('project_task_comments').first()).toMatchObject({ note: 'Protected native note', collaboration_revision: 1 });
+  }));
+
+it.each(['conversation', 'author'])('native task comments apply %s masks to body/count and reaction projections', async field => withNativeTaskCommentsFixture(async ({ resource, user, customerPrincipal, operation, comments, reactions, avatar }: any) => {
+  const root = await comments.createTaskComment({ taskId: resource.id, note: 'Masked native note' });
+  await reactions.toggleTaskCommentReaction(root, '👍');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Native comment mask', actorUserId: user.user_id });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  await expect(reactions.getTaskCommentsReactionsBatch([root])).rejects.toThrow();
+  await expect(reactions.toggleTaskCommentReaction(root, '👍')).rejects.toThrow();
+  if (field === 'conversation') {
+    await expect(comments.getTaskComments(resource.id)).rejects.toThrow();
+    await expect(comments.getTaskCommentCount(resource.id)).rejects.toThrow();
+    await expect(comments.getTaskCommentCountsBatch([resource.id])).rejects.toThrow();
+    await expect(comments.updateTaskComment(root, { note: 'Blind edit' }, 1)).rejects.toThrow();
+  } else {
+    expect(await comments.getTaskComments(resource.id)).toMatchObject([{ note: 'Masked native note', userId: null, firstName: '', lastName: '', email: '', canEdit: false, canReact: false }]);
+    expect(avatar.mock.calls.at(-1)[1]).toEqual([]);
+    expect(await comments.getTaskCommentCount(resource.id)).toBe(1);
+  }
+}));
+
+it('native task comments reject mixed batches that contain a task outside current project scope', async () => withNativeTaskCommentsFixture(async ({ customer, resource, project, phase, user, operation, comments, reactions }: any) => {
+  const root = await comments.createTaskComment({ taskId: resource.id, note: 'Allowed project' });
+  const otherProjectId = randomUUID(), otherPhaseId = randomUUID(), otherTaskId = randomUUID();
+  await customer.table('projects').insert({ ...await customer.table('projects').where('project_id', project.project_id).first(), project_id: otherProjectId, project_number: 'OTHER', project_name: 'Other project', wbs_code: '2' });
+  await customer.table('project_phases').insert({ ...phase, phase_id: otherPhaseId, project_id: otherProjectId, wbs_code: '2.1' });
+  const task = await customer.table('project_tasks').where('task_id', resource.id).first();
+  const mapping = await customer.table('project_status_mappings').where('project_status_mapping_id', task.project_status_mapping_id).first(), mappingId = randomUUID();
+  await customer.table('project_status_mappings').insert({ ...mapping, project_status_mapping_id: mappingId, project_id: otherProjectId, phase_id: null });
+  await customer.table('project_tasks').insert({ ...task, task_id: otherTaskId, phase_id: otherPhaseId, project_status_mapping_id: mappingId, wbs_code: '2.1.1' });
+  const other = await comments.createTaskComment({ taskId: otherTaskId, note: 'Restricted project' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Native project ownership', actorUserId: user.user_id });
+  await customer.table('projects').where('project_id', project.project_id).update({ assigned_to: user.user_id });
+  await customer.table('projects').where('project_id', otherProjectId).update({ assigned_to: null });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action, templateKey: 'assigned', config: {} });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect(await comments.getTaskCommentCount(resource.id)).toBe(1);
+  await expect(comments.getTaskCommentCountsBatch([resource.id, otherTaskId])).rejects.toThrow();
+  await expect(reactions.getTaskCommentsReactionsBatch([root, other])).rejects.toThrow();
+}));
+
+it('native task comments remain locally readable after trust ends while mutations remain blocked', async () => withNativeTaskCommentsFixture(async ({ customer, principal, resource, comments, reactions, add, read }: any) => {
+  const foreign = await add(principal, 'shared_it', 'Retained shared contribution');
+  const local = await comments.createTaskComment({ taskId: resource.id, note: 'Customer retained note' });
+  await reactions.toggleTaskCommentReaction(local, '👍');
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  expect(await comments.getTaskComments(resource.id)).toHaveLength(2);
+  expect(await comments.getTaskCommentCount(resource.id)).toBe(2);
+  expect((await reactions.getTaskCommentsReactionsBatch([local])).reactions[local]).toHaveLength(1);
+  await expect(comments.updateTaskComment(local, { note: 'After separation' }, 1)).rejects.toThrow();
+  await expect(read(principal)).rejects.toThrow();
+  expect(await customer.table('project_task_comments').where('task_comment_id', foreign.commentId).first()).toMatchObject({ actor_reference_id: expect.any(String) });
+}));
+
+it('native task comments reject portal identities before returning bodies or reaction identities', async () => withNativeTaskCommentsFixture(async ({ user, resource, comments, reactions }: any) => {
+  const root = await comments.createTaskComment({ taskId: resource.id, note: 'Internal-only body' });
+  const auth = await import('@alga-psa/auth');
+  await auth.runWithApiKeyUser({ ...user, user_type: 'client' }, async () => {
+    expect(await comments.getTaskComments(resource.id)).toMatchObject({ actionError: expect.any(String) });
+    expect(await comments.getTaskCommentCount(resource.id)).toMatchObject({ actionError: expect.any(String) });
+    expect(await comments.getTaskCommentCountsBatch([resource.id])).toMatchObject({ actionError: expect.any(String) });
+    expect(await comments.createTaskComment({ taskId: resource.id, note: 'Portal injection' })).toMatchObject({ actionError: expect.any(String) });
+    await expect(reactions.getTaskCommentsReactionsBatch([root])).rejects.toThrow('Only internal users');
+    await expect(reactions.toggleTaskCommentReaction(root, '👍')).rejects.toThrow('Only internal users');
+  });
+}));
+
+it('native task comments cannot overwrite another customer technician author', async () => withNativeTaskCommentsFixture(async ({ customer, user, resource, comments, customerPrincipal, add }: any) => {
+  const id = randomUUID(), sessionId = randomUUID();
+  await customer.table('users').insert({ ...user, user_id: id, username: `other-${id}`, email: `other-${id}@test.invalid` });
+  for (const role of await customer.table('user_roles').where('user_id', user.user_id)) await customer.table('user_roles').insert({ ...role, user_id: id });
+  await customer.table('sessions').insert({ tenant: resource.tenant, user_id: id, session_id: sessionId, expires_at: new Date(Date.now() + 3600000) });
+  const root = await add({ ...customerPrincipal, userId: id, sessionId }, 'organization_private', 'Another technician private contribution');
+  await expect(comments.updateTaskComment(root.commentId, { note: 'Different author edit' }, 1)).rejects.toThrow();
+  await expect(comments.deleteTaskComment(root.commentId, 1)).rejects.toThrow();
+  expect(await customer.table('project_task_comments').where('task_comment_id', root.commentId).first()).toMatchObject({ user_id: id, collaboration_revision: 1 });
+}));
+
+it('native task comments roll back bodies and queued events when the session expires during a write', async () => withNativeTaskCommentsFixture(async ({ customer, resource, customerPrincipal, comments, publish }: any) => {
+  const name = `expire_native_task_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw(`CREATE FUNCTION ??() RETURNS trigger AS $$ BEGIN IF NEW.tenant = ?::uuid THEN
+    UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = ?::uuid AND session_id = ?::uuid;
+    END IF; RETURN NEW; END; $$ LANGUAGE plpgsql`, [name, resource.tenant, resource.tenant, customerPrincipal.sessionId]).toQuery());
+  await db.raw('CREATE TRIGGER ?? AFTER INSERT ON project_task_comments FOR EACH ROW EXECUTE FUNCTION ??()', [name, name]);
+  try { await expect(comments.createTaskComment({ taskId: resource.id, note: 'Expiry during native write' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+  finally { await db.raw('DROP TRIGGER ?? ON project_task_comments', [name]); await db.raw('DROP FUNCTION ??()', [name]); }
+  expect(await customer.table('project_task_comments')).toHaveLength(0);
+  expect(await customer.table('comment_threads').where('project_task_id', resource.id)).toHaveLength(0);
+  expect(publish).not.toHaveBeenCalled();
+}));
+
+it('native task comments snapshot command and batch inputs before awaiting their connection', async () => withNativeTaskCommentsFixture(async ({ resource, comments, reactions, connection, customer }: any) => {
+  const pauseConnection = () => {
+    let entered!: () => void, release!: () => void;
+    const started = new Promise<void>(resolve => { entered = resolve; });
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    connection.mockImplementationOnce(async () => { entered(); await gate; return { knex: db, tenant: resource.tenant }; });
+    return { started, release };
+  };
+  const request = { taskId: resource.id, note: 'Snapshotted native note' }, first = pauseConnection();
+  const writing = comments.createTaskComment(request);
+  await first.started; request.taskId = randomUUID(); request.note = 'Mutated after submission'; first.release();
+  const root = await writing;
+  expect(await customer.table('project_task_comments').where('task_comment_id', root).first()).toMatchObject({ task_id: resource.id, note: 'Snapshotted native note' });
+  const tasks = [resource.id], second = pauseConnection(), counting = comments.getTaskCommentCountsBatch(tasks);
+  await second.started; tasks.push(randomUUID()); second.release();
+  expect(await counting).toEqual({ [resource.id]: 1 });
+  const ids = [root], third = pauseConnection(), reading = reactions.getTaskCommentsReactionsBatch(ids);
+  await third.started; ids.push(randomUUID()); third.release();
+  expect(await reading).toEqual({ reactions: {}, userNames: {} });
 }));

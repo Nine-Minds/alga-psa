@@ -1448,7 +1448,14 @@
     "addFailed": "Impossibile aggiungere il commento",
     "submitting": "Invio...",
     "loading": "Caricamento...",
-    "empty": "Nessun commento ancora. Sii il primo a commentare!"
+    "empty": "Nessun commento ancora. Sii il primo a commentare!",
+    "audiences": {
+      "requester": "Richiedente e team IT",
+      "shared_it": "Team IT condivisi",
+      "organization_private": "Solo la mia organizzazione"
+    },
+    "authorUnavailable": "Autore non disponibile",
+    "loadError": "Impossibile caricare la conversazione. Aggiorna per verificare il tuo accesso."
   },
   "clientPortal": {
     "clientsWillSee": "I clienti vedranno:",

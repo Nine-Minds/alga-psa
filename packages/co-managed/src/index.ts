@@ -51,3 +51,4 @@ export { recordCoManagedProjectTaskAudit } from './projectTaskAudit';
 export * from './projectTaskAssignments';
 export * from './projectTaskQueue';
 export * from './projectTaskConversation';
+export * from './nativeTaskCommentAccess';

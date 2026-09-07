@@ -5,7 +5,7 @@ export interface IProjectTaskComment extends TenantEntity {
   taskId: string;  // REQUIRED - always present
   threadId?: string;
   parentCommentId?: string | null;
-  userId: string;
+  userId: string | null;
   authorType: 'internal';  // Always 'internal'
 
   note: string;  // BlockNote JSON
@@ -22,4 +22,10 @@ export interface IProjectTaskCommentWithUser extends IProjectTaskComment {
   lastName: string;
   email: string;
   avatarUrl?: string | null;
+  organizationName?: string;
+  audience?: 'requester' | 'shared_it' | 'organization_private';
+  collaborationRevision?: number;
+  canEdit?: boolean;
+  canReply?: boolean;
+  canReact?: boolean;
 }

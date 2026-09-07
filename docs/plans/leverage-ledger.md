@@ -318,3 +318,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `ticketConversation.ts` and `projectTaskConversation.ts`.
 - **Gate:** Two callers; shared pagination is stable, but native audience, publication, attachment, and event contracts still differ. WATCH / reconsider when the task consumer boundary settles.
 - **Status:** watching. Keep explicit resource readers while task integration is established. Task legacy flags cannot inherit ticket-public defaults. Timestamp handling is verified on non-UTC PostgreSQL connections.
+
+## native-task-comment-admission — pattern
+- **What:** Native comment bodies, counts, writes, and reaction batches must retain the same current local project/session/lifecycle authority through their final read or mutation.
+- **Where:** Project task comment and reaction actions; `nativeTaskCommentAccess.ts` and the projects composition adapter.
+- **Gate:** Eight existing entry points, high disclosure cost, stable owner-local project policy. ACT / bounded-now.
+- **Status:** extracted. One native action boundary binds the browser identity, resolves actual comment/task parents, locks parent projects before tasks, and rechecks session/lifecycle after the callback. Batches authorize every current parent before querying results. This local-owner boundary remains valid after live trust terminates; it cannot borrow the former MSP grant.
+
+## customer-project-policy-record — pattern
+- **What:** Native task admission and qualified customer work project the actual customer project/client/assignee into home RBAC and bundle policy.
+- **Where:** `customerWork.ts`, `nativeTaskCommentAccess.ts`.
+- **Gate:** Two callers share the record shape; live shared relationships and retained owner-local batches have distinct admission and lifetime requirements. WATCH.
+- **Status:** watching. Keep projections aligned; reconsider a common local-resource admission layer when export and paid-upgrade paths settle. Do not force post-termination customer reads through an active-trust requirement.

@@ -56,6 +56,7 @@ async function withCoManagedCustomerWork<T>(db: Knex, inputActor: CoManagedSessi
         if (action === 'update') taskQuery.forUpdate('task', 'phase'); else taskQuery.forShare('task', 'phase');
         if ((await taskQuery.first('phase.project_id'))?.project_id !== projectId) throw new CoManagedSharedWorkError();
       }
+      // LEVERAGE: pattern customer-project-policy-record — native task entry points and qualified customer work use the same actual parent project.
       record = { id: project.project_id, clientId: project.client_id, assignedUserIds: project.assigned_to ? [project.assigned_to] : [], teamIds: [] };
     }
     const decision = await authorizeCoManagedWorkRecord(trx, actor, subject, resource.kind === 'ticket' ? 'ticket' : 'project', action, record);

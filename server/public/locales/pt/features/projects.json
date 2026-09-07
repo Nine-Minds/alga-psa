@@ -1414,7 +1414,14 @@
     "addFailed": "Falha ao adicionar comentário",
     "submitting": "Enviando...",
     "loading": "Carregando...",
-    "empty": "Nenhum comentário ainda. Seja o primeiro a comentar!"
+    "empty": "Nenhum comentário ainda. Seja o primeiro a comentar!",
+    "audiences": {
+      "requester": "Solicitante e equipes de TI",
+      "shared_it": "Equipes de TI compartilhadas",
+      "organization_private": "Somente minha organização"
+    },
+    "authorUnavailable": "Autor indisponível",
+    "loadError": "Não foi possível carregar a conversa. Atualize para verificar seu acesso."
   },
   "addStatusDialog": {
     "phaseTitle": "Adicionar status de fase da biblioteca",

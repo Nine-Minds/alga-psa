@@ -1414,7 +1414,14 @@
     "addFailed": "Failed to add comment",
     "submitting": "Submitting...",
     "loading": "Loading...",
-    "empty": "No comments yet. Be the first to comment!"
+    "empty": "No comments yet. Be the first to comment!",
+    "audiences": {
+      "requester": "Requester and IT teams",
+      "shared_it": "Shared IT teams",
+      "organization_private": "My organization only"
+    },
+    "authorUnavailable": "Author unavailable",
+    "loadError": "Unable to load this conversation. Refresh to check your current access."
   },
   "addStatusDialog": {
     "phaseTitle": "Add Phase Status from Library",
