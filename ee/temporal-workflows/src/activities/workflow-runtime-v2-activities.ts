@@ -13,6 +13,7 @@ import {
   createSecretResolverFromProvider,
   applyRedactions,
   safeSerialize,
+  enforceSnapshotSize,
   type Envelope,
   type InputMapping,
   type SecretResolver,
@@ -29,6 +30,7 @@ import {
   WorkflowDefinitionModelV2,
   WorkflowDefinitionVersionModelV2,
   WorkflowRunStepModelV2,
+  WorkflowRunSnapshotModelV2,
   WorkflowRunModelV2,
   WorkflowRunWaitModelV2,
   WorkflowTaskModel,
@@ -223,44 +225,78 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
   stepPath: string;
   status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
   errorMessage?: string;
+  scopes?: WorkflowRuntimeV2ScopeState;
 }): Promise<void> {
   return retryOnAdminReadOnly(
     async () => {
       const knex = await getAdminConnection();
-      const now = new Date().toISOString();
-      const step = await tenantDb(knex, '__workflow_step_completion_discovery__')
-        .unscoped<{ step_id: string; run_id: string; step_path: string; started_at?: string | null; tenant?: string | null }>(
-          'workflow_run_steps',
-          'workflow step completion resolves the tenant and duration from step_id before updating'
-        )
-        .where({ step_id: input.stepId, run_id: input.runId, step_path: input.stepPath })
-        .first();
-      if (!step) {
-        throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
-      }
-      const tenant = step.tenant ?? null;
-      const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
-      const durationMs = Math.max(Date.now() - startedAt, 0);
+      return knex.transaction(async (trx) => {
+        const now = new Date().toISOString();
+        const step = await tenantDb(trx, '__workflow_step_completion_discovery__')
+          .unscoped<{ step_id: string; run_id: string; step_path: string; started_at?: string | null; tenant?: string | null; snapshot_id?: string | null }>(
+            'workflow_run_steps',
+            'workflow step completion resolves the tenant and duration from step_id before updating'
+          )
+          .where({ step_id: input.stepId, run_id: input.runId, step_path: input.stepPath })
+          .forUpdate()
+          .first();
+        if (!step) {
+          throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
+        }
+        const tenant = step.tenant ?? null;
+        const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
+        const durationMs = Math.max(Date.now() - startedAt, 0);
 
-      await WorkflowRunStepModelV2.update(knex, input.stepId, {
-        status: input.status,
-        duration_ms: durationMs,
-        completed_at: now,
-        error_json: input.status === 'FAILED' && input.errorMessage
-          ? { message: input.errorMessage }
-          : null,
-      }, tenant);
+        let snapshotId = step.snapshot_id;
+        if (input.scopes && !snapshotId) {
+          const configuredDays = Number(process.env.WORKFLOW_SNAPSHOT_RETENTION_DAYS ?? 30);
+          if (!Number.isFinite(configuredDays) || configuredDays <= 0) throw new Error('Invalid workflow snapshot retention');
+          const redactions = Array.isArray(input.scopes.meta?.redactions)
+            ? input.scopes.meta.redactions.filter((path): path is string => typeof path === 'string') : [];
+          const envelope = { payload: input.scopes.payload, vars: input.scopes.workflow,
+            lexical: input.scopes.lexical, meta: input.scopes.meta ?? {}, error: input.scopes.error ?? null };
+          const bounded = enforceSnapshotSize(applyRedactions(safeSerialize(envelope), redactions), 256 * 1024) as Record<string, unknown>;
+          const snapshot = await WorkflowRunSnapshotModelV2.create(trx, {
+            tenant, run_id: input.runId, step_path: input.stepPath, envelope_json: bounded,
+            size_bytes: Buffer.byteLength(JSON.stringify(bounded), 'utf8'),
+          });
+          snapshotId = snapshot.snapshot_id;
+          // Only prune this run's diagnostic history; completion in one tenant
+          // must never remove another tenant's snapshots.
+          const expired = await tenantDb(trx, tenant ?? '__legacy_workflow_snapshot_retention__')
+            .unscoped('workflow_run_snapshots', 'retention is restricted to the verified run and its tenant')
+            .where({ run_id: input.runId, tenant })
+            .where('created_at', '<', new Date(Date.now() - configuredDays * 86400000).toISOString())
+            .delete().returning('snapshot_id');
+          if (expired.length) {
+            await tenantDb(trx, tenant ?? '__legacy_workflow_snapshot_retention__')
+              .unscoped('workflow_run_steps', 'clear expired snapshot references only in the verified run and tenant')
+              .where({ run_id: input.runId, tenant }).whereIn('snapshot_id', expired.map(row => row.snapshot_id))
+              .update({ snapshot_id: null });
+          }
+        }
 
-      await WorkflowRunModelV2.update(knex, input.runId, {
-        status: input.status === 'FAILED'
-          ? 'FAILED'
-          : input.status === 'CANCELED'
-            ? 'CANCELED'
-            : 'RUNNING',
-        error_json: input.status === 'FAILED' && input.errorMessage
-          ? { message: input.errorMessage, nodePath: input.stepPath }
-          : null,
-      }, tenant);
+        await WorkflowRunStepModelV2.update(trx, input.stepId, {
+          ...(snapshotId ? { snapshot_id: snapshotId } : {}),
+          status: input.status,
+          duration_ms: durationMs,
+          completed_at: now,
+          error_json: input.status === 'FAILED' && input.errorMessage
+            ? { message: input.errorMessage }
+            : null,
+        }, tenant);
+
+        await WorkflowRunModelV2.update(trx, input.runId, {
+          status: input.status === 'FAILED'
+            ? 'FAILED'
+            : input.status === 'CANCELED'
+              ? 'CANCELED'
+              : 'RUNNING',
+          error_json: input.status === 'FAILED' && input.errorMessage
+            ? { message: input.errorMessage, nodePath: input.stepPath }
+            : null,
+        }, tenant);
+      });
     },
     { logLabel: 'projectWorkflowRuntimeV2StepCompletion' }
   );

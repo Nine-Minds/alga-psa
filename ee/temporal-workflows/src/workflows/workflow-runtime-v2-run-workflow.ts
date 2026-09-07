@@ -54,6 +54,7 @@ const activities = proxyActivities<{
     stepPath: string;
     status: 'SUCCEEDED' | 'FAILED' | 'CANCELED';
     errorMessage?: string;
+    scopes?: WorkflowRuntimeV2ScopeState;
   }): Promise<void>;
   executeWorkflowRuntimeV2ActionStep(input: {
     runId: string;
@@ -355,6 +356,7 @@ export async function workflowRuntimeV2RunWorkflow(
     try {
       if (current.step.type === 'control.return') {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -375,6 +377,7 @@ export async function workflowRuntimeV2RunWorkflow(
           totalSteps: branchSteps.length,
         });
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -393,6 +396,7 @@ export async function workflowRuntimeV2RunWorkflow(
           totalSteps: tryCatchStep.try.length,
         });
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -443,6 +447,7 @@ export async function workflowRuntimeV2RunWorkflow(
           state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         }
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -520,6 +525,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -584,6 +590,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -667,6 +674,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -746,6 +754,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -800,6 +809,7 @@ export async function workflowRuntimeV2RunWorkflow(
                 },
               };
               await activities.projectWorkflowRuntimeV2StepCompletion({
+                scopes: state.scopes,
                 runId: input.runId,
                 stepId: stepProjection.stepId,
                 stepPath: current.path,
@@ -822,6 +832,7 @@ export async function workflowRuntimeV2RunWorkflow(
         }
         state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -850,6 +861,7 @@ export async function workflowRuntimeV2RunWorkflow(
       };
       state = advanceWorkflowRuntimeV2PastStep(state, pinned.definition);
       await activities.projectWorkflowRuntimeV2StepCompletion({
+        scopes: state.scopes,
         runId: input.runId,
         stepId: stepProjection.stepId,
         stepPath: current.path,
@@ -887,6 +899,7 @@ export async function workflowRuntimeV2RunWorkflow(
       }
       if (isCancellationRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -899,6 +912,7 @@ export async function workflowRuntimeV2RunWorkflow(
 
       if (isInterpreterCorruptionRuntimeError(runtimeError)) {
         await activities.projectWorkflowRuntimeV2StepCompletion({
+          scopes: state.scopes,
           runId: input.runId,
           stepId: stepProjection.stepId,
           stepPath: current.path,
@@ -910,6 +924,7 @@ export async function workflowRuntimeV2RunWorkflow(
       }
 
       await activities.projectWorkflowRuntimeV2StepCompletion({
+        scopes: state.scopes,
         runId: input.runId,
         stepId: stepProjection.stepId,
         stepPath: current.path,

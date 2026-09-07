@@ -1,4 +1,4 @@
-import { beforeAll, afterAll, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, afterAll, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -28,6 +28,40 @@ vi.mock('@alga-psa/workflows/runtime/core', async (importOriginal) => ({
 }));
 
 let db: Knex;
+beforeEach(() => { actionHandler.mockReset(); registeredAction.current = null; });
+it('stores redacted bounded step snapshots with idempotent writes and retention', async () => {
+  const Step = (await import('@alga-psa/workflows/persistence/workflowRunStepModelV2')).default;
+  const Snapshot = (await import('@alga-psa/workflows/persistence/workflowRunSnapshotModelV2')).default;
+  const { projectWorkflowRuntimeV2StepCompletion: complete } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const tenant = randomUUID();
+  const definition = await WorkflowDefinition.create(db, tenant, { name: 'Snapshots', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
+  const run = await WorkflowRun.create(db, { workflow_id: definition.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
+  const scopes: any = { payload: { secretRef: 'private', nested: [{ $secret: 'private' }], token: 'resolved', public: 'visible' }, workflow: {}, lexical: [], meta: { redactions: ['/payload/token'] } };
+  const original = structuredClone(scopes);
+  const step = await Step.create(db, { tenant, run_id: run.run_id, step_path: 'first', definition_step_id: 'first', status: 'STARTED', attempt: 1 });
+  const completion = { runId: run.run_id, stepId: step.step_id, stepPath: step.step_path, status: 'SUCCEEDED' as const, scopes };
+  await complete(completion);
+  await complete(completion);
+  const [snapshot] = await Snapshot.listByRun(db, run.run_id, tenant);
+  expect(await Snapshot.listByRun(db, run.run_id, tenant)).toHaveLength(1);
+  expect(snapshot.envelope_json).toMatchObject({ payload: { secretRef: '[REDACTED]', nested: [{ $secret: '[SECRET:REDACTED]' }], token: '[REDACTED]', public: 'visible' } });
+  expect(snapshot.size_bytes).toBe(Buffer.byteLength(JSON.stringify(snapshot.envelope_json)));
+  expect((await Step.listByRun(db, run.run_id, tenant))[0].snapshot_id).toBe(snapshot.snapshot_id);
+  expect(scopes).toEqual(original);
+  await db('workflow_run_snapshots').where({ tenant, snapshot_id: snapshot.snapshot_id }).update({ created_at: new Date(Date.now() - 40 * 86400000) });
+  const otherRun = await WorkflowRun.create(db, { workflow_id: definition.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
+  const unrelated = await Snapshot.create(db, { tenant, run_id: otherRun.run_id, step_path: 'old', envelope_json: {}, size_bytes: 2, created_at: new Date(Date.now() - 40 * 86400000).toISOString() });
+  const next = await Step.create(db, { tenant, run_id: run.run_id, step_path: 'second', definition_step_id: 'second', status: 'STARTED', attempt: 1 });
+  await complete({ ...completion, stepId: next.step_id, stepPath: next.step_path, scopes: { ...scopes, payload: { big: '💡'.repeat(100000) } } });
+  const remaining = await Snapshot.listByRun(db, run.run_id, tenant);
+  expect(remaining).toHaveLength(1);
+  expect((await Snapshot.listByRun(db, otherRun.run_id, tenant)).map(row => row.snapshot_id)).toEqual([unrelated.snapshot_id]);
+  expect((await Step.listByRun(db, run.run_id, tenant)).find(row => row.step_id === step.step_id)?.snapshot_id).toBeNull();
+  expect(remaining[0].snapshot_id).not.toBe(snapshot.snapshot_id);
+  expect(remaining[0].envelope_json).toMatchObject({ truncated: true, max: 256 * 1024 });
+  expect(remaining[0].envelope_json.size).toBeGreaterThan(256 * 1024);
+  expect(JSON.parse(JSON.stringify(remaining[0].envelope_json))).toEqual(remaining[0].envelope_json);
+});
 beforeAll(async () => { db = await createTestDbConnection(); }, 180_000);
 afterAll(async () => { await db?.destroy(); });
 it('persists one concurrent invocation per tenant key and isolates lookup and updates', async () => {

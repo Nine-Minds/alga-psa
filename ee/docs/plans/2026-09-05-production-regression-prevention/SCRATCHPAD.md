@@ -1192,3 +1192,11 @@
 - While tracing skipped snapshot coverage, found that the real completion activity discovered a step by ID alone and used a separately supplied run ID for the run update; a missing step fell back to an unscoped update.
 - Added a real database case covering absent step, wrong run, wrong path and successful owned completion. It failed before the fix (nonexistent step accepted), then passed with the full six-case persistence suite after matching all three identities before either update.
 - Temporal readiness: 72/72 passed; targeted TypeScript passed. Evidence: `evidence/workflow-step-completion-ownership.json`. Snapshot and output-storage redaction remain unfinished; this incidental fix does not replace those requirements.
+
+### 2026-09-07 — Restore Temporal diagnostic snapshot persistence
+
+- Added optional scopes to the existing completion activity and supplied them from all workflow completion branches. Older activity inputs remain accepted. The transaction locks the verified step, writes one redacted/bounded snapshot, links it to the step, and prunes expired run-local history with reference cleanup.
+- Snapshot limits: 256 KiB; retention defaults to 30 days, configurable with positive `WORKFLOW_SNAPSHOT_RETENTION_DAYS`. This is completion-triggered retention, not a global inactive-run sweep.
+- Real database behavior: 7/7 passed; Temporal readiness: 72/72 passed; targeted TypeScript passed. Fixed mock state leakage exposed by shuffled test order. Evidence: `evidence/temporal-snapshot-persistence.json`.
+- Keep legacy redaction skips visible until output storage and full run-studio parity are verified. Citus runtime and real Temporal-server replay verification remain outstanding.
+- Native full integration job `101650631428` remains running; workspace DB and all three infrastructure shards completed successfully. Do not cancel it to publish these local changes.
