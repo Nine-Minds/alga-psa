@@ -148,8 +148,8 @@ export interface ITimePeriodView extends Omit<ITimePeriod, 'start_date' | 'end_d
 export interface ITimePeriodWithStatusView extends Omit<ITimePeriodWithStatus, 'start_date' | 'end_date'> {
   start_date: string;
   end_date: string;
-  hoursEntered: number;
-  daysLogged: number;
+  hoursEntered: number | null;
+  daysLogged: number | null;
   lastEntryDate?: string;
   /** Id of the backing time_sheets row, or null when none exists yet (created lazily on view). */
   timeSheetId?: string | null;

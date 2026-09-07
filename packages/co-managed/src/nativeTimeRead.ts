@@ -98,8 +98,8 @@ async function readChangeRequests(trx: Knex.Transaction, tenant: string, entry: 
 /** A timesheet is a collection of independently admitted work records. Hidden
  * entries and their review comments never enter the returned collection. */
 export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, sheetId: string,
-  identify: () => Promise<CoManagedAuthenticatedActor>, options: { view?: boolean; comments?: boolean; requireCompleteContent?: boolean } = {}
-): Promise<{ handled: false } | { handled: true; entries: any[]; sheet?: any; comments: any[] }> {
+  identify: () => Promise<CoManagedAuthenticatedActor>, options: { view?: boolean; comments?: boolean; requireCompleteContent?: boolean; approval?: boolean; employee?: boolean } = {}
+): Promise<{ handled: false } | { handled: true; entries: any[]; sheet?: any; comments: any[]; visibility: { completeEntries: boolean; redactedFields: readonly string[] } }> {
   if (!isCoManagedUuid(tenant) || !isCoManagedUuid(sheetId)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
     await getCoManagedOperationalState(trx, tenant);
@@ -117,6 +117,10 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
     const sheet = await owner.table('time_sheets').where('id', sheetId).forShare().first();
     if (!sheet || sheet.user_id !== hint.user_id) throw new CoManagedSharedWorkError();
     const sheetPolicy = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_sheet', 'read', { id: sheetId, ownerUserId: sheet.user_id, assignedUserIds: [sheet.user_id] });
+    if (options.approval) {
+      const approval = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_sheet', 'approve', { id: sheetId, ownerUserId: sheet.user_id, assignedUserIds: [sheet.user_id] });
+      sheetPolicy.redactedFields = [...sheetPolicy.redactedFields, ...approval.redactedFields];
+    }
     if (isNativeTimeFieldHidden(sheetPolicy.redactedFields, ['id', 'time_sheet_id', 'user_id', 'time_entries', 'entries', 'time_sheets.id', 'time_sheets.user_id', 'time_sheets.time_entries'])) throw new CoManagedSharedWorkError();
     const hints = await owner.table('time_entries').where({ time_sheet_id: sheetId }).orderBy('entry_id').select('*');
     const entries: any[] = [];
@@ -137,13 +141,18 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
       for (const field of Object.keys(view)) if (hidden([field])) delete view[field];
       for (const field of ['submitted_at', 'approved_at', 'created_at', 'updated_at']) if (field in view) view[field] = view[field] ? new Date(view[field]).toISOString() : undefined;
       if (!view.approved_by) delete view.approved_by;
+      if (options.employee) {
+        const employee = await owner.table('users').where('user_id', sheet.user_id).forShare().first('first_name', 'last_name', 'email');
+        view.employee_name = hidden(['employee', 'employee_name', 'first_name', 'last_name', 'user_name']) ? '' : `${employee?.first_name ?? ''} ${employee?.last_name ?? ''}`.trim();
+        view.employee_email = hidden(['employee', 'employee_email', 'email']) ? '' : employee?.email ?? '';
+      }
       if (!hidden(['time_period', 'time_period.start_date', 'time_period.end_date', 'period_start_date', 'period_end_date'])) {
         const period = await owner.table('time_periods').where('period_id', sheet.period_id).forShare().first('period_id', 'start_date', 'end_date');
         if (!period) throw new CoManagedSharedWorkError();
         view.time_period = { tenant, period_id: period.period_id, start_date: toCalendarDateString(period.start_date), end_date: toCalendarDateString(period.end_date) };
       }
       if (!hidden(['entry_count', 'total_entries'])) view.entry_count = entries.length;
-      if (!hidden(['total_hours', 'total_minutes', 'duration', 'elapsed_minutes'])) {
+      if (!hidden(['total_hours', 'total_minutes', 'hoursEntered', 'hours_entered', 'duration', 'elapsed_minutes'])) {
         view.total_minutes = entries.reduce((sum, entry) => sum + entry.elapsed_minutes, 0); view.total_hours = view.total_minutes / 60;
       }
     }
@@ -155,7 +164,7 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
     // whole response, including an otherwise empty sheet.
     await credential.assertCurrent();
     entries.sort((a, b) => b.start_time.localeCompare(a.start_time) || a.entry_id.localeCompare(b.entry_id));
-    return { handled: true, entries, sheet: view, comments };
+    return { handled: true, entries, sheet: view, comments, visibility: { completeEntries: entries.length === hints.length, redactedFields: sheetPolicy.redactedFields } };
   });
 }
 

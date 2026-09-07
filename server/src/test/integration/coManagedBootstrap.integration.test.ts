@@ -13466,3 +13466,88 @@ it('native time sheet details roll back a new comment when its browser session e
     expect(await customer.table('time_sheet_comments')).toHaveLength(0);
   } finally { await db.raw('DROP TRIGGER expire_sheet_comment_session ON time_sheet_comments'); await db.raw('DROP FUNCTION expire_sheet_comment_session()'); }
 }));
+
+it('native time sheet lists share detail projections across own all approval and period views', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, sheets, operations, user, customer, principal }: any) => {
+  expect(await operations.fetchTimeSheets()).toMatchObject([{ id: entry.time_sheet_id, entry_count: 1, total_hours: 1.5 }]);
+  expect(await operations.fetchAllTimeSheets()).toMatchObject([{ id: entry.time_sheet_id, total_hours: 1.5 }]);
+  expect(await sheets.fetchTimeSheetsForApproval()).toEqual([]);
+  await operations.submitTimeSheet(entry.time_sheet_id);
+  const approvals = await sheets.fetchTimeSheetsForApproval();
+  expect(approvals).toMatchObject([{ id: entry.time_sheet_id, employee_email: user.email, total_hours: 1.5, comments: [] }]);
+  const { timeSheetApprovalViewSchema } = await import('../../../../packages/scheduling/src/schemas/timeSheet.schemas');
+  expect(timeSheetApprovalViewSchema.safeParse(approvals[0]).success).toBe(true);
+  expect(await operations.fetchTimePeriods(context.userId)).toMatchObject([{ timeSheetId: entry.time_sheet_id, hoursEntered: 1.5, daysLogged: 1, entryCount: 1, periodTimesheetCount: 1 }]);
+  await sheets.approveTimeSheet(entry.time_sheet_id, context.userId);
+  expect(await sheets.fetchTimeSheetsForApproval()).toEqual([]);
+  expect(await sheets.fetchTimeSheetsForApproval(true)).toHaveLength(1);
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await operations.fetchTimeSheets()).toHaveLength(1);
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await operations.fetchAllTimeSheets()).toMatchObject([{ total_hours: 1.5 }]);
+}));
+
+it('native time sheet lists exclude unmanaged owners and keep incomplete global removal counts unknown', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, customer, user, operations }: any) => {
+  const stranger = randomUUID(), otherSheet = randomUUID(), sheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first();
+  await customer.table('users').insert({ ...user, user_id: stranger, email: 'unmanaged-sheet@example.test', username: 'unmanaged-sheet', reports_to: null });
+  await customer.table('time_sheets').insert({ ...sheet, id: otherSheet, user_id: stranger });
+  expect(await operations.fetchTimePeriods(context.userId)).toMatchObject([{ periodTimesheetCount: 2 }]);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_sheet', action: 'read_all' }).select('permission_id')).del();
+  const visible = await operations.fetchAllTimeSheets();
+  expect(visible).toHaveLength(1); expect(visible[0].id).toBe(entry.time_sheet_id);
+  expect((await operations.fetchTimePeriods(context.userId))[0].periodTimesheetCount).toBeUndefined();
+  await expect(operations.fetchTimePeriods(stranger)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('native time sheet lists compute period effort only from visible work and withhold partial-sheet comments and removal counts', async () => withNativeTimeSheetCommandFixture(async ({ entry, create, context, sheets, operations, user, resource }: any) => {
+  await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Visible planning' });
+  await sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Private full-sheet context', false);
+  await operations.submitTimeSheet(entry.time_sheet_id);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet list work scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect(await operations.fetchTimeSheets()).toMatchObject([{ entry_count: 1, total_hours: 1 }]);
+  expect(await sheets.fetchTimeSheetsForApproval()).toMatchObject([{ entry_count: 1, total_hours: 1, comments: [] }]);
+  const periods = await operations.fetchTimePeriods(context.userId);
+  expect(periods).toMatchObject([{ hoursEntered: 1, daysLogged: 1, lastEntryDate: '2026-09-07' }]);
+  expect(periods[0].entryCount).toBeUndefined();
+}));
+
+it('native time sheet lists preserve field masks in employee labels and period metrics', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, sheets, operations, user, resource }: any) => {
+  await operations.submitTimeSheet(entry.time_sheet_id);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet list field scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_sheet', action: 'read', templateKey: 'own', config: { redactedFields: ['employee_name', 'employee_email', 'hoursEntered', 'daysLogged'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  const approvals = await sheets.fetchTimeSheetsForApproval();
+  expect(approvals).toMatchObject([{ employee_name: '', employee_email: '' }]); expect(approvals[0].total_hours).toBeUndefined();
+  expect(await operations.fetchTimePeriods(context.userId)).toMatchObject([{ hoursEntered: null, daysLogged: null }]);
+}));
+
+it('native time sheet lists include unopened periods without fabricating a backing sheet', async () => withNativeTimeSheetCommandFixture(async ({ context, customer, operations }: any) => {
+  const periodId = randomUUID();
+  await customer.table('time_periods').insert({ tenant: context.tenant, period_id: periodId, start_date: '2026-09-14', end_date: '2026-09-21' });
+  const periods = await operations.fetchTimePeriods(context.userId);
+  expect(periods[0]).toMatchObject({ period_id: periodId, timeSheetId: null, timeSheetStatus: 'DRAFT', hoursEntered: 0, daysLogged: 0, entryCount: 0, periodTimesheetCount: 0 });
+  expect(await customer.table('time_sheets')).toHaveLength(1);
+}));
+
+it('native time sheet lists reject the whole collection when the key expires during a nested source wait', async () => withNativeTimeSheetCommandFixture(async ({ context, customer, resource, apiKeyId }: any) => {
+  const domain = await import('../../../../packages/co-managed/src/nativeTimeSheetList'), blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
+  let pid: number | undefined;
+  const reading = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return domain.listCoManagedNativeTimeSheets(trx, context.tenant, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId }));
+  });
+  const rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await db.raw('SELECT pg_sleep(1.6)');
+  } finally { await blocker.rollback(); }
+  await rejected;
+}));

@@ -459,3 +459,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Native `fetchTimeSheet`, alternate sheet entry reader, `fetchTimeSheetComments`, `addCommentToTimeSheet`, shared time projection/comment command.
 - **Gate:** Shared high-cost disclosure and attribution boundary across reads/writes. ACT / bounded-now in the approved time workstream.
 - **Status:** sheet detail totals use admitted intervals; complete-content visibility controls the comment stream and comment writes; stored author/reviewer attribution comes from actual identity/ownership. Final credential/lifecycle checks retain rollback. Five focused source-mode cases pass. List/approval-dashboard readers, sheet creation/deletion and wider scale/concurrency verification remain pending.
+
+## native-time-sheet-list-authority — pattern
+- **What:** Own/all sheet lists, manager approvals and period summaries independently joined raw sheet/entry/user rows and bypassed retained detail visibility.
+- **Where:** `fetchTimeSheets`, `fetchAllTimeSheets`, `fetchTimeSheetsForApproval`, `fetchTimePeriods`, shared `nativeTimeSheetList`.
+- **Gate:** Four adapters share current credential, delegation and disclosure invariants. ACT / bounded-now in the approved time workstream.
+- **Status:** all use retained sheet projections; employee metadata and metrics honor masks; scope-limited removal counts remain unknown, and the period UI renders masked metrics as an em dash. Six focused source-mode scenarios pass. Sheet creation/deletion, API sheet/period adapters and broader scale/concurrency verification remain pending.

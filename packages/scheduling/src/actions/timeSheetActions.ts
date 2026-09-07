@@ -11,7 +11,7 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
-import { commandCoManagedNativeTimeSheets, readCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { commandCoManagedNativeTimeSheets, listCoManagedNativeTimeSheets, readCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -121,6 +121,8 @@ export const fetchTimeSheetsForApproval = withAuth(async (
 ): Promise<ITimeSheetApprovalView[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { approval: true, includeApproved });
+    if (current.handled) return current.sheets as ITimeSheetApprovalView[];
     const scopedDb = tenantDb(db, tenant) as any;
 
     if (!await hasPermission(user, 'time_sheet', 'approve', db)) {

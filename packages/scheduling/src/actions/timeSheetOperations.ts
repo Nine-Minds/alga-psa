@@ -1,6 +1,6 @@
 'use server'
 
-import { commandCoManagedNativeTimeSheets } from '@alga-psa/co-managed';
+import { commandCoManagedNativeTimeSheets, listCoManagedNativeTimeSheets } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { Knex } from 'knex'; // Import Knex type
@@ -98,6 +98,8 @@ export const fetchTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeS
   console.log('Fetching time sheets for user:', currentUserId);
 
   const {knex: db} = await createTenantKnex();
+  const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { userId: currentUserId });
+  if (current.handled) return current.sheets as ITimeSheet[];
   const facade = tenantDb(db, tenant);
   const query = facade.table('time_sheets')
     .where({
@@ -212,8 +214,10 @@ export const submitTimeSheet = withAuth(async (user, { tenant }, timeSheetId: st
   }
 });
 
-export const fetchAllTimeSheets = withAuth(async (_user, { tenant }): Promise<ITimeSheet[]> => {
+export const fetchAllTimeSheets = withAuth(async (user, { tenant }): Promise<ITimeSheet[]> => {
   const {knex: db} = await createTenantKnex();
+  const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), {});
+  if (current.handled) return current.sheets as ITimeSheet[];
   const facade = tenantDb(db, tenant);
 
   console.log('Fetching all time sheets');
@@ -246,6 +250,8 @@ export const fetchTimePeriods = withAuth(async (user, { tenant }, userId: string
     const validatedParams = validateData<FetchTimePeriodsParams>(fetchTimePeriodsParamsSchema, { userId });
 
     const {knex: db} = await createTenantKnex();
+    const current = await listCoManagedNativeTimeSheets(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { userId: validatedParams.userId, periods: true });
+    if (current.handled) return current.periods as ITimePeriodWithStatusView[];
 
     await assertCanActOnBehalf(user, tenant, validatedParams.userId, db);
 
