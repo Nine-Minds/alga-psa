@@ -14,7 +14,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 vi.mock('@alga-psa/db', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/db')>();
-  return { ...actual, createTenantKnex: async () => ({ knex: state.trx, tenant: state.tenant }) };
+  return { ...actual, withAdminTransaction: async (fn: (trx: Knex.Transaction) => Promise<unknown>) => fn(state.trx!), createTenantKnex: async () => ({ knex: state.trx, tenant: state.tenant }) };
 });
 vi.mock('@alga-psa/auth', async importOriginal => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
@@ -402,3 +402,29 @@ it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 're
     try { await environment?.teardown(); } finally { Object.values(handlers).forEach(handler => handler.mockRestore()); }
   }
 }, 60_000);
+
+
+it.each(['threadId', 'inReplyTo', 'references', 'unmatched-token'])('resolves email threading with real tenant-scoped queries: %s', async lookup => {
+  const f = await fixture(), foreign = randomUUID(), ticketId = randomUUID();
+  for (const table of ['tickets', 'statuses', 'email_reply_tokens']) {
+    await state.trx!.raw('CREATE TABLE ?? (LIKE ?? INCLUDING ALL)', [table, `public.${table}`]);
+  }
+  await state.trx!('tickets').insert([
+    { tenant: foreign, client_id: randomUUID(), ticket_id: randomUUID(), ticket_number: 'FOREIGN-1', title: 'Foreign thread', email_metadata: { threadId: 'shared-thread', messageId: 'shared-message@example.invalid' } },
+    { tenant: f.tenant, client_id: randomUUID(), ticket_id: ticketId, ticket_number: 'OWN-1', title: 'Own thread', email_metadata: { threadId: 'shared-thread', messageId: 'shared-message@example.invalid' } },
+    { tenant: foreign, client_id: randomUUID(), ticket_id: randomUUID(), ticket_number: 'FOREIGN-ONLY', title: 'Foreign only', email_metadata: { threadId: 'foreign-only' } },
+  ]);
+  const emailData = { id: 'incoming-message', subject: 'Re: Own thread', from: { email: 'sender@example.invalid' }, body: { text: 'Please help' },
+    ...(lookup === 'threadId' ? { threadId: 'shared-thread' } : lookup === 'references' ? { references: ['<unknown@example.invalid>', '<shared-message@example.invalid>'] } : { inReplyTo: '<shared-message@example.invalid>' }) };
+  const input = { ...f, tenantId: f.tenant,
+    step: { type: 'action.call' as const, config: { actionId: 'resolve_existing_ticket_from_email', version: 1,
+      inputMapping: { emailData, parsedEmail: { sanitizedText: 'Please help', metadata: { parser: { tokens: lookup === 'unmatched-token' ? { conversationToken: 'missing-token' } : null } } } } } },
+    scopes: { payload: {}, workflow: {}, lexical: [], system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1, tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } } };
+  const result = await executeWorkflowRuntimeV2ActionStep(input);
+  expect(result.output).toMatchObject({ success: true, source: 'threadHeaders', ticket: { ticketId, ticketNumber: 'OWN-1', subject: 'Own thread' } });
+  const invocation = await state.trx!('workflow_action_invocations').where({ run_id: f.runId }).first();
+  expect(invocation).toMatchObject({ status: 'SUCCEEDED', output_json: result.output });
+  const denied = await executeWorkflowRuntimeV2ActionStep({ ...input, stepPath: 'foreign-only', step: { ...input.step,
+    config: { ...input.step.config, inputMapping: { emailData: { id: 'foreign-message', subject: 'Foreign only', from: emailData.from, body: emailData.body, threadId: 'foreign-only' } } } } });
+  expect(denied.output).toEqual({ success: false, ticket: null, source: null });
+});

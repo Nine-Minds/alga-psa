@@ -2440,3 +2440,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Definition loading and step-start inserts remain fixture seams; no application-start/quota claim. External business effects and context resolution remain synthetic handlers, while parsing and activity storage are real. The caught failure is resolution failure because parser failures intentionally fall back in the current node.
 - All 24 integration cases pass, including six new engine/database journeys. Removed 24 equivalent retired assertions; two remain for application-action email start and actual threading lookup. Evidence lists each removed assertion: evidence/email-temporal-persistence-port.json. Combined with earlier engine scenarios, coverage includes actual mapped tenant/provider/sender inputs and context state.
 - Native CI still needs an updated published candidate; broad plan requirements remain open.
+
+### 2026-09-07 — actual email threading action and tenant queries
+
+- Added four database-backed registered-action cases for threadId, bracketed In-Reply-To, References fallback and unmatched reply-token fallback. Real action, lookup queries, schema validation and invocation persistence execute against cloned migrated ticket/status/token tables.
+- Fixtures include matching identifiers in two tenants plus a foreign-only thread. Every case selects only the current tenant's ticket and rejects the foreign-only record. Database transaction connection is substituted to the rollback-only schema; no query/result mocks.
+- All 28 integration cases pass (21.09s). Initial fixture failure required client_id on migrated tickets; no application defect found in this slice. Evidence: evidence/email-threading-action-port.json. Removed the retired stubbed threading case; one retired application-action email-start assertion remains. Native CI/full plan remain open.

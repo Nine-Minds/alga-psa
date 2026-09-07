@@ -129,8 +129,8 @@ afterAll(async () => {
   await db.destroy();
 });
 
-// Two remaining retired-interpreter assertions await active replacements:
-// application-action email start and real threading lookup. The other original
+// One remaining retired-interpreter assertion awaits an active replacement:
+// application-action email start. Real threading lookup and the other original
 // assertions now run in snapshotStorage integration and email-definition engine
 // suites; see the production-regression-prevention plan evidence.
 describe.skip('workflow runtime v2 email workflow integration tests', () => {
@@ -178,21 +178,5 @@ describe.skip('workflow runtime v2 email workflow integration tests', () => {
     });
   });
 
-  it('When reply token missing or not matched, resolve existing ticket via threading. Mocks: non-target dependencies.', async () => {
-    await resetWorkflowRuntimeTables(db);
-    await seedEmailWorkflow();
 
-    stubAction('parse_email_reply', 1, vi.fn().mockResolvedValue({ success: true, parsed: { sanitizedText: 'x', confidence: 'high', tokens: {} } }));
-    const resolveExistingSpy = vi.fn().mockResolvedValue({ success: true, ticket: { ticketId: 'ticket-456' }, source: 'threadHeaders' });
-    stubAction('resolve_existing_ticket_from_email', 1, resolveExistingSpy);
-    stubAction('resolve_inbound_ticket_context', 1, vi.fn().mockResolvedValue({ ticketDefaults: {}, matchedClient: null, targetClientId: null, targetContactId: null, targetLocationId: null }));
-    stubAction('create_comment_from_parsed_email', 1, vi.fn().mockResolvedValue({ comment_id: 'comment-2' }));
-    stubAction('process_email_attachments_batch', 1, vi.fn().mockResolvedValue({ processed: 0, failed: 0 }));
-    stubAction('create_ticket_with_initial_comment', 1, vi.fn().mockResolvedValue({ ticket_id: 'ticket-new', ticket_number: 'T-1', comment_id: 'comment-0' }));
-    stubAction('send_ticket_acknowledgement_email', 1, vi.fn().mockResolvedValue({ success: true }));
-    stubAction('create_human_task_for_email_processing_failure', 1, vi.fn().mockResolvedValue({ task_id: 'task-1' }));
-
-    await startWorkflowRunAction({ workflowId: EMAIL_WORKFLOW_ID, workflowVersion: emailWorkflowVersion, payload: baseEmailPayload() });
-    expect(resolveExistingSpy).toHaveBeenCalled();
-  });
 });
