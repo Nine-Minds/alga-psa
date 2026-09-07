@@ -28,9 +28,11 @@ import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
-  NativeTimeTrackingError, readCoManagedNativeTimeEntry, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  NativeTimeTrackingError, NativeTimeDeletionError, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+
+import { reverseDeletedTimeEntryBilling } from '@alga-psa/scheduling/lib/timeEntryDeletionBilling';
 
 interface TimeApiAdmission {
   entryId?: string; operational: boolean; access: CoManagedNativeTimeAccess | null; existing: any; source: any;
@@ -104,6 +106,10 @@ export class TimeEntryService extends BaseService<any> {
 
   private async withTimeErrors<T>(work: () => Promise<T>): Promise<T> {
     try { return await work(); } catch (error) {
+      if (error instanceof NativeTimeDeletionError) {
+        if (error.code === 'TIME_DELETE_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
       if (error instanceof NativeTimeTrackingError) {
         if (error.code === 'TIMER_NOT_FOUND') throw new NotFoundError('Time tracking session not found');
         if (error.code === 'TIMER_ALREADY_ACTIVE') throw new ConflictError('An active time tracking session already exists');
@@ -606,6 +612,10 @@ export class TimeEntryService extends BaseService<any> {
 
   async delete(id: string, context: ServiceContext): Promise<void> {
     const { knex } = await this.getKnex();
+    const handled = await this.withTimeErrors(() => deleteCoManagedNativeTimeEntry(knex, context.tenant, id, async () => this.timeActor(context),
+      (trx, entry) => reverseDeletedTimeEntryBilling(trx, context.tenant, entry),
+      event => publishEvent({ eventType: 'TIME_ENTRY_DELETED', payload: { ...event, timestamp: new Date().toISOString() } })));
+    if (handled) return;
     const existing = await this.getById(id, context);
     if (!existing) {
       throw new NotFoundError('Time entry not found');

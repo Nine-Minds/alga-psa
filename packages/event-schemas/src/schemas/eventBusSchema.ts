@@ -828,6 +828,7 @@ export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({
   workItemId: z.string().nullable().optional(),
   workItemType: z.string().nullable().optional(),
   approvedBy: z.string().uuid().optional(),
+  deletedBy: z.string().uuid().optional(),
   requestedBy: z.string().uuid().optional(),
   reason: z.string().optional(),
   changes: z.record(z.unknown()).optional(),

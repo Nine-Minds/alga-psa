@@ -12958,3 +12958,129 @@ it('native timesheet collections reject the whole response when credentials expi
   } finally { await blocker.rollback(); }
   await rejected;
 }));
+
+it.each(['browser', 'api'])('native time deletion removes %s effort and review comments atomically with task totals', async channel => withNativeTimeSheetReadFixture(async ({ entry, addRequest, service, context, actions, customer, resource, publish }: any) => {
+  await addRequest();
+  const events = await import('@alga-psa/event-bus/publishers'), emitted = channel === 'api' ? publish : vi.mocked(events.publishEvent);
+  emitted.mockClear();
+  if (channel === 'api') await service.delete(entry.entry_id, context); else await actions.deleteTimeEntry(entry.entry_id);
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(await customer.table('time_entry_change_requests')).toHaveLength(0);
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(0);
+  expect(emitted).toHaveBeenCalledTimes(1); expect(JSON.stringify(emitted.mock.calls)).not.toMatch(/Private API effort|Please explain/);
+}));
+
+it('native time deletion preserves timer receipts and prevents retry from recreating deleted effort', async () => withNativeTimerFixture(async ({ start, stop, service, context, customer }: any) => {
+  const timer = await start(); await stop(timer); await service.delete(timer.session_id, context);
+  expect(await customer.table('time_entries')).toHaveLength(0);
+  expect(await customer.table('native_time_tracking_sessions').first()).toMatchObject({ completed_entry_id: timer.session_id });
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 404 });
+}));
+
+it('native time deletion requires actual key scope and editable sheet and entry state', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, user, resource, apiKeyId }: any) => {
+  await expect(service.delete(entry.entry_id, { ...context, apiKeyId: randomUUID() })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'SUBMITTED' });
+  await expect(service.delete(entry.entry_id, context)).rejects.toMatchObject({ statusCode: 409 });
+  await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'DRAFT' });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'APPROVED' });
+  await expect(service.delete(entry.entry_id, context)).rejects.toMatchObject({ statusCode: 409 });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'DRAFT' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Delete time scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'delete', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(service.delete(entry.entry_id, context)).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'APPROVED' });
+  await expect(service.delete(entry.entry_id, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native time deletion permits authorized removal of an entry with hidden notes without returning them', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, user, resource, operation, apiKeyId, publish }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Delete hidden notes', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  publish.mockClear(); expect(await service.delete(entry.entry_id, context)).toBeUndefined();
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(JSON.stringify(publish.mock.calls)).not.toContain('Private API effort');
+}));
+
+it('native time deletion rolls effort, review comments, task totals and events back on final key expiry', async () => withNativeTimeSheetReadFixture(async ({ entry, addRequest, service, context, customer, resource, apiKeyId, publish }: any) => {
+  await addRequest(); publish.mockClear();
+  await db.raw(`CREATE FUNCTION expire_time_delete_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = OLD.tenant AND api_key_id = '${apiKeyId}'::uuid; RETURN OLD; END $$`);
+  await db.raw('CREATE TRIGGER expire_time_delete_key AFTER DELETE ON time_entries FOR EACH ROW EXECUTE FUNCTION expire_time_delete_key()');
+  try {
+    await expect(service.delete(entry.entry_id, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_entries')).toHaveLength(1); expect(await customer.table('time_entry_change_requests')).toHaveLength(1);
+    expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(90);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_time_delete_key ON time_entries'); await db.raw('DROP FUNCTION expire_time_delete_key()'); }
+}));
+
+it('native time deletion serializes retries and rejects writes after license expiry', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, publish, create, principal }: any) => {
+  publish.mockClear();
+  const results = await Promise.allSettled([service.delete(entry.entry_id, context), service.delete(entry.entry_id, context)]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1); expect(publish).toHaveBeenCalledTimes(1);
+  const next = await create(); await expireCoManagedEntitlement(principal.tenant);
+  await expect(service.delete(next.entry_id, context)).rejects.toMatchObject({ statusCode: 403, code: 'CO_MANAGED_READ_ONLY' });
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+async function seedTimeDeletionBlock(fixture: any, entry: any) {
+  const { customer, context, operation } = fixture, blockId = randomUUID();
+  let serviceId = entry.service_id;
+  if (!serviceId) {
+    serviceId = randomUUID(); const typeId = randomUUID();
+    await customer.table('service_types').insert({ tenant: context.tenant, id: typeId, name: 'Deletion block service' });
+    await customer.table('service_catalog').insert({ tenant: context.tenant, service_id: serviceId, service_name: 'Deletion labor', billing_method: 'hourly', custom_service_type_id: typeId });
+  }
+  await customer.table('hour_blocks').insert({ tenant: context.tenant, block_id: blockId, client_id: operation.customer_client_id, service_id: serviceId,
+    total_minutes: 60, remaining_minutes: 30, hourly_rate: 10000, status: 'active' });
+  await customer.table('hour_block_time_allocations').insert({ tenant: context.tenant, allocation_id: randomUUID(), block_id: blockId, time_entry_id: entry.entry_id, minutes: 30 });
+  return { blockId, serviceId };
+}
+
+it('native time deletion refuses operational billing evidence without changing allocations or balances', async () => withNativeTimeSheetReadFixture(async (fixture: any) => {
+  const { entry, service, context, customer } = fixture, { blockId } = await seedTimeDeletionBlock(fixture, entry);
+  await expect(service.delete(entry.entry_id, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('time_entries')).toHaveLength(1); expect(await customer.table('hour_block_time_allocations')).toHaveLength(1);
+  expect(Number((await customer.table('hour_blocks').where('block_id', blockId).first()).remaining_minutes)).toBe(30);
+}));
+
+it('native time deletion reverses commercial post-upgrade allocations and rolls them back with a failed deletion', async () => withNativeTimeSheetReadFixture(async (fixture: any) => {
+  const { entry, service, context, customer, create, resource, publish } = fixture;
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  const typeId = randomUUID(), serviceId = randomUUID();
+  await customer.table('service_types').insert({ tenant: context.tenant, id: typeId, name: 'Upgraded deletion' });
+  await customer.table('service_catalog').insert({ tenant: context.tenant, service_id: serviceId, service_name: 'Upgraded labor', billing_method: 'hourly', custom_service_type_id: typeId });
+  const commercial = await create({ start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', service_id: serviceId, is_billable: false });
+  const { blockId } = await seedTimeDeletionBlock(fixture, commercial); publish.mockClear();
+  await db.raw("CREATE FUNCTION fail_time_delete() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Injected time deletion failure'; END $$");
+  await db.raw('CREATE TRIGGER fail_time_delete AFTER DELETE ON time_entries FOR EACH ROW EXECUTE FUNCTION fail_time_delete()');
+  try {
+    await expect(service.delete(commercial.entry_id, context)).rejects.toThrow('Injected time deletion failure');
+    expect(await customer.table('time_entries')).toHaveLength(2); expect(await customer.table('hour_block_time_allocations')).toHaveLength(1);
+    expect(Number((await customer.table('hour_blocks').where('block_id', blockId).first()).remaining_minutes)).toBe(30);
+    expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(150);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER fail_time_delete ON time_entries'); await db.raw('DROP FUNCTION fail_time_delete()'); }
+  await service.delete(commercial.entry_id, context);
+  expect((await customer.table('time_entries')).map((row: any) => row.entry_id)).toEqual([entry.entry_id]);
+  expect(await customer.table('hour_block_time_allocations')).toHaveLength(0);
+  expect(Number((await customer.table('hour_blocks').where('block_id', blockId).first()).remaining_minutes)).toBe(60);
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(90);
+  expect(publish).toHaveBeenCalledTimes(1);
+}));
+
+it('native time deletion retains the acting manager separately from a deactivated entry owner', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, user, publish }: any) => {
+  const formerId = randomUUID(), sheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first(), formerSheet = randomUUID();
+  await customer.table('users').insert({ ...user, user_id: formerId, email: 'deleted-former@example.test', username: 'deleted-former', is_inactive: true, reports_to: user.user_id });
+  await customer.table('time_sheets').insert({ ...sheet, id: formerSheet, user_id: formerId });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ user_id: formerId, time_sheet_id: formerSheet });
+  publish.mockClear(); await service.delete(entry.entry_id, context);
+  expect(await customer.table('time_entries')).toHaveLength(0);
+  expect(publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TIME_ENTRY_DELETED', payload: expect.objectContaining({ userId: formerId, deletedBy: user.user_id }) }));
+  const { TimeEntryEventPayloadSchema } = await import('@alga-psa/event-schemas');
+  expect(TimeEntryEventPayloadSchema.parse(publish.mock.calls[0][0].payload)).toMatchObject({ userId: formerId, deletedBy: user.user_id });
+}));

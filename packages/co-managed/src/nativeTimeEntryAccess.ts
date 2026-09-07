@@ -26,21 +26,22 @@ export async function admitCoManagedNativeTimeSave(trx: Knex.Transaction, inputA
   return admitNativeTimeAccess(trx, inputActor, input, 'save');
 }
 
-/** The timer owner loads and locks its clock/receipt before calling this source
- * boundary. A clock ID is not looked up as an already completed time entry. */
+/** Source authority for a separately retained clock or completed entry. The
+ * caller confirms the canonical row under lock. Deletion checks editable state
+ * after this policy boundary so conflicts cannot reveal out-of-scope state. */
 export async function admitCoManagedNativeTimeSource(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
-  input: TimeSaveInput, action: 'read' | 'create' | 'update'): Promise<CoManagedNativeTimeAccess> {
+  input: TimeSaveInput, action: 'read' | 'create' | 'update' | 'delete'): Promise<CoManagedNativeTimeAccess> {
   return admitNativeTimeAccess(trx, inputActor, input, action);
 }
 
 /** Home ownership/delegation only; callers still evaluate each concrete
  * sheet or work record's bundle scope before returning its data. */
 export async function admitCoManagedNativeTimeOwner(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor,
-  subject: AuthorizationSubject, subjectUserId: string, reading: boolean) {
+  subject: AuthorizationSubject, subjectUserId: string, allowInactiveSubject: boolean) {
   const owner = tenantDb(trx, actor.tenant);
   if (!isCoManagedUuid(subjectUserId)) throw new CoManagedSharedWorkError();
   const subjectUser = owner.table('users').where({ user_id: subjectUserId, user_type: 'internal' });
-  if (!reading) subjectUser.where('is_inactive', false);
+  if (!allowInactiveSubject) subjectUser.where('is_inactive', false);
   if (!await subjectUser.forShare().first('user_id')) throw new CoManagedSharedWorkError();
 
   if (subjectUserId !== actor.userId) {
@@ -65,7 +66,7 @@ export async function admitCoManagedNativeTimeOwner(trx: Knex.Transaction, actor
 }
 
 async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManagedAuthenticatedActor,
-  input: TimeSaveInput, action: 'save' | 'read' | 'create' | 'update'): Promise<CoManagedNativeTimeAccess> {
+  input: TimeSaveInput, action: 'save' | 'read' | 'create' | 'update' | 'delete'): Promise<CoManagedNativeTimeAccess> {
   const reading = action === 'read', sourceOnly = action !== 'save';
   const actor = snapshotCoManagedAuthenticatedActor(inputActor), owner = tenantDb(trx, actor.tenant);
   input = { ...input };
@@ -78,7 +79,7 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
   const hint = !sourceOnly && input.entry_id ? await owner.table('time_entries').where('entry_id', input.entry_id).first() : null;
   if (!sourceOnly && input.entry_id && !hint) throw new CoManagedSharedWorkError();
   const subjectUserId = hint?.user_id || input.user_id || actor.userId;
-  await admitCoManagedNativeTimeOwner(trx, actor, subject, subjectUserId, reading);
+  await admitCoManagedNativeTimeOwner(trx, actor, subject, subjectUserId, reading || action === 'delete');
 
   // Both sheets remain editable when moving an entry. Caller-supplied DRAFT
   // must never reopen submitted or approved work.
@@ -87,10 +88,10 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
     const sheetQuery = owner.table('time_sheets').where('id', id);
     if (reading) sheetQuery.forShare(); else sheetQuery.forUpdate();
     const sheet = await sheetQuery.first('user_id', 'approval_status', 'period_id');
-    if (!sheet || sheet.user_id !== subjectUserId || (!reading && !['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status))) throw new CoManagedSharedWorkError();
+    if (!sheet || sheet.user_id !== subjectUserId || (!reading && action !== 'delete' && !['DRAFT', 'CHANGES_REQUESTED'].includes(sheet.approval_status))) throw new CoManagedSharedWorkError();
     if (!await owner.table('time_periods').where('period_id', sheet.period_id).forShare().first('period_id')) throw new CoManagedSharedWorkError();
   }
-  if (!reading && input.approval_status && input.approval_status !== 'DRAFT' && input.approval_status !== 'CHANGES_REQUESTED') throw new CoManagedSharedWorkError();
+  if (!reading && action !== 'delete' && input.approval_status && input.approval_status !== 'DRAFT' && input.approval_status !== 'CHANGES_REQUESTED') throw new CoManagedSharedWorkError();
   if (hint && (hint.invoiced || !['DRAFT', 'CHANGES_REQUESTED'].includes(hint.approval_status))) throw new CoManagedSharedWorkError();
 
   const sources = [input, ...(hint ? [hint] : [])];
@@ -149,11 +150,11 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
     const timeAction = sourceOnly ? action : input.entry_id ? 'update' : 'create';
     const timePolicy = await authorizeCoManagedLocalRecord(trx, actor, subject, 'time_entry', timeAction, timeRecord);
     const timeFields = [...timePolicy.redactedFields];
-    // These mutations return a full entry. Its current read policy must also
+    // These commands also require current read scope. Response-producing writes must
     // admit that response, including stored notes omitted from a partial edit.
     if (!reading) timeFields.push(...(await authorizeCoManagedLocalRecord(trx, actor, subject, 'time_entry', 'read', timeRecord)).redactedFields);
     redactedTimeFields.push(...timeFields);
-    if (!reading && isNativeTimeFieldHidden(timeFields, ['notes', 'start_time', 'end_time', 'work_item_id', 'work_item_type', 'time_sheet_id', 'user_id'])) throw new CoManagedSharedWorkError();
+    if (!reading && action !== 'delete' && isNativeTimeFieldHidden(timeFields, ['notes', 'start_time', 'end_time', 'work_item_id', 'work_item_type', 'time_sheet_id', 'user_id'])) throw new CoManagedSharedWorkError();
     const hidden = (names: string[]) => isCoManagedReadFieldHidden(fields, names.flatMap(name => [name, `values.${name}`, `project_tasks.${name}`, `projects.${name}`, `project_phases.${name}`, `tickets.${name}`]));
     if (hidden(['name', 'title', 'task_name'])) workItem.name = '';
     if (hidden(['description', 'url'])) workItem.description = '';

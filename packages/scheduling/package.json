@@ -56,6 +56,10 @@
     "./providers/*": {
       "import": "./src/providers/*.tsx",
       "types": "./src/providers/*.tsx"
+    },
+    "./lib/timeEntryDeletionBilling": {
+      "types": "./src/lib/timeEntryDeletionBilling.ts",
+      "import": "./src/lib/timeEntryDeletionBilling.ts"
     }
   },
   "scripts": {

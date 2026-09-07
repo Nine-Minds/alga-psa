@@ -428,3 +428,16 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Native `fetchTimeEntriesForTimeSheet`, `fetchTimeEntryChangeRequestsForTimeSheet`, retained time detail projection.
 - **Gate:** Shared authority/projection shape with high disclosure cost. ACT / bounded-now in the approved time workstream.
 - **Status:** extended the retained reader to independently admit sheet entries and current-sheet review history; reused home ownership/delegation and a tracked-browser identity resolver. Shared read locks preserve concurrent reads. Broader API collections, summaries and exports remain pending.
+
+
+## native-time-deletion — pattern
+- **What:** Browser/API deletion must retain actual work authority through billing reversal, row/child deletion, task effort and post-commit identity events.
+- **Where:** Native `deleteTimeEntry`, REST `TimeEntryService.delete` and bulk dispatch.
+- **Gate:** Two adapters with high-cost permission, financial and rollback invariants. ACT / bounded-now under the approved time workstream.
+- **Status:** shared customer-owned deletion boundary and billing-reversal adapter implemented; tested expiry rollback, state privacy, timer receipts, acting-manager attribution and commercial allocation restoration.
+
+## time-allocation-command-locks — friction
+- **What:** Entry deletion retains its canonical entry before reading reversal allocations; nightly client reconciliation must use compatible serialization before taking its own ledger snapshot.
+- **Where:** `reverseDeletedTimeEntryBilling`, shared `reverseTimeEntryAllocations` / `reverseClientTimeEntryAllocations` / `reconcileClientAllocations`.
+- **Gate:** Financial snapshot correctness across concurrent entry and reconciliation commands. ACT / staged-migration within the remaining billing integration; changing only deletion cannot establish the shared invariant.
+- **Status:** pending. Deletion rollback tests pass; concurrent nightly-reconciliation correctness has not been claimed or verified.

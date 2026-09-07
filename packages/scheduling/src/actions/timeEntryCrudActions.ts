@@ -52,8 +52,9 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
@@ -80,6 +81,7 @@ async function publishTimeEntrySearchEvent(
     workItemId?: string | null;
     workItemType?: string | null;
     approvedBy?: string;
+    deletedBy?: string;
     requestedBy?: string;
     reason?: string;
     changes?: Record<string, unknown>;
@@ -1145,6 +1147,10 @@ export const deleteTimeEntry = withAuth(async (
   const {knex: db} = await createTenantKnex();
 
   try {
+    const handled = await deleteCoManagedNativeTimeEntry(db, tenant, entryId, () => resolveNativeTimeBrowserActor(user, tenant),
+      (trx, entry) => reverseDeletedTimeEntryBilling(trx, tenant, entry),
+      event => publishTimeEntrySearchEvent('TIME_ENTRY_DELETED', event));
+    if (handled) return;
   // Check permission for time entry deletion
   if (!await hasPermission(user, 'time_entry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete time entries');
@@ -1169,56 +1175,7 @@ export const deleteTimeEntry = withAuth(async (
         throw new Error('This time entry has already been invoiced and cannot be deleted.');
       }
 
-      // --- Bucket Usage Update Logic (Before Delete) ---
-      if (timeEntry.service_id && (timeEntry.billable_duration || 0) > 0) {
-        let clientId: string | null = null;
-        if (timeEntry.work_item_id && timeEntry.work_item_type) {
-            clientId = await getClientIdForWorkItem(trx, tenant, timeEntry.work_item_id as string, timeEntry.work_item_type as string);
-        }
-
-        if (clientId && timeEntry.service_id) {
-          // Scope-resolution gate + weighted burn, resolved under the deleted
-          // entry's OWN client and line (negative on delete).
-          try {
-            const reversedDelta = await adjustTimeSpanDraw(
-              trx,
-              tenant,
-              clientId,
-              {
-                service_id: timeEntry.service_id,
-                start_time: timeEntry.start_time,
-                end_time: timeEntry.end_time,
-                billable_duration: timeEntry.billable_duration,
-                contract_line_id: timeEntry.contract_line_id ?? null,
-              },
-              -1,
-            );
-            if (reversedDelta !== 0) {
-              console.log(`Successfully decremented bucket usage for deleted entry ${entryId} (weighted delta ${reversedDelta})`);
-            }
-          } catch (bucketError) {
-            console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-            // Re-throwing ensures data consistency; preserve the typed code.
-            if (isBucketUsageError(bucketError)) {
-              throw bucketError;
-            }
-            throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
-          }
-        }
-      }
-      // --- End Bucket Usage Update Logic ---
-
-      // --- Hour-block burn reversal ---
-      // Restore the minutes the deleted entry drew from any hour blocks. Best-
-      // effort like the save path: failures are logged and the nightly
-      // reconcile converges. Runs unconditionally (an entry may carry block
-      // allocations without being contract-covered).
-      try {
-        await reverseTimeEntryAllocations(trx, tenant, entryId);
-      } catch (blockReverseError) {
-        console.error(`Error reversing hour-block burn for deleted time entry ${entryId}:`, blockReverseError);
-      }
-      // --- End Hour-block burn reversal ---
+      await reverseDeletedTimeEntryBilling(trx, tenant, timeEntry);
 
       // 2. Delete the time entry
       const deleteCount = await trxTenantDb.table('time_entries')
