@@ -12212,3 +12212,160 @@ it('operational time moves recalculate both affected task totals without duplica
   expect(Number((await customer.table('project_tasks').where('task_id', nextTaskId).first()).actual_hours)).toBe(90);
   expect(await customer.table('time_entries')).toHaveLength(1);
 }));
+
+async function withNativeOperationalTimeFixture(work: (fixture: any) => Promise<void>) {
+  await withOperationalTimeFixture(async (fixture: any) => {
+    const { customer, customerPrincipal, resource } = fixture, auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+    const user = await customer.table('users').where('user_id', customerPrincipal.userId).first();
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+    const events = await import('@alga-psa/event-bus/publishers'), publish = vi.spyOn(events, 'publishEvent').mockResolvedValue(undefined);
+    const actions = await import('../../../../packages/scheduling/src/actions/timeEntryCrudActions');
+    const periodId = randomUUID(), sheetId = randomUUID();
+    await customer.table('time_periods').insert({ tenant: resource.tenant, period_id: periodId, start_date: '2026-09-07', end_date: '2026-09-14' });
+    await customer.table('time_sheets').insert({ tenant: resource.tenant, id: sheetId, period_id: periodId, user_id: user.user_id, approval_status: 'DRAFT' });
+    const input = { ...fixture.fields, entry_id: '', created_at: '2026-09-07T09:00:00Z', updated_at: '2026-09-07T09:00:00Z', time_sheet_id: sheetId, approval_status: 'DRAFT' };
+    const save = (extra: any = {}) => actions.saveTimeEntry({ ...input, ...extra });
+    try { await withTrackedTaskBrowser(customerPrincipal, customer, browser => auth.runWithApiKeyUser(user, () => runWithTenant(resource.tenant,
+      () => work({ ...fixture, ...browser, user, actions, publish, input, save, sheetId })))); }
+    finally { publish.mockRestore(); connection.mockRestore(); }
+  });
+}
+
+it('native operational time saves and edits service-free effort without changing task assignments', async () => withNativeOperationalTimeFixture(async ({ save, actions, customer, resource, publish, input }: any) => {
+  expect(await actions.getTimeEntryBillingMode()).toBe('operational');
+  const entry = await save({ billable_duration: 90 });
+  expect(entry).toMatchObject({ billing_mode: 'operational', billable_duration: 0, service_id: null, contract_line_id: null, time_sheet_id: input.time_sheet_id,
+    workItem: { name: 'Verify rollout', is_billable: false } });
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(90);
+  expect((await customer.table('project_tasks').where('task_id', resource.id).first()).assigned_to).toBeNull();
+  expect(await customer.table('task_resources')).toHaveLength(0);
+  const edited = await save({ entry_id: entry.entry_id, end_time: '2026-09-07T09:30:00Z', notes: 'Revised effort' });
+  expect(edited).toMatchObject({ billing_mode: 'operational', billable_duration: 0, notes: 'Revised effort' });
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(30);
+  expect(publish).toHaveBeenCalledTimes(2);
+  expect(JSON.stringify(publish.mock.calls)).not.toContain('Revised effort');
+}));
+
+it.each(['service_id', 'contract_line_id', 'tax_rate_id', 'tax_region'])('native operational time rejects commercial selection %s before writing', async field => withNativeOperationalTimeFixture(async ({ save, customer, publish }: any) => {
+  await expect(save({ [field]: field === 'tax_region' ? 'US-NY' : randomUUID() })).rejects.toMatchObject({ code: 'OPERATIONAL_TIME_COMMERCIAL_FIELDS' });
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('native operational time cannot reopen submitted sheets, impersonate an owner or accept a foreign source', async () => withNativeOperationalTimeFixture(async ({ save, customer, sheetId, publish, sponsorActor }: any) => {
+  await expect(save({ user_id: sponsorActor.userId })).rejects.toThrow();
+  await expect(save({ work_item_id: randomUUID() })).rejects.toThrow();
+  await expect(save({ approval_status: 'APPROVED' })).rejects.toThrow();
+  await customer.table('time_sheets').where('id', sheetId).update({ approval_status: 'SUBMITTED' });
+  await expect(save({ approval_status: 'DRAFT' })).rejects.toThrow();
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('native operational time rejects stale sessions, API overrides and missing local time permission', async () => withNativeOperationalTimeFixture(async ({ save, customer, session, override, user, publish }: any) => {
+  const original = session.getMockImplementation(); session.mockResolvedValue(null);
+  await expect(save()).rejects.toThrow(); session.mockImplementation(original!);
+  override.mockReturnValue(user); await expect(save()).rejects.toThrow(); override.mockReturnValue(undefined);
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_entry', action: 'create' }).select('permission_id')).del();
+  await expect(save()).rejects.toThrow(); expect(await customer.table('time_entries')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+}));
+
+it('native operational time rolls back entry, effort and events when the session expires at the final admission', async () => withNativeOperationalTimeFixture(async ({ save, customer, resource, sessionId, publish }: any) => {
+  await db.raw(`CREATE FUNCTION expire_native_time_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND session_id = '${sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_native_time_session AFTER INSERT ON time_entries FOR EACH ROW EXECUTE FUNCTION expire_native_time_session()');
+  try {
+    await expect(save()).rejects.toThrow(); expect(await customer.table('time_entries')).toHaveLength(0);
+    expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(123);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_native_time_session ON time_entries'); await db.raw('DROP FUNCTION expire_native_time_session()'); }
+}));
+
+it('native operational time retains its mode after upgrade and applies the commercial requirement to new PSA effort', async () => withNativeOperationalTimeFixture(async ({ save, customer, actions }: any) => {
+  const entry = await save();
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await actions.getTimeEntryBillingMode()).toBe('commercial');
+  const updated = await save({ entry_id: entry.entry_id, end_time: '2026-09-07T10:00:00Z' });
+  expect(updated).toMatchObject({ billing_mode: 'operational', billable_duration: 0, service_id: null });
+  await expect(save()).rejects.toThrow(/service/i);
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native operational time applies project masks to returned labels without hiding independent time notes', async () => withNativeOperationalTimeFixture(async ({ save, user, resource, operation }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Time source masks', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['task_name', 'project_name', 'description', 'conversation'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  const entry = await save();
+  expect(entry.notes).toBe('Private operational effort');
+  expect(entry.workItem).toMatchObject({ name: '', description: '' });
+  expect(JSON.stringify(entry.workItem)).not.toMatch(/Verify rollout|Joint rollout|Private detailed work/);
+}));
+
+it('native operational time rejects saves outside the current project bundle and preserves the previous entry', async () => withNativeOperationalTimeFixture(async ({ save, user, resource, customer }: any) => {
+  const entry = await save(), bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Current time work scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  await expect(save({ entry_id: entry.entry_id, notes: 'No longer allowed' })).rejects.toThrow();
+  expect((await customer.table('time_entries').where('entry_id', entry.entry_id).first()).notes).toBe('Private operational effort');
+}));
+
+it('native operational time moves one entry between tasks without duplicating effort and rejects an invalid period', async () => withNativeOperationalTimeFixture(async ({ save, customer, resource }: any) => {
+  const entry = await save(), task = await customer.table('project_tasks').where('task_id', resource.id).first(), next = randomUUID();
+  await customer.table('project_tasks').insert({ ...task, task_id: next, wbs_code: `${task.wbs_code}.native`, actual_hours: 0 });
+  expect(await save({ entry_id: entry.entry_id, start_time: '2026-09-06T09:00:00Z', end_time: '2026-09-06T10:00:00Z' })).toMatchObject({ messageKey: 'msp/time-entry:errors.timeEntry.outsidePeriod' });
+  await save({ entry_id: entry.entry_id, work_item_id: next });
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(0);
+  expect(Number((await customer.table('project_tasks').where('task_id', next).first()).actual_hours)).toBe(90);
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native operational time supports general effort without a fabricated work record', async () => withNativeOperationalTimeFixture(async ({ save, customer }: any) => {
+  const entry = await save({ work_item_type: 'non_billable_category', work_item_id: '__non_billable__' });
+  expect(entry).toMatchObject({ billing_mode: 'operational', work_item_id: null, workItem: { type: 'non_billable_category', work_item_id: '__non_billable__' } });
+  const edited = await save({ entry_id: entry.entry_id, work_item_type: 'non_billable_category', work_item_id: '__non_billable__', notes: 'General IT work' });
+  expect(edited.notes).toBe('General IT work'); expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native operational time cached search evidence cannot bypass the current work and private-note boundary', async () => withNativeOperationalTimeFixture(async ({ save, resource, customer, user, sessionId }: any) => {
+  const entry = await save(), { getIndexer } = await import('../../../../packages/search/src/index'), { upsertSearchDoc } = await import('../../../../packages/search/src/upsert');
+  const doc = await getIndexer('time_entry')!.loadOne(db, resource.tenant, entry.entry_id); expect(doc).toBeTruthy();
+  await upsertSearchDoc(db, doc!); expect(await customer.table('app_search_index').where('object_type', 'time_entry')).toHaveLength(1);
+  const { withProjectSearchAccess } = await import('../../../../packages/search/src/projectSearchAccess');
+  const results = await withProjectSearchAccess(db, resource.tenant, user, { kind: 'session', sessionId }, async (trx, relation) => {
+    expect(relation).toBeTruthy();
+    return trx.from(trx.raw(relation!.sql, relation!.bindings)).where('object_type', 'time_entry').select('object_id');
+  });
+  expect(results).toEqual([]);
+}));
+
+it('native operational time saves ticket effort without assigning the ticket', async () => withNativeOperationalTimeFixture(async ({ save, customer }: any) => {
+  const ticket = await customer.table('tickets').first();
+  const entry = await save({ work_item_type: 'ticket', work_item_id: ticket.ticket_id });
+  expect(entry).toMatchObject({ billing_mode: 'operational', workItem: { type: 'ticket', name: 'Customer issue', is_billable: false } });
+  expect((await customer.table('tickets').where('ticket_id', ticket.ticket_id).first()).assigned_to).toBeNull();
+  expect(await customer.table('ticket_resources')).toHaveLength(0);
+}));
+
+it('native operational time leaves new paid PSA entries on the ordinary service-backed save path', async () => withNativeOperationalTimeFixture(async ({ save, customer, resource }: any) => {
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  const typeId = randomUUID(), serviceId = randomUUID();
+  await customer.table('service_types').insert({ tenant: resource.tenant, id: typeId, name: 'Native time services' });
+  await customer.table('service_catalog').insert({ tenant: resource.tenant, service_id: serviceId, service_name: 'Native time service', billing_method: 'hourly', custom_service_type_id: typeId });
+  const entry = await save({ service_id: serviceId });
+  expect(entry).toMatchObject({ billing_mode: 'commercial', service_id: serviceId, billable_duration: 0 });
+}));
+
+it('native operational time checks actual schedule ownership and supports local interaction effort', async () => withNativeOperationalTimeFixture(async ({ save, customer, resource, user }: any) => {
+  const scheduleId = randomUUID(), interactionId = randomUUID(), typeId = randomUUID();
+  await customer.table('schedule_entries').insert({ tenant: resource.tenant, entry_id: scheduleId, title: 'Own operational appointment', work_item_type: 'ad_hoc', scheduled_start: '2026-09-07T09:00:00Z', scheduled_end: '2026-09-07T10:30:00Z', status: 'scheduled' });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  await expect(save({ work_item_type: 'ad_hoc', work_item_id: scheduleId })).rejects.toThrow();
+  await customer.table('schedule_entry_assignees').insert({ tenant: resource.tenant, entry_id: scheduleId, user_id: user.user_id });
+  expect(await save({ work_item_type: 'ad_hoc', work_item_id: scheduleId })).toMatchObject({ billing_mode: 'operational', workItem: { name: 'Own operational appointment' } });
+  await customer.table('interaction_types').insert({ tenant: resource.tenant, type_id: typeId, type_name: 'Operational call' });
+  await customer.table('interactions').insert({ tenant: resource.tenant, interaction_id: interactionId, type_id: typeId, user_id: user.user_id, title: 'Local IT call' });
+  expect(await save({ work_item_type: 'interaction', work_item_id: interactionId })).toMatchObject({ billing_mode: 'operational', workItem: { name: 'Local IT call' } });
+}));

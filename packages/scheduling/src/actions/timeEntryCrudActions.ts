@@ -1,6 +1,6 @@
 'use server'
 
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { resolveContractLineSelection } from '../lib/contractLineDisambiguation';
 // Bucket usage MUST go through the shared canonical service. This package used
 // to carry a local fork (src/services/bucketUsageService.ts) that kept querying
@@ -21,7 +21,7 @@ import {
   type ContractLineSource,
 } from '@alga-psa/types';
 import { IWorkItem } from '@alga-psa/types';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission, getSession, getApiKeyUserOverride } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
 import { formatISO } from 'date-fns';
 import { validateData } from '@alga-psa/validation';
@@ -49,6 +49,12 @@ import {
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
 import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
+import type { Knex } from 'knex';
+import { productTimeEntryMode, type IUser } from '@alga-psa/types';
+import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
+  CoManagedSharedWorkError, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -299,15 +305,43 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   }
 });
 
-export const saveTimeEntry = withAuth(async (
-  user,
-  { tenant },
-  timeEntry: Omit<ITimeEntry, 'tenant'>
-): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
-  const {knex: db} = await createTenantKnex();
-  const tenantScopedDb = tenantDb(db, tenant) as any;
+/** UI hint only; every save re-evaluates the product and stored entry mode. */
+export const getTimeEntryBillingMode = withAuth(async (user, { tenant }) => {
+  const { knex } = await createTenantKnex();
+  if (user.user_type !== 'internal' || !await hasPermission(user, 'time_entry', 'read', knex)) throw new CoManagedSharedWorkError();
+  const workspace = await tenantDb(knex, tenant).table('tenants').first('product_code');
+  const mode = workspace && productTimeEntryMode(workspace.product_code);
+  if (!mode) throw new CoManagedSharedWorkError();
+  return mode;
+});
 
+export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<ITimeEntry, 'tenant'>): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
+  const { knex } = await createTenantKnex();
   try {
+    return await withTransaction(knex, async trx => {
+      const currentMode = await lockTimeEntryBillingMode(trx, tenant);
+      const stored = timeEntry.entry_id ? await tenantDb(trx, tenant).table('time_entries').where('entry_id', timeEntry.entry_id).first('billing_mode') : null;
+      let access: CoManagedNativeTimeAccess | null = null;
+      if (currentMode === 'operational' || stored?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, tenant)) {
+        const session = await getSession();
+        if (getApiKeyUserOverride() || !session?.session_id || session.user?.tenant !== tenant || session.user?.id !== user.user_id || session.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
+        access = await admitCoManagedNativeTimeSave(trx, { kind: 'session', tenant, userId: user.user_id, sessionId: session.session_id }, timeEntry);
+      }
+      const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
+      const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
+      await access?.assertCurrent();
+      return result;
+    });
+  } catch (error) {
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntry: Omit<ITimeEntry, 'tenant'>,
+  db: Knex.Transaction, operational: boolean, access: CoManagedNativeTimeAccess | null): Promise<ITimeEntryWithWorkItem> {
+  const tenantScopedDb = tenantDb(db, tenant) as any;
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
     // Update operation
@@ -322,9 +356,12 @@ export const saveTimeEntry = withAuth(async (
   }
 
   // Validate input
-  const validatedTimeEntry = validateData<SaveTimeEntryParams>(saveTimeEntryParamsSchema, timeEntry);
+  const operationalFields = operational ? operationalTimeEntryFields(timeEntry) : null;
+  const validatedTimeEntry = validateData<SaveTimeEntryParams>(operational ? timeEntrySchema : saveTimeEntryParamsSchema,
+    operational ? { ...timeEntry, ...operationalFields, service_id: undefined, tax_region: undefined } : timeEntry);
+  if (access && !(new Date(validatedTimeEntry.end_time).getTime() > new Date(validatedTimeEntry.start_time).getTime())) throw new Error('Time entry end must be after start');
 
-  if (!validatedTimeEntry.service_id?.trim()) {
+  if (!operational && !validatedTimeEntry.service_id?.trim()) {
     throw new Error('Service is required for time entries');
   }
 
@@ -348,7 +385,8 @@ export const saveTimeEntry = withAuth(async (
       timeEntryUserId = existing.user_id;
     }
 
-    await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
+    if (access) timeEntryUserId = access.subjectUserId;
+    else await assertCanActOnBehalf(user, tenant, timeEntryUserId, db);
 
     // Extract only the fields that exist in the database schema
     const {
@@ -412,6 +450,7 @@ export const saveTimeEntry = withAuth(async (
     const startDate = truncateToMinute(start_time);
     const endDate = truncateToMinute(end_time);
     const actualDurationMinutes = Math.round((endDate.getTime() - startDate.getTime()) / 60000);
+    if (access && actualDurationMinutes <= 0) throw new Error('Time entry must contain at least one minute');
     
     // Always store actual duration, only set billable_duration to 0 if explicitly non-billable
     const finalBillableDuration = billable_duration === 0 ? 0 :
@@ -451,8 +490,9 @@ export const saveTimeEntry = withAuth(async (
       updated_at: new Date().toISOString()
     };
 
-    // Log the cleaned entry for debugging
-    console.log('Cleaned entry data:', cleanedEntry);
+    if (operationalFields) Object.assign(cleanedEntry, operationalFields);
+    if (access && work_item_type === 'non_billable_category' && work_item_id === NON_BILLABLE_FALLBACK_WORK_ITEM_ID) Object.assign(cleanedEntry, { work_item_id: null });
+
 
     let resultingEntry: ITimeEntry | null = null;
 
@@ -520,7 +560,7 @@ export const saveTimeEntry = withAuth(async (
     }
 
 
-    await db.transaction(async (trx) => {
+    await withTransaction(db, async (trx) => {
       const trxTenantDb = tenantDb(trx, tenant) as any;
       console.log('Starting transaction for time entry');
       let oldDuration = 0; // Initialize oldDuration
@@ -558,7 +598,6 @@ export const saveTimeEntry = withAuth(async (
         }
 
         resultingEntry = updated;
-        console.log('Updated entry:', resultingEntry);
 
         if (updated.time_sheet_id) {
           const timeSheetStatus = await trxTenantDb.table('time_sheets')
@@ -598,11 +637,10 @@ export const saveTimeEntry = withAuth(async (
         }
 
         resultingEntry = inserted;
-        console.log('Inserted entry:', resultingEntry);
 
-        // Add user to ticket_resources or task_resources when a new time entry is created.
-        if (work_item_type === 'project_task') {
-          await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, null, inserted);
+        await recalculateProjectTaskActualHoursForEntryChange(trx, tenant, null, inserted);
+        // Operational effort does not implicitly change work assignments.
+        if (!access && work_item_type === 'project_task') {
 
           // Get current task to check if it already has an assignee
           const task = await trxTenantDb.table('project_tasks')
@@ -648,7 +686,7 @@ export const saveTimeEntry = withAuth(async (
               // No task_resources record is created when there's no additional user
             }
           }
-        } else if (work_item_type === 'ticket') {
+        } else if (!access && work_item_type === 'ticket') {
           // Check if user is already in ticket_resources for this ticket
           const existingResource = await trxTenantDb.table('ticket_resources')
             .where({
@@ -841,18 +879,19 @@ export const saveTimeEntry = withAuth(async (
       throw new Error('Time entry save returned a row without an entry ID.');
     }
 
-    await publishTimeEntrySearchEvent(entry_id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED', {
+    registerAfterCommit(db, () => publishTimeEntrySearchEvent(entry_id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED', {
       tenantId: tenant,
-      timeEntryId: entry.entry_id,
+      timeEntryId: entry.entry_id!,
       userId: entry.user_id,
       workItemId: entry.work_item_id,
       workItemType: entry.work_item_type,
-      changes: entry_id ? validatedTimeEntry : undefined,
-    });
+      changes: entry_id && !access ? validatedTimeEntry : undefined,
+    }), 'time-entry-search');
 
     // Fetch work item details based on the saved entry
     let workItemDetails: IWorkItem;
-    switch (entry.work_item_type) {
+    if (access) workItemDetails = access.workItem;
+    else switch (entry.work_item_type) {
       case 'project_task': {
         const taskQuery = tenantScopedDb.table('project_tasks')
           .where({
@@ -978,13 +1017,7 @@ export const saveTimeEntry = withAuth(async (
     };
     return result;
 
-  } catch (error) {
-    console.error('Error saving time entry:', error);
-    const expected = timeSheetActionErrorFrom(error);
-    if (expected) return expected;
-    throw error;
-  }
-});
+}
 
 export const updateTimeEntryApprovalStatus = withAuth(async (
   user,

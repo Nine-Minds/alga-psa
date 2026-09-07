@@ -67,6 +67,12 @@ function matchesCoManagedScopeConstraints(constraints: ScopeConstraint[], record
  * shared commands; only their qualified record projection differs. */
 export async function authorizeCoManagedWorkRecord(trx: Knex.Transaction, actor: CoManagedHomeActor,
   subject: AuthorizationSubject, resourceType: 'ticket' | 'project', action: 'read' | 'update' | 'create', record: AuthorizationRecord) {
+  return authorizeCoManagedLocalRecord(trx, actor, subject, resourceType, action, record);
+}
+
+/** Current local RBAC and bundle policy for a concrete tenant-owned record. */
+export async function authorizeCoManagedLocalRecord(trx: Knex.Transaction, actor: CoManagedHomeActor,
+  subject: AuthorizationSubject, resourceType: string, action: string, record: AuthorizationRecord) {
   const kernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: input => resolveBundleNarrowingRulesForEvaluation(trx, input, { lock: true }) }),

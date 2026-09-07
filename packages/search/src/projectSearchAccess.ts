@@ -23,7 +23,9 @@ export async function withProjectSearchAccess<T>(db: Knex, tenant: string, input
     // parents and vectors cannot sneak into a redacted project result.
     const columns = ['tenant', 'object_type', 'object_id', 'parent_type', 'parent_id', 'title', 'subtitle', 'body', 'url', 'metadata',
       'visible_to_user_ids', 'visible_to_roles', 'is_internal_only', 'is_private', 'client_scope_id', 'required_permission', 'search_vector', 'source_updated_at'];
-    const ordinary = owner.table('app_search_index as i').whereNotIn('i.object_type', [...PROJECT_SEARCH_TYPES]).select(columns.map(name => `i.${name}`));
+    // Time search requires its own current source and private-note policy. A legacy
+    // cached ACL cannot authorize newly writable operational effort.
+    const ordinary = owner.table('app_search_index as i').whereNotIn('i.object_type', [...PROJECT_SEARCH_TYPES, 'time_entry']).select(columns.map(name => `i.${name}`));
     const branches: Knex.QueryBuilder[] = [ordinary];
     for (const kind of PROJECT_SEARCH_TYPES) {
       const isComment = kind === 'project_task_comment', isTask = kind === 'project_task' || isComment, isPhase = kind === 'project_phase';

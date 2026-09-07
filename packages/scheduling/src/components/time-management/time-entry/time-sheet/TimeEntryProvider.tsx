@@ -1,11 +1,12 @@
 'use client';
 
-import { createContext, useContext, useReducer, useEffect, useCallback, useMemo } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ITimeEntry, ITimeEntryWithWorkItem, ITimePeriod, ITimePeriodView } from '@alga-psa/types';
 import { IExtendedWorkItem } from '@alga-psa/types';
 import { TaxRegion } from '@alga-psa/types';
 import { fetchClientTaxRateForWorkItem, fetchScheduleEntryForWorkItem, fetchServicesForTimeEntry, fetchTaxRegions } from '../../../../actions/timeEntryActions';
+import { getTimeEntryBillingMode } from '../../../../actions/timeEntryCrudActions';
 import { getClientIdForWorkItem } from '../../../../lib/contractLineDisambiguation';
 import { formatISO, parseISO } from 'date-fns';
 import { generateUUID } from '@alga-psa/core';
@@ -50,6 +51,7 @@ function timeEntryReducer(state: TimeEntryState, action: TimeEntryAction): TimeE
     case 'SET_INITIAL_DATA':
       return {
         ...state,
+        error: null,
         services: action.payload.services,
         taxRegions: action.payload.taxRegions,
         isLoading: false,
@@ -120,6 +122,7 @@ const TimeEntryContext = createContext<TimeEntryContextType | undefined>(undefin
 export function TimeEntryProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const { t } = useTranslation('msp/time-entry');
   const [state, dispatch] = useReducer(timeEntryReducer, initialState);
+  const initialization = useRef(0);
 
   const initializeEntries = useCallback(async ({
     existingEntries,
@@ -129,16 +132,20 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
     workItem,
     date,
   }: InitializeEntriesParams): Promise<void> => {
+    const request = ++initialization.current;
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
+      dispatch({ type: 'SET_ENTRIES', payload: [] });
+      const billingMode = await getTimeEntryBillingMode();
+      const operational = billingMode === 'operational' || Boolean(existingEntries?.length && existingEntries.every(entry => entry.billing_mode === 'operational'));
 
-      const clientId = (workItem.type === 'ticket' || workItem.type === 'project_task')
+      const clientId = !operational && (workItem.type === 'ticket' || workItem.type === 'project_task')
         ? await getClientIdForWorkItem(workItem.work_item_id, workItem.type)
         : null;
 
       const [services, taxRegions, client] = await Promise.all([
-        fetchServicesForTimeEntry(workItem.type),
-        fetchTaxRegions(),
+        operational ? Promise.resolve([]) : fetchServicesForTimeEntry(workItem.type),
+        operational ? Promise.resolve([]) : fetchTaxRegions(),
         clientId ? getSchedulingClientById(clientId) : Promise.resolve(null)
       ]);
 
@@ -149,6 +156,7 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         throw new Error(getErrorMessage(taxRegions));
       }
 
+      if (request !== initialization.current) return;
       dispatch({
         type: 'SET_INITIAL_DATA',
         payload: { services, taxRegions },
@@ -253,6 +261,12 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
         }];
       }
 
+      newEntries = newEntries.map(entry => billingMode === 'operational' || entry.billing_mode === 'operational' ? {
+        ...entry, billing_mode: 'operational', billable_duration: 0, service_id: undefined, tax_region: undefined,
+        contract_line_id: null, tax_rate_id: null, contract_line_source: null, contract_line_unresolved_reason: null,
+        _isServicePrefilled: false, _originalServiceId: null, _serviceOverridden: false,
+      } : entry);
+      if (request !== initialization.current) return;
       const sortedEntries = [...newEntries].sort((a, b) =>
         parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
       );
@@ -268,13 +282,14 @@ export function TimeEntryProvider({ children }: { children: React.ReactNode }): 
       );
       dispatch({ type: 'UPDATE_DURATIONS', payload: durations });
     } catch (error) {
+      if (request !== initialization.current) return;
       console.error('Error initializing entries:', error);
       dispatch({
         type: 'SET_ERROR',
         payload: t('timeEntryProvider.errors.initialize', { defaultValue: 'Failed to initialize time entries' })
       });
     } finally {
-      dispatch({ type: 'SET_LOADING', payload: false });
+      if (request === initialization.current) dispatch({ type: 'SET_LOADING', payload: false });
     }
   }, [t]);
 
