@@ -2015,3 +2015,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Clean fedfeffee8 readiness run passes 42 files / 263 assertions (13.65s); engine passes nine files / 38 assertions (13.82s), zero skips and complete execution reconciliation. Evidence: evidence/temporal-discovery-refresh-fedfe.json.
 - Refreshed the mixed-revision repository inventory with actual current Temporal collections. Only two Temporal files remain unmatched: email-only.e2e.test.ts and tenant-creation-workflow.e2e.test.ts. Overall mixed-artifact unmatched count is 100, but other lanes' older artifacts omit newer assigned tests, so this is not a current-CI orphan count. Global discovery remains failed/incomplete. Report: /tmp/alga-inventory-after-temporal-result.json.
 - No external publication attempted; push approval remains pending.
+
+### 2026-09-07 — own the legacy email workflow environment and test actual timeout
+
+- Legacy email workflow suite now owns a TestWorkflowEnvironment, native worker connection and unique task queue, with deterministic worker/environment teardown. Explicitly selects the existing mock email provider before imports, preserving its original mock-message assertions without risking live delivery. Assigned to the engine runner and independent discovery.
+- Replaced the misleading timeout-success case with an injected real activity delay: verifies the activity started and the workflow failed with TimeoutFailure at its one-second execution deadline. Other password/validation/minimal/concurrency cases remain. Six cases pass in 3.73 seconds (/tmp/alga-email-owned-engine.log).
+- This is workflow orchestration/mock-email coverage; it does not replace the built-container SMTP/MIME integration lane. Full engine execution with this assignment remains to be validated; tenant-creation-workflow.e2e.test.ts is still unassigned. External push remains awaiting approval.

@@ -1,61 +1,54 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { Client, Connection } from '@temporalio/client';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import type { Client } from '@temporalio/client';
+import { TestWorkflowEnvironment } from '@temporalio/testing';
+import { Context } from '@temporalio/activity';
+import { randomUUID } from 'node:crypto';
+
+vi.hoisted(() => { vi.stubEnv('EMAIL_PROVIDER', 'mock'); });
 import { Worker } from '@temporalio/worker';
 import { generateTemporaryPassword, sendWelcomeEmail } from '../../activities/email-activities';
 import { testEmailWorkflow } from '../../workflows/test-email-workflow';
 import type { SendWelcomeEmailActivityInput } from '../../types/workflow-types';
 import path from 'path';
 
-describe('Email Activities - E2E Tests', () => {
-  let connection: Connection;
+describe('Email workflow with the explicit mock email provider', () => {
+  let environment: TestWorkflowEnvironment;
   let client: Client;
   let worker: Worker;
+  let workerRun: Promise<void> | undefined;
+  let delayedActivityStarted = false;
+  const taskQueue = `email-engine-${randomUUID()}`;
 
   beforeAll(async () => {
-    // Try creating worker without explicit connection first
-    try {
-      // Create worker using default connection settings
-      worker = await Worker.create({
-        taskQueue: 'email-e2e-test-queue',
-        workflowsPath: path.resolve(__dirname, '../../workflows'),
-        activities: {
-          generateTemporaryPassword,
-          sendWelcomeEmail,
+    environment = await TestWorkflowEnvironment.createTimeSkipping();
+    client = environment.client;
+    worker = await Worker.create({
+      connection: environment.nativeConnection,
+      taskQueue,
+      workflowsPath: path.resolve(__dirname, '../../workflows/test-email-workflow.ts'),
+      shutdownGraceTime: '1s',
+      activities: {
+        generateTemporaryPassword,
+        sendWelcomeEmail: async (input: SendWelcomeEmailActivityInput) => {
+          if (input.tenantName === 'Timeout Test Tenant') {
+            delayedActivityStarted = true;
+            await Context.current().sleep(60_000);
+          }
+          return sendWelcomeEmail(input);
         },
-        // Worker options - fix the configuration issue
-        maxConcurrentActivityTaskExecutions: 1,
-        maxConcurrentWorkflowTaskExecutions: 1,
-        maxCachedWorkflows: 0, // Disable workflow caching to avoid the config issue
-      });
-
-      // Get the connection from the worker
-      connection = worker.connection;
-      
-      client = new Client({
-        connection,
-        namespace: 'default',
-      });
-      
-      // Start the worker
-      worker.run().catch(error => {
-        console.error('Worker error:', error);
-      });
-      
-      // Give the worker time to start
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-    } catch (error) {
-      console.error('Failed to create worker:', error);
-      throw error;
-    }
-  }, 60000);
+      },
+    });
+    workerRun = worker.run();
+    // Observe early rejection immediately; teardown still propagates failure.
+    workerRun.catch(() => {});
+  });
 
   afterAll(async () => {
-    if (worker) {
-      await worker.shutdown();
-    }
-    if (connection) {
-      await connection.close();
+    try {
+      if (worker) { worker.shutdown(); await workerRun; }
+    } finally {
+      await environment?.teardown();
+      vi.unstubAllEnvs();
     }
   });
 
@@ -79,7 +72,7 @@ describe('Email Activities - E2E Tests', () => {
       // Execute the workflow end-to-end
       const handle = await client.workflow.start(testEmailWorkflow, {
         args: [input],
-        taskQueue: 'email-e2e-test-queue',
+        taskQueue,
         workflowId: `email-e2e-test-${timestamp}`,
       });
 
@@ -118,7 +111,7 @@ describe('Email Activities - E2E Tests', () => {
 
       const handle = await client.workflow.start(testEmailWorkflow, {
         args: [input],
-        taskQueue: 'email-e2e-test-queue',
+        taskQueue,
         workflowId: `email-invalid-${timestamp}`,
       });
 
@@ -151,7 +144,7 @@ describe('Email Activities - E2E Tests', () => {
 
       const handle = await client.workflow.start(testEmailWorkflow, {
         args: [input],
-        taskQueue: 'email-e2e-test-queue',
+        taskQueue,
         workflowId: `email-minimal-${timestamp}`,
       });
 
@@ -185,7 +178,7 @@ describe('Email Activities - E2E Tests', () => {
 
         const handle = await client.workflow.start(testEmailWorkflow, {
           args: [input],
-          taskQueue: 'email-e2e-test-queue',
+          taskQueue,
           workflowId: `email-concurrent-${timestamp}-${i}`,
         });
 
@@ -227,7 +220,7 @@ describe('Email Activities - E2E Tests', () => {
 
       const handle = await client.workflow.start(testEmailWorkflow, {
         args: [input],
-        taskQueue: 'email-e2e-test-queue',
+        taskQueue,
         workflowId: `email-error-${timestamp}`,
       });
 
@@ -243,7 +236,7 @@ describe('Email Activities - E2E Tests', () => {
       expect(result.emailResult.error).toBeDefined();
     });
 
-    it('should handle activity timeouts gracefully', async () => {
+    it('rejects when the email activity exceeds the workflow execution deadline', async () => {
       const timestamp = Date.now();
       const input: SendWelcomeEmailActivityInput = {
         tenantId: `tenant-${timestamp}`,
@@ -260,16 +253,13 @@ describe('Email Activities - E2E Tests', () => {
       // Create workflow with short timeout to test timeout handling
       const handle = await client.workflow.start(testEmailWorkflow, {
         args: [input],
-        taskQueue: 'email-e2e-test-queue',
+        taskQueue,
         workflowId: `email-timeout-${timestamp}`,
-        workflowExecutionTimeout: '10s', // Short timeout for testing
+        workflowExecutionTimeout: '1s',
       });
 
-      // Should complete within timeout
-      const result = await handle.result();
-      
-      expect(result.temporaryPassword).toBeDefined();
-      expect(result.emailResult).toBeDefined();
+      await expect(handle.result()).rejects.toMatchObject({ cause: { name: 'TimeoutFailure' } });
+      expect(delayedActivityStarted).toBe(true);
     });
   });
 });
