@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CoManagedSharedResource, CoManagedTaskEditorState, CoManagedTaskEditPatch, CoManagedTaskEditRequest } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -7,6 +7,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getSharedProjectTaskEditorAction, getSharedProjectTaskStatusesAction, editSharedProjectTaskAction } from '@/lib/actions/coManagedProjectTaskActions';
+
+import CoManagedProjectTaskHistory from './CoManagedProjectTaskHistory';
 
 function localTime(value: string | null | undefined) {
   if (!value) return '';
@@ -23,6 +25,7 @@ function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
   const [busy, setBusy] = useState(false), [refresh, setRefresh] = useState(0), [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<CoManagedTaskEditRequest | null>(null);
   const generation = useRef(0);
+  const historyUnavailable = useCallback(() => { setState(null); setError('loadError'); }, []);
   useEffect(() => {
     const current = ++generation.current; setState(null); setChoices([]); setError(null); setNext(null);
     void getSharedProjectTaskEditorAction(resource).then(async result => {
@@ -78,5 +81,6 @@ function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
     </form>}
     {pending && <Button id="co-project-task-discard" variant="outline" disabled={busy} onClick={() => { setPending(null); setState(null); setRefresh(value => value + 1); }}>{t('coManaged.projects.discard')}</Button>}
     <Button id="co-project-task-reload" variant="outline" disabled={busy || pending !== null} onClick={() => { setState(null); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button>
+    {state && <CoManagedProjectTaskHistory resource={resource} onUnavailable={historyUnavailable} />}
   </section>;
 }

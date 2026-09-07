@@ -2,7 +2,7 @@
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCoManagedProjectTaskEditor, getCoManagedProjectTaskStatuses, listCoManagedProjectTasks, CoManagedTaskEditError, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTaskEditRequest } from '@alga-psa/co-managed';
+import { getCoManagedProjectTaskEditor, getCoManagedProjectTaskStatuses, listCoManagedProjectTaskHistory, listCoManagedProjectTasks, CoManagedTaskEditError, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTaskEditRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { editSharedProjectTask } from '../co-managed/editProjectTask';
 
@@ -28,4 +28,9 @@ export const editSharedProjectTaskAction = withAuth(async (user, { tenant }, res
 export const listSharedProjectTasksAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, afterId?: string) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex();
   return listCoManagedProjectTasks(knex, actor, resource, afterId);
+});
+
+export const listSharedProjectTaskHistoryAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, beforeId?: string) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex();
+  return listCoManagedProjectTaskHistory(knex, actor, resource, beforeId);
 });

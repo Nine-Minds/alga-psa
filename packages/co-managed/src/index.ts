@@ -44,3 +44,5 @@ export * from './customerReplyTokens';
 export { getCoManagedProjectTaskEditor, getCoManagedProjectTaskStatuses, editCoManagedProjectTask, CoManagedTaskEditError } from './projectTaskEditing';
 export type { CoManagedTaskEditField, CoManagedTaskEditPatch, CoManagedTaskEditRequest, CoManagedTaskEditReceipt, CoManagedTaskEditorState } from './projectTaskEditing';
 export { listCoManagedProjectTasks } from './projectTaskEditing';
+
+export { listCoManagedProjectTaskHistory, type CoManagedTaskHistoryEntry } from './projectTaskEditing';

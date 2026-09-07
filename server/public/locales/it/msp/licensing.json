@@ -574,6 +574,12 @@
       "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura."
     },
     "projects": {
+      "history": {
+        "title": "Cronologia delle modifiche",
+        "empty": "Nessuna modifica alle attività cogestite da mostrare.",
+        "updated": "Aggiornato",
+        "cleared": "Rimosso"
+      },
       "tasks": "Attività del progetto",
       "empty": "Nessuna attività disponibile in questo progetto.",
       "task": "Attività del progetto",

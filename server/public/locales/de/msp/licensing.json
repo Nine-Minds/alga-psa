@@ -572,6 +572,12 @@
       "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten."
     },
     "projects": {
+      "history": {
+        "title": "Änderungsverlauf",
+        "empty": "Keine Änderungen an gemeinsam verwalteten Aufgaben vorhanden.",
+        "updated": "Aktualisiert",
+        "cleared": "Entfernt"
+      },
       "tasks": "Projektaufgaben",
       "empty": "In diesem Projekt sind keine Aufgaben verfügbar.",
       "task": "Projektaufgabe",

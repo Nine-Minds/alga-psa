@@ -576,6 +576,12 @@
       "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu."
     },
     "projects": {
+      "history": {
+        "title": "Historia zmian",
+        "empty": "Brak zmian współzarządzanych zadań do wyświetlenia.",
+        "updated": "Zaktualizowano",
+        "cleared": "Wyczyszczono"
+      },
       "tasks": "Zadania projektu",
       "empty": "W tym projekcie nie ma dostępnych zadań.",
       "task": "Zadanie projektu",

@@ -10568,3 +10568,76 @@ it('preserves explicit audit ownership across foreign connection context and ret
   const migration = require('../../../migrations/20260907150600_preserve_explicit_audit_tenant.cjs');
   await migration.up(db); await expect(migration.down(db)).rejects.toThrow('shared project history');
 }));
+
+it('shows qualified task change history with immutable names and excludes unrelated audit records', async () => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, mappings, domain, edit }: any) => {
+  await edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Recorded name' } });
+  await edit(db, customerPrincipal, resource, { operationId: randomUUID(), expected: { project_status_mapping_id: mappings[0].project_status_mapping_id }, patch: { project_status_mapping_id: mappings[1].project_status_mapping_id } });
+  const rows = await customer.table('audit_logs').where('record_id', resource.id);
+  const statusAudit = rows.find((row: any) => row.changed_data.project_status_mapping_id);
+  expect(statusAudit.details.task_status_name).toBe('Verified');
+  await customer.table('project_status_mappings').where('project_status_mapping_id', mappings[1].project_status_mapping_id).update({ custom_name: 'Renamed status' });
+  await customer.table('collaboration_actor_references').update({ display_name: 'Renamed actor', organization_name: 'Renamed organization' });
+  const source = rows[0];
+  for (const overrides of [{ operation: 'ordinary_native_audit' }, { record_id: randomUUID() }, { details: { ...source.details, relationship_id: randomUUID() } }])
+    await customer.table('audit_logs').insert({ ...source, audit_id: randomUUID(), changed_data: { task_name: 'Do not disclose', description: 'Private notes', actual_hours: 123 }, ...overrides });
+  const local = await domain.listCoManagedProjectTaskHistory(db, customerPrincipal, resource);
+  const shared = await domain.listCoManagedProjectTaskHistory(db, principal, resource);
+  expect(shared).toEqual(local); expect(shared.items).toHaveLength(2);
+  expect(shared.items[0].changes).toEqual([{ field: 'project_status_mapping_id', value: mappings[1].project_status_mapping_id, statusName: 'Verified' }]);
+  expect(shared.items[1].author.displayName).toBe(source.details.actor_display_name);
+  expect(JSON.stringify(shared)).not.toMatch(/Do not disclose|Private notes|actual_hours|actor_user_id|actor_reference_id|Renamed/);
+  expect(await sponsor.table('audit_logs').where('record_id', resource.id)).toHaveLength(0);
+}));
+
+it('pages task history using database timestamp precision without duplicates or hidden-change counts', async () => withSharedProjectTaskFixture(async ({ customer, principal, resource, domain, edit }: any) => {
+  await edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Seed' } });
+  const source = await customer.table('audit_logs').where('record_id', resource.id).first();
+  await customer.table('audit_logs').where('audit_id', source.audit_id).del();
+  for (let index = 0; index < 60; index++) await customer.table('audit_logs').insert({ ...source, audit_id: randomUUID(),
+    timestamp: db.raw("'2026-09-07 12:00:00.123000+00'::timestamptz + (? * interval '1 microsecond')", [index]),
+    changed_data: index % 2 ? { task_name: `Visible ${index}` } : { description: 'Never shared' } });
+  const first = await domain.listCoManagedProjectTaskHistory(db, principal, resource);
+  const second = await domain.listCoManagedProjectTaskHistory(db, principal, resource, first.nextBeforeId);
+  expect(first.items).toHaveLength(25); expect(second.items).toHaveLength(5); expect(second.nextBeforeId).toBeNull();
+  expect(new Set([...first.items, ...second.items].map((item: any) => item.id)).size).toBe(30);
+  expect([...first.items, ...second.items].map((item: any) => item.changes[0].value)).toEqual(Array.from({ length: 30 }, (_, index) => `Visible ${59 - index * 2}`));
+  expect(first).not.toHaveProperty('total'); expect(JSON.stringify([first, second])).not.toContain('Never shared');
+  await expect(domain.listCoManagedProjectTaskHistory(db, principal, resource, randomUUID())).rejects.toThrow();
+  await expect(domain.listCoManagedProjectTaskHistory(db, principal, resource, 'bad-cursor')).rejects.toThrow();
+}));
+
+it.each(['customer', 'sponsor'])('redacts task history fields and derived authors using current %s bundle authority', async side => withSharedProjectTaskFixture(async ({ customer, principal, customerPrincipal, resource, operation, domain, edit }: any) => {
+  await edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout', due_date: null }, patch: { task_name: 'Hidden title', due_date: '2026-10-01T12:00:00.000Z' } });
+  const actor = side === 'customer' ? customerPrincipal : principal;
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: actor.tenant, name: 'History field policy', actorUserId: actor.userId });
+  await bundles.upsertBundleRule(db, { tenant: actor.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [side === 'customer' ? operation.customer_client_id : operation.request.clientId], redactedFields: ['project_tasks.task_name', 'actor_reference_id', 'timestamp'] } });
+  await bundles.publishBundleRevision(db, { tenant: actor.tenant, bundleId, revisionId, actorUserId: actor.userId }); await bundles.createBundleAssignment(db, { tenant: actor.tenant, bundleId, targetType: 'user', targetId: actor.userId });
+  const history = await domain.listCoManagedProjectTaskHistory(db, actor, resource);
+  expect(history.items).toHaveLength(1); expect(history.items[0]).toEqual({ id: expect.any(String), changes: [{ field: 'due_date', value: '2026-10-01T12:00:00.000Z' }] });
+  expect(JSON.stringify(history)).not.toContain('Hidden title');
+}));
+
+it('keeps task history readable during license lapse and denies revoked or expired readers', async () => withSharedProjectTaskFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, domain, edit }: any) => {
+  await edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Before lapse' } });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect((await domain.listCoManagedProjectTaskHistory(db, principal, resource)).items).toHaveLength(1);
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+  await expect(domain.listCoManagedProjectTaskHistory(db, principal, resource)).rejects.toThrow();
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+  await customer.table('co_management_project_scopes').del();
+  await expect(domain.listCoManagedProjectTaskHistory(db, principal, resource)).rejects.toThrow();
+  expect((await domain.listCoManagedProjectTaskHistory(db, customerPrincipal, resource)).items).toHaveLength(1);
+}));
+
+it('omits the task history and its pagination metadata when the history field is hidden', async () => withSharedProjectTaskFixture(async ({ principal, resource, operation, domain, edit }: any) => {
+  await edit(db, principal, resource, { operationId: randomUUID(), expected: { task_name: 'Verify rollout' }, patch: { task_name: 'Hidden history' } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Hidden history policy', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['history'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect(await domain.listCoManagedProjectTaskHistory(db, principal, resource)).toEqual({ items: [], nextBeforeId: null });
+}));

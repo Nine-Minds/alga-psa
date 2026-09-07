@@ -572,6 +572,12 @@
       "transferHelp": "Delen verplaatst dit gesprek en de bijlagen naar de werkruimte van de klant. Het oorspronkelijke privégesprek van de MSP blijft bewaard als alleen-lezen geschiedenis."
     },
     "projects": {
+      "history": {
+        "title": "Wijzigingsgeschiedenis",
+        "empty": "Geen wijzigingen aan gezamenlijk beheerde taken om te tonen.",
+        "updated": "Bijgewerkt",
+        "cleared": "Gewist"
+      },
       "tasks": "Projecttaken",
       "empty": "Er zijn geen taken beschikbaar in dit project.",
       "task": "Projecttaak",

@@ -116,6 +116,7 @@ export async function editCoManagedProjectTask(db: Knex, inputActor: CoManagedSe
       const previous = await owner.table('co_management_command_receipts').where('operation_id', request.operationId).forShare().first();
       if (previous) {
         if (previous.request_hash !== hash) throw new CoManagedTaskEditError('TASK_EDIT_OPERATION_CONFLICT');
+        await assertCurrent(write, true);
         return { operationId: request.operationId, appliedAt: normalize(previous.applied_at)! };
       }
       if (Object.entries(request.expected).some(([field, value]) => normalize(row[field]) !== value)) throw new CoManagedTaskEditError('TASK_EDIT_CONFLICT');
@@ -174,5 +175,64 @@ export async function listCoManagedProjectTasks(db: Knex, inputActor: CoManagedS
     }
     await assertCurrent(context);
     return { items: items.slice(0, 25), nextAfterId: items.length > 25 ? items[24].resource.id : null };
+  });
+}
+
+export interface CoManagedTaskHistoryEntry {
+  id: string;
+  occurredAt?: string;
+  author?: { displayName: string; organizationName?: string };
+  changes: Array<{ field: CoManagedTaskEditField; value: string | null; statusName?: string }>;
+}
+
+/** Working-field history is shared with the canonical task. Legacy audit rows
+ * and unrelated metadata are never promoted into the collaboration timeline. */
+export async function listCoManagedProjectTaskHistory(db: Knex, inputActor: CoManagedSessionActor,
+  inputResource: CoManagedSharedResource, beforeId?: string) {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = taskResource(inputResource);
+  if (beforeId !== undefined && !isCoManagedUuid(beforeId)) throw new CoManagedSharedWorkError();
+  return boundary(actor, resource)(db, actor, resource, 'read', async context => {
+    const masked = (names: string[]) => isCoManagedReadFieldHidden(context.redactedFields, names);
+    if (masked(['history', 'audit_logs', 'changed_data'])) return { items: [] as CoManagedTaskHistoryEntry[], nextBeforeId: null };
+    const owner = tenantDb(context.trx, resource.tenant);
+    const history = () => owner.table('audit_logs as history').where({ 'history.table_name': 'project_tasks', 'history.record_id': resource.id,
+      'history.operation': 'co_managed_project_task_update' }).whereRaw("history.details->>'relationship_id' = ?", [resource.relationshipId]);
+    if (beforeId && !await history().where('history.audit_id', beforeId).first('history.audit_id')) throw new CoManagedSharedWorkError();
+    let scanned = beforeId;
+    const items: CoManagedTaskHistoryEntry[] = [];
+    while (items.length < 26) {
+      const query = history().orderBy('history.timestamp', 'desc').orderBy('history.audit_id', 'desc').limit(50);
+      // Compare in PostgreSQL to retain timestamp precision across page boundaries.
+      if (scanned) query.whereRaw('(history.timestamp, history.audit_id) < (SELECT timestamp, audit_id FROM audit_logs WHERE tenant = ? AND audit_id = ?)', [resource.tenant, scanned]);
+      const rows = await query.select('history.audit_id', 'history.timestamp', 'history.changed_data', 'history.details');
+      if (!rows.length) break;
+      for (const row of rows) {
+        scanned = row.audit_id;
+        const changes: CoManagedTaskHistoryEntry['changes'] = [];
+        for (const field of fields) {
+          if (hidden(context, field) || masked([`history.changes.${field}`, `changed_data.${field}`]) ||
+            !Object.hasOwn(row.changed_data ?? {}, field)) continue;
+          const value = row.changed_data[field];
+          if (value !== null && typeof value !== 'string') continue;
+          const change: CoManagedTaskHistoryEntry['changes'][number] = { field, value };
+          if (field === 'project_status_mapping_id' && typeof row.details?.task_status_name === 'string' &&
+            !masked(['details.task_status_name'])) change.statusName = row.details.task_status_name;
+          changes.push(change);
+        }
+        if (!changes.length) continue;
+        const entry: CoManagedTaskHistoryEntry = { id: row.audit_id, changes };
+        if (!masked(['timestamp', 'occurredAt', 'history.occurredAt'])) entry.occurredAt = normalize(row.timestamp)!;
+        if (!masked(['author', 'actor', 'users', 'user_id', 'actor_reference_id', 'actor_tenant', 'actor_user_id', 'actor_display_name',
+          'actor_organization_name', 'details', 'history.author']) && typeof row.details?.actor_display_name === 'string') {
+          entry.author = { displayName: row.details.actor_display_name };
+          if (typeof row.details.actor_organization_name === 'string') entry.author.organizationName = row.details.actor_organization_name;
+        }
+        items.push(entry);
+        if (items.length === 26) break;
+      }
+      if (rows.length < 50) break;
+    }
+    await assertCurrent(context);
+    return { items: items.slice(0, 25), nextBeforeId: items.length > 25 ? items[24].id : null };
   });
 }

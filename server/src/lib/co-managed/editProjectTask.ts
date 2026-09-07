@@ -15,10 +15,15 @@ export async function editSharedProjectTask(db: Knex, actor: CoManagedSessionAct
       .forShare().first('first_name', 'last_name', 'email');
     const organization = reference ? null : await tenantDb(context.trx, context.actor.tenant).table('tenants').forShare().first('client_name');
     const displayName = reference?.display_name ?? ([user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.email || context.actor.userId);
-    await tenantDb(context.trx, context.resource.tenant).table('audit_logs').insert({ audit_id: randomUUID(), tenant: context.resource.tenant,
+    const owner = tenantDb(context.trx, context.resource.tenant);
+    const statusQuery = owner.table('project_status_mappings as mapping').where('mapping.project_status_mapping_id', patch.project_status_mapping_id ?? null);
+    owner.tenantJoin(statusQuery, 'statuses as s', 'mapping.status_id', 's.status_id', { type: 'left' });
+    owner.tenantJoin(statusQuery, 'standard_statuses as ss', 'mapping.standard_status_id', 'ss.standard_status_id', { type: 'left' });
+    const status = patch.project_status_mapping_id ? await statusQuery.first(context.trx.raw('COALESCE(mapping.custom_name, s.name, ss.name) as name')) : null;
+    await owner.table('audit_logs').insert({ audit_id: randomUUID(), tenant: context.resource.tenant,
       table_name: 'project_tasks', record_id: context.resource.id, operation: 'co_managed_project_task_update', changed_data: patch,
       user_id: actorReferenceId ? null : context.actor.userId, timestamp: context.trx.raw('clock_timestamp()'),
-      details: { actor_reference_id: actorReferenceId, actor_display_name: displayName, actor_organization_name: reference?.organization_name ?? organization?.client_name, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId, relationship_id: context.resource.relationshipId,
+      details: { task_status_name: status?.name, actor_reference_id: actorReferenceId, actor_display_name: displayName, actor_organization_name: reference?.organization_name ?? organization?.client_name, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId, relationship_id: context.resource.relationshipId,
         operation_id: operationId } });
   });
 }

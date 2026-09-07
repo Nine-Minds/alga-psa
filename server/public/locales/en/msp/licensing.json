@@ -661,6 +661,12 @@
       "transferHelp": "Sharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history."
     },
     "projects": {
+      "history": {
+        "title": "Change history",
+        "empty": "No co-managed task changes to show.",
+        "updated": "Updated",
+        "cleared": "Cleared"
+      },
       "tasks": "Project tasks",
       "empty": "No tasks are available in this project.",
       "task": "Project task",

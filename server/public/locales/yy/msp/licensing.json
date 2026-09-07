@@ -572,6 +572,12 @@
       "transferHelp": "2222222 222222222 2222 222222 222 222 22222222222 2222 222 22222222 2222222222 222 22222222 22222222222 222222 22 22222222 22 222222222 22222222"
     },
     "projects": {
+      "history": {
+        "title": "Change history",
+        "empty": "No co-managed task changes to show.",
+        "updated": "Updated",
+        "cleared": "Cleared"
+      },
       "tasks": "[Project tasks]",
       "empty": "[No tasks are available in this project.]",
       "task": "[Project task]",
