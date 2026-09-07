@@ -7,6 +7,7 @@ import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mj
 import { normalizeTestFile, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 import { partitionTestFiles } from './lib/test-sharding.mjs';
+import { requiredInfrastructureFiles } from './lib/infrastructure-selection.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cwd = path.join(root, 'server');
@@ -36,15 +37,7 @@ try {
   save('discovery', discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
   const complete = read('all-files').map(entry => normalizeTestFile(typeof entry === 'string' ? entry : entry.file, root)).sort();
-  const floor = [
-    'server/src/test/infrastructure/billing/invoices/invoiceDueDate.test.ts',
-    'server/src/test/infrastructure/billing/invoices/manualInvoice.test.ts',
-    'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts',
-    'server/src/test/infrastructure/billing/tax/taxRoundingBehavior.test.ts',
-    'server/src/test/infrastructure/billing/credits/creditApplication.test.ts',
-  ].sort();
-  for (const file of floor) if (!complete.includes(file)) throw new Error(`Mandatory infrastructure floor was not collected: ${file}`);
-  allFiles = mode === 'full' ? complete : floor;
+  allFiles = requiredInfrastructureFiles(complete, mode);
   const selected = partitionTestFiles(allFiles, index, total);
   const filters = selected.map(file => path.join(root, file));
   // Use explicit file partitions: Vitest 3's --list --filesOnly ignores --shard.

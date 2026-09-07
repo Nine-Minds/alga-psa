@@ -15,7 +15,8 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
     writeFileSync(path.join(root, file), content);
   };
   for (const file of ['scripts/run-infrastructure-tests.mjs', 'scripts/verify-infrastructure-shards.mjs',
-    'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs']) {
+    'scripts/lib/test-discovery.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs',
+    'scripts/lib/infrastructure-selection.mjs']) {
     write(file, readFileSync(path.join(source, file), 'utf8'));
   }
   write('.gitignore', 'node_modules/\ntest-results/\n');
@@ -28,9 +29,9 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'user.name', 'CI fixture');
   git('add', '.'); git('commit', '-qm', 'fixture');
-  const run = (script, index = 1, mode = 'full', total = 3) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
+  const run = (script, index = 1, mode = 'full', total = 3, environment = {}) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
-    env: { ...process.env, CI: '1', INFRA_JOB_RESULT: 'success', INFRA_MODE: mode, INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total) },
+    env: { ...process.env, CI: '1', GITHUB_SHA: git('rev-parse', 'HEAD').trim(), INFRA_JOB_RESULT: 'success', INFRA_MODE: mode, INFRA_SHARD_INDEX: String(index), INFRA_SHARD_TOTAL: String(total), ...environment },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
   for (const index of [1, 2, 3]) {
@@ -75,6 +76,37 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   assert.equal(read('test-results/infrastructure/evidence.json').counts.passed, 5);
   assert.ok(read('test-results/infrastructure/evidence.json').expectedFiles.includes(
     'server/src/test/infrastructure/billing/invoices/billingInvoiceGeneration_tax.test.ts'));
+  // These are genuine passing reports for every Tier-1 file. Relabelling the
+  // set as "full" must not let its own manifest hide the extra repository test.
+  rmSync(path.join(root, 'test-results/infrastructure-shards'), { recursive: true, force: true });
+  const reducedDirectory = 'test-results/infrastructure-shards/shard-1';
+  cpSync(path.join(root, 'test-results/infrastructure'), path.join(root, reducedDirectory), { recursive: true });
+  const reducedEvidence = read(`${reducedDirectory}/evidence.json`);
+  write(`${reducedDirectory}/evidence.json`, JSON.stringify({ ...reducedEvidence,
+    selection: { ...reducedEvidence.selection, mode: 'full' } }));
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'full', 1).status, 1);
+  assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'incomplete');
+  write(`${reducedDirectory}/evidence.json`, JSON.stringify(reducedEvidence));
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 0);
+
+  for (const mutation of [
+    { ...reducedEvidence, workingTreeDirty: true },
+    { ...reducedEvidence, source: { ...reducedEvidence.source, before: { ...reducedEvidence.source.before, dirty: true } } },
+    { ...reducedEvidence, source: { ...reducedEvidence.source, after: { ...reducedEvidence.source.after, changes: [{ file: 'runtime.ts' }] } } },
+  ]) {
+    write(`${reducedDirectory}/evidence.json`, JSON.stringify(mutation));
+    assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 1);
+    assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'incomplete');
+  }
+  write(`${reducedDirectory}/evidence.json`, JSON.stringify(reducedEvidence));
+  for (const environment of [{ GITHUB_SHA: 'f'.repeat(40) }, { GITHUB_SHA: '' }, { INFRA_MODE: 'unknown' }, { INFRA_JOB_RESULT: 'failure' }]) {
+    assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1, environment).status, 1);
+  }
+  write('changed-runtime.ts', 'export const changed = true;\n');
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 1);
+  assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'incomplete');
+  rmSync(path.join(root, 'changed-runtime.ts'));
+  assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 0);
   write('server/src/test/infrastructure/omitted.spec.ts', "test('new test', () => expect(true).toBe(true));\n");
   assert.equal(run('run-infrastructure-tests.mjs', 1, 'tier1', 1).status, 1);
   assert.deepEqual(read('test-results/infrastructure/discovery.json').unmatched, ['server/src/test/infrastructure/omitted.spec.ts']);
