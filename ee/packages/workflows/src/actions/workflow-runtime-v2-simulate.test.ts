@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
+import { hasPermission } from '@alga-psa/auth';
 
 type RuntimeEventRow = {
   event_id: string;
@@ -218,6 +219,7 @@ const eventRow = (overrides: Partial<RuntimeEventRow>): RuntimeEventRow => ({
 
 describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () => {
   beforeEach(() => {
+    vi.mocked(hasPermission).mockResolvedValue(true);
     fixture.tenant = 'tenant-a';
     fixture.events = [];
     fixture.simulatedCalls = [];
@@ -361,6 +363,29 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
     expect(result.snapshots[0].envelope_json.payload).toEqual(expected);
     if (action === exportWorkflowRunDetailAction) expect(result.run.input_json).toEqual(expected);
     expect(output).toEqual({ secretRef: 'private-reference', credentials: [{ $secret: 'PRIVATE_KEY' }], apiKey: 'private-value', ticketId: 'ticket-1' });
+  });
+
+  it.each([
+    ['run details', listWorkflowRunStepsAction],
+    ['run export', exportWorkflowRunDetailAction],
+  ] as const)('withholds free-form invocation errors from restricted viewers in %s', async (_name, action) => {
+    vi.mocked(hasPermission).mockImplementation(async (_user, _resource, permission) => permission === 'read');
+    fixture.invocations = [{ invocation_id: 'invocation-1', input_json: { value: 'private' }, output_json: { value: 'private' },
+      error_message: 'Provider rejected private input', error_json: { category: 'ActionError', code: 'INVALID', message: 'private', details: { value: 'private' } } }];
+    const result = await action({ runId: 'run-1' }) as any;
+    expect(result.invocations[0]).toMatchObject({ input_json: { redacted: true }, output_json: { redacted: true },
+      error_message: null, error_json: { redacted: true, category: 'ActionError', code: 'INVALID' } });
+    expect(JSON.stringify(result.invocations)).not.toContain('private');
+  });
+
+  it.each([
+    ['run details', listWorkflowRunStepsAction, 'tenant-b'],
+    ['run export', exportWorkflowRunDetailAction, 'tenant-b'],
+    ['run details', listWorkflowRunStepsAction, null],
+    ['run export', exportWorkflowRunDetailAction, null],
+  ] as const)('rejects foreign or unowned runs through %s', async (_name, action, runTenant) => {
+    fixture.run.tenant = runTenant;
+    await expect(action({ runId: 'run-1' })).rejects.toThrow('Not found');
   });
 
   it('includes structured invocation error_json in run step details', async () => {

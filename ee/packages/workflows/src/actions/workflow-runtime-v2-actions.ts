@@ -3182,6 +3182,7 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
       }))
     : invocations.map((invocation) => ({
         ...invocation,
+        error_message: null,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
         error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
@@ -3206,13 +3207,7 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'read', knex);
 
-  const run = await WorkflowRunModelV2.getById(knex, parsed.runId, tenant);
-  if (!run) {
-    return throwHttpError(404, 'Not found');
-  }
-  if (tenant && run.tenant && run.tenant !== tenant) {
-    return throwHttpError(404, 'Not found');
-  }
+  const run = await requireRunTenantAccess(knex, parsed.runId, tenant);
 
   const runTenant = run.tenant ?? tenant ?? null;
   const steps = await WorkflowRunStepModelV2.listByRun(knex, parsed.runId, runTenant);
@@ -3233,6 +3228,7 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
       }))
     : invocations.map((invocation) => ({
         ...invocation,
+        error_message: null,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
         error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
