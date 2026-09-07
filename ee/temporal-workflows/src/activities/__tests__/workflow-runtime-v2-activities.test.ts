@@ -24,45 +24,31 @@ vi.mock('@alga-psa/db/admin', () => ({
   retryOnAdminReadOnly: async (fn: () => Promise<unknown>) => fn(),
 }));
 
-vi.mock('@alga-psa/workflows/runtime/core', () => ({
-  WorkflowRuntimeV2: class WorkflowRuntimeV2 {},
-  workflowDefinitionSchema: {
-    parse: (value: unknown) => value,
-  },
-  resolveInputMapping: mocks.resolveInputMapping,
-  resolveExpressionsWithSecrets: mocks.resolveExpressionsWithSecrets,
-  getActionRegistryV2: () => ({
-    get: mocks.actionRegistryGet,
-  }),
-  getNodeTypeRegistry: () => ({
-    get: vi.fn(),
-  }),
-  generateIdempotencyKey: () => 'generated-idempotency-key',
-  initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
-  createSecretResolverFromProvider: (provider: unknown) => provider,
-  applyRedactions: (value: unknown) => {
-    if (Array.isArray(value)) {
-      return value.map((entry) => (entry && typeof entry === 'object' && 'secretRef' in entry ? { ...entry, secretRef: '[REDACTED]' } : entry));
-    }
-    if (value && typeof value === 'object') {
-      const redact = (input: unknown): unknown => {
-        if (Array.isArray(input)) return input.map(redact);
-        if (!input || typeof input !== 'object') return input;
-        const result: Record<string, unknown> = {};
-        for (const [key, val] of Object.entries(input as Record<string, unknown>)) {
-          result[key] = key === 'secretRef' ? '[REDACTED]' : redact(val);
-        }
-        return result;
-      };
-      return redact(value);
-    }
-    return value;
-  },
-  safeSerialize: (value: unknown) => JSON.parse(JSON.stringify(value)),
-  workflowStepQuotaService: {
-    reserveStepStart: mocks.reserveStepStart,
-  },
-}));
+vi.mock('@alga-psa/workflows/runtime/core', async () => {
+  const { applyRedactions, safeSerialize } = await import('@alga-psa/shared/workflow/runtime/utils/redactionUtils');
+  return {
+    WorkflowRuntimeV2: class WorkflowRuntimeV2 {},
+    workflowDefinitionSchema: {
+      parse: (value: unknown) => value,
+    },
+    resolveInputMapping: mocks.resolveInputMapping,
+    resolveExpressionsWithSecrets: mocks.resolveExpressionsWithSecrets,
+    getActionRegistryV2: () => ({
+      get: mocks.actionRegistryGet,
+    }),
+    getNodeTypeRegistry: () => ({
+      get: vi.fn(),
+    }),
+    generateIdempotencyKey: () => 'generated-idempotency-key',
+    initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
+    createSecretResolverFromProvider: (provider: unknown) => provider,
+    applyRedactions,
+    safeSerialize,
+    workflowStepQuotaService: {
+      reserveStepStart: mocks.reserveStepStart,
+    },
+  };
+});
 
 vi.mock('@alga-psa/shared/workflow/secrets', () => ({
   createTenantSecretProvider: () => ({

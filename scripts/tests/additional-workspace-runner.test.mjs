@@ -13,6 +13,7 @@ for (const [suite, directory, include, customConfig] of [
   ['ui-kit-showcase', 'ee/extensions/samples/ui-kit-showcase/test', 'test', 'ee/extensions/samples/ui-kit-showcase/vitest.config.ts'],
   ['workspace-unit', 'sdk', '../sdk'],
   ['api-e2e', 'server/src/test/e2e/api', 'src/test/e2e/api'],
+  ['temporal-readiness', 'ee/temporal-workflows/src/config/__tests__', 'src/config/__tests__', 'ee/temporal-workflows/vitest.readiness.config.ts'],
   ['server-colocated', 'server/src/lib', 'src/lib'],
   ['enterprise-unit', 'ee/server/src/__tests__/unit', 'src/__tests__/unit'],
   ['enterprise-integration', 'ee/server/src/__tests__/integration', 'src/__tests__/integration'],

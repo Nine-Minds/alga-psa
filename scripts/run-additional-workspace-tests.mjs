@@ -13,6 +13,7 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const suite = process.argv[2];
 const settings = {
   'api-e2e': { directory: 'server', config: 'vitest.api-e2e.config.ts' },
+  'temporal-readiness': { directory: 'ee/temporal-workflows', config: 'vitest.readiness.config.ts' },
   'nx-tooling': { directory: '.', config: 'tools/nx-tests/vitest.config.ts' },
   'ui-kit-showcase': { directory: 'ee/extensions/samples/ui-kit-showcase', config: 'vitest.config.ts',
     vitest: 'ee/extensions/samples/ui-kit-showcase/node_modules/vitest/vitest.mjs' },
@@ -38,6 +39,7 @@ const discoveryPath = path.join(output, 'discovery.json');
 for (const file of [collectedPath, testsPath, reportPath, evidencePath, discoveryPath, path.join(output, 'progress.jsonl')]) writeFileSync(file, 'null\n');
 const env = {
   ...process.env,
+  ...(suite === 'temporal-readiness' ? { TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP: '1' } : {}),
   ...(suite === 'enterprise-integration'
     ? { REQUIRE_DB: '1', SKIP_DB_TESTS: '', REAL_REDIS: '1', APP_ENV: 'test',
         TEST_DB_NAME: 'alga_ee_integration_test', DB_NAME_SERVER: 'alga_ee_integration_test',

@@ -4,6 +4,10 @@ on:
   pull_request:
     paths:
       - 'ee/temporal-workflows/**'
+      - 'ee/packages/workflows/**'
+      - 'shared/workflow/**'
+      - 'scripts/run-additional-workspace-tests.mjs'
+      - 'scripts/lib/test-*.mjs'
       - 'packages/integrations/**'
       - 'scripts/check-temporal-worker-packaging-contract.mjs'
       - 'scripts/temporal-worker-dist-import-smoke.mjs'
@@ -16,6 +20,10 @@ on:
       - main
     paths:
       - 'ee/temporal-workflows/**'
+      - 'ee/packages/workflows/**'
+      - 'shared/workflow/**'
+      - 'scripts/run-additional-workspace-tests.mjs'
+      - 'scripts/lib/test-*.mjs'
       - 'packages/integrations/**'
       - 'scripts/check-temporal-worker-packaging-contract.mjs'
       - 'scripts/temporal-worker-dist-import-smoke.mjs'
@@ -39,17 +47,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install
-          fi
+        run: npm ci
 
       - name: Temporal readiness fast gate
         run: npm run guard:temporal-readiness:fast
+
+      - name: Upload Temporal readiness execution evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: temporal-readiness-execution
+          path: test-results/temporal-readiness/
+          retention-days: 7
 
   docker-parity:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
@@ -62,14 +74,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
-        run: |
-          if ! npm ci; then
-            echo "npm ci failed; attempting npm install fallback to regenerate lock data"
-            npm install
-          fi
+        run: npm ci
 
       - name: Docker parity gate
         run: npm run guard:temporal-readiness:docker
