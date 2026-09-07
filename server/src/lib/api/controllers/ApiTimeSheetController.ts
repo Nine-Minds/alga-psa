@@ -10,6 +10,7 @@ import {
   createTimeSheetSchema,
   updateTimeSheetSchema,
   timeSheetListQuerySchema,
+  timeSheetFilterSchema,
   createTimePeriodSchema,
   updateTimePeriodSchema,
   createTimePeriodSettingsSchema,
@@ -752,7 +753,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Validate query parameters
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
+        const queryParams = this.collectionQuery(url);
         
         let searchParams;
         try {
@@ -828,7 +829,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Validate query parameters
         const url = new URL(req.url);
-        const queryParams = Object.fromEntries(url.searchParams);
+        const queryParams = this.collectionQuery(url);
         
         let exportParams;
         try {
@@ -838,6 +839,16 @@ export class ApiTimeSheetController extends ApiBaseController {
             throw new ValidationError('Invalid export parameters', error.errors);
           }
           throw error;
+        }
+
+        const current = await runWithTenant(tenantId!, () => this.timeSheetService.exportCurrentTimeSheets(exportParams, apiRequest.context));
+        if (current.handled) {
+          if (exportParams.format === 'json') return createSuccessResponse(current.data);
+          const xlsx = exportParams.format === 'xlsx';
+          return new NextResponse(current.data as BodyInit, { headers: {
+            'Content-Type': xlsx ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'text/csv; charset=utf-8',
+            'Content-Disposition': `attachment; filename="time-sheets.${xlsx ? 'xlsx' : 'csv'}"`,
+          } });
         }
 
         // Export within tenant context
@@ -914,9 +925,13 @@ export class ApiTimeSheetController extends ApiBaseController {
           throw new ForbiddenError('Permission denied: Cannot read time sheet statistics');
         }
 
+        let filters;
+        try { filters = timeSheetFilterSchema.parse(Object.fromEntries(new URL(req.url).searchParams)); }
+        catch (error) { if (error instanceof ZodError) throw new ValidationError('Invalid statistics filters', error.errors); throw error; }
+
         // Get statistics within tenant context
         const stats = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getStatistics(apiRequest.context);
+          return await this.timeSheetService.getStatistics(apiRequest.context, filters);
         });
 
         return createSuccessResponse(stats);
@@ -2089,6 +2104,15 @@ export class ApiTimeSheetController extends ApiBaseController {
         return handleApiError(error);
       }
     };
+  }
+
+  private collectionQuery(url: URL) {
+    const parameters: Record<string, any> = Object.fromEntries(url.searchParams);
+    for (const field of ['approval_statuses', 'user_ids', 'period_ids', 'fields']) {
+      const values = url.searchParams.getAll(field).flatMap(value => value.split(',')).filter(Boolean);
+      if (values.length) parameters[field] = values;
+    }
+    return parameters;
   }
 
   // Helper method to convert data to CSV

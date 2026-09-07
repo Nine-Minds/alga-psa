@@ -14,6 +14,8 @@ import {
 } from './common';
 import { approvalStatusSchema, timeEntryResponseSchema } from './timeEntry';
 
+const timeSheetCalendarDateSchema = z.union([z.string().date(), z.string().datetime()]);
+
 // Time period frequency schema
 export const timePeriodFrequencySchema = z.enum(['daily', 'weekly', 'monthly', 'quarterly', 'yearly', 'custom']);
 
@@ -41,10 +43,10 @@ export const timeSheetFilterSchema = baseFilterSchema.extend({
   approved_to: z.string().datetime().optional(),
   approved_by: uuidSchema.optional(),
   has_entries: booleanTransform.optional(),
-  period_start_from: dateSchema.optional(),
-  period_start_to: dateSchema.optional(),
-  period_end_from: dateSchema.optional(),
-  period_end_to: dateSchema.optional()
+  period_start_from: timeSheetCalendarDateSchema.optional(),
+  period_start_to: timeSheetCalendarDateSchema.optional(),
+  period_end_from: timeSheetCalendarDateSchema.optional(),
+  period_end_to: timeSheetCalendarDateSchema.optional()
 });
 
 // Time sheet list query schema
@@ -90,8 +92,8 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   
   time_period: z.object({
     period_id: uuidSchema,
-    start_date: z.union([z.string().date(), z.string().datetime()]),
-    end_date: z.union([z.string().date(), z.string().datetime()]),
+    start_date: timeSheetCalendarDateSchema,
+    end_date: timeSheetCalendarDateSchema,
     is_current: z.boolean().optional()
   }).optional(),
   
@@ -222,19 +224,19 @@ export const reverseApprovalSchema = z.object({
 export const timeSheetStatsResponseSchema = z.object({
   total_time_sheets: z.number(),
   pending_approval: z.number(),
-  approved_this_period: z.number(),
+  approved_this_period: z.number().nullable(),
   changes_requested: z.number(),
-  total_hours_this_period: z.number(),
-  billable_hours_this_period: z.number(),
+  total_hours_this_period: z.number().nullable(),
+  billable_hours_this_period: z.number().nullable(),
   time_sheets_by_status: z.record(z.number()),
   time_sheets_by_user: z.record(z.number()),
-  average_hours_per_sheet: z.number(),
+  average_hours_per_sheet: z.number().nullable(),
   approval_rate: z.number(),
-  on_time_submission_rate: z.number(),
+  on_time_submission_rate: z.number().nullable(),
   top_users_by_hours: z.array(z.object({
     user_id: uuidSchema,
     user_name: z.string(),
-    total_hours: z.number(),
+    total_hours: z.number().nullable(),
     sheet_count: z.number()
   }))
 });
@@ -246,8 +248,8 @@ export const timeSheetSearchSchema = z.object({
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
   period_ids: z.array(uuidSchema).optional(),
-  date_from: dateSchema.optional(),
-  date_to: dateSchema.optional(),
+  date_from: timeSheetCalendarDateSchema.optional(),
+  date_to: timeSheetCalendarDateSchema.optional(),
   include_entries: booleanTransform.optional().default("false"),
   limit: z.string().transform(val => parseInt(val)).pipe(z.number().min(1).max(100)).optional().default('25')
 });
@@ -261,8 +263,8 @@ export const timeSheetExportQuerySchema = z.object({
   approval_statuses: z.array(approvalStatusSchema).optional(),
   user_ids: z.array(uuidSchema).optional(),
   period_ids: z.array(uuidSchema).optional(),
-  date_from: dateSchema.optional(),
-  date_to: dateSchema.optional(),
+  date_from: timeSheetCalendarDateSchema.optional(),
+  date_to: timeSheetCalendarDateSchema.optional(),
   fields: z.array(z.string()).optional()
 });
 

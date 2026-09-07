@@ -13807,3 +13807,60 @@ it('customer sheet edits roll notes creation and workflow events back on final k
     expect(publish).not.toHaveBeenCalled();
   } finally { await db.raw('DROP TRIGGER expire_sheet_edit_key ON time_sheets'); await db.raw('DROP FUNCTION expire_sheet_edit_key()'); }
 }));
+
+it('customer sheet reporting computes visible statistics and exports all pages with filters and grouping', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer }: any) => {
+  const periodIds: string[] = [];
+  for (let day = 1; day <= 27; day++) {
+    const periodId = randomUUID(); periodIds.push(periodId);
+    await customer.table('time_periods').insert({ tenant: context.tenant, period_id: periodId, start_date: `2026-10-${String(day).padStart(2, '0')}`, end_date: `2026-10-${String(day + 1).padStart(2, '0')}` });
+    await customer.table('time_sheets').insert({ tenant: context.tenant, user_id: context.userId, period_id: periodId, approval_status: 'DRAFT' });
+  }
+  expect(await sheetService.list({}, context)).toMatchObject({ total: 28 });
+  expect((await sheetService.list({}, context)).data).toHaveLength(25);
+  const exported = await sheetService.exportCurrentTimeSheets({ format: 'json', fields: ['id', 'period_id', 'total_hours'], group_by: 'none' }, context);
+  expect(exported.data).toHaveLength(28);
+  expect(exported.data.find((row: any) => row.id === entry.time_sheet_id)).toMatchObject({ total_hours: 1.5 });
+  const grouped = await sheetService.exportCurrentTimeSheets({ format: 'json', group_by: 'period', period_ids: periodIds.slice(0, 2), fields: ['id'] }, context);
+  expect(Object.keys(grouped.data).sort()).toEqual(periodIds.slice(0, 2).sort());
+  const stats = await sheetService.getStatistics(context);
+  expect(stats).toMatchObject({ total_time_sheets: 28, average_hours_per_sheet: 1.5 / 28, time_sheets_by_status: { DRAFT: 28 }, top_users_by_hours: [{ total_hours: 1.5, sheet_count: 28 }] });
+  const schemas = await import('../../lib/api/schemas/timeSheet'); schemas.timeSheetStatsResponseSchema.parse(stats);
+  expect(await sheetService.getStatistics(context, { has_entries: true })).toMatchObject({ total_time_sheets: 1, average_hours_per_sheet: 1.5 });
+}));
+
+it('customer sheet reporting exports safe CSV and real grouped XLSX with requested private detail only', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context }: any) => {
+  await sheetService.update(entry.time_sheet_id, { notes: '=SUM(1,2)\nPrivate notes' }, context);
+  await sheetService.addComment(entry.time_sheet_id, { comment_text: 'Private export feedback' }, context);
+  const csv = await sheetService.exportCurrentTimeSheets({ format: 'csv', fields: ['id', 'notes', 'time_entries', 'comments'], include_comments: false, include_time_entries: false }, context);
+  expect(csv.data).toContain('"\'=SUM(1,2)\nPrivate notes"');
+  expect(csv.data).not.toContain('Private export feedback'); expect(csv.data).not.toContain(entry.entry_id);
+  const xlsx = await sheetService.exportCurrentTimeSheets({ format: 'xlsx', group_by: 'user', fields: ['notes', 'time_entries', 'comments'], include_comments: true, include_time_entries: true }, context);
+  const ExcelJS = await import('exceljs'), workbook = new ExcelJS.default.Workbook();
+  await workbook.xlsx.load(xlsx.data);
+  expect(workbook.worksheets).toHaveLength(1);
+  const row = workbook.worksheets[0].getRow(2);
+  expect(row.getCell(1).value).toBe(context.userId);
+  expect(row.getCell(2).value).toBe('=SUM(1,2)\nPrivate notes');
+  expect(row.getCell(2).type).toBe(ExcelJS.default.ValueType.String);
+  expect(JSON.parse(String(row.getCell(3).value))).toMatchObject([{ entry_id: entry.entry_id }]);
+  expect(JSON.parse(String(row.getCell(4).value))).toMatchObject([{ comment_text: 'Private export feedback' }]);
+  await expect(sheetService.exportCurrentTimeSheets({ format: 'json', fields: ['api_key'] }, context)).rejects.toMatchObject({ statusCode: 400 });
+}));
+
+it('customer sheet reporting preserves masked totals and withholds free text across every export format', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, resource, user }: any) => {
+  await sheetService.update(entry.time_sheet_id, { notes: 'Invisible project context' }, context);
+  await sheetService.addComment(entry.time_sheet_id, { comment_text: 'Invisible feedback' }, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet report masks', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_sheet', action: 'read', templateKey: 'own', config: { redactedFields: ['total_hours', 'billing', 'time_period'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await sheetService.getStatistics(context)).toMatchObject({ total_time_sheets: 1, total_hours_this_period: null, billable_hours_this_period: null, average_hours_per_sheet: null, approved_this_period: null, top_users_by_hours: [{ total_hours: null }] });
+  for (const format of ['csv', 'json', 'xlsx']) {
+    const result = await sheetService.exportCurrentTimeSheets({ format, include_comments: true, include_time_entries: true }, context);
+    let text = typeof result.data === 'string' ? result.data : JSON.stringify(result.data);
+    if (format === 'xlsx') { const ExcelJS = await import('exceljs'), workbook = new ExcelJS.default.Workbook(); await workbook.xlsx.load(result.data); text = JSON.stringify(workbook.worksheets[0].getSheetValues()); }
+    expect(text).not.toContain('Invisible'); expect(text).not.toContain('Private API effort');
+  }
+}));

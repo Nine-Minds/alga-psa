@@ -483,3 +483,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `nativeTimeSheetLifecycle`, `nativeTimeRead`, `nativeTimeSheetCommand`, `TimeSheetService`, additive timesheet notes migration.
 - **Gate:** Extend the existing lifecycle engine with distinct explicit-create and lazy-open entry points; compose existing workflow commands instead of duplicating transitions. ACT / bounded-now.
 - **Status:** Explicit creation rejects duplicates under the existing user lock; retained note edits require complete sheet content and current update authority. Status assignments use review commands. Read projections and command receipts protect sheet-wide free text. Five focused source-mode scenarios pass in 9.40 seconds; broad validation remains deferred.
+
+## native-time-sheet-reporting-projections — pattern
+- **What:** Statistics were a placeholder and controller exports silently used the first unfiltered list page; reconstructing reporting queries would duplicate customer visibility rules.
+- **Where:** `TimeSheetService`, `timeSheetCollection`, search/export/statistics handlers in `ApiTimeSheetController`.
+- **Gate:** Existing admitted collection supplies authoritative visible rows; pure projections support statistics and all export formats. ACT / bounded-now.
+- **Status:** Reporting derives exclusively from admitted fields; unknown metrics stay null, exports include all permitted rows with explicit filters/fields/groups, and real XLSX/escaped CSV retain private-content masks. Three focused scenarios pass in 10.22 seconds, with direct Node filter/calendar checks. Collection scale, HTTP/browser and wider validation remain deferred.

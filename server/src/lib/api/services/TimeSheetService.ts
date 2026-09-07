@@ -32,7 +32,7 @@ import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
 import { NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
-import { timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
+import { exportTimeSheetProjections, timeSheetStatistics, timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
 function throwTimePeriodSettingsApiError(error: unknown): never {
   const dbError = error as { code?: string; column?: string };
@@ -1389,7 +1389,22 @@ export class TimeSheetService extends BaseService<any> {
 
 
 
+  async exportCurrentTimeSheets(options: TimeSheetExportQuery, context: ServiceContext) {
+    const { knex } = await this.getKnex();
+    const current = await this.currentSheets(knex, context);
+    if (!current.handled) return current;
+    const rows = filterTimeSheets(current.sheets.map(timeSheetDto), { period_start_from: options.date_from, period_end_to: options.date_to })
+      .filter(sheet => (!options.user_ids?.length || options.user_ids.includes(sheet.user_id)) &&
+        (!options.period_ids?.length || options.period_ids.includes(sheet.period_id)) &&
+        (!options.approval_statuses?.length || options.approval_statuses.includes(sheet.approval_status)));
+    try { return { handled: true as const, data: await exportTimeSheetProjections(rows, options) }; }
+    catch (error) { if (error instanceof Error && error.message === 'Unknown timesheet export field') throw new BadRequestError(error.message); throw error; }
+  }
+
   async getStatistics(context: ServiceContext, filters?: TimeSheetFilterData): Promise<any> {
+    const { knex } = await this.getKnex();
+    const current = await this.currentSheets(knex, context);
+    if (current.handled) return timeSheetStatistics(filterTimeSheets(current.sheets.map(timeSheetDto), filters));
     // Implementation would return comprehensive time sheet statistics
     // Similar to other statistics methods in the pattern
     return {
