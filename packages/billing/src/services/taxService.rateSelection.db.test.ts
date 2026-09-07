@@ -7,8 +7,17 @@ vi.mock('@alga-psa/db', async importOriginal => ({
   ...await importOriginal<typeof import('@alga-psa/db')>(),
   createTenantKnex: async () => ({ knex: context.db, tenant: context.tenant }),
 }));
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: (...args: any[]) => unknown) => (...args: unknown[]) => fn({ user_id: 'tax-fixture' }, { tenant: context.tenant }, ...args),
+}));
+vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
+vi.mock('@shared/services/productAccessGuard', () => ({
+  assertPsaOnlyTenantAccess: async () => undefined,
+  ProductAccessError: class extends Error {},
+}));
 import ClientTaxSettings from '../models/clientTaxSettings';
 import { TaxService } from './taxService';
+import { addTaxRate, updateTaxRate } from '../actions/taxRateActions';
 
 let db: Knex;
 let clientId: string;
@@ -57,6 +66,28 @@ beforeEach(async () => {
 afterEach(async () => { await context.db?.rollback(); context.db = undefined; });
 
 describe('TaxService PostgreSQL rate selection', () => {
+  it('create and update actions persist a valid rate through their real transactions', async () => {
+    const saved = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: defaultRateId }).first();
+    const { tax_rate_id: omitted, ...data } = saved;
+    const created = await addTaxRate({ ...data, start_date: '2025-01-01', end_date: '2026-01-01' });
+    expect(created).toHaveProperty('tax_rate_id');
+    if (!('tax_rate_id' in created)) throw new Error('Expected a persisted tax rate');
+    expect(await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: created.tax_rate_id }).first())
+      .toEqual(created);
+    const updated = await updateTaxRate({ ...created, tax_percentage: 8 });
+    expect(updated).toMatchObject({ tax_rate_id: created.tax_rate_id });
+    const readback = await context.db!('tax_rates').where({ tenant: context.tenant, tax_rate_id: created.tax_rate_id }).first();
+    expect(Number(readback.tax_percentage)).toBe(8);
+  });
+  it('create and update actions reject overlapping ranges without persisting changes', async () => {
+    const before = await context.db!('tax_rates').where({ tenant: context.tenant }).orderBy('tax_rate_id');
+    const { tax_rate_id, ...proposed } = before.find(rate => rate.tax_rate_id === defaultRateId)!;
+    const creation = await addTaxRate({ ...proposed, start_date: '2026-01-01', end_date: null });
+    expect(creation).toMatchObject({ actionError: 'Tax rate date range overlaps with an existing rate for this region.', messageKey: 'msp/billing-settings:errors.taxRate.overlap' });
+    const update = await updateTaxRate({ ...proposed, tax_rate_id, start_date: '2026-01-01', end_date: null });
+    expect(update).toMatchObject({ actionError: 'Tax rate date range overlaps with an existing rate for this region.', messageKey: 'msp/billing-settings:errors.taxRate.overlap' });
+    expect(await context.db!('tax_rates').where({ tenant: context.tenant }).orderBy('tax_rate_id')).toEqual(before);
+  });
   it('excludes the edited rate while preserving tenant and region boundaries in overlap validation', async () => {
     // OTHER and foreign-tenant rates overlap, but cannot block this edit.
     await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region })

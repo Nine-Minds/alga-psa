@@ -2178,3 +2178,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Real PostgreSQL validation exposed three failures: proposed unbounded ranges incorrectly accepted existing future or equal-start rates because the missing end date was replaced with the start. Tax-rate create/update actions call this validator.
 - Corrected the half-open interval predicate. An absent end is unbounded, existing end must be absent or later than the proposed start, and an existing start upper bound applies only when the proposed end exists. Adjacent ranges remain valid.
 - All 27 PostgreSQL cases pass after the fix, including edit exclusion and tenant/region isolation. The tax unit file also passes while retaining its three unrelated TODOs. Evidence: evidence/tax-open-ended-overlap.json. No broad plan flags changed; native CI remains unverified.
+
+### 2026-09-07 — keep asynchronous tax validation errors inside action handlers
+
+- Action-level DB coverage exposed a second bug: addTaxRate/updateTaxRate returned withTransaction without awaiting it, so asynchronous overlap rejection bypassed their existing error mapper. Both now await within try.
+- Added successful create/update persisted readback and overlapping create/update error-result/non-mutation checks. Real transaction/savepoint and PostgreSQL paths execute; auth, RBAC and product-access guards are fixture-controlled. Initial assertion used message; corrected it to the existing actionError/messageKey contract after fixing the escaped rejection.
+- All 29 DB cases pass (1.44 seconds). Evidence: evidence/tax-action-transaction-errors.json. No broad plan flags changed; native CI remains unverified.
