@@ -486,9 +486,13 @@ function projectTableBuilder() {
 }
 
 function userTableBuilder() {
-  let result = currentUser;
+  let result: UserRecord | UserRecord[] | null = currentUser;
   const builder = createQuery(() => result);
   builder.where = () => builder;
+  builder.whereIn = (column: string, ids: string[]) => {
+    result = currentUser && column === 'user_id' && ids.includes(currentUser.user_id) ? [currentUser] : [];
+    return builder;
+  };
   return builder;
 }
 

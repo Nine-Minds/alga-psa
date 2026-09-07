@@ -1,3 +1,4 @@
+import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
 import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 
 import { getTenantDefaultLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
@@ -1602,8 +1603,11 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
  * Handle ticket comment added events
  */
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: InternalNotificationHandlerOptions): Promise<void> {
-  const { payload } = event;
-  const { tenantId, ticketId, userId, comment } = payload;
+  let { payload } = event;
+  const { tenantId, ticketId } = payload;
+  const actor = readTicketNotificationActor(payload, tenantId, payload.actorUserId || payload.userId);
+  const userId = actor.userId;
+  let { comment } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
@@ -1615,6 +1619,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
   try {
     const db = opts?.db ?? await getConnection(tenantId);
+    const currentPayload = await resolveTicketCommentNotificationPayload(db, payload);
+    if (!currentPayload) return;
+    payload = currentPayload; comment = payload.comment;
 
     // Get ticket details including contact
     const ticket = await tenantScopedTable(db, 'tickets', tenantId)
@@ -1627,13 +1634,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
       return;
     }
 
-    // Get author name
-    const author = await tenantScopedTable(db, 'users', tenantId)
-      .select('first_name', 'last_name')
-      .where('user_id', userId)
-      .first();
-
-    const authorName = author ? `${author.first_name} ${author.last_name}` : 'Someone';
+    const [authorName] = await resolveTicketNotificationActorNames(db, tenantId, [actor], 'Someone');
 
     // Extract comment text preview from BlockNote content
     let commentPreview = '';
@@ -1673,7 +1674,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
           )
           .whereIn('user_id', resolvedMentionedUserIds);
         const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
-          shouldCreateTicketCommentNotification(
+          (!comment?.isInternal || mentionedUser.user_type === 'internal') && shouldCreateTicketCommentNotification(
             suppression,
             mentionedUser.user_type === 'client' ? 'contact' : 'internal',
           ));
@@ -1708,7 +1709,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 commentText: commentText,
                 commentPreview: commentPreview,
                 commentAuthor: authorName,
-                commentAuthorId: userId,
+                commentAuthorId: userId || null,
+                ...(actor.actorReference ? { commentActorReference: actor.actorReference } : {}),
                 contextType: 'ticket',
                 contextId: ticketId
               }
@@ -1733,7 +1735,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
 
     // Notify all assigned agents (if not internal comment)
     if (
-      !comment?.isInternal &&
+      (!comment?.isInternal || comment.audience === 'shared_it') &&
       shouldCreateTicketCommentNotification(suppression, 'internal')
     ) {
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
@@ -1759,8 +1761,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
                 id: comment?.id,
                 text: commentPreview,
                 author: authorName,
-                authorId: userId,
-                isInternal: false
+                authorId: userId || null,
+                ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
+                isInternal: Boolean(comment?.isInternal)
               }
             }
           });
@@ -1811,7 +1814,8 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
               id: comment?.id,
               text: commentPreview,
               author: authorName,
-              authorId: userId,
+              authorId: userId || null,
+              ...(actor.actorReference ? { actorReference: actor.actorReference } : {}),
               isInternal: false
             }
           }
@@ -1906,8 +1910,9 @@ async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Pro
 
       if (resolvedNewlyMentionedUserIds.length > 0) {
         const newlyMentionedUsers = await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
-          .whereIn('user_id', resolvedNewlyMentionedUserIds);
+          .select('user_id', 'username', 'user_type', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .whereIn('user_id', resolvedNewlyMentionedUserIds)
+          .modify(query => { if (newComment?.isInternal) query.where('user_type', 'internal'); });
 
         if (newlyMentionedUsers.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
@@ -3197,6 +3202,7 @@ export const internalNotificationSubscriberTestHarness = {
   handleTicketUpdated,
   handleTicketClosed,
   handleTicketCommentAdded,
+  handleTicketCommentUpdated,
   handleTransactionalOutboxDelivery,
   handleInternalNotificationEvent,
 };

@@ -55,3 +55,36 @@ describe('qualified collaboration event attribution', () => {
       .toMatchObject({ actorType: 'SYSTEM' });
   });
 });
+
+describe('qualified comment audience contracts', () => {
+  const commentId = '00000000-0000-4000-8000-000000000006';
+  const threadId = '00000000-0000-4000-8000-000000000007';
+  const payload = { ...buildWorkflowPayload({ ticketId }, ctx), commentId, thread_id: threadId, parent_comment_id: null, is_reply: false,
+    comment: { id: commentId, thread_id: threadId, parent_comment_id: null, is_reply: false, content: 'Saved comment', author: 'Morgan Lee',
+      authorType: 'internal', isInternal: true, audience: 'shared_it' } };
+  const event = { ...envelope, eventType: 'TICKET_COMMENT_ADDED', payload };
+  it('retains the audience, qualified author and thread through serialization', () => {
+    const parsed = EventSchemas.TICKET_COMMENT_ADDED.parse(JSON.parse(JSON.stringify(event)));
+    expect(parsed.payload).toMatchObject(payload);
+    expect(parsed.payload).not.toHaveProperty('userId');
+    expect(EventSchemas.TICKET_COMMENT_ADDED.parse({ ...event, payload: { ...payload, comment: { ...payload.comment, audience: 'requester', isInternal: false } } }).payload.comment.audience).toBe('requester');
+  });
+  it.each([
+    { comment: { ...payload.comment, audience: undefined } },
+    { comment: { ...payload.comment, audience: 'organization_private' } },
+    { comment: { ...payload.comment, isInternal: false } },
+    { comment: { ...payload.comment, authorType: 'client' } },
+    { comment: undefined },
+    { commentId: ticketId },
+    { thread_id: ticketId },
+    { parent_comment_id: ticketId },
+    { userId: reference.userId },
+  ])('rejects mixed identity, inconsistent threading and unsafe foreign audiences', change => {
+    expect(EventSchemas.TICKET_COMMENT_ADDED.safeParse({ ...event, payload: { ...payload, ...change } }).success).toBe(false);
+  });
+  it('retains ordinary local producers and requires a local author without foreign attribution', () => {
+    const legacy = { tenantId: owner, ticketId, userId: reference.userId, comment: { id: commentId, content: 'Local comment', author: 'Local User', isInternal: true } };
+    expect(EventSchemas.TICKET_COMMENT_ADDED.parse({ ...event, payload: legacy }).payload).toMatchObject(legacy);
+    expect(EventSchemas.TICKET_COMMENT_ADDED.safeParse({ ...event, payload: { ...legacy, userId: undefined } }).success).toBe(false);
+  });
+});

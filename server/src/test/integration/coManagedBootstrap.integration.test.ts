@@ -4854,3 +4854,90 @@ it('rechecks shared comment session authority after waiting on its root thread w
     expect(await customer.table('co_management_command_receipts')).toHaveLength(1);
   } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));
+
+it('revalidates published collaboration comment events against current audience, body and saved attribution before delivery', async () => withCommentCreationFixture(async ({
+  principal, customerPrincipal, resource, customer, sponsor, create,
+}) => {
+  const { resolveTicketCommentNotificationPayload: resolve } = await import('../../lib/notifications/ticketCommentNotificationContext');
+  const receipt = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Saved IT body' });
+  const row = await customer.table('comments').where('comment_id', receipt.commentId).first();
+  const payload = { tenantId: resource.tenant, ticketId: resource.id, actorType: 'COLLABORATOR', actorReference: { ownerTenantId: resource.tenant,
+    referenceId: row.actor_reference_id, tenantId: principal.tenant, userId: principal.userId, displayName: row.actor_display_name, organizationName: row.actor_organization_name },
+    comment: { id: receipt.commentId, content: 'Stale event body', author: 'Wrong local name', isInternal: true, audience: 'shared_it' } };
+  expect(await resolve(db, payload)).toMatchObject({ comment: { content: row.note, author: 'Morgan Provider (MSP)' } });
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Renamed', is_inactive: true });
+  expect(await resolve(db, payload)).toMatchObject({ comment: { author: 'Morgan Provider (MSP)' } });
+  for (const alteration of [{ ticketId: randomUUID() }, { actorReference: { ...payload.actorReference, referenceId: randomUUID() } },
+    { actorReference: { ...payload.actorReference, displayName: 'Forged historical name' } }, { comment: { ...payload.comment, audience: 'requester', isInternal: false } }]) {
+    expect(await resolve(db, { ...payload, ...alteration })).toBeNull();
+  }
+  await customer.table('comment_threads').where('thread_id', receipt.threadId).update({ collaboration_audience: 'organization_private' });
+  expect(await resolve(db, payload)).toBeNull();
+  await customer.table('comment_threads').where('thread_id', receipt.threadId).update({ collaboration_audience: 'shared_it' });
+  await customer.table('comments').where('comment_id', receipt.commentId).update({ deleted_at: new Date() });
+  expect(await resolve(db, payload)).toBeNull();
+  await customer.table('comments').where('comment_id', receipt.commentId).update({ deleted_at: null, publish_state: 'scheduled' });
+  expect(await resolve(db, payload)).toBeNull();
+  const local = await create(customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Local IT body' });
+  const localPayload = { tenantId: resource.tenant, ticketId: resource.id, userId: customerPrincipal.userId,
+    comment: { id: local.commentId, content: 'Local event', author: 'Local author', isInternal: true, audience: 'shared_it' } };
+  expect(await resolve(db, localPayload)).not.toBeNull();
+  expect(await resolve(db, { ...localPayload, userId: principal.userId })).toBeNull();
+}));
+
+it('delivers qualified comment names to customer recipients without colliding author IDs or internal portal mentions', async () => withCommentCreationFixture(async ({
+  principal, customerPrincipal, resource, customer, create,
+}) => {
+  const dbModule = await import('@alga-psa/db'); const serverDb = await import('../../lib/db'); const adminDb = await import('@alga-psa/db/admin');
+  const notifications = await import('@alga-psa/notifications/actions'); const mail = await import('../../lib/notifications/sendEventEmail');
+  const send = vi.spyOn(mail, 'sendEventEmail').mockResolvedValue(undefined);
+  const notify = vi.spyOn(notifications, 'createNotificationFromTemplateInternal').mockResolvedValue({} as any);
+  const spies = [vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db), vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant }),
+    vi.spyOn(serverDb, 'createTenantKnex').mockResolvedValue({ knex: db }), vi.spyOn(adminDb, 'getAdminConnection').mockResolvedValue(db)];
+  try {
+    const { ticketEmailSubscriberTestHarness: email } = await import('../../lib/eventBus/subscribers/ticketEmailSubscriber');
+    const { internalNotificationSubscriberTestHarness: internal } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+    const { EventSchemas } = await import('@alga-psa/event-schemas');
+    const localUser = await customer.table('users').where('user_id', customerPrincipal.userId).first();
+    await customer.table('users').insert({ ...localUser, user_id: principal.userId, first_name: 'Local', last_name: 'Collision', username: `collision-${randomUUID()}@example.test`, email: `collision-${randomUUID()}@example.test` });
+    await customer.table('tickets').where('ticket_id', resource.id).update({ assigned_to: principal.userId });
+    const portalUserId = randomUUID();
+    const contact = await customer.table('contacts').first();
+    await customer.table('tickets').where('ticket_id', resource.id).update({ contact_name_id: contact.contact_name_id });
+    await customer.table('users').insert({ ...localUser, user_id: portalUserId, user_type: 'client', contact_id: contact.contact_name_id, username: `portal-${randomUUID()}@example.test`, email: `portal-${randomUUID()}@example.test` });
+    const added = async (audience: 'requester' | 'shared_it') => {
+      const receipt = await create(principal, { operationId: randomUUID(), audience, text: `Comment ${audience}` });
+      const comment = await customer.table('comments').where('comment_id', receipt.commentId).first();
+      return EventSchemas.TICKET_COMMENT_ADDED.parse({ id: randomUUID(), eventType: 'TICKET_COMMENT_ADDED', timestamp: new Date().toISOString(), payload: {
+        tenantId: resource.tenant, ticketId: resource.id, actorType: 'COLLABORATOR', actorReference: { ownerTenantId: resource.tenant, referenceId: comment.actor_reference_id,
+          tenantId: principal.tenant, userId: principal.userId, displayName: comment.actor_display_name, organizationName: comment.actor_organization_name },
+        comment: { id: receipt.commentId, content: comment.note, author: comment.actor_display_name, authorType: 'internal', audience, isInternal: audience !== 'requester' } } });
+    };
+    const publicEvent = await added('requester');
+    await email.handleTicketCommentAdded(publicEvent); await internal.handleTicketCommentAdded(publicEvent, { db, propagateErrors: true });
+    expect(send.mock.calls.length).toBeGreaterThan(0);
+    expect(send.mock.calls.some(([input]: any[]) => input.to === contact.email)).toBe(true);
+    expect(send.mock.calls.every(([input]: any[]) => input.context.comment.author === 'Morgan Provider (MSP)')).toBe(true);
+    expect(notify.mock.calls.some(([, input]: any[]) => input.user_id === principal.userId && input.data.authorName === 'Morgan Provider (MSP)' &&
+      input.metadata.comment.authorId === null && input.metadata.comment.actorReference.tenantId === principal.tenant)).toBe(true);
+    send.mockClear(); notify.mockClear();
+    const internalEvent = await added('shared_it');
+    const mentioned = JSON.stringify([{ type: 'paragraph', content: [ { type: 'mention', props: { userId: principal.userId } }, { type: 'mention', props: { userId: portalUserId } } ] }]);
+    await customer.table('comments').where('comment_id', internalEvent.payload.comment.id).update({ note: mentioned });
+    await email.handleTicketCommentAdded(internalEvent); await internal.handleTicketCommentAdded(internalEvent, { db, propagateErrors: true });
+    expect(notify.mock.calls.length).toBeGreaterThan(0);
+    expect(notify.mock.calls.every(([, input]: any[]) => input.user_id !== portalUserId)).toBe(true);
+    expect(notify.mock.calls.some(([, input]: any[]) => input.user_id === principal.userId)).toBe(true);
+    const portal = await customer.table('users').where('user_id', portalUserId).first();
+    expect(send.mock.calls.every(([input]: any[]) => input.to !== portal.email && input.to !== contact.email)).toBe(true);
+    notify.mockClear(); send.mockClear();
+    await customer.table('comment_threads').where('thread_id', (await customer.table('comments').where('comment_id', internalEvent.payload.comment.id).first()).thread_id).update({ collaboration_audience: 'organization_private' });
+    await email.handleTicketCommentAdded(internalEvent); await internal.handleTicketCommentAdded(internalEvent, { db, propagateErrors: true });
+    expect(notify).not.toHaveBeenCalled(); expect(send).not.toHaveBeenCalled();
+    // Legacy internal edits must also exclude newly mentioned portal users.
+    await internal.handleTicketCommentUpdated({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_UPDATED', payload: {
+      tenantId: resource.tenant, ticketId: resource.id, userId: customerPrincipal.userId, oldComment: { id: randomUUID(), content: 'Old', author: 'Local', isInternal: true },
+      newComment: { id: randomUUID(), content: mentioned, author: 'Local', isInternal: true } } } as any);
+    expect(notify.mock.calls.length).toBeGreaterThan(0); expect(notify.mock.calls.every(([, input]: any[]) => input.user_id !== portalUserId)).toBe(true);
+  } finally { notify.mockRestore(); send.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
+}));

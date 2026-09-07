@@ -1,3 +1,4 @@
+import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
 import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 import { getEventBus } from '../index';
 import {
@@ -2414,14 +2415,18 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 }
 
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
-  const { payload } = event;
+  let { payload } = event;
   const { tenantId } = payload;
   const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from base field, falling back to legacy
-  const commentUserId = payload.actorUserId || (payload as any).userId;
+  const commentActor = readTicketNotificationActor(payload, tenantId, payload.actorUserId || payload.userId);
+  const commentUserId = commentActor.userId || undefined;
 
   try {
     const db = await getConnection(tenantId);
+    const currentPayload = await resolveTicketCommentNotificationPayload(db, payload);
+    if (!currentPayload) return;
+    payload = currentPayload;
 
     // Get ticket details with all required fields
     const ticket = await fetchTicketForEmail(db, tenantId, payload.ticketId);
@@ -2493,7 +2498,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       return;
     }
 
-    if (!commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {
+    if (!commentActor.actorReference && !commentAuthorEmail && payload.comment?.author && isValidEmail(payload.comment.author)) {
       commentAuthorEmail = payload.comment.author.trim();
     }
 
@@ -2689,7 +2694,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     // Event schema uses `isInternal` (camelCase); legacy payloads may omit it.
     const isPublicComment = !payload.comment?.isInternal;
 
-    let isFromAgent = false;
+    let isFromAgent = Boolean(commentActor.actorReference);
     if (commentAuthorUserId) {
       const author = await tenantDb(db, tenantId).table('users')
         .select('user_type')

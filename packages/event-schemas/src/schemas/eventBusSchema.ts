@@ -567,6 +567,36 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   }).optional(),
 });
 
+/** Qualified comment events retain thread audience and foreign attribution.
+ * Ordinary producers still require their existing local user identity. */
+export const TicketCommentAddedPayloadSchema = TicketEventPayloadSchema.extend({
+  userId: z.string().uuid().optional(),
+  actorUserId: z.string().uuid().optional(),
+  commentId: z.string().uuid().optional(),
+  occurredAt: z.string().datetime().optional(),
+  thread_id: z.string().uuid().optional(),
+  parent_comment_id: z.string().uuid().nullable().optional(),
+  is_reply: z.boolean().optional(),
+  comment: TicketEventPayloadSchema.shape.comment.unwrap().extend({
+    audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
+    thread_id: z.string().uuid().optional(),
+    parent_comment_id: z.string().uuid().nullable().optional(),
+    is_reply: z.boolean().optional(),
+  }).optional(),
+}).superRefine((payload, context) => {
+  const fail = (message: string) => context.addIssue({ code: z.ZodIssueCode.custom, message });
+  const foreign = payload.actorType === 'COLLABORATOR';
+  if (!foreign && !payload.userId && !payload.actorUserId) fail('A local comment event requires its local author');
+  const comment = payload.comment;
+  if (foreign && (!comment || !comment.audience || comment.authorType !== 'internal' || comment.audience === 'organization_private')) {
+    fail('A foreign comment requires an explicit requester or shared IT audience');
+  }
+  if (comment?.audience && comment.isInternal !== (comment.audience !== 'requester')) fail('Comment visibility must match its explicit audience');
+  if (payload.commentId && comment && payload.commentId !== comment.id) fail('Comment identities must agree');
+  if (payload.thread_id && comment?.thread_id && payload.thread_id !== comment.thread_id) fail('Thread identities must agree');
+  if (payload.parent_comment_id !== undefined && comment?.parent_comment_id !== undefined && payload.parent_comment_id !== comment.parent_comment_id) fail('Parent identities must agree');
+});
+
 // Ticket additional agent event payload schema
 export const TicketAdditionalAgentPayloadSchema = BasePayloadSchema.extend({
   ticketId: z.string().uuid(),
@@ -1199,7 +1229,7 @@ export const EventPayloadSchemas = {
   TICKET_DELETED: TicketEventPayloadSchema,
   TICKET_ASSIGNED: TicketAssignedPayloadSchema,
   TICKET_ADDITIONAL_AGENT_ASSIGNED: TicketAdditionalAgentPayloadSchema,
-  TICKET_COMMENT_ADDED: TicketEventPayloadSchema,
+  TICKET_COMMENT_ADDED: TicketCommentAddedPayloadSchema,
   TICKET_COMMENT_UPDATED: TicketCommentUpdatedPayloadSchema,
   TICKET_COMMENT_DELETED: TicketCommentDeletedPayloadSchema,
   TICKET_RESPONSE_STATE_CHANGED: TicketResponseStateChangedPayloadSchemaV2,
