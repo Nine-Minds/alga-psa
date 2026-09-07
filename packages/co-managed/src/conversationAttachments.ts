@@ -31,6 +31,10 @@ function reference(input: CoManagedCommentReference): CoManagedCommentReference 
       ![input.storeTenant, input.threadId, input.commentId].every(isCoManagedUuid)) deny();
   return { storeTenant: input.storeTenant.toLowerCase(), threadId: input.threadId.toLowerCase(), commentId: input.commentId.toLowerCase() };
 }
+function attachmentReference(input: CoManagedAttachmentReference): CoManagedAttachmentReference {
+  if (!input || Object.keys(input).some(key => !['storeTenant', 'threadId', 'commentId', 'attachmentId'].includes(key)) || !isCoManagedUuid(input.attachmentId)) deny();
+  return { ...reference({ storeTenant: input.storeTenant, threadId: input.threadId, commentId: input.commentId }), attachmentId: input.attachmentId.toLowerCase() };
+}
 function resourceSnapshot(input: CoManagedSharedResource): CoManagedSharedResource {
   if (!input || input.kind !== 'ticket' || ![input.tenant, input.relationshipId, input.id].every(isCoManagedUuid)) deny();
   return { kind: 'ticket', tenant: input.tenant.toLowerCase(), relationshipId: input.relationshipId.toLowerCase(), id: input.id.toLowerCase() };
@@ -170,9 +174,33 @@ export async function listCoManagedConversationAttachments(db: Knex, inputActor:
 export async function downloadCoManagedConversationAttachment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
   input: CoManagedAttachmentReference, download: (path: string) => Promise<Uint8Array>): Promise<{ attachment: CoManagedConversationAttachment; content: Uint8Array }> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource);
-  if (!input || Object.keys(input).some(key => !['storeTenant', 'threadId', 'commentId', 'attachmentId'].includes(key)) || !isCoManagedUuid(input.attachmentId)) deny();
-  const attachmentId = input.attachmentId.toLowerCase(), comment = reference({ storeTenant: input.storeTenant, threadId: input.threadId, commentId: input.commentId });
+  const { attachmentId, ...comment } = attachmentReference(input);
   return withComment(db, actor, resource, comment, 'read', context => readPublishedCoManagedAttachment(context, attachmentId, download));
+}
+
+export interface CoManagedAttachmentRemovalReceipt extends CoManagedAttachmentReference { removedAt: string }
+/** The immutable qualified file identity is its removal idempotency key. Current
+ * comment scope and original authorship are checked again even on an exact retry. */
+export async function removeCoManagedConversationAttachment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
+  input: CoManagedAttachmentReference): Promise<CoManagedAttachmentRemovalReceipt> {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), qualified = attachmentReference(input);
+  const { attachmentId, ...comment } = qualified;
+  return withComment(db, actor, resource, comment, 'update', async context => {
+    const owner = tenantDb(context.trx, comment.storeTenant);
+    const row = await attachmentQuery(context).where({ attachment_id: attachmentId, status: 'ready' }).forUpdate().first();
+    if (!row || row.actor_tenant !== actor.tenant || row.actor_user_id !== actor.userId) deny();
+    await assertCoManagedSessionUnexpired(context.trx, actor); await assertCoManagedOperationalWrite(context.trx, resource.tenant);
+    if (row.discarded_at) {
+      if (row.removal_actor_tenant !== actor.tenant || row.removal_actor_user_id !== actor.userId) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT');
+      return { ...qualified, removedAt: new Date(row.discarded_at).toISOString() };
+    }
+    // An unrelated comment using a staged draft's future ID cannot authorize
+    // removal of its hidden files. Only published attachments reach this path.
+    if (!await visibleAttachmentQuery(context).where('attachment_id', attachmentId).first()) deny();
+    const [removed] = await owner.table(TABLE).where('attachment_id', attachmentId).update({ discarded_at: context.trx.raw('clock_timestamp()'),
+      removal_actor_tenant: actor.tenant, removal_actor_user_id: actor.userId, cleanup_next_attempt_at: context.trx.raw('clock_timestamp()') }).returning('discarded_at');
+    return { ...qualified, removedAt: new Date(removed.discarded_at).toISOString() };
+  });
 }
 
 /** Internal engines, called inside retained technician or requester admission.
@@ -192,9 +220,9 @@ export async function readPublishedCoManagedAttachment(context: CoManagedAttachm
   return { attachment: summary(row, context.audience), content };
 }
 
-/** UI hint only. Upload repeats this complete authority check and does not trust
+/** UI hint only. Upload and removal repeat this authority check and do not trust
  * author IDs or an enabled button supplied by a browser. */
-export async function canUploadCoManagedConversationAttachment(db: Knex, inputActor: CoManagedSessionActor,
+export async function canManageCoManagedConversationAttachments(db: Knex, inputActor: CoManagedSessionActor,
   inputResource: CoManagedSharedResource, inputComment: CoManagedCommentReference): Promise<boolean> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), comment = reference(inputComment);
   try { return await withComment(db, actor, resource, comment, 'update', async () => true); }
@@ -203,3 +231,6 @@ export async function canUploadCoManagedConversationAttachment(db: Knex, inputAc
     throw error;
   }
 }
+
+/** Compatibility name retained for existing upload-only consumers. */
+export const canUploadCoManagedConversationAttachment = canManageCoManagedConversationAttachments;

@@ -1,13 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ upload: vi.fn(), list: vi.fn(), hint: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
+const mocks = vi.hoisted(() => ({ upload: vi.fn(), remove: vi.fn(), list: vi.fn(), hint: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {},
   Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Command: class extends Error { constructor(public code: string) { super(code); } } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
-vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedAttachmentError: mocks.Command, listCoManagedConversationAttachments: mocks.list, canUploadCoManagedConversationAttachment: mocks.hint }));
+vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedAttachmentError: mocks.Command, listCoManagedConversationAttachments: mocks.list, canManageCoManagedConversationAttachments: mocks.hint, removeCoManagedConversationAttachment: mocks.remove }));
 vi.mock('../../../lib/co-managed/conversationAttachments', () => ({ uploadConversationAttachment: mocks.upload }));
-import { uploadCoManagedAttachmentAction, listCoManagedAttachmentsAction, getCoManagedAttachmentsScreenAction } from '../../../lib/actions/coManagedAttachmentActions';
+import { removeCoManagedAttachmentAction, uploadCoManagedAttachmentAction, listCoManagedAttachmentsAction, getCoManagedAttachmentsScreenAction } from '../../../lib/actions/coManagedAttachmentActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 const comment = { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' };
 const form = () => { const value = new FormData(); value.append('file', new Blob(['Bytes'], { type: 'text/plain' }), 'Upload.txt'); return value; };
@@ -42,4 +42,22 @@ it('returns current attachment write hints and transport limits with the actual 
   const result = await getCoManagedAttachmentsScreenAction(resource, comment);
   expect(result).toMatchObject({ canUpload: false, attachments: [], actor: { tenant: 'home-tenant', userId: 'home-user' } });
   expect(result.maxBytes).toBeGreaterThan(0); expect(result.maxBytes).toBeLessThan(20 * 1048576);
+});
+
+it('removes the immutable qualified attachment under the actual browser identity without a release-flag dependency', async () => {
+  const attachment = { ...comment, attachmentId: 'file' };
+  mocks.remove.mockResolvedValue({ ...attachment, removedAt: '2026-09-07T00:00:00.000Z' });
+  expect(await removeCoManagedAttachmentAction(resource, attachment)).toEqual({ ok: true, receipt: { ...attachment, removedAt: '2026-09-07T00:00:00.000Z' } });
+  expect(mocks.remove).toHaveBeenCalledWith(mocks.knex, { kind: 'session', tenant: 'home-tenant', userId: 'home-user', sessionId: 'tracked-session' }, resource, attachment);
+  mocks.override.mockReturnValue({}); expect(await removeCoManagedAttachmentAction(resource, attachment)).toEqual({ ok: false, code: 'forbidden' });
+  expect(mocks.remove).toHaveBeenCalledOnce();
+});
+it('keeps removal available when upload transport is disabled, while respecting actual write hints', async () => {
+  const old = process.env.SERVER_ACTIONS_BODY_LIMIT; process.env.SERVER_ACTIONS_BODY_LIMIT = '1kb';
+  try {
+    mocks.hint.mockResolvedValue(true); mocks.list.mockResolvedValue([]);
+    expect(await getCoManagedAttachmentsScreenAction(resource, comment)).toMatchObject({ canUpload: false, canRemove: true });
+    mocks.hint.mockResolvedValue(false);
+    expect(await getCoManagedAttachmentsScreenAction(resource, comment)).toMatchObject({ canUpload: false, canRemove: false });
+  } finally { if (old === undefined) delete process.env.SERVER_ACTIONS_BODY_LIMIT; else process.env.SERVER_ACTIONS_BODY_LIMIT = old; }
 });

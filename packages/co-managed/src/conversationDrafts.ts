@@ -126,7 +126,7 @@ async function withDraft<T>(db: Knex, actor: CoManagedSessionActor, resource: Co
   });
 }
 async function progress(context: CoManagedAttachmentContext, row: any): Promise<CoManagedConversationDraftProgress> {
-  const files = await tenantDb(context.trx, context.comment.storeTenant).table(FILES).where({ draft_operation_id: row.operation_id, status: 'ready' }).select('attachment_id');
+  const files = await tenantDb(context.trx, context.comment.storeTenant).table(FILES).where({ draft_operation_id: row.operation_id, status: 'ready' }).whereNull('discarded_at').select('attachment_id');
   return { storeTenant: context.comment.storeTenant, operationId: row.operation_id, status: row.status, uploadedAttachmentIds: files.map(file => file.attachment_id) };
 }
 async function rejectExistingMessage(context: CoManagedAttachmentContext) {
@@ -171,7 +171,7 @@ export async function uploadCoManagedDraftAttachment(db: Knex, inputActor: CoMan
   return transferCoManagedAttachment(db, actor, resource, { attachmentId, comment: prepared.comment, fileName: prepared.file.fileName, mimeType: prepared.file.mimeType, content },
     work => withDraft(db, actor, resource, reference, async (context, row) => {
       if (row.status === 'published' && !await tenantDb(context.trx, reference.storeTenant).table(FILES).where({ attachment_id: attachmentId,
-        draft_operation_id: reference.operationId, status: 'ready', content_hash: digest, file_size: content.length }).forShare().first()) conflict();
+        draft_operation_id: reference.operationId, status: 'ready', content_hash: digest, file_size: content.length }).whereNull('discarded_at').forShare().first()) conflict();
       return work(context);
     }), upload);
 }

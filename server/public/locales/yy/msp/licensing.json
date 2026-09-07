@@ -552,7 +552,13 @@
       "upload": "22222",
       "invalid": "22222",
       "loadError": "22222",
-      "unknownOutcome": "22222"
+      "unknownOutcome": "22222",
+      "remove": "22222",
+      "removeTitle": "22222",
+      "removeHelp": "22222 {{name}}",
+      "removeUnknownOutcome": "22222",
+      "removing": "22222",
+      "removeNamed": "22222 {{name}}"
     }
   }
 }

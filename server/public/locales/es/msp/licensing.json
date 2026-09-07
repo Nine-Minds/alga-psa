@@ -554,7 +554,13 @@
       "upload": "Subir",
       "invalid": "Elija un archivo permitido que no supere el límite de tamaño.",
       "loadError": "Los archivos adjuntos no están disponibles. Actualice para comprobar su acceso.",
-      "unknownOutcome": "No pudimos confirmar la subida. Reintente con el mismo archivo."
+      "unknownOutcome": "No pudimos confirmar la subida. Reintente con el mismo archivo.",
+      "remove": "Quitar",
+      "removeTitle": "Quitar archivo adjunto",
+      "removeHelp": "¿Quitar {{name}} de este mensaje? Quienes vean el mensaje ya no podrán descargar este archivo.",
+      "removeUnknownOutcome": "No pudimos confirmar la eliminación. Reintente para comprobar el mismo archivo.",
+      "removing": "Quitando…",
+      "removeNamed": "Quitar {{name}}"
     }
   }
 }

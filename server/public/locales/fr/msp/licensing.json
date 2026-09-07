@@ -554,7 +554,13 @@
       "upload": "Envoyer",
       "invalid": "Choisissez un fichier autorisé respectant la taille maximale.",
       "loadError": "Les pièces jointes sont indisponibles. Actualisez pour vérifier votre accès.",
-      "unknownOutcome": "Nous n’avons pas pu confirmer l’envoi. Réessayez avec le même fichier."
+      "unknownOutcome": "Nous n’avons pas pu confirmer l’envoi. Réessayez avec le même fichier.",
+      "remove": "Retirer",
+      "removeTitle": "Retirer la pièce jointe",
+      "removeHelp": "Retirer {{name}} de ce message ? Les personnes qui consultent le message ne pourront plus télécharger ce fichier.",
+      "removeUnknownOutcome": "Nous n’avons pas pu confirmer le retrait. Réessayez pour vérifier le même fichier.",
+      "removing": "Retrait…",
+      "removeNamed": "Retirer {{name}}"
     }
   }
 }

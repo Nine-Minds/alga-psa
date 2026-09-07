@@ -552,7 +552,13 @@
       "upload": "Hochladen",
       "invalid": "Wählen Sie eine zulässige Datei innerhalb der Größenbegrenzung.",
       "loadError": "Anhänge sind nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
-      "unknownOutcome": "Der Upload konnte nicht bestätigt werden. Versuchen Sie es mit derselben Datei erneut."
+      "unknownOutcome": "Der Upload konnte nicht bestätigt werden. Versuchen Sie es mit derselben Datei erneut.",
+      "remove": "Entfernen",
+      "removeTitle": "Anhang entfernen",
+      "removeHelp": "{{name}} aus dieser Nachricht entfernen? Personen, die die Nachricht sehen, können diese Datei dann nicht mehr herunterladen.",
+      "removeUnknownOutcome": "Das Entfernen konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Datei zu prüfen.",
+      "removing": "Wird entfernt…",
+      "removeNamed": "{{name}} entfernen"
     }
   }
 }

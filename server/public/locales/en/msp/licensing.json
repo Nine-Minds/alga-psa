@@ -641,7 +641,13 @@
       "upload": "Upload",
       "invalid": "Choose an allowed file within the size limit.",
       "loadError": "Attachments are unavailable. Refresh to check your access.",
-      "unknownOutcome": "We could not confirm the upload. Retry to check the same file."
+      "unknownOutcome": "We could not confirm the upload. Retry to check the same file.",
+      "remove": "Remove",
+      "removeTitle": "Remove attachment",
+      "removeHelp": "Remove {{name}} from this message? People viewing the message will no longer be able to download this file.",
+      "removeUnknownOutcome": "We could not confirm removal. Retry to check the same file.",
+      "removing": "Removing…",
+      "removeNamed": "Remove {{name}}"
     }
   }
 }

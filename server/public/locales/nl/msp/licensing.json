@@ -552,7 +552,13 @@
       "upload": "Uploaden",
       "invalid": "Kies een toegestaan bestand binnen de maximale grootte.",
       "loadError": "Bijlagen zijn niet beschikbaar. Vernieuw om uw toegang te controleren.",
-      "unknownOutcome": "We konden de upload niet bevestigen. Probeer hetzelfde bestand opnieuw."
+      "unknownOutcome": "We konden de upload niet bevestigen. Probeer hetzelfde bestand opnieuw.",
+      "remove": "Verwijderen",
+      "removeTitle": "Bijlage verwijderen",
+      "removeHelp": "{{name}} uit dit bericht verwijderen? Mensen die het bericht bekijken, kunnen dit bestand daarna niet meer downloaden.",
+      "removeUnknownOutcome": "We konden de verwijdering niet bevestigen. Probeer opnieuw om hetzelfde bestand te controleren.",
+      "removing": "Verwijderen…",
+      "removeNamed": "{{name}} verwijderen"
     }
   }
 }

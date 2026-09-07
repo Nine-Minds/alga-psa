@@ -556,7 +556,13 @@
       "upload": "Prześlij",
       "invalid": "Wybierz dozwolony plik mieszczący się w limicie rozmiaru.",
       "loadError": "Załączniki są niedostępne. Odśwież, aby sprawdzić dostęp.",
-      "unknownOutcome": "Nie udało się potwierdzić przesłania. Spróbuj ponownie z tym samym plikiem."
+      "unknownOutcome": "Nie udało się potwierdzić przesłania. Spróbuj ponownie z tym samym plikiem.",
+      "remove": "Usuń",
+      "removeTitle": "Usuń załącznik",
+      "removeHelp": "Usunąć {{name}} z tej wiadomości? Osoby przeglądające wiadomość nie będą już mogły pobrać tego pliku.",
+      "removeUnknownOutcome": "Nie można potwierdzić usunięcia. Spróbuj ponownie, aby sprawdzić ten sam plik.",
+      "removing": "Usuwanie…",
+      "removeNamed": "Usuń {{name}}"
     }
   }
 }

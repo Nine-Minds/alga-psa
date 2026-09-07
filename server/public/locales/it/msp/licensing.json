@@ -554,7 +554,13 @@
       "upload": "Carica",
       "invalid": "Scegli un file consentito entro il limite di dimensione.",
       "loadError": "Gli allegati non sono disponibili. Aggiorna per verificare il tuo accesso.",
-      "unknownOutcome": "Impossibile confermare il caricamento. Riprova con lo stesso file."
+      "unknownOutcome": "Impossibile confermare il caricamento. Riprova con lo stesso file.",
+      "remove": "Rimuovi",
+      "removeTitle": "Rimuovi allegato",
+      "removeHelp": "Rimuovere {{name}} da questo messaggio? Chi visualizza il messaggio non potrà più scaricare questo file.",
+      "removeUnknownOutcome": "Impossibile confermare la rimozione. Riprova per verificare lo stesso file.",
+      "removing": "Rimozione…",
+      "removeNamed": "Rimuovi {{name}}"
     }
   }
 }

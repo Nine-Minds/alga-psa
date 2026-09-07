@@ -554,7 +554,13 @@
       "upload": "Carregar",
       "invalid": "Escolha um ficheiro permitido dentro do limite de tamanho.",
       "loadError": "Os anexos estão indisponíveis. Atualize para verificar o seu acesso.",
-      "unknownOutcome": "Não foi possível confirmar o carregamento. Tente novamente com o mesmo ficheiro."
+      "unknownOutcome": "Não foi possível confirmar o carregamento. Tente novamente com o mesmo ficheiro.",
+      "remove": "Remover",
+      "removeTitle": "Remover anexo",
+      "removeHelp": "Remover {{name}} desta mensagem? Quem visualizar a mensagem não poderá mais baixar este arquivo.",
+      "removeUnknownOutcome": "Não foi possível confirmar a remoção. Tente novamente para verificar o mesmo arquivo.",
+      "removing": "Removendo…",
+      "removeNamed": "Remover {{name}}"
     }
   }
 }

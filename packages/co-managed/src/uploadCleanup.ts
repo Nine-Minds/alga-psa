@@ -40,11 +40,13 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
           .where('cleanup_next_attempt_at', '<=', trx.raw('clock_timestamp()')).forUpdate().skipLocked().first();
         if (!row) return;
         if (row.storage_path !== `co-management/${tenant}/${row.attachment_id}`) throw new Error('Invalid cleanup path');
+        const explicitRemoval = row.status === 'ready' && row.removal_actor_tenant === row.actor_tenant && row.removal_actor_user_id === row.actor_user_id;
         if (row.draft_operation_id) {
-          const draft = await owner.table(DRAFTS).where({ operation_id: row.draft_operation_id, status: 'draft' }).whereNotNull('abandoned_at').first();
+          const draft = await owner.table(DRAFTS).where('operation_id', row.draft_operation_id).first();
           if (!draft || draft.customer_tenant !== row.customer_tenant || draft.relationship_id !== row.relationship_id || draft.ticket_id !== row.ticket_id ||
-            draft.thread_id !== row.thread_id || draft.operation_id !== row.comment_id) throw new Error('Invalid cleanup draft');
-        } else if (row.status !== 'pending') throw new Error('Published attachments require explicit deletion');
+            draft.thread_id !== row.thread_id || draft.operation_id !== row.comment_id ||
+            (explicitRemoval ? draft.status !== 'published' || draft.abandoned_at : draft.status !== 'draft' || !draft.abandoned_at)) throw new Error('Invalid cleanup draft');
+        } else if (row.status !== 'pending' && !explicitRemoval) throw new Error('Published attachments require explicit deletion');
         await remove(row.storage_path);
         await owner.table(FILES).where('attachment_id', row.attachment_id).update({ purged_at: trx.raw('clock_timestamp()'), file_name: 'Removed attachment',
           mime_type: 'application/octet-stream', cleanup_error_code: null });
