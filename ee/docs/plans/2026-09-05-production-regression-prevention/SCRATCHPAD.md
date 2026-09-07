@@ -1218,3 +1218,9 @@
 - Added `npm run test:temporal-snapshot-runtime`: an isolated Temporal test server executes the built workflow with a return step; activity assertions verify redacted diagnostic data, no raw scopes argument, and unchanged live execution data. Test passed locally. Activity bodies are doubles; DB behavior remains independently tested.
 - CI runs this command after compilation and uploads its running/passed/failed JSON evidence with the readiness artifact. Source: `scripts/temporal-snapshot-runtime-smoke.cjs`; evidence: `evidence/temporal-built-snapshot-runtime.json`.
 - Native full integration job 101650631428 still reports its full-suite execution step in progress. Leave it intact before publishing queued commits.
+
+### 2026-09-07 — Real Temporal regression exposes dropped redaction metadata
+
+- Expanded the built runtime smoke to action output, oversized snapshots and meta.* assignment, with recorded-history replay. It failed before the fix: assigning action output discarded meta.redactions, exposing the resolved token in subsequent diagnostic activity payloads.
+- assignToScopePath now preserves metadata/error state and writes meta.* values to metadata. Added readiness assertions for preserved metadata and error context.
+- Rebuilt worker, 72 readiness cases, three real Temporal cases and three same-build history replays all passed. Evidence: `evidence/workflow-assignment-metadata.json`. Prior-release history compatibility and invocation output storage remain outstanding.

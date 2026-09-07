@@ -1049,6 +1049,8 @@ function assignToScopePath(
 ): WorkflowRuntimeV2InterpreterState {
   const normalized = normalizeAssignmentPath(saveAs);
   const scopes = {
+    ...state.scopes,
+    meta: cloneRecord(state.scopes.meta ?? {}),
     payload: cloneRecord(state.scopes.payload),
     workflow: cloneRecord(state.scopes.workflow),
     lexical: state.scopes.lexical.map((scope) => cloneRecord(scope)),
@@ -1067,7 +1069,7 @@ function assignToScopePath(
       setNestedValue(scopes.workflow, normalized.slice('local.'.length), output);
     }
   } else if (normalized.startsWith('meta.')) {
-    setNestedValue(scopes.workflow, normalized.slice('meta.'.length), output);
+    setNestedValue(scopes.meta, normalized.slice('meta.'.length), output);
   } else {
     setNestedValue(scopes.workflow, normalized, output);
   }

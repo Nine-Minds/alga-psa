@@ -146,6 +146,8 @@ describe('workflowRuntimeV2RunWorkflow', () => {
       definition,
       initialScopes: {
         payload: { ticketId: 't_1' },
+        meta: { source: 'fixture', redactions: [] },
+        error: { message: 'previous handled error' },
         workflow: {},
         lexical: [],
         system: {
@@ -191,7 +193,7 @@ describe('workflowRuntimeV2RunWorkflow', () => {
         stepId: 'step-1',
         stepPath: 'root.steps[0]',
         status: 'SUCCEEDED',
-        snapshot: expect.objectContaining({ payload: { ticketId: 't_1' }, vars: { lastAction: { updated: true } } }),
+        snapshot: expect.objectContaining({ payload: { ticketId: 't_1' }, vars: { lastAction: { updated: true } }, meta: { source: 'fixture', redactions: [] }, error: { message: 'previous handled error' } }),
       })
     );
     expect(mockActivities.projectWorkflowRuntimeV2StepCompletion).toHaveBeenNthCalledWith(
