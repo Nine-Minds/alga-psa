@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-09-06",
+  "updatedAt": "2026-09-07",
   "purpose": "Track proven regression boundaries and verification limits; null incident identifiers must not be counted as production escapes.",
   "records": [
     {
@@ -397,6 +397,79 @@
       "status": "local-before-and-after-verified",
       "limits": [
         "No production incident supplied. Native browser revalidation of the fix remains required."
+      ]
+    },
+    {
+      "id": "table-refresh-resets-open-user-menu",
+      "classification": "native-browser-discovered-behavioral-defect",
+      "incident": null,
+      "journey": "Open a user action menu while asynchronously loaded table data refreshes",
+      "missingBoundary": "React component identity across refreshed table render callbacks",
+      "ownerRole": "UI maintainers",
+      "testFiles": [
+        "packages/ui/src/components/DataTable.interaction.test.tsx",
+        "e2e-tests/tests/tenant-identity.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "fixRevision": "055e1b19c8",
+      "evidence": "table-interaction-continuity.json",
+      "before": {
+        "status": "intended-assertion-failure",
+        "assertion": "After opening the real dropdown and refreshing columns/rows, Edit is missing."
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "assertion": "Edit remains open and invokes the new callback once, never the stale callback. Full UI package: 79 files, 416 tests passed, zero skipped."
+      },
+      "reproduction": {
+        "cwd": "packages/ui",
+        "command": "../../node_modules/.bin/vitest run src/components/DataTable.interaction.test.tsx",
+        "defect": "In an isolated checkout before the fix, copy the permanent interaction test and run it against the original DataTable generated cell renderer."
+      },
+      "status": "local-before-and-after-verified-native-pending",
+      "limits": [
+        "The native trace is consistent with the reproduced reset path; rebuilt native browser acceptance is still required.",
+        "No production incident identifier was supplied; do not count as an attributed production escape."
+      ]
+    },
+    {
+      "id": "calendar-manual-sync-replaces-webhook-identity",
+      "classification": "native-browser-discovered-lifecycle-defect",
+      "incident": null,
+      "journey": "Manually synchronize a Microsoft calendar and then receive a vendor event correction",
+      "missingBoundary": "Subscription identity survives manual sync so incoming notifications retain a resolvable provider",
+      "ownerRole": "Integration maintainers",
+      "testFiles": [
+        "server/src/test/unit/calendar/calendarActions.sync.test.ts",
+        "e2e-tests/tests/microsoft-calendar.spec.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "browserWorkflow": ".github/workflows/e2e-fresh-install-tests.yaml"
+      },
+      "fixRevision": "5f2566f966",
+      "evidence": "calendar-subscription-preservation.json",
+      "before": {
+        "status": "intended-assertion-failure",
+        "assertion": "Existing subscription renewal and renewal-failure expectations failed; manual sync registered a replacement subscription."
+      },
+      "after": {
+        "status": "local-behavioral-tests-passed",
+        "assertion": "All six orchestration tests pass: preserve and renew an existing Microsoft subscription, register the initial one, and surface renewal failure."
+      },
+      "reproduction": {
+        "cwd": "server",
+        "command": "node node_modules/vitest/vitest.mjs run src/test/unit/calendar/calendarActions.sync.test.ts",
+        "defect": "In an isolated checkout before the fix, copy the permanent action test and execute it against the unconditional registration implementation."
+      },
+      "status": "local-before-and-after-verified-native-pending",
+      "limits": [
+        "Focused tests mock provider/DB/sync boundaries. Native browser assertions additionally require stable persisted subscription identity, successful callback delivery and corrected DB/UI state.",
+        "The replacement explains a potential stranded-notification race; rebuilt browser validation must establish resolution of the observed native timeout.",
+        "No production incident identifier was supplied."
       ]
     }
   ]
