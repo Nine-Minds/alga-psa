@@ -10,7 +10,7 @@ const TYPES = ['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_COMMENT
 export type CoManagedConversationEventType = typeof TYPES[number];
 export interface CoManagedEventPublication {
   kind: 'event' | 'workflow'; eventType: CoManagedConversationEventType; payload: Record<string, any>;
-  workflowContext?: Record<string, any>; idempotencyKey?: string;
+  workflowContext?: Record<string, any>; idempotencyKey?: string; channel?: 'internal-notifications';
 }
 export interface CoManagedEventIntent {
   tenant: string; eventId: string; ticketId: string; commentId: string; threadId: string; audience: CommentAudience; publication: CoManagedEventPublication;
@@ -22,7 +22,8 @@ const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(va
 export async function enqueueCoManagedConversationEvent(trx: Knex.Transaction, input: CoManagedEventIntent): Promise<void> {
   if (!trx.isTransaction || ![input.tenant, input.eventId, input.ticketId, input.commentId, input.threadId].every(isCoManagedUuid) ||
     !['requester', 'shared_it', 'organization_private'].includes(input.audience) || !TYPES.includes(input.publication?.eventType) ||
-    !['event', 'workflow'].includes(input.publication.kind)) throw new CoManagedSharedWorkError();
+    !['event', 'workflow'].includes(input.publication.kind) ||
+    (input.publication.channel !== undefined && (input.publication.kind !== 'event' || input.publication.channel !== 'internal-notifications'))) throw new CoManagedSharedWorkError();
   const publication = JSON.parse(JSON.stringify(input.publication)) as CoManagedEventPublication;
   if (publication.eventType === 'TICKET_COMMENT_ADDED') {
     if (!publication.payload.comment || publication.payload.comment.id !== input.commentId || publication.payload.commentId !== input.commentId) throw new CoManagedSharedWorkError();
@@ -36,7 +37,7 @@ export async function enqueueCoManagedConversationEvent(trx: Knex.Transaction, i
     event_type: publication.eventType, audience: input.audience, publication: JSON.stringify(publication), request_hash: requestHash }).onConflict(['tenant', 'event_id']).ignore();
   const row = await owner.table(TABLE).where('event_id', input.eventId).forShare().first('request_hash');
   if (row?.request_hash !== requestHash) throw new Error('Co-managed event identity was reused with different intent');
-  await enqueueCoManagedEventConsumers(trx, input.tenant, input.eventId, publication.eventType);
+  await enqueueCoManagedEventConsumers(trx, input.tenant, input.eventId, publication.eventType, { channel: publication.channel });
 }
 /** Current audience and publication checks apply to newly-created-message
  * delivery. Metadata-only invalidations still run after removal or restriction. */

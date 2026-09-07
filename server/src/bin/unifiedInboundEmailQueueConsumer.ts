@@ -1,3 +1,4 @@
+import { retainCoManagedInboundCommentEvent } from '@alga-psa/co-managed/inboundConversationEvents';
 import { processCoManagedReplyArtifact } from '@alga-psa/co-managed/inboundEmailAttachments';
 import { admitCoManagedEmailReply } from '@alga-psa/co-managed/inboundEmailReply';
 import { UnifiedInboundEmailQueueConsumer } from '@alga-psa/shared/services/email/unifiedInboundEmailQueueConsumer';
@@ -38,7 +39,7 @@ async function main(): Promise<void> {
   const durableConsumer = new UnifiedInboundEmailQueueConsumerV2({
     pollDelayMs: 250,
     renewPostgresLease: renewPostgresLeaseForV2Job,
-    handleJob: async (job, ctx) => processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply, qualifiedReplyArtifacts: processCoManagedReplyArtifact }),
+    handleJob: async (job, ctx) => processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply, qualifiedReplyArtifacts: processCoManagedReplyArtifact, retainConversationEvent: retainCoManagedInboundCommentEvent }),
   });
 
   const shutdown = () => {

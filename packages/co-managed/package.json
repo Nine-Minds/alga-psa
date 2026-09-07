@@ -22,6 +22,10 @@
       "types": "./src/inboundRequesterReply.ts",
       "import": "./dist/inboundRequesterReply.js"
     },
+    "./inboundConversationEvents": {
+      "types": "./src/inboundConversationEvents.ts",
+      "import": "./dist/inboundConversationEvents.js"
+    },
     "./inboundEmailAttachments": {
       "types": "./src/inboundEmailAttachments.ts",
       "import": "./dist/inboundEmailAttachments.js"

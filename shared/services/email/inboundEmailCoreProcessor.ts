@@ -18,6 +18,7 @@
  * mere inbox-row existence check.
  */
 
+import type { InboundConversationEventRetainer } from './inboundConversationEvents';
 import type { EmailReplyAdmission } from './qualifiedReplyAdmission';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -61,6 +62,7 @@ export interface ProcessInboundInboxParams {
   inboxId: string;
   owner: string;
   qualifiedReplyAdmission?: EmailReplyAdmission;
+  retainConversationEvent?: InboundConversationEventRetainer;
   leaseTtlMs: number;
   /** In shadow mode no core entities are created; used for source-stage coverage validation. */
   mode?: 'shadow' | 'enforce';
@@ -257,6 +259,7 @@ export async function processInboundInbox(
         inbox: locked,
         emailData: parsed.emailData,
         qualifiedReplyAdmission: params.qualifiedReplyAdmission,
+        retainConversationEvent: params.retainConversationEvent,
       });
       return { terminalReplay: false as const, ...result };
     });
@@ -323,6 +326,7 @@ async function runCommitPhase(params: {
   inboxId: string;
   owner: string;
   qualifiedReplyAdmission?: EmailReplyAdmission;
+  retainConversationEvent?: InboundConversationEventRetainer;
   mode?: 'shadow' | 'enforce';
   trx: Knex.Transaction;
   inbox: InboundEmailInboxRecord;
@@ -343,12 +347,14 @@ async function runCommitPhase(params: {
     trx,
     tenantId,
     inboxId: params.inboxId,
+    retainConversationEvent: params.retainConversationEvent,
     suppressCommentEmail: false,
   });
   const commentPublisher = new InboundEmailOutboxEventPublisher({
     trx,
     tenantId,
     inboxId: params.inboxId,
+    retainConversationEvent: params.retainConversationEvent,
     suppressCommentEmail: true,
   });
 

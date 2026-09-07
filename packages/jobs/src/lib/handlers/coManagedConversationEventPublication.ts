@@ -6,7 +6,7 @@ import { publishEvent, publishWorkflowEvent, type WorkflowEventPublishContext } 
 export async function publishCoManagedConversationEvent(publication: CoManagedEventPublication, eventId: string) {
   if (publication.kind === 'workflow') await publishWorkflowEvent({ eventType: publication.eventType, payload: publication.payload,
     ctx: publication.workflowContext as WorkflowEventPublishContext, idempotencyKey: publication.idempotencyKey }, { eventId, strict: true });
-  else await publishEvent({ eventType: publication.eventType, payload: publication.payload } as any, { eventId, strict: true });
+  else await publishEvent({ eventType: publication.eventType, payload: publication.payload } as any, { eventId, strict: true, ...(publication.channel ? { channel: publication.channel } : {}) });
 }
 export async function replayCoManagedConversationConsumer(publication: CoManagedEventPublication, eventId: string, consumer: CoManagedEventConsumer) {
   if (publication.kind !== 'event') throw new Error('Unsupported co-managed consumer publication');

@@ -1,3 +1,4 @@
+import { retainCoManagedInboundCommentEvent } from '../../../../packages/co-managed/src/inboundConversationEvents';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'node:module';
 import { randomUUID } from 'node:crypto';
@@ -671,7 +672,7 @@ async function stagedCoManagedInbox(tenant: string) {
 
 async function runCoManagedInbox(tenantId: string, inboxId: string) {
   const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
-  return processInboundInbox({ tenantId, inboxId, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce' });
+  return processInboundInbox({ tenantId, inboxId, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce', retainConversationEvent: retainCoManagedInboundCommentEvent });
 }
 
 describe('durable co-managed email intake pauses', () => {
@@ -8650,7 +8651,7 @@ async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters
     try {
       await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
         run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(),
-          leaseTtlMs: 30_000, mode: 'enforce', qualifiedReplyAdmission: admitCoManagedRequesterReply }) });
+          leaseTtlMs: 30_000, mode: 'enforce', qualifiedReplyAdmission: admitCoManagedRequesterReply, retainConversationEvent: retainCoManagedInboundCommentEvent }) });
     } finally { nativeTokenLookup.mockRestore(); nativeThreadLookup.mockRestore(); intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
   });
 }
@@ -8672,7 +8673,9 @@ it('processes an actual qualified requester email reply atomically in its canoni
   expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal', attributes: before.attributes });
   expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
   const outbox = await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id);
-  expect(outbox.map(row => row.event_type)).toEqual(expect.arrayContaining(['TICKET_COMMENT_ADDED', 'INBOUND_EMAIL_REPLY_RECEIVED']));
+  expect(outbox.map(row => row.event_type)).toContain('INBOUND_EMAIL_REPLY_RECEIVED');
+  expect(outbox.map(row => row.event_type)).not.toContain('TICKET_COMMENT_ADDED');
+  expect(await customer.table('co_management_event_outbox').where({ comment_id: (result as any).commentId, event_type: 'TICKET_COMMENT_ADDED' })).toHaveLength(1);
   expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ status: 'succeeded', outcome_kind: 'replied' });
   expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
   expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(outbox.length);
@@ -8719,6 +8722,8 @@ it('rolls qualified requester reply writes and outbox back before retaining quar
     expect(writer).toHaveBeenCalledTimes(1);
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+    expect(await customer.table('co_management_event_consumers')).toHaveLength(0);
     expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
   } finally { writer.mockRestore(); }
 }));
@@ -8835,6 +8840,7 @@ it('defers and rolls back requester email when a separately compiled admission a
   const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
   const before = await customer.table('comments').where('ticket_id', resource.id);
   const result = await processInboundInbox({ tenantId: resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce',
+    retainConversationEvent: retainCoManagedInboundCommentEvent,
     qualifiedReplyAdmission: async (trx, input, write) => {
       await admitCoManagedRequesterReply(trx, input, write);
       // This intentionally has another constructor, as the worker's compiled
@@ -9239,7 +9245,7 @@ async function withTechnicianInboundFixture(work: (fixture: Parameters<Parameter
     try {
       await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
         run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000,
-          mode: 'enforce', qualifiedReplyAdmission: admitCoManagedEmailReply }) });
+          mode: 'enforce', qualifiedReplyAdmission: admitCoManagedEmailReply, retainConversationEvent: retainCoManagedInboundCommentEvent }) });
     } finally { nativeTokenLookup.mockRestore(); nativeThreadLookup.mockRestore(); intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
   });
 }
@@ -9267,8 +9273,10 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('processes 
   expect(receipt.reply_token_hash).toMatch(/^[a-f0-9]{64}$/);
   expect(JSON.stringify(receipt)).not.toContain('cm2:'); expect(JSON.stringify(receipt)).not.toContain(emailData.from.email);
   const outbox = await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id);
-  expect(outbox.find(row => row.event_type === 'TICKET_COMMENT_ADDED')?.payload).toMatchObject({ userId: recipient.userId, comment: { isInternal: audience !== 'requester' } });
-  expect(outbox.map(row => row.event_type)).toEqual(expect.arrayContaining(['TICKET_COMMENT_ADDED', 'INBOUND_EMAIL_REPLY_RECEIVED']));
+  expect((await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_ADDED' }).first())?.publication.payload).toMatchObject({ userId: recipient.userId, comment: { isInternal: audience !== 'requester' } });
+  expect(outbox.map(row => row.event_type)).toContain('INBOUND_EMAIL_REPLY_RECEIVED');
+  expect(outbox.map(row => row.event_type)).not.toContain('TICKET_COMMENT_ADDED');
+  expect(await customer.table('co_management_event_outbox').where({ comment_id: (result as any).commentId, event_type: 'TICKET_COMMENT_ADDED' })).toHaveLength(1);
   expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
   expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
   expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(outbox.length);
@@ -9323,6 +9331,8 @@ it('rolls actual technician comment and outbox writes back before quarantining a
     expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
     expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
     expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+    expect(await customer.table('co_management_event_consumers')).toHaveLength(0);
     expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
     expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
   } finally { writer.mockRestore(); }
@@ -9366,6 +9376,11 @@ it.each(['requester', 'shared_it', 'organization_private'] as const)('preserves 
     const comment = await customer.table('comments').where('comment_id', (result as any).commentId).first();
     expect(comment).toMatchObject({ ticket_id: ticket.ticket_id, user_id: recipient.userId, contact_id: null, author_type: 'internal', is_internal: audience !== 'requester' });
     expect(comment.note).toContain('Technician diagnostic reply.');
+    const commentEvent = await customer.table('co_management_event_outbox').where('comment_id', comment.comment_id).first();
+    expect(commentEvent.publication.channel).toBe('internal-notifications');
+    const consumers = await customer.table('co_management_event_consumers').where('event_id', commentEvent.event_id);
+    expect(consumers.find(row => row.consumer === 'internal-notifications').status).toBe('pending');
+    expect(consumers.filter(row => row.consumer !== 'internal-notifications').every(row => row.status === 'cancelled')).toBe(true);
     expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first()).toMatchObject({
       ticket_id: ticket.ticket_id, comment_id: comment.comment_id, thread_id: comment.thread_id,
       source_ticket_id: resource.id, actor_user_id: recipient.userId, audience });
@@ -9760,3 +9775,93 @@ it('reuses committed technician tokens after SMTP acceptance loses its delivery 
   expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(1);
   expect(await customer.table('co_management_customer_email_deliveries').first()).toMatchObject({ status: 'delivered', attempt_count: 2 });
 }));
+
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('publishes inbound %s conversation events only after inbox commit with current content and durable consumers', async audience => withTechnicianInboundFixture(async ({ customer, resource, inbox, publish, run }) => {
+  const observations: any[] = [];
+  publish.mockImplementation(async (event: any, options: any) => {
+    if (event.eventType === 'TICKET_COMMENT_ADDED') observations.push({ event, options,
+      inbox: await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first() });
+  });
+  const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  expect(observations).toHaveLength(1);
+  const row = await customer.table('co_management_event_outbox').where('comment_id', (result as any).commentId).first();
+  expect(row).toMatchObject({ status: 'published', audience, publication: { payload: { comment: { content: '', audience } } } });
+  expect(observations[0]).toMatchObject({ inbox: { status: 'succeeded' }, options: { eventId: row.event_id, strict: true },
+    event: { payload: { commentId: row.comment_id, comment: { audience, content: expect.stringContaining('Technician diagnostic reply.') } } } });
+  expect(observations[0].event.payload.comment.content).not.toContain('ALGA-REPLY-TOKEN');
+  expect(await customer.table('co_management_event_consumers').where('event_id', row.event_id)).toHaveLength(5);
+  expect(await customer.table('inbound_email_outbox').where({ inbox_id: inbox.inbox_id, event_type: 'TICKET_COMMENT_ADDED' })).toHaveLength(0);
+}, audience));
+
+it('recovers inbound conversation publication from current content after a lost publish acknowledgement', async () => withTechnicianInboundFixture(async ({ customer, resource, publish, run }) => {
+  publish.mockRejectedValue(new Error('Lost Redis acknowledgement'));
+  const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  const row = await customer.table('co_management_event_outbox').where('comment_id', (result as any).commentId).first();
+  expect(row).toMatchObject({ status: 'pending', attempts: 1 });
+  await customer.table('comments').where('comment_id', row.comment_id).update({ note: 'Current edited reply body' });
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const send = vi.fn().mockResolvedValue(undefined);
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current edited reply body' }) }) }), row.event_id]);
+  expect(await run()).toMatchObject({ disposition: 'ack', reason: 'terminal_replay' });
+  expect(await customer.table('co_management_event_outbox').where('comment_id', row.comment_id)).toHaveLength(1);
+}));
+
+it.each(['deleted', 'audience'] as const)('cancels undelivered inbound conversation content after %s changes and closes its recovery obligations', async change => withTechnicianInboundFixture(async ({ customer, resource, publish, run }) => {
+  publish.mockRejectedValue(new Error('Redis unavailable'));
+  const result = await run(), row = await customer.table('co_management_event_outbox').where('comment_id', (result as any).commentId).first();
+  if (change === 'deleted') await customer.table('comments').where('comment_id', row.comment_id).update({ deleted_at: new Date() });
+  else await customer.table('comment_threads').where('thread_id', row.thread_id).update({ collaboration_audience: 'organization_private' });
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const { recoverCoManagedEventConsumers } = await import('../../../../packages/co-managed/src/conversationEventConsumers');
+  const send = vi.fn();
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send)).toEqual({ published: 0, cancelled: 1, failed: 0 });
+  await customer.table('co_management_event_consumers').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  expect(await recoverCoManagedEventConsumers(db, resource.tenant, send)).toEqual({ queued: 0, cancelled: 5, failed: 0 });
+  expect(send).not.toHaveBeenCalled();
+}));
+
+it('preserves initial inbound internal-only delivery even when excluded consumer rows are replayed', async () => withTechnicianInboundFixture(async ({ customer, resource, recipient, inbox, publish }) => {
+  const { withTransaction } = await import('@alga-psa/db');
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const { InboundEmailOutboxEventPublisher } = await import('../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher');
+  const created = await withTransaction(db, trx => TicketModel.createComment({ ticket_id: resource.id, author_type: 'internal', author_id: recipient.userId,
+    content: 'Initial ticket description', collaboration_audience: 'requester' }, resource.tenant, trx,
+  new InboundEmailOutboxEventPublisher({ trx, tenantId: resource.tenant, inboxId: inbox.inbox_id, suppressCommentEmail: true, retainConversationEvent: retainCoManagedInboundCommentEvent }), undefined, recipient.userId));
+  const row = await customer.table('co_management_event_outbox').where('comment_id', created.comment_id).first();
+  expect(row.publication.channel).toBe('internal-notifications');
+  expect(publish.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_COMMENT_ADDED')?.[1]).toMatchObject({ eventId: row.event_id, channel: 'internal-notifications' });
+  const consumers = await customer.table('co_management_event_consumers').where('event_id', row.event_id);
+  expect(consumers.filter(item => item.status === 'pending').map(item => item.consumer)).toEqual(['internal-notifications']);
+  // A stale backfill must not revive delivery outside the original channel.
+  await customer.table('co_management_event_consumers').where('event_id', row.event_id).update({ status: 'pending', completed_at: null, error_code: null, next_attempt_at: new Date(0) });
+  const { consumeCoManagedConversationEvent, recoverCoManagedEventConsumers } = await import('../../../../packages/co-managed/src/conversationEventConsumers');
+  const effect = vi.fn(), event = { id: row.event_id, eventType: row.event_type, payload: row.publication.payload };
+  expect(await consumeCoManagedConversationEvent(db, event, 'customer-internal-email', effect)).toBe(true); expect(effect).not.toHaveBeenCalled();
+  const replay = vi.fn(); expect(await recoverCoManagedEventConsumers(db, resource.tenant, replay)).toEqual({ queued: 1, cancelled: 3, failed: 0 });
+  expect(replay.mock.calls[0][2]).toBe('internal-notifications');
+}));
+
+it('retries co-managed inbox comments when the conversation-retention adapter is absent without native fallback', async () => withTechnicianInboundFixture(async ({ customer, resource, inbox }) => {
+  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+  const { admitCoManagedEmailReply } = await import('../../../../packages/co-managed/src/inboundEmailReply');
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  expect(await processInboundInbox({ tenantId: resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce',
+    qualifiedReplyAdmission: admitCoManagedEmailReply })).toMatchObject({ disposition: 'retry', error: 'Co-managed comment publication requires durable conversation retention' });
+  expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+  expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+  expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+}));
+
+it('keeps ordinary PSA inbox comment events in their native outbox', async () => {
+  const { operation } = await readyForAcceptance(), tenant = operation.tenant, inbox = await stagedCoManagedInbox(tenant);
+  const { InboundEmailOutboxEventPublisher } = await import('../../../../shared/workflow/adapters/inboundEmailOutboxEventPublisher');
+  await db.transaction(trx => new InboundEmailOutboxEventPublisher({ trx, tenantId: tenant, inboxId: inbox.inbox_id,
+    retainConversationEvent: retainCoManagedInboundCommentEvent }).publishCommentCreated({ tenantId: tenant, ticketId: randomUUID(), commentId: randomUUID(), userId: randomUUID(), metadata: { content: 'Native PSA comment' } }));
+  const owner = tenantDb(db, tenant);
+  expect(await owner.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toEqual([expect.objectContaining({ event_type: 'TICKET_COMMENT_ADDED', payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Native PSA comment' }) }) })]);
+  expect(await owner.table('co_management_event_outbox')).toHaveLength(0);
+});

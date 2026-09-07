@@ -4,6 +4,7 @@
  * both the Redis claim and the Postgres lease together.
  */
 
+import type { InboundConversationEventRetainer } from './inboundConversationEvents';
 import type { QualifiedReplyArtifactProcessor } from './qualifiedReplyArtifacts';
 import type { EmailReplyAdmission } from './qualifiedReplyAdmission';
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
@@ -47,7 +48,7 @@ export async function renewPostgresLeaseForV2Job(
 export async function processUnifiedInboundEmailDurableJob(
   job: UnifiedInboundEmailQueueJobV2,
   ctx: InboundV2JobContext,
-  options: { qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor } = {}
+  options: { qualifiedReplyAdmission?: EmailReplyAdmission; qualifiedReplyArtifacts?: QualifiedReplyArtifactProcessor; retainConversationEvent?: InboundConversationEventRetainer } = {}
 ): Promise<InboundEmailQueueDisposition> {
   const mode = await getInboundDurableModeForTenant(job.tenantId);
   if (mode === 'off') {
@@ -58,7 +59,7 @@ export async function processUnifiedInboundEmailDurableJob(
   }
   switch (job.workType) {
     case 'process_inbox':
-      return handleProcessInbox(job, ctx, mode, options.qualifiedReplyAdmission);
+      return handleProcessInbox(job, ctx, mode, options.qualifiedReplyAdmission, options.retainConversationEvent);
     case 'stage_ingress':
       return handleStageIngress(job, ctx);
     case 'process_artifact':
@@ -73,13 +74,14 @@ export async function processUnifiedInboundEmailDurableJob(
 }
 
 async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext,
-  mode: Exclude<InboundEmailDurableMode, 'off'>, qualifiedReplyAdmission?: EmailReplyAdmission): Promise<InboundEmailQueueDisposition> {
+  mode: Exclude<InboundEmailDurableMode, 'off'>, qualifiedReplyAdmission?: EmailReplyAdmission, retainConversationEvent?: InboundConversationEventRetainer): Promise<InboundEmailQueueDisposition> {
   const owner = newInboundProcessorOwner();
   return processInboundInbox({
     tenantId: job.tenantId,
     inboxId: job.recordId,
     owner,
     qualifiedReplyAdmission,
+    retainConversationEvent,
     leaseTtlMs: getDurableLeaseTtlMs(),
     mode: mode === 'enforce' ? 'enforce' : 'shadow',
     onClaim: (lease) => ctx.registerPostgresLease(lease),

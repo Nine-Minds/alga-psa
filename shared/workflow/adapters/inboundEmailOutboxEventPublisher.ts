@@ -12,6 +12,8 @@
  */
 
 import type { Knex } from 'knex';
+import { tenantDb } from '@alga-psa/db';
+import type { InboundConversationEventRetainer } from '../../services/email/inboundConversationEvents';
 import { randomUUID } from 'node:crypto';
 import type { IEventPublisher } from '@alga-psa/types';
 import { insertOutboxRow } from '../../services/email/inboundEmailDurableStore';
@@ -20,6 +22,7 @@ export interface InboundEmailOutboxEventPublisherContext {
   trx: Knex.Transaction;
   tenantId: string;
   inboxId: string;
+  retainConversationEvent?: InboundConversationEventRetainer;
   /**
    * When true, `publishCommentCreated` is recorded as `initial-comment-created`
    * (the first comment on a new inbound-email ticket, kept in-app only).
@@ -57,6 +60,22 @@ export class InboundEmailOutboxEventPublisher implements IEventPublisher {
     publishOptions?: Record<string, unknown> | null;
   }): Promise<void> {
     const outboxId = randomUUID();
+    if (params.eventType === 'TICKET_COMMENT_ADDED') {
+      const comment = params.payload.comment as { id: string };
+      if (this.ctx.retainConversationEvent) {
+        if (await this.ctx.retainConversationEvent(this.ctx.trx, { tenant: this.ctx.tenantId, eventId: outboxId,
+          ticketId: params.payload.ticketId as string, commentId: comment.id, payload: params.payload,
+          ...(params.publishOptions?.channel === 'internal-notifications' ? { channel: 'internal-notifications' as const } : {}) }, async (event, eventId) => {
+          const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+          await publishEvent({ eventType: event.eventType as any, payload: event.payload as any }, { eventId, strict: true,
+            ...(event.channel ? { channel: event.channel } : {}) });
+        })) return;
+      } else {
+        const owner = tenantDb(this.ctx.trx, this.ctx.tenantId);
+        if ((await owner.table('tenants').first('product_code'))?.product_code === 'co_managed' ||
+            await owner.table('co_management_relationships').first('relationship_id')) throw new Error('Co-managed comment publication requires durable conversation retention');
+      }
+    }
     await insertOutboxRow(this.ctx.trx, {
       tenant: this.ctx.tenantId,
       inbox_id: this.ctx.inboxId,

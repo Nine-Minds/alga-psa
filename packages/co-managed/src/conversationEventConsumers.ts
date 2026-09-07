@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { isCoManagedUuid } from './sharedWorkIdentity';
 import { prepareCoManagedConversationEvent, type CoManagedEventPublication } from './conversationEventOutbox';
-import { coManagedConversationEventConsumers, type CoManagedEventConsumer } from './conversationEventConsumerCatalog';
+import { coManagedConsumerAllowedForChannel, coManagedConversationEventConsumers, type CoManagedEventConsumer } from './conversationEventConsumerCatalog';
 export { coManagedConversationEventConsumers, type CoManagedEventConsumer } from './conversationEventConsumerCatalog';
 
 const TABLE = 'co_management_event_consumers';
@@ -22,7 +22,7 @@ export async function consumeCoManagedConversationEvent(db: Knex, event: { id: s
     const row = await owner.table(TABLE).where({ event_id: event.id, consumer }).forUpdate().first();
     if (!row) throw new Error('Missing co-managed consumer obligation');
     if (row.status !== 'pending') return true;
-    const publication = source.status === 'cancelled' ? null : await prepareCoManagedConversationEvent({ trx, tenant }, source);
+    const publication = source.status === 'cancelled' || !coManagedConsumerAllowedForChannel(source.publication?.channel, consumer) ? null : await prepareCoManagedConversationEvent({ trx, tenant }, source);
     if (publication) await effect(trx, publication);
     await owner.table(TABLE).where({ event_id: event.id, consumer }).update({ status: publication ? 'completed' : 'cancelled', completed_at: trx.raw('clock_timestamp()'), error_code: null });
     return true;
@@ -48,7 +48,7 @@ export async function recoverCoManagedEventConsumers(db: Knex, tenant: string,
         if (!source || source.status === 'pending') return null;
         const row = await owner.table(TABLE).where({ ...item, status: 'pending' }).where('next_attempt_at', '<=', trx.raw('clock_timestamp()')).forUpdate().skipLocked().first();
         if (!row) return null;
-        const publication = source.status === 'cancelled' ? null : await prepareCoManagedConversationEvent({ trx, tenant }, source);
+        const publication = source.status === 'cancelled' || !coManagedConsumerAllowedForChannel(source.publication?.channel, item.consumer) ? null : await prepareCoManagedConversationEvent({ trx, tenant }, source);
         if (!publication) {
           await owner.table(TABLE).where(item).update({ status: 'cancelled', completed_at: trx.raw('clock_timestamp()'), error_code: null });
           return 'cancelled';

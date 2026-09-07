@@ -239,3 +239,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `packages/jobs/src/lib/handlers/coManagedRequesterEmailRouting.ts` and `coManagedCommentEmailTransport.ts`.
 - **Gate:** Two actual replyable delivery callers, stable existing mailbox resolution, high risk from divergent reply routing; ACT / in-pass.
 - **Status:** extracted the existing mailbox lookup as a shared internal function. Portal-domain selection remains requester-specific, and technicians retain their internal ticket links. The broader native-subscriber routing marker remains; this extraction does not claim to unify native routing.
+
+
+## native-comment-outbox-ownership — friction
+- **What:** Inbound co-managed comments used the native email outbox while interactive shared comments used current-source conversation intent and durable consumer recovery.
+- **Where:** Shared inbound core/outbox adapter, co-managed conversation outbox/catalog/consumers, and both mail worker compositions.
+- **Gate:** Two actual producers with identical downstream conversation requirements; retaining two independently publishing rows would split authority and recovery. ACT / bounded-now within the approved notification/email integration.
+- **Status:** revised. The native publisher accepts a typed retention callback and relinquishes comment publication when the conversation outbox owns it. Both production workers supply the compiled adapter; missing composition retries co-managed writes. Commit hooks dispatch current content, and existing maintenance owns recovery. The outbox intent now retains an optional internal-only channel; consumer creation, consumption and recovery enforce its exclusions, preserving initial ticket-comment behavior even after stale consumer backfill. Native UI/API/scheduled comment writers and non-comment workflow events remain separate integration work.
