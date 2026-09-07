@@ -1243,3 +1243,26 @@
 - Corrected the earlier publication hold: integration-tests.yml and unit-tests.yml have no cancel-in-progress policy. Only e2e-fresh-install-tests.yaml auto-cancels prior PR runs, and that workflow was terminal. Future pushes need not wait for integration completion on that mistaken premise.
 - Initial push auto-review rejected an unverified/private-destination assumption. Read-only verification confirmed origin is PUBLIC Nine-Minds/alga-psa, viewer ADMIN, and Robert Isaacs owns same-repository PR 3343 on this branch. Retry was approved and published through 23c841b44c. New CI was confirmed dispatched; prior job 101650631428 still remained in progress.
 - Updated PR description to current candidate and explicit verification limits. Local Citus session 52670 remains active; latest read-only progress: 899 migrations complete and 198 hash-distributed tables. No Citus runtime assertion success is claimed yet.
+
+### 2026-09-07 — Citus development seed compatibility and native Temporal evidence
+
+- Resolved scalar INSERT subqueries in development fixtures after actual Citus bootstrap failures; notification upserts now bind a timestamp fetched from the database. Resumed execution reached the final numeric seed 89 successfully.
+- PostgreSQL workflow persistence suite passed all seven cases with these seed changes. Fresh Citus rebuild is running in session 79257; no Citus runtime pass claimed yet.
+- Added the workflow persistence suite to the Citus job and broadened relevant source/seed/harness path filters. Native execution of this new wiring remains pending.
+- Published Temporal job 101662884343 passed 72 readiness tests and the built workflow smoke/history replays, verified from its log. Published cycle and Nx tooling checks passed; full integration/browser builds still pending. Evidence: evidence/citus-development-seeds.json.
+
+### 2026-09-07 — Citus runtime exposes distributed row-lock bug
+
+- Fresh combined migrations plus all development seeds completed. Workflow suite executed: five passed, two failed because step completion used FOR UPDATE without the tenant distribution predicate. This is runtime evidence, not a migration-only check.
+- Step completion now resolves the parent run tenant before validating and locking the matching step. Existing invalid-step/run/path assertions remain intact.
+- Added run-citus-workflow-tests.mjs using shared execution reconciliation: it collects test identities, executes the required file, rejects missing/skipped/todo/incomplete results and publishes raw results plus evidence. CI invokes this runner.
+- Full fresh Citus gate rerun active in session 79980, log /tmp/alga-citus-workflow-gate.log. PostgreSQL regression rerun active separately in session 16455.
+
+- Tenant-routed completion fix: PostgreSQL seven cases and targeted TypeScript passed; execution-reconciliation six tests passed. Read-only seed relation checks passed for nine fixture tables on PostgreSQL. Citus session 79980 remains active; keep its revision stable until the gate completes. Native EE build succeeded; CE build remains active in job 101662995102.
+
+### 2026-09-07 — Fresh Citus runtime gate passes
+
+- Session 79980 completed successfully: fresh combined migrations and development seeds, then seven workflow persistence cases passed in 312 seconds. Actual collected/executed identities match; zero skipped, failed, todo or pending cases.
+- Tenant-routed FOR UPDATE fixes the two observed Citus runtime failures. PostgreSQL remains seven of seven; targeted types and six reconciliation tests passed.
+- Nine seeded relation tables passed readback on both backends. Initial Citus readback selected a runtime test tenant via unordered fallback; corrected the checker to explicitly select seeded Oz, then both backends passed. No fixture change was needed.
+- Native enterprise integration, affected typecheck and EE workflow build guard passed on published 23c841b44c. New Citus gate native execution remains pending publication; broader plan status stays unchanged.

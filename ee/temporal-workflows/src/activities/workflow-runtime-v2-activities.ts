@@ -234,18 +234,24 @@ export async function projectWorkflowRuntimeV2StepCompletion(input: {
       const knex = await getAdminConnection();
       return knex.transaction(async (trx) => {
         const now = new Date().toISOString();
+        const run = await WorkflowRunModelV2.getById(trx, input.runId);
+        if (!run) {
+          throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
+        }
+        const tenant = run.tenant ?? null;
+        // Citus row locks must route to one tenant shard. Discover the run
+        // first, then verify and lock the step within that run's tenant.
         const step = await tenantDb(trx, '__workflow_step_completion_discovery__')
           .unscoped<{ step_id: string; run_id: string; step_path: string; started_at?: string | null; tenant?: string | null; snapshot_id?: string | null }>(
             'workflow_run_steps',
-            'workflow step completion resolves the tenant and duration from step_id before updating'
+            'workflow step completion locks the matching step in the verified run tenant'
           )
-          .where({ step_id: input.stepId, run_id: input.runId, step_path: input.stepPath })
+          .where({ tenant, step_id: input.stepId, run_id: input.runId, step_path: input.stepPath })
           .forUpdate()
           .first();
         if (!step) {
           throw new Error(`Step ${input.stepId} does not belong to run ${input.runId} at ${input.stepPath}`);
         }
-        const tenant = step.tenant ?? null;
         const startedAt = step?.started_at ? new Date(step.started_at).getTime() : Date.now();
         const durationMs = Math.max(Date.now() - startedAt, 0);
 

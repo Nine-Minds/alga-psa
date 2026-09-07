@@ -21,6 +21,20 @@ on:
     paths:
       - 'server/migrations/**'
       - 'ee/server/migrations/**'
+      - 'server/seeds/**'
+      - 'server/test-utils/**'
+      - 'server/vitest.config.ts'
+      - 'ee/temporal-workflows/**'
+      - 'shared/**'
+      - 'packages/workflows/**'
+      - 'packages/db/**'
+      - 'packages/types/**'
+      - 'server/package.json'
+      - 'scripts/run-citus-workflow-tests.mjs'
+      - 'scripts/lib/test-execution-evidence.mjs'
+      - 'scripts/lib/test-revision.mjs'
+      - 'package.json'
+      - 'package-lock.json'
       - '.github/workflows/citus-migration-smoke.yml'
   push:
     branches:
@@ -28,6 +42,21 @@ on:
     paths:
       - 'server/migrations/**'
       - 'ee/server/migrations/**'
+      - 'server/seeds/**'
+      - 'server/test-utils/**'
+      - 'server/vitest.config.ts'
+      - 'ee/temporal-workflows/**'
+      - 'shared/**'
+      - 'packages/workflows/**'
+      - 'packages/db/**'
+      - 'packages/types/**'
+      - 'server/package.json'
+      - 'scripts/run-citus-workflow-tests.mjs'
+      - 'scripts/lib/test-execution-evidence.mjs'
+      - 'scripts/lib/test-revision.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/citus-migration-smoke.yml'
 
 jobs:
   citus-migrate:
@@ -143,3 +172,21 @@ jobs:
               exit 1
             fi
           done
+
+      - name: Run workflow persistence regressions on distributed tables
+        working-directory: server
+        env:
+          CI: 'true'
+          TEST_DB_BACKEND: citus
+          TEST_DB_NAME: workflow_citus_runtime
+          DB_NAME_SERVER: workflow_citus_runtime
+          TEST_MIGRATIONS_DIR: ${{ github.workspace }}/server/combined-migrations
+        run: node ../scripts/run-citus-workflow-tests.mjs
+
+      - name: Upload Citus runtime results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citus-workflow-runtime
+          path: test-results/citus-runtime/
+          if-no-files-found: error
