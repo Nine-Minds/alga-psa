@@ -1,0 +1,15 @@
+{
+  "oldPath": "packages/surveys/src/actions/surveyResponseActions.db.test.ts",
+  "newPath": "server/src/services/surveyResponseActions.db.test.ts",
+  "reason": "The suite exercises a server-owned service and migrations. Its location inside surveys creates a package-to-server import dependency.",
+  "change": "Relocation and relative import adjustments only; behavioral cases preserved",
+  "validation": {
+    "testsPassed": 17,
+    "testsFailed": 0,
+    "durationSeconds": 5.49,
+    "log": "/tmp/alga-survey-server-relocation.log",
+    "database": "designer_browser_82cc",
+    "workspaceDbDiscovery": "/tmp/alga-survey-relocation-collection.json"
+  },
+  "pending": "Resolved Nx before/after graph and production build verification"
+}

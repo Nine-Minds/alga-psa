@@ -1,9 +1,9 @@
 import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
-import { encryptActionReplay, decryptActionReplay } from '../../../../shared/workflow/runtime/utils/actionReplayCipher';
+import { encryptActionReplay, decryptActionReplay } from '../../../../../shared/workflow/runtime/utils/actionReplayCipher';
 import WorkflowActionInvocationModelV2 from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
 import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
 
@@ -23,8 +23,8 @@ vi.mock('@alga-psa/auth', async importOriginal => {
     hasPermission: async () => state.canRead,
   };
 });
-import { listWorkflowRunStepsAction, exportWorkflowRunDetailAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
-import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep, executeWorkflowRuntimeV2NodeStep, completeWorkflowRuntimeV2Run } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
+import { listWorkflowRunStepsAction, exportWorkflowRunDetailAction } from '../../../../packages/workflows/src/actions/workflow-runtime-v2-actions';
+import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep, executeWorkflowRuntimeV2NodeStep, completeWorkflowRuntimeV2Run } from '../../activities/workflow-runtime-v2-activities';
 
 let db: Knex;
 beforeAll(async () => {
@@ -296,7 +296,7 @@ it.each(['new', 'reply', 'no-defaults', 'ack-failure', 'attachment-failure', 're
   const { TestWorkflowEnvironment } = await import('@temporalio/testing');
   const { readFileSync } = await import('node:fs');
   const path = await import('node:path');
-  const root = path.resolve(__dirname, '../../../..');
+  const root = path.resolve(__dirname, '../../../../..');
   const definition = JSON.parse(readFileSync(path.join(root, 'shared/workflow/runtime/workflows/email-processing-workflow.v2.json'), 'utf8'));
   const f = await fixture();
   initializeWorkflowRuntimeV2();

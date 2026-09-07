@@ -20,15 +20,15 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: unknown) => { state.events.push(event); },
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
 }));
-vi.mock('../../../../server/src/lib/db', async () => {
+vi.mock('../lib/db', async () => {
   const db = await import('@alga-psa/db');
   return { createTenantKnex: db.createTenantKnex, runWithTenant: db.runWithTenant };
 });
-vi.mock('../../../../server/src/lib/eventBus/publishers', () => ({
+vi.mock('../lib/eventBus/publishers', () => ({
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
 }));
 vi.mock('@alga-psa/email', async () => {
-  const { DatabaseTemplateProcessor } = await import('../../../email/src/templateProcessors');
+  const { DatabaseTemplateProcessor } = await import('../../../packages/email/src/templateProcessors');
   return { DatabaseTemplateProcessor, TenantEmailService: { getInstance: () => ({
     sendEmail: async (options: any) => {
       const rendered = await options.templateProcessor.process(options);
@@ -37,18 +37,18 @@ vi.mock('@alga-psa/email', async () => {
     },
   }) } };
 });
-import SurveyAnalyticsService from '../services/SurveyAnalyticsService';
-import { getSurveyFilterOptions } from './survey-actions/surveyResponseFilterActions';
-import { sendSurveyInvitation } from '../../../../server/src/services/surveyService';
-import { getSurveyInvitationForToken, submitSurveyResponse } from './surveyResponseActions';
-import { issueSurveyToken } from './surveyTokenService';
+import SurveyAnalyticsService from '../../../packages/surveys/src/services/SurveyAnalyticsService';
+import { getSurveyFilterOptions } from '../../../packages/surveys/src/actions/survey-actions/surveyResponseFilterActions';
+import { sendSurveyInvitation } from './surveyService';
+import { getSurveyInvitationForToken, submitSurveyResponse } from '../../../packages/surveys/src/actions/surveyResponseActions';
+import { issueSurveyToken } from '../../../packages/surveys/src/actions/surveyTokenService';
 import { EventSchemas } from '@alga-psa/event-schemas';
 
 const require = createRequire(import.meta.url);
-const emailMigration = require('../../../../server/migrations/20260907200000_add_project_survey_email_template.cjs');
-const { upsertEmailTemplate } = require('../../../../server/migrations/utils/templates/_shared/upsertEmailTemplates.cjs');
-const ticketTemplate = require('../../../../server/migrations/utils/templates/email/surveys/surveyTicketClosed.cjs');
-const migration = createRequire(import.meta.url)('../../../../server/migrations/20260907190000_add_project_survey_subjects.cjs');
+const emailMigration = require('../../migrations/20260907200000_add_project_survey_email_template.cjs');
+const { upsertEmailTemplate } = require('../../migrations/utils/templates/_shared/upsertEmailTemplates.cjs');
+const ticketTemplate = require('../../migrations/utils/templates/email/surveys/surveyTicketClosed.cjs');
+const migration = createRequire(import.meta.url)('../../migrations/20260907190000_add_project_survey_subjects.cjs');
 let db: Knex;
 beforeAll(() => {
   const database = process.env.DB_NAME_SERVER;
