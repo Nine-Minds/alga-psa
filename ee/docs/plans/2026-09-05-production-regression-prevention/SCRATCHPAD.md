@@ -1224,3 +1224,9 @@
 - Expanded the built runtime smoke to action output, oversized snapshots and meta.* assignment, with recorded-history replay. It failed before the fix: assigning action output discarded meta.redactions, exposing the resolved token in subsequent diagnostic activity payloads.
 - assignToScopePath now preserves metadata/error state and writes meta.* values to metadata. Added readiness assertions for preserved metadata and error context.
 - Rebuilt worker, 72 readiness cases, three real Temporal cases and three same-build history replays all passed. Evidence: `evidence/workflow-assignment-metadata.json`. Prior-release history compatibility and invocation output storage remain outstanding.
+
+### 2026-09-07 — Verify worker integration floor and classify browser nonexecution
+
+- Real-runner regression now proves worker-owned mandatory cases execute during docs-only direct invocation and stale worker manifest paths fail. Full/affected/fallback and skip-detection checks remain green. Evidence: `evidence/worker-integration-floor.json`.
+- Published browser workflow 34093073839 completed: EE image succeeded, CE image failed on the known locally fixed project cycle. Browser jobs 101659290911/101659290969 rejected BUILD_RESULT=failure before setup; neither ran browser assertions. Do not describe these as runtime browser failures.
+- Full integration job 101650631428 remains active on the published revision; its terminal report is still pending.

@@ -116,6 +116,15 @@ process.exit(result.status ?? 1);
   write('docs/testing.md', 'Documentation change'); commit();
   assert.equal(select().shouldRun, false);
   assert.deepEqual(execute(), ['floor.test.js']); // direct invocation preserves the floor
+  const workerFloor = '../ee/temporal-workflows/src/__tests__/integration/worker.test.js';
+  write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/floor.test.js', workerFloor] }));
+  assert.deepEqual(execute(), ['floor.test.js', 'worker.test.js']);
+  git('mv', 'ee/temporal-workflows/src/__tests__/integration/worker.test.js', 'ee/temporal-workflows/src/__tests__/integration/renamed.test.js');
+  const missingWorker = run('scripts/run-tier1-integration.mjs', {});
+  assert.notEqual(missingWorker.status, 0);
+  assert.match(missingWorker.stderr, /entries not found/);
+  git('mv', 'ee/temporal-workflows/src/__tests__/integration/renamed.test.js', 'ee/temporal-workflows/src/__tests__/integration/worker.test.js');
+  write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/floor.test.js'] }));
   write('server/src/test/integration/floor.test.js', "test('critical floor', () => expect(2 + 2).toBe(4)); test.skip('unexecuted safety check', () => expect(true).toBe(true));");
   const skipped = run('scripts/run-tier1-integration.mjs', {});
   assert.equal(skipped.status, 1, skipped.stdout + skipped.stderr);
