@@ -31,6 +31,16 @@ below.
 
 ## Column schema
 
+The production browser runner also writes
+`e2e-tests/execution-evidence/metrics.json` (schema version 2), retained by the
+existing Playwright diagnostics upload. It records each required journey's
+file/project/title identity, first attempt, retry count, attempt statuses,
+edition and lane outcome. Missing execution stays incomplete; retry-only passes
+stay failed. It omits raw error and attachment payloads. `artifactManifest` is
+currently null until immutable release-component identity is wired; this browser
+lane result does not establish release readiness. The artifact is not yet
+published into a live Sheet readiness tab.
+
 Rows land on the `metrics` tab. The script writes the header row on first use.
 For an older schema, it verifies every existing heading and appends only the
 missing suffix. A reordered or renamed managed heading stops the write instead

@@ -6,13 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { reconcileDiscovery, repositoryTestFiles } from '../scripts/lib/test-discovery.mjs';
 import { playwrightTests, reconcilePlaywrightExecution } from '../scripts/lib/playwright-execution-evidence.mjs';
 import { testRevision } from '../scripts/lib/test-revision.mjs';
+import { browserTestMetrics } from '../scripts/lib/browser-test-metrics.mjs';
 
 const require = createRequire(import.meta.url);
 const cwd = fileURLToPath(new URL('.', import.meta.url));
 const root = path.resolve(cwd, '..');
 const output = path.join(cwd, 'execution-evidence');
 mkdirSync(output, { recursive: true });
-const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence'].map(name => [name, path.join(output, `${name}.json`)]));
+const files = Object.fromEntries(['collected', 'results', 'discovery', 'evidence', 'metrics'].map(name => [name, path.join(output, `${name}.json`)]));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
 const save = (file, data) => writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 let before;
@@ -57,5 +58,10 @@ try {
   evidence.failures.push(error.message);
 }
 save(files.evidence, evidence);
+const readReport = file => {
+  try { return JSON.parse(readFileSync(file, 'utf8')); } catch { return null; }
+};
+save(files.metrics, browserTestMetrics({ collected: readReport(files.collected), report: readReport(files.results),
+  evidence, root, revision: before?.revision }));
 for (const failure of evidence.failures) console.error(failure);
 process.exit(evidence.status === 'passed' ? 0 : 1);
