@@ -1158,3 +1158,8 @@
 - One required integration case passed locally in disposable workflow_invocation_82cc (no skips). Evidence: workflow-invocation-persistence.json. This is database uniqueness/isolation coverage, not safe activity retry or live worker execution.
 - Remaining activity risk to investigate: executeActionInvocation only replays SUCCEEDED; existing STARTED/FAILED rows lead back to insert against the unique key. Need behavioral retry/lease/attempt semantics before claiming robust recovery.
 - Current c5d608 full integration job 101633362425 is live (run 34087162034); keep local commits unpushed.
+
+### Failed workflow invocation retry claim — 2026-09-07
+- Fixed failed invocation recovery: activity previously attempted a new insert against the existing unique key. New persistence claim conditionally changes FAILED to STARTED and increments attempt under the tenant scope; one claimant wins. Activity reuses that row and does not run a handler when the claim loses.
+- Readiness 71 passed; real DB concurrency/isolation regression passed with simultaneous claims, wrong-tenant denial, incremented attempt and refusal to steal STARTED. Temporal build tsconfig no-emit compile passed. Evidence: workflow-failed-invocation-retry.json.
+- This does not resolve stale STARTED after worker loss or guarantee provider exactly-once effects. Those require additional ownership/recovery and live Temporal tests. Legacy email/redaction skips remain open. Current native PR has no failed checks observed, with long lanes still running; keep local commits unpushed.

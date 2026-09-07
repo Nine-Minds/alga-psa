@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getAdminConnection: vi.fn(),
   findInvocationByIdempotency: vi.fn(),
   createInvocation: vi.fn(),
+  claimFailed: vi.fn(),
   updateInvocation: vi.fn(),
   initializeWorkflowRuntimeV2: vi.fn(),
   resolveInputMapping: vi.fn(),
@@ -62,6 +63,7 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   WorkflowActionInvocationModelV2: {
     findByIdempotency: mocks.findInvocationByIdempotency,
     create: mocks.createInvocation,
+    claimFailed: mocks.claimFailed,
     update: mocks.updateInvocation,
   },
   WorkflowDefinitionVersionModelV2: {},
@@ -103,6 +105,7 @@ describe('workflow-runtime-v2 activities', () => {
       attempt: 1,
     });
     mocks.updateInvocation.mockResolvedValue(undefined);
+    mocks.claimFailed.mockResolvedValue(null);
     mocks.actionHandler.mockResolvedValue({
       title_text: 'rendered compose output',
     });
@@ -181,6 +184,27 @@ describe('workflow-runtime-v2 activities', () => {
     expect(mocks.actionHandler).toHaveBeenCalledOnce();
     expect(mocks.createInvocation).toHaveBeenCalledOnce();
     expect(mocks.findInvocationByIdempotency).toHaveBeenLastCalledWith(expect.anything(), step.config.actionId, 1, `tenant-1:${key}`, 'tenant-1');
+  });
+
+  it.each([true, false])('executes a failed retry only when the atomic claim succeeds: %s', async (claimed) => {
+    mocks.findInvocationByIdempotency.mockResolvedValue({ invocation_id: 'failed-invocation', status: 'FAILED' });
+    mocks.claimFailed.mockResolvedValue(claimed ? { invocation_id: 'failed-invocation', attempt: 2 } : null);
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+    const execution = executeWorkflowRuntimeV2ActionStep({
+      runId: 'retry-run', stepPath: 'root.steps[0]', stepId: 'step', tenantId: 'tenant-1',
+      step: { type: 'action.call', config: { actionId: 'email-test', version: 1 } },
+      scopes: { payload: {}, workflow: {}, lexical: [], meta: {}, error: null,
+        system: { runId: 'retry-run', workflowId: 'workflow', workflowVersion: 1, tenantId: 'tenant-1', definitionHash: null, runtimeSemanticsVersion: null } },
+    });
+    if (claimed) {
+      await execution;
+      expect(mocks.actionHandler).toHaveBeenCalledWith({}, expect.objectContaining({ attempt: 2 }));
+      expect(mocks.updateInvocation).toHaveBeenCalledWith(expect.anything(), 'failed-invocation', expect.objectContaining({ status: 'SUCCEEDED' }), 'tenant-1');
+    } else {
+      await expect(execution).rejects.toThrow('already in progress');
+      expect(mocks.actionHandler).not.toHaveBeenCalled();
+    }
+    expect(mocks.createInvocation).not.toHaveBeenCalled();
   });
 
   it('preserves raw action config as stepConfig for transform.compose_text outputs', async () => {

@@ -36,4 +36,11 @@ it('persists one concurrent invocation per tenant key and isolates lookup and up
   expect((await Invocation.findByIdempotency(db, records[0].action_id, 1, records[0].idempotency_key, tenants[0]))?.status).toBe('SUCCEEDED');
   expect(await Invocation.listByRun(db, records[0].run_id, tenants[0])).toHaveLength(1);
   expect(await Invocation.listByRun(db, records[0].run_id, tenants[1])).toEqual([]);
+  await Invocation.update(db, winner.invocation_id, { status: 'FAILED', error_message: 'Temporary provider failure' }, tenants[0]);
+  expect(await Invocation.claimFailed(db, winner.invocation_id, tenants[1])).toBeNull();
+  const claims = await Promise.all([Invocation.claimFailed(db, winner.invocation_id, tenants[0]), Invocation.claimFailed(db, winner.invocation_id, tenants[0])]);
+  expect(claims.filter(Boolean)).toHaveLength(1);
+  expect(claims.find(Boolean)).toMatchObject({ invocation_id: winner.invocation_id, status: 'STARTED', attempt: 2, error_message: null, completed_at: null });
+  expect(await Invocation.claimFailed(db, winner.invocation_id, tenants[0])).toBeNull();
+
 });

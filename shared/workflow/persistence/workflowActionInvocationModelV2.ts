@@ -36,6 +36,20 @@ function workflowActionInvocations(
 }
 
 const WorkflowActionInvocationModelV2 = {
+  claimFailed: async (knex: Knex, invocationId: string, tenant?: string | null): Promise<WorkflowActionInvocationRecord | null> => {
+    const [record] = await workflowActionInvocations(knex, tenant)
+      .where({ invocation_id: invocationId, status: 'FAILED' })
+      .update({
+        status: 'STARTED',
+        attempt: knex.raw('attempt + 1'),
+        started_at: new Date().toISOString(),
+        completed_at: null,
+        error_message: null,
+      })
+      .returning('*');
+    return record ?? null;
+  },
+
   create: async (knex: Knex, data: Partial<WorkflowActionInvocationRecord>): Promise<WorkflowActionInvocationRecord> => {
     const [record] = await workflowActionInvocations(knex, data.tenant)
       .insert({

@@ -866,7 +866,11 @@ async function executeActionInvocation(input: {
     return action.outputSchema.parse(existing.output_json ?? {});
   }
 
-  const invocation = await WorkflowActionInvocationModelV2.create(input.knex, {
+  // Reuse a failed invocation under its stable key. The conditional update
+  // allows only one retry to own it; an in-flight invocation is never stolen.
+  const invocation = existing
+    ? await WorkflowActionInvocationModelV2.claimFailed(input.knex, existing.invocation_id, input.tenantId)
+    : await WorkflowActionInvocationModelV2.create(input.knex, {
     run_id: input.runId,
     tenant: input.tenantId ?? undefined,
     step_path: input.stepPath,
@@ -878,6 +882,9 @@ async function executeActionInvocation(input: {
     input_json: parsedInput as Record<string, unknown>,
     started_at: new Date().toISOString(),
   });
+  if (!invocation) {
+    throw new Error(`Workflow action invocation ${existing?.invocation_id} is already in progress`);
+  }
 
   try {
     const output = await action.handler(parsedInput, {
