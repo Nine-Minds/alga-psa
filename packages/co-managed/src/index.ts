@@ -31,3 +31,5 @@ export * from './conversationEventOutbox';
 
 export { consumeCoManagedConversationEvent, recoverCoManagedEventConsumers, coManagedConversationEventConsumers } from './conversationEventConsumers';
 export type { CoManagedEventConsumer } from './conversationEventConsumers';
+
+export * from './commentEmailDeliveries';

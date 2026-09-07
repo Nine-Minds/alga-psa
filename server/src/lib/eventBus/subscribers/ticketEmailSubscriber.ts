@@ -1,4 +1,5 @@
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
+import { handleCoManagedCommentEmailEvent } from './coManagedCommentEmailSubscriber';
 import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
 import { getEventBus } from '../index';
 import {
@@ -3448,6 +3449,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     ] as const;
 
     const channel = getEmailEventChannel();
+    await getEventBus().subscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel, subscriberId: 'co-managed-email' });
     console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
 
     for (const eventType of ticketEventTypes) {
@@ -3467,6 +3469,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
  * Unregister email notification subscriber
  */
 export async function unregisterTicketEmailSubscriber(): Promise<void> {
+  await getEventBus().unsubscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel: getEmailEventChannel() });
   try {
     const ticketEventTypes = [
       'TICKET_CREATED',

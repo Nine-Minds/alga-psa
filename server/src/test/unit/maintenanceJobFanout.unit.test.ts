@@ -157,7 +157,7 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox', 'co_management_event_consumers'] : [table]);
+      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
@@ -175,6 +175,13 @@ describe('runMaintenanceJob', () => {
 
   it('throws for an unknown job name', async () => {
     await expect(runMaintenanceJob('not-a-real-job')).rejects.toThrow(/Unknown maintenance job/);
+  });
+
+  it('discovers MSPs with only pending co-managed email recipients', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 'msp' }]);
+    selectTenantsMock.mockImplementation(table => table === 'co_management_email_deliveries' ? [{ tenant: 'msp' }] : []);
+    expect((await runMaintenanceJob('co-managed-notification-recovery')).total).toBe(1);
+    expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-notification-recovery', { tenantId: 'msp' });
   });
 
   it('discovers an owner whose publication succeeded but whose consumer has not completed', async () => {
