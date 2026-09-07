@@ -70,7 +70,9 @@ persistence after reload, a rejected password, and unauthenticated access from
 a separate browser context. Tenant specs cover administrator and technician
 sign-in, saved client details, and cross-tenant client reads. Portal specs cover
 separate client identities, persistence, tenant-specific sign-in, and refusal
-to enter MSP pages. The portal ticket round trip submits a request, checks its
+to enter MSP pages. The dashboard redirect regression signs in as a real portal
+user, records the MSP-to-portal redirect, rejects authentication loops, and
+checks the same session identity after reload. The portal ticket round trip submits a request, checks its
 persisted client/contact/default assignment, adds public and internal technician
 comments, and verifies the public reply after reload. Separate client and tenant
 sessions must be denied access to the ticket. New journeys require successful
