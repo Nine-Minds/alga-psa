@@ -80,6 +80,7 @@ export async function createCoManagedTicketComment(db: Knex, inputActor: CoManag
         await assertWriteAuthority(trx); return result(previous.applied_at);
       }
       let audience = request.audience;
+      // LEVERAGE: pattern co-managed-conversation-destination — draft staging must preserve this root and parent audience admission.
       if (request.parent) {
         const thread = await owner.table('comment_threads').where({ thread_id: threadId, ticket_id: resource.id }).forUpdate().first();
         if (!thread) throw new CoManagedSharedWorkError();

@@ -382,6 +382,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_project_scopes', 'co_management_staff_assignments',
   'co_management_ticket_handoffs', 'co_management_ticket_work', 'co_managed_ticket_references',
   'co_management_conversation_attachments',
+  'co_management_conversation_drafts',
   'co_management_private_command_receipts',
   'co_management_notification_deliveries',
   'co_management_in_app_receipts',

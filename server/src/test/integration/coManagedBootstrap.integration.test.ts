@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6504,4 +6504,138 @@ it('derives attachment upload controls from actual qualified authorship, content
   await expireCoManagedEntitlement(principal.tenant);
   expect(await attachments.canUploadCoManagedConversationAttachment(db, customerPrincipal, resource, attachmentComment(customer))).toBe(false);
   expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, attachmentComment(customer))).toEqual([]);
+}));
+
+async function withConversationDraftFixture(work: (fixture: Parameters<Parameters<typeof withAttachmentFixture>[0]>[0] & {
+  drafts: typeof import('../../../../packages/co-managed/src/conversationDrafts');
+  publishCustomer: typeof import('../../lib/co-managed/createTicketComment').createSharedTicketComment;
+  file: (text: string) => { descriptor: import('../../../../packages/co-managed/src/conversationDrafts').CoManagedDraftFile; content: Buffer };
+}) => Promise<void>) {
+  await withAttachmentFixture(async fixture => {
+    const drafts = await import('../../../../packages/co-managed/src/conversationDrafts');
+    const { createSharedTicketComment: publishCustomer } = await import('../../lib/co-managed/createTicketComment');
+    const { createHash } = await import('node:crypto');
+    const file = (text: string) => { const content = Buffer.from(text); return { content, descriptor: { attachmentId: randomUUID(), fileName: `${text}.txt`,
+      mimeType: 'text/plain', size: content.length, contentHash: createHash('sha256').update(content).digest('hex') } }; };
+    await work({ ...fixture, drafts, publishCustomer, file });
+  });
+}
+const draftRef = (value: { storeTenant: string; operationId: string }) => ({ storeTenant: value.storeTenant, operationId: value.operationId });
+
+it('publishes a drafted message and every prepared attachment atomically through the production comment adapter', async () => withConversationDraftFixture(async ({
+  principal, customerPrincipal, resource, customer, attachments, drafts, publishCustomer, upload, download, file,
+}) => {
+  const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+  const delivered: number[] = [];
+  vi.mocked(publishEvent).mockImplementation(async event => {
+    if (event.eventType === 'TICKET_COMMENT_ADDED') {
+      const count = await customer.table('co_management_conversation_attachments as f').join('co_management_conversation_drafts as d', join => join.on('d.tenant', '=', 'f.tenant').andOn('d.operation_id', '=', 'f.draft_operation_id')).where('d.status', 'published').count({ count: '*' }).first();
+      delivered.push(Number(count?.count));
+    }
+  });
+  const first = file('First'), second = file('Second');
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Message with two files' }, files: [first.descriptor, second.descriptor] };
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+  expect(await drafts.beginCoManagedConversationDraft(db, principal, resource, request)).toEqual(draft);
+  const ready = await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), first.descriptor.attachmentId, first.content, upload);
+  expect(await customer.table('comments').where('comment_id', request.operationId).first()).toBeUndefined();
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_NOT_READY' });
+  expect(await customer.table('co_management_command_receipts').where('operation_id', request.operationId).first()).toBeUndefined();
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), second.descriptor.attachmentId, second.content, upload);
+  const [receipt, duplicate] = await Promise.all([drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer), drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)]);
+  expect(duplicate).toEqual(receipt); expect(delivered).toEqual([2]);
+  expect(await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).toEqual(receipt);
+  const list = await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, attachmentComment(receipt));
+  expect(list.map(value => value.attachmentId).sort()).toEqual([first.descriptor.attachmentId, second.descriptor.attachmentId].sort());
+  expect(await customer.table('co_management_conversation_drafts').where('operation_id', request.operationId).first()).toMatchObject({ status: 'published', receipt });
+  expect(await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), first.descriptor.attachmentId, first.content, upload)).toEqual(ready);
+  expect(upload).toHaveBeenCalledTimes(2);
+}));
+
+it('keeps draft attachments hidden if an unrelated request creates their future message ID', async () => withConversationDraftFixture(async ({
+  principal, resource, create, attachments, drafts, publishCustomer, upload, download, file,
+}) => {
+  const part = file('Collision'); const request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Intended draft' }, files: [part.descriptor] };
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+  const ready = await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+  const collision = await create(principal, { operationId: request.operationId, audience: 'shared_it', text: 'Unrelated message' });
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(collision))).toEqual([]);
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_CONFLICT' });
+  expect(download).not.toHaveBeenCalled();
+}));
+
+it('retains exact draft content and manifests, rejects changed bytes and competing actors, and recovers incomplete uploads', async () => withConversationDraftFixture(async ({
+  principal, customerPrincipal, resource, customer, drafts, publishCustomer, upload, file,
+}) => {
+  const part = file('Immutable'); const request = { operationId: randomUUID(), audience: 'requester' as const,
+    content: { document: [{ type: 'paragraph', content: [{ type: 'text', text: 'Original draft', styles: { bold: true } }] }] }, files: [part.descriptor] };
+  const pending = drafts.beginCoManagedConversationDraft(db, principal, resource, request); request.content.document[0].content[0].text = 'Changed while waiting';
+  const draft = await pending;
+  await expect(drafts.beginCoManagedConversationDraft(db, principal, resource, request)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_CONFLICT' });
+  await expect(drafts.uploadCoManagedDraftAttachment(db, customerPrincipal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, Buffer.from('Wrong bytes'), upload)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_CONFLICT' });
+  await expect(drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, async () => { throw new Error('Lost acknowledgement'); })).rejects.toThrow('Lost acknowledgement');
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+  const receipt = await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer);
+  expect(JSON.parse((await customer.table('comments').where('comment_id', receipt.commentId).first()).note)[0].content[0].text).toBe('Original draft');
+}));
+
+it('keeps private draft messages and files in the correct organization and inherits reply audiences', async () => withConversationDraftFixture(async ({
+  principal, customerPrincipal, resource, customer, sponsor, create, attachments, drafts, publishCustomer, upload, download, file,
+}) => {
+  for (const actor of [principal, customerPrincipal]) {
+    const part = file('Private');
+    const draft = await drafts.beginCoManagedConversationDraft(db, actor, resource, { operationId: randomUUID(), audience: 'organization_private', content: { text: 'Private draft' }, files: [part.descriptor] });
+    expect(draft.storeTenant).toBe(actor.tenant);
+    const attachment = await drafts.uploadCoManagedDraftAttachment(db, actor, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+    await drafts.publishCoManagedConversationDraft(db, actor, resource, draftRef(draft), publishCustomer);
+    expect((await attachments.downloadCoManagedConversationAttachment(db, actor, resource, attachmentReference(attachment), download)).content.length).toBe(7);
+    const other = actor === principal ? customerPrincipal : principal;
+    await expect(attachments.downloadCoManagedConversationAttachment(db, other, resource, attachmentReference(attachment), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await (actor === principal ? customer : sponsor).table('co_management_conversation_drafts').where('operation_id', draft.operationId).first()).toBeUndefined();
+  }
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Customer root' }), part = file('Reply');
+  const reply = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), parent: attachmentComment(root), content: { text: 'MSP reply' }, files: [part.descriptor] });
+  const attachment = await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(reply), part.descriptor.attachmentId, part.content, upload);
+  const receipt = await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(reply), publishCustomer);
+  expect(receipt.threadId).toBe(root.threadId); expect(attachment.audience).toBe('shared_it');
+}));
+
+it('rolls draft publication and native effects back with the owner and rejects publication after scope loss or license lapse', async () => withConversationDraftFixture(async ({
+  principal, resource, customer, sponsor, drafts, publishCustomer, upload, file,
+}) => {
+  const part = file('Rollback');
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', content: { text: 'Rollback draft' }, files: [part.descriptor] });
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+  await expect(db.transaction(async trx => { await drafts.publishCoManagedConversationDraft(trx, principal, resource, draftRef(draft), publishCustomer); throw new Error('Owner rollback'); })).rejects.toThrow('Owner rollback');
+  expect(await customer.table('comments').where('comment_id', draft.operationId).first()).toBeUndefined();
+  expect(await customer.table('co_management_command_receipts').where('operation_id', draft.operationId).first()).toBeUndefined();
+  expect(await customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).first()).toMatchObject({ status: 'draft', receipt: null });
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  const entitlement = await sponsor.table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, principal.tenant, entitlement.source_reference, async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 86400000) }));
+  await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).delete();
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const migration = require('../../../migrations/20260906210000_create_co_management_conversation_drafts.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+
+it('rejects changed draft audiences before publication and refuses damaged published receipts', async () => withConversationDraftFixture(async ({
+  principal, customerPrincipal, resource, customer, create, drafts, publishCustomer, upload, file,
+}) => {
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared root' }), part = file('Audience');
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), parent: attachmentComment(root), content: { text: 'Shared reply' }, files: [part.descriptor] });
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'requester', is_internal: false });
+  await customer.table('comments').where('comment_id', root.commentId).update({ is_internal: false });
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('comments').where('comment_id', draft.operationId).first()).toBeUndefined();
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'shared_it', is_internal: true });
+  await customer.table('comments').where('comment_id', root.commentId).update({ is_internal: true });
+  const receipt = await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer);
+  await customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).update({ receipt: { ...receipt, storeTenant: principal.tenant } });
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_CONFLICT' });
 }));
