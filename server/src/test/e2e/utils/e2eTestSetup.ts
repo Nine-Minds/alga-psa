@@ -145,6 +145,9 @@ export async function setupE2ETestEnvironment(options: {
         // Clean up client locations
         await tenantTable('client_locations').delete();
 
+        // API-created clients also own billing profiles; locations can reference them.
+        await tenantTable('client_billing_profiles').delete();
+
         // Clean up clients
         await tenantTable('clients').delete();
         

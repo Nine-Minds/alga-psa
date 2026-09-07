@@ -4,6 +4,7 @@ import {
   E2ETestEnvironment
 } from '../utils/e2eTestSetup';
 import { ApiTestClient } from '../utils/apiTestHelpers';
+import { createUserTestData } from '../utils/userTestData';
 import { createClientTestData, createClientLocationTestData } from '../utils/clientTestData';
 import {
   ensureApiServerRunning,
@@ -65,7 +66,6 @@ describe('Clients API E2E Tests', () => {
     it('should reject requests without API key', async () => {
       const client = new ApiTestClient({
         baseUrl: apiBaseUrl,
-        tenantId: env.tenant
       });
       const response = await client.get('/api/v1/clients');
       
@@ -83,7 +83,6 @@ describe('Clients API E2E Tests', () => {
       const client = new ApiTestClient({
         baseUrl: apiBaseUrl,
         apiKey: 'invalid-key',
-        tenantId: env.tenant
       });
       const response = await client.get('/api/v1/clients');
       
@@ -184,12 +183,14 @@ describe('Clients API E2E Tests', () => {
         console.error('Create client failed in delete test:', createResponse.status, JSON.stringify(createResponse.data, null, 2));
       }
       
+      expect(createResponse.status, JSON.stringify(createResponse.data)).toBe(201);
       const clientId = createResponse.data.data.client_id;
+      createdClientIds.push(clientId);
       
       // Delete the client
       const response = await env.apiClient.delete(`/api/v1/clients/${clientId}`);
       
-      expect(response.status).toBe(204);
+      expect(response.status, JSON.stringify(response.data)).toBe(204);
       
       // Verify it's deleted
       const getResponse = await env.apiClient.get(`/api/v1/clients/${clientId}`);
@@ -198,12 +199,10 @@ describe('Clients API E2E Tests', () => {
 
     it('should list clients with pagination', async () => {
       // Create multiple clients
-      const clients = [];
       for (let i = 0; i < 5; i++) {
         const clientData = createClientTestData();
         const response = await env.apiClient.post('/api/v1/clients', clientData);
         if (response.data?.data) {
-          clients.push(response.data.data);
           createdClientIds.push(response.data.data.client_id);
         }
       }
@@ -483,18 +482,18 @@ describe('Clients API E2E Tests', () => {
       const contact2Id = createContact2Response.data.data.contact_name_id;
 
       // Create client portal users for these contacts
-      const user1Data = {
+      const user1Data = createUserTestData({
         contact_id: contact1Id,
         email: contact1Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
-      const user2Data = {
+      });
+      const user2Data = createUserTestData({
         contact_id: contact2Id,
         email: contact2Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
+      });
 
       const createUser1Response = await env.apiClient.post('/api/v1/users', user1Data);
       const createUser2Response = await env.apiClient.post('/api/v1/users', user2Data);
@@ -563,12 +562,12 @@ describe('Clients API E2E Tests', () => {
       const contactId = createContactResponse.data.data.contact_name_id;
 
       // Create user for contact
-      const userData = {
+      const userData = createUserTestData({
         contact_id: contactId,
         email: contactData.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
+      });
 
       const createUserResponse = await env.apiClient.post('/api/v1/users', userData);
       expect(createUserResponse.status).toBe(201);
@@ -640,18 +639,18 @@ describe('Clients API E2E Tests', () => {
       const contact2Id = createContact2Response.data.data.contact_name_id;
 
       // Create users for contacts
-      const user1Data = {
+      const user1Data = createUserTestData({
         contact_id: contact1Id,
         email: contact1Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
-      const user2Data = {
+      });
+      const user2Data = createUserTestData({
         contact_id: contact2Id,
         email: contact2Data.email,
         password: 'TestPassword123!',
         user_type: 'client'
-      };
+      });
 
       const createUser1Response = await env.apiClient.post('/api/v1/users', user1Data);
       const createUser2Response = await env.apiClient.post('/api/v1/users', user2Data);

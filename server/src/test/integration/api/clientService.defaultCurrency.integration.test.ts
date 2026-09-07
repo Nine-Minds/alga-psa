@@ -38,6 +38,7 @@ function schemaTable(table: string) {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
+  await tenantTable(tenantId, 'contacts').del();
   await tenantTable(tenantId, 'client_contracts').del();
   await tenantTable(tenantId, 'contract_lines').del();
   await tenantTable(tenantId, 'contracts').del();
@@ -85,7 +86,7 @@ function serviceFor(tenantId: string): ClientService {
   return service;
 }
 
-describe('client default_currency_code write integration', () => {
+describe('client currency and billing-profile lifecycle integration', () => {
   beforeAll(async () => {
     db = await createTestDbConnection();
     tenantColumns = await schemaTable('tenants').columnInfo();
@@ -163,5 +164,44 @@ describe('client default_currency_code write integration', () => {
       { tenant: tenantId, userId: uuidv4() } as any,
     );
     expect(defaulted.default_currency_code).toBe('USD');
+  });
+
+  it('deletes a newly created client and its billing profile while preserving a neighboring client', async () => {
+    const tenantId = await createTenant();
+    const service = serviceFor(tenantId);
+    const context = { tenant: tenantId, userId: uuidv4() };
+    const created = await service.create({ client_name: 'Delete me', billing_cycle: 'monthly' } as any, context);
+    const neighbor = await service.create({ client_name: 'Keep me', billing_cycle: 'monthly' } as any, context);
+    const profiles = () => tenantTable(tenantId, 'client_billing_profiles');
+    expect(await profiles().where({ client_id: created.client_id })).toHaveLength(1);
+    const neighborProfiles = await profiles().where({ client_id: neighbor.client_id });
+    expect(neighborProfiles).toHaveLength(1);
+
+    await service.delete(created.client_id, context);
+
+    expect(await tenantTable(tenantId, 'clients').where({ client_id: created.client_id }).first()).toBeUndefined();
+    expect(await profiles().where({ client_id: created.client_id })).toEqual([]);
+    expect(await profiles().where({ client_id: neighbor.client_id })).toEqual(neighborProfiles);
+    expect(await tenantTable(tenantId, 'clients').where({ client_id: neighbor.client_id }).first()).toBeDefined();
+  });
+
+  it('preserves the client and billing profile when a contact blocks deletion', async () => {
+    const tenantId = await createTenant();
+    const service = serviceFor(tenantId);
+    const context = { tenant: tenantId, userId: uuidv4() };
+    const created = await service.create({ client_name: 'Blocked deletion', billing_cycle: 'monthly' } as any, context);
+    const contactId = uuidv4();
+    await tenantTable(tenantId, 'contacts').insert({
+      tenant: tenantId, client_id: created.client_id, contact_name_id: contactId,
+      full_name: 'Blocking contact', email: 'blocking@example.test',
+    });
+    const profiles = await tenantTable(tenantId, 'client_billing_profiles').where({ client_id: created.client_id });
+    expect(profiles).toHaveLength(1);
+
+    await expect(service.delete(created.client_id, context)).rejects.toMatchObject({ statusCode: 400 });
+
+    expect(await tenantTable(tenantId, 'client_billing_profiles').where({ client_id: created.client_id })).toEqual(profiles);
+    expect(await tenantTable(tenantId, 'clients').where({ client_id: created.client_id }).first()).toBeDefined();
+    expect(await tenantTable(tenantId, 'contacts').where({ contact_name_id: contactId }).first()).toBeDefined();
   });
 });

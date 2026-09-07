@@ -52,10 +52,7 @@ export class ApiTestClient {
   private config: ApiTestConfig;
 
   constructor(config: ApiTestConfig) {
-    this.config = {
-      baseUrl: config.baseUrl || 'http://localhost:3000',
-      ...config
-    };
+    this.config = { ...config };
   }
 
   /**

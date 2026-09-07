@@ -4,6 +4,7 @@ import {
   E2ETestEnvironment
 } from '../utils/e2eTestSetup';
 import { createUserTestData } from '../utils/userTestData';
+import { ApiTestClient, createTestApiKey } from '../utils/apiTestHelpers';
 
 describe('Users API E2E Tests', () => {
   let env: E2ETestEnvironment;
@@ -33,9 +34,8 @@ describe('Users API E2E Tests', () => {
 
   describe('Authentication', () => {
     it('should reject requests without API key', async () => {
-      const client = new env.apiClient.constructor({
-        baseUrl: env.apiClient.config.baseUrl,
-        tenantId: env.tenant
+      const client = new ApiTestClient({
+        baseUrl: process.env.TEST_API_BASE_URL!,
       });
       const response = await client.get('/api/v1/users');
       
@@ -44,10 +44,9 @@ describe('Users API E2E Tests', () => {
     });
 
     it('should reject requests with invalid API key', async () => {
-      const client = new env.apiClient.constructor({
-        baseUrl: env.apiClient.config.baseUrl,
+      const client = new ApiTestClient({
+        baseUrl: process.env.TEST_API_BASE_URL!,
         apiKey: 'invalid-key',
-        tenantId: env.tenant
       });
       const response = await client.get('/api/v1/users');
       
@@ -196,12 +195,10 @@ describe('Users API E2E Tests', () => {
 
     it('should list users with pagination', async () => {
       // Create multiple users
-      const users = [];
       for (let i = 0; i < 5; i++) {
         const userData = createUserTestData();
         const response = await env.apiClient.post('/api/v1/users', userData);
         if (response.status === 201) {
-          users.push(response.data.data);
           createdUserIds.push(response.data.data.user_id);
         }
       }
@@ -324,51 +321,57 @@ describe('Users API E2E Tests', () => {
 
   describe('Password Management', () => {
     let testUserId: string;
+    let ownClient: ApiTestClient;
+    let originalHash: string;
+    const currentPassword = 'TestPassword123!';
+    const replacementPassword = 'NewPassword123!';
+    const storedHash = async () => (await env.db('users')
+      .where({ tenant: env.tenant, user_id: testUserId }).first('hashed_password')).hashed_password;
 
     beforeEach(async () => {
-      // Create a test user
-      const userData = createUserTestData();
-      const response = await env.apiClient.post('/api/v1/users', userData);
-      if (response.status === 201) {
-        testUserId = response.data.data.user_id;
-        createdUserIds.push(testUserId);
-      }
+      const response = await env.apiClient.post('/api/v1/users', createUserTestData({ password: currentPassword, user_type: 'internal' }));
+      expect(response.status, JSON.stringify(response.data)).toBe(201);
+      testUserId = response.data.data.user_id;
+      createdUserIds.push(testUserId);
+      originalHash = await storedHash();
+      const key = await createTestApiKey(env.db, testUserId, env.tenant);
+      ownClient = new ApiTestClient({ baseUrl: process.env.TEST_API_BASE_URL!, apiKey: key.api_key });
     });
 
-    it('should allow users to change their own password', async () => {
-      // Create a test user with a known password
-      const testPassword = 'TestPassword123!';
-      const userData = createUserTestData({ password: testPassword });
-      const createResponse = await env.apiClient.post('/api/v1/users', userData);
-      
-      if (createResponse.status !== 201) {
-        throw new Error('Failed to create test user for password change');
-      }
-      
-      const userId = createResponse.data.data.user_id;
-      createdUserIds.push(userId);
-      
-      // Try to change another user's password - should get 403 (forbidden)
-      const otherUserResponse = await env.apiClient.put(`/api/v1/users/${userId}/password`, {
-        current_password: 'WrongPassword123!',
-        new_password: 'NewPassword123!',
-        confirm_password: 'NewPassword123!'
+    it('rejects another user password change without administrator permission and preserves the password', async () => {
+      const response = await env.apiClient.put(`/api/v1/users/${testUserId}/password`, {
+        new_password: replacementPassword, confirm_password: replacementPassword,
       });
-      
-      expect(otherUserResponse.status).toBe(403);
-      expect(otherUserResponse.data.error.message).toContain('administrators');
-      
-      // Test changing own password (the env.userId)
-      // First, we need to know the test user's password, which we don't have
-      // So let's test that the endpoint requires current password
-      const ownPasswordResponse = await env.apiClient.put(`/api/v1/users/${env.userId}/password`, {
-        new_password: 'NewPassword123!',
-        confirm_password: 'NewPassword123!'
-        // Missing current_password
+      expect(response.status).toBe(403);
+      expect(response.data.error).toMatchObject({ code: 'FORBIDDEN', message: expect.stringContaining('administrators') });
+      expect(await storedHash()).toBe(originalHash);
+    });
+
+    it.each([undefined, 'WrongPassword123!'])('rejects an invalid current password (%s) without modifying it', async (password) => {
+      const response = await ownClient.put(`/api/v1/users/${testUserId}/password`, {
+        current_password: password, new_password: replacementPassword, confirm_password: replacementPassword,
       });
-      
-      expect(ownPasswordResponse.status).toBe(400);
-      expect(ownPasswordResponse.data.error.message).toBe('Current password is required');
+      expect(response.status).toBe(400);
+      expect(response.data.error).toMatchObject({
+        code: 'VALIDATION_ERROR', message: password ? 'Current password is incorrect' : 'Current password is required',
+      });
+      expect(await storedHash()).toBe(originalHash);
+    });
+
+    it('changes the password as its owner and uses the persisted replacement for a subsequent change', async () => {
+      const path = `/api/v1/users/${testUserId}/password`;
+      const first = await ownClient.put(path, {
+        current_password: currentPassword, new_password: replacementPassword, confirm_password: replacementPassword,
+      });
+      expect(first.status, JSON.stringify(first.data)).toBe(200);
+      const replacementHash = await storedHash();
+      expect(replacementHash).not.toBe(originalHash);
+      expect(replacementHash).not.toBe(replacementPassword);
+      const second = await ownClient.put(path, {
+        current_password: replacementPassword, new_password: 'FinalPassword789!', confirm_password: 'FinalPassword789!',
+      });
+      expect(second.status, JSON.stringify(second.data)).toBe(200);
+      expect(await storedHash()).not.toBe(replacementHash);
     });
   });
 
