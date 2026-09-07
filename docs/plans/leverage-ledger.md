@@ -149,3 +149,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: ticketCommentNotification.ts and customerCommentNotification.ts.
 - Gate: high disclosure/lifecycle cost, two actual identity boundaries, stable locked source/audience/redaction rules; ACT / bounded extraction of the internal content reader.
 - Status: revised (2026-09-07). Both callers use the same retained ticket/thread/comment content reader. MSP admission still requires current trust and permits only requester/shared-IT content. The new customer recipient boundary applies local RBAC/bundle policy, permits customer-owned private content, and remains independent of sponsorship after departure or PSA upgrade. It grants no session or mutation authority. Routing/preferences and durable customer delivery remain separate integration work.
+
+## Customer technician email delivery — pattern
+- What: customer-local and MSP-shared queues need the same current internal-email preferences and escaped/localized transport, with different source authority and navigation.
+- Where: commentEmailRecipient.ts, commentEmailDeliveries.ts, customerEmailDeliveries.ts and coManagedCommentEmailTransport.ts.
+- Gate: two concrete queues, high stale-recipient/content cost, stable preference and rendering rules; ACT / bounded extraction.
+- Status: revised (2026-09-07). Both queues use the locked current-email preference reader and caller-owned transport renderer. Customer routing/source admission stays ownership-based; MSP routing remains trust-based. Completion-loop duplication is marked for observation while requester recipient kinds are still being shaped. Customer subscriber effects use the existing connection-aware after-commit engine so an outer rollback discards sends and the owning commit supplies the root recovery connection.

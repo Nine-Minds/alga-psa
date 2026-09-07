@@ -34,3 +34,5 @@ export type { CoManagedEventConsumer } from './conversationEventConsumers';
 
 export * from './commentEmailDeliveries';
 export * from './customerCommentNotification';
+
+export * from './customerEmailDeliveries';

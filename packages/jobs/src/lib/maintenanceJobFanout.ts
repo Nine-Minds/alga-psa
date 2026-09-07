@@ -81,7 +81,9 @@ const tenantsWithPendingCoManagedNotifications: TenantSelector = async db => {
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
   const emails = await db.unscoped<{ tenant: string }>('co_management_email_deliveries', 'maintenance fanout selects MSPs with pending co-managed email recipients')
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
-  return [...new Set([...notifications, ...events, ...consumers, ...emails].map(row => row.tenant))].map(tenant => ({ tenant }));
+  const customerEmails = await db.unscoped<{ tenant: string }>('co_management_customer_email_deliveries', 'maintenance fanout selects customers with pending technician email deliveries')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  return [...new Set([...notifications, ...events, ...consumers, ...emails, ...customerEmails].map(row => row.tenant))].map(tenant => ({ tenant }));
 };
 
 const tenantsWithInboundEmail: TenantSelector = (db) => db

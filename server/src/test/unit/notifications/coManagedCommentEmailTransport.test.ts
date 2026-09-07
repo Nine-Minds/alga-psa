@@ -34,3 +34,18 @@ it.each([
 ])('does not treat unavailable or deferred transport as completed delivery', async (result, expected) => {
   runtime.send.mockResolvedValue(result); expect(await sendCoManagedCommentEmail(delivery())).toMatchObject(expected);
 });
+
+it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('renders customer-owned technician email in %s with native navigation and stable caller-owned delivery', async locale => {
+  const { sendCoManagedCustomerCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  runtime.locale.mockResolvedValue(locale);
+  const source = delivery();
+  const item = { ...source, message: { ...source.message, audience: 'organization_private' as const,
+    resource: { tenant: source.tenant, kind: 'ticket' as const, id: source.message.resource.id } } };
+  expect(await sendCoManagedCustomerCommentEmail(item)).toEqual({ status: 'delivered' });
+  const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
+  expect(params).toMatchObject({ tenantId: source.tenant, userId: source.recipientUserId, retryPolicy: 'caller', headers: { 'Message-ID': source.messageId } });
+  expect(content.text).toContain(`/msp/tickets/${source.message.resource.id}`);
+  expect(content.text).not.toContain('/co-management/');
+  expect(content.html).toContain('&lt;script&gt;');
+  if (locale.startsWith('en')) expect(content.subject).toBe('New comment on a ticket');
+});

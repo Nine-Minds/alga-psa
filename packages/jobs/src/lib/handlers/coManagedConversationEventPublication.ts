@@ -12,6 +12,6 @@ export async function replayCoManagedConversationConsumer(publication: CoManaged
   if (publication.kind !== 'event') throw new Error('Unsupported co-managed consumer publication');
   await publishEvent({ eventType: publication.eventType, payload: publication.payload } as any, {
     eventId, strict: true, force: true, targetSubscriber: consumer,
-    channel: consumer === 'search-index' ? 'global' : consumer === 'co-managed-email' ? getEmailEventChannel() : 'internal-notifications',
+    channel: consumer === 'search-index' ? 'global' : ['co-managed-email', 'customer-internal-email'].includes(consumer) ? getEmailEventChannel() : 'internal-notifications',
   });
 }

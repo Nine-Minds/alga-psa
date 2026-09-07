@@ -14,9 +14,13 @@ exports.up = async function (knex) {
     // Qualified soft references retain completion evidence after source/user deletion.
   });
   await ensureTenantDistribution(knex, TABLE);
-  await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_check');
-  await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_consumer_check');
-  await knex.raw("ALTER TABLE co_management_event_consumers ADD CONSTRAINT co_management_event_consumers_consumer_check CHECK (consumer IN ('search-index', 'internal-notifications', 'co-managed-email') AND attempts >= 0)");
+  const existing = await knex.raw("SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid = 'co_management_event_consumers'::regclass AND conname = 'co_management_event_consumers_consumer_check'");
+  // Replaying this migration must not narrow a later consumer catalog.
+  if (!existing.rows[0]?.definition.includes("'co-managed-email'")) {
+    await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_check');
+    await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_consumer_check');
+    await knex.raw("ALTER TABLE co_management_event_consumers ADD CONSTRAINT co_management_event_consumers_consumer_check CHECK (consumer IN ('search-index', 'internal-notifications', 'co-managed-email') AND attempts >= 0)");
+  }
   await knex.raw(`INSERT INTO co_management_event_consumers (tenant, event_id, consumer) SELECT tenant, event_id, 'co-managed-email' FROM co_management_event_outbox WHERE event_type = 'TICKET_COMMENT_ADDED' ON CONFLICT DO NOTHING`);
 };
 exports.down = async function (knex) {

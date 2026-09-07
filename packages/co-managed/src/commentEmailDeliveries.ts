@@ -4,7 +4,7 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 import { deliverCoManagedTicketCommentToAssignees, isCoManagedNotificationAssignee, type CoManagedTicketCommentDeliveryRequest } from './ticketCommentRecipients';
 import { withCoManagedTicketCommentNotification, type CoManagedTicketCommentNotification } from './ticketCommentNotification';
-import type { CoManagedNotificationRecipientContext } from './sharedWork';
+import { coManagedInternalEmailRecipient } from './commentEmailRecipient';
 
 const TABLE = 'co_management_email_deliveries';
 const IDENTITY = ['tenant', 'delivery_key', 'recipient_user_id', 'event_id', 'customer_tenant', 'relationship_id', 'ticket_id', 'comment_id', 'thread_id', 'audience'] as const;
@@ -27,23 +27,8 @@ export async function enqueueCoManagedCommentEmailDeliveries(db: Knex, request: 
   });
 }
 
-async function recipient(context: CoManagedNotificationRecipientContext) {
-  const home = tenantDb(context.trx, context.actor.tenant);
-  const user = await home.table('users').where({ user_id: context.actor.userId, user_type: 'internal', is_inactive: false }).forShare().first('email');
-  if (!user || typeof user.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email.trim())) return null;
-  const settings = await home.table('notification_settings').forShare().first('is_enabled');
-  if (settings?.is_enabled === false) return null;
-  const subtype = await home.table('notification_subtypes').where('name', 'Ticket Comment Added').forShare().first('id', 'category_id');
-  if (subtype) {
-    for (const [table, where] of [
-      ['tenant_notification_subtype_settings', { subtype_id: subtype.id }],
-      ['tenant_notification_category_settings', { category_id: subtype.category_id }],
-      ['user_notification_preferences', { user_id: context.actor.userId, subtype_id: subtype.id }],
-    ] as const) if ((await home.table(table).where(where).forShare().first('is_enabled'))?.is_enabled === false) return null;
-  }
-  return { email: user.email.trim(), subtypeId: subtype?.id as number | undefined };
-}
 function sameIdentity(row: any, candidate: any) { return IDENTITY.every(key => row[key] === candidate[key]); }
+// LEVERAGE: pattern comment-email-completion — MSP and customer queues retain identical attempt/completion semantics under different source admission.
 async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDeliveryResult) {
   const attempts = row.attempt_count + 1, retry = result.status === 'failed' && result.retryable && attempts < 10;
   const delay = Math.min(3600000, Math.max(60000 * 2 ** Math.min(attempts - 1, 6), result.status === 'failed' && Number.isFinite(result.retryAfterMs) ? result.retryAfterMs! : 0));
@@ -66,7 +51,7 @@ export async function processCoManagedCommentEmailDeliveries(db: Knex, tenant: s
       const didProcess = await withTransaction(db, async trx => {
         const resource = { tenant: candidate.customer_tenant, relationshipId: candidate.relationship_id, kind: 'ticket' as const, id: candidate.ticket_id };
         const delivered = await withCoManagedTicketCommentNotification(trx, { kind: 'notification_recipient', tenant, userId: candidate.recipient_user_id }, resource, candidate.comment_id, async (context, message) => {
-          const assigned = await isCoManagedNotificationAssignee(context), to = await recipient(context);
+          const assigned = await isCoManagedNotificationAssignee(context), to = await coManagedInternalEmailRecipient(context);
           const row = await due(trx, candidate.delivery_key).forUpdate().skipLocked().first();
           if (!row) return false;
           if (!sameIdentity(row, candidate)) throw new Error('Co-managed email identity changed');

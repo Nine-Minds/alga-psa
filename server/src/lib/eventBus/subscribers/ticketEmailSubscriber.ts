@@ -1,3 +1,4 @@
+import { handleCoManagedCustomerCommentEmailEvent, deliverCoManagedCustomerCommentEmailEvent } from './coManagedCustomerCommentEmailSubscriber';
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
 import { handleCoManagedCommentEmailEvent } from './coManagedCommentEmailSubscriber';
 import { readTicketNotificationActor, resolveTicketNotificationActorNames, previousTicketChangeValue } from '../../notifications/ticketNotificationContext';
@@ -2425,6 +2426,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
   try {
     const db = await getConnection(tenantId);
+    // The durable consumer owns customer technician completion. Its separate
+    // targeted subscriber never replays this native requester-email path.
+    if (await handleCoManagedCustomerCommentEmailEvent(event, db)) suppression.suppressInternalNotifications = true;
     const currentPayload = await resolveTicketCommentNotificationPayload(db, payload);
     if (!currentPayload) return;
     payload = currentPayload;
@@ -3449,6 +3453,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     ] as const;
 
     const channel = getEmailEventChannel();
+    await getEventBus().subscribe('TICKET_COMMENT_ADDED', deliverCoManagedCustomerCommentEmailEvent, { channel, subscriberId: 'customer-internal-email' });
     await getEventBus().subscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel, subscriberId: 'co-managed-email' });
     console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);
 
@@ -3469,6 +3474,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
  * Unregister email notification subscriber
  */
 export async function unregisterTicketEmailSubscriber(): Promise<void> {
+  await getEventBus().unsubscribe('TICKET_COMMENT_ADDED', deliverCoManagedCustomerCommentEmailEvent, { channel: getEmailEventChannel() });
   await getEventBus().unsubscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel: getEmailEventChannel() });
   try {
     const ticketEventTypes = [
