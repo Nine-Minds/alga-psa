@@ -8,6 +8,7 @@ on:
       - 'ee/server/seeds/**'
       - 'shared/**'
       - 'scripts/run-additional-workspace-tests.mjs'
+      - 'scripts/verify-temporal-execution.mjs'
       - 'scripts/lib/**'
       - 'packages/**'
       - 'scripts/check-temporal-worker-packaging-contract.mjs'
@@ -25,6 +26,7 @@ on:
       - 'ee/server/seeds/**'
       - 'shared/**'
       - 'scripts/run-additional-workspace-tests.mjs'
+      - 'scripts/verify-temporal-execution.mjs'
       - 'scripts/lib/**'
       - 'packages/**'
       - 'scripts/check-temporal-worker-packaging-contract.mjs'
@@ -108,3 +110,31 @@ jobs:
 
       - name: Docker parity gate
         run: npm run guard:temporal-readiness:docker
+
+  execution-complete:
+    name: Temporal execution gate
+    needs: [fast-readiness, engine-tests]
+    if: always() && github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      TEMPORAL_GATE_JOB_RESULTS: ${{ toJSON(needs) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        if: always()
+        with:
+          pattern: temporal-*-execution
+          path: test-results/temporal-gate-input
+      - name: Verify required jobs, raw reports and candidate identities
+        if: always()
+        run: node scripts/verify-temporal-execution.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: temporal-execution-gate
+          path: test-results/temporal-gate/aggregate.json
+          if-no-files-found: error

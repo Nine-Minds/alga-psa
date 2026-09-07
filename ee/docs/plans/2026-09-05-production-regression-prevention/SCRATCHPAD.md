@@ -1537,3 +1537,9 @@
 - Found companion gap: browser run.mjs recorded workingTreeDirty but still exited zero for otherwise passing reports. New command-level test uses a temporary Git checkout and simulated Playwright report producer to exercise clean, already-dirty and changed-during-execution states. Before fix dirty command incorrectly exited zero.
 - Browser gate now fails dirty before/after source. All ten browser runner/metrics/Sheets tests pass; test asserts raw passing case count remains one while dirty command is rejected. No customer/browser behavior replaced by the protocol fixture.
 - Native browser job 101707718632 remains live (credentials setup observed); preserve run pending completion.
+
+### 2026-09-07 — Independent combined Temporal execution gate
+
+- Extracted the existing workspace evaluator into reusable evaluateExecutionGate while preserving workspace requirements and its complete test suite. New Temporal adapter fixes two required suites/jobs in code.
+- Added verify-temporal-execution.mjs and always-evaluated (non-scheduled) Temporal execution gate job. Downloads named readiness/engine artifacts, independently recomputes raw execution and inventory for the checked-out candidate, rejects missing/dirty/stale/filtered reports and unsuccessful prerequisites, and uploads aggregate evidence even on failure.
+- Ten gate tests pass: eight existing workspace tests plus two Temporal tests covering passing bundles and seven failure mutations. Native verification pending. This is the Temporal aggregate only; F007 global aggregate remains incomplete.

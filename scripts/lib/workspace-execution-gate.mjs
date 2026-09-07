@@ -15,11 +15,11 @@ export const workspaceRequirements = [
 
 // Evaluate reports, not just producer-authored "passed" manifests. The caller
 // supplies the expected revision and tracked candidate files independently.
-export function evaluateWorkspaceGate({ root, revision, jobResults, candidatesBySuite, bundles }) {
+export function evaluateExecutionGate({ root, revision, jobResults, candidatesBySuite, bundles, requirements, extraJobs = [], scope }) {
   const failures = [];
   const suites = [];
   if (typeof revision !== 'string' || !/^[a-f0-9]{40}$/.test(revision)) failures.push('Missing or invalid candidate revision');
-  for (const job of new Set([...workspaceRequirements.map(item => item.job), 'enterprise-unit-complete'])) {
+  for (const job of new Set([...requirements.map(item => item.job), ...extraJobs])) {
     if (jobResults?.[job]?.result !== 'success') failures.push(`Required job ${job}: ${jobResults?.[job]?.result ?? 'missing'}`);
   }
   if (!Array.isArray(bundles)) {
@@ -27,9 +27,9 @@ export function evaluateWorkspaceGate({ root, revision, jobResults, candidatesBy
     bundles = [];
   }
   for (const bundle of bundles) {
-    if (!workspaceRequirements.some(item => item.suite === bundle?.suite)) failures.push(`Unexpected suite bundle: ${bundle?.suite}`);
+    if (!requirements.some(item => item.suite === bundle?.suite)) failures.push(`Unexpected suite bundle: ${bundle?.suite}`);
   }
-  for (const requirement of workspaceRequirements) {
+  for (const requirement of requirements) {
     const { suite, shards: total } = requirement;
     const selected = bundles.filter(bundle => bundle?.suite === suite);
     const evidence = [];
@@ -71,6 +71,11 @@ export function evaluateWorkspaceGate({ root, revision, jobResults, candidatesBy
       failures: suiteFailures });
     failures.push(...suiteFailures.map(failure => `${suite}: ${failure}`));
   }
-  return { schemaVersion: 1, revision, scope: 'additional-workspace-tests',
+  return { schemaVersion: 1, revision, scope,
     status: failures.length ? 'failed' : 'passed', suites, failures };
+}
+
+export function evaluateWorkspaceGate(input) {
+  return evaluateExecutionGate({ ...input, requirements: workspaceRequirements,
+    extraJobs: ['enterprise-unit-complete'], scope: 'additional-workspace-tests' });
 }
