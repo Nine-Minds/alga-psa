@@ -25,6 +25,7 @@ export interface CoManagedConversationItem {
   createdAt: string;
   updatedAt: string | null;
   deleted: boolean;
+  revision: number | null;
   note: string | null;
   markdown: string | null;
   author?: CoManagedConversationAuthor;
@@ -73,7 +74,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
   comments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id',
     parent_comment_id: trx.raw(`CASE WHEN parent.publish_state = 'published' AND (? = false OR ? IN ('requester', 'shared_it')) THEN parent.comment_id ELSE NULL END`, [foreign, parentAudience]),
     audience, created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
-    deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content',
+    deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: trx.raw('NULL::integer'),
     actor_tenant: trx.raw('COALESCE(a.actor_tenant, c.tenant)'),
     actor_kind: trx.raw("CASE WHEN c.actor_reference_id IS NOT NULL OR c.user_id IS NOT NULL THEN 'user' WHEN c.contact_id IS NOT NULL THEN 'contact' WHEN c.is_system_generated THEN 'system' ELSE 'unknown' END"),
     actor_id: trx.raw('COALESCE(a.actor_user_id, c.user_id, c.contact_id)'), actor_reference_id: 'c.actor_reference_id',
@@ -92,7 +93,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
       on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
     privateComments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id',
       audience: trx.raw("'organization_private'::text"), created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
-      deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', actor_tenant: 'c.tenant', actor_kind: trx.raw("'user'::text"),
+      deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: 'c.revision', actor_tenant: 'c.tenant', actor_kind: trx.raw("'user'::text"),
       actor_id: 'c.actor_user_id', actor_reference_id: trx.raw('NULL::uuid'), actor_display_name: 'c.actor_display_name', actor_organization_name: 'c.actor_organization_name' });
     queries.push(privateComments);
   }
@@ -104,6 +105,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
   const items: CoManagedConversationItem[] = rows.slice(0, 25).map(row => ({
     storeTenant: row.store_tenant, commentId: row.comment_id, threadId: row.thread_id, parentCommentId: row.parent_comment_id,
     audience: row.audience, createdAt: row.created_at_exact, updatedAt: row.updated_at_exact, deleted: row.deleted_at != null,
+    revision: isCoManagedReadFieldHidden(redactedFields, ['revision']) ? null : row.revision,
     note: row.deleted_at == null ? row.note : null, markdown: row.deleted_at == null ? row.markdown : null,
     ...(hideAuthor ? {} : { author: { tenant: row.actor_tenant, kind: row.actor_kind, id: row.actor_id, displayName: row.actor_display_name,
       organizationName: row.actor_organization_name, referenceId: row.actor_reference_id } }),

@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -4569,4 +4569,147 @@ it('applies conversation body and author redactions before returning content or 
     expect(redacted.items.map(item => item.note)).toEqual(field === 'comments.note' ? ['Private body'] : field === 'co_management_private_comments' ? ['Visible body'] : []);
     expect(redacted.nextBefore).toBeNull();
   }
+}));
+
+it('keeps private note commands and retry receipts in the MSP store without changing customer history', async () => withConversationFixture(async ({ principal, customerPrincipal, resource, customer, sponsor, read }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const before = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const customerReceipts = await customer.table('co_management_command_receipts');
+  const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Private **literal**\n![image](https://example.test/private) <script> & text' };
+  const created = await mutate(db, principal, resource, create);
+  expect(await mutate(db, principal, resource, create)).toEqual(created);
+  expect(created).toMatchObject({ storeTenant: principal.tenant, commentId: create.operationId, threadId: create.operationId, revision: 1 });
+  const root = await sponsor.table('co_management_private_comments').where('comment_id', created.commentId).first();
+  expect(JSON.parse(root.note).flatMap((block: any) => block.content.map((item: any) => item.text)).join('\n')).toBe(create.text);
+  expect(root.markdown_content).toContain('\\!\\[image\\]'); expect(root.markdown_content).toContain('&lt;script');
+  expect(root).toMatchObject({ actor_user_id: principal.userId, actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP', revision: 1 });
+  const parent = { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId };
+  const reply = await mutate(db, principal, resource, { kind: 'create', operationId: randomUUID(), parent, text: 'Private reply' });
+  expect(reply.threadId).toBe(created.threadId);
+  expect(await sponsor.table('co_management_private_comments').where('comment_id', reply.commentId).first()).toMatchObject({ parent_comment_id: created.commentId });
+  expect(await customer.table('comments')).toEqual([]);
+  expect(await customer.table('co_management_private_command_receipts')).toEqual([]);
+  expect(await customer.table('co_management_command_receipts')).toEqual(customerReceipts);
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(before);
+  expect((await read(db, customerPrincipal, resource)).items).toEqual([]);
+  expect((await read(db, principal, resource)).items).toHaveLength(2);
+  expect((await read(db, principal, resource)).items.every(item => item.audience === 'organization_private' && item.revision === 1)).toBe(true);
+  const migration = require('../../../migrations/20260906170000_create_co_management_private_command_receipts.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained private command receipts');
+  expect(await sponsor.table('co_management_private_command_receipts')).toHaveLength(2);
+}));
+
+it('makes private edits and tombstones revision-safe while exact retries retain their original receipts', async () => withConversationFixture(async ({ principal, resource, sponsor, read }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Original note' };
+  const created = await mutate(db, principal, resource, create);
+  const comment = { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId };
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Renamed' });
+  const edit = { kind: 'edit' as const, operationId: randomUUID(), comment, expectedRevision: 1, text: 'Edited note' };
+  const edited = await mutate(db, principal, resource, edit);
+  expect(edited.revision).toBe(2);
+  await expect(mutate(db, principal, resource, { ...edit, operationId: randomUUID(), text: 'Stale edit' })).rejects.toMatchObject({ code: 'PRIVATE_COMMENT_CONFLICT' });
+  await expect(mutate(db, principal, resource, { ...edit, text: 'Reused operation' })).rejects.toMatchObject({ code: 'PRIVATE_COMMENT_OPERATION_CONFLICT' });
+  const remove = { kind: 'delete' as const, operationId: randomUUID(), comment, expectedRevision: 2 };
+  const deleted = await mutate(db, principal, resource, remove);
+  expect(deleted.revision).toBe(3);
+  expect(await mutate(db, principal, resource, create)).toEqual(created);
+  expect(await mutate(db, principal, resource, edit)).toEqual(edited);
+  expect(await mutate(db, principal, resource, remove)).toEqual(deleted);
+  expect((await read(db, principal, resource)).items).toEqual([expect.objectContaining({ deleted: true, note: null, markdown: null, revision: 3,
+    author: expect.objectContaining({ displayName: 'Morgan Provider' }) })]);
+  await expect(mutate(db, principal, resource, { ...edit, operationId: randomUUID(), expectedRevision: 3 })).rejects.toMatchObject({ code: 'PRIVATE_COMMENT_CONFLICT' });
+  await expect(mutate(db, principal, resource, { kind: 'create', operationId: randomUUID(), parent: comment, text: 'Reply to deleted root' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await sponsor.table('co_management_private_command_receipts')).toHaveLength(3);
+}));
+
+it('rejects private note source/store/parent forgery and edits of another author without widening visibility', async () => withConversationFixture(async ({ principal, customerPrincipal, resource, sponsor, addPrivate, addCustomer }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const own = await addPrivate({ note: 'Own thread' }), other = await addPrivate({ note: 'Other thread' });
+  const unrelated = await addPrivate({ note: 'Other ticket', sourceId: randomUUID() });
+  const shared = await addCustomer({ note: 'Customer note' });
+  const target = { storeTenant: principal.tenant, threadId: own.threadId, commentId: own.id };
+  const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Denied reply' };
+  for (const parent of [ { ...target, storeTenant: resource.tenant }, { ...target, commentId: other.id },
+    { ...target, threadId: unrelated.threadId, commentId: unrelated.id }, { ...target, threadId: shared.threadId, commentId: shared.id } ]) {
+    await expect(mutate(db, principal, resource, { ...create, parent })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  await expect(mutate(db, customerPrincipal, resource, create)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('co_management_private_comments').where('comment_id', own.id).update({ actor_user_id: randomUUID() });
+  for (const command of [{ kind: 'edit' as const, text: 'Claim note' }, { kind: 'delete' as const }]) {
+    await expect(mutate(db, principal, resource, { ...command, operationId: randomUUID(), comment: target, expectedRevision: 1 })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  for (const input of [{ ...create, audience: 'shared_it' }, { ...create, text: '' }, { ...create, text: 'nul\0' },
+    { kind: 'delete', operationId: randomUUID(), comment: target, expectedRevision: 0 }, { ...create, parent: { ...target, actor: principal.userId } }]) {
+    await expect(mutate(db, principal, resource, input as any)).rejects.toMatchObject({ code: 'INVALID_PRIVATE_COMMENT' });
+  }
+  expect(await sponsor.table('co_management_private_command_receipts')).toEqual([]);
+}));
+
+it('serializes concurrent private note edits and rolls back comments together with their private receipts', async () => withConversationFixture(async ({ principal, resource, sponsor }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Once only' };
+  const [first, retry] = await Promise.all([mutate(db, principal, resource, create), mutate(db, principal, resource, create)]);
+  expect(first).toEqual(retry);
+  const comment = { storeTenant: first.storeTenant, threadId: first.threadId, commentId: first.commentId };
+  const results = await Promise.allSettled(['A', 'B'].map(text => mutate(db, principal, resource, { kind: 'edit', operationId: randomUUID(), comment, expectedRevision: 1, text })));
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'PRIVATE_COMMENT_CONFLICT' } });
+  await expect(db.transaction(async trx => { await mutate(trx, principal, resource, { kind: 'create', operationId: randomUUID(), text: 'Rollback' }); throw new Error('Rollback private command'); })).rejects.toThrow('Rollback private command');
+  expect(await sponsor.table('co_management_private_comments')).toHaveLength(1);
+  expect(await sponsor.table('co_management_private_command_receipts')).toHaveLength(2);
+}));
+
+it('denies private commands after license lapse or live grant revocation, including receipt replay', async () => withConversationFixture(async ({ principal, resource, customer, sponsor, read }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const create = { kind: 'create' as const, operationId: randomUUID(), text: 'Before lapse' };
+  await mutate(db, principal, resource, create);
+  await expireCoManagedEntitlement(principal.tenant);
+  for (const operationId of [create.operationId, randomUUID()]) await expect(mutate(db, principal, resource, { ...create, operationId })).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  expect((await read(db, principal, resource)).items).toHaveLength(1);
+  const entitlement = await sponsor.table('co_managed_entitlements').first();
+  await reconcileHostedCoManagedEntitlement(db, principal.tenant, entitlement.source_reference, async () => ({ active: true, capacity: 2, validUntil: new Date(Date.now() + 86400000) }));
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  await expect(mutate(db, principal, resource, create)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await sponsor.table('co_management_private_command_receipts')).toHaveLength(1);
+}));
+
+it('requires both read and write content scope for private notes and denies viewer contributions', async () => withConversationFixture(async ({ principal, resource, operation, sponsor, sponsorActor, target }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const request = { kind: 'create' as const, operationId: randomUUID(), text: 'Denied content' };
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'user', principalId: principal.userId, role: 'viewer' }]);
+  await expect(mutate(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 5, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Private command scope', actorUserId: principal.userId });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: action === 'read' ? ['co_management_private_comments'] : [] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  await expect(mutate(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' })
+    .update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [] } });
+  await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'update' })
+    .update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: ['note'] } });
+  await expect(mutate(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await sponsor.table('co_management_private_command_receipts')).toEqual([]);
+}));
+
+it('rechecks the actual session after waiting for a private thread lock before applying content', async () => withConversationFixture(async ({ principal, resource, sponsor, addPrivate }) => {
+  const { mutateCoManagedPrivateTicketComment: mutate } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const note = await addPrivate({ note: 'Unchanged' });
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 1000) });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, principal.tenant).table('co_management_private_threads').where('thread_id', note.threadId).forUpdate().first();
+  let onQuery!: (query: { sql: string }) => void;
+  const waiting = new Promise<void>(resolve => { onQuery = query => { if (query.sql.includes('co_management_private_threads') && query.sql.includes('for update')) resolve(); }; db.on('query', onQuery); });
+  const attempt = mutate(db, principal, resource, { kind: 'edit', operationId: randomUUID(), comment: { storeTenant: principal.tenant, threadId: note.threadId, commentId: note.id }, expectedRevision: 1, text: 'Expired' }).then(() => null, error => error);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Private command did not wait for thread lock'); })]);
+    await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await sponsor.table('co_management_private_comments').where('comment_id', note.id).first()).toMatchObject({ note: 'Unchanged', revision: 1 });
+    expect(await sponsor.table('co_management_private_command_receipts')).toEqual([]);
+  } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));

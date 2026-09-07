@@ -150,6 +150,8 @@ export async function searchCoManagedTicketEditOptions(db: Knex, inputActor: CoM
 export async function editCoManagedTicket(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
   input: CoManagedTicketEditRequest, apply: (context: CoManagedTicketEditContext, patch: CoManagedTicketEditPatch) => Promise<void>): Promise<CoManagedTicketEditReceipt> {
   const actor = snapshotCoManagedSessionActor(inputActor), resource = ticketResource(inputResource), request = snapshotRequest(input);
+  // LEVERAGE: pattern co-managed-command-receipt — shared edits and private notes
+  // share retry semantics while retaining different receipt ownership.
   const hash = createHash('sha256').update(JSON.stringify({ resource, actor: { tenant: actor.tenant, userId: actor.userId }, command: 'ticket_edit', request })).digest('hex');
   try {
     return await withCoManagedSharedWork(db, actor, resource, 'update', context =>
