@@ -20,6 +20,5 @@ export async function reverseDeletedTimeEntryBilling(trx: Knex.Transaction, tena
       billable_duration: entry.billable_duration, contract_line_id: entry.contract_line_id ?? null,
     }, -1);
   }
-  // LEVERAGE: friction time-allocation-command-locks — deletion retains the entry; nightly reconciliation must share that serialization before reading reversal allocations.
   await reverseTimeEntryAllocations(trx, tenant, entry.entry_id);
 }

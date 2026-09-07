@@ -438,6 +438,6 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 
 ## time-allocation-command-locks — friction
 - **What:** Entry deletion retains its canonical entry before reading reversal allocations; nightly client reconciliation must use compatible serialization before taking its own ledger snapshot.
-- **Where:** `reverseDeletedTimeEntryBilling`, shared `reverseTimeEntryAllocations` / `reverseClientTimeEntryAllocations` / `reconcileClientAllocations`.
+- **Where:** `reverseDeletedTimeEntryBilling`, shared `allocateTimeEntry` / `reverseTimeEntryAllocations` / `reconcileClientAllocations`.
 - **Gate:** Financial snapshot correctness across concurrent entry and reconciliation commands. ACT / staged-migration within the remaining billing integration; changing only deletion cannot establish the shared invariant.
-- **Status:** pending. Deletion rollback tests pass; concurrent nightly-reconciliation correctness has not been claimed or verified.
+- **Status:** implemented for entry/ledger serialization. Allocation reloads and retains the actual row; reversal shares one client-scoped engine; reconciliation locks candidate entries before client balances and rereads after waits. Five focused source-mode PostgreSQL checks passed (concurrent reversal, stale allocation input/retry, deletion/reconciliation in both orders, invoicing during a lock wait). Broad billing/Citus validation and the wider source-parent/invoice lock audit are deferred; this does not claim global application deadlock freedom.

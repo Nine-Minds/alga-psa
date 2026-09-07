@@ -13084,3 +13084,82 @@ it('native time deletion retains the acting manager separately from a deactivate
   const { TimeEntryEventPayloadSchema } = await import('@alga-psa/event-schemas');
   expect(TimeEntryEventPayloadSchema.parse(publish.mock.calls[0][0].payload)).toMatchObject({ userId: formerId, deletedBy: user.user_id });
 }));
+
+async function withTimeAllocationFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeTimeSheetReadFixture(async (fixture: any) => {
+    const { customer, context, create } = fixture;
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+    await customer.table('tenants').update({ product_code: 'psa' });
+    const typeId = randomUUID(), serviceId = randomUUID();
+    await customer.table('service_types').insert({ tenant: context.tenant, id: typeId, name: 'Allocation serialization' });
+    await customer.table('service_catalog').insert({ tenant: context.tenant, service_id: serviceId, service_name: 'Allocation labor', billing_method: 'hourly', custom_service_type_id: typeId });
+    const commercial = await create({ start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', service_id: serviceId, is_billable: true });
+    const block = await seedTimeDeletionBlock(fixture, commercial);
+    const engine = await import('../../../../shared/billingClients/hourBlockService');
+    const balance = async () => Number((await customer.table('hour_blocks').where('block_id', block.blockId).first()).remaining_minutes);
+    await work({ ...fixture, ...block, commercial, engine, balance });
+  });
+}
+
+it('hour-block entry serialization credits concurrent reversals only once', async () => withTimeAllocationFixture(async ({ customer, context, commercial, engine, balance }: any) => {
+  await Promise.all([1, 2].map(() => withTransaction(db, trx => engine.reverseTimeEntryAllocations(trx, context.tenant, commercial.entry_id))));
+  expect(await balance()).toBe(60);
+  expect(await customer.table('hour_block_time_allocations')).toHaveLength(0);
+}));
+
+it('hour-block entry serialization uses persisted mode, client and duration and rejects repeat burns', async () => withTimeAllocationFixture(async ({ customer, context, entry, commercial, operation, engine, balance }: any) => {
+  await withTransaction(db, async trx => {
+    await engine.reverseTimeEntryAllocations(trx, context.tenant, commercial.entry_id);
+    expect(await engine.allocateTimeEntry(trx, context.tenant, operation.customer_client_id, { ...commercial, entry_id: entry.entry_id })).toEqual([]);
+    expect(await engine.allocateTimeEntry(trx, context.tenant, randomUUID(), commercial)).toEqual([]);
+    expect(await engine.allocateTimeEntry(trx, context.tenant, operation.customer_client_id, { ...commercial, billable_duration: 1 })).toMatchObject([{ minutes: 60 }]);
+  });
+  await expect(withTransaction(db, trx => engine.allocateTimeEntry(trx, context.tenant, operation.customer_client_id, commercial))).rejects.toThrow('Reverse existing');
+  expect(await balance()).toBe(0);
+  expect(await customer.table('hour_block_time_allocations')).toHaveLength(1);
+}));
+
+it.each(['delete', 'reconcile'])('hour-block entry serialization preserves balances when %s wins against the other command', async first => withTimeAllocationFixture(async ({ customer, context, commercial, operation, engine, balance }: any) => {
+  const winner = await db.transaction();
+  const remove = async (trx: any) => {
+    await engine.reverseTimeEntryAllocations(trx, context.tenant, commercial.entry_id);
+    await tenantDb(trx, context.tenant).table('time_entries').where('entry_id', commercial.entry_id).delete();
+  };
+  const reconcile = (trx: any) => engine.reconcileClientAllocations(trx, context.tenant, operation.customer_client_id);
+  // Keep the winner uncommitted while the other command discovers its old row.
+  await tenantDb(winner, context.tenant).table('time_entries').where('entry_id', commercial.entry_id).forUpdate().first();
+  let pid: number | undefined;
+  const waiting = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return first === 'delete' ? reconcile(trx) : remove(trx);
+  });
+  // Attach rejection handling immediately while the transaction is waiting.
+  const settled = waiting.then(() => ({ error: null }), error => ({ error }));
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    if (first === 'delete') await remove(winner); else await reconcile(winner);
+    await winner.commit();
+    expect((await settled).error).toBeNull();
+  } finally { if (!winner.isCompleted()) await winner.rollback(); }
+  expect(await customer.table('time_entries').where('entry_id', commercial.entry_id)).toHaveLength(0);
+  expect(await customer.table('hour_block_time_allocations')).toHaveLength(0);
+  expect(await balance()).toBe(60);
+}));
+
+it('hour-block entry serialization skips time invoiced during a reconciliation lock wait', async () => withTimeAllocationFixture(async ({ customer, context, commercial, operation, engine, balance }: any) => {
+  const blocker = await db.transaction();
+  await tenantDb(blocker, context.tenant).table('time_entries').where('entry_id', commercial.entry_id).forUpdate().first();
+  let pid: number | undefined;
+  const waiting = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return engine.reconcileClientAllocations(trx, context.tenant, operation.customer_client_id);
+  });
+  const result = expect(waiting).resolves.toBe(0);
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await tenantDb(blocker, context.tenant).table('time_entries').where('entry_id', commercial.entry_id).update({ invoiced: true });
+    await blocker.commit(); await result;
+  } finally { if (!blocker.isCompleted()) await blocker.rollback(); }
+  expect(await balance()).toBe(30);
+  expect(await customer.table('hour_block_time_allocations')).toHaveLength(1);
+}));
