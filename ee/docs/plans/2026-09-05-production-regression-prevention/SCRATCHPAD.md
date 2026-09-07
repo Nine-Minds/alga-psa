@@ -1466,3 +1466,10 @@
 - Existing four CLI cases execute the actual child process and verify refusal of conflicting modes, missing explicit mode and malformed tenant UUID, plus help without DB access. Focused run passed four cases; added the file to readiness include and independent discovery.
 - Exact readiness runner session 55615 exited zero: 26 files / 192 tests with zero skips/missing identities. Evidence: evidence/temporal-upgrade-cli-readiness.json. Native verification pending next publication.
 - Corrected prior inventory wording: 110 files were unmatched in mixed-revision collection artifacts, not necessarily unassigned in current code. The i18n baseline already matches current Node tooling selection; current CI artifacts must close stale collection gaps before claiming remaining ownership counts.
+
+### 2026-09-07 — Explicit DB configuration precedence repaired
+
+- Attempted previously unassigned product-upgrade-operations.integration.test.ts against owned invoice_citus_82cc. All ten cases failed before DB access because packages/db/src/lib/knexfile.ts manually overwrote explicit DB_NAME_SERVER from dotenv parsed values (server).
+- Removed redundant overwrite; dotenv defaults now fill absent settings while respecting explicit environment variables. Added two behavioral configuration cases using a dotenv boundary double. Before: four failed/two passed; after: six passed. Existing connection expectations retained.
+- Reran same real DB suite with explicit test credentials: all ten passed, 6.59 seconds. Covers PSA seed/RBAC/tax/SLA backfill idempotency, preserved roles/users, no-write preflight, guarded product flip, failed verification, and Stripe-failure withholding. No previous-release schema-upgrade claim.
+- Evidence: evidence/explicit-db-precedence.json. Native verification and mandatory DB runner assignment remain outstanding.

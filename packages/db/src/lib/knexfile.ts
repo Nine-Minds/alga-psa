@@ -19,10 +19,8 @@ type Function = (err: Error | null, connection: Knex.Client) => void;
 // (tsx create-tenant.ts -> require(tenant-creation) -> @alga-psa/db source).
 if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
   try {
-    const result = dotenv.config({ path: '.env.localtest' });
-    if (result.parsed?.DB_NAME_SERVER) {
-      (process.env as any).DB_NAME_SERVER = result.parsed.DB_NAME_SERVER;
-    }
+    // Preserve explicit process settings, including isolated test databases.
+    dotenv.config({ path: '.env.localtest' });
   } catch {}
 }
 
