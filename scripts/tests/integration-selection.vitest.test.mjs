@@ -19,7 +19,7 @@ test('workflow selector and real integration runner agree on git changes and wid
   // Exercise the production entry points in a disposable repository. The
   // runner shim delegates every invocation to the installed Vitest binary;
   // its optional failure models an unavailable affected-test graph only.
-  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs']) {
+  for (const file of ['scripts/select-integration-tests.mjs', 'scripts/run-tier1-integration.mjs', 'scripts/lib/integration-selection.mjs', 'scripts/lib/test-execution-evidence.mjs', 'scripts/lib/test-discovery.mjs', 'scripts/lib/test-revision.mjs', 'scripts/lib/test-sharding.mjs']) {
     write(file, '');
     copyFileSync(path.join(repository, file), path.join(root, file));
   }
@@ -118,6 +118,7 @@ process.exit(result.status ?? 1);
   assert.deepEqual(execute(), ['floor.test.js']); // direct invocation preserves the floor
   const workerFloor = '../ee/temporal-workflows/src/__tests__/integration/worker.test.js';
   write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/floor.test.js', workerFloor] }));
+  base = commit();
   assert.deepEqual(execute(), ['floor.test.js', 'worker.test.js']);
   git('mv', 'ee/temporal-workflows/src/__tests__/integration/worker.test.js', 'ee/temporal-workflows/src/__tests__/integration/renamed.test.js');
   const missingWorker = run('scripts/run-tier1-integration.mjs', {});
@@ -126,6 +127,7 @@ process.exit(result.status ?? 1);
   git('mv', 'ee/temporal-workflows/src/__tests__/integration/renamed.test.js', 'ee/temporal-workflows/src/__tests__/integration/worker.test.js');
   write('server/src/test/integration/tier1.manifest.json', JSON.stringify({ paths: ['src/test/integration/floor.test.js'] }));
   write('server/src/test/integration/floor.test.js', "test('critical floor', () => expect(2 + 2).toBe(4)); test.skip('unexecuted safety check', () => expect(true).toBe(true));");
+  base = commit();
   const skipped = run('scripts/run-tier1-integration.mjs', {});
   assert.equal(skipped.status, 1, skipped.stdout + skipped.stderr);
   const evidence = JSON.parse(readFileSync(path.join(root, 'test-results/integration/evidence.json'), 'utf8'));
