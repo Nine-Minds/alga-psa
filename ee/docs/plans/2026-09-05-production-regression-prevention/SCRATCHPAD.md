@@ -1605,3 +1605,10 @@
 - Strengthened existing hard-timeout regression with a distinct leased reader whose pending read rejects on disconnect. Parent reset checks all leased readers are closed; final assertions require reader interruption, replacement parent and closed leases after bus shutdown.
 - Updated test passes (0.853s). Temporarily removed only stopBlockingRead from hard-timeout recovery; regression fails because reader is never disconnected. Production code restored in finally; diff confirms no mutation retained. This supplements prior real-Redis publication/blocked-close/recreation tests.
 - Browser run34113539423 remains active; local follow-up commits remain queued. Full plan still incomplete.
+
+### 2026-09-07 — Worker queue ownership assigned to readiness
+
+- Added existing orphan worker-queue-ownership.test.ts to readiness config and independent selector: two runtime configuration cases check default queues and rejection of the authored runtime queue; its pre-existing source packaging guard is retained, not new behavioral coverage.
+- Deleted test-file-check.test.ts: it allocated an empty temporary directory, printed a nonexistent file path and performed no assertion or application call. No behavior coverage was removed or replaced with a passing exclusion.
+- Full readiness execution:30files,216passed,zero skipped (9.55s). Direct diagnostic commands initially lacked bootstrap bypass, then used root Vitest4 instead of the runner's server Vitest3; final run matches server binary and TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1. Two subprocess tests required local IPC outside sandbox; authorized execution passed without changing their assertions.
+- Global repository inventory remains incomplete; the earlier mixed-revision orphan list is not a current count. Native verification pending publication after current browser run.

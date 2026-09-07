@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     ...base.test,
     include: [
+      'src/__tests__/worker-queue-ownership.test.ts',
       'src/config/__tests__/**/*.test.ts',
       'src/workflows/__tests__/generic-job-workflow.temporal.test.ts',
       'src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts',
