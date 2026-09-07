@@ -15,7 +15,7 @@ vi.mock('@alga-psa/db', async () => {
   };
 });
 vi.mock('@alga-psa/db/admin', () => ({ getAdminConnection: async () => state.trx }));
-vi.mock('@alga-psa/auth', () => ({ localizeActionError: async (error: unknown) => error }));
+vi.mock('@alga-psa/auth', () => ({ localizeActionError: async (error: unknown) => error, withAuth: (fn: any) => (...args: any[]) => fn({}, { tenant: state.tenant }, ...args) }));
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: unknown) => { state.events.push(event); },
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
@@ -37,6 +37,8 @@ vi.mock('@alga-psa/email', async () => {
     },
   }) } };
 });
+import SurveyAnalyticsService from '../services/SurveyAnalyticsService';
+import { getSurveyFilterOptions } from './survey-actions/surveyResponseFilterActions';
 import { sendSurveyInvitation } from '../../../../server/src/services/surveyService';
 import { getSurveyInvitationForToken, submitSurveyResponse } from './surveyResponseActions';
 import { issueSurveyToken } from './surveyTokenService';
@@ -172,6 +174,28 @@ describe.each(['ticket', 'project'] as const)('%s survey response persistence', 
     expect(state.workflows.map(event => event.eventType)).toEqual(['SURVEY_SENT']);
     const token = decodeURIComponent(new URL(retry.surveyUrl).pathname.split('/').at(-1)!);
     expect(await getSurveyInvitationForToken(token)).toMatchObject({ [`${kind}Id`]: f.subjectId });
+  });
+  it('reports the subject and assigned technician in lists, negative feedback and filters', async () => {
+    const f = await fixture(kind);
+    const userId = randomUUID();
+    await state.trx!('users').insert({ tenant: f.tenant, user_id: userId, username: 'report-agent', first_name: 'Report', last_name: 'Agent', email: 'agent@example.test', hashed_password: 'synthetic', user_type: 'internal' });
+    await state.trx!(kind === 'project' ? 'projects' : 'tickets').where({ [`${kind}_id`]: f.subjectId }).update({ assigned_to: userId });
+    expect(await submitSurveyResponse({ token: f.token, rating: 1 })).toHaveProperty('responseId');
+    const expected = { [`${kind}Id`]: f.subjectId, [`${kind}Number`]: kind === 'project' ? 'P-123' : 'T-123' };
+    const page = await SurveyAnalyticsService.getResponsesPage(state.trx!, f.tenant, { filters: { technicianId: userId } });
+    expect(page.totalCount).toBe(1);
+    expect(page.items).toHaveLength(1);
+    expect(page.items[0]).toMatchObject({ ...expected, technicianName: 'Report Agent' });
+    const issues = await SurveyAnalyticsService.getTopNegativeResponses(state.trx!, f.tenant, { technicianId: userId });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]).toMatchObject({ ...expected, assignedAgentName: 'Report Agent' });
+    expect((await SurveyAnalyticsService.getResponsesPage(state.trx!, f.tenant, { filters: { technicianId: randomUUID() } })).totalCount).toBe(0);
+    expect((await SurveyAnalyticsService.getResponsesPage(state.trx!, f.otherTenant)).totalCount).toBe(0);
+    state.tenant = f.tenant;
+    expect((await getSurveyFilterOptions()).technicians).toEqual([{ value: userId, label: 'Report Agent' }]);
+    await state.trx!('users').where({ user_id: userId }).update({ tenant: f.otherTenant });
+    expect((await SurveyAnalyticsService.getResponsesPage(state.trx!, f.tenant)).items[0].technicianName).toBeNull();
+    expect((await getSurveyFilterOptions()).technicians).toEqual([]);
   });
   it('rejects an out-of-range rating without consuming the invitation', async () => {
     const f = await fixture(kind);

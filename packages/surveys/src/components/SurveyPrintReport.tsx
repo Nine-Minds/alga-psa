@@ -46,7 +46,7 @@ export default function SurveyPrintReport({ data, title, subtitle, sections }: S
   ];
 
   const issueColumns: PrintableTableColumn<SurveyIssueSummary>[] = [
-    { key: 'ticket', header: t('print.columns.ticket', { defaultValue: 'Ticket' }), render: (row) => row.ticketNumber || dash },
+    { key: 'ticket', header: t('print.columns.subject', { defaultValue: 'Ticket / Project' }), render: (row) => row.projectNumber || row.ticketNumber || dash },
     { key: 'client', header: t('print.columns.client', { defaultValue: 'Client' }), render: (row) => row.clientName || dash },
     { key: 'rating', header: t('print.columns.rating', { defaultValue: 'Rating' }), render: (row) => row.rating },
     { key: 'agent', header: t('print.columns.agent', { defaultValue: 'Agent' }), render: (row) => row.assignedAgentName || dash },
@@ -55,7 +55,7 @@ export default function SurveyPrintReport({ data, title, subtitle, sections }: S
   ];
 
   const responseColumns: PrintableTableColumn<SurveyResponseListItem>[] = [
-    { key: 'ticket', header: t('print.columns.ticket', { defaultValue: 'Ticket' }), render: (row) => row.ticketNumber || dash },
+    { key: 'ticket', header: t('print.columns.subject', { defaultValue: 'Ticket / Project' }), render: (row) => row.projectNumber || row.ticketNumber || dash },
     { key: 'client', header: t('print.columns.client', { defaultValue: 'Client' }), render: (row) => row.clientName || dash },
     { key: 'contact', header: t('print.columns.contact', { defaultValue: 'Contact' }), render: (row) => row.contactName || dash },
     { key: 'rating', header: t('print.columns.rating', { defaultValue: 'Rating' }), render: (row) => row.rating },

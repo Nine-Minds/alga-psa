@@ -2368,3 +2368,10 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Removed the unverified-domain catch bypass, which returned a successful invitation and emitted SURVEY_SENT after a failed email. All provider failures now follow the existing cleanup-and-rethrow path.
 - Parameterized real PostgreSQL journey tests reproduce two failures against the old code (13 pass); corrected code passes all 15. Failure leaves no invitation/events; a successful retry yields one usable invitation and a sent event without a false reminder. Evidence: evidence/survey-delivery-false-success.json; recorded in regression-ledger.json without inventing a production incident.
 - Transport is synthetic; native CI and real provider delivery remain unverified. Analytics/UI project support remains next. No broad completion flags changed.
+
+### 2026-09-07 — project survey analytics and UI subjects
+
+- Active package analytics adds tenant-scoped project/agent joins, retains subject identity and includes projects in technician filtering. Filter options require an actual tenant-owned user, eliminating the old dangling foreign agent option.
+- Recent-response links, negative feedback, details and printed reports distinguish project subjects without dereferencing null ticketId. Shared response types and eight locale files carry the additional subject fields/labels.
+- Real database suite passes 17; previous reporting code fails two cases (project filter omission and foreign agent option). Component suite passes eight; old code fails all four project cases while four ticket cases pass. Evidence: evidence/project-survey-reporting.json.
+- Legacy server analytics copies have no runtime import consumers in the inspected source; left unchanged. Browser end-to-end, native CI and full plan acceptance still remain; no broad flags changed.
