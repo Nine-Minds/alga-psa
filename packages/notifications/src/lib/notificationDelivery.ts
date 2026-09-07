@@ -4,6 +4,7 @@ import { withCoManagedStoredCommentNotification } from '@alga-psa/co-managed';
 import type { InternalNotification } from '../types/internalNotification';
 import { getNotificationTemplate, renderTemplate, checkInternalNotificationEnabled } from '../actions/internal-notification-actions/createNotificationCore';
 import { coManagedCommentPresentation } from './coManagedCommentPresentation';
+import { coManagedNotificationPredicate } from './coManagedNotificationClassification';
 
 export type NotificationDeliveryLocator = Pick<InternalNotification, 'tenant' | 'user_id' | 'internal_notification_id' | 'metadata'>;
 
@@ -24,8 +25,8 @@ export async function withNotificationDelivery<T>(db: Knex, queued: Notification
     if (!row) return null;
     // Classify by receipt independently of recipient/metadata, so a damaged or
     // stripped marker can never turn shared cached text into an ordinary row.
-    const receipt = await home.table('co_management_in_app_receipts').where('notification_id', identity.id).first('delivery_key');
-    if (queuedShared || hasSharedMarker(row.metadata) || receipt) {
+    const qualified = await source().whereRaw('?', [coManagedNotificationPredicate(trx)]).first('internal_notification_id');
+    if (queuedShared || qualified) {
       return withCoManagedStoredCommentNotification(trx, { kind: 'notification_recipient', tenant: identity.tenant, userId: identity.userId }, identity.id,
         async (context, current) => {
           const template = await getNotificationTemplate(context.trx, identity.tenant, current.templateName, current.languageCode);

@@ -53,3 +53,6 @@ export * from './projectTaskQueue';
 export * from './projectTaskConversation';
 export * from './nativeTaskCommentAccess';
 export { retainCoManagedTaskCommentEvent } from './projectTaskEvents';
+
+export * from './taskCommentNotification';
+export * from './taskCommentRecipients';

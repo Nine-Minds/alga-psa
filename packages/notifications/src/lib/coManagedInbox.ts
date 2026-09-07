@@ -5,13 +5,7 @@ import { readCoManagedStoredCommentNotification, CoManagedSharedWorkError, asser
 import type { InternalNotification } from '../types/internalNotification';
 import { getNotificationTemplate, renderTemplate } from '../actions/internal-notification-actions/createNotificationCore';
 import { coManagedCommentPresentation } from './coManagedCommentPresentation';
-
-/** Receipt classification also catches a shared row whose metadata was removed. */
-function qualifiedNotification(db: Knex.Transaction) {
-  return db.raw(`(jsonb_exists(COALESCE(internal_notifications.metadata::jsonb, '{}'::jsonb), 'coManaged') OR EXISTS (
-    SELECT 1 FROM co_management_in_app_receipts cir WHERE cir.tenant = internal_notifications.tenant
-      AND cir.notification_id = internal_notifications.internal_notification_id))`);
-}
+import { coManagedNotificationPredicate as qualifiedNotification } from './coManagedNotificationClassification';
 
 /** Qualify the shared subset once, then use the same visibility set for SQL
  * pagination and every count. Ordinary notifications keep native semantics.
@@ -22,7 +16,7 @@ export async function coManagedInboxScope(trx: Knex.Transaction, user: { user_id
   const query = home.table('internal_notifications').where('user_id', user.user_id).whereNull('deleted_at')
     .whereRaw('?', [qualifiedNotification(trx)]).select('internal_notifications.internal_notification_id');
   home.tenantJoin(query, 'co_management_in_app_receipts as scope_receipt', 'internal_notifications.internal_notification_id', 'scope_receipt.notification_id', { type: 'left' });
-  query.orderBy('scope_receipt.customer_tenant').orderBy('scope_receipt.ticket_id').orderBy('internal_notifications.internal_notification_id');
+  query.orderByRaw('CASE WHEN scope_receipt.customer_tenant = ?::uuid THEN 1 ELSE 0 END', [tenant]).orderBy('scope_receipt.customer_tenant').orderBy('scope_receipt.resource_type').orderBy('scope_receipt.resource_id').orderBy('internal_notifications.internal_notification_id');
   if (options.id) query.where('internal_notification_id', options.id);
   const candidates = await query;
   const classified = new Set<string>(candidates.map(row => row.internal_notification_id));

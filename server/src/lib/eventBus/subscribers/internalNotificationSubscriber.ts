@@ -1,4 +1,6 @@
 import { recoverCoManagedNotificationDeliveries } from '@alga-psa/notifications/lib/coManagedDeliveryRuntime';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
+import { persistCoManagedTaskCommentNotifications } from '../../co-managed/persistTaskCommentNotifications';
 import { consumeCoManagedConversationEvent } from '@alga-psa/co-managed';
 import { persistCoManagedCommentNotifications } from '../../co-managed/persistCommentNotifications';
 import { registerNotificationCreatedEffects } from '@alga-psa/notifications/actions/internal-notification-actions/notificationCreatedEffects';
@@ -1277,6 +1279,7 @@ async function handleTaskCommentAdded(event: TaskCommentAddedEvent): Promise<voi
 
   try {
     const db = await getConnection(tenantId);
+    if (await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenantId))) return;
     const scopedDb = tenantDb(db, tenantId);
 
     // Get task details
@@ -1475,6 +1478,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 
   try {
     const db = await getConnection(tenantId);
+    if (await withTransaction(db, trx => hasCoManagedConversationOwnership(trx, tenantId))) return;
     const scopedDb = tenantDb(db, tenantId);
 
     // Get task details
@@ -2979,6 +2983,19 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
   }
 
   const validatedEvent = eventSchema.parse(event);
+  if (validatedEvent.eventType === 'PROJECT_TASK_COMMENT_CREATED') {
+    const db = await getConnection(validatedEvent.payload.tenantId);
+    await consumeCoManagedConversationEvent(db, validatedEvent as any, 'internal-notifications', async (trx, current) => {
+      const payload = current.payload;
+      await persistCoManagedTaskCommentNotifications(trx, { eventId: validatedEvent.id, ownerTenant: payload.tenantId as string,
+        taskId: payload.taskId as string, commentId: payload.taskCommentId as string }, (currentTrx, notification) => registerNotificationCreatedEffects(currentTrx, notification, {
+          delivery: row => recoverCoManagedNotificationDeliveries(row.tenant, 3, row.internal_notification_id),
+        }));
+    });
+    // Neither a missing receipt nor a legacy raw payload authorizes a fallback.
+    return;
+  }
+
   if (validatedEvent.eventType === 'TICKET_COMMENT_ADDED') {
     const db = await getConnection(validatedEvent.payload.tenantId);
     if (await consumeCoManagedConversationEvent(db, validatedEvent as any, 'internal-notifications', async (trx, current) => {
@@ -3242,6 +3259,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'TICKET_CLOSED',
       'TICKET_COMMENT_ADDED',
       'TICKET_COMMENT_UPDATED',
+      'PROJECT_TASK_COMMENT_CREATED',
       'TASK_COMMENT_ADDED',
       'TASK_COMMENT_UPDATED',
       'PROJECT_CREATED',
@@ -3288,6 +3306,7 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'TICKET_CLOSED',
       'TICKET_COMMENT_ADDED',
       'TICKET_COMMENT_UPDATED',
+      'PROJECT_TASK_COMMENT_CREATED',
       'TASK_COMMENT_ADDED',
       'TASK_COMMENT_UPDATED',
       'PROJECT_CREATED',

@@ -360,3 +360,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `CoManagedTicketConversation.tsx`, `CoManagedProjectTaskConversation.tsx`.
 - **Gate:** Two callers; attachment/disclosure orchestration, revision contracts and task recipient capabilities are still different and evolving. WATCH.
 - **Status:** watching. Reuse the validated document control and text renderer now. Keep task commands explicit rather than stretching the ticket attachment pipeline with resource flags; revisit a shared composer controller when task attachments/disclosure and consumer authority are connected.
+
+## qualified-notification-receipts — friction
+- **What:** Ticket-only notification receipts prevented tasks from using the current-source inbox and independent channel retry engine.
+- **Where:** Stored comment verification, inbox scoping/presentation, task event consumer, notification delivery queue.
+- **Gate:** Two concrete resource families; stable receipt, rendering, preferences and delivery contracts. ACT / bounded-now.
+- **Status:** revised. The existing receipt retains resource type/ID and rolling ticket compatibility. Task-specific recipient/source readers feed the same inbox and channel verifier. Owner-local task history keeps current project policy after separation; MSP reads retain live trust. Canonical task creation enrolls the existing internal-notification consumer, committing both tenants' receipts and recovery rows with consumer completion. No second inbox or transport retry engine.
+
+## notification-source-classification — pattern
+- **What:** Inbox pagination and channel delivery must agree that a damaged qualified notice or an older customer task notice cannot use cached content as native authority.
+- **Where:** `coManagedNotificationClassification.ts`, `coManagedInbox.ts`, `notificationDelivery.ts`.
+- **Gate:** Two callers with identical source classification and high disclosure cost. ACT / bounded-now.
+- **Status:** extracted. One SQL predicate identifies markers, receipts and legacy task/mention notices in current or retained customer ownership. Identified legacy notices without authoritative receipts are omitted; pending retained creation events join recovery, while published pre-rollout notices are not replayed as new alerts.

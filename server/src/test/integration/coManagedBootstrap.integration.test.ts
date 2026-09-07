@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -11352,7 +11352,7 @@ it('task events retain metadata-only qualified intent and consumer work atomical
   expect(rows.map((row: any) => row.publication.payload.collaboration.revision)).toEqual([1, 2, 3]);
   expect(rows.every((row: any) => row.ticket_id === null && row.resource_type === 'project_task' && row.resource_id === resource.id)).toBe(true);
   expect(JSON.stringify(rows)).not.toMatch(/Never retain|Changed body|MSP private content|actor_display_name/);
-  expect(await customer.table('co_management_event_consumers')).toHaveLength(3);
+  expect(await customer.table('co_management_event_consumers')).toHaveLength(4);
   expect(await sponsor.table('co_management_event_outbox')).toHaveLength(0);
   const { EventSchemas } = await import('@alga-psa/event-schemas');
   for (const row of rows) {
@@ -11392,8 +11392,8 @@ it('task events replay stable identities after transport loss and recover incomp
   expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0][1]).toBe(root.operationId); expect(send.mock.calls[1]).toEqual(send.mock.calls[0]);
   await customer.table('co_management_event_consumers').update({ next_attempt_at: new Date(0) });
-  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 1, cancelled: 0, failed: 0 });
-  expect(replay.mock.calls[0][2]).toBe('search-index');
+  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 2, cancelled: 0, failed: 0 });
+  expect(replay.mock.calls.map(call => call[2]).sort()).toEqual(['internal-notifications', 'search-index']);
   const event = { id: root.operationId, eventType: 'PROJECT_TASK_COMMENT_CREATED', payload: { tenantId: resource.tenant, taskId: randomUUID(), taskCommentId: randomUUID(), commentContent: 'Forged transport body' } };
   const effect = vi.fn();
   await Promise.all([consume(db, event, 'search-index', effect), consume(db, event, 'search-index', effect)]);
@@ -11419,7 +11419,8 @@ it('task events update actual search state and cannot resurrect deleted comments
     expect(await customer.table('app_search_index').where('object_id', root.commentId)).toHaveLength(0);
     expect(await projectTaskCommentIndexer.loadOne(db, resource.tenant, root.commentId)).toBeNull();
     expect(await projectTaskCommentIndexer.loadBatch(db, resource.tenant, undefined, 100)).toEqual([]);
-    expect((await customer.table('co_management_event_consumers')).every((row: any) => row.status === 'completed')).toBe(true);
+    expect((await customer.table('co_management_event_consumers').where('consumer', 'search-index')).every((row: any) => row.status === 'completed')).toBe(true);
+    expect((await customer.table('co_management_event_consumers').where('consumer', 'internal-notifications').first()).status).toBe('pending');
   } finally { vi.unstubAllEnvs(); connection.mockRestore(); }
 }));
 
@@ -11448,7 +11449,7 @@ it('task events recover native project publications through the actual maintenan
     const calls = publish.mock.calls.filter(([event]: any[]) => event.eventType === 'PROJECT_TASK_COMMENT_CREATED');
     expect(calls).toHaveLength(2); expect(calls.every(([, options]: any[]) => options.eventId === row.event_id && options.strict === true)).toBe(true);
     expect(await customer.table('co_management_event_outbox').where('event_id', row.event_id).first()).toMatchObject({ status: 'published' });
-    expect(await customer.table('co_management_event_consumers').where('event_id', row.event_id).first()).toMatchObject({ status: 'pending', consumer: 'search-index' });
+    expect(await customer.table('co_management_event_consumers').where({ event_id: row.event_id, consumer: 'search-index' }).first()).toMatchObject({ status: 'pending', consumer: 'search-index' });
   } finally { connection.mockRestore(); }
 }));
 
@@ -11708,4 +11709,239 @@ it('task conversation actions recheck session expiry after assembling the screen
   try { await expect(actions.getSharedProjectTaskConversationAction(resource)).rejects.toThrow(); }
   finally { read.mockRestore(); }
   expect(new Date((await customer.table('sessions').where('session_id', customerPrincipal.sessionId).first()).expires_at).getTime()).toBeGreaterThan(Date.now());
+}));
+
+async function withTaskNotificationFixture(work: (fixture: any) => Promise<void>) {
+  await withTaskConversationFixture(async fixture => {
+    const { customer, sponsor, principal, customerPrincipal, resource } = fixture;
+    const localUser = await customer.table('users').where('user_id', customerPrincipal.userId).first(), localId = randomUUID();
+    await customer.table('users').insert({ ...localUser, user_id: localId, username: `task-recipient-${localId}`, email: `${localId}@example.test` });
+    for (const role of await customer.table('user_roles').where('user_id', customerPrincipal.userId)) await customer.table('user_roles').insert({ ...role, user_id: localId });
+    const localActor = { ...customerPrincipal, userId: localId, sessionId: randomUUID() };
+    await customer.table('sessions').insert({ tenant: resource.tenant, user_id: localId, session_id: localActor.sessionId, expires_at: new Date(Date.now() + 3600000) });
+    await customer.table('project_tasks').where('task_id', resource.id).update({ assigned_to: localId });
+    const assignments = await import('../../../../packages/co-managed/src/projectTaskAssignments');
+    await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: { tenant: principal.tenant, kind: 'user', id: principal.userId } });
+    const subtype = await db('internal_notification_subtypes').where('name', 'task-comment-added').first();
+    await db('internal_notification_templates').insert({ name: 'task-comment-added', language_code: 'en', title: 'Task {{taskName}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).ignore();
+    const { persistCoManagedTaskCommentNotifications: persist } = await import('../../lib/co-managed/persistTaskCommentNotifications');
+    const notify = async (comment: any) => {
+      try { await persist(db, { ownerTenant: resource.tenant, taskId: resource.id, commentId: comment.commentId, eventId: comment.operationId }); }
+      catch (error) { if (error instanceof AggregateError) throw error.errors[0]; throw error; }
+    };
+    const { readCoManagedStoredCommentNotification: readStored } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+    const { processCoManagedNotificationDeliveries: process } = await import('../../../../packages/notifications/src/lib/coManagedDeliveryQueue');
+    await work({ ...fixture, localActor, localId, notify, persist, readStored, process, subtypeId: subtype.internal_notification_subtype_id });
+  });
+}
+
+it('task notifications persist qualified customer/MSP receipts and derive current content for every delivery channel', async () => withTaskNotificationFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, notify, readStored, localActor, process, write, ref }: any) => {
+  const comment = await add(customerPrincipal, 'shared_it', 'Original task message'); await notify(comment); await notify(comment);
+  const msp = await sponsor.table('internal_notifications').first(), local = await customer.table('internal_notifications').first();
+  expect(msp.metadata.coManaged).toMatchObject({ version: 2, resource, commentId: comment.commentId });
+  expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(1); expect(await customer.table('co_management_in_app_receipts')).toHaveLength(1);
+  expect((await readStored(db, localActor, local.internal_notification_id)).message.note).toContain('Original task message');
+  await write(customerPrincipal, { kind: 'edit', operationId: randomUUID(), comment: ref(comment), expectedRevision: 1, text: 'Current task message' });
+  const sent: any[] = [];
+  expect(await process(db, principal.tenant, async (channel: string, current: any) => { sent.push({ channel, current }); return { status: 'delivered' }; })).toEqual({ examined: 3, processed: 3 });
+  expect(sent.map(item => item.channel).sort()).toEqual(['in_app', 'push', 'teams']);
+  for (const { current } of sent) { expect(current.message).toContain('Current task message'); expect(current.message).not.toContain('Original task message'); }
+  expect((await readStored(db, principal, msp.internal_notification_id)).message.note).toContain('Current task message');
+  expect(await process(db, principal.tenant, async () => { throw new Error('Already completed'); })).toEqual({ examined: 0, processed: 0 });
+}));
+
+it('task notifications keep customer-private content local and suppress the actual qualified author', async () => withTaskNotificationFixture(async ({ customer, sponsor, principal, customerPrincipal, add, notify }: any) => {
+  await notify(await add(customerPrincipal, 'organization_private', 'Customer diagnosis')); expect(await sponsor.table('internal_notifications')).toHaveLength(0); expect(await customer.table('internal_notifications')).toHaveLength(1);
+  await notify(await add(principal, 'shared_it', 'MSP diagnosis')); expect(await sponsor.table('internal_notifications')).toHaveLength(0); expect(await customer.table('internal_notifications')).toHaveLength(2);
+}));
+
+it.each(['scope', 'role', 'staff', 'assignment', 'inactive', 'body_mask', 'deleted', 'private'])(
+  'task notification reads and queued delivery honor current %s authority without cached fallback', async reason => withTaskNotificationFixture(async ({ customer, sponsor, principal, customerPrincipal, operation, resource, add, notify, readStored, process }: any) => {
+    const comment = await add(customerPrincipal, 'shared_it', 'Protected task notification'); await notify(comment); const stored = await sponsor.table('internal_notifications').first();
+    if (reason === 'scope') await customer.table('co_management_project_scopes').del();
+    if (reason === 'role') await sponsor.table('user_roles').where('user_id', principal.userId).del();
+    if (reason === 'staff') await sponsor.table('co_management_staff_assignments').del();
+    if (reason === 'assignment') await sponsor.table('co_managed_project_task_references').update({ active: false });
+    if (reason === 'inactive') await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+    if (reason === 'deleted') await customer.table('project_task_comments').where('task_comment_id', comment.commentId).update({ deleted_at: new Date() });
+    if (reason === 'private') await customer.table('comment_threads').where('thread_id', comment.threadId).update({ collaboration_audience: 'organization_private', is_internal: true });
+    if (reason === 'body_mask') {
+      const bundles = await import('@alga-psa/authorization'); const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Task notification body', actorUserId: principal.userId });
+      await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: ['conversation'] } });
+      await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId }); await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+    }
+    const current = await readStored(db, principal, stored.internal_notification_id);
+    if (reason === 'assignment') expect(current).not.toBeNull(); else expect(current).toBeNull();
+    const transport = vi.fn(); await process(db, principal.tenant, transport); expect(transport).not.toHaveBeenCalled();
+    expect((await sponsor.table('co_management_notification_deliveries')).every((row: any) => row.status === 'skipped')).toBe(true);
+  }));
+
+it('task notification reads retain customer ownership after separation and resist stripped metadata', async () => withTaskNotificationFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, notify, readStored, localActor, process }: any) => {
+  await notify(await add(customerPrincipal, 'shared_it', 'Retained local task notice'));
+  const local = await customer.table('internal_notifications').first(), msp = await sponsor.table('internal_notifications').first();
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  expect(await readStored(db, principal, msp.internal_notification_id)).toBeNull(); expect(await readStored(db, localActor, local.internal_notification_id)).not.toBeNull();
+  const { coManagedCommentPresentation } = await import('../../../../packages/notifications/src/lib/coManagedCommentPresentation');
+  const retained = await readStored(db, localActor, local.internal_notification_id);
+  expect(coManagedCommentPresentation(retained.message, retained.eventId, retained.deliveryKey).link).toMatch(new RegExp(`^/msp/projects/.+\\?phaseId=.+&taskId=${resource.id}$`));
+  await customer.table('internal_notifications').where('internal_notification_id', local.internal_notification_id).update({ metadata: {}, message: 'Untrusted cached body' });
+  const deliver = vi.fn(); await process(db, resource.tenant, deliver); expect(deliver).not.toHaveBeenCalled(); expect(await readStored(db, localActor, local.internal_notification_id)).toBeNull();
+}));
+
+async function withTaskNotificationSubscriberFixture(work: (fixture: any) => Promise<void>) {
+  await withTaskNotificationFixture(async fixture => {
+    const database = await import('@alga-psa/db');
+    const broadcaster = await import('@alga-psa/notifications/realtime/internalNotificationBroadcaster');
+    const runtime = await import('@alga-psa/notifications/lib/coManagedDeliveryRuntime');
+    const teams = await import('@alga-psa/notifications/realtime/teamsNotificationDelivery');
+    const observed: any[] = [];
+    const broadcast = vi.spyOn(broadcaster, 'publishAuthorizedInAppNotification').mockImplementation(async notification => {
+      expect(await tenantDb(db, notification.tenant).table('internal_notifications').where('internal_notification_id', notification.internal_notification_id).first()).toBeTruthy();
+      observed.push(notification); return { status: 'delivered' };
+    });
+    const push = vi.fn(async () => ({ status: 'delivered' as const })), unregister = runtime.registerCoManagedPushTransport(push);
+    const teamsDelivery = vi.spyOn(teams, 'deliverAuthorizedTeamsNotification').mockResolvedValue({ status: 'skipped', reason: 'test_transport' });
+    const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
+    const event = async (receipt: any) => {
+      const row = await fixture.customer.table('co_management_event_outbox').where('event_id', receipt.operationId).first();
+      return { id: row.event_id, eventType: row.event_type, payload: row.publication.payload, timestamp: new Date().toISOString() };
+    };
+    try {
+      const { internalNotificationSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
+      await work({ ...fixture, handle: internalNotificationSubscriberTestHarness.handleInternalNotificationEvent, event, observed, push });
+    } finally {
+      try { await vi.waitFor(async () => {
+        expect(await fixture.sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(0);
+        expect(await fixture.customer.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(0);
+      }, { timeout: 10000 }); }
+      finally { connection.mockRestore(); unregister(); teamsDelivery.mockRestore(); broadcast.mockRestore(); }
+    }
+  });
+}
+
+it('task notification subscriber reconstructs retained intent, deduplicates concurrent consumption, and emits only committed current content', async () => withTaskNotificationSubscriberFixture(async ({ customer, sponsor, customerPrincipal, add, event, handle, observed, push }: any) => {
+  const receipt = await add(customerPrincipal, 'shared_it', 'Authoritative task notification'), input = await event(receipt);
+  const forged = { ...input, payload: { ...input.payload, taskId: randomUUID(), taskCommentId: randomUUID() } };
+  await Promise.all([handle(forged), handle(input)]);
+  expect(await customer.table('co_management_in_app_receipts')).toHaveLength(1); expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(1);
+  expect(await customer.table('co_management_event_consumers').where({ event_id: receipt.operationId, consumer: 'internal-notifications' }).first()).toMatchObject({ status: 'completed' });
+  await vi.waitFor(() => expect(observed).toHaveLength(2)); await vi.waitFor(() => expect(push).toHaveBeenCalledTimes(2));
+  expect(observed.every((notice: any) => notice.message.includes('Authoritative task notification'))).toBe(true);
+  await handle(input); expect(observed).toHaveLength(2);
+  await handle({ ...input, id: randomUUID() }); expect(await customer.table('co_management_in_app_receipts')).toHaveLength(1);
+}));
+
+it('task notification consumer rolls back both tenant effects on completion failure and retries the same receipts once', async () => withTaskNotificationSubscriberFixture(async ({ customer, sponsor, customerPrincipal, resource, add, event, handle, observed }: any) => {
+  const receipt = await add(customerPrincipal, 'shared_it', 'Recoverable task notice'), input = await event(receipt);
+  const name = `task_notification_completion_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_event_consumers ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR consumer <> 'internal-notifications' OR status <> 'completed')", [name, resource.tenant]).toQuery());
+  try {
+    await expect(handle(input)).rejects.toMatchObject({ constraint: name });
+    expect(await customer.table('internal_notifications')).toHaveLength(0); expect(await sponsor.table('internal_notifications')).toHaveLength(0);
+    expect(await customer.table('co_management_notification_deliveries')).toHaveLength(0); expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(0); expect(observed).toHaveLength(0);
+  } finally { await db.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT ??', [name]); }
+  await handle(input); await vi.waitFor(() => expect(observed).toHaveLength(2));
+}));
+
+it('task notification subscriber suppresses native cached comment and mention handlers for retained customer ownership', async () => withTaskNotificationSubscriberFixture(async ({ customer, sponsor, customerPrincipal, resource, project, add, event, handle, observed }: any) => {
+  const receipt = await add(customerPrincipal, 'organization_private', 'Current private source');
+  const base = { id: randomUUID(), timestamp: new Date().toISOString(), payload: { tenantId: resource.tenant, taskId: resource.id, projectId: project.project_id,
+    userId: customerPrincipal.userId, taskCommentId: receipt.commentId, taskName: 'Cached task name', commentContent: 'Stale cached body @everyone' } };
+  await handle({ ...base, eventType: 'TASK_COMMENT_ADDED' }); await handle({ ...base, eventType: 'TASK_COMMENT_UPDATED', payload: { ...base.payload, oldCommentContent: 'Old body', newCommentContent: 'Stale cached body @everyone' } });
+  expect(await customer.table('internal_notifications')).toHaveLength(0); expect(await sponsor.table('internal_notifications')).toHaveLength(0); expect(observed).toHaveLength(0);
+  await handle(await event(receipt)); await vi.waitFor(() => expect(observed).toHaveLength(1)); expect(observed[0].message).toContain('Current private source');
+}));
+
+it('task notification migration backfills pending obligations without replaying old native alerts and protects retained receipts', async () => withTaskNotificationFixture(async ({ customer, sponsor, customerPrincipal, resource, add, notify }: any) => {
+  const migration = require('../../../migrations/20260907183000_qualify_co_managed_notification_receipts.cjs');
+  const pending = await add(customerPrincipal, 'shared_it', 'Pending pre-rollout'), published = await add(customerPrincipal, 'shared_it', 'Published pre-rollout');
+  await customer.table('co_management_event_consumers').where('consumer', 'internal-notifications').del();
+  await customer.table('co_management_event_outbox').where('event_id', published.operationId).update({ status: 'published', completed_at: new Date() });
+  await migration.up(db); await migration.up(db);
+  expect(await customer.table('co_management_event_consumers').where({ event_id: pending.operationId, consumer: 'internal-notifications' }).first()).toMatchObject({ status: 'pending' });
+  expect(await customer.table('co_management_event_consumers').where({ event_id: published.operationId, consumer: 'internal-notifications' }).first()).toMatchObject({ status: 'cancelled', error_code: 'legacy_native_delivery' });
+  await notify(pending);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained task notification receipts');
+  await expect(sponsor.table('co_management_in_app_receipts').update({ ticket_id: randomUUID() })).rejects.toMatchObject({ constraint: 'co_management_in_app_resource_check' });
+}));
+
+it('task notification inbox filters legacy cached notices and denied rows before pagination and counts, including after an upgrade', async () => withTaskNotificationFixture(async ({ customer, customerPrincipal, localActor, localId, resource, add, notify }: any) => {
+  await notify(await add(customerPrincipal, 'shared_it', 'Visible task notice'));
+  const current = await customer.table('internal_notifications').first(), legacyId = randomUUID(), mentionId = randomUUID();
+  await customer.table('internal_notifications').insert([
+    { ...current, internal_notification_id: legacyId, metadata: {}, message: 'Legacy cached secret', created_at: '2030-01-01T00:00:00Z' },
+    { ...current, internal_notification_id: mentionId, template_name: 'user-mentioned', metadata: { contextType: 'task' }, message: 'Legacy mention secret', created_at: '2030-01-01T00:00:00Z' },
+  ]);
+  const auth = await import('@alga-psa/auth'), database = await import('@alga-psa/db');
+  const spies = [vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined), vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: localActor.sessionId, user: { id: localId, tenant: resource.tenant, user_type: 'internal' } } as any),
+    vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant })];
+  try {
+    const actions = await import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
+    const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+    const local = await customer.table('users').where('user_id', localId).first();
+    await auth.runWithApiKeyUser(local, () => runWithTenant(resource.tenant, async () => {
+      expect(await actions.getNotificationsAction({ limit: 1 } as any)).toMatchObject({ total: 1, unread_count: 1, has_more: false, notifications: [expect.objectContaining({ internal_notification_id: current.internal_notification_id, message: expect.stringContaining('Visible task notice') })] });
+      expect(await actions.getNotificationByIdAction(legacyId)).toBeNull();
+      await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+      await customer.table('tenants').update({ product_code: 'psa' });
+      expect(await actions.getUnreadCountAction(undefined, undefined, true)).toMatchObject({ total: 1, unread_count: 1 });
+      const transport = vi.fn();
+      for (const id of [legacyId, mentionId]) expect(await withNotificationDelivery(db, await customer.table('internal_notifications').where('internal_notification_id', id).first(), transport)).toBeNull();
+      expect(transport).not.toHaveBeenCalled();
+      await customer.table('user_roles').where('user_id', localId).del();
+      expect(await actions.getNotificationsAction({ limit: 1 } as any)).toMatchObject({ total: 0, unread_count: 0, notifications: [] });
+    }));
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
+}));
+
+it('task notifications deduplicate direct, team, and additional task resources while requiring current parent project permission', async () => withTaskNotificationFixture(async ({ customer, customerPrincipal, localId, resource, add, notify }: any) => {
+  const teamId = randomUUID();
+  await customer.table('teams').insert({ tenant: resource.tenant, team_id: teamId, team_name: 'Internal task team', manager_id: localId });
+  await customer.table('team_members').insert({ tenant: resource.tenant, team_id: teamId, user_id: localId });
+  await customer.table('project_tasks').where('task_id', resource.id).update({ assigned_team_id: teamId });
+  await customer.table('task_resources').insert({ tenant: resource.tenant, task_id: resource.id, assigned_to: customerPrincipal.userId, additional_user_id: localId });
+  await notify(await add(customerPrincipal, 'shared_it', 'Direct and team and resource')); expect(await customer.table('internal_notifications')).toHaveLength(1);
+  await customer.table('project_tasks').where('task_id', resource.id).update({ assigned_to: null });
+  await notify(await add(customerPrincipal, 'shared_it', 'Team and resource')); expect(await customer.table('internal_notifications')).toHaveLength(2);
+  await customer.table('team_members').where('team_id', teamId).del();
+  await notify(await add(customerPrincipal, 'shared_it', 'Additional resource')); expect(await customer.table('internal_notifications')).toHaveLength(3);
+  await customer.table('user_roles').where('user_id', localId).del();
+  await notify(await add(customerPrincipal, 'shared_it', 'Routing is not authority')); expect(await customer.table('internal_notifications')).toHaveLength(3);
+}));
+
+it('task notification preferences suppress creation and later delivery independently of authorized inbox history', async () => withTaskNotificationFixture(async ({ customer, sponsor, principal, customerPrincipal, localId, resource, add, notify, subtypeId, process, readStored }: any) => {
+  const subtype = await db('internal_notification_subtypes').where('internal_notification_subtype_id', subtypeId).first();
+  await customer.table('user_internal_notification_preferences').insert({ tenant: resource.tenant, user_id: localId, subtype_id: subtypeId, category_id: subtype.category_id, is_enabled: false });
+  const comment = await add(customerPrincipal, 'shared_it', 'Preference-sensitive task notice'); await notify(comment);
+  expect(await customer.table('internal_notifications')).toHaveLength(0); expect(await customer.table('co_management_in_app_receipts').first()).toMatchObject({ outcome: 'disabled' });
+  await sponsor.table('user_internal_notification_preferences').insert({ tenant: principal.tenant, user_id: principal.userId, subtype_id: subtypeId, category_id: subtype.category_id, is_enabled: false });
+  const transport = vi.fn(); await process(db, principal.tenant, transport); expect(transport).not.toHaveBeenCalled();
+  expect(await readStored(db, principal, (await sponsor.table('internal_notifications').first()).internal_notification_id)).not.toBeNull();
+  await customer.table('user_internal_notification_preferences').update({ is_enabled: true }); await notify(comment); expect(await customer.table('internal_notifications')).toHaveLength(0);
+}));
+
+it('task notification delivery holds current customer recipient authority through transport and rejects revocation on the next attempt', async () => withTaskNotificationFixture(async ({ customer, customerPrincipal, localId, resource, add, notify }: any) => {
+  await notify(await add(customerPrincipal, 'shared_it', 'Delivery race body'));
+  const queued = await customer.table('internal_notifications').first();
+  const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+  let started!: () => void, resume!: () => void;
+  const ready = new Promise<void>(resolve => { started = resolve; }), paused = new Promise<void>(resolve => { resume = resolve; });
+  const delivery = withNotificationDelivery(db, queued, async () => { started(); await paused; return true; });
+  await Promise.race([ready, delivery.then(() => { throw new Error('Delivery did not reach authorized callback'); })]);
+  try {
+    await expect(db.transaction(async trx => {
+      await trx.raw("SET LOCAL lock_timeout = '75ms'"); await tenantDb(trx, resource.tenant).table('user_roles').where('user_id', localId).del();
+    })).rejects.toMatchObject({ code: '55P03' });
+  } finally { resume(); await delivery; }
+  await customer.table('user_roles').where('user_id', localId).del();
+  expect(await withNotificationDelivery(db, queued, async () => true)).toBeNull();
+}));
+
+it('task notification owner reads reject expiry after assembling content and roll back callback work', async () => withTaskNotificationFixture(async ({ customer, customerPrincipal, localActor, resource, add }: any) => {
+  const comment = await add(customerPrincipal, 'shared_it', 'Late expiry body');
+  const { withCoManagedTaskCommentNotification } = await import('../../../../packages/co-managed/src/taskCommentNotification');
+  await expect(withCoManagedTaskCommentNotification(db, localActor, resource, comment.commentId, async context => {
+    await tenantDb(context.trx, resource.tenant).table('sessions').where('session_id', localActor.sessionId).update({ expires_at: new Date(0) }); return true;
+  })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(new Date((await customer.table('sessions').where('session_id', localActor.sessionId).first()).expires_at).getTime()).toBeGreaterThan(Date.now());
 }));
