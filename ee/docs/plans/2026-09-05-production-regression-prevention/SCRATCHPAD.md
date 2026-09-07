@@ -1517,3 +1517,10 @@
 - Strengthened the new real-DB regression with a third setup invocation after onboarding_completed becomes true. Entire tenant_settings row and email settings must remain unchanged; cleanup must actually remove the tenant, not merely return from rollback.
 - Exact temporal-database runner session 77177 exited zero: two files / 11 cases, 7.17 seconds, no skips/missing cases. Evidence: evidence/tenant-setup-preservation.json.
 - Current browser run 34109001526 has CE job 101707718598 and EE job 101707718632 in progress. Preserve them until terminal; known engine failure has a queued repair.
+
+### 2026-09-07 — Expanded gates follow dependency changes
+
+- Audited path filters after growing Temporal and Citus coverage. Temporal paths omitted core/db/email/SLA and shared email changes; Citus omitted billing/email package changes despite executing invoice and tenant setup behavior.
+- Both workflows now select packages/**, ee/packages/**, shared/**, EE onboarding seeds and all shared runner libraries. Kept existing migration, workflow, manifest and harness triggers. This deliberately widens execution when package dependencies change.
+- Parsed actual workflow YAML and exercised both pull_request/push glob selectors against seven representative dependency paths plus unrelated docs: all 28 dependency selections pass and unrelated docs remain unselected. No source-string test added.
+- Native browser jobs remain active; queued commits are not yet published.

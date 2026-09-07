@@ -4,11 +4,12 @@ on:
   pull_request:
     paths:
       - 'ee/temporal-workflows/**'
-      - 'ee/packages/workflows/**'
-      - 'shared/workflow/**'
+      - 'ee/packages/**'
+      - 'ee/server/seeds/**'
+      - 'shared/**'
       - 'scripts/run-additional-workspace-tests.mjs'
-      - 'scripts/lib/test-*.mjs'
-      - 'packages/integrations/**'
+      - 'scripts/lib/**'
+      - 'packages/**'
       - 'scripts/check-temporal-worker-packaging-contract.mjs'
       - 'scripts/temporal-worker-dist-import-smoke.mjs'
       - 'scripts/temporal-worker-docker-parity.mjs'
@@ -20,11 +21,12 @@ on:
       - main
     paths:
       - 'ee/temporal-workflows/**'
-      - 'ee/packages/workflows/**'
-      - 'shared/workflow/**'
+      - 'ee/packages/**'
+      - 'ee/server/seeds/**'
+      - 'shared/**'
       - 'scripts/run-additional-workspace-tests.mjs'
-      - 'scripts/lib/test-*.mjs'
-      - 'packages/integrations/**'
+      - 'scripts/lib/**'
+      - 'packages/**'
       - 'scripts/check-temporal-worker-packaging-contract.mjs'
       - 'scripts/temporal-worker-dist-import-smoke.mjs'
       - 'scripts/temporal-worker-docker-parity.mjs'
