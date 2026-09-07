@@ -2319,3 +2319,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - PR3343 advanced externally to 7b170294a7; current checks now expose fresh Citus, Temporal engine and integration shard failures. Citus job101833124798/run34151013464 fails tenant collection on jobs/handlers/workflowScheduledRunHandlers. Local generated jobs dist had concealed the missing Vitest source aliases.
 - Mirrored existing worker tsconfig jobs mappings into Temporal Vitest. Full six-file tenant lane against owned Citus passes 27 tests in 17.41 seconds. Temporarily parked only the ignored jobs dist directory; assertion collection still succeeds, then restored directory in finally. Evidence: evidence/temporal-jobs-source-resolution.json.
 - Separate native engine error: production-index worker bundle cannot resolve workflows/runtime/utils/redactionUtils, workflows/lib/workflowRuntimeV2TemporalContract and workflows/runtime/expressionEngine. Investigate real bundler resolution next; integration shard failure also outstanding. No native pass or broad completion flags claimed.
+
+### 2026-09-07 — repair native Temporal workflow webpack resolution
+
+- Reproduced native engine job101833124603 failure with workflows dist temporarily parked: full index fails, non-authored index passes. Temporal webpack does not inherit Vitest aliases; local cached package output concealed this.
+- Added source mapping for workflows package to the production-index engine test’s real Worker bundler, matching worker tsconfig while preserving actual workflow execution/assertions. With cached dist absent, both tests pass. Build directory restored in finally.
+- Complete canonical engine lane: 44 tests/10 files passed, zero omissions, discovery passed, 44.02 seconds. Working-tree validation is explicitly dirty; no native candidate claim. Evidence: evidence/temporal-workflow-source-bundling.json. Integration shard failure still needs inspection. No broad flags changed.

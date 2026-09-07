@@ -10,7 +10,18 @@ it.each(['index.ts', 'non-authored-index.ts'])('executes registered workflows fr
   const calls: Array<{ tenantId: string; jobName: string }> = [];
   try {
     const worker = await Worker.create({ connection: environment.nativeConnection, taskQueue,
-      workflowsPath: path.resolve(import.meta.dirname, '..', index), activities: {
+      workflowsPath: path.resolve(import.meta.dirname, '..', index),
+      // Temporal bundles workflows in webpack outside Vitest's resolver. Match
+      // the worker tsconfig source mapping instead of relying on ignored dist
+      // files left by a previous local build (production uses tsc-alias).
+      bundlerOptions: { webpackConfigHook: config => ({
+        ...config,
+        resolve: { ...config.resolve, alias: {
+          ...config.resolve?.alias,
+          '@alga-psa/workflows': path.resolve(import.meta.dirname, '../../../../packages/workflows/src'),
+        } },
+      }) },
+      activities: {
         listMarketingTenantIds: async () => ['tenant-a', 'tenant-b'],
         runMarketingJobForTenant: async (input: { tenantId: string; jobName: string }) => {
           calls.push(input);
