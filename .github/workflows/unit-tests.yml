@@ -199,6 +199,7 @@ jobs:
       # Recycle the process between files; retain serial execution and the same
       # collection/coverage scope. The progress journal records any recurrence.
       - name: Run server unit tests with coverage
+        id: server-unit-run
         working-directory: ./server
         run: |
           selection=(src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions)
@@ -220,6 +221,11 @@ jobs:
           DB_USER_ADMIN: ''
           DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'
+      - name: Require complete server unit execution
+        if: always()
+        run: node scripts/verify-server-unit-execution.mjs
+        env:
+          SERVER_UNIT_RUN_OUTCOME: ${{ steps.server-unit-run.outcome }}
       # `if: always()`: a red run is exactly the data point the coverage
       # artifact and metrics sheet exist to capture.
       - name: Upload lcov artifact
@@ -238,6 +244,7 @@ jobs:
             test-results/server-coverage/collected.json
             test-results/server-coverage/collected-tests.json
             test-results/server-coverage/progress.jsonl
+            test-results/server-coverage/evidence.json
             server/test-results.json
             server/coverage/coverage-summary.json
           retention-days: 30
