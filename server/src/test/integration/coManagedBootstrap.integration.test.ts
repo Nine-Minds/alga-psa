@@ -13399,3 +13399,70 @@ it('native time sheet commands refuse reversal when any entry has been invoiced 
   expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'APPROVED' });
   expect(await customer.table('time_sheet_comments')).toHaveLength(0);
 }));
+
+it('native time sheet details return actual visible effort and comments with authenticated authorship', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, service, sheets }: any) => {
+  const view = await sheets.fetchTimeSheet(entry.time_sheet_id);
+  expect(view).toMatchObject({ id: entry.time_sheet_id, entry_count: 1, total_minutes: 90, total_hours: 1.5, time_period: { start_date: '2026-09-07', end_date: '2026-09-14' } });
+  const { timeSheetViewSchema, timeSheetCommentSchema } = await import('../../../../packages/scheduling/src/schemas/timeSheet.schemas');
+  expect(timeSheetViewSchema.safeParse(view).success).toBe(true);
+  expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id)).toMatchObject([{ entry_id: entry.entry_id, billing_mode: 'operational', elapsed_minutes: 90 }]);
+  await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, randomUUID(), 'Forged author', true)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const comment = await sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Private sheet feedback', true);
+  expect(comment).toMatchObject({ user_id: context.userId, is_approver: false, comment: 'Private sheet feedback' });
+  expect(timeSheetCommentSchema.safeParse(comment).success).toBe(true);
+  expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toMatchObject([{ comment_id: comment.comment_id, user_id: context.userId, is_approver: false }]);
+  expect(await service.getById(entry.entry_id, context)).toMatchObject({ entry_id: entry.entry_id, elapsed_minutes: 90 });
+  expect(await service.list({}, context)).toMatchObject({ total: 1, data: [{ entry_id: entry.entry_id, elapsed_minutes: 90 }] });
+}));
+
+it('native time sheet details omit excluded effort and withhold comments about partially visible sheets', async () => withNativeTimeSheetCommandFixture(async ({ entry, create, context, sheets, user, resource }: any) => {
+  const general = await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Visible planning' });
+  await sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Private feedback mentions excluded project', false);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet detail source scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect(await sheets.fetchTimeSheet(entry.time_sheet_id)).toMatchObject({ entry_count: 1, total_hours: 1 });
+  expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id)).toMatchObject([{ entry_id: general.entry_id }]);
+  expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toEqual([]);
+  await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Blind sheet feedback', false)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('native time sheet details respect field masks for notes, sheet totals, periods and free-text comments', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, sheets, user, resource, operation }: any) => {
+  await sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Private original notes', false);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Sheet detail fields', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['notes'] } });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_sheet', action: 'read', templateKey: 'own', config: { redactedFields: ['time_period', 'total_hours'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  const view = await sheets.fetchTimeSheet(entry.time_sheet_id);
+  expect(view).toMatchObject({ entry_count: 1 }); expect(view.time_period).toBeUndefined(); expect(view.total_hours).toBeUndefined(); expect(view.total_minutes).toBeUndefined();
+  expect(await sheets.fetchTimeEntriesForTimeSheet(entry.time_sheet_id)).toMatchObject([{ notes: '', elapsed_minutes: 90 }]);
+  expect(await sheets.fetchTimeSheetComments(entry.time_sheet_id)).toEqual([]);
+  await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'New blind notes', false)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('native time sheet details retain manager attribution and remain readable during write expiry', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, sheets, user, customer, principal }: any) => {
+  const formerId = randomUUID(), sheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first(), formerSheet = randomUUID();
+  await customer.table('users').insert({ ...user, user_id: formerId, email: 'comment-former@example.test', username: 'comment-former', is_inactive: true, reports_to: user.user_id });
+  await customer.table('time_sheets').insert({ ...sheet, id: formerSheet, user_id: formerId });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ user_id: formerId, time_sheet_id: formerSheet });
+  const comment = await sheets.addCommentToTimeSheet(formerSheet, context.userId, 'Manager history note', false);
+  expect(comment).toMatchObject({ user_id: context.userId, is_approver: true });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await sheets.fetchTimeSheetComments(formerSheet)).toMatchObject([{ comment: 'Manager history note' }]);
+  expect(await sheets.fetchTimeSheet(formerSheet)).toMatchObject({ total_hours: 1.5 });
+  await expect(sheets.addCommentToTimeSheet(formerSheet, context.userId, 'Disallowed new note', false)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  expect(await customer.table('time_sheet_comments')).toHaveLength(1);
+}));
+
+it('native time sheet details roll back a new comment when its browser session expires at final admission', async () => withNativeTimeSheetCommandFixture(async ({ entry, context, sheets, customer, sessionId }: any) => {
+  await db.raw(`CREATE FUNCTION expire_sheet_comment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND session_id = '${sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_sheet_comment_session AFTER INSERT ON time_sheet_comments FOR EACH ROW EXECUTE FUNCTION expire_sheet_comment_session()');
+  try {
+    await expect(sheets.addCommentToTimeSheet(entry.time_sheet_id, context.userId, 'Rolled back private note', false)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('time_sheet_comments')).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_sheet_comment_session ON time_sheet_comments'); await db.raw('DROP FUNCTION expire_sheet_comment_session()'); }
+}));

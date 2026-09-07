@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
+import { toCalendarDateString } from '@alga-psa/core';
 import { productTimeEntryMode } from '@alga-psa/types';
 import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from './nativeConversationEvents';
@@ -28,7 +29,7 @@ export async function readCoManagedNativeTimeEntry(db: Knex, tenant: string, ent
     const credential = await lockCoManagedLocalAuthentication(trx, actor);
     if (!await hasCoManagedLocalPermission(trx, actor, 'time_entry', 'read', true)) throw new CoManagedSharedWorkError();
     if (!hint) { await credential.assertCurrent(); return { handled: true, entry: null }; }
-    const entry = await readNativeTimeEntry(trx, actor, hint);
+    const { entry } = await readNativeTimeEntry(trx, actor, hint);
     await credential.assertCurrent();
     return { handled: true, entry };
   });
@@ -77,7 +78,7 @@ async function readNativeTimeEntry(trx: Knex.Transaction, actor: CoManagedAuthen
       result.work_item_title = result.workItem.name;
     }
     await access.assertCurrent();
-    return result;
+    return { entry: result, fullContentVisible: access.redactedTimeFields.length === 0 && access.redactedSourceFields.length === 0 };
 }
 
 async function readChangeRequests(trx: Knex.Transaction, tenant: string, entry: any) {
@@ -97,7 +98,8 @@ async function readChangeRequests(trx: Knex.Transaction, tenant: string, entry: 
 /** A timesheet is a collection of independently admitted work records. Hidden
  * entries and their review comments never enter the returned collection. */
 export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, sheetId: string,
-  identify: () => Promise<CoManagedAuthenticatedActor>): Promise<{ handled: false } | { handled: true; entries: any[] }> {
+  identify: () => Promise<CoManagedAuthenticatedActor>, options: { view?: boolean; comments?: boolean; requireCompleteContent?: boolean } = {}
+): Promise<{ handled: false } | { handled: true; entries: any[]; sheet?: any; comments: any[] }> {
   if (!isCoManagedUuid(tenant) || !isCoManagedUuid(sheetId)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
     await getCoManagedOperationalState(trx, tenant);
@@ -116,17 +118,44 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
     if (!sheet || sheet.user_id !== hint.user_id) throw new CoManagedSharedWorkError();
     const sheetPolicy = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_sheet', 'read', { id: sheetId, ownerUserId: sheet.user_id, assignedUserIds: [sheet.user_id] });
     if (isNativeTimeFieldHidden(sheetPolicy.redactedFields, ['id', 'time_sheet_id', 'user_id', 'time_entries', 'entries', 'time_sheets.id', 'time_sheets.user_id', 'time_sheets.time_entries'])) throw new CoManagedSharedWorkError();
-    const hints = await owner.table('time_entries').where({ time_sheet_id: sheetId, user_id: sheet.user_id }).orderBy('entry_id').select('*');
+    const hints = await owner.table('time_entries').where({ time_sheet_id: sheetId }).orderBy('entry_id').select('*');
     const entries: any[] = [];
+    let completeContent = true;
     for (const entry of hints) {
-      try { entries.push(await readNativeTimeEntry(trx, actor, entry, true)); }
-      catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
+      try {
+        if (entry.user_id !== sheet.user_id) throw new CoManagedSharedWorkError();
+        const projected = await readNativeTimeEntry(trx, actor, entry, true);
+        entries.push(projected.entry); completeContent &&= projected.fullContentVisible;
+      } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; completeContent = false; }
     }
+    if (options.requireCompleteContent && !completeContent) throw new CoManagedSharedWorkError();
+    const hidden = (fields: string[]) => isNativeTimeFieldHidden(sheetPolicy.redactedFields, fields.flatMap(field => [field, `time_sheets.${field}`]));
+    let view: any;
+    if (options.view) {
+      if (hidden(['id', 'tenant', 'user_id', 'period_id', 'approval_status'])) throw new CoManagedSharedWorkError();
+      view = { ...sheet };
+      for (const field of Object.keys(view)) if (hidden([field])) delete view[field];
+      for (const field of ['submitted_at', 'approved_at', 'created_at', 'updated_at']) if (field in view) view[field] = view[field] ? new Date(view[field]).toISOString() : undefined;
+      if (!view.approved_by) delete view.approved_by;
+      if (!hidden(['time_period', 'time_period.start_date', 'time_period.end_date', 'period_start_date', 'period_end_date'])) {
+        const period = await owner.table('time_periods').where('period_id', sheet.period_id).forShare().first('period_id', 'start_date', 'end_date');
+        if (!period) throw new CoManagedSharedWorkError();
+        view.time_period = { tenant, period_id: period.period_id, start_date: toCalendarDateString(period.start_date), end_date: toCalendarDateString(period.end_date) };
+      }
+      if (!hidden(['entry_count', 'total_entries'])) view.entry_count = entries.length;
+      if (!hidden(['total_hours', 'total_minutes', 'duration', 'elapsed_minutes'])) {
+        view.total_minutes = entries.reduce((sum, entry) => sum + entry.elapsed_minutes, 0); view.total_hours = view.total_minutes / 60;
+      }
+    }
+    // A sheet comment can mention any of its work. No entry filtering or field
+    // masking can safely redact that free text, so withhold the whole stream.
+    const comments = options.comments && completeContent && !hidden(['comments', 'time_sheet_comments', 'comment'])
+      ? await readSheetComments(trx, tenant, sheetId, sheetPolicy.redactedFields) : [];
     // A scoped-out entry is omitted; an expired credential invalidates the
     // whole response, including an otherwise empty sheet.
     await credential.assertCurrent();
     entries.sort((a, b) => b.start_time.localeCompare(a.start_time) || a.entry_id.localeCompare(b.entry_id));
-    return { handled: true, entries };
+    return { handled: true, entries, sheet: view, comments };
   });
 }
 
@@ -154,10 +183,25 @@ export async function readCoManagedNativeTimeEntries(db: Knex, tenant: string,
     await owner.table('users').whereIn('user_id', [...new Set(hints.map(row => row.user_id))]).orderBy('user_id').forShare().select('user_id');
     await owner.table('time_sheets').whereIn('id', [...new Set(hints.map(row => row.time_sheet_id).filter(Boolean))]).orderBy('id').forShare().select('id');
     for (const hint of hints) {
-      try { entries.push(await readNativeTimeEntry(trx, actor, hint, false, true)); }
+      try { entries.push((await readNativeTimeEntry(trx, actor, hint, false, true)).entry); }
       catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
     }
     await credential.assertCurrent();
     return { handled: true, entries };
+  });
+}
+
+async function readSheetComments(trx: Knex.Transaction, tenant: string, sheetId: string, fields: readonly string[]) {
+  const owner = tenantDb(trx, tenant);
+  if (isNativeTimeFieldHidden(fields, ['comments.comment', 'comments.comment_id', 'comments.user_id', 'comments.created_at',
+    'comments.is_approver', 'time_sheet_comments.is_approver',
+    'time_sheet_comments.comment', 'time_sheet_comments.comment_id', 'time_sheet_comments.user_id', 'time_sheet_comments.created_at'])) return [];
+  const rows = await owner.table('time_sheet_comments').where('time_sheet_id', sheetId).orderBy('created_at', 'desc').orderBy('comment_id').forShare().select('*');
+  const users = await owner.table('users').whereIn('user_id', [...new Set(rows.map(row => row.user_id))]).forShare().select('user_id', 'first_name', 'last_name');
+  return rows.map(row => {
+    const user = users.find(user => user.user_id === row.user_id);
+    return { tenant, comment_id: row.comment_id, time_sheet_id: sheetId, user_id: row.user_id, comment: row.comment,
+      created_at: new Date(row.created_at).toISOString(), is_approver: row.is_approver,
+      user_name: isNativeTimeFieldHidden(fields, ['user_name', 'comments.user_name', 'time_sheet_comments.user_name']) ? undefined : `${user?.first_name ?? ''} ${user?.last_name ?? ''}`.trim() };
   });
 }

@@ -69,3 +69,4 @@ export * from './nativeTimeRead';
 export * from './nativeTimeDeletion';
 export * from './nativeTimeReview';
 export * from './nativeTimeSheetCommand';
+export * from './nativeTimeSheetComment';

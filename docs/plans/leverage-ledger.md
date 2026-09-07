@@ -453,3 +453,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `timeSheetOperations.submitTimeSheet`, four review actions in `timeSheetActions`, shared `nativeTimeSheetCommand`.
 - **Gate:** Five adapters share high-cost scope, state, financial and atomicity invariants. ACT / bounded-now in the approved time workstream.
 - **Status:** shared all-or-nothing engine retains owner/sheet/source/entry policy and state, checks all billing evidence, stores audit comments and queues identity events after commit. Six focused source-mode scenarios validated, including a two-case follow-up for localized bulk errors and actual session-expiry rollback. Broader sheet/comment readers, related comment writes/deletion, API sheet commands and wider concurrent lock ordering remain pending.
+
+## native-time-sheet-comment-authority — pattern
+- **What:** Whole-sheet free text can reference any entry; independently filtered entries cannot safely redact that prose. Comment writes also trusted caller-supplied authors and approver flags.
+- **Where:** Native `fetchTimeSheet`, alternate sheet entry reader, `fetchTimeSheetComments`, `addCommentToTimeSheet`, shared time projection/comment command.
+- **Gate:** Shared high-cost disclosure and attribution boundary across reads/writes. ACT / bounded-now in the approved time workstream.
+- **Status:** sheet detail totals use admitted intervals; complete-content visibility controls the comment stream and comment writes; stored author/reviewer attribution comes from actual identity/ownership. Final credential/lifecycle checks retain rollback. Five focused source-mode cases pass. List/approval-dashboard readers, sheet creation/deletion and wider scale/concurrency verification remain pending.

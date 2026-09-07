@@ -11,7 +11,7 @@ import {
   ITimeSheetApprovalView,
   ITimePeriodView
 } from '@alga-psa/types';
-import { commandCoManagedNativeTimeSheets } from '@alga-psa/co-managed';
+import { commandCoManagedNativeTimeSheets, readCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
@@ -194,6 +194,8 @@ export const addCommentToTimeSheet = withAuth(async (
 ): Promise<ITimeSheetComment | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await addCoManagedNativeTimeSheetComment(db, tenant, { sheetId: timeSheetId, userId, comment }, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.comment as ITimeSheetComment;
     const scopedDb = tenantDb(db, tenant) as any;
 
     // Fetch the timesheet to check ownership
@@ -339,6 +341,8 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
 export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant), { view: true });
+    if (current.handled) return current.sheet as ITimeSheetView;
     const scopedDb = tenantDb(db, tenant) as any;
 
     if (!await hasPermission(user, 'time_sheet', 'read', db)) {
@@ -384,6 +388,8 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
 export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeEntry[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant));
+    if (current.handled) return current.entries.sort((a, b) => a.start_time.localeCompare(b.start_time) || a.entry_id.localeCompare(b.entry_id)) as ITimeEntry[];
     const scopedDb = tenantDb(db, tenant) as any;
 
     if (!await hasPermission(user, 'time_sheet', 'read', db)) {
@@ -449,6 +455,8 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
 export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetComment[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await readCoManagedNativeTimeSheet(db, tenant, timeSheetId, () => resolveNativeTimeBrowserActor(user, tenant), { comments: true });
+    if (current.handled) return current.comments as ITimeSheetComment[];
     const scopedDb = tenantDb(db, tenant) as any;
 
     if (!await hasPermission(user, 'time_sheet', 'read', db)) {
