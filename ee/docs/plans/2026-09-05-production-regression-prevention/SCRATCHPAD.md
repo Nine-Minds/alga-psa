@@ -1498,3 +1498,9 @@
 - Existing email-activities.temporal.test.ts failed ten/eleven cases: obsolete Context.logger mock and unresolved password Promises. Its only passing randomness case compared Promise objects. Corrected Context.log and awaited values, preserving all eleven cases.
 - Removed unused ephemeral Temporal environment: no workflow or activity execution was routed through it. Renamed describe to Context Behavior and assigned the file to fast readiness with independent discovery. No engine-coverage claim.
 - Exact readiness runner session 61873 exited zero: 29 files / 213 tests, zero missing/skipped, 10.00 seconds. Evidence: evidence/email-context-readiness.json. Native publication/verification pending.
+
+### 2026-09-07 — Database runner fails closed before execution
+
+- Verified actual temporal-database runner with missing connection settings: exits one and records explicit configuration failure. Added scripts/tests/temporal-database-runner.test.mjs, automatically selected by Node tooling inventory.
+- Behavioral test copies the runner/libs into a temporary Git repository, removes each of five mandatory settings in turn, seeds stale passed evidence and verifies nonzero exit, failed replacement evidence and cleared raw results. All five scenarios pass; no network/database access or source-string assertion.
+- Remaining legacy tenant-activities.test.ts is not promoted: it directly calls activities without context, expects obsolete setup roles/statuses and includes an empty connection-failure case. Requires substantive behavioral repair rather than counting nominal cases.
