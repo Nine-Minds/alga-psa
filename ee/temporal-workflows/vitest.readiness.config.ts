@@ -23,6 +23,7 @@ export default defineConfig({
       'src/activities/__tests__/comment-recovery-forwarding.test.ts',
       'src/activities/__tests__/email-activities-simple.test.ts',
       'src/activities/__tests__/email-activities-standalone.test.ts',
+      'src/activities/__tests__/email-activities.temporal.test.ts',
       'src/activities/__tests__/gmail-adapter-secret-log-hygiene.test.ts',
       'src/activities/__tests__/microsoft-email-filesystem-secret-provider.test.ts',
       'src/activities/__tests__/portal-domain-activities.test.ts',

@@ -1492,3 +1492,9 @@
 - Existing standalone email suite: initial run two failed/six passed. Password assertions were inspecting Promises, and the uniqueness case falsely passed by comparing Promise identities. Awaited actual generated passwords, retaining all content/length/uniqueness checks and all email cases.
 - Added suite to readiness selection and independent discovery. Exact runner session 49374 exited zero: 28 files / 202 tests, zero missing/skipped, 9.04 seconds. Evidence: evidence/email-standalone-readiness.json. No production changes.
 - Current published head remains 9180b2a9c8. Browser image build jobs 101701349398/101701349408 still live; known native engine failure is repaired in queued commit 9ed8b450a3.
+
+### 2026-09-07 — Direct email context tests restored
+
+- Existing email-activities.temporal.test.ts failed ten/eleven cases: obsolete Context.logger mock and unresolved password Promises. Its only passing randomness case compared Promise objects. Corrected Context.log and awaited values, preserving all eleven cases.
+- Removed unused ephemeral Temporal environment: no workflow or activity execution was routed through it. Renamed describe to Context Behavior and assigned the file to fast readiness with independent discovery. No engine-coverage claim.
+- Exact readiness runner session 61873 exited zero: 29 files / 213 tests, zero missing/skipped, 10.00 seconds. Evidence: evidence/email-context-readiness.json. Native publication/verification pending.
