@@ -17,3 +17,4 @@ export * from './privateTicketConversation';
 export * from './ticketCommentCreation';
 export * from './ticketCommentNotification';
 export * from './ticketCommentRecipients';
+export * from './storedCommentNotification';

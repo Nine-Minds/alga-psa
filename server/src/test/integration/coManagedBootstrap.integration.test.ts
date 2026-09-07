@@ -5488,3 +5488,87 @@ it('leaves no receipt after template failure and suppresses internal, revoked an
   await persist(db, event);
   expect(await sponsor.table('internal_notifications')).toHaveLength(2);
 }));
+
+it('revalidates stored notification content and recipient read restrictions instead of returning cached text', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, customer, operation, persist, event,
+}) => {
+  const { readCoManagedStoredCommentNotification: read } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  await persist(db, event);
+  const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Current authorized notification body' });
+  const result = await read(db, principal, notification.internal_notification_id);
+  expect(result).toMatchObject({ notificationId: notification.internal_notification_id, templateName: 'ticket-comment-added', message: {
+    resource, note: 'Current authorized notification body', audience: 'shared_it',
+  } });
+  expect(result).not.toHaveProperty('title'); expect(result).not.toHaveProperty('metadata');
+  expect(JSON.stringify(result)).not.toContain('Customer shared reply');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Inbox read restrictions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['actor', 'title', 'ticket_number'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const redacted = await read(db, principal, notification.internal_notification_id);
+  expect(redacted?.message).not.toHaveProperty('author'); expect(redacted?.message).not.toHaveProperty('ticketTitle'); expect(redacted?.message).not.toHaveProperty('ticketNumber');
+  await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: ['comments.note'] } });
+  expect(await read(db, principal, notification.internal_notification_id)).toBeNull();
+  await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId] } });
+  await expireCoManagedEntitlement(operation.tenant);
+  expect(await read(db, principal, notification.internal_notification_id)).not.toBeNull();
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  expect(await read(db, principal, notification.internal_notification_id)).toBeNull();
+}));
+
+it('binds stored notification reads to the receipt recipient, source, thread and current audience', async () => withInAppCommentFixture(async ({
+  principal, customerPrincipal, resource, sponsor, customer, eligibleIds, persist, event,
+}) => {
+  const { readCoManagedStoredCommentNotification: read } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  await persist(db, event);
+  const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  const id = notification.internal_notification_id;
+  expect(await read(db, customerPrincipal, id)).toBeNull();
+  const metadata = notification.metadata;
+  await sponsor.table('internal_notifications').where('internal_notification_id', id).update({ metadata: JSON.stringify({ coManaged: {
+    ...metadata.coManaged, resource: { ...metadata.coManaged.resource, tenant: principal.tenant },
+  } }) });
+  expect(await read(db, principal, id)).toBeNull();
+  await sponsor.table('internal_notifications').where('internal_notification_id', id).update({ metadata: JSON.stringify(metadata),
+    user_id: eligibleIds.find(userId => userId !== principal.userId) });
+  expect(await read(db, principal, id)).toBeNull();
+  await sponsor.table('internal_notifications').where('internal_notification_id', id).update({ user_id: principal.userId, deleted_at: new Date() });
+  expect(await read(db, principal, id)).toBeNull();
+  await sponsor.table('internal_notifications').where('internal_notification_id', id).update({ deleted_at: null });
+  const comment = await customer.table('comments').where('comment_id', event.payload.comment.id).first();
+  await customer.table('comment_threads').where('thread_id', comment.thread_id).update({ collaboration_audience: 'organization_private' });
+  expect(await read(db, principal, id)).toBeNull();
+  await customer.table('comment_threads').where('thread_id', comment.thread_id).update({ collaboration_audience: 'shared_it' });
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ deleted_at: new Date() });
+  expect(await read(db, principal, id)).toBeNull();
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ deleted_at: null });
+  expect(await read(db, principal, id)).not.toBeNull();
+  await sponsor.table('co_management_in_app_receipts').where('notification_id', id).del();
+  expect(await read(db, principal, id)).toBeNull();
+  expect(await sponsor.table('internal_notifications').where('internal_notification_id', id)).toHaveLength(1);
+}));
+
+it('rechecks the interactive session after waiting for a stored notification lock', async () => withInAppCommentFixture(async ({
+  principal, sponsor, persist, event,
+}) => {
+  const { readCoManagedStoredCommentNotification: read } = await import('../../../../packages/co-managed/src/storedCommentNotification');
+  await persist(db, event);
+  const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, principal.tenant).table('internal_notifications').where('internal_notification_id', notification.internal_notification_id).forUpdate().first();
+  let signal!: () => void;
+  const waiting = new Promise<void>(resolve => { signal = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('internal_notifications') && query.sql.includes('for share')) signal(); };
+  db.on('query', listener);
+  const attempt = read(db, principal, notification.internal_notification_id);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Notification read finished before waiting'); })]);
+    await blocker.raw('select pg_sleep(1.1)');
+    await blocker.commit();
+    expect(await attempt).toBeNull();
+  } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));
