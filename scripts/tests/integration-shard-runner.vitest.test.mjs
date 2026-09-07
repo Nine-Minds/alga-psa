@@ -31,9 +31,9 @@ test('actual integration runner partitions, executes and rejects missing or stal
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   git('init', '-q'); git('config', 'user.email', 'fixture@example.invalid'); git('config', 'user.name', 'CI fixture');
   git('add', '.'); git('commit', '-qm', 'fixture');
-  const run = (script, index = 1, mode = 'full', total = 3, base = '') => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
+  const run = (script, index = 1, mode = 'full', total = 3, base = '', overrides = {}) => spawnSync(process.execPath, [path.join(root, 'scripts', script)], {
     cwd: root, encoding: 'utf8', timeout: 30_000,
-    env: { ...process.env, CI: '1', TIER1_BASE_SHA: base, GITHUB_SHA: git('rev-parse', 'HEAD').trim(), INTEGRATION_FULL: String(mode === 'full'), INTEGRATION_JOB_RESULT: 'success', INTEGRATION_SHARD_INDEX: String(index), INTEGRATION_SHARD_TOTAL: String(total) },
+    env: { ...process.env, CI: '1', TIER1_BASE_SHA: base, GITHUB_SHA: git('rev-parse', 'HEAD').trim(), INTEGRATION_FULL: String(mode === 'full'), INTEGRATION_JOB_RESULT: 'success', INTEGRATION_SELECTION_RESULT: 'success', INTEGRATION_EVENT: 'pull_request', INTEGRATION_SHARD_INDEX: String(index), INTEGRATION_SHARD_TOTAL: String(total), ...overrides },
   });
   const read = file => JSON.parse(readFileSync(path.join(root, file), 'utf8'));
   for (const index of [1, 2, 3]) {
@@ -48,6 +48,7 @@ test('actual integration runner partitions, executes and rejects missing or stal
   let combined = run('verify-integration-shards.mjs');
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
   assert.equal(read('test-results/integration-aggregate/aggregate.json').counts.passed, 5);
+  assert.equal(run('verify-integration-shards.mjs', 1, 'full', 3, '', { INTEGRATION_EVENT: 'schedule', INTEGRATION_SELECTION_RESULT: 'skipped' }).status, 0);
 
   const metrics = () => testCounts(read('test-results/integration-aggregate/results.json'), read('test-results/integration-aggregate/aggregate.json'), git('rev-parse', 'HEAD').trim());
   assert.equal(metrics().runStatus, 'complete');
@@ -103,4 +104,20 @@ test('actual integration runner partitions, executes and rejects missing or stal
   assert.equal(unavailableGraph.status, 1);
   assert.match(unavailableGraph.stderr, /Independent affected collection unavailable/);
   assert.match(unavailableGraph.stderr, /Missing mandatory integration file/);
+  rmSync(path.join(root, 'test-results/integration-shards'), { recursive: true });
+  write('docs/testing.md', 'Documentation-only change.\n');
+  git('add', '.'); git('commit', '-qm', 'document testing');
+  const skipped = { INTEGRATION_JOB_RESULT: 'skipped' };
+  const unnecessary = run('verify-integration-shards.mjs', 1, 'selected', 1, head, skipped);
+  assert.equal(unnecessary.status, 0, unnecessary.stderr);
+  assert.equal(read('test-results/integration-aggregate/aggregate.json').status, 'not-applicable');
+  assert.equal(read('test-results/integration-aggregate/results.json').executionCompleteness, 'not-applicable');
+  for (const selection of ['failure', 'cancelled', 'skipped', '']) {
+    const rejected = run('verify-integration-shards.mjs', 1, 'selected', 1, head,
+      { ...skipped, INTEGRATION_SELECTION_RESULT: selection });
+    assert.equal(rejected.status, 1);
+    assert.match(rejected.stderr, /Integration change selection did not succeed/);
+  }
+  assert.equal(run('verify-integration-shards.mjs', 1, 'selected', 1, base, skipped).status, 1);
+  assert.equal(run('verify-integration-shards.mjs', 1, 'selected', 1, 'missing-base', skipped).status, 1);
 });

@@ -212,13 +212,15 @@ jobs:
   integration-execution-complete:
     name: Integration execution complete
     needs: [check-changes, integration-tests]
-    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
       INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
       INTEGRATION_FULL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') }}
       INTEGRATION_JOB_RESULT: ${{ needs.integration-tests.result }}
+      INTEGRATION_SELECTION_RESULT: ${{ needs.check-changes.result }}
+      INTEGRATION_EVENT: ${{ github.event_name }}
       REAL_REDIS: '1'
       TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
@@ -229,11 +231,12 @@ jobs:
         with:
           node-version: '22'
       - name: Install tooling for independent affected collection
-        if: env.INTEGRATION_FULL != 'true'
+        if: env.INTEGRATION_FULL != 'true' && needs.integration-tests.result == 'success'
         run: |
           npm install -g npm@11
           npm ci
       - name: Download every integration shard
+        if: always() && needs.integration-tests.result != 'skipped'
         uses: actions/download-artifact@v4
         with:
           pattern: server-integration-shard-*
@@ -250,7 +253,7 @@ jobs:
           if-no-files-found: error
           retention-days: 30
       - name: Record combined integration metrics
-        if: always() && (env.INTEGRATION_FULL == 'true' || github.event_name == 'push')
+        if: always() && needs.integration-tests.result != 'skipped' && (env.INTEGRATION_FULL == 'true' || github.event_name == 'push')
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:
