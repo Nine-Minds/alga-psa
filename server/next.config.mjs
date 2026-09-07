@@ -274,6 +274,10 @@ const nextConfig = {
       '@alga-psa/teams/': '../packages/teams/src/',
       '@alga-psa/telephony': '../packages/telephony/src',
       '@alga-psa/telephony/': '../packages/telephony/src/',
+      '@alga-psa/marketing': '../packages/marketing/src',
+      '@alga-psa/marketing/': '../packages/marketing/src/',
+      '@alga-psa/opportunities': '../packages/opportunities/src',
+      '@alga-psa/opportunities/': '../packages/opportunities/src/',
       '@alga-psa/tenancy': '../packages/tenancy/src',
       '@alga-psa/tenancy/': '../packages/tenancy/src/',
       '@alga-psa/event-schemas': '../packages/event-schemas/src',
@@ -611,6 +615,10 @@ const nextConfig = {
       '@alga-psa/tags/': `${prebuiltDirAbs('tags')}/`,
       '@alga-psa/telephony': prebuiltDirAbs('telephony'),
       '@alga-psa/telephony/': `${prebuiltDirAbs('telephony')}/`,
+      '@alga-psa/marketing': prebuiltDirAbs('marketing'),
+      '@alga-psa/marketing/': `${prebuiltDirAbs('marketing')}/`,
+      '@alga-psa/opportunities': prebuiltDirAbs('opportunities'),
+      '@alga-psa/opportunities/': `${prebuiltDirAbs('opportunities')}/`,
       // Source-transpiled packages
       '@alga-psa/scheduling': path.join(__dirname, '../packages/scheduling/src'),
       // @alga-psa/jobs + /search: source-transpiled. jobs' export names do NOT

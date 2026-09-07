@@ -180,7 +180,7 @@ jobs:
     needs: [changes, build-images]
     if: always()
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -781,6 +781,59 @@ jobs:
         timeout-minutes: 25
         run: xvfb-run --auto-servernum npm test
         shell: bash
+
+      - name: Install API test dependencies
+        id: api_dependencies
+        if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
+        timeout-minutes: 10
+        run: npm ci
+
+      - name: Attest ownership of the fresh-install API database
+        id: api_database
+        if: ${{ !cancelled() && steps.api_dependencies.outcome == 'success' }}
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          container_id=$(docker-compose -p alga-e2e-test ps -q postgres)
+          test -n "$container_id"
+          test "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.project" }}' "$container_id")" = alga-e2e-test
+          test "$(docker inspect --format '{{ index .Config.Labels "com.docker.compose.service" }}' "$container_id")" = postgres
+          test "$(docker inspect --format '{{ .State.Running }}' "$container_id")" = true
+          environment_id=$(node -e 'console.log(require("node:crypto").randomUUID())')
+          # Provision through the verified owned container, not an arbitrary DB URL.
+          docker exec -i "$container_id" psql -U postgres -d server -v ON_ERROR_STOP=1 -v environment_id="$environment_id" <<'SQL'
+          CREATE TABLE public.alga_test_environment_ownership (
+            singleton boolean PRIMARY KEY CHECK (singleton),
+            environment_id uuid NOT NULL,
+            database_name text NOT NULL
+          );
+          INSERT INTO public.alga_test_environment_ownership
+            VALUES (true, :'environment_id'::uuid, current_database());
+          SQL
+          echo "E2E_DATABASE_ID=$environment_id" >> "$GITHUB_ENV"
+
+      - name: Run API E2E tests with execution reconciliation
+        if: ${{ !cancelled() && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 15
+        env:
+          TEST_API_BASE_URL: http://127.0.0.1:3000
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: server
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+        run: node scripts/run-additional-workspace-tests.mjs api-e2e
+
+      - name: Upload API execution evidence
+        if: ${{ always() && steps.api_dependencies.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-api-${{ matrix.edition }}
+          path: test-results/api-e2e/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Collect all container logs on failure
         if: failure() && steps.install_docker_compose.outcome == 'success'

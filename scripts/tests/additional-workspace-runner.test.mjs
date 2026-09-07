@@ -12,6 +12,7 @@ for (const [suite, directory, include, customConfig] of [
   ['nx-tooling', 'tools/nx-tests', 'tools/nx-tests', 'tools/nx-tests/vitest.config.ts'],
   ['ui-kit-showcase', 'ee/extensions/samples/ui-kit-showcase/test', 'test', 'ee/extensions/samples/ui-kit-showcase/vitest.config.ts'],
   ['workspace-unit', 'sdk', '../sdk'],
+  ['api-e2e', 'server/src/test/e2e/api', 'src/test/e2e/api'],
   ['server-colocated', 'server/src/lib', 'src/lib'],
   ['enterprise-unit', 'ee/server/src/__tests__/unit', 'src/__tests__/unit'],
   ['enterprise-integration', 'ee/server/src/__tests__/integration', 'src/__tests__/integration'],
@@ -30,12 +31,13 @@ for (const [suite, directory, include, customConfig] of [
     symlinkSync(path.join(repository, 'server/node_modules'), path.join(root, 'ee/extensions/samples/ui-kit-showcase/node_modules'), 'dir');
   }
   writeFileSync(path.join(root, '.gitignore'), 'node_modules/\ntest-results/\n');
+  const suffix = suite === 'api-e2e' ? 'e2e.test.ts' : 'test.ts';
   const configure = (include) => writeFileSync(path.join(root,
     customConfig ?? (suite.startsWith('enterprise-') ? `ee/server/vitest.${suite.slice('enterprise-'.length)}.config.ts`
       : suite === 'ai-gateway' ? 'services/ai-gateway/vitest.config.ts' : `server/vitest.${suite}.config.ts`)),
     `export default ${JSON.stringify({ test: { include, globals: true, environment: 'node', pool: 'forks', fileParallelism: false, maxWorkers: 1 } })};`);
-  configure([`${include}/**/*.test.ts`]);
-  const example = path.join(root, directory, 'example.test.ts');
+  configure([`${include}/**/*.${suffix}`]);
+  const example = path.join(root, directory, `example.${suffix}`);
   writeFileSync(example, "test('saves the result', () => expect(2 + 2).toBe(4));\n");
   if (suite === 'enterprise-integration') {
     writeFileSync(path.join(root, 'server/migration-helper.cjs'), 'module.exports = (amount) => amount * 2;');
@@ -94,12 +96,12 @@ for (const [suite, directory, include, customConfig] of [
   assert.equal(current.evidence.expectedTests.length, 1);
 
   // A runner that still passes its selected file cannot hide a newly added test.
-  configure([`${include}/example.test.ts`]);
-  const omitted = path.join(root, directory, 'omitted.test.ts');
+  configure([`${include}/example.${suffix}`]);
+  const omitted = path.join(root, directory, `omitted.${suffix}`);
   writeFileSync(omitted, "test('new behavior', () => expect(true).toBe(true));\n");
   current = run();
   assert.equal(current.result.status, 1);
-  assert.ok(current.evidence.failures.some((message) => message.includes(`No runner collects test: ${directory}/omitted.test.ts`)));
+  assert.ok(current.evidence.failures.some((message) => message.includes(`No runner collects test: ${directory}/omitted.${suffix}`)));
   rmSync(omitted);
 
   writeFileSync(example, "test.skip('saves the result', () => expect(2 + 2).toBe(4));\n");

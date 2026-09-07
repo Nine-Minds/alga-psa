@@ -110,7 +110,7 @@ export async function createTestTickets(
   count: number,
   defaults: Partial<TicketTestData> = {}
 ): Promise<any[]> {
-  const tickets = [];
+  const tickets: Awaited<ReturnType<typeof createTestTicket>>[] = [];
   for (let i = 0; i < count; i++) {
     const ticket = await createTestTicket(db, tenant, {
       ...defaults,
@@ -132,7 +132,7 @@ export async function createTestTicketSet(
   priorityIds: { low: string; medium: string; high: string },
   boardId: string
 ): Promise<any[]> {
-  const tickets = [];
+  const tickets: Awaited<ReturnType<typeof createTestTicket>>[] = [];
 
   // Create tickets with different statuses
   tickets.push(await createTestTicket(db, tenant, {
@@ -205,7 +205,7 @@ export async function createTicketsForPagination(
   boardId: string,
   count: number = 30
 ): Promise<any[]> {
-  const tickets = [];
+  const tickets: Awaited<ReturnType<typeof createTestTicket>>[] = [];
   const baseTime = Date.now();
 
   for (let i = 0; i < count; i++) {

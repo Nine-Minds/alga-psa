@@ -39,6 +39,10 @@ export function isApplianceNodeTest(file) {
 // These roots are not covered by the server unit command or package-local
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
+  if (lane === 'api-e2e') {
+    return /^server\/src\/test\/e2e\/api\//.test(file)
+      && /\.e2e\.test\.ts$/.test(file);
+  }
   if (lane === 'nx-tooling') {
     return /^tools\/nx-tests\//.test(file) && /\.(test|spec)\.[cm]?[jt]sx?$/.test(file);
   }

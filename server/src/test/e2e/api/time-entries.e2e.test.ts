@@ -734,7 +734,21 @@ describe('Time Entries API E2E Tests', () => {
     });
   });
 
-  describe.skip('Approval Workflow', () => {
+  describe('Approval Workflow', () => {
+    beforeEach(async () => {
+      const role = await tenantTable('user_roles').where({ user_id: env.userId }).first();
+      expect(role).toBeDefined();
+      let permission = await tenantTable('permissions').where({ resource: 'time_entry', action: 'approve' }).first();
+      if (!permission) {
+        [permission] = await tenantTable('permissions').insert({
+          tenant: env.tenant, permission_id: uuidv4(), resource: 'time_entry', action: 'approve',
+        }).returning('*');
+      }
+      await tenantTable('role_permissions').insert({
+        tenant: env.tenant, role_id: role.role_id, permission_id: permission.permission_id,
+      }).onConflict(['tenant', 'role_id', 'permission_id']).ignore();
+    });
+
     it('should approve time entries', async () => {
       const ticket = await createTestTicket(env.db, env.tenant, {
         client_id: env.clientId,
@@ -745,7 +759,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create multiple entries with SUBMITTED status
-      const entries = [];
+      const entries: string[] = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
@@ -763,6 +777,11 @@ describe('Time Entries API E2E Tests', () => {
       
       assertSuccess(response);
       expect(response.data.data.approved_count).toBe(2);
+      const persisted = await env.db('time_entries')
+        .where({ tenant: env.tenant }).whereIn('entry_id', entries)
+        .select('entry_id', 'approval_status');
+      expect(persisted).toHaveLength(2);
+      expect(persisted.every(entry => entry.approval_status === 'APPROVED')).toBe(true);
     });
 
     it('should reject invalid entry IDs for approval', async () => {
@@ -934,7 +953,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create entries
-      const entryIds = [];
+      const entryIds: string[] = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,
@@ -969,7 +988,7 @@ describe('Time Entries API E2E Tests', () => {
       const service = await createTestService(env.db, env.tenant);
       
       // Create entries
-      const entries = [];
+      const entries: string[] = [];
       for (let i = 0; i < 2; i++) {
         const entry = await createTestTimeEntry(env.db, env.tenant, {
           work_item_id: ticket.ticket_id,

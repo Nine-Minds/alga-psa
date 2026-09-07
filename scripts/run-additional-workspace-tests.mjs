@@ -12,6 +12,7 @@ import { normalizeTestFile } from './lib/test-execution-evidence.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const suite = process.argv[2];
 const settings = {
+  'api-e2e': { directory: 'server', config: 'vitest.api-e2e.config.ts' },
   'nx-tooling': { directory: '.', config: 'tools/nx-tests/vitest.config.ts' },
   'ui-kit-showcase': { directory: 'ee/extensions/samples/ui-kit-showcase', config: 'vitest.config.ts',
     vitest: 'ee/extensions/samples/ui-kit-showcase/node_modules/vitest/vitest.mjs' },
