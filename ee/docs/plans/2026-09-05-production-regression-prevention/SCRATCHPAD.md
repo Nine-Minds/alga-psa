@@ -1286,3 +1286,20 @@
 - Native browser artifacts show collection failure in invoice-ticket-ownership.spec.ts due to transitive @js-temporal/polyfill dependency missing from standalone browser install. Browser assertions did not run.
 - Replaced the application helper import with explicit API selector fixture data. Reproduced before-failure in /tmp without root dependencies; after-fix collection passes 23 CE and 25 EE cases across 14 files.
 - Added standalone browser collection before image builds and required its success in the stable aggregate check. Native verification pending. Evidence: evidence/browser-standalone-collection.json.
+
+### 2026-09-07 — Enterprise API identifies session-dependent tier check
+
+- Completed enterprise job 101670277273: 334 API cases passed, extension install failed (expected 202, received 403). Direct jobs/logs API returned the terminal log while gh run view refused until the whole workflow ends.
+- Extension API route uses browser-session assertTierAccess despite API-key identity. Changed to assertTenantTierAccess with req.context.tenant; added lower-tier denial with no install side effect before the Pro success assertion. Validation pending.
+- Combined Citus runtime gate active in session 69541, log /tmp/alga-citus-combined-runtime-gate.log, committed revision 9f52acb702. Do not commit during its revision-consistency check.
+
+### 2026-09-07 — Extension API fixture and tenant policy validation
+
+- simpleRoleSetup does not grant extension:write; added that explicit grant and a revoked-permission denial assertion in the extension API case. Separately assert Essentials tier denial with TIER_ACCESS_DENIED before restoring fixture Pro plan and installing. Solo permits extensions, so it is not a valid denied-tier fixture.
+- Four route behavioral tests pass with the API-tenant tier check; the original session-based route fails three, proving it can both borrow another tenant tier and deny a licensed API tenant based on an unrelated session. Null session resolves to Pro by existing policy, so missing-session alone did not reproduce the native 403.
+- Both previous production browser jobs are terminal; community API result inspection pending. Combined Citus session 69541 still active.
+
+### 2026-09-07 — Combined Citus gate verifies all eight cases
+
+- Session 69541 completed: two required files, eight passed, zero failures/skips/todos/pending, and exact collected/executed identities. Duration 631.50 seconds; evidence/citus-combined-runtime.json.
+- Community API job 101670277218 had 334 passes and one 20-second timeout in explicit client/contact/user reactivation. Parallelized its five independent final reads into one group and retained all active-state checks plus explicit response status assertions; no timeout increase. Native runtime verification still pending.

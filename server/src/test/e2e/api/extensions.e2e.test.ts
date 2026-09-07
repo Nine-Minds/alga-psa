@@ -7,6 +7,7 @@ import {
   stopApiServerIfStarted,
 } from '../utils/apiServerManager';
 import { setupE2ETestEnvironment, type E2ETestEnvironment } from '../utils/e2eTestSetup';
+import { grantTestUserPermission, withoutTestUserPermission } from '../utils/simpleRoleSetup';
 
 const apiBaseUrl = resolveApiBaseUrl(process.env.TEST_API_BASE_URL);
 
@@ -80,6 +81,7 @@ describe('Extensions API – Install endpoint', () => {
       return;
     }
     expect(extensionsTablesAvailable).toBe(true);
+    await grantTestUserPermission(env.db, env.userId, env.tenant, 'extension', 'write');
 
     const registryId = randomUUID();
     const versionId = randomUUID();
@@ -109,6 +111,26 @@ describe('Extensions API – Install endpoint', () => {
       created_at: new Date(),
     });
 
+    await withoutTestUserPermission(env.db, env.userId, env.tenant, 'extension', 'write', async () => {
+      const denied = await env.apiClient.post('/api/v1/extensions/install', { registryId, version });
+      expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+      expect(denied.data).toMatchObject({ error: { message: 'Permission denied: Cannot write extension' } });
+      expect(await env.db('tenant_extension_install').where({ tenant_id: env.tenant, registry_id: registryId }).first()).toBeUndefined();
+    });
+
+    // API-key requests have no browser session. Licensing must use the
+    // authenticated tenant, and still refuse installations on a lower tier.
+    const tenantRow = await env.db('tenants').where({ tenant: env.tenant }).first();
+    await env.db('tenants').where({ tenant: env.tenant }).update({ plan: 'essentials' });
+    try {
+      const denied = await env.apiClient.post('/api/v1/extensions/install', { registryId, version });
+      expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+      expect(denied.data).toMatchObject({ error: { code: 'TIER_ACCESS_DENIED' } });
+      expect(await env.db('tenant_extension_install').where({ tenant_id: env.tenant, registry_id: registryId }).first()).toBeUndefined();
+    } finally {
+      await env.db('tenants').where({ tenant: env.tenant }).update({ plan: tenantRow.plan });
+    }
+
     const response = await env.apiClient.post('/api/v1/extensions/install',
       { registryId, version },
       {
@@ -118,7 +140,7 @@ describe('Extensions API – Install endpoint', () => {
       },
     );
 
-    expect(response.status).toBe(202);
+    expect(response.status, JSON.stringify(response.data)).toBe(202);
     expect(response.ok).toBe(true);
 
     const payload = response.data as { data?: any };

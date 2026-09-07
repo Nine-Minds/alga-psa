@@ -691,23 +691,21 @@ describe('Clients API E2E Tests', () => {
       ]);
       expect(reactivatedRecords.map(response => response.status)).toEqual([200, 200, 200, 200]);
 
-      // Verify everything is now active
-      const activeClientResponse = await env.apiClient.get(`/api/v1/clients/${clientId}`);
-      expect(activeClientResponse.data.data.is_inactive).toBe(false);
-
-      const [activeContact1Response, activeContact2Response] = await Promise.all([
+      // These independent reads verify the same final state in one request
+      // group; serial groups add avoidable network latency to this long journey.
+      const [activeClientResponse, activeContact1Response, activeContact2Response,
+        activeUser1Response, activeUser2Response] = await Promise.all([
+        env.apiClient.get(`/api/v1/clients/${clientId}`),
         env.apiClient.get(`/api/v1/contacts/${contact1Id}`),
         env.apiClient.get(`/api/v1/contacts/${contact2Id}`),
-      ]);
-      expect(activeContact1Response.data.data.is_inactive).toBe(false);
-      expect(activeContact2Response.data.data.is_inactive).toBe(false);
-
-      const [activeUser1Response, activeUser2Response] = await Promise.all([
         env.apiClient.get(`/api/v1/users/${user1Id}`),
         env.apiClient.get(`/api/v1/users/${user2Id}`),
       ]);
-      expect(activeUser1Response.data.data.is_inactive).toBe(false);
-      expect(activeUser2Response.data.data.is_inactive).toBe(false);
+      for (const response of [activeClientResponse, activeContact1Response,
+        activeContact2Response, activeUser1Response, activeUser2Response]) {
+        expect(response.status, JSON.stringify(response.data)).toBe(200);
+        expect(response.data.data.is_inactive).toBe(false);
+      }
     });
   });
 
