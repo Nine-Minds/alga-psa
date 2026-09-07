@@ -1943,3 +1943,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Replaced fresh-install's outcome-only shell gate with raw browser/API artifact verification for both editions. Required files come from the gate checkout; browser edition metadata must match. It independently recomputes change selection, checks build/collection/browser outcomes, preserves an aggregate decision, and requires complete artifacts on runtime changes. Documentation-only selection is explicit and still requires the existing successful browser no-op jobs.
 - Added two file-artifact behavioral tests covering four successful lanes, uncollected new browser files, cancelled builds, missing enterprise API results and selection/no-op failures. Combined candidate/artifact/fresh-install tests passed 9/9 before adding edition metadata enforcement; the two fresh-install cases passed afterward. Native wiring has not run yet. This completes local wiring for the fresh-install aggregate only; repository-wide gate and protections remain open.
+
+### 2026-09-07 — full tooling validation after aggregate wiring
+
+- Complete tooling runner passed 486 cases across 46 required files, zero failures/skips/cancellations, 122.26 seconds on clean c704e97ad5. This includes newly added aggregate/artifact/source-capture tests and all existing tooling fixtures. Evidence: evidence/node-tooling-local-c704.json; /tmp/alga-node-tooling-c704.log.
+- actionlint passed both edited workflows with shellcheck disabled. Native integration job 101729712868 remains in_progress as of 13:40 UTC; pending publication is intentionally preserving its terminal evidence. No full-plan completion claim.
