@@ -31,6 +31,8 @@ on:
       - 'ee/packages/**'
       - 'server/package.json'
       - 'scripts/run-citus-runtime-tests.mjs'
+      - 'scripts/verify-citus-execution.mjs'
+      - 'scripts/tests/citus-execution.test.mjs'
       - 'scripts/run-additional-workspace-tests.mjs'
       - 'scripts/lib/**'
       - 'ee/server/seeds/**'
@@ -53,6 +55,8 @@ on:
       - 'ee/packages/**'
       - 'server/package.json'
       - 'scripts/run-citus-runtime-tests.mjs'
+      - 'scripts/verify-citus-execution.mjs'
+      - 'scripts/tests/citus-execution.test.mjs'
       - 'scripts/run-additional-workspace-tests.mjs'
       - 'scripts/lib/**'
       - 'ee/server/seeds/**'
@@ -209,4 +213,40 @@ jobs:
         with:
           name: citus-runtime
           path: test-results/citus-runtime/
+          if-no-files-found: error
+
+  citus-complete:
+    name: Citus execution complete
+    needs: [citus-migrate]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CITUS_JOB_RESULT: ${{ needs.citus-migrate.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download distributed runtime evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: citus-runtime
+          path: test-results/citus-input/citus-runtime
+      - name: Download tenant database evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: temporal-database-execution
+          path: test-results/citus-input/temporal-database
+      - name: Independently verify complete candidate execution
+        if: always()
+        run: node scripts/verify-citus-execution.mjs
+      - name: Upload Citus aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: citus-aggregate
+          path: test-results/citus-gate/
           if-no-files-found: error

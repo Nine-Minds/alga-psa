@@ -2252,3 +2252,10 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Reviewed and removed debug-login-details, debug-successful-login and debug-tenant-auth. They printed credentials, request payloads or observations but asserted no login outcome. Canonical login and portal-identity suites assert success, rejection, session persistence and tenant boundaries. Duplicate-email behavior is not claimed as covered.
 - Preserved basic-browser: it has synthetic-page harness assertions and requires separate classification. Historical evidence files remain unchanged.
 - Current canonical Playwright collection succeeds for both editions: community 37 tests/18 files, enterprise 41 tests/18 files. This is collection evidence only, not a new runtime pass. Mapping and artifact hashes: evidence/login-diagnostics-retirement.json. No broad plan flags changed.
+
+### 2026-09-07 — independently verify both Citus execution bundles
+
+- Added an always-running aggregate job within the Citus workflow. It downloads raw Citus runtime and Temporal database reports separately and verifies candidate identity, clean source, full selection, required file inventory and actual assertion outcomes. Producer job success alone cannot satisfy it.
+- Consumer-owned floors require both runtime files and all six tenant database files even if a producer collection/configuration drops one. Read failures are accumulated so both bundles receive diagnostics; CLI always overwrites the aggregate verdict on failure.
+- Actual CLI fixture regression exercises passing artifacts, omitted files in each lane, skipped assertions, filtered selection, malformed/missing reports, unsuccessful job states, stale candidate and dirty checkout. Focused Citus/workspace database gate tests and actionlint pass. Evidence: evidence/citus-independent-gate.json.
+- Workflow remains path-triggered; native execution, effective protection and global gate completeness remain open. No broad plan flags changed.
