@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -8431,4 +8431,196 @@ it('rejects foreign-owner, legacy and malformed requester reply tokens instead o
   for (const request of [{ ...input, tenant: principal.tenant }, { ...input, token: randomUUID() }, { ...input, token: 'cm1:invalid' },
     { ...input, senderAuth: {} as any }]) await expect(reply(db, request, writer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(writer).not.toHaveBeenCalled();
+}));
+
+async function withRequesterEmailQueueFixture(work: (fixture: Parameters<Parameters<typeof withRequesterEmailAuthorityFixture>[0]>[0] & {
+  request: import('../../../../packages/co-managed/src/requesterEmailDeliveries').CoManagedRequesterEmailRequest;
+  enqueue: typeof import('../../../../packages/co-managed/src/requesterEmailDeliveries').enqueueCoManagedRequesterEmailDelivery;
+  processEmail: typeof import('../../../../packages/co-managed/src/requesterEmailDeliveries').processCoManagedRequesterEmailDeliveries;
+}) => Promise<void>) {
+  await withRequesterEmailAuthorityFixture(async fixture => {
+    const { enqueueCoManagedRequesterEmailDelivery: enqueue, processCoManagedRequesterEmailDeliveries: processEmail } = await import('../../../../packages/co-managed/src/requesterEmailDeliveries');
+    await work({ ...fixture, enqueue, processEmail, request: { ownerTenant: fixture.resource.tenant, ticketId: fixture.resource.id, commentId: fixture.commentId, eventId: randomUUID() } });
+  });
+}
+
+it('commits requester email tokens before transport and lets concurrent queue workers complete a recipient once', async () => withRequesterEmailQueueFixture(async ({
+  customer, resource, commentId, contactId, request, enqueue, processEmail,
+}) => {
+  await Promise.all([enqueue(db, request), enqueue(db, request)]);
+  const queued = await customer.table('co_management_requester_email_deliveries'); expect(queued).toHaveLength(1);
+  expect(queued[0]).toMatchObject({ recipient_kind: 'requester_contact', recipient_id: contactId, status: 'pending' });
+  expect(queued[0]).not.toHaveProperty('email'); expect(queued[0]).not.toHaveProperty('note');
+  expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(0);
+  await customer.table('comments').where('comment_id', commentId).update({ note: 'Current requester email body' });
+  const send = vi.fn(async delivery => {
+    // This uses another pooled connection. An uncommitted token would be absent.
+    const token = await customer.table('co_management_requester_reply_tokens').where('token', delivery.replyToken).first();
+    expect(token).toMatchObject({ recipient_id: contactId, recipient_email: 'requester@example.test', delivery_key: queued[0].delivery_key });
+    expect(delivery.message.note).toBe('Current requester email body'); expect(delivery.recipient.kind).toBe('requester_contact');
+    return { status: 'delivered' as const };
+  });
+  await Promise.all([processEmail(db, resource.tenant, send), processEmail(db, resource.tenant, send)]);
+  expect(send).toHaveBeenCalledTimes(1);
+  await processEmail(db, resource.tenant, send); expect(send).toHaveBeenCalledTimes(1);
+  expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject({ status: 'delivered', attempt_count: 1, next_attempt_at: null });
+}));
+
+it('reloads requester email content and address on retries with address-bound tokens and a stable Message-ID', async () => withRequesterEmailQueueFixture(async ({
+  customer, resource, contactId, commentId, request, enqueue, processEmail,
+}) => {
+  await enqueue(db, request);
+  const send = vi.fn().mockResolvedValueOnce({ status: 'failed', retryable: true, errorCode: 'provider_unavailable' }).mockResolvedValueOnce({ status: 'delivered' });
+  await processEmail(db, resource.tenant, send);
+  const first = send.mock.calls[0][0];
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: 'changed-requester@example.test' });
+  await customer.table('comments').where('comment_id', commentId).update({ note: 'Updated body after retry' });
+  await customer.table('co_management_requester_email_deliveries').update({ next_attempt_at: '2020-01-01T00:00:00Z' });
+  await processEmail(db, resource.tenant, send);
+  const second = send.mock.calls[1][0];
+  expect(second).toMatchObject({ email: 'changed-requester@example.test', messageId: first.messageId, message: { note: 'Updated body after retry' } });
+  expect(second.replyToken).not.toBe(first.replyToken);
+  expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(2);
+  expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject({ status: 'delivered', attempt_count: 2 });
+}));
+
+it.each(['inactive_contact', 'inactive_client', 'private_thread', 'deleted_comment', 'notifications_disabled', 'subtype_disabled', 'category_disabled'] as const)(
+  'suppresses queued requester email after %s without issuing a token', async condition => withRequesterEmailQueueFixture(async ({
+    customer, resource, operation, contactId, commentId, request, enqueue, processEmail,
+  }) => {
+    await enqueue(db, request);
+    if (condition === 'inactive_contact') await customer.table('contacts').where('contact_name_id', contactId).update({ is_inactive: true });
+    if (condition === 'inactive_client') await customer.table('clients').where('client_id', operation.customer_client_id).update({ is_inactive: true });
+    if (condition === 'private_thread') await customer.table('comment_threads').where('ticket_id', resource.id).update({ collaboration_audience: 'organization_private', is_internal: true });
+    if (condition === 'deleted_comment') await customer.table('comments').where('comment_id', commentId).update({ deleted_at: new Date() });
+    if (condition === 'notifications_disabled') {
+      if (await customer.table('notification_settings').first()) await customer.table('notification_settings').update({ is_enabled: false });
+      else await customer.table('notification_settings').insert({ tenant: resource.tenant, is_enabled: false });
+    }
+    if (condition === 'subtype_disabled' || condition === 'category_disabled') {
+      const subtype = await customer.table('notification_subtypes').where('name', 'Ticket Comment Added').first();
+      expect(subtype).toBeTruthy();
+      const table = condition === 'subtype_disabled' ? 'tenant_notification_subtype_settings' : 'tenant_notification_category_settings';
+      const key = condition === 'subtype_disabled' ? { subtype_id: subtype.id } : { category_id: subtype.category_id };
+      if (await customer.table(table).where(key).first()) await customer.table(table).where(key).update({ is_enabled: false });
+      else await customer.table(table).insert({ tenant: resource.tenant, ...key, is_enabled: false });
+    }
+    const send = vi.fn(); await processEmail(db, resource.tenant, send); expect(send).not.toHaveBeenCalled();
+    expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(0);
+    expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject({ status: 'skipped', attempt_count: 1 });
+  }));
+
+it('retains the first requester identity on event replay and does not reroute an old delivery to a new default location', async () => withRequesterEmailQueueFixture(async ({
+  customer, resource, operation, request, enqueue, processEmail, makeLocation,
+}) => {
+  await enqueue(db, request);
+  const original = await customer.table('co_management_requester_email_deliveries').first();
+  await customer.table('tickets').where('ticket_id', resource.id).update({ contact_name_id: null });
+  await customer.table('client_locations').where('client_id', operation.customer_client_id).update({ is_default: false }); await makeLocation();
+  await enqueue(db, request);
+  expect(await customer.table('co_management_requester_email_deliveries').first()).toEqual(original);
+  const send = vi.fn(); await processEmail(db, resource.tenant, send); expect(send).not.toHaveBeenCalled();
+  expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject({ status: 'skipped' });
+  await enqueue(db, { ...request, eventId: randomUUID() });
+  const next = vi.fn().mockResolvedValue({ status: 'delivered' }); await processEmail(db, resource.tenant, next);
+  expect(next).toHaveBeenCalledTimes(1); expect(next.mock.calls[0][0].recipient.kind).toBe('requester_location');
+}));
+
+it('keeps requester email token, source and identity locks through transport and preserves retry exhaustion after departure', async () => withRequesterEmailQueueFixture(async ({
+  customer, resource, contactId, commentId, request, enqueue, processEmail,
+}) => {
+  await enqueue(db, request);
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  const heldLocks: boolean[] = [];
+  const send = vi.fn(async delivery => {
+    for (const [table, where] of [
+      ['contacts', { contact_name_id: contactId }], ['comments', { comment_id: commentId }], ['tickets', { ticket_id: resource.id }],
+      ['co_management_requester_reply_tokens', { token: delivery.replyToken }],
+    ] as const) heldLocks.push(await db.transaction(trx => tenantDb(trx, resource.tenant).table(table).where(where).forUpdate().noWait().first()).then(() => false, error => error.code === '55P03'));
+    throw new Error('SMTP accepted but acknowledgement lost');
+  });
+  await processEmail(db, resource.tenant, send);
+  await customer.table('co_management_requester_email_deliveries').update({ next_attempt_at: '2020-01-01T00:00:00Z', attempt_count: 9 });
+  await processEmail(db, resource.tenant, send); await processEmail(db, resource.tenant, send);
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(heldLocks).toEqual(Array(8).fill(true));
+  expect(send.mock.calls[0][0].replyToken).toBe(send.mock.calls[1][0].replyToken);
+  expect(send.mock.calls[0][0].messageId).toBe(send.mock.calls[1][0].messageId);
+  expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject({ status: 'failed', attempt_count: 10, error_code: 'email_transport_failed', next_attempt_at: null });
+}));
+
+it.each(['expires_at', 'revoked_at'] as const)('does not resurrect requester email tokens after %s during a retry', async field => withRequesterEmailQueueFixture(async ({
+  customer, resource, request, enqueue, processEmail,
+}) => {
+  await enqueue(db, request);
+  const send = vi.fn().mockResolvedValue({ status: 'failed', retryable: true, errorCode: 'provider_down' });
+  await processEmail(db, resource.tenant, send);
+  await customer.table('co_management_requester_reply_tokens').update({ [field]: '2000-01-01T00:00:00Z' });
+  await customer.table('co_management_requester_email_deliveries').update({ next_attempt_at: '2020-01-01T00:00:00Z' });
+  await processEmail(db, resource.tenant, send); expect(send).toHaveBeenCalledTimes(1);
+  expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject({ status: 'skipped', attempt_count: 2 });
+  expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(1);
+}));
+
+it('rolls back requester email discovery with its owning transaction and requires a root recovery connection', async () => withRequesterEmailQueueFixture(async ({
+  customer, resource, request, enqueue, processEmail,
+}) => {
+  await expect(db.transaction(async trx => { await enqueue(trx, request); throw new Error('rollback requester discovery'); })).rejects.toThrow('rollback requester discovery');
+  expect(await customer.table('co_management_requester_email_deliveries')).toHaveLength(0);
+  expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(0);
+  const send = vi.fn();
+  await db.transaction(async trx => { await expect(processEmail(trx, resource.tenant, send)).rejects.toThrow('recovery scope'); });
+  for (const limit of [0, -1, 301, 1.5]) await expect(processEmail(db, resource.tenant, send, { limit })).rejects.toThrow('recovery scope');
+  expect(send).not.toHaveBeenCalled();
+  await enqueue(db, request);
+  const migration = require('../../../migrations/20260907060000_create_co_management_requester_email_deliveries.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained requester email');
+}));
+
+it.each(['address', 'audience', 'revocation', 'preferences'] as const)('rechecks requester email %s changes between token commit and delivery', async change => withRequesterEmailQueueFixture(async ({
+  customer, resource, request, contactId, commentId, enqueue, processEmail,
+}) => {
+  if (change === 'preferences' && !await customer.table('notification_settings').first()) await customer.table('notification_settings').insert({ tenant: resource.tenant, is_enabled: true });
+  await enqueue(db, request);
+  if (change === 'revocation') {
+    await processEmail(db, resource.tenant, async () => ({ status: 'failed', retryable: true, errorCode: 'prepare_revocation_retry' }));
+    await customer.table('co_management_requester_email_deliveries').update({ next_attempt_at: '2020-01-01T00:00:00Z' });
+  }
+  const tokens = await import('../../../../packages/co-managed/src/requesterReplyTokens');
+  const original = tokens.issueCoManagedRequesterReplyToken;
+  let mutation: Promise<void> | undefined, mutationPid: number | undefined;
+  const source = await customer.table('comments').where('comment_id', commentId).first('thread_id');
+  const issue = vi.spyOn(tokens, 'issueCoManagedRequesterReplyToken').mockImplementationOnce(async (...args) => {
+    const issued = await original(...args);
+    // Queue a real authority change behind the preparation transaction's locks.
+    // Waiting until PostgreSQL reports it blocked makes the phase race explicit.
+    mutation = db.transaction(async trx => {
+      mutationPid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+      const owner = tenantDb(trx, resource.tenant);
+      if (change === 'address') await owner.table('contacts').where('contact_name_id', contactId).update({ email: 'between-phases@example.test' });
+      if (change === 'audience') await owner.table('comment_threads').where('thread_id', source.thread_id).update({ collaboration_audience: 'organization_private', is_internal: true });
+      if (change === 'revocation') await owner.table('co_management_requester_reply_tokens').where('token', issued!.token).update({ revoked_at: new Date() });
+      if (change === 'preferences') await owner.table('notification_settings').update({ is_enabled: false });
+    });
+    await vi.waitFor(async () => {
+      expect(mutationPid).toBeDefined();
+      expect((await db('pg_stat_activity').where('pid', mutationPid!).first('wait_event_type'))?.wait_event_type).toBe('Lock');
+    });
+    return issued;
+  });
+  const send = vi.fn().mockResolvedValue({ status: 'delivered' });
+  try {
+    await processEmail(db, resource.tenant, send); await mutation;
+    expect(send).not.toHaveBeenCalled();
+    expect(await customer.table('co_management_requester_email_deliveries').first()).toMatchObject(change === 'address'
+      ? { status: 'pending', error_code: 'requester_address_changed', attempt_count: 1 }
+      : { status: 'skipped', attempt_count: change === 'revocation' ? 2 : 1 });
+    if (change === 'address') {
+      await customer.table('co_management_requester_email_deliveries').update({ next_attempt_at: '2020-01-01T00:00:00Z' });
+      await processEmail(db, resource.tenant, send);
+      expect(send).toHaveBeenCalledTimes(1); expect(send.mock.calls[0][0].email).toBe('between-phases@example.test');
+      expect(await customer.table('co_management_requester_reply_tokens')).toHaveLength(2);
+    }
+  } finally { issue.mockRestore(); await mutation; }
 }));
