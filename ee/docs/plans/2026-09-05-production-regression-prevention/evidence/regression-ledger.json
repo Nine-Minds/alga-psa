@@ -63,12 +63,24 @@
         "passed": 4,
         "assertion": "Required options remain available with a scoped warning, successful refresh clears the warning, and required client-loading failure remains fatal."
       },
-      "status": "focused-fix-verified-browser-after-pending",
+      "status": "local-before-and-after-verified-historical-native-after-passed",
       "limits": [
         "Focused component tests mock action responses and the child form.",
-        "The real browser after-fix journey must run against the fix image; collection is not execution.",
-        "This newly discovered issue has no supplied production incident identifier."
-      ]
+        "Historical native Finance manual-invoice flow passes in both editions; it does not independently assert the absence of sales-order permissions.",
+        "No supplied production incident identifier. Historical after-fix evidence does not replace current-candidate CI."
+      ],
+      "nativeAfter": {
+        "evidence": "regression-native-after-audit-d8cf.json",
+        "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+        "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+        "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+        "editions": [
+          "community",
+          "enterprise"
+        ],
+        "status": "passed-first-attempt",
+        "currentCandidateReadiness": false
+      }
     },
     {
       "id": "manual-invoice-entered-number",
@@ -107,12 +119,24 @@
         "databaseSuitePassed": 16,
         "assertion": "Custom number persists, blank input still allocates, duplicate-number retry returns INVOICE_NUMBER_CONFLICT and rolls back with identical invoice, charge and transaction rows."
       },
-      "status": "focused-fix-verified-browser-after-pending",
+      "status": "local-before-and-after-verified-historical-native-after-passed",
       "limits": [
         "The before action test uses a database mock; the after duplicate retry additionally uses real migrated PostgreSQL.",
-        "The complete UI-to-PDF after-fix journey is pending native production CI.",
-        "This newly discovered issue has no supplied production incident identifier."
-      ]
+        "Historical native manual-invoice flow verifies the entered number, finalized download and retry effects in both editions.",
+        "No supplied production incident identifier. Historical after-fix evidence does not replace current-candidate CI."
+      ],
+      "nativeAfter": {
+        "evidence": "regression-native-after-audit-d8cf.json",
+        "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+        "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+        "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+        "editions": [
+          "community",
+          "enterprise"
+        ],
+        "status": "passed-first-attempt",
+        "currentCandidateReadiness": false
+      }
     },
     {
       "id": "recurring-invoice-approval-remediation",
@@ -465,12 +489,22 @@
         "command": "node node_modules/vitest/vitest.mjs run src/test/unit/calendar/calendarActions.sync.test.ts",
         "defect": "In an isolated checkout before the fix, copy the permanent action test and execute it against the unconditional registration implementation."
       },
-      "status": "local-before-and-after-verified-native-pending",
+      "status": "local-before-and-after-verified-historical-native-after-passed",
       "limits": [
-        "Focused tests mock provider/DB/sync boundaries. Native browser assertions additionally require stable persisted subscription identity, successful callback delivery and corrected DB/UI state.",
-        "The replacement explains a potential stranded-notification race; rebuilt browser validation must establish resolution of the observed native timeout.",
-        "No production incident identifier was supplied."
-      ]
+        "Focused tests mock provider/DB/sync boundaries. Three historical EE native cases additionally verify preserved subscription identity, callback delivery and corrected DB/UI state after outage, permission denial and throttling.",
+        "No production incident identifier was supplied. Historical after-fix evidence does not replace current-candidate CI."
+      ],
+      "nativeAfter": {
+        "evidence": "regression-native-after-audit-d8cf.json",
+        "revision": "3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f",
+        "headRevision": "d8cf156c731bdfb9414ee6435152a676e0bcecf4",
+        "runUrl": "https://github.com/Nine-Minds/alga-psa/actions/runs/34118119011",
+        "editions": [
+          "enterprise"
+        ],
+        "status": "passed-first-attempt",
+        "currentCandidateReadiness": false
+      }
     }
   ]
 }
