@@ -1846,6 +1846,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent, opts?: I
  */
 async function handleTicketCommentUpdated(event: TicketCommentUpdatedEvent): Promise<void> {
   const { payload } = event;
+  // Qualified edit/delete events are content-free invalidations. Their current
+  // content is read through the shared inbox boundary, never a cached mention.
+  if (payload.collaborationMutation) return;
   const { tenantId, ticketId, userId, oldComment, newComment } = payload;
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentUpdated START', {

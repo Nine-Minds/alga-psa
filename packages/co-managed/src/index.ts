@@ -19,3 +19,4 @@ export * from './ticketCommentNotification';
 export * from './ticketCommentRecipients';
 export * from './storedCommentNotification';
 export { assertCoManagedSessionUnexpired } from './sharedWorkIdentity';
+export * from './ticketCommentMutation';

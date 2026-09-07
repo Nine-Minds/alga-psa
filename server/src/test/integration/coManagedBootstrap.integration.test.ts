@@ -6135,3 +6135,116 @@ it('excludes shared receipts and malformed shared metadata from client notificat
     expect(await portal.fetchNotificationActivities({ search: 'tickets' })).toEqual([]);
   });
 }));
+
+async function withCommentMutationFixture(work: (fixture: Parameters<Parameters<typeof withCommentCreationFixture>[0]>[0] & {
+  mutateComment: typeof import('../../lib/co-managed/mutateTicketComment').mutateSharedTicketComment;
+  publish: ReturnType<typeof vi.mocked<typeof import('@alga-psa/event-bus/publishers').publishEvent>>;
+}) => Promise<void>) {
+  await withCommentCreationFixture(async fixture => {
+    const { mutateSharedTicketComment: mutateComment } = await import('../../lib/co-managed/mutateTicketComment');
+    const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+    await work({ ...fixture, mutateComment, publish: vi.mocked(publishEvent) });
+  });
+}
+
+it('edits and deletes own qualified comments with exact-version retries, preserved audiences and metadata-only committed effects', async () => withCommentMutationFixture(async ({
+  principal, customerPrincipal, resource, customer, create, read, mutateComment, publish,
+}) => {
+  const created = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Original shared text' });
+  const reply = await create(customerPrincipal, { operationId: randomUUID(), parent: { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId }, text: 'Customer reply remains' });
+  const item = (await read(db, principal, resource)).items.find(row => row.commentId === created.commentId)!;
+  const command = { kind: 'edit' as const, operationId: randomUUID(), comment: { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId },
+    expectedUpdatedAt: item.updatedAt, text: 'Edited shared text' };
+  // Strict references deliberately exclude receipt-only fields.
+  const [first, retry] = await Promise.all([mutateComment(db, principal, resource, command), mutateComment(db, principal, resource, command)]);
+  expect(first).toEqual(retry); expect(first.updatedAt).toMatch(/\.\d{6}Z$/);
+  expect((await read(db, principal, resource)).items.find(row => row.commentId === created.commentId)).toMatchObject({ updatedAt: first.updatedAt, audience: 'shared_it', markdown: 'Edited shared text' });
+  await expect(mutateComment(db, principal, resource, { ...command, operationId: randomUUID() })).rejects.toMatchObject({ code: 'COMMENT_MUTATION_CONFLICT' });
+  await expect(mutateComment(db, principal, resource, { ...command, text: 'Different retry' })).rejects.toMatchObject({ code: 'COMMENT_MUTATION_OPERATION_CONFLICT' });
+  const deletion = { kind: 'delete' as const, operationId: randomUUID(), comment: command.comment, expectedUpdatedAt: first.updatedAt };
+  const deleted = await mutateComment(db, principal, resource, deletion);
+  expect(await mutateComment(db, principal, resource, deletion)).toEqual(deleted);
+  const stored = await customer.table('comments').where('comment_id', created.commentId).first();
+  expect(stored).toMatchObject({ note: '[deleted]', markdown_content: '[deleted]', user_id: null, actor_display_name: 'Morgan Provider', is_internal: true });
+  expect(stored.deleted_at).not.toBeNull();
+  const { ticketCommentIndexer } = await import('../../../../packages/search/src/indexers/ticket_comment');
+  const { verifyResultVisibility } = await import('../../../../packages/search/src/acl');
+  expect(await ticketCommentIndexer.loadOne(db, resource.tenant, created.commentId)).toBeNull();
+  expect((await ticketCommentIndexer.loadBatch(db, resource.tenant, null, 50)).map(row => row.objectId)).not.toContain(created.commentId);
+  expect(await verifyResultVisibility(db, { tenant: resource.tenant, userId: customerPrincipal.userId, isInternal: true,
+    permissions: ['ticket:read'], clientAccess: { mode: 'all' } }, [{ type: 'ticket_comment', id: created.commentId }])).toEqual([]);
+
+  expect(await customer.table('comment_threads').where('thread_id', created.threadId).first()).toMatchObject({ collaboration_audience: 'shared_it', reply_count: 1 });
+  expect(await customer.table('comments').where('comment_id', reply.commentId).first()).toMatchObject({ markdown_content: 'Customer reply remains' });
+  const events = publish.mock.calls.map(call => call[0]).filter(event => ['TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED'].includes(event.eventType));
+  expect(events).toHaveLength(2);
+  expect(events[0].payload).toMatchObject({ actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant, userId: principal.userId },
+    commentId: created.commentId, collaborationMutation: { kind: 'edit', audience: 'shared_it', threadId: created.threadId } });
+  expect(events[0].payload).not.toHaveProperty('userId');
+  expect(JSON.stringify(events)).not.toContain('Original shared text'); expect(JSON.stringify(events)).not.toContain('Edited shared text');
+  const audit = await customer.table('ticket_audit_logs').where('entity_id', created.commentId).whereIn('event_type', ['TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED']);
+  expect(audit).toHaveLength(2); expect(JSON.stringify(audit)).not.toContain('Edited shared text');
+}));
+
+it('rejects other authors, forged stores, implicit disclosure and revoked authority while allowing customer-owned private edits', async () => withCommentMutationFixture(async ({
+  principal, customerPrincipal, resource, customer, create, read, mutateComment,
+}) => {
+  const foreign = await create(principal, { operationId: randomUUID(), audience: 'requester', text: 'MSP author' });
+  const own = await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private' });
+  const requestFor = async (actor: typeof principal, comment: typeof foreign) => ({ kind: 'edit' as const, operationId: randomUUID(),
+    comment: { storeTenant: comment.storeTenant, threadId: comment.threadId, commentId: comment.commentId },
+    expectedUpdatedAt: (await read(db, actor, resource)).items.find(row => row.commentId === comment.commentId)!.updatedAt, text: 'Edited' });
+  const foreignRequest = await requestFor(principal, foreign), localRequest = await requestFor(customerPrincipal, own);
+  await expect(mutateComment(db, customerPrincipal, resource, foreignRequest)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(mutateComment(db, principal, resource, localRequest)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(mutateComment(db, principal, resource, { ...foreignRequest, audience: 'shared_it' } as any)).rejects.toMatchObject({ code: 'INVALID_COMMENT_MUTATION' });
+  await expect(mutateComment(db, principal, resource, { ...foreignRequest, comment: { ...foreignRequest.comment, storeTenant: principal.tenant } })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const local = await mutateComment(db, customerPrincipal, resource, localRequest);
+  expect((await read(db, customerPrincipal, resource)).items.find(row => row.commentId === own.commentId)).toMatchObject({ audience: 'organization_private', updatedAt: local.updatedAt, markdown: 'Edited' });
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  await expect(mutateComment(db, principal, resource, foreignRequest)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('comments').where('comment_id', foreign.commentId).first()).toMatchObject({ markdown_content: 'MSP author' });
+}));
+
+it('rolls back comment edits, receipts, activities and publication with the owning transaction', async () => withCommentMutationFixture(async ({
+  principal, resource, customer, create, read, mutateComment, publish,
+}) => {
+  const created = await create(principal, { operationId: randomUUID(), audience: 'requester', text: 'Before rollback' });
+  const item = (await read(db, principal, resource)).items[0];
+  const command = { kind: 'edit' as const, operationId: randomUUID(), comment: { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId },
+    expectedUpdatedAt: item.updatedAt, text: 'Rolled back text' };
+  const { withTransaction } = await import('@alga-psa/db');
+  publish.mockClear();
+  await expect(withTransaction(db, async trx => { await mutateComment(trx, principal, resource, command); throw new Error('Owner failed'); })).rejects.toThrow('Owner failed');
+  expect(await customer.table('comments').where('comment_id', created.commentId).first()).toMatchObject({ markdown_content: 'Before rollback' });
+  expect(await customer.table('co_management_command_receipts').where('operation_id', command.operationId)).toEqual([]);
+  expect(await customer.table('ticket_audit_logs').where('entity_id', created.commentId)).toEqual([]);
+  expect(publish).not.toHaveBeenCalled();
+  await mutateComment(db, principal, resource, command);
+  expect(publish).toHaveBeenCalledOnce();
+}));
+
+it('rechecks shared edit authority after a thread lock wait and leaves no receipt or effects when the session expires', async () => withCommentMutationFixture(async ({
+  principal, resource, customer, sponsor, create, read, mutateComment, publish,
+}) => {
+  const created = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Unchanged after wait' });
+  const item = (await read(db, principal, resource)).items[0];
+  const command = { kind: 'edit' as const, operationId: randomUUID(), comment: { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId },
+    expectedUpdatedAt: item.updatedAt, text: 'Expired edit' };
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('comment_threads').where('thread_id', created.threadId).forUpdate().first();
+  let signal!: () => void;
+  const waiting = new Promise<void>(resolve => { signal = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('comment_threads') && query.sql.includes('for update')) signal(); };
+  db.on('query', listener); publish.mockClear();
+  const attempt = mutateComment(db, principal, resource, command).catch(error => error);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Comment edit completed without waiting'); })]);
+    await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('comments').where('comment_id', created.commentId).first()).toMatchObject({ markdown_content: 'Unchanged after wait' });
+    expect(await customer.table('co_management_command_receipts').where('operation_id', command.operationId)).toEqual([]);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));

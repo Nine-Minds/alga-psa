@@ -102,3 +102,19 @@ describe('qualified message workflow authors', () => {
     expect(EventSchemas.TICKET_MESSAGE_ADDED.safeParse({ ...event, payload: { ...payload, ...alteration } }).success).toBe(false);
   });
 });
+
+describe('qualified comment mutation events', () => {
+  it.each([['TICKET_COMMENT_UPDATED', 'edit'], ['TICKET_COMMENT_DELETED', 'delete']] as const)('keeps %s content-free and owner-qualified', (eventType, kind) => {
+    const payload = { tenantId: owner, ticketId, commentId: ticketId, actorType: 'COLLABORATOR', actorReference: reference,
+      isInternal: true, collaborationMutation: { kind, threadId: ticketId, audience: 'shared_it' } };
+    expect(EventSchemas[eventType].parse({ ...envelope, eventType, payload }).payload).toMatchObject(payload);
+    for (const patch of [{ userId: reference.userId }, { actorType: 'USER' }, { actorReference: { ...reference, ownerTenantId: reference.tenantId } },
+      { collaborationMutation: { kind, threadId: ticketId, audience: 'organization_private' } }, { isInternal: false }, { commentId: undefined }]) {
+      expect(EventSchemas[eventType].safeParse({ ...envelope, eventType, payload: { ...payload, ...patch } }).success).toBe(false);
+    }
+    if (kind === 'edit') expect(EventSchemas[eventType].safeParse({ ...envelope, eventType, payload: { ...payload,
+      newComment: { id: ticketId, content: 'Cached secret', author: 'Someone' } } }).success).toBe(false);
+    expect(EventSchemas[eventType].safeParse({ ...envelope, eventType, payload: { ...payload, actorType: 'USER', actorReference: undefined,
+      userId: reference.userId, collaborationMutation: { kind, threadId: ticketId, audience: 'organization_private' } } }).success).toBe(true);
+  });
+});

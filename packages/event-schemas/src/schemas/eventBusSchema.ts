@@ -756,6 +756,32 @@ export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
   timestamp: z.string().datetime().optional(),
 });
 
+const ticketCommentMutationSchema = z.object({
+  kind: z.enum(['edit', 'delete']), threadId: z.string().uuid(),
+  audience: z.enum(['requester', 'shared_it', 'organization_private']),
+}).strict();
+function validateTicketCommentMutation(payload: any, ctx: z.RefinementCtx, kind: 'edit' | 'delete') {
+  const mutation = payload.collaborationMutation;
+  if (!mutation) {
+    if (payload.actorReference || payload.actorType === 'COLLABORATOR' || (kind === 'edit' && !payload.userId)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Comment mutations require a qualified reference or local user.' });
+    }
+    return;
+  }
+  if (mutation.kind !== kind || !payload.commentId || payload.oldComment || payload.newComment || payload.comment ||
+      payload.isInternal !== (mutation.audience !== 'requester')) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Qualified mutation events contain identity and audience only.' });
+  }
+  if (payload.actorReference) {
+    if (payload.actorType !== 'COLLABORATOR' || payload.actorReference.ownerTenantId !== payload.tenantId ||
+        payload.actorReference.tenantId === payload.tenantId || payload.userId || mutation.audience === 'organization_private') {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid qualified comment mutation actor.' });
+    }
+  } else if (!payload.userId || payload.actorType !== 'USER') {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'A local mutation requires its local user.' });
+  }
+}
+
 // Ticket comment delete event payload schema.
 // commentId is top-level so the search index subscriber's extractObjectId can resolve it.
 export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
@@ -763,10 +789,15 @@ export const TicketCommentDeletedPayloadSchema = BasePayloadSchema.extend({
   commentId: z.string().uuid(),
   userId: z.string().uuid().optional(),
   isInternal: z.boolean().optional(),
-});
+  collaborationMutation: ticketCommentMutationSchema.optional(),
+}).superRefine((payload, ctx) => validateTicketCommentMutation(payload, ctx, 'delete'));
 
 // Ticket comment update event payload schema
 export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend({
+  userId: z.string().uuid().optional(),
+  commentId: z.string().uuid().optional(),
+  isInternal: z.boolean().optional(),
+  collaborationMutation: ticketCommentMutationSchema.optional(),
   oldComment: z.object({
     id: z.string().uuid(),
     content: z.string(),
@@ -779,7 +810,7 @@ export const TicketCommentUpdatedPayloadSchema = TicketEventPayloadSchema.extend
     author: z.string(),
     isInternal: z.boolean().optional(),
   }).optional(),
-});
+}).superRefine((payload, ctx) => validateTicketCommentMutation(payload, ctx, 'edit'));
 
 // Time entry event payload schema
 export const TimeEntryEventPayloadSchema = BasePayloadSchema.extend({

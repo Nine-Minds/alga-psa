@@ -22,6 +22,9 @@ export interface CommentCollaborationContext {
   audience: CommentAudience;
   assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
 }
+export interface CommentCollaborationMutationContext extends CommentCollaborationContext {
+  commentId: string; threadId: string; updatedAt: string;
+}
 async function collaborationAttribution(trx: Knex.Transaction, tenant: string, comment: Omit<IComment, 'tenant'>,
   context: CommentCollaborationContext) {
   if (!trx.isTransaction || comment.ticket_id !== context.ticketId || !['requester', 'shared_it', 'organization_private'].includes(context.audience) ||
@@ -221,6 +224,32 @@ const Comment = {
         logger.error('Error inserting comment:', error);
         throw error;
       }
+    });
+  },
+
+  /** Qualified command adapter: immutable author/thread/audience and retained
+   * tombstones keep replies and historical attribution resolvable after delete. */
+  mutateCollaboration: async (knexOrTrx: Knex | Knex.Transaction, tenant: string,
+    input: { kind: 'edit'; note: string; markdown_content: string } | { kind: 'delete' }, inputContext: CommentCollaborationMutationContext): Promise<void> => {
+    const context = { ...inputContext }, mutation = { ...input };
+    if (!knexOrTrx.isTransaction || !['edit', 'delete'].includes(mutation.kind) ||
+        Object.keys(mutation).some(key => !(mutation.kind === 'edit' ? ['kind', 'note', 'markdown_content'] : ['kind']).includes(key)) ||
+        !Number.isFinite(Date.parse(context.updatedAt))) throw new Error('Invalid collaboration mutation context');
+    return withCoManagedOperationalTransaction(knexOrTrx, tenant, async trx => {
+      const audience = await assertCommentThreadAudience(trx, tenant, context.threadId, { ticketId: context.ticketId });
+      const existing = await tenantScopedTable<IComment>(trx, 'comments', tenant).where({ comment_id: context.commentId,
+        thread_id: context.threadId, ticket_id: context.ticketId }).forUpdate().first();
+      if (!existing || existing.deleted_at || existing.publish_state !== 'published' || audience !== context.audience || existing.is_system_generated ||
+          (existing.actor_reference_id ?? undefined) !== context.actorReferenceId) throw new Error('Invalid collaboration mutation target');
+      await collaborationAttribution(trx, tenant, { ticket_id: existing.ticket_id, user_id: existing.user_id, contact_id: existing.contact_id,
+        author_type: existing.author_type, is_internal: existing.is_internal, publish_state: existing.publish_state } as Omit<IComment, 'tenant'>, context);
+      if (mutation.kind === 'edit' && (typeof mutation.note !== 'string' || typeof mutation.markdown_content !== 'string')) throw new Error('Invalid collaboration text');
+      await context.assertWriteAuthority(trx);
+      await tenantScopedTable(trx, 'comments', tenant).where('comment_id', context.commentId).update({ updated_at: context.updatedAt,
+        ...(mutation.kind === 'edit' ? { note: mutation.note, markdown_content: mutation.markdown_content }
+          : { note: '[deleted]', markdown_content: '[deleted]', deleted_at: context.updatedAt }) });
+      await tenantScopedTable(trx, 'comment_threads', tenant).where('thread_id', context.threadId).update({ last_activity_at: context.updatedAt });
+      await context.assertWriteAuthority(trx);
     });
   },
 

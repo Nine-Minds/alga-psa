@@ -62,6 +62,8 @@ function baseTicketCommentQuery(knex: Knex, tenant: string) {
   tenantJoinIndexerTable(knex, tenant, query, 'tickets as t', 't.ticket_id', 'c.ticket_id');
 
   return query
+    .whereNull('c.deleted_at')
+    .where('c.publish_state', 'published')
     .select(
       'c.comment_id',
       'c.ticket_id',
