@@ -8,10 +8,10 @@ import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { ensureCoManagedActorReference } from './actorReferences';
-import { plainTextContent } from './conversationContent';
+import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 
 export interface CoManagedCommentReference { storeTenant: string; threadId: string; commentId: string }
-export type CoManagedCommentCreateRequest = { operationId: string; text: string } & (
+export type CoManagedCommentCreateRequest = { operationId: string } & CoManagedConversationContent & (
   { audience: CommentAudience; parent?: never } | { parent: CoManagedCommentReference; audience?: never });
 export interface CoManagedCommentCreateReceipt extends CoManagedCommentReference { operationId: string; appliedAt: string }
 export interface CoManagedCommentCreateContext extends CoManagedSharedWorkContext {
@@ -30,9 +30,11 @@ export class CoManagedCommentCreateError extends Error {
 }
 function snapshotRequest(input: CoManagedCommentCreateRequest): CoManagedCommentCreateRequest {
   const invalid = (): never => { throw new CoManagedCommentCreateError('INVALID_COMMENT_CREATE'); };
-  if (!input || !isCoManagedUuid(input.operationId) || typeof input.text !== 'string' || !input.text.trim() || input.text.length > 100_000 || input.text.includes('\0') ||
-      Object.keys(input).some(key => !['operationId', 'text', 'audience', 'parent'].includes(key))) invalid();
-  const base = { operationId: input.operationId.toLowerCase(), text: input.text };
+  if (!input || !isCoManagedUuid(input.operationId) ||
+      Object.keys(input).some(key => !['operationId', 'text', 'document', 'audience', 'parent'].includes(key))) invalid();
+  let content: CoManagedConversationContent;
+  try { content = snapshotConversationContent(input); } catch { return invalid(); }
+  const base = { operationId: input.operationId.toLowerCase(), ...content };
   if (input.parent !== undefined) {
     const parent = input.parent;
     if (input.audience !== undefined || !parent || ![parent.storeTenant, parent.threadId, parent.commentId].every(isCoManagedUuid) ||
@@ -96,7 +98,7 @@ export async function createCoManagedTicketComment(db: Knex, inputActor: CoManag
       await assertWriteAuthority(trx);
       await apply({ ...context, actorReferenceId, audience, assertWriteAuthority,
         canUpdateResponseState: !isCoManagedReadFieldHidden([...context.redactedFields, ...readContext.redactedFields], ['response_state', 'tickets.response_state']) }, { comment_id: request.operationId, ticket_id: resource.id, thread_id: threadId,
-        parent_comment_id: request.parent?.commentId ?? null, ...plainTextContent(request.text), is_internal: audience !== 'requester', is_resolution: false,
+        parent_comment_id: request.parent?.commentId ?? null, ...encodeConversationContent(request), is_internal: audience !== 'requester', is_resolution: false,
         author_type: 'internal', user_id: foreign ? null : actor.userId, publish_state: 'published' });
       await assertWriteAuthority(trx);
       const [saved] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId,

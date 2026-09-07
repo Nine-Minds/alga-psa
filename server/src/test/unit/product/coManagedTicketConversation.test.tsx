@@ -6,6 +6,10 @@ import CoManagedTicketConversation from '../../../components/co-managed/CoManage
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
 const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
+vi.mock('next/dynamic', () => ({ default: () => ({ id, label, document, editable, onChange }: any) => label
+  ? <label>{label}<textarea id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
+      onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} /></label>
+  : <div id={id}>{document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}</div> }));
 vi.mock('next-auth/react', () => ({ useSession: () => ({ data: mocks.session }) }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
@@ -43,15 +47,15 @@ it('shows qualified authors and routes a new MSP-private note to the home store'
   fireEvent.click(button('new')); fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'organization_private' } });
   fireEvent.change(message(), { target: { value: 'MSP private note' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.private).toHaveBeenCalledOnce());
-  expect(mocks.private).toHaveBeenCalledWith(resource, { kind: 'create', text: 'MSP private note', operationId: expect.any(String) }); expect(mocks.create).not.toHaveBeenCalled();
+  expect(mocks.private).toHaveBeenCalledWith(resource, { kind: 'create', document: expect.any(Array), operationId: expect.any(String) }); expect(mocks.create).not.toHaveBeenCalled();
 });
 it('inherits reply audience and sends the exact original version for an own-author edit', async () => {
   mount(); await screen.findByText('Shared content'); fireEvent.click(button('reply'));
   expect(screen.queryByRole('combobox')).toBeNull(); fireEvent.change(message(), { target: { value: 'Inherited reply' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-  expect(mocks.create).toHaveBeenCalledWith(resource, { operationId: expect.any(String), text: 'Inherited reply', parent: { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' } });
+  expect(mocks.create).toHaveBeenCalledWith(resource, { operationId: expect.any(String), document: expect.any(Array), parent: { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' } });
   await waitFor(() => expect(button('edit')).toBeInTheDocument()); fireEvent.click(button('edit')); fireEvent.change(message(), { target: { value: 'Edited' } }); fireEvent.click(button('send'));
-  await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce()); expect(mocks.mutate.mock.calls[0][1]).toMatchObject({ kind: 'edit', text: 'Edited', expectedUpdatedAt: item().updatedAt });
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce()); expect(mocks.mutate.mock.calls[0][1]).toMatchObject({ kind: 'edit', document: expect.any(Array), expectedUpdatedAt: item().updatedAt });
 });
 it('confirms private deletion with its revision', async () => {
   const row = { ...item(), storeTenant: 'msp', audience: 'organization_private', revision: 3 };
@@ -107,7 +111,7 @@ it('does not claim another organization’s author with the same user ID and kee
   fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'organization_private' } });
   fireEvent.change(message(), { target: { value: 'Customer-private note' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-  expect(mocks.create.mock.calls[0][1]).toMatchObject({ text: 'Customer-private note', audience: 'organization_private' });
+  expect(mocks.create.mock.calls[0][1]).toMatchObject({ document: expect.any(Array), audience: 'organization_private' });
   expect(mocks.private).not.toHaveBeenCalled();
 });
 
@@ -119,4 +123,15 @@ it('removes an open editor when periodic revalidation removes its content audien
   await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
   expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
   expect(screen.queryByText('Shared content')).toBeNull();
+});
+
+it('retains formatted own-author blocks when editing and does not offer destructive attachment edits', async () => {
+  const formatted = [{ type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'Formatted title', styles: { bold: true } }] }];
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), note: JSON.stringify(formatted) }] });
+  const view = mount(); await screen.findByText('Formatted title'); fireEvent.click(button('edit')); fireEvent.click(button('send'));
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
+  expect(mocks.mutate.mock.calls[0][1].document[0]).toMatchObject(formatted[0]);
+  view.unmount(); mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), note: JSON.stringify([{ type: 'image', props: { url: '/api/files/foreign' } }]) }] });
+  mount(); await screen.findByText('Morgan'); expect(screen.queryByRole('button', { name: 'coManaged.conversation.edit' })).toBeNull();
+  expect(document.querySelector('img')).toBeNull();
 });

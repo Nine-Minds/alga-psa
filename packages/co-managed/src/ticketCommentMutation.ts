@@ -9,13 +9,13 @@ import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoMan
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationBodySources } from './conversationPolicy';
 import type { CoManagedCommentReference } from './ticketCommentCreation';
-import { plainTextContent } from './conversationContent';
+import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 
 export type CoManagedCommentMutationRequest = {
   operationId: string; comment: CoManagedCommentReference;
   /** Exact timestamp returned by the conversation reader, including microseconds. */
   expectedUpdatedAt: string | null;
-} & ({ kind: 'edit'; text: string } | { kind: 'delete' });
+} & (({ kind: 'edit' } & CoManagedConversationContent) | { kind: 'delete' });
 export interface CoManagedCommentMutationReceipt extends CoManagedCommentReference { operationId: string; updatedAt: string; deleted: boolean }
 export interface CoManagedCommentMutationContext extends CoManagedSharedWorkContext {
   operationId: string; actorReferenceId?: string; audience: CommentAudience; threadId: string; commentId: string;
@@ -33,22 +33,23 @@ const timestampPattern = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$/;
 function snapshotRequest(input: CoManagedCommentMutationRequest): CoManagedCommentMutationRequest {
   const invalid = (): never => { throw new CoManagedCommentMutationError('INVALID_COMMENT_MUTATION'); };
   if (!input || !['edit', 'delete'].includes(input.kind) || !isCoManagedUuid(input.operationId) ||
-      Object.keys(input).some(key => !['operationId', 'comment', 'expectedUpdatedAt', ...(input.kind === 'edit' ? ['kind', 'text'] : ['kind'])].includes(key))) invalid();
+      Object.keys(input).some(key => !['operationId', 'comment', 'expectedUpdatedAt', ...(input.kind === 'edit' ? ['kind', 'text', 'document'] : ['kind'])].includes(key))) invalid();
   const target = input.comment;
   if (!target || Object.keys(target).some(key => !['storeTenant', 'threadId', 'commentId'].includes(key)) ||
       ![target.storeTenant, target.threadId, target.commentId].every(isCoManagedUuid)) invalid();
   if (input.expectedUpdatedAt !== null && (typeof input.expectedUpdatedAt !== 'string' || !timestampPattern.test(input.expectedUpdatedAt) || !Number.isFinite(Date.parse(input.expectedUpdatedAt)))) invalid();
-  if (input.kind === 'edit' && (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 100_000 || input.text.includes('\0'))) invalid();
+
   const common = { operationId: input.operationId.toLowerCase(), expectedUpdatedAt: input.expectedUpdatedAt,
     comment: { storeTenant: target.storeTenant.toLowerCase(), threadId: target.threadId.toLowerCase(), commentId: target.commentId.toLowerCase() } };
-  return input.kind === 'edit' ? { ...common, kind: 'edit', text: input.text } : { ...common, kind: 'delete' };
+  if (input.kind === 'delete') return { ...common, kind: 'delete' };
+  try { return { ...common, kind: 'edit', ...snapshotConversationContent(input) }; } catch { return invalid(); }
 }
 function assertVisible(context: CoManagedSharedWorkContext) {
   if (isCoManagedReadFieldHidden(context.redactedFields, [...coManagedConversationBodySources, 'comments', 'comment_threads'])) throw new CoManagedSharedWorkError();
 }
 const exactTimestamp = (trx: Knex.Transaction, column: string) => trx.raw(`to_char(?? AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')`, [column]);
 
-/** Existing text and deletion commands never alter audience, ownership or author.
+/** Content and deletion commands never alter audience, ownership or author.
  * Exact retries return their committed version without repeating effects. */
 export async function mutateCoManagedTicketComment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
   input: CoManagedCommentMutationRequest, apply: (context: CoManagedCommentMutationContext, mutation: CoManagedCommentMutation) => Promise<void>): Promise<CoManagedCommentMutationReceipt> {
@@ -95,7 +96,7 @@ export async function mutateCoManagedTicketComment(db: Knex, inputActor: CoManag
       const updatedAt: string = clock.rows[0].value;
       await assertWriteAuthority(trx);
       await apply({ ...context, operationId: request.operationId, audience, actorReferenceId: comment.actor_reference_id ?? undefined, threadId: thread.thread_id,
-        commentId: comment.comment_id, updatedAt, assertWriteAuthority }, request.kind === 'edit' ? { kind: 'edit', ...plainTextContent(request.text) } : { kind: 'delete' });
+        commentId: comment.comment_id, updatedAt, assertWriteAuthority }, request.kind === 'edit' ? { kind: 'edit', ...encodeConversationContent(request) } : { kind: 'delete' });
       await assertWriteAuthority(trx);
       await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId,
         resource_type: 'ticket', resource_id: resource.id, actor_tenant: actor.tenant, actor_user_id: actor.userId,

@@ -1,3 +1,5 @@
+import { snapshotConversationDocument, type CoManagedRichTextDocument } from '@alga-psa/co-managed/conversationRichText';
+
 /** Render authorized text without resolving embedded images, documents or local
  * mentions against the viewer's tenant. Attachment rendering has its own gate. */
 export function conversationText(note: string | null, markdown: string | null): string {
@@ -23,24 +25,13 @@ export function conversationText(note: string | null, markdown: string | null): 
   return blocks(document);
 }
 
-/** Do not flatten a formatted or attached message into a destructive text edit. */
-export function plainConversationDraft(note: string | null): string | null {
+/** Preserve validated blocks verbatim; unsupported embedded resources cannot be
+ * flattened into a destructive edit. Legacy raw strings remain literal text. */
+export function conversationDocument(note: string | null): CoManagedRichTextDocument | null {
   if (!note) return null;
-  let blocks: unknown;
-  try { blocks = JSON.parse(note); } catch { return note; }
-  if (!Array.isArray(blocks) || blocks.length > 10000) return null;
-  const lines: string[] = [];
-  for (const value of blocks) {
-    if (!value || typeof value !== 'object') return null;
-    const block = value as Record<string, any>;
-    if (block.type !== 'paragraph' || (block.children?.length ?? 0) > 0 || !Array.isArray(block.content) ||
-        Object.values(block.props ?? {}).some(value => !['left', 'default'].includes(value as string))) return null;
-    let line = '';
-    for (const inline of block.content) {
-      if (!inline || inline.type !== 'text' || typeof inline.text !== 'string' || Object.values(inline.styles ?? {}).some(Boolean)) return null;
-      line += inline.text;
-    }
-    lines.push(line);
+  let value: unknown;
+  try { value = JSON.parse(note); } catch {
+    value = [{ type: 'paragraph', content: [{ type: 'text', text: note, styles: {} }] }];
   }
-  return lines.join('\n');
+  try { return snapshotConversationDocument(value, true); } catch { return null; }
 }

@@ -6270,3 +6270,47 @@ it('derives conversation write audiences from actual content policy and preserve
   expect(await permissions(db, customerPrincipal, resource)).toEqual([]);
   expect((await read(db, customerPrincipal, resource)).items.map(row => row.note)).toContain('Readable history');
 }));
+
+it('preserves canonical rich documents through create, inherited replies, exact edit retries and current conversation reads', async () => withCommentMutationFixture(async ({
+  principal, customerPrincipal, resource, customer, create, read, mutateComment,
+}) => {
+  const document = [{ type: 'heading', props: { level: 2 }, content: [{ type: 'text', text: 'Shared heading', styles: { bold: true } }],
+    children: [{ type: 'paragraph', content: [{ type: 'text', text: '<literal> **text**', styles: {} }] }] }];
+  const request = { operationId: randomUUID(), audience: 'shared_it' as const, document };
+  const first = await create(principal, request); expect(await create(principal, request)).toEqual(first);
+  const comment = { storeTenant: first.storeTenant, threadId: first.threadId, commentId: first.commentId };
+  const stored = await customer.table('comments').where('comment_id', first.commentId).first();
+  expect(JSON.parse(stored.note)[0]).toMatchObject(document[0]); expect(stored.markdown_content).toContain('## **Shared heading**');
+  const reply = await create(customerPrincipal, { operationId: randomUUID(), parent: comment, document });
+  expect((await read(db, principal, resource)).items.find(item => item.commentId === reply.commentId)?.audience).toBe('shared_it');
+  const item = (await read(db, principal, resource)).items.find(item => item.commentId === first.commentId)!;
+  const edit = { kind: 'edit' as const, operationId: randomUUID(), comment, expectedUpdatedAt: item.updatedAt,
+    document: [{ type: 'quote', content: [{ type: 'text', text: 'Revised', styles: { italic: true } }] }] };
+  const applied = await mutateComment(db, principal, resource, edit); expect(await mutateComment(db, principal, resource, edit)).toEqual(applied);
+  expect((await read(db, principal, resource)).items.find(item => item.commentId === first.commentId)?.markdown).toBe('> *Revised*');
+  await expect(mutateComment(db, principal, resource, { ...edit, document })).rejects.toMatchObject({ code: 'COMMENT_MUTATION_OPERATION_CONFLICT' });
+  await expect(create(principal, { ...request, text: 'Ambiguous' } as any)).rejects.toMatchObject({ code: 'INVALID_COMMENT_CREATE' });
+  await expect(mutateComment(db, principal, resource, { ...edit, document: [{ type: 'image', props: { url: '/api/files/other' } }] })).rejects.toMatchObject({ code: 'INVALID_COMMENT_MUTATION' });
+}));
+
+it('keeps rich private notes and edits exclusively in the MSP store and snapshots documents before awaiting authority', async () => withCommentCreationFixture(async ({
+  principal, resource, sponsor, customer, create,
+}) => {
+  const { mutateCoManagedPrivateTicketComment: save } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const document = [{ type: 'paragraph', content: [{ type: 'text', text: 'Private rich content', styles: { bold: true } }] }];
+  const operationId = randomUUID();
+  const pending = save(db, principal, resource, { kind: 'create', operationId, document });
+  document[0].content[0].text = 'Mutated after admission';
+  const created = await pending;
+  const stored = await sponsor.table('co_management_private_comments').where('comment_id', created.commentId).first();
+  expect(JSON.parse(stored.note)[0].content[0].text).toBe('Private rich content');
+  expect(await customer.table('comments').where('comment_id', created.commentId).first()).toBeUndefined();
+  const edit = { kind: 'edit' as const, operationId: randomUUID(), comment: { storeTenant: created.storeTenant, threadId: created.threadId, commentId: created.commentId }, expectedRevision: 1, document };
+  const edited = await save(db, principal, resource, edit); expect(await save(db, principal, resource, edit)).toEqual(edited);
+  expect((await sponsor.table('co_management_private_comments').where('comment_id', created.commentId).first()).markdown_content).toBe('**Mutated after admission**');
+  await expect(save(db, principal, resource, { ...edit, document: [{ type: 'paragraph', content: [{ type: 'mention', props: { userId: randomUUID() } }] }] })).rejects.toMatchObject({ code: 'INVALID_PRIVATE_COMMENT' });
+  const canonical = create(principal, { operationId: randomUUID(), audience: 'shared_it', document });
+  document[0].content[0].text = 'Another mutation';
+  const receipt = await canonical;
+  expect(JSON.parse((await customer.table('comments').where('comment_id', receipt.commentId).first()).note)[0].content[0].text).toBe('Mutated after admission');
+}));

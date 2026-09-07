@@ -9,6 +9,14 @@
     ".": {
       "types": "./src/index.ts",
       "import": "./src/index.ts"
+    },
+    "./conversationRichText": {
+      "types": "./src/conversationRichText.ts",
+      "import": "./src/conversationRichText.ts"
+    },
+    "./conversationContent": {
+      "types": "./src/conversationContent.ts",
+      "import": "./src/conversationContent.ts"
     }
   },
   "scripts": {

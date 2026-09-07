@@ -1,4 +1,4 @@
-import { plainTextContent } from './conversationContent';
+import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -9,8 +9,8 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 export interface CoManagedPrivateCommentReference { storeTenant: string; threadId: string; commentId: string }
 export type CoManagedPrivateCommentCommand = { operationId: string } & (
-  { kind: 'create'; text: string; parent?: CoManagedPrivateCommentReference } |
-  { kind: 'edit'; text: string; comment: CoManagedPrivateCommentReference; expectedRevision: number } |
+  ({ kind: 'create'; parent?: CoManagedPrivateCommentReference } & CoManagedConversationContent) |
+  ({ kind: 'edit'; comment: CoManagedPrivateCommentReference; expectedRevision: number } & CoManagedConversationContent) |
   { kind: 'delete'; comment: CoManagedPrivateCommentReference; expectedRevision: number });
 export interface CoManagedPrivateCommentReceipt extends CoManagedPrivateCommentReference {
   operationId: string; revision: number; appliedAt: string;
@@ -25,20 +25,21 @@ export class CoManagedPrivateCommentError extends Error {
 function snapshotCommand(input: CoManagedPrivateCommentCommand): CoManagedPrivateCommentCommand {
   const invalid = (): never => { throw new CoManagedPrivateCommentError('INVALID_PRIVATE_COMMENT'); };
   if (!input || !['create', 'edit', 'delete'].includes(input.kind) || !isCoManagedUuid(input.operationId)) invalid();
-  const keys = input.kind === 'create' ? ['operationId', 'kind', 'text', 'parent'] : input.kind === 'edit'
-    ? ['operationId', 'kind', 'text', 'comment', 'expectedRevision'] : ['operationId', 'kind', 'comment', 'expectedRevision'];
+  const keys = input.kind === 'create' ? ['operationId', 'kind', 'text', 'document', 'parent'] : input.kind === 'edit'
+    ? ['operationId', 'kind', 'text', 'document', 'comment', 'expectedRevision'] : ['operationId', 'kind', 'comment', 'expectedRevision'];
   if (Object.keys(input).some(key => !keys.includes(key))) invalid();
   const reference = (value: CoManagedPrivateCommentReference): CoManagedPrivateCommentReference => {
     if (!value || Object.keys(value).some(key => !['storeTenant', 'threadId', 'commentId'].includes(key)) ||
         ![value.storeTenant, value.threadId, value.commentId].every(isCoManagedUuid)) invalid();
     return { storeTenant: value.storeTenant.toLowerCase(), threadId: value.threadId.toLowerCase(), commentId: value.commentId.toLowerCase() };
   };
-  if (input.kind !== 'delete' && (typeof input.text !== 'string' || !input.text.trim() || input.text.length > 100_000 || input.text.includes('\0'))) invalid();
+
   if (input.kind !== 'create' && (!Number.isInteger(input.expectedRevision) || input.expectedRevision < 1 || input.expectedRevision >= 2147483647)) invalid();
   const operationId = input.operationId.toLowerCase();
-  if (input.kind === 'create') return { kind: 'create', operationId, text: input.text, ...(input.parent !== undefined ? { parent: reference(input.parent) } : {}) };
+  const content = (value: CoManagedConversationContent) => { try { return snapshotConversationContent(value); } catch { return invalid(); } };
+  if (input.kind === 'create') return { kind: 'create', operationId, ...content(input), ...(input.parent !== undefined ? { parent: reference(input.parent) } : {}) };
   const common = { operationId, comment: reference(input.comment), expectedRevision: input.expectedRevision };
-  return input.kind === 'edit' ? { ...common, kind: 'edit', text: input.text } : { ...common, kind: 'delete' };
+  return input.kind === 'edit' ? { ...common, kind: 'edit', ...content(input) } : { ...common, kind: 'delete' };
 }
 const contentSources = ['conversation', 'note', 'markdown_content', 'created_at', 'updated_at', 'thread_id', 'parent_comment_id', 'collaboration_audience',
   'co_management_private_threads', 'co_management_private_comments', 'revision'];
@@ -98,16 +99,16 @@ export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: 
           await home.table('co_management_private_comments').insert({ tenant: actor.tenant, comment_id: commentId, thread_id: threadId,
             parent_comment_id: target?.commentId ?? null, actor_user_id: actor.userId,
             actor_display_name: [user.first_name?.trim(), user.last_name?.trim()].filter(Boolean).join(' ') || user.email || actor.userId,
-            actor_organization_name: organization.client_name || actor.tenant, ...plainTextContent(request.text), revision });
+            actor_organization_name: organization.client_name || actor.tenant, ...encodeConversationContent(request), revision });
         } else {
           const comment = await home.table('co_management_private_comments').where({ thread_id: threadId, comment_id: request.comment.commentId }).forUpdate().first();
-          // Ordinary text changes never claim another technician's authorship.
+          // Content changes never claim another technician's authorship.
           if (!comment || comment.actor_user_id !== actor.userId) throw new CoManagedSharedWorkError();
           if (comment.deleted_at || comment.revision !== request.expectedRevision) throw new CoManagedPrivateCommentError('PRIVATE_COMMENT_CONFLICT');
           await assertWrite();
           commentId = comment.comment_id; revision = comment.revision + 1;
           await home.table('co_management_private_comments').where('comment_id', commentId).update({ revision, updated_at: trx.raw('clock_timestamp()'),
-            ...(request.kind === 'edit' ? plainTextContent(request.text) : { deleted_at: trx.raw('clock_timestamp()') }) });
+            ...(request.kind === 'edit' ? encodeConversationContent(request) : { deleted_at: trx.raw('clock_timestamp()') }) });
         }
         await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('clock_timestamp()') });
         await assertWrite();

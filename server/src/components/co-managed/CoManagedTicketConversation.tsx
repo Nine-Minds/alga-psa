@@ -1,17 +1,20 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import type { CoManagedSharedResource, CoManagedConversationCursor, CoManagedConversationItem, CoManagedCommentCreateRequest, CoManagedCommentMutationRequest, CoManagedPrivateCommentCommand } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
+import dynamic from 'next/dynamic';
+import { snapshotConversationDocument, type CoManagedRichTextDocument } from '@alga-psa/co-managed/conversationRichText';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
 import { createCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentActions';
 import { mutateCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentMutationActions';
 import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManagedPrivateTicketCommentActions';
-import { conversationText, plainConversationDraft } from './conversationText';
+import { conversationText, conversationDocument } from './conversationText';
+
+const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
 
 type Screen = Awaited<ReturnType<typeof getCoManagedTicketConversationScreenAction>>;
 type Audience = Screen['writeAudiences'][number];
@@ -24,7 +27,10 @@ function Composer({ resource, actor, audiences, draft, onSaved, onCancel }: {
 }) {
   const { t } = useTranslation('msp/licensing');
   const [audience, setAudience] = useState<Audience>(draft.kind === 'new' ? (audiences.includes('shared_it') ? 'shared_it' : audiences[0]) : draft.item.audience);
-  const [text, setText] = useState(draft.kind === 'edit' ? plainConversationDraft(draft.item.note) ?? '' : '');
+  const [document, setDocument] = useState<CoManagedRichTextDocument>(draft.kind === 'edit' ? conversationDocument(draft.item.note) ?? [] : []);
+  const validDocument = useMemo(() => {
+    try { return snapshotConversationDocument(document); } catch { return null; }
+  }, [document]);
   const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
   const submission = useRef<Submission | null>(null), inFlight = useRef(false), mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
@@ -33,16 +39,16 @@ function Composer({ resource, actor, audiences, draft, onSaved, onCancel }: {
   const rejected = error && !['unknownOutcome', 'invalid'].includes(error);
   const frozen = busy || uncertain || Boolean(rejected) || !permitted;
   async function submit() {
-    if (inFlight.current || rejected || !permitted || (draft.kind !== 'delete' && !text.trim())) return;
+    if (inFlight.current || rejected || !permitted || (draft.kind !== 'delete' && !validDocument)) return;
     if (!submission.current) {
       const operationId = crypto.randomUUID();
       const privateStore = draft.kind === 'new' ? actor.tenant !== resource.tenant && audience === 'organization_private' : draft.item.storeTenant !== resource.tenant;
       if (draft.kind === 'new' || draft.kind === 'reply') {
         const parent = draft.kind === 'reply' ? reference(draft.item) : undefined;
-        submission.current = privateStore ? { store: 'private', request: { kind: 'create', operationId, text, ...(parent ? { parent } : {}) } }
-          : { store: 'create', request: { operationId, text, ...(parent ? { parent } : { audience }) } };
+        submission.current = privateStore ? { store: 'private', request: { kind: 'create', operationId, document: validDocument!, ...(parent ? { parent } : {}) } }
+          : { store: 'create', request: { operationId, document: validDocument!, ...(parent ? { parent } : { audience }) } };
       } else {
-        const change = draft.kind === 'edit' ? { kind: 'edit' as const, text } : { kind: 'delete' as const };
+        const change = draft.kind === 'edit' ? { kind: 'edit' as const, document: validDocument! } : { kind: 'delete' as const };
         submission.current = privateStore ? { store: 'private', request: { ...change, operationId, comment: reference(draft.item), expectedRevision: draft.item.revision! } }
           : { store: 'mutate', request: { ...change, operationId, comment: reference(draft.item), expectedUpdatedAt: draft.item.updatedAt } };
       }
@@ -65,12 +71,12 @@ function Composer({ resource, actor, audiences, draft, onSaved, onCancel }: {
       options={audiences.map(value => ({ value, label: t(`coManaged.conversation.audiences.${value}`) }))} onValueChange={value => setAudience(value as Audience)} />
       : <p className="text-sm font-medium">{t(`coManaged.conversation.audiences.${audience}`)}</p>}
     <p className="text-sm text-muted-foreground">{t(`coManaged.conversation.audienceHelp.${audience}`)}</p>
-    {draft.kind === 'delete' ? <p>{t('coManaged.conversation.deleteHelp')}</p> : <TextArea id="co-conversation-text" label={t('coManaged.conversation.message')} value={text} maxLength={100000} rows={5}
-      required disabled={frozen} onChange={event => setText(event.target.value)} />}
+    {draft.kind === 'delete' ? <p>{t('coManaged.conversation.deleteHelp')}</p> : <Document id="co-conversation-text" label={t('coManaged.conversation.message')} document={document}
+      editable={!frozen} onChange={setDocument} />}
     {!permitted && <p role="status">{t('coManaged.ticket.readOnly')}</p>}
     {error && <p role="alert" className="text-destructive">{t(error === 'unknownOutcome' ? 'coManaged.conversation.unknownOutcome' : `coManaged.editor.errors.${error}`)}</p>}
     <div className="flex flex-wrap gap-2">
-      <Button id="co-conversation-submit" type="submit" disabled={busy || Boolean(rejected) || !permitted || (draft.kind !== 'delete' && !text.trim())}>
+      <Button id="co-conversation-submit" type="submit" disabled={busy || Boolean(rejected) || !permitted || (draft.kind !== 'delete' && !validDocument)}>
         {t(busy ? 'coManaged.ticket.saving' : uncertain ? 'coManaged.ticket.retry' : `coManaged.conversation.${draft.kind === 'delete' ? 'delete' : 'send'}`)}</Button>
       <Button id="co-conversation-cancel" type="button" variant="outline" disabled={busy || uncertain} onClick={onCancel}>{t('coManaged.ticket.cancel')}</Button>
     </div>
@@ -125,6 +131,7 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
       {!state.items.length && <p className="text-sm text-muted-foreground">{t('coManaged.conversation.empty')}</p>}
       <ol className="space-y-3">{state.items.map(item => {
         const id = `co-comment-${item.storeTenant}-${item.commentId}`;
+        const content = item.deleted ? null : conversationDocument(item.note);
         const own = item.author?.kind === 'user' && item.author.tenant === state.actor.tenant && item.author.id === state.actor.userId;
         const writable = state.writeAudiences.includes(item.audience) && !item.deleted && (item.storeTenant === resource.tenant || item.revision !== null);
         return <li id={id} key={id} className="space-y-2 rounded-lg border border-[rgb(var(--color-border-200))] p-4">
@@ -134,10 +141,11 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
           </div>
           <p className="text-xs text-muted-foreground"><time dateTime={item.createdAt}>{formatDate(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</time>
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
-          <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>
+          {content ? <Document key={`${id}:${item.updatedAt}`} id={`${id}-body`} document={content} />
+            : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
           {writable && !draft && <div className="flex flex-wrap gap-2">
             <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>
-            {own && plainConversationDraft(item.note) !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
+            {own && content !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
             {own && <Button id={`${id}-delete`} variant="ghost" size="sm" onClick={() => open({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
           </div>}
         </li>;
