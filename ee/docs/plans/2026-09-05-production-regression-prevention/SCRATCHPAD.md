@@ -1063,3 +1063,8 @@
 ### Bind integration metrics to execution evidence — 2026-09-07
 - Strict integration execution could reject skips/missing identities while the raw Vitest report still appeared green to the recorder. Added TEST_METRICS_EXECUTION to Tier-1/full recording and fail-closed diagnostic downgrading for missing, unsupported, failed or stale-revision evidence. Passing evidence does not override raw lifecycle checks.
 - Behavioral failure reproduced before repair; final 16 metrics cases pass with zero skips, including a real subprocess loading an absent configured evidence file. Integration workflow actionlint passes. Evidence: metrics-execution-binding.json. These checks do not substitute for independent gate verification.
+
+### Full Node tooling verification with accumulated metrics repairs — 2026-09-07
+- Initial run session 52282 terminated failure due to sandbox EPERM on loopback servers and an owned generated Next debug directory being scanned by Graph endpoint guard. Preserved that directory at /tmp/alga-accounting-api-dev-82cc-preserved, outside source discovery.
+- Escalated rerun session 21793 completed successfully: 37 required files, 456 passed assertions, zero failed/skipped/todo/cancelled, 117.45 seconds. Discovery and execution reconciliation passed, before/after revision 8e61f221a7 both clean. Existing one manual localization baseline exclusion remains visible. Evidence: node-tooling-metrics-full.json.
+- Native candidate remains 2de93c8492; these newer metrics commits are not yet natively verified. Calendar browser source audit reconfirms outbound UI create/delete coverage is still missing; current test covers vendor create/delete and UI edit only.
