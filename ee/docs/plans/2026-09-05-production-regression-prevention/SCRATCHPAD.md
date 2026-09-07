@@ -1732,3 +1732,18 @@ restored. Evidence: `evidence/tenant-deletion-control-flow.json`.
 
 Published head remains d8cf156c73. CI had no reported failures on the last check;
 new browser run34118119011 must not be cancelled by pushing this follow-up early.
+
+### Product bootstrap engine regression (2026-09-07)
+
+Extended the existing tenantCreationWorkflow appliance suite to execute both PSA
+and AlgaDesk on the real ephemeral Temporal engine, record seed inputs/order, and
+verify product identity reaches seed activity before admin creation. Added a
+non-retryable seed-failure case that verifies no admin/setup/customer/email steps
+and no destructive automatic tenant rollback. All four focused cases pass.
+Omitting productCode from the seed input fails the AlgaDesk case; source restored.
+Activity results remain synthetic; this is orchestration evidence, not DB seed
+execution. Evidence: `evidence/product-bootstrap-engine.json`.
+
+CI34118119105 remains active, running workflow/invoice Citus regressions. No early
+PR failures reported at inspection. Follow-up remains local while published
+candidate d8cf156c73 continues verification.
