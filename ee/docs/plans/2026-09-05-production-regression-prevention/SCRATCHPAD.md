@@ -1340,3 +1340,9 @@
 - Server coverage job previously uploaded execution/progress only. Added actual Vitest file and test-name collection before execution, sharing the same Bash selection array with the run command. Empty collection fails; both artifacts upload even on failure. Assertion collection uses the same per-file worker isolation as execution.
 - Local filesOnly collection passed: 2692 files. Combined with the 16 prior native artifacts, discovery accounts for 3348 of 3944 files, leaving 596 unmatched. This mixes local collection with older native results and is not final readiness evidence.
 - YAML parsing and extracted bash -n passed. Test-name collection is still live in session 42692, log /tmp/alga-server-unit-collection-82cc.log; it started with existing default pool settings before the workflow isolation flag was added. Do not restart it just because observation timed out. Evidence: evidence/server-unit-collection-artifacts.json.
+
+### 2026-09-07 — Server collection completes; mobile artifact gap
+
+- Session 42692 terminated successfully (exit 0). Actual Vitest test-name collection contains 14539 identities, representing all 2692 files. Updated evidence/server-unit-collection-artifacts.json; no active local collection session remains.
+- Mobile CI previously ran npm test without retaining raw execution or collection artifacts. Added generated-editor preparation before actual Vitest file/name collection, empty-collection rejection, and JSON execution reporting while retaining npm test. Always upload test-results/mobile as mobile-execution.
+- Local mobile file collection found all 134 files using the root Vitest installation; emitted missing expo/tsconfig.base warning because mobile-local dependencies are absent. This proves file discovery only, not mobile execution. Native exact mobile collection/execution verification is pending. Workflow YAML parsed and Bash syntax checked.
