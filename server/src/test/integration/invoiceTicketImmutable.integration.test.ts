@@ -101,6 +101,38 @@ it('generates immutable ticket presentation from approved source records', async
     fs.writeFileSync(`${evidenceDir}/before-source-edit.html`, beforeHtml.html);
     fs.writeFileSync(`${evidenceDir}/before-source-edit.pdf`, await pdfBefore.generatePDF({ invoiceId: result.invoice_id, userId, templateId: template.template_id }));
     const beforeText = execFileSync('pdftotext', ['-layout', `${evidenceDir}/before-source-edit.pdf`, '-'], { encoding: 'utf8' });
+    // Historical foreign ownership must not leak through either standard or
+    // transformed detail rendering, even when legacy link FKs permit the IDs.
+    const foreignLinkId = randomUUID(), foreignTenant = randomUUID();
+    try {
+      await db('invoice_time_entries').insert({ ...links[0], invoice_time_entry_id: foreignLinkId, tenant: foreignTenant,
+        work_item_snapshot: { ...links[0].work_item_snapshot, title: 'FOREIGN_PRIVATE_SENTINEL' } });
+      expect(mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, tenant, result.invoice_id))).toEqual(vm);
+      expect((await pdfBefore.renderInvoicePreview({ invoiceId: result.invoice_id, templateId: template.template_id })).html).toBe(beforeHtml.html);
+      const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
+      const detail = structuredClone(getStandardTemplateAstByCode('standard-invoice-by-ticket'))!;
+      detail.transforms = { sourceBindingId: 'timeEntries', outputBindingId: 'private-check-detail', operations: [
+        { id: 'sort-detail', type: 'sort', keys: [{ path: 'amount', direction: 'desc' }] },
+      ] };
+      detail.layout.children!.push({ id: 'private-check-table', type: 'dynamic-table',
+        repeat: { sourceBinding: { bindingId: 'private-check-detail' }, itemBinding: 'entry' },
+        columns: [{ id: 'description', header: 'Public detail', value: { type: 'path', path: 'entry.description' } }],
+      } as any);
+      const detailPreview = await pdfBefore.renderInvoicePreview({ invoiceId: result.invoice_id, templateAst: detail });
+      expect(detailPreview.html).toContain('Public work');
+      expect(detailPreview.html).not.toContain('PRIVATE');
+      fs.writeFileSync(`${evidenceDir}/foreign-detail-preview.html`, detailPreview.html);
+      const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
+      const savedDetail = await saveInvoiceTemplate({ template_id: randomUUID(), name: 'Synthetic ownership detail', version: 1, is_default: false, templateAst: detail } as any);
+      expect(savedDetail.success, savedDetail.error).toBe(true);
+      fs.writeFileSync(`${evidenceDir}/foreign-detail.pdf`, await pdfBefore.generatePDF({ invoiceId: result.invoice_id, userId, templateId: savedDetail.template!.template_id }));
+      const detailText = execFileSync('pdftotext', ['-layout', `${evidenceDir}/foreign-detail.pdf`, '-'], { encoding: 'utf8' });
+      expect(detailText).toContain('Public work');
+      expect(detailText).not.toContain('PRIVATE');
+    } finally {
+      await db('invoice_time_entries').where({ tenant: foreignTenant, invoice_time_entry_id: foreignLinkId }).delete();
+    }
+
     const frozen = JSON.stringify(vm);
     // Invoiced fields are locked in the UI. Deliberate fixture-only source edits
     // test immutable historical rendering, not a supported edit workflow.

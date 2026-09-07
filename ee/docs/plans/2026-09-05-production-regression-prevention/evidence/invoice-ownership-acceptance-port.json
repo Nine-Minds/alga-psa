@@ -1,0 +1,63 @@
+{
+  "scope": "Replace opt-in authenticated invoice ownership acceptance case with active browser and DB/PDF coverage",
+  "baseRevision": "66da23c0731d19a9bf7a4e8ef3794f609430cda2",
+  "workingTreeDirty": true,
+  "localValidation": {
+    "artifact": "/tmp/alga-invoice-ownership-port-final.log",
+    "sha256": "de3d47d3d57ac900f9d71c7afa24a094136f8c2a20cbea6fe969ed74db9ccabd",
+    "passed": 1,
+    "failed": 0,
+    "boundary": "Full immutable invoice integration regression plus foreign standard/transformed preview and saved-template PDF exclusion"
+  },
+  "historicalNativeBrowser": {
+    "runId": "34151013512",
+    "candidate": "cfb7f4ea768b946be613c1bd215e935f62bc432f",
+    "sourceBlob": "e15de63e24c0649d169fc1cbcde316cdfbae605d",
+    "sourceMatchesLocal": true,
+    "caseResults": {
+      "community": [
+        {
+          "title": "authenticated invoice generation excludes foreign ticket snapshots from reads and downloaded PDF",
+          "tests": [
+            {
+              "status": "expected",
+              "results": [
+                {
+                  "status": "passed",
+                  "retry": 0
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "enterprise": [
+        {
+          "title": "authenticated invoice generation excludes foreign ticket snapshots from reads and downloaded PDF",
+          "tests": [
+            {
+              "status": "expected",
+              "results": [
+                {
+                  "status": "passed",
+                  "retry": 0
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "scope": "Historical native CE/EE evidence only; not an updated current-candidate CI pass"
+  },
+  "behavior": [
+    "Existing browser test signs in, generates via authenticated API, verifies four links and scoped read equality after foreign snapshot insertion, rejects wrong-tenant reads and inspects a downloaded PDF.",
+    "Active integration test now inserts a malformed foreign-owned historical link, checks unchanged standard preview/model, checks transformed detail preview and saves a detail template before inspecting real PDF text for public work and absence of private sentinel.",
+    "Removed equivalent INVOICE_TICKET_AUTH opt-in case; CUSTOM and CLOSURE cases remain until UI-authored fixture coverage is ported."
+  ],
+  "limits": [
+    "Integration authentication uses seeded-identity substitutes; native browser evidence supplies the separate real authentication boundary.",
+    "First local attempt incorrectly used inline AST for invoice PDF output; corrected to the supported saved template-ID path. No production code changed.",
+    "No new approval to publish the current candidate; full plan and native validation remain open."
+  ]
+}

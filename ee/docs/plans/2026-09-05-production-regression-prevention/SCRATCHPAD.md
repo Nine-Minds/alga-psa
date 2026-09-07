@@ -2453,3 +2453,10 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Publication exposed TRIGGER_MAPPING_REQUIRED: event and workflow schema refs differ. Added explicit sourcePayloadSchemaRef and event.payload mapping to the source template. The historical migration copy/persisted tenant definitions remain unchanged; the April migration pauses/hides the old system email workflow. Do not interpret this as evidence that the current production inbound pipeline is broken.
 - Full publish/start suite passes all 50 cases (16.84s). Before-fix targeted case failed at publication; 49 others were intentionally unselected then. Evidence: evidence/email-application-start-port.json.
 - Removed the last retired interpreter email test file. Its original assertions now have active replacements recorded in preceding port evidence. Remaining invoice skips, native candidate validation and broader plan work are still open.
+
+### 2026-09-07 — invoice ownership acceptance coverage reconciliation
+
+- Verified actual historical native CE/EE browser reports for invoice-ticket-ownership.spec.ts: each passes on retry 0 at candidate cfb7f4ea768b946be613c1bd215e935f62bc432f (run 34151013512). Candidate blob e15de63e24c0649d169fc1cbcde316cdfbae605d matches current local spec. This is historical evidence, not updated native candidate success.
+- Added remaining foreign transformed-detail assertions to the active immutable invoice integration test. Real generated invoice plus deliberately malformed foreign-owned link must leave standard preview/model unchanged; transformed detail preview and saved-template PDF preserve public work and exclude private sentinel. Whole regression passes (21.67s), including prior financial/immutability/history assertions.
+- Initial PDF attempt passed inline AST to an invoice path that uses saved template ID. Corrected fixture to save the template through the real action; no application code changed. Evidence: evidence/invoice-ownership-acceptance-port.json.
+- Removed the equivalent opt-in authenticated ownership case. Two UI-authored invoice acceptance cases remain (CUSTOM and CLOSURE). Full plan/native CI remain open.
