@@ -44,7 +44,11 @@ function eeUnavailable(): Response {
 }
 
 export async function POST(request: NextRequest): Promise<Response> {
-  const deniedResponse = await assertSessionProductAccess({
+  // The EE handler validates API keys and enforces the tenant product gate.
+  // Requiring a browser session first prevents authenticated API clients from
+  // reaching that handler. CE and session requests retain their existing gate.
+  const deniedResponse = isEnterpriseEdition && request.headers.get('x-api-key')
+    ? null : await assertSessionProductAccess({
     capability: 'extensions',
     allowedProducts: ['psa'],
   });

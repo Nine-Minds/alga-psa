@@ -1107,3 +1107,8 @@
 - Selector now uses UTC calendar-day boundaries for date-only inputs, including the entire end date with an exclusive next-midnight bound. Explicit timestamp filters preserve their exact inclusive cutoff.
 - New real-database regression failed before the fix (late-day invoice absent), then all seven invoiceSelection integration tests passed with no skips in isolated accounting_date_boundary_82cc. Evidence: accounting-export-date-boundary.json. Native API validation pending.
 - Extension 401 diagnosis: CE forwarding route calls session-only assertSessionProductAccess before the enterprise API-key-authenticated handler. Fix and behavioral verification remain outstanding. Full integration 101620543698 remains live; pushes held.
+
+### Extension install API-key forwarding — 2026-09-07
+- Reproduced native 401 with the real forwarding route: a session-only guard ran before the EE API-key middleware. EE API-key requests now reach the existing authenticated product gate. CE and requests without API keys retain the session gate.
+- Behavioral cases exercise the actual forwarding route, API-key middleware and product registry, with mocked key persistence/context construction and installation boundary. Valid PSA key succeeds; invalid key, AlgaDesk product, missing auth and CE/session cases remain denied. Related client-user and session-product checks also pass: 16 tests, zero failures/skips. Before fix, valid-key and product-denial cases returned the wrong 401.
+- Native full installation, including downstream tier and permissions, remains pending. Evidence: extension-install-api-key.json. Full integration job 101620543698 revalidated live; no push.
