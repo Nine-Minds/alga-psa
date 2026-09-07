@@ -47,6 +47,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
   }
   if (lane === 'temporal-readiness') {
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
+    if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/email-activities.temporal.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/activities/__tests__/portal-domain-reconcile.integration.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/scripts/__tests__/upgrade-tenant-product.test.ts') return true;

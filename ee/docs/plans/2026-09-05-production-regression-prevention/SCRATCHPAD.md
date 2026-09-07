@@ -1717,3 +1717,18 @@ The event-bus isolated reader fix is still queued locally and must be validated
 on the next candidate; do not attribute this timeout conclusively to it yet.
 Evidence: `evidence/api-native-a02.json`. At final inspection both edition jobs
 had finished and fresh-install-e2e aggregate was queued; preserve run until terminal.
+
+### Executable tenant deletion control flow (2026-09-07)
+
+Added ten workflow behavior cases beside the existing source-only contracts.
+All four triggers verify suspension ordering and final provider teardown; rollback
+checks both resume failures, preserving completion and refusing tenant deletion;
+legacy patch-disabled paths omit new calls. Activity and Temporal API doubles
+exercise the shipped control flow without a server. This does not prove engine
+history replay compatibility or provider side effects. Assigned to readiness and
+independent discovery; all229 cases across32 files pass. Removing background
+suspension produces four intended ordering failures, and production source was
+restored. Evidence: `evidence/tenant-deletion-control-flow.json`.
+
+Published head remains d8cf156c73. CI had no reported failures on the last check;
+new browser run34118119011 must not be cancelled by pushing this follow-up early.
