@@ -36,3 +36,4 @@ export * from './commentEmailDeliveries';
 export * from './customerCommentNotification';
 
 export * from './customerEmailDeliveries';
+export * from './requesterCommentEmail';

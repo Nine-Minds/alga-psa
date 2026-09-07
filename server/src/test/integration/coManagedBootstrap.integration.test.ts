@@ -8113,3 +8113,155 @@ it('rolls customer email discovery and completion back with its caller and sends
     expect(await customer.table('co_management_customer_email_deliveries').first()).toMatchObject({ status: 'delivered' });
   } finally { send.mockRestore(); }
 }));
+
+async function withRequesterEmailAuthorityFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
+  contactId: string; commentId: string; localResource: { tenant: string; kind: 'ticket'; id: string };
+  discover: () => Promise<{ recipient: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient; email: string; message: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterCommentEmail } | null>;
+  retry: (recipient: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient) => Promise<{ recipient: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterEmailRecipient; email: string; message: import('../../../../packages/co-managed/src/requesterCommentEmail').CoManagedRequesterCommentEmail } | null>;
+  makeLocation: (options?: { id?: string; email?: string; active?: boolean; isDefault?: boolean }) => Promise<string>;
+}) => Promise<void>) {
+  await withConversationFixture(async fixture => {
+    const { customer, resource, operation, addCustomer } = fixture;
+    const contact = await customer.table('contacts').where('client_id', operation.customer_client_id).first();
+    const contactId = randomUUID();
+    await customer.table('contacts').insert({ ...contact, contact_name_id: contactId, full_name: 'Email-only requester', email: 'requester@example.test', is_inactive: false });
+    await customer.table('tickets').where('ticket_id', resource.id).update({ contact_name_id: contactId });
+    const comment = await addCustomer({ note: 'Requester-visible MSP response', audience: 'requester', foreign: true });
+    const { discoverCoManagedRequesterCommentEmail: discover, withCoManagedRequesterCommentEmail: retry } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+    const localResource = { tenant: resource.tenant, kind: 'ticket' as const, id: resource.id };
+    const result = async (context: any, message: any) => ({ recipient: context.recipient, email: context.email, message });
+    const makeLocation = async (options: { id?: string; email?: string; active?: boolean; isDefault?: boolean } = {}) => {
+      const id = options.id ?? randomUUID();
+      await customer.table('client_locations').insert({ tenant: resource.tenant, location_id: id, client_id: operation.customer_client_id,
+        location_name: 'Requester fallback', address_line1: '1 Test Street', city: 'Test City', country_code: 'US', country_name: 'United States',
+        is_default: options.isDefault ?? true, is_active: options.active ?? true, email: options.email ?? 'client-requester@example.test' });
+      return id;
+    };
+    await work({ ...fixture, contactId, commentId: comment.id, localResource, makeLocation,
+      discover: () => discover(db, localResource, comment.id, result), retry: recipient => retry(db, recipient, localResource, comment.id, result) });
+  });
+}
+
+it('admits an email-only current requester without a portal account and reloads the same contact address and content', async () => withRequesterEmailAuthorityFixture(async ({
+  customer, resource, operation, contactId, commentId, discover, retry,
+}) => {
+  expect(await customer.table('users').where('contact_id', contactId)).toHaveLength(0);
+  const original = await discover();
+  expect(original).toMatchObject({ recipient: { kind: 'requester_contact', tenant: resource.tenant, clientId: operation.customer_client_id, contactId },
+    email: 'requester@example.test', message: { audience: 'requester', note: 'Requester-visible MSP response' } });
+  expect(original?.message).not.toHaveProperty('metadata');
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: ' current-requester@example.test ' });
+  await customer.table('comments').where('comment_id', commentId).update({ note: 'Edited requester content' });
+  expect(await retry(original!.recipient)).toMatchObject({ recipient: original!.recipient, email: 'current-requester@example.test', message: { note: 'Edited requester content' } });
+}));
+
+it('never redirects an old requester obligation to a replacement contact even when they share the same address', async () => withRequesterEmailAuthorityFixture(async ({
+  customer, resource, contactId, discover, retry,
+}) => {
+  const original = await discover();
+  const replacementId = randomUUID(), contact = await customer.table('contacts').where('contact_name_id', contactId).first();
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: null });
+  await customer.table('contacts').insert({ ...contact, contact_name_id: replacementId });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ contact_name_id: replacementId });
+  expect(await retry(original!.recipient)).toBeNull();
+  expect(await discover()).toMatchObject({ recipient: { kind: 'requester_contact', contactId: replacementId }, email: 'requester@example.test' });
+}));
+
+it('binds requester fallback mail to the current unique default location and cancels it when contact mail becomes available', async () => withRequesterEmailAuthorityFixture(async ({
+  customer, resource, operation, contactId, discover, retry, makeLocation,
+}) => {
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: null });
+  await customer.table('client_locations').where('client_id', operation.customer_client_id).update({ is_default: false });
+  const locationId = await makeLocation();
+  const original = await discover();
+  expect(original).toMatchObject({ recipient: { kind: 'requester_location', tenant: resource.tenant, clientId: operation.customer_client_id, locationId }, email: 'client-requester@example.test' });
+  await customer.table('client_locations').where('location_id', locationId).update({ email: 'updated-location@example.test' });
+  expect(await retry(original!.recipient)).toMatchObject({ email: 'updated-location@example.test' });
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: 'new-contact@example.test' });
+  expect(await retry(original!.recipient)).toBeNull();
+  expect(await discover()).toMatchObject({ recipient: { kind: 'requester_contact', contactId }, email: 'new-contact@example.test' });
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: null });
+  await customer.table('client_locations').where('location_id', locationId).update({ is_default: false });
+  const replacement = await makeLocation({ email: 'updated-location@example.test' });
+  expect(await retry(original!.recipient)).toBeNull();
+  expect(await discover()).toMatchObject({ recipient: { kind: 'requester_location', locationId: replacement } });
+  await expect(makeLocation({ email: 'ambiguous-default@example.test' })).rejects.toMatchObject({ code: '23505' });
+  expect(await discover()).toMatchObject({ recipient: { locationId: replacement } });
+}));
+
+it.each(['inactive_contact', 'inactive_client', 'invalid_address', 'wrong_client', 'invisible_board'] as const)('does not use fallback email to bypass a requester with %s restrictions', async condition => withRequesterEmailAuthorityFixture(async ({
+  customer, resource, operation, contactId, discover, makeLocation,
+}) => {
+  await customer.table('client_locations').where('client_id', operation.customer_client_id).update({ is_default: false }); await makeLocation();
+  if (condition !== 'invalid_address') await customer.table('contacts').where('contact_name_id', contactId).update({ email: null });
+  if (condition === 'inactive_contact') await customer.table('contacts').where('contact_name_id', contactId).update({ is_inactive: true });
+  if (condition === 'inactive_client') await customer.table('clients').where('client_id', operation.customer_client_id).update({ is_inactive: true });
+  if (condition === 'invalid_address') await customer.table('contacts').where('contact_name_id', contactId).update({ email: 'not an address' });
+  if (condition === 'wrong_client') await customer.table('contacts').where('contact_name_id', contactId).update({ client_id: null });
+  if (condition === 'invisible_board') {
+    const groupId = randomUUID();
+    await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'No requester boards' });
+    await customer.table('contacts').where('contact_name_id', contactId).update({ portal_visibility_group_id: groupId });
+  }
+  expect(await discover()).toBeNull();
+}));
+
+it('restricts requester email to current published public agent responses and suppresses self and close-paired mail', async () => withRequesterEmailAuthorityFixture(async ({
+  customer, customerPrincipal, resource, contactId, commentId, localResource, discover, addCustomer,
+}) => {
+  const { discoverCoManagedRequesterCommentEmail: read } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+  const deliver = vi.fn(async (_, message) => message);
+  for (const audience of ['shared_it', 'organization_private'] as const) {
+    const comment = await addCustomer({ note: 'Not requester content', audience, internal: true });
+    expect(await read(db, localResource, comment.id, deliver)).toBeNull();
+  }
+  expect(deliver).not.toHaveBeenCalled();
+  const authorComment = await addCustomer({ note: 'Customer technician response', audience: 'requester' });
+  expect(await read(db, localResource, authorComment.id, deliver)).not.toBeNull();
+  await customer.table('users').where('user_id', customerPrincipal.userId).update({ email: 'REQUESTER@example.test' });
+  expect(await read(db, localResource, authorComment.id, deliver)).toBeNull();
+  await customer.table('users').where('user_id', customerPrincipal.userId).update({ email: 'author@example.test', contact_id: contactId });
+  expect(await read(db, localResource, authorComment.id, deliver)).toBeNull();
+  await customer.table('users').where('user_id', customerPrincipal.userId).update({ contact_id: null, user_type: 'client' });
+  expect(await read(db, localResource, authorComment.id, deliver)).toBeNull();
+  await customer.table('comments').where('comment_id', commentId).update({ metadata: { closes_ticket: true } }); expect(await discover()).toBeNull();
+  await customer.table('comments').where('comment_id', commentId).update({ metadata: {}, publish_state: 'scheduled' }); expect(await discover()).toBeNull();
+  await customer.table('comments').where('comment_id', commentId).update({ publish_state: 'published', deleted_at: new Date() }); expect(await discover()).toBeNull();
+}));
+
+it('preserves requester ownership after MSP revocation and departure while retaining current visibility and source locks', async () => withRequesterEmailAuthorityFixture(async ({
+  customer, sponsor, resource, operation, contactId, commentId, localResource, discover, retry,
+}) => {
+  const original = await discover();
+  await sponsor.table('tenants').update({ suspended_at: new Date() });
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await retry(original!.recipient)).not.toBeNull();
+  const groupId = randomUUID();
+  await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'Requester email boards' });
+  await customer.table('contacts').where('contact_name_id', contactId).update({ portal_visibility_group_id: groupId });
+  await customer.table('client_portal_visibility_group_boards').insert({ tenant: resource.tenant, group_id: groupId, board_id: operation.customer_board_id });
+  const { withCoManagedRequesterCommentEmail: read } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+  await read(db, original!.recipient, localResource, commentId, async () => {
+    for (const [table, where] of [
+      ['tenants', {}], ['clients', { client_id: operation.customer_client_id }], ['contacts', { contact_name_id: contactId }],
+      ['tickets', { ticket_id: resource.id }], ['comments', { comment_id: commentId }], ['client_portal_visibility_groups', { group_id: groupId }],
+      ['client_portal_visibility_group_boards', { group_id: groupId }],
+    ] as const) await expect(db.transaction(trx => tenantDb(trx, resource.tenant).table(table).where(where).forUpdate().noWait().first())).rejects.toMatchObject({ code: '55P03' });
+  });
+  await customer.table('client_portal_visibility_group_boards').where('group_id', groupId).del();
+  expect(await retry(original!.recipient)).toBeNull();
+}));
+
+it('rejects foreign and malformed requester email identities without borrowing an MSP session', async () => withRequesterEmailAuthorityFixture(async ({
+  principal, localResource, commentId, discover,
+}) => {
+  const original = await discover();
+  const { withCoManagedRequesterCommentEmail: read } = await import('../../../../packages/co-managed/src/requesterCommentEmail');
+  const deliver = vi.fn();
+  for (const recipient of [{ ...original!.recipient, tenant: principal.tenant }, { ...original!.recipient, kind: 'session' },
+    { ...original!.recipient, contactId: 'not-a-contact' }, { ...original!.recipient, clientId: null }]) {
+    await expect(read(db, recipient as any, localResource, commentId, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  expect(deliver).not.toHaveBeenCalled();
+}));

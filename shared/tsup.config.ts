@@ -79,6 +79,8 @@ export default defineConfig({
     'billingClients/templateClone': 'billingClients/templateClone.ts',
     'lib/boardTicketDefaults': 'lib/boardTicketDefaults.ts',
     'lib/commentAudience': 'lib/commentAudience.ts',
+    'lib/tickets/clientPortalVisibility': 'lib/tickets/clientPortalVisibility.ts',
+    'lib/tickets/clientPortalVisibility.server': 'lib/tickets/clientPortalVisibility.server.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',

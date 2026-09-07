@@ -29,6 +29,8 @@ function buildTrx(params: {
     if (table === 'contacts') {
       return {
         where: vi.fn().mockReturnValue({
+          modify(callback: (query: any) => void) { callback(this); return this; },
+          forShare: vi.fn().mockReturnThis(),
           first: vi.fn().mockResolvedValue(params.contact),
         }),
       };
@@ -37,6 +39,8 @@ function buildTrx(params: {
     if (table === 'client_portal_visibility_groups') {
       return {
         where: vi.fn().mockReturnValue({
+          modify(callback: (query: any) => void) { callback(this); return this; },
+          forShare: vi.fn().mockReturnThis(),
           first: vi.fn().mockResolvedValue(params.group),
         }),
       };
@@ -44,6 +48,8 @@ function buildTrx(params: {
 
     if (table === 'client_portal_visibility_group_boards as cvgb') {
       return {
+        modify(callback: (query: any) => void) { callback(this); return this; },
+        forShare: vi.fn().mockReturnThis(),
         join: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         select: vi.fn().mockResolvedValue(

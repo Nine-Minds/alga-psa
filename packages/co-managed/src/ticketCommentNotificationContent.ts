@@ -22,7 +22,7 @@ export interface TicketCommentNotificationContent<Resource extends { tenant: str
  * recipient authority in this transaction. Admission chooses allowed audiences;
  * source identities, publication state and redactions are always rechecked here. */
 export async function readLockedTicketCommentNotification<Resource extends { tenant: string; id: string }>(
-  context: { trx: Knex.Transaction; actor: CoManagedHomeActor; resource: Resource; redactedFields: readonly string[] },
+  context: { trx: Knex.Transaction; actor: CoManagedHomeActor | null; resource: Resource; redactedFields: readonly string[] },
   commentId: string, audiences: readonly TicketCommentAudience[],
 ): Promise<TicketCommentNotificationContent<Resource> | null> {
   const { trx, actor: homeActor, redactedFields } = context;
@@ -59,7 +59,7 @@ export async function readLockedTicketCommentNotification<Resource extends { ten
   }
   // Self-suppression compares the qualified identity, even when display fields
   // are redacted. A coincident customer UUID is a different author.
-  if (author.kind === 'user' && author.tenant === homeActor.tenant && author.id === homeActor.userId) return null;
+  if (homeActor && author.kind === 'user' && author.tenant === homeActor.tenant && author.id === homeActor.userId) return null;
   const ticket = await owner.table('tickets').where('ticket_id', context.resource.id).first('ticket_number', 'title');
   if (!ticket) return null;
   const message: TicketCommentNotificationContent<Resource> = {
