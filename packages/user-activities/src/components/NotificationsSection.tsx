@@ -56,7 +56,13 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
   const searchParams = useSearchParams();
   const notificationTabParam = searchParams?.get('notificationTab');
 
-  const [activities, setActivities] = useState<NotificationActivity[]>([]);
+  const identity = `${session?.user?.tenant ?? ''}:${session?.user?.id ?? ''}`;
+  const currentIdentity = useRef(identity);
+  currentIdentity.current = identity;
+  const activityRequest = useRef(0);
+  const [activityState, setActivityState] = useState({ identity, rows: [] as NotificationActivity[], total: 0 });
+  const activities = activityState.identity === identity ? activityState.rows : [];
+  const totalCount = activityState.identity === identity ? activityState.total : 0;
   const [loading, setLoading] = useState(true);
   const { openActivityDrawer } = useActivityDrawer();
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +80,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
 
   // Full-view (flag-on) server-side pagination state.
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCount, setTotalCount] = useState(0);
 
   // Derive the active priority chip from the shared notification filters, so the
   // chips and the filter dialog stay in sync off a single source of truth.
@@ -97,12 +102,14 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
     enablePolling: true
   });
 
-  // Track previous unread count to detect changes
-  const prevUnreadCountRef = useRef<number>(realTimeHook.unreadCount);
-  const prevNotificationCountRef = useRef<number>(realTimeHook.notifications.length);
-
   // Fetch initial activities
   const loadActivities = useCallback(async (filters: Partial<ActivityFilters>) => {
+    // LEVERAGE: pattern session-scoped-async-view — keep old identity and superseded reads from restoring shared content.
+    const request = ++activityRequest.current;
+    const current = () => currentIdentity.current === identity && activityRequest.current === request;
+    if (!tenant || !userId) {
+      setActivityState({ identity, rows: [], total: 0 }); setLoading(false); return;
+    }
     try {
       setLoading(true);
       setError(null);
@@ -116,8 +123,7 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
           offset,
           FULL_MODE_PAGE_SIZE
         );
-        setActivities(paged);
-        setTotalCount(total);
+        if (current()) setActivityState({ identity, rows: paged, total });
       } else {
         // Fetch notification activities using current filters
         const result = await fetchNotificationActivities(filters);
@@ -127,15 +133,18 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
 
-        setActivities(sortedActivities.slice(0, limit));
+        if (current()) setActivityState({ identity, rows: sortedActivities.slice(0, limit), total: sortedActivities.length });
       }
     } catch (err) {
       console.error('Error loading notification activities:', err);
-      setError(t('sections.notifications.errors.loadFailed', { defaultValue: 'Failed to load notification activities. Please try again later.' }));
+      if (current()) {
+        setActivityState({ identity, rows: [], total: 0 });
+        setError(t('sections.notifications.errors.loadFailed', { defaultValue: 'Failed to load notification activities. Please try again later.' }));
+      }
     } finally {
-      setLoading(false);
+      if (current()) setLoading(false);
     }
-  }, [limit, fullMode, currentPage]);
+  }, [limit, fullMode, currentPage, identity, tenant, userId, t]);
 
   // In full view, reset to the first page whenever the effective filters change so
   // the user is never stranded on an out-of-range page.
@@ -144,11 +153,6 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
       setCurrentPage(1);
     }
   }, [notificationFilters, fullMode]);
-
-  // Load activities initially and when filters change
-  useEffect(() => {
-    loadActivities(notificationFilters);
-  }, [notificationFilters, loadActivities]);
 
   // Update active tab when URL parameter changes
   useEffect(() => {
@@ -168,26 +172,12 @@ export function NotificationsSection({ limit = 5, onViewAll, noCard = false, ful
     }
   }, [notificationTabParam, activeTab]);
 
-  // Watch for changes in real-time notifications and auto-refresh
+  // Every authorized inbox refresh is a new snapshot, including when counts
+  // stay unchanged but a shared message is edited or its fields are redacted.
   useEffect(() => {
-    // Skip initial render
-    if (prevUnreadCountRef.current === undefined) {
-      prevUnreadCountRef.current = realTimeHook.unreadCount;
-      prevNotificationCountRef.current = realTimeHook.notifications.length;
-      return;
-    }
-
-    // Check if unread count or notification count changed
-    const unreadCountChanged = prevUnreadCountRef.current !== realTimeHook.unreadCount;
-    const notificationCountChanged = prevNotificationCountRef.current !== realTimeHook.notifications.length;
-
-    if (unreadCountChanged || notificationCountChanged) {
-      console.log('Notifications changed, auto-refreshing list...');
-      loadActivities(notificationFilters);
-      prevUnreadCountRef.current = realTimeHook.unreadCount;
-      prevNotificationCountRef.current = realTimeHook.notifications.length;
-    }
-  }, [realTimeHook.unreadCount, realTimeHook.notifications.length, loadActivities, notificationFilters]);
+    void loadActivities(notificationFilters);
+    return () => { activityRequest.current++; };
+  }, [realTimeHook.notifications, notificationFilters, loadActivities]);
 
   const handleRefresh = () => {
     // Reload activities with the current filters

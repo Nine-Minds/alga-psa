@@ -67,13 +67,16 @@ export function useActivitiesCache() {
     async (filters: ActivityFilters, page: number, pageSize: number): Promise<ActivityResponse> => {
       const cacheKey = generateCacheKey(filters, page, pageSize);
       const now = Date.now();
+      // Notification bodies and even empty counts depend on current shared
+      // access. A local cache hit must never replace that authorization read.
+      const cacheable = Boolean(filters.types?.length) && !filters.types!.includes(ActivityType.NOTIFICATION);
 
       if (!isInitialLoad) {
         setIsLoading(true);
       }
 
       try {
-        if (cache.current.has(cacheKey)) {
+        if (cacheable && cache.current.has(cacheKey)) {
           const entry = cache.current.get(cacheKey)!;
           if (entry.expiresAt > now) {
             console.log('Cache hit for activities data');
@@ -110,12 +113,14 @@ export function useActivitiesCache() {
           cacheTtl = CACHE_TTL.DRAWER;
         }
 
-        cache.current.set(cacheKey, {
-          activities: result.activities,
-          totalCount: result.totalCount,
-          timestamp: now,
-          expiresAt: now + cacheTtl,
-        });
+        if (cacheable) {
+          cache.current.set(cacheKey, {
+            activities: result.activities,
+            totalCount: result.totalCount,
+            timestamp: now,
+            expiresAt: now + cacheTtl,
+          });
+        }
 
         if (cache.current.size > CACHE_SIZE_LIMIT) {
           const entries = Array.from(cache.current.entries());

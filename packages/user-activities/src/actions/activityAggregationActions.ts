@@ -1,4 +1,5 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { coManagedInboxScope } from '@alga-psa/notifications/lib/coManagedInbox';
 import { Knex } from 'knex';
 import {
   Activity,
@@ -307,7 +308,10 @@ export async function fetchUserActivitiesForApi(
   const tags = [`user:${effectiveUserId}`, ...typesToFetch.map(type => `type:${type}`)];
   // Longer TTL for drawer operations (detected by small page size).
   const ttl = pageSize <= 5 ? cache.ttl.DRAWER : cache.ttl.DEFAULT;
-  await cache.set(cacheKey, JSON.stringify(response), ttl, tags);
+  // Notification presentation must be regenerated under current source access.
+  if (!typesToFetch.includes(ActivityType.NOTIFICATION)) {
+    await cache.set(cacheKey, JSON.stringify(response), ttl, tags);
+  }
 
   return response;
 }
@@ -1533,6 +1537,13 @@ function buildNotificationActivitiesQuery(
     });
 }
 
+async function notificationActivityScope(trx: Knex.Transaction, tenant: string, userId: string) {
+  const user = await tenantDb(trx, tenant).table('users').where('user_id', userId).first('user_id', 'user_type');
+  // The inbox scope independently binds shared access to the actual tracked
+  // browser session. Supplying another target or using an API key grants none.
+  return coManagedInboxScope(trx, user ?? { user_id: userId }, tenant);
+}
+
 /** Fetch notification activities for a user. */
 export async function fetchNotificationActivities(
   userId: string,
@@ -1545,19 +1556,18 @@ export async function fetchNotificationActivities(
     const { knex: db, tenant } = await createTenantKnex(tenantId);
     if (!tenant) throw new Error('Tenant is required');
 
-    const notifications = await withTransaction(db, async (trx: Knex.Transaction) =>
-      buildNotificationActivitiesQuery(trx, tenant, userId, filters)
-        .orderBy('internal_notifications.created_at', 'desc')
-    );
-    const activities = notifications.map((notification: any) =>
-      mapNotificationActivity(notification)
-    );
-
-    if (activities.length > 0) {
-      const cacheKey = `notification-activities:${userId}:${JSON.stringify(filters)}`;
-      await cache.set(cacheKey, JSON.stringify(activities), cache.ttl.LIST, [`user:${userId}`, `type:${ActivityType.NOTIFICATION}`]);
-    }
-    return activities;
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      const scope = await notificationActivityScope(trx, tenant, userId);
+      const query = buildNotificationActivitiesQuery(trx, tenant, userId, filters);
+      scope.apply(query);
+      const notifications = await query.orderBy('internal_notifications.created_at', 'desc');
+      const activities = notifications.flatMap((row: any) => {
+        const current = scope.render(row);
+        return current ? [mapNotificationActivity(current)] : [];
+      });
+      await scope.assertCurrent();
+      return activities;
+    });
   } catch (error) {
     console.error('Error fetching notification activities:', error);
     return [];
@@ -1593,22 +1603,26 @@ export async function fetchNotificationActivitiesPagedInternal(
   const safeLimit = Math.max(0, Math.min(100, Math.floor(limit)));
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    const scope = await notificationActivityScope(trx, tenant, userId);
     const baseQuery = buildNotificationActivitiesQuery(
       trx,
       tenant,
       userId,
       filters
     );
+    scope.apply(baseQuery);
     const [{ count }] = await baseQuery.clone().count('* as count');
     const rows = await baseQuery.clone()
       .orderBy('internal_notifications.created_at', 'desc')
       .offset(safeOffset)
       .limit(safeLimit);
 
-    return {
-      activities: rows.map((row: any) => mapNotificationActivity(row)),
-      total: Number(count),
-    };
+    const activities = rows.flatMap((row: any) => {
+      const current = scope.render(row);
+      return current ? [mapNotificationActivity(current)] : [];
+    });
+    await scope.assertCurrent();
+    return { activities, total: Number(count) };
   });
 }
 

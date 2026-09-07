@@ -6079,3 +6079,59 @@ it('does not issue a notification signal token if the session expires while wait
     expect(await attempt).toBeNull();
   } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));
+
+it('reauthorizes notification activity rows before pagination and totals and keeps API targets from borrowing a browser session', async () => withInAppInboxFixture(async ({
+  principal, resource, sponsor, customer, notificationId, event, apiOverride, eligibleIds,
+}) => {
+  const feed = await import('../../../../packages/user-activities/src/actions/activityAggregationActions');
+  const ordinaryId = randomUUID();
+  const common = { tenant: principal.tenant, user_id: principal.userId, template_name: 'native-example', language_code: 'en', title: 'Ordinary activity',
+    message: 'Ordinary body', type: 'info', category: 'general', priority: 'normal' };
+  await sponsor.table('internal_notifications').insert([
+    { ...common, internal_notification_id: ordinaryId, created_at: '2020-01-01T00:00:00Z' },
+    { ...common, internal_notification_id: randomUUID(), created_at: '2030-01-01T00:00:00Z', metadata: { coManaged: { version: 1 } }, message: 'FORGED SECRET' },
+  ]);
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Current activity text' });
+  const first = await feed.fetchNotificationActivitiesPagedInternal(principal.userId, principal.tenant, {}, 0, 1);
+  expect(first.total).toBe(2); expect(first.activities.map(row => row.notificationId)).toEqual([notificationId]);
+  expect(first.activities[0].message).toContain('Current activity text');
+  expect(first.activities[0].metadata?.coManaged.resource).toEqual(resource);
+  expect(first.activities[0].metadata).not.toHaveProperty('ticketId');
+  const second = await feed.fetchNotificationActivitiesPagedInternal(principal.userId, principal.tenant, {}, 1, 1);
+  expect(second.activities.map(row => row.notificationId)).toEqual([ordinaryId]);
+  const all = await feed.fetchNotificationActivities(principal.userId, principal.tenant, {});
+  expect(all).toHaveLength(2); expect(JSON.stringify(all)).not.toContain('FORGED SECRET');
+  const otherRecipient = eligibleIds.find(id => id !== principal.userId)!;
+  expect(await feed.fetchNotificationActivitiesPagedInternal(otherRecipient, principal.tenant, {})).toEqual({ activities: [], total: 0 });
+  apiOverride.mockReturnValue({ user_id: principal.userId, tenant: principal.tenant } as any);
+  expect((await feed.fetchNotificationActivitiesPagedInternal(principal.userId, principal.tenant, {})).activities.map(row => row.notificationId)).toEqual([ordinaryId]);
+  apiOverride.mockReturnValue(undefined);
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  expect(await feed.fetchNotificationActivitiesPagedInternal(principal.userId, principal.tenant, {}, 0, 1)).toMatchObject({ total: 1, activities: [{ notificationId: ordinaryId }] });
+  expect((await feed.fetchNotificationActivities(principal.userId, principal.tenant, {})).map(row => row.id)).toEqual([ordinaryId]);
+  await sponsor.table('internal_notifications').where('internal_notification_id', notificationId).update({ metadata: null });
+  expect((await feed.fetchNotificationActivitiesPagedInternal(principal.userId, principal.tenant, {})).total).toBe(1);
+}));
+
+it('excludes shared receipts and malformed shared metadata from client notification activities without hiding ordinary notices', async () => withInAppInboxFixture(async ({
+  principal, sponsor, notificationId,
+}) => {
+  const auth = await import('@alga-psa/auth');
+  const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/notificationActivities');
+  const ordinaryId = randomUUID();
+  const common = { tenant: principal.tenant, user_id: principal.userId, template_name: 'native-example', language_code: 'en', title: 'Portal notice',
+    message: 'Portal body', type: 'info', category: 'general', priority: 'normal' };
+  await sponsor.table('internal_notifications').insert([
+    { ...common, internal_notification_id: ordinaryId },
+    { ...common, internal_notification_id: randomUUID(), metadata: { coManaged: {} }, message: 'MALFORMED SHARED SECRET' },
+  ]);
+  await sponsor.table('internal_notifications').where('internal_notification_id', notificationId).update({ metadata: null });
+  await sponsor.table('users').where('user_id', principal.userId).update({ user_type: 'client' });
+  const user = await sponsor.table('users').where('user_id', principal.userId).first();
+  await auth.runWithApiKeyUser(user, async () => {
+    const activities = await portal.fetchNotificationActivities({});
+    expect(activities.map(row => row.notificationId)).toEqual([ordinaryId]);
+    expect(activities[0].message).toBe('Portal body');
+    expect(await portal.fetchNotificationActivities({ search: 'tickets' })).toEqual([]);
+  });
+}));
