@@ -1,0 +1,50 @@
+{
+  "status": "Local validation passed; native execution pending",
+  "api": {
+    "changes": [
+      "Shared tenant-scoped permission revocation helper restores exact grants in finally; exercised by client and project HTTP tests",
+      "Client permission test no longer accepts 500 or interchangeable success/denial; requires 403 with unchanged persisted clients and successful creation after grant restoration",
+      "Permission list no longer returns successfully on 500 and requires a populated 10-row page",
+      "Previously empty permission-update test now updates via HTTP and checks reopened result, persisted fields, stable identity and preserved role grant",
+      "Cross-tenant permission read/update/delete all require 404 with unchanged foreign row; filter checks require actual matching rows and exclude nonmatching rows",
+      "Removed obsolete ignored tenantId ApiTestClient options found by focused TypeScript check"
+    ],
+    "validation": {
+      "combinedPassed": 19,
+      "combinedFailed": 0,
+      "combinedFilteredOut": 43,
+      "combinedDurationSeconds": 7.39,
+      "combinedLog": "/tmp/alga-api-rbac-no-false-green.log",
+      "finalPermissionSuitePassed": 15,
+      "finalPermissionSuiteSkipped": 0,
+      "finalPermissionSuiteDurationSeconds": 2.91,
+      "finalPermissionLog": "/tmp/alga-permission-api-final.log",
+      "types": "All four changed TypeScript files pass focused strictNullChecks tsc; /tmp/alga-api-rbac-no-false-green-types-final.log"
+    },
+    "scope": "Real HTTP against existing isolated built application, synthetic tenant fixtures in preserved browser database. Filtered cases are not counted as executed; rebuilt native CE/EE acceptance pending."
+  },
+  "nativeCommunity": {
+    "run": 34078331062,
+    "job": 101612274739,
+    "browserPassed": 22,
+    "browserDuration": "4.7m",
+    "jobConclusion": "failure",
+    "failure": "API database attestation omitted password for socket authentication; API runner did not execute. Missing API artifact was a subsequent setup-failure consequence.",
+    "log": "/tmp/alga-browser-ce-df9b.log"
+  },
+  "attestationRepair": {
+    "change": "Pass the workflow-generated synthetic database password to docker exec through PGPASSWORD and use psql --no-password to fail promptly rather than prompt on SQL stdin.",
+    "validation": [
+      "Temporary pgvector/pgvector:pg16 with network_mode:none, tmpfs data and --auth-local=scram-sha-256",
+      "Original no-password connection rejects with exit 2",
+      "Exact corrected workflow shell block passes CREATE TABLE and INSERT after verifying Compose project/service labels and running state",
+      "Persisted environment UUID exactly matches emitted GITHUB_ENV identity and database_name=server",
+      "Temporary container removed; existing application/database untouched"
+    ],
+    "fixtureLocal": "/tmp/alga-api-attestation-auth-82cc"
+  },
+  "remaining": [
+    "Native execution of corrected API setup and tests",
+    "Full plan acceptance remains incomplete; no feature/test completion flags changed"
+  ]
+}

@@ -802,7 +802,7 @@ jobs:
           test "$(docker inspect --format '{{ .State.Running }}' "$container_id")" = true
           environment_id=$(node -e 'console.log(require("node:crypto").randomUUID())')
           # Provision through the verified owned container, not an arbitrary DB URL.
-          docker exec -i "$container_id" psql -U postgres -d server -v ON_ERROR_STOP=1 -v environment_id="$environment_id" <<'SQL'
+          docker exec -i -e PGPASSWORD=placeholder-password "$container_id" psql --no-password -U postgres -d server -v ON_ERROR_STOP=1 -v environment_id="$environment_id" <<'SQL'
           CREATE TABLE public.alga_test_environment_ownership (
             singleton boolean PRIMARY KEY CHECK (singleton),
             environment_id uuid NOT NULL,

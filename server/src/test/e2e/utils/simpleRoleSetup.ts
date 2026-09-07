@@ -20,6 +20,26 @@ export async function grantTestUserPermission(
   }).onConflict(['tenant', 'role_id', 'permission_id']).ignore();
 }
 
+/** Temporarily revoke a capability only within an isolated test user's tenant. */
+export async function withoutTestUserPermission(
+  db: Knex, userId: string, tenant: string, resource: string, action: string,
+  verify: () => Promise<void>,
+): Promise<void> {
+  const table = (name: string) => tenantDb(db, tenant).table(name);
+  const roles = await table('user_roles').where({ user_id: userId }).pluck('role_id');
+  const permissions = await table('permissions').where({ resource, action }).pluck('permission_id');
+  const grants = await table('role_permissions').whereIn('role_id', roles)
+    .whereIn('permission_id', permissions);
+  if (grants.length === 0) throw new Error(`Test user has no ${resource}:${action} grants to revoke`);
+  await table('role_permissions').whereIn('role_id', roles)
+    .whereIn('permission_id', permissions).delete();
+  try {
+    await verify();
+  } finally {
+    await table('role_permissions').insert(grants);
+  }
+}
+
 /**
  * Simple role setup for testing - creates a basic user with permissions
  * without dealing with complex tenant-specific permission structures

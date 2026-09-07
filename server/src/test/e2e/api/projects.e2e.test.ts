@@ -4,6 +4,7 @@ import {
   setupE2ETestEnvironment,
   E2ETestEnvironment
 } from '../utils/e2eTestSetup';
+import { withoutTestUserPermission } from '../utils/simpleRoleSetup';
 import { createProjectTestData } from '../utils/projectTestData';
 
 describe('Projects API E2E Tests', () => {
@@ -464,29 +465,9 @@ describe('Projects API E2E Tests', () => {
   });
 
   describe('Permissions', () => {
-    async function withoutProjectPermission(action: string, verify: () => Promise<void>) {
-      // Remove only this synthetic tenant user's grants, then restore the exact
-      // mappings so a denial assertion cannot change later tests' permissions.
-      const roles = await env.db('user_roles')
-        .where({ tenant: env.tenant, user_id: env.userId }).pluck('role_id');
-      const permissions = await env.db('permissions')
-        .where({ tenant: env.tenant, resource: 'project', action }).pluck('permission_id');
-      const grants = await env.db('role_permissions')
-        .where({ tenant: env.tenant }).whereIn('role_id', roles)
-        .whereIn('permission_id', permissions);
-      expect(grants.length).toBeGreaterThan(0);
-      await env.db('role_permissions').where({ tenant: env.tenant })
-        .whereIn('role_id', roles).whereIn('permission_id', permissions).delete();
-      try {
-        await verify();
-      } finally {
-        await env.db('role_permissions').insert(grants);
-      }
-    }
-
     it('denies listing without project read permission and permits it after restoration', async () => {
       expect((await env.apiClient.get('/api/v1/projects')).status).toBe(200);
-      await withoutProjectPermission('read', async () => {
+      await withoutTestUserPermission(env.db, env.userId, env.tenant, 'project', 'read', async () => {
         const denied = await env.apiClient.get('/api/v1/projects');
         expect(denied.status, JSON.stringify(denied.data)).toBe(403);
         expect(denied.data.error.message).toBeTruthy();
@@ -498,7 +479,7 @@ describe('Projects API E2E Tests', () => {
 
     it('denies creation without project create permission without persisting a project', async () => {
       const projectData = createProjectTestData({ client_id: env.clientId });
-      await withoutProjectPermission('create', async () => {
+      await withoutTestUserPermission(env.db, env.userId, env.tenant, 'project', 'create', async () => {
         const before = await env.db('projects').where({ tenant: env.tenant }).select('*');
         const denied = await env.apiClient.post('/api/v1/projects', projectData);
         expect(denied.status, JSON.stringify(denied.data)).toBe(403);

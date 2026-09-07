@@ -3,6 +3,7 @@ import {
   setupE2ETestEnvironment,
   E2ETestEnvironment
 } from '../utils/e2eTestSetup';
+import { withoutTestUserPermission } from '../utils/simpleRoleSetup';
 import { ApiTestClient } from '../utils/apiTestHelpers';
 import { createUserTestData } from '../utils/userTestData';
 import { createClientTestData, createClientLocationTestData } from '../utils/clientTestData';
@@ -712,25 +713,31 @@ describe('Clients API E2E Tests', () => {
   });
 
   describe('Permissions', () => {
-    it('should enforce read permissions for listing', async () => {
-      // This test assumes the test user has proper permissions
-      // If permissions are revoked, this should fail
-      const response = await env.apiClient.get('/api/v1/clients');
-      expect(response.status).toBe(200);
+    it('denies listing without client read permission and restores access', async () => {
+      expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
+      await withoutTestUserPermission(env.db, env.userId, env.tenant, 'client', 'read', async () => {
+        const denied = await env.apiClient.get('/api/v1/clients');
+        expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+        expect((await env.apiClient.get('/api/v1/projects')).status).toBe(200);
+      });
+      expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
     });
 
-    it('should enforce create permissions', async () => {
+    it('denies client creation without a grant and persists it after restoration', async () => {
       const clientData = createClientTestData();
-      const response = await env.apiClient.post('/api/v1/clients', clientData);
-
-      if (response.status === 500) {
-        console.error('Unexpected 500 error in permissions test:', JSON.stringify(response.data, null, 2));
-      }
-
-      expect([201, 403, 500]).toContain(response.status); // Allow 500 for now
-      if (response.status === 201 && response.data?.data?.client_id) {
-        createdClientIds.push(response.data.data.client_id);
-      }
+      const clients = () => env.db('clients').where({ tenant: env.tenant }).orderBy('client_id');
+      await withoutTestUserPermission(env.db, env.userId, env.tenant, 'client', 'create', async () => {
+        const before = await clients();
+        const denied = await env.apiClient.post('/api/v1/clients', clientData);
+        expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+        expect(await clients()).toEqual(before);
+        expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
+      });
+      const allowed = await env.apiClient.post('/api/v1/clients', clientData);
+      expect(allowed.status, JSON.stringify(allowed.data)).toBe(201);
+      createdClientIds.push(allowed.data.data.client_id);
+      expect(await env.db('clients').where({ tenant: env.tenant, client_id: allowed.data.data.client_id }).first())
+        .toMatchObject({ client_name: clientData.client_name });
     });
   });
 });
