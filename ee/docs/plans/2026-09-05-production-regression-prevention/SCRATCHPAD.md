@@ -1915,3 +1915,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 ### 2026-09-07 — combined changed DB suite validation
 
 - Ran Microsoft callback, workflow trigger dispatch and email message lookup suites together with per-file fork isolation/maxWorkers=1 on the owned disposable database. All 3 files / 22 cases passed, zero skips, 45.59 seconds. Evidence: evidence/local-db-followups-combined.json; /tmp/alga-combined-new-db-suites.log. This validates the changed suites together, not complete integration CI. Plan validator passes 37 features/31 test entries and git diff check is clean.
+
+### 2026-09-07 — preserve explicitly isolated legacy email endpoints
+
+- Isolated legacy email initialization now requires an explicit test database name, host, port and admin user, preserves caller-supplied service endpoints, and aligns DB_NAME_SERVER with the reset target TEST_DB_NAME. Removed the email settings fixture's earlier unconditional endpoint overrides.
+- Behavioral initialization-boundary tests verify preserved settings and rejection before connecting when the isolated database name is missing. Combined fixture suite: 7 files / 18 cases passed in 1.28 seconds (/tmp/alga-isolated-email-env.log). Database initialization is substituted; fixed Compose ports and health URLs remain outstanding, so this is not full-stack isolation evidence.
+- Rechecked native integration run 34118118987: job 101729712868 remains in_progress. Its result is not yet available; no replacement run was started.

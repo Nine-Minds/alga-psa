@@ -88,6 +88,18 @@ export class E2ETestContext extends TestContext {
       'EMAIL_PORT': '1025'
     };
 
+    if (process.env.E2E_DATABASE_ISOLATED === 'true') {
+      for (const key of ['TEST_DB_NAME', 'DB_HOST', 'DB_PORT', 'DB_USER_ADMIN']) {
+        if (!process.env[key]?.trim()) throw new Error(`Isolated legacy email fixtures require explicit ${key}`);
+      }
+      // Preserve the owned stack configuration supplied before module loading.
+      // TEST_DB_NAME is what createTestDbConnection uses for its reset target.
+      for (const key of Object.keys(e2eEnvVars) as Array<keyof typeof e2eEnvVars>) {
+        if (process.env[key] !== undefined) e2eEnvVars[key] = process.env[key]!;
+      }
+      e2eEnvVars.DB_NAME_SERVER = process.env.TEST_DB_NAME!;
+    }
+
     for (const [key, value] of Object.entries(e2eEnvVars)) {
       this.originalEnvVars[key] = process.env[key];
       process.env[key] = value;
