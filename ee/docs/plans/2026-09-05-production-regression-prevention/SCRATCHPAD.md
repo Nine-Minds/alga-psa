@@ -1549,3 +1549,9 @@
 - Added command-level coverage in a temporary clean Git checkout with tracked Temporal candidates and independently generated raw collection/results. Valid readiness/engine artifact names produce passed aggregate; wrong GITHUB_SHA, malformed needs JSON, corrupt results and missing results exit one and persist failed aggregate evidence.
 - All three Temporal gate tests pass, including evaluator mutation coverage. This verifies actual CLI file loading and output persistence beyond the evaluator seam; no external network or app writes.
 - Native browser CE/EE remain active on published head; queued changes await their terminal results.
+
+### 2026-09-07 — Scheduled Temporal behavioral execution
+
+- Removed schedule exclusions from both Temporal behavioral lanes and their always-evaluated aggregate. Nightly execution now runs readiness, engine tests and reconciliation alongside existing Docker parity; a scheduled run can no longer omit both behavioral lanes by design.
+- Readiness artifact upload now errors when evidence files are absent, matching engine evidence handling.
+- Validation: actionlint passes; all 11 Temporal/workspace aggregate behavioral and CLI tests pass. Native scheduled execution remains unverified until publication.

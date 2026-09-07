@@ -42,7 +42,6 @@ on:
 jobs:
   engine-tests:
     name: Temporal engine execution complete
-    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -63,7 +62,6 @@ jobs:
           retention-days: 30
 
   fast-readiness:
-    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -90,6 +88,7 @@ jobs:
         with:
           name: temporal-readiness-execution
           path: test-results/temporal-readiness/
+          if-no-files-found: error
           retention-days: 7
 
   docker-parity:
@@ -114,7 +113,7 @@ jobs:
   execution-complete:
     name: Temporal execution gate
     needs: [fast-readiness, engine-tests]
-    if: always() && github.event_name != 'schedule'
+    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
