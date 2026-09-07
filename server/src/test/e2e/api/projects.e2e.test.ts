@@ -19,25 +19,21 @@ describe('Projects API E2E Tests', () => {
   });
 
   afterAll(async () => {
-    // Clean up any created projects
-    for (const projectId of createdProjectIds) {
-      try {
-        await env.apiClient.delete(`/api/v1/projects/${projectId}`);
-      } catch (error) {
-        // Ignore errors during cleanup
+    try {
+      for (const projectId of createdProjectIds) {
+        const response = await env.apiClient.delete(`/api/v1/projects/${projectId}`);
+        expect([204, 404], JSON.stringify(response.data)).toContain(response.status);
       }
+    } finally {
+      await env.cleanup();
     }
-    
-    // Clean up test environment
-    await env.cleanup();
   }, 30000); // 30 second timeout for cleanup
 
   describe('Authentication', () => {
     it('should reject requests without API key', async () => {
       const { ApiTestClient } = await import('../utils/apiTestHelpers');
       const client = new ApiTestClient({
-        baseUrl: env.apiClient['config'].baseUrl,
-        tenantId: env.tenant
+        baseUrl: process.env.TEST_API_BASE_URL!,
       });
       const response = await client.get('/api/v1/projects');
       
@@ -48,9 +44,8 @@ describe('Projects API E2E Tests', () => {
     it('should reject requests with invalid API key', async () => {
       const { ApiTestClient } = await import('../utils/apiTestHelpers');
       const client = new ApiTestClient({
-        baseUrl: env.apiClient['config'].baseUrl,
+        baseUrl: process.env.TEST_API_BASE_URL!,
         apiKey: 'invalid-key',
-        tenantId: env.tenant
       });
       const response = await client.get('/api/v1/projects');
       
@@ -269,10 +264,9 @@ describe('Projects API E2E Tests', () => {
       // Create a test project
       const projectData = createProjectTestData({ client_id: env.clientId });
       const response = await env.apiClient.post('/api/v1/projects', projectData);
-      if (response.status === 201) {
-        testProjectId = response.data.data.project_id;
-        createdProjectIds.push(testProjectId);
-      }
+      expect(response.status, JSON.stringify(response.data)).toBe(201);
+      testProjectId = response.data.data.project_id;
+      createdProjectIds.push(testProjectId);
     });
 
     it('should get project tasks', async () => {
@@ -282,6 +276,30 @@ describe('Projects API E2E Tests', () => {
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
       expect(response.data.data[0]).not.toHaveProperty('description_rich_text');
+    });
+
+    it('creates a task through the API and deletes its project with all owned rows', async () => {
+      const phase = await env.apiClient.post(`/api/v1/projects/${testProjectId}/phases`, { phase_name: 'Lifecycle phase' });
+      expect(phase.status, JSON.stringify(phase.data)).toBe(201);
+      const phaseId = phase.data.data.phase_id;
+      const mapping = await env.db('project_status_mappings')
+        .where({ tenant: env.tenant, project_id: testProjectId }).orderBy('display_order').first();
+      expect(mapping).toBeDefined();
+      const created = await env.apiClient.post(`/api/v1/projects/${testProjectId}/phases/${phaseId}/tasks`, {
+        task_name: 'Lifecycle task', description: 'Task created through the API',
+        project_status_mapping_id: mapping.project_status_mapping_id, estimated_hours: 60,
+      });
+      expect(created.status, JSON.stringify(created.data)).toBe(201);
+      const taskId = created.data.data.task_id;
+      const reopened = await env.apiClient.get(`/api/v1/projects/tasks/${taskId}`);
+      expect(reopened.status).toBe(200);
+      expect(reopened.data.data).toMatchObject({ task_id: taskId, task_name: 'Lifecycle task', phase_id: phaseId });
+      const deleted = await env.apiClient.delete(`/api/v1/projects/${testProjectId}`);
+      expect(deleted.status, JSON.stringify(deleted.data)).toBe(204);
+      expect((await env.apiClient.get(`/api/v1/projects/${testProjectId}`)).status).toBe(404);
+      expect(await env.db('project_tasks').where({ tenant: env.tenant, task_id: taskId }).first()).toBeUndefined();
+      expect(await env.db('project_phases').where({ tenant: env.tenant, project_id: testProjectId })).toEqual([]);
+      expect(await env.db('project_status_mappings').where({ tenant: env.tenant, project_id: testProjectId })).toEqual([]);
     });
 
     it('should get project tickets', async () => {

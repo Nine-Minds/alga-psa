@@ -1,7 +1,9 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { EventEmitter } from 'node:events';
 
-vi.mock('../utils/getSecret', () => ({ getSecret: vi.fn(async () => undefined) }));
+// The legacy entry point now shares the package bus. Keep secret lookup at the
+// real dependency boundary so filesystem I/O cannot race fake-timer advances.
+vi.mock('@alga-psa/core/secrets', () => ({ getSecret: vi.fn(async () => undefined) }));
 
 type FakeRedisClient = EventEmitter & {
   connect: () => Promise<void>;

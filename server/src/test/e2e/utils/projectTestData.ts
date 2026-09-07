@@ -116,7 +116,7 @@ export function createProjectByType(type: string, clientId: string, overrides: P
     },
     consulting: {
       project_type: 'consulting',
-      billing_rate: faker.number.float({ min: 200, max: 500, precision: 0.01 }),
+      billing_rate: faker.number.float({ min: 200, max: 500, fractionDigits: 2 }),
       tags: ['consulting', 'advisory']
     },
     research: {

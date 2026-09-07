@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 import { ProjectService } from '@/lib/api/services/ProjectService';
+import { ProjectModel } from '@alga-psa/projects/models';
+import { createTestService } from '../../e2e/utils/timeEntryTestDataFactory';
 
 vi.mock('server/src/lib/eventBus/publishers', () => ({
   publishEvent: vi.fn(async () => undefined),
@@ -47,6 +49,7 @@ function schemaTable(table: string) {
 }
 
 async function cleanupTenant(tenantId: string): Promise<void> {
+  await tenantTable(tenantId, 'time_entries').del();
   await tenantTable(tenantId, 'project_ticket_links').del();
   await tenantTable(tenantId, 'task_checklist_items').del();
   await tenantTable(tenantId, 'project_tasks').del();
@@ -55,6 +58,8 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'projects').del();
   await tenantTable(tenantId, 'next_number').del();
   await tenantTable(tenantId, 'statuses').del();
+  await tenantTable(tenantId, 'service_catalog').del();
+  await tenantTable(tenantId, 'service_types').del();
   await tenantTable(tenantId, 'clients').del();
   await tenantTable(tenantId, 'users').del();
   await tenantRows().where({ tenant: tenantId }).del();
@@ -192,6 +197,90 @@ describe('project service status lookup integration', () => {
 
     expect(persisted).toBeDefined();
     expect(persisted.status).toBe(fixture.defaultStatusId);
+  });
+
+  it.each([false, true])('creates usable task mappings, preferring tenant statuses when present (%s)', async (custom) => {
+    const fixture = await createFixture();
+    const context = { tenant: fixture.tenantId, userId: fixture.userId };
+    // Standard statuses are global reference data in the migrated schema.
+    const standards = await db('standard_statuses').where({ item_type: 'project_task' }).orderBy('display_order');
+    expect(standards.length).toBeGreaterThan(0);
+    const customIds = [uuidv4(), uuidv4()];
+    if (custom) {
+      await tenantTable(fixture.tenantId, 'statuses').insert(customIds.map((statusId, index) => ({
+        tenant: fixture.tenantId, status_id: statusId, name: `Task status ${index}`,
+        status_type: 'project_task', item_type: null, order_number: index + 1,
+        is_default: index === 0, is_closed: index === 1, created_by: fixture.userId,
+      })));
+    }
+    const service = new ProjectService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: fixture.tenantId });
+    const project = await service.createProject({
+      project_name: 'Project ready for tasks', client_id: fixture.clientId,
+    } as any, context);
+    const mappings = await tenantTable(fixture.tenantId, 'project_status_mappings')
+      .where({ project_id: project.project_id }).orderBy('display_order');
+    expect(mappings.map(row => row.is_standard ? row.standard_status_id : row.status_id))
+      .toEqual(custom ? customIds : standards.map(row => row.standard_status_id));
+    expect(mappings.map(row => row.display_order)).toEqual(Array.from({ length: custom ? 2 : standards.length }, (_, index) => index + 1));
+    expect(mappings.every(row => row.is_visible && row.is_standard === !custom)).toBe(true);
+    const phase = await service.createPhase(project.project_id, { phase_name: 'Execution' } as any, context);
+    const task = await service.createTask(phase.phase_id, {
+      task_name: 'First task', project_status_mapping_id: mappings[0].project_status_mapping_id,
+      estimated_hours: 60, task_type_key: 'task',
+    } as any, context);
+    expect(await tenantTable(fixture.tenantId, 'project_tasks').where({ task_id: task.task_id }).first())
+      .toMatchObject({ phase_id: phase.phase_id, project_status_mapping_id: mappings[0].project_status_mapping_id });
+    const neighbor = await service.createProject({ project_name: 'Keep this project', client_id: fixture.clientId } as any, context);
+    await service.delete(project.project_id, context);
+    expect(await tenantTable(fixture.tenantId, 'projects').where({ project_id: project.project_id }).first()).toBeUndefined();
+    expect(await tenantTable(fixture.tenantId, 'project_phases').where({ project_id: project.project_id })).toEqual([]);
+    expect(await tenantTable(fixture.tenantId, 'project_status_mappings').where({ project_id: project.project_id })).toEqual([]);
+    expect(await tenantTable(fixture.tenantId, 'project_tasks').where({ task_id: task.task_id }).first()).toBeUndefined();
+    expect(await tenantTable(fixture.tenantId, 'projects').where({ project_id: neighbor.project_id }).first()).toBeDefined();
+    expect(await tenantTable(fixture.tenantId, 'project_status_mappings').where({ project_id: neighbor.project_id })).toHaveLength(mappings.length);
+  });
+
+  it('returns 409 for project task time entries and preserves the project graph', async () => {
+    const fixture = await createFixture();
+    const context = { tenant: fixture.tenantId, userId: fixture.userId };
+    const service = new ProjectService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: fixture.tenantId });
+    const project = await service.createProject({ project_name: 'Tracked work', client_id: fixture.clientId } as any, context);
+    const mapping = await tenantTable(fixture.tenantId, 'project_status_mappings').where({ project_id: project.project_id }).first();
+    const phase = await service.createPhase(project.project_id, { phase_name: 'Tracked phase' } as any, context);
+    const task = await service.createTask(phase.phase_id, { task_name: 'Tracked task', project_status_mapping_id: mapping.project_status_mapping_id } as any, context);
+    const billingService = await createTestService(db, fixture.tenantId);
+    const entryId = uuidv4();
+    await tenantTable(fixture.tenantId, 'time_entries').insert({
+      tenant: fixture.tenantId, entry_id: entryId, user_id: fixture.userId,
+      work_item_type: 'project_task', work_item_id: task.task_id, service_id: billingService.service_id,
+      start_time: '2026-09-07T10:00:00Z', end_time: '2026-09-07T11:00:00Z',
+      work_date: '2026-09-07', work_timezone: 'UTC', billable_duration: 60, approval_status: 'DRAFT',
+    });
+    await expect(service.delete(project.project_id, context)).rejects.toMatchObject({ statusCode: 409 });
+    await expect(service.delete(project.project_id, { ...context, tenant: uuidv4() })).rejects.toMatchObject({ statusCode: 404 });
+    expect(await tenantTable(fixture.tenantId, 'projects').where({ project_id: project.project_id }).first()).toBeDefined();
+    expect(await tenantTable(fixture.tenantId, 'project_phases').where({ phase_id: phase.phase_id }).first()).toBeDefined();
+    expect(await tenantTable(fixture.tenantId, 'project_tasks').where({ task_id: task.task_id }).first()).toBeDefined();
+    expect(await tenantTable(fixture.tenantId, 'project_status_mappings').where({ project_status_mapping_id: mapping.project_status_mapping_id }).first()).toBeDefined();
+    expect(await tenantTable(fixture.tenantId, 'time_entries').where({ entry_id: entryId }).first()).toBeDefined();
+  });
+
+  it('rolls project creation and numbering back if status initialization fails', async () => {
+    const fixture = await createFixture();
+    const service = new ProjectService();
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: fixture.tenantId });
+    const failure = vi.spyOn(ProjectModel, 'addProjectStatusMapping').mockRejectedValueOnce(new Error('Injected mapping write failure'));
+    try {
+      await expect(service.createProject({ project_name: 'Must roll back', client_id: fixture.clientId } as any,
+        { tenant: fixture.tenantId, userId: fixture.userId })).rejects.toThrow('Injected mapping write failure');
+      expect(await tenantTable(fixture.tenantId, 'projects')).toEqual([]);
+      expect(await tenantTable(fixture.tenantId, 'project_status_mappings')).toEqual([]);
+      expect(Number((await tenantTable(fixture.tenantId, 'next_number').where({ entity_type: 'PROJECT' }).first()).last_number)).toBe(0);
+    } finally {
+      failure.mockRestore();
+    }
   });
 
   it('resolves named project statuses from status_type rows during create', async () => {
