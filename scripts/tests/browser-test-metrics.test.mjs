@@ -13,8 +13,10 @@ function report(results = [{ status: 'passed', retry: 0 }], status = 'expected')
       projectId: 'ee', projectName: 'enterprise', expectedStatus: 'passed', status, results,
     }] }] }], stats: { expected: status === 'expected' ? 1 : 0, flaky: status === 'flaky' ? 1 : 0, unexpected: 0, skipped: 0 } };
 }
+const cleanEvidence = () => ({ revision, status: 'passed', workingTreeDirty: false,
+  source: { before: { revision, dirty: false, changes: [] }, after: { revision, dirty: false, changes: [] } } });
 const check = (overrides = {}) => browserTestMetrics({ root: '/repo', revision,
-  collected: report([]), report: report(), evidence: { revision, status: 'passed' }, ...overrides });
+  collected: report([]), report: report(), evidence: cleanEvidence(), ...overrides });
 
 test('journey reporting retains identity, edition and first attempt without inventing artifact identity', () => {
   const result = check();
@@ -69,4 +71,17 @@ test('the actual browser runner emits incomplete metrics when execution cannot s
   assert.equal(metrics.collected, 0);
   assert.equal(metrics.executed, 0);
   assert.equal(metrics.revision, null);
+});
+
+test('dirty, missing and changed source evidence cannot produce passed readiness metrics', () => {
+  for (const mutate of [
+    evidence => { evidence.workingTreeDirty = true; },
+    evidence => { delete evidence.source; },
+    evidence => { evidence.source.before.dirty = true; },
+    evidence => { evidence.source.after.changes = [{ file: 'changed.ts' }]; },
+    evidence => { evidence.source.after.revision = 'b'.repeat(40); },
+  ]) {
+    const evidence = cleanEvidence(); mutate(evidence);
+    assert.equal(check({ evidence }).status, 'failed');
+  }
 });

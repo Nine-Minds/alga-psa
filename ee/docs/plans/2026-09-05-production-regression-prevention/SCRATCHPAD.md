@@ -1524,3 +1524,9 @@
 - Both workflows now select packages/**, ee/packages/**, shared/**, EE onboarding seeds and all shared runner libraries. Kept existing migration, workflow, manifest and harness triggers. This deliberately widens execution when package dependencies change.
 - Parsed actual workflow YAML and exercised both pull_request/push glob selectors against seven representative dependency paths plus unrelated docs: all 28 dependency selections pass and unrelated docs remain unselected. No source-string test added.
 - Native browser jobs remain active; queued commits are not yet published.
+
+### 2026-09-07 — Browser readiness rejects unverified source state
+
+- browserTestMetrics previously checked revision and raw execution but could project passed from an evidence manifest marked dirty or lacking before/after source provenance. New behavioral case reproduced actual passed vs expected failed.
+- Metrics now require explicit clean before/after revisions, empty change lists and workingTreeDirty:false. Missing/dirty/changed provenance records a failure without copying source file details or secret payloads to metrics. Existing versioned columns unchanged.
+- Browser metrics and Sheets projection tests: nine passed. Covers five source-evidence mutations in addition to missing execution/retries/edition/column behavior. Native verification remains pending; full F024/F025 not claimed complete.

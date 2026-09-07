@@ -29,10 +29,15 @@ export function browserTestMetrics({ collected, report, evidence, root, revision
   const missing = journeys.some(journey => journey.required && (!journey.observed || journey.firstAttempt === 'missing'));
   const revisionMatches = typeof revision === 'string' && /^[a-f0-9]{40}$/.test(revision)
     && evidence?.revision === revision;
+  const cleanSource = evidence?.workingTreeDirty === false && ['before', 'after'].every(phase => {
+    const source = evidence?.source?.[phase];
+    return source?.revision === revision && source.dirty === false
+      && Array.isArray(source.changes) && source.changes.length === 0;
+  });
   return {
     schemaVersion: 2, suite: 'production-browser', revision: revision ?? null,
     status: !readable || !expected.length || missing ? 'incomplete'
-      : !revisionMatches || evidence?.status !== 'passed' || verified.status !== 'passed' ? 'failed' : 'passed',
+      : !revisionMatches || !cleanSource || evidence?.status !== 'passed' || verified.status !== 'passed' ? 'failed' : 'passed',
     configuration: {
       edition: collected?.config?.metadata?.edition ?? null,
       authentication: collected?.config?.metadata?.authentication ?? null,
@@ -45,6 +50,7 @@ export function browserTestMetrics({ collected, report, evidence, root, revision
     executed: journeys.filter(journey => journey.observed && journey.attempts.some(attempt =>
       ['passed', 'failed', 'timedOut', 'interrupted'].includes(attempt.status))).length,
     counts: verified.counts, journeys,
-    failures: [...verified.failures, ...(!revisionMatches ? ['Missing or mismatched candidate revision'] : [])],
+    failures: [...verified.failures, ...(!revisionMatches ? ['Missing or mismatched candidate revision'] : []),
+      ...(!cleanSource ? ['Missing, dirty or changed source evidence'] : [])],
   };
 }
