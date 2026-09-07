@@ -138,6 +138,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install PDF comparison tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+
       - name: Install locked collaboration server for integration tests
         run: npm ci --prefix hocuspocus --ignore-scripts
 

@@ -72,13 +72,16 @@ async function createSourceFixture(db: ReturnType<typeof knex>, customize?: (ids
     return { tenant, userId, clientId, contractId, lineId, serviceId, cycleId, profileId, usageLineId, usageServiceId, taxRateId, regionCode };
 }
 
-it.runIf(process.env.INVOICE_TICKET_LIVE === '1')('generates immutable ticket presentation from approved source records', async () => {
+it('generates immutable ticket presentation from approved source records', async () => {
   fs.mkdirSync(evidenceDir, { recursive: true });
-  const env = dotenv.parse(fs.readFileSync('.env.local'));
-  Object.assign(process.env, env, { DB_PORT: '5472' });
-  const db = knex({ client: 'pg', connection: { host: env.DB_HOST, port: 5472, database: env.DB_NAME_SERVER, user: env.DB_USER_ADMIN, password: env.DB_PASSWORD_ADMIN } });
+  const db = await createTestDbConnection();
   try {
-    state.user = await db('users').where({ email: 'invoice-draft-verifier@example.invalid' }).first();
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
     state.tenant = state.user.tenant;
     const { tenant, userId, clientId, lineId, serviceId, cycleId, profileId, usageServiceId } = await createSourceFixture(db);
     fs.writeFileSync(`${evidenceDir}/source.json`, JSON.stringify({ tenant, clientId, lineId, cycleId, userId }, null, 2));
