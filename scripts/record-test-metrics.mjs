@@ -224,9 +224,9 @@ export function buildRow() {
   const cov = coveragePcts(summary);
   const files = coverageFileCounts(summary);
   if (!counts && cov.lines === '') {
-    console.warn('test-metrics: no results or coverage files found, nothing to record');
-    process.exit(0);
+    console.warn('test-metrics: no results or coverage files found; recording incomplete run');
   }
+  const missingRequiredReport = !counts && (Boolean(process.env.TEST_METRICS_RESULTS) || cov.lines === '');
   const runUrl = process.env.GITHUB_RUN_ID
     ? `${process.env.GITHUB_SERVER_URL ?? 'https://github.com'}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`
     : '';
@@ -240,7 +240,7 @@ export function buildRow() {
     cov.lines, cov.statements, cov.branches, cov.functions,
     counts?.durationS ?? '',
     runUrl,
-    counts?.executed ?? '', counts?.runStatus ?? '',
+    counts?.executed ?? '', counts?.runStatus ?? (missingRequiredReport ? 'partial' : ''),
     files.measured, files.total,
   ];
 }

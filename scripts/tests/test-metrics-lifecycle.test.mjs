@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { testCounts } from '../record-test-metrics.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const assertion = status => ({ status });
 function report(testResults, counts = {}) {
@@ -41,4 +45,49 @@ test('a fully passing suite keeps legacy counts and percentage', () => {
   ], { numPassedTests: 1, numPendingTests: 0, numTotalTests: 1, numFailedTestSuites: 0 }));
   assert.equal(result.runStatus, 'complete');
   assert.equal(result.passPct, 100);
+});
+
+function buildIsolatedRow({ results, coverage, requestResults = true } = {}) {
+  const dir = mkdtempSync(join(tmpdir(), 'metrics-report-'));
+  try {
+    const env = { PATH: process.env.PATH, TEST_METRICS_SUITE: 'required-tests' };
+    if (requestResults) env.TEST_METRICS_RESULTS = join(dir, 'results.json');
+    if (results !== undefined) writeFileSync(env.TEST_METRICS_RESULTS, results);
+    if (coverage) {
+      env.TEST_METRICS_COVERAGE = join(dir, 'coverage.json');
+      writeFileSync(env.TEST_METRICS_COVERAGE, JSON.stringify(coverage));
+    }
+    const moduleUrl = new URL('../record-test-metrics.mjs', import.meta.url).href;
+    const output = execFileSync(process.execPath, ['--input-type=module', '-e',
+      `import { buildRow, HEADER } from ${JSON.stringify(moduleUrl)};
+       const row = buildRow();
+       console.log(JSON.stringify(Object.fromEntries(HEADER.map((key, index) => [key, row[index]]))));`],
+    { cwd: dir, env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    return JSON.parse(output);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+}
+
+test('missing and malformed required reports remain visible without invented zero counts', () => {
+  for (const results of [undefined, '{broken']) {
+    const row = buildIsolatedRow({ results });
+    assert.equal(row.suite, 'required-tests');
+    assert.equal(row.run_status, 'partial');
+    assert.equal(row.passed, '');
+    assert.equal(row.executed, '');
+    assert.equal(row.pass_pct, '');
+  }
+});
+
+test('coverage cannot conceal an explicitly requested missing test report', () => {
+  const row = buildIsolatedRow({ coverage: { total: { lines: { pct: 80 } } } });
+  assert.equal(row.run_status, 'partial');
+  assert.equal(row.lines_pct, 80);
+  assert.equal(row.pass_pct, '');
+});
+
+test('intentional coverage-only reporting preserves its legacy blank execution status', () => {
+  const row = buildIsolatedRow({ requestResults: false, coverage: { total: { lines: { pct: 80 } } } });
+  assert.equal(row.run_status, '');
+  assert.equal(row.lines_pct, 80);
+  assert.equal(row.executed, '');
 });

@@ -29,5 +29,22 @@
     "Does not establish complete inventory or release readiness.",
     "No historical Sheet rows were rewritten.",
     "F024/F025 remain incomplete: versioned schema, journey/retry/artifact reporting and workbook readiness still required."
-  ]
+  ],
+  "missingReportRepair": {
+    "behavior": "Missing or malformed explicitly requested reports emit a partial row with unknown counts blank. Coverage-only mode retains blank execution status when TEST_METRICS_RESULTS is absent.",
+    "tests": {
+      "before": {
+        "passed": 4,
+        "failed": 2,
+        "log": "/tmp/alga-metrics-missing-before.log"
+      },
+      "after": {
+        "passed": 7,
+        "failed": 0,
+        "skipped": 0,
+        "log": "/tmp/alga-metrics-missing-final.log"
+      }
+    },
+    "limit": "A cancelled workflow that never invokes the recorder still requires external reconciliation; no cancellation coverage claimed."
+  }
 }

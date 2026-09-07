@@ -1045,3 +1045,8 @@
 - Found a concrete metrics failure from the df9b native report: 2059 passed, zero failed assertions, and a failed mention suite could still be classified complete with 100%. Added failed-suite-without-failed-assertion detection, preserving raw counts and existing Sheet columns while emitting partial/blank percentage.
 - Four behavioral report cases cover failed bootstrap, failed teardown, ordinary assertion failure and full success. Before: two intended failures/two passes. After: four passes, zero skips. Actual downloaded df9b report now yields partial and blank passPct. Evidence: metrics-suite-lifecycle.json. New Node test is under the existing scripts/tests discovery root.
 - Documented legacy completeness limitations. F024/F025 remain false; this repair does not substitute for versioned required-set readiness, missing/cancelled run records, or live workbook changes. No push while native full job 101620543698 runs.
+
+### Preserve missing report visibility — 2026-09-07
+- Removed the metrics recorder early success exit for absent results/coverage. Explicit missing or malformed result files now produce a partial row with blank counts and percentage, even if coverage exists. Coverage-only callers without TEST_METRICS_RESULTS preserve their prior blank execution status.
+- Added subprocess behavioral tests of the actual buildRow invocation in an isolated empty directory. Before: four passed/two failed. Final: seven passed/zero skipped in 143 ms. Existing legacy headers remain unchanged. Evidence appended to metrics-suite-lifecycle.json.
+- This requires the metrics step to execute; cancelled-before-recorder reconciliation and versioned readiness schema remain open. F024/F025 remain incomplete.

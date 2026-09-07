@@ -73,6 +73,13 @@ signal shows in the vitest JSON report:
   successful;
 - an execution manifest explicitly reports incomplete required execution.
 
+Missing or malformed requested test reports also produce a partial row, with
+blank test counts and pass percentage. A coverage report does not hide a
+missing test report. Intentional coverage-only invocations omit
+`TEST_METRICS_RESULTS` and retain blank execution status. Recording still
+depends on the metrics step running; workflow cancellation before that step
+requires an external reconciliation job to record the missing run.
+
 `complete` describes this legacy report check, not release readiness. It does
 not prove that every required test was discovered or that intentional skips
 are acceptable. Required execution reconciliation must establish those facts.
