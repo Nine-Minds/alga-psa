@@ -1352,3 +1352,10 @@
 - Native browser jobs 101685165287 (CE) and 101685165359 (EE), run 34102126365, both failed before checkout/application startup. Their shell gate reads COLLECTION_RESULT but the step omitted that env variable and the job omitted browser-collection from direct needs.
 - Added the direct dependency and needs.browser-collection.result env binding. Executed the actual YAML shell step with simulated GitHub needs resolution: original exits 1 with all producers successful; repaired exits 0; missing/failed/cancelled/skipped mandatory collection exits 1; documented no-application-change selection exits 0. Temporary reproduction: /tmp/alga-verify-browser-prerequisite.cjs.
 - Both browser jobs and aggregate are terminal, so publication can proceed without cancelling a live browser build. Updated native application/API outcomes are still unverified because no browser runtime started in this run.
+
+### 2026-09-07 — Playwright native collections join global inventory
+
+- Added format=playwright to read-runner-collection, using the existing validated Playwright parser. Deduplicates file identities across projects/cases while rejecting empty reports, reported import errors and paths outside the producer checkout.
+- Actual production collection: CE 23 cases/14 files; EE 25 cases/14 files. Both JSON artifacts successfully read by the adapter. Full adapter/discovery behavioral set: 21 passed, zero skipped, 4.07 seconds on Node 25.
+- Standalone browser-collection job now uploads both native JSON collections before image builds. No execution outcomes are inferred from collection.
+- Additional local actual file collections found 287 integration files, 20 API files and six fast Temporal readiness files. After these plus mobile, 149 prior unmatched files remain (including 14 production browser files now readable by the adapter). Remaining concentration: legacy browser suites and Temporal tests outside fast readiness. These collections mix local and older native evidence; global CI assignment/enforcement remains incomplete.

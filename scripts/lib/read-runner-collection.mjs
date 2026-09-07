@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { normalizeTestFile } from './test-execution-evidence.mjs';
 import { reconcileNodeExecution } from './node-test-execution.mjs';
+import { playwrightTests } from './playwright-execution-evidence.mjs';
 
 export function readRunnerCollection(collection, manifestDirectory) {
   if (!collection.collectionFile) return collection;
@@ -12,7 +13,10 @@ export function readRunnerCollection(collection, manifestDirectory) {
   const read = file => readFileSync(path.resolve(manifestDirectory, file), 'utf8');
   const raw = read(collection.collectionFile);
   let files;
-  if (collection.format === 'node-events') {
+  if (collection.format === 'playwright') {
+    files = [...new Set(playwrightTests(JSON.parse(raw), collection.sourceRoot).map(test => test.file))];
+    if (!files.length) throw new Error(`Empty Playwright collection: ${collection.runner}`);
+  } else if (collection.format === 'node-events') {
     if (!collection.evidenceFile) throw new Error(`Node collection requires evidenceFile: ${collection.runner}`);
     const evidence = JSON.parse(read(collection.evidenceFile));
     const verified = reconcileNodeExecution({ root: collection.sourceRoot, files: evidence.expectedFiles,

@@ -71,8 +71,17 @@ jobs:
       - name: Collect both editions without root workspace dependencies
         working-directory: e2e-tests
         run: |
-          E2E_EDITION=community npm run test:list
-          E2E_EDITION=enterprise npm run test:list
+          mkdir -p ../test-results/browser-collection
+          E2E_EDITION=community PLAYWRIGHT_JSON_OUTPUT_FILE=../test-results/browser-collection/community.json npm run test:list -- --reporter=json
+          E2E_EDITION=enterprise PLAYWRIGHT_JSON_OUTPUT_FILE=../test-results/browser-collection/enterprise.json npm run test:list -- --reporter=json
+      - name: Retain standalone browser collection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-collection
+          path: test-results/browser-collection/
+          if-no-files-found: error
+          retention-days: 30
 
   build-images:
     needs: [changes, browser-collection]

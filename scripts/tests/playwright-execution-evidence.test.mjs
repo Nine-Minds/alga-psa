@@ -1,5 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
 import { reconcilePlaywrightExecution, playwrightTests } from '../lib/playwright-execution-evidence.mjs';
 
 function report() {
@@ -18,6 +22,21 @@ function check(change = {}) {
   return reconcilePlaywrightExecution({ root: '/repo', revision: 'fixture', exitCode: 0, collected: report(), report: report(), ...change });
 }
 function one(data) { return data.suites[0].suites[0].specs[0].tests[0]; }
+
+test('inventory reads Playwright artifacts and refuses empty, errored or external collections', t => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'playwright-inventory-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  const descriptor = { runner: 'browser', format: 'playwright', sourceRoot: '/repo', collectionFile: 'collected.json' };
+  const read = data => {
+    writeFileSync(path.join(directory, 'collected.json'), JSON.stringify(data));
+    return readRunnerCollection(descriptor, directory);
+  };
+  assert.deepEqual(read(report()).files, ['e2e-tests/tests/invoice.spec.ts']);
+  for (const mutate of [data => { data.suites = []; }, data => { data.errors = [{ message: 'Cannot load test' }]; }, data => { data.config.rootDir = '/outside'; }]) {
+    const data = report(); mutate(data);
+    assert.throws(() => read(data));
+  }
+});
 
 test('browser identities preserve nested titles, project and repeated cases', () => {
   const data = report();
