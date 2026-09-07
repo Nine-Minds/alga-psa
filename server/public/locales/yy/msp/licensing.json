@@ -572,6 +572,33 @@
       "transferHelp": "2222222 222222222 2222 222222 222 222 22222222222 2222 222 22222222 2222222222 222 22222222 22222222222 222222 22 22222222 22 222222222 22222222"
     },
     "projects": {
+      "queue": {
+        "title": "Project task queues",
+        "workingDescription": "Tasks in your workspace and customer tasks assigned to your MSP.",
+        "oversightDescription": "Customer tasks within your approved project access.",
+        "customerDescription": "Tasks in your workspace, including projects shared with your MSP.",
+        "assignment": "Assignment",
+        "all": "All assignments",
+        "mine": "Assigned to me",
+        "my_teams": "Assigned to my teams",
+        "counts": "{{total}} tasks · {{open}} open · {{closed}} closed",
+        "empty": "No permitted tasks match these filters.",
+        "loadError": "Unable to load tasks. Refresh to check your current access.",
+        "sort": {
+          "updated": "〖Ŀȧşŧ ŭƥḓȧŧḗḓ ·····〗",
+          "due": "〖Ḓŭḗ ḓȧŧḗ ····〗",
+          "name": "[Task name]",
+          "project": "Project"
+        },
+        "columns": {
+          "task": "[Project task]",
+          "project": "Project",
+          "workspace": "〖Ẇȯřķşƥȧƈḗ ····〗",
+          "state": "〖Şŧȧŧŭş ···〗",
+          "assignee": "Assignee",
+          "due": "〖Ḓŭḗ ḓȧŧḗ ····〗"
+        }
+      },
       "assignment": {
         "title": "MSP assignment",
         "unassigned": "Not assigned to the MSP",

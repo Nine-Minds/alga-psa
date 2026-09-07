@@ -572,6 +572,33 @@
       "transferHelp": "Delen verplaatst dit gesprek en de bijlagen naar de werkruimte van de klant. Het oorspronkelijke privégesprek van de MSP blijft bewaard als alleen-lezen geschiedenis."
     },
     "projects": {
+      "queue": {
+        "title": "Projecttaakwachtrijen",
+        "workingDescription": "Taken in uw werkruimte en klanttaken die aan uw MSP zijn toegewezen.",
+        "oversightDescription": "Klanttaken binnen de projecten waartoe u toegang hebt.",
+        "customerDescription": "Taken in uw werkruimte, inclusief projecten die met uw MSP zijn gedeeld.",
+        "assignment": "Toewijzing",
+        "all": "Alle toewijzingen",
+        "mine": "Aan mij toegewezen",
+        "my_teams": "Aan mijn teams toegewezen",
+        "counts": "{{total}} taken · {{open}} open · {{closed}} gesloten",
+        "empty": "Geen toegankelijke taken voldoen aan deze filters.",
+        "loadError": "Taken konden niet worden geladen. Vernieuw om uw toegang te controleren.",
+        "sort": {
+          "updated": "Laatst bijgewerkt",
+          "due": "Vervaldatum",
+          "name": "Taaknaam",
+          "project": "Project"
+        },
+        "columns": {
+          "task": "Projecttaak",
+          "project": "Project",
+          "workspace": "Werkruimte",
+          "state": "Status",
+          "assignee": "Verantwoordelijke",
+          "due": "Vervaldatum"
+        }
+      },
       "assignment": {
         "title": "MSP-toewijzing",
         "unassigned": "Niet toegewezen aan de MSP",

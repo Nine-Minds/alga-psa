@@ -84,7 +84,7 @@ function TaskEditor({ resource }: { resource: CoManagedSharedResource }) {
     </form>}
     {pending && <Button id="co-project-task-discard" variant="outline" disabled={busy} onClick={() => { setPending(null); setState(null); setRefresh(value => value + 1); }}>{t('coManaged.projects.discard')}</Button>}
     <Button id="co-project-task-reload" variant="outline" disabled={busy || pending !== null} onClick={() => { setState(null); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button>
-    {state && <CoManagedProjectTaskAssignment key={collaborationRefresh} resource={resource} onUnavailable={historyUnavailable} onChanged={assignmentChanged} />}
-    {state && <CoManagedProjectTaskHistory key={collaborationRefresh} resource={resource} onUnavailable={historyUnavailable} />}
+    {state && <CoManagedProjectTaskAssignment key={`assignment-${collaborationRefresh}`} resource={resource} onUnavailable={historyUnavailable} onChanged={assignmentChanged} />}
+    {state && <CoManagedProjectTaskHistory key={`history-${collaborationRefresh}`} resource={resource} onUnavailable={historyUnavailable} />}
   </section>;
 }

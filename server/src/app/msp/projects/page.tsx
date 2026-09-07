@@ -1,3 +1,4 @@
+import CoManagedProjectTaskQueueLink from '@/components/co-managed/CoManagedProjectTaskQueueLink';
 import Projects from '@alga-psa/projects/components/Projects';
 import { getAllClientsForProjects, getProjects } from '@alga-psa/projects/actions/projectActions';
 import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
@@ -121,13 +122,16 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   }
 
   return (
-    <Projects
-      initialProjects={projectsData}
-      clients={clientsData}
-      initialFilters={initialFilters}
-      initialProjectTags={initialProjectTags}
-      initialAllUniqueTags={allProjectTags}
-    />
+    <>
+      <CoManagedProjectTaskQueueLink />
+      <Projects
+        initialProjects={projectsData}
+        clients={clientsData}
+        initialFilters={initialFilters}
+        initialProjectTags={initialProjectTags}
+        initialAllUniqueTags={allProjectTags}
+      />
+    </>
   );
 }
 

@@ -20,6 +20,7 @@ export default function CoManagedTicketQueue() {
   const [error, setError] = useState(false);
   const [refresh, setRefresh] = useState(0);
   useEffect(() => {
+    // LEVERAGE: pattern qualified-queue-request-lifetime — ticket/task filters must discard older requests and clear stale rows/counts.
     let cancelled = false;
     setResult(null); setError(false);
     void getCoManagedTicketQueueAction(request).then(page => { if (!cancelled) setResult(page); }).catch(() => { if (!cancelled) setError(true); });

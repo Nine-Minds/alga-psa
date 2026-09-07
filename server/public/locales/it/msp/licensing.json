@@ -574,6 +574,33 @@
       "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura."
     },
     "projects": {
+      "queue": {
+        "title": "Code delle attività di progetto",
+        "workingDescription": "Attività del tuo spazio e attività dei clienti assegnate al tuo MSP.",
+        "oversightDescription": "Attività dei clienti nei progetti a cui hai accesso.",
+        "customerDescription": "Attività del tuo spazio, inclusi i progetti condivisi con il tuo MSP.",
+        "assignment": "Assegnazione",
+        "all": "Tutte le assegnazioni",
+        "mine": "Assegnate a me",
+        "my_teams": "Assegnate ai miei team",
+        "counts": "{{total}} attività · {{open}} aperte · {{closed}} chiuse",
+        "empty": "Nessuna attività autorizzata corrisponde a questi filtri.",
+        "loadError": "Impossibile caricare le attività. Aggiorna per verificare il tuo accesso.",
+        "sort": {
+          "updated": "Ultimo aggiornamento",
+          "due": "Scadenza",
+          "name": "Nome attività",
+          "project": "Progetto"
+        },
+        "columns": {
+          "task": "Attività del progetto",
+          "project": "Progetto",
+          "workspace": "Spazio di lavoro",
+          "state": "Stato",
+          "assignee": "Responsabile",
+          "due": "Scadenza"
+        }
+      },
       "assignment": {
         "title": "Assegnazione al MSP",
         "unassigned": "Non assegnato al MSP",

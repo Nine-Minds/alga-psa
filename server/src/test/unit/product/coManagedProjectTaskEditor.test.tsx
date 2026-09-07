@@ -100,6 +100,7 @@ it('assigns qualified MSP work and refreshes history without discarding an unsav
   await waitFor(() => expect(mocks.assign).toHaveBeenCalledTimes(1));
   expect(mocks.assign).toHaveBeenCalledWith(resource, { operationId: expect.any(String), expectedRevision: 3, assignee: { tenant: 'msp', kind: 'user', id: 'tech-a' } });
   await waitFor(() => expect(mocks.history).toHaveBeenCalledTimes(2)); expect(name()).toHaveValue('Still drafting');
+  expect(document.querySelectorAll('#co-task-assignment-title')).toHaveLength(1); expect(document.querySelectorAll('#co-project-task-history-title')).toHaveLength(1);
 });
 it('freezes and retries the exact assignment after an uncertain result', async () => {
   mocks.assignment.mockResolvedValue({ resource, revision: 1, canEdit: true, canAssign: false, mspAssignment: { tenant: 'msp', kind: 'user', id: 'tech-a', name: 'Technician', organizationName: 'MSP' } });

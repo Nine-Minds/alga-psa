@@ -1,6 +1,7 @@
+import { applyCoManagedQueuePolicy } from './queuePolicy';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { compileResourceReadAuthorizationSql, resolveBundleNarrowingRulesForEvaluation, type AuthorizationSubject, type BundleNarrowingRule } from '@alga-psa/authorization';
+import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization';
 import { getCoManagedOperationalState } from '@alga-psa/licensing';
 import { hasCoManagedLocalPermission } from './localPermission';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
@@ -57,34 +58,6 @@ function snapshotRequest(input: CoManagedTicketQueueRequest): Required<Omit<CoMa
     sort: input.sort ?? 'updated', direction: input.direction ?? 'desc', page: input.page ?? 1, pageSize: input.pageSize ?? 25 };
 }
 
-/** The compiler sees only home-policy projections. A shared ticket has no MSP
- * owner, and its queue/assignee exist only through the verified MSP work reference. */
-function applyPolicy(query: Knex.QueryBuilder, subject: AuthorizationSubject, rules: BundleNarrowingRule[], shared: boolean) {
-  const result = compileResourceReadAuthorizationSql(query, { resourceType: 'ticket', action: 'read', builtinRules: [], bundleRules: rules,
-    ctx: { subject, adapter: { ownerColumn: 'q.auth_owner', clientColumn: 'q.auth_client', boardColumn: 'q.auth_board', teamColumn: 'q.auth_team',
-      applyAssignedUsers: (builder, ids) => { builder.whereIn('q.auth_assigned', ids); } } } });
-  // Do not execute a partially compiled policy if the kernel gains a new guard.
-  if (!result.supported) throw new CoManagedSharedWorkError();
-  const columns: Record<string, string | undefined> = { client_id: 'q.auth_client', board_id: 'q.auth_board',
-    owner_user_id: shared ? undefined : 'q.auth_owner', assigned_to: 'q.auth_assigned' };
-  for (const rule of rules) for (const constraint of rule.constraints ?? []) {
-    const column = columns[constraint.field];
-    if (!column) { query.whereRaw('false'); continue; }
-    // The shared command's absent local queue/assignee is undefined, not null.
-    if ((shared && constraint.field !== 'client_id') || constraint.field === 'assigned_to') query.whereNotNull(column);
-    if (constraint.operator === 'eq') {
-      if (isCoManagedUuid(constraint.value) || constraint.value === null) query.where(column, constraint.value);
-      else query.whereRaw('false');
-    }
-    else if (constraint.operator === 'in' && Array.isArray(constraint.value)) {
-      query.where(function () {
-        this.whereIn(column, (constraint.value as unknown[]).filter(isCoManagedUuid));
-        if (!shared && (constraint.value as unknown[]).includes(null)) this.orWhereNull(column);
-      });
-    } else query.whereRaw('false');
-  }
-}
-
 /** One authorized SQL relation drives search, sorting, pagination and counts.
  * No independently paginated tenant lists, cached permissions, or shadow tickets. */
 export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSessionActor, input: CoManagedTicketQueueRequest): Promise<CoManagedTicketQueuePage> {
@@ -138,7 +111,7 @@ export async function getCoManagedTicketQueue(db: Knex, inputActor: CoManagedSes
         is_closed: 's.is_closed', responsibility: shared ? trx.raw("COALESCE(w.responsibility, 'customer')") : trx.raw("'msp'::text"),
         entered_at: 't.entered_at', updated_at: 't.updated_at', ...policyColumns });
       const authorized = trx.from(base.as('q'));
-      applyPolicy(authorized, subject, rules, shared);
+      applyCoManagedQueuePolicy(authorized, subject, rules, { resourceType: 'ticket', shared });
       authorized.select('q.tenant', 'q.ticket_id', 'q.relationship_id', 'q.workspace_name');
       for (const field of Object.keys(sources)) authorized.select(visible[field] ? `q.${field}` : trx.raw(`NULL::${field === 'is_closed' ? 'boolean' : ['entered_at', 'updated_at'].includes(field) ? 'timestamptz' : 'text'} as ??`, [field]));
       queries.push(authorized);

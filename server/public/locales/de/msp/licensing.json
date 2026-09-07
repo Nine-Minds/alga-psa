@@ -572,6 +572,33 @@
       "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten."
     },
     "projects": {
+      "queue": {
+        "title": "Projektaufgabenlisten",
+        "workingDescription": "Aufgaben in Ihrem Arbeitsbereich und Ihrem MSP zugewiesene Kundenaufgaben.",
+        "oversightDescription": "Kundenaufgaben innerhalb Ihres genehmigten Projektzugriffs.",
+        "customerDescription": "Aufgaben in Ihrem Arbeitsbereich einschließlich mit Ihrem MSP geteilter Projekte.",
+        "assignment": "Zuweisung",
+        "all": "Alle Zuweisungen",
+        "mine": "Mir zugewiesen",
+        "my_teams": "Meinen Teams zugewiesen",
+        "counts": "{{total}} Aufgaben · {{open}} offen · {{closed}} geschlossen",
+        "empty": "Keine zugänglichen Aufgaben entsprechen diesen Filtern.",
+        "loadError": "Aufgaben konnten nicht geladen werden. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+        "sort": {
+          "updated": "Zuletzt aktualisiert",
+          "due": "Fällig am",
+          "name": "Aufgabenname",
+          "project": "Projekt"
+        },
+        "columns": {
+          "task": "Projektaufgabe",
+          "project": "Projekt",
+          "workspace": "Arbeitsbereich",
+          "state": "Status",
+          "assignee": "Zuständiger",
+          "due": "Fällig am"
+        }
+      },
       "assignment": {
         "title": "MSP-Zuweisung",
         "unassigned": "Nicht dem MSP zugewiesen",

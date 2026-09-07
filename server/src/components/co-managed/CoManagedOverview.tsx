@@ -12,6 +12,7 @@ import CoManagedCheckout from '@enterprise/components/co-managed/CoManagedChecko
 import { previewCoManagedSeatsAction, purchaseCoManagedSeatsAction } from '@enterprise/lib/actions/coManagedBillingActions';
 import { getCoManagedBillingState } from '@/lib/actions/coManagedActions';
 import CoManagedProvisioningPanel from './CoManagedProvisioningPanel';
+import CoManagedProjectTaskQueueLink from './CoManagedProjectTaskQueueLink';
 import CoManagedTicketQueueLink from './CoManagedTicketQueueLink';
 
 export default function CoManagedOverview({ initialClientId }: { initialClientId?: string }) {
@@ -64,6 +65,7 @@ export default function CoManagedOverview({ initialClientId }: { initialClientId
     <div><h1 className="text-3xl font-bold">{t('coManaged.title')}</h1>
       <p className="mt-2 text-muted-foreground">{t('coManaged.description')}</p></div>
     <CoManagedTicketQueueLink />
+    <CoManagedProjectTaskQueueLink />
     {error && <p role="alert" className="text-destructive">{error}</p>}
     {!state ? (!error && <p role="status">{t('coManaged.loading')}</p>) : <>
       <div className="grid gap-4 sm:grid-cols-3">

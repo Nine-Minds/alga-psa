@@ -10757,3 +10757,154 @@ it('allows customer withdrawal after project unsharing while retaining the MSP p
   await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
   expect(await sponsor.table('co_managed_project_task_references').first()).toMatchObject({ active: false, revision: 2 });
 }));
+
+async function withTaskQueueFixture(work: (fixture: any) => Promise<void>) {
+  await withTaskAssignmentFixture(async fixture => {
+    const { customer, sponsor, customerPrincipal, principal, resource, selected, assignments, operation, project } = fixture;
+    await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+    const { ProjectModel: model } = await import('@alga-psa/projects/models');
+    const projectStatus = await customer.table('statuses').where('status_id', project.status).first();
+    await sponsor.table('statuses').insert({ ...projectStatus, tenant: principal.tenant });
+    const nativeProject = await model.create(db, principal.tenant, { project_name: 'Native rollout', project_number: 'NATIVE-1', client_id: operation.request.clientId,
+      status: projectStatus.status_id, wbs_code: '1', assigned_to: principal.userId } as any);
+    const phase = await model.addPhase(db, principal.tenant, { project_id: nativeProject.project_id, phase_name: 'Native delivery', wbs_code: '1.1', status: 'planning', order_number: 1 } as any);
+    await model.addStatusToProject(db, principal.tenant, nativeProject.project_id, { name: 'Native ready', status_type: 'project_task', item_type: 'project_task', order_number: 100, is_closed: false, is_default: true } as any);
+    const mappings = await model.getProjectStatusMappings(db, principal.tenant, nativeProject.project_id);
+    await sponsor.table('project_tasks').insert({ tenant: principal.tenant, task_id: resource.id, phase_id: phase.phase_id, task_name: 'A native task', wbs_code: '1.1.1',
+      project_status_mapping_id: mappings[0].project_status_mapping_id, task_type_key: 'task', assigned_to: principal.userId });
+    await work({ ...fixture, nativeProject, queue: (await import('../../../../packages/co-managed/src/projectTaskQueue')).getCoManagedProjectTaskQueue });
+  });
+}
+
+it('combines native and qualified shared tasks before queue sorting, filtering and pagination', async () => withTaskQueueFixture(async ({ principal, resource, nativeProject, customer, sponsor, queue, mappings }: any) => {
+  const first = await queue(db, principal, { view: 'working', sort: 'name', direction: 'asc', pageSize: 1 });
+  expect(first).toMatchObject({ totalCount: 2, openCount: 2, closedCount: 0, canOversight: true });
+  expect(first.items).toEqual([expect.objectContaining({ tenant: principal.tenant, taskId: resource.id, projectId: nativeProject.project_id, relationshipId: null })]);
+  const second = await queue(db, principal, { view: 'working', sort: 'name', direction: 'asc', pageSize: 1, page: 2 });
+  expect(second.items).toEqual([expect.objectContaining({ tenant: resource.tenant, taskId: resource.id, relationshipId: resource.relationshipId })]);
+  expect((await queue(db, principal, { view: 'oversight' })).items.map((item: any) => item.tenant)).toEqual([resource.tenant]);
+  expect((await queue(db, principal, { view: 'working', workspaceTenant: resource.tenant })).totalCount).toBe(1);
+  expect(await queue(db, principal, { view: 'working', page: 10 })).toMatchObject({ items: [], totalCount: 2 });
+  await customer.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Literal 100% task', project_status_mapping_id: mappings[1].project_status_mapping_id });
+  await sponsor.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Literal 100X task' });
+  expect((await queue(db, principal, { view: 'working', search: '100%', state: 'all' })).items.map((item: any) => item.tenant)).toEqual([resource.tenant]);
+  expect(await queue(db, principal, { view: 'working', state: 'all' })).toMatchObject({ totalCount: 2, openCount: 1, closedCount: 1 });
+  expect((await queue(db, principal, { view: 'working', state: 'closed' })).items.map((item: any) => item.tenant)).toEqual([resource.tenant]);
+}));
+
+it('keeps unassigned shared tasks in oversight and removes withdrawn or unshared tasks from working', async () => withTaskQueueFixture(async ({ principal, customerPrincipal, resource, assignments, customer, queue }: any) => {
+  await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: null });
+  expect((await queue(db, principal, { view: 'working' })).items.map((item: any) => item.tenant)).toEqual([principal.tenant]);
+  expect((await queue(db, principal, { view: 'oversight' })).totalCount).toBe(1);
+  await customer.table('co_management_project_scopes').del();
+  expect(await queue(db, principal, { view: 'oversight' })).toMatchObject({ items: [], totalCount: 0, workspaces: [] });
+  expect(await queue(db, principal, { view: 'working', workspaceTenant: resource.tenant })).toMatchObject({ items: [], totalCount: 0 });
+}));
+
+it('lets customers reach their own canonical task queue without MSP or unrelated customer rows', async () => withTaskQueueFixture(async ({ principal, customerPrincipal, resource, queue }: any) => {
+  const result = await queue(db, customerPrincipal, { view: 'working' });
+  expect(result).toMatchObject({ canOversight: false, totalCount: 1 });
+  expect(result.items[0]).toMatchObject({ tenant: resource.tenant, relationshipId: resource.relationshipId, taskId: resource.id });
+  expect(await queue(db, customerPrincipal, { view: 'working', workspaceTenant: principal.tenant })).toMatchObject({ items: [], totalCount: 0 });
+  await expect(queue(db, customerPrincipal, { view: 'oversight' })).rejects.toThrow();
+  await withSharedProjectTaskFixture(async ({ resource: other }: any) => expect(await queue(db, principal, { view: 'working', workspaceTenant: other.tenant })).toMatchObject({ items: [], totalCount: 0 }));
+}));
+
+it('applies assigned-work-only policy and current staff/session authority before task queue counts', async () => withTaskQueueFixture(async ({ principal, sponsor, resource, queue }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Assigned queue', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'own_or_assigned', config: {} });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect((await queue(db, principal, { view: 'working' })).totalCount).toBe(2);
+  await expireCoManagedEntitlement(principal.tenant); expect((await queue(db, principal, { view: 'working' })).totalCount).toBe(2);
+  await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).del();
+  expect((await queue(db, principal, { view: 'working' })).totalCount).toBe(1);
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+  await expect(queue(db, principal, { view: 'working' })).rejects.toThrow();
+}));
+
+it('filters task queues by personal resources and current team assignments', async () => withTaskQueueFixture(async ({ principal, sponsorActor, sponsor, customerPrincipal, target, resource, queue, assignments }: any) => {
+  expect((await queue(db, principal, { view: 'working', assignment: 'mine' })).totalCount).toBe(2);
+  const primaryId = randomUUID(), sourceUser = await sponsor.table('users').where('user_id', principal.userId).first();
+  await sponsor.table('users').insert({ ...sourceUser, user_id: primaryId, username: `queue-${primaryId}`, email: `queue-${primaryId}@example.test` });
+  await sponsor.table('project_tasks').where('task_id', resource.id).update({ assigned_to: primaryId });
+  await sponsor.table('task_resources').insert({ tenant: principal.tenant, task_id: resource.id, assigned_to: primaryId, additional_user_id: principal.userId });
+  expect((await queue(db, principal, { view: 'working', assignment: 'mine' })).totalCount).toBe(2);
+  const teamId = randomUUID();
+  await sponsor.table('teams').insert({ tenant: principal.tenant, team_id: teamId, team_name: 'Queue team', manager_id: principal.userId });
+  await sponsor.table('team_members').insert({ tenant: principal.tenant, team_id: teamId, user_id: principal.userId });
+  await (await import('../../../../packages/co-managed/src/policy')).replaceCoManagedStaffAssignments(db, sponsorActor, target, 4, [{ kind: 'team', principalId: teamId, role: 'technician' }]);
+  await assignments.assignCoManagedProjectTask(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: { tenant: principal.tenant, kind: 'team', id: teamId } });
+  expect((await queue(db, principal, { view: 'working', assignment: 'mine' })).items.map((item: any) => item.tenant)).toEqual([principal.tenant]);
+  expect((await queue(db, principal, { view: 'working', assignment: 'my_teams' })).items.map((item: any) => item.tenant)).toEqual([resource.tenant]);
+  await sponsor.table('team_members').where('team_id', teamId).del();
+  expect((await queue(db, principal, { view: 'working', assignment: 'my_teams' })).totalCount).toBe(0);
+}));
+
+it('redacts task queue search, status counts, assignment filters and workspace labels before pagination', async () => withTaskQueueFixture(async ({ principal, resource, operation, queue }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Queue redactions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: {
+    selectedClientIds: [operation.request.clientId], redactedFields: ['values.task_name', 'values.project_status_mapping_id', 'assignee', 'organizationName', 'project_id'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const overview = await queue(db, principal, { view: 'oversight', state: 'all' });
+  expect(overview).toMatchObject({ totalCount: 1, openCount: 0, closedCount: 0, workspaces: [] });
+  expect(overview.items[0]).not.toHaveProperty('workspaceName'); expect(overview.items[0]).not.toHaveProperty('projectId');
+  for (const field of ['task_name', 'status_name', 'is_closed', 'assignee_name']) expect(overview.items[0].fields).not.toHaveProperty(field);
+  expect((await queue(db, principal, { view: 'oversight', state: 'all', search: 'Verify rollout' })).totalCount).toBe(0);
+  expect((await queue(db, principal, { view: 'oversight', state: 'open' })).totalCount).toBe(0);
+  expect((await queue(db, principal, { view: 'oversight', state: 'all', assignment: 'mine' })).totalCount).toBe(0);
+  expect((await queue(db, principal, { view: 'working', state: 'all', workspaceTenant: resource.tenant })).totalCount).toBe(0);
+}));
+
+it('does not expose stale project status fallback after a phase-specific override exists', async () => withTaskQueueFixture(async ({ principal, customer, phase, mappings, resource, queue }: any) => {
+  await customer.table('project_status_mappings').where('project_status_mapping_id', mappings[1].project_status_mapping_id).update({ phase_id: phase.phase_id });
+  const row = (await queue(db, principal, { view: 'oversight', state: 'all' })).items[0];
+  expect(row.fields.status_name).toBeNull();
+  await customer.table('project_tasks').where('task_id', resource.id).update({ project_status_mapping_id: mappings[1].project_status_mapping_id });
+  expect((await queue(db, principal, { view: 'oversight', state: 'closed' })).items[0].fields.status_name).toBe('Verified');
+}));
+
+it('keeps two customers with identical task identities distinct in one MSP queue', async () => withTaskQueueFixture(async ({ sponsor, sponsorActor, principal, operation, customer, resource, queue, assignments, selected }: any) => {
+  await sponsor.table('co_managed_entitlements').update({ capacity: 4 });
+  const clientId = randomUUID(); await sponsor.table('clients').insert({ tenant: principal.tenant, client_id: clientId, client_name: 'Second customer' });
+  const prepared = await prepareCoManagedProvisioning(db, { sponsorTenant: principal.tenant, requestedBy: principal.userId, clientId, escalationBoardId: operation.request.escalationBoardId,
+    operationId: randomUUID(), seats: 2, visibilityMode: 'board_scope', workspaceName: 'Second customer IT', administrator: { firstName: 'Second', lastName: 'Admin', email: `second-${randomUUID()}@example.test` } });
+  const second = await readyForAcceptance('board_scope', prepared); await acceptCoManagedRelationship(db, second.actor, second.input);
+  const sourceTask = await customer.table('project_tasks').where('task_id', resource.id).first();
+  const sourcePhase = await customer.table('project_phases').where('phase_id', sourceTask.phase_id).first();
+  const sourceProject = await customer.table('projects').where('project_id', sourcePhase.project_id).first();
+  const mappings = await customer.table('project_status_mappings').where('project_id', sourceProject.project_id);
+  const statusIds = new Map<string, string>();
+  for (const status of await customer.table('statuses').whereIn('status_id', [sourceProject.status, ...mappings.map((mapping: any) => mapping.status_id).filter(Boolean)])) {
+    const existing = await second.customer.table('statuses').where({ name: status.name, item_type: status.item_type }).whereNull('board_id').first();
+    statusIds.set(status.status_id, existing?.status_id ?? status.status_id);
+    if (!existing) await second.customer.table('statuses').insert({ ...status, tenant: second.actor.tenant, created_by: null });
+  }
+  await second.customer.table('projects').insert({ ...sourceProject, tenant: second.actor.tenant, status: statusIds.get(sourceProject.status), client_id: prepared.customer_client_id });
+  await second.customer.table('project_phases').insert({ ...sourcePhase, tenant: second.actor.tenant });
+  const mappingIds = new Map<string, string>();
+  for (const mapping of mappings) {
+    const mappingId = randomUUID(); mappingIds.set(mapping.project_status_mapping_id, mappingId);
+    await second.customer.table('project_status_mappings').insert({ ...mapping, tenant: second.actor.tenant, project_status_mapping_id: mappingId, status_id: mapping.status_id ? statusIds.get(mapping.status_id) : null });
+  }
+  await second.customer.table('project_tasks').insert({ ...sourceTask, tenant: second.actor.tenant, project_status_mapping_id: mappingIds.get(sourceTask.project_status_mapping_id), task_name: 'Same task' });
+  await customer.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Same task' });
+  const policy = await import('../../../../packages/co-managed/src/policy'), target = { customerTenant: second.actor.tenant, relationshipId: prepared.relationship_id };
+  await policy.replaceCoManagedStaffAssignments(db, sponsorActor, target, 2, [{ kind: 'user', principalId: principal.userId, role: 'technician' }]);
+  const current = await policy.getCoManagedCollaborationPolicy(db, second.actor, target);
+  await policy.replaceCoManagedCustomerScope(db, second.actor, target, 3, { ...current, projects: [{ id: sourceProject.project_id, canCollaborate: true }] });
+  const secondPrincipal = { ...second.actor, kind: 'session', sessionId: randomUUID() };
+  await second.customer.table('sessions').insert({ tenant: second.actor.tenant, user_id: second.actor.userId, session_id: secondPrincipal.sessionId, expires_at: new Date(Date.now() + 3600000) });
+  await assignments.assignCoManagedProjectTask(db, secondPrincipal, { ...resource, tenant: second.actor.tenant, relationshipId: prepared.relationship_id }, { operationId: randomUUID(), expectedRevision: 0, assignee: selected });
+  const firstPage = await queue(db, principal, { view: 'oversight', sort: 'name', direction: 'asc', pageSize: 1 });
+  const nextPage = await queue(db, principal, { view: 'oversight', sort: 'name', direction: 'asc', pageSize: 1, page: 2 });
+  expect(firstPage.totalCount).toBe(2); expect(nextPage.totalCount).toBe(2);
+  expect([firstPage.items[0].tenant, nextPage.items[0].tenant]).toEqual([resource.tenant, second.actor.tenant].sort());
+  expect(firstPage.items[0].taskId).toBe(nextPage.items[0].taskId);
+  await customer.table('co_management_project_scopes').del();
+  expect((await queue(db, principal, { view: 'oversight' })).items.map((item: any) => item.tenant)).toEqual([second.actor.tenant]);
+  expect((await queue(db, secondPrincipal, { view: 'working' })).items.map((item: any) => item.tenant)).toEqual([second.actor.tenant]);
+}));

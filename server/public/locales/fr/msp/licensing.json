@@ -574,6 +574,33 @@
       "transferHelp": "Le partage transfère ce fil et ses pièces jointes dans l’espace de travail du client. Le fil privé d’origine du MSP est conservé en lecture seule."
     },
     "projects": {
+      "queue": {
+        "title": "Files des tâches de projet",
+        "workingDescription": "Tâches de votre espace et tâches client affectées à votre MSP.",
+        "oversightDescription": "Tâches client dans les projets auxquels vous avez accès.",
+        "customerDescription": "Tâches de votre espace, y compris les projets partagés avec votre MSP.",
+        "assignment": "Affectation",
+        "all": "Toutes les affectations",
+        "mine": "Affectées à moi",
+        "my_teams": "Affectées à mes équipes",
+        "counts": "{{total}} tâches · {{open}} ouvertes · {{closed}} fermées",
+        "empty": "Aucune tâche autorisée ne correspond à ces filtres.",
+        "loadError": "Impossible de charger les tâches. Actualisez pour vérifier votre accès.",
+        "sort": {
+          "updated": "Dernière modification",
+          "due": "Échéance",
+          "name": "Nom de la tâche",
+          "project": "Projet"
+        },
+        "columns": {
+          "task": "Tâche du projet",
+          "project": "Projet",
+          "workspace": "Espace de travail",
+          "state": "Statut",
+          "assignee": "Responsable",
+          "due": "Échéance"
+        }
+      },
       "assignment": {
         "title": "Affectation au MSP",
         "unassigned": "Non affecté au MSP",

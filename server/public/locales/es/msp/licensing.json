@@ -574,6 +574,33 @@
       "transferHelp": "Al compartir, este hilo y sus adjuntos se transfieren al espacio de trabajo del cliente. El hilo privado original del MSP se conserva como historial de solo lectura."
     },
     "projects": {
+      "queue": {
+        "title": "Colas de tareas de proyecto",
+        "workingDescription": "Tareas de su espacio y tareas de clientes asignadas a su MSP.",
+        "oversightDescription": "Tareas de clientes dentro de los proyectos a los que tiene acceso.",
+        "customerDescription": "Tareas de su espacio, incluidos los proyectos compartidos con su MSP.",
+        "assignment": "Asignación",
+        "all": "Todas las asignaciones",
+        "mine": "Asignadas a mí",
+        "my_teams": "Asignadas a mis equipos",
+        "counts": "{{total}} tareas · {{open}} abiertas · {{closed}} cerradas",
+        "empty": "Ninguna tarea autorizada coincide con estos filtros.",
+        "loadError": "No se pudieron cargar las tareas. Actualice para comprobar su acceso.",
+        "sort": {
+          "updated": "Última actualización",
+          "due": "Fecha de vencimiento",
+          "name": "Nombre de la tarea",
+          "project": "Proyecto"
+        },
+        "columns": {
+          "task": "Tarea del proyecto",
+          "project": "Proyecto",
+          "workspace": "Espacio de trabajo",
+          "state": "Estado",
+          "assignee": "Responsable",
+          "due": "Fecha de vencimiento"
+        }
+      },
       "assignment": {
         "title": "Asignación al MSP",
         "unassigned": "Sin asignar al MSP",

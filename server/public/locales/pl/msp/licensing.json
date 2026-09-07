@@ -576,6 +576,33 @@
       "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu."
     },
     "projects": {
+      "queue": {
+        "title": "Kolejki zadań projektowych",
+        "workingDescription": "Zadania w Twoim obszarze roboczym i zadania klientów przypisane do Twojego MSP.",
+        "oversightDescription": "Zadania klientów w projektach, do których masz dostęp.",
+        "customerDescription": "Zadania w Twoim obszarze roboczym, w tym projekty udostępnione Twojemu MSP.",
+        "assignment": "Przypisanie",
+        "all": "Wszystkie przypisania",
+        "mine": "Przypisane do mnie",
+        "my_teams": "Przypisane do moich zespołów",
+        "counts": "{{total}} zadań · {{open}} otwartych · {{closed}} zamkniętych",
+        "empty": "Brak dostępnych zadań pasujących do tych filtrów.",
+        "loadError": "Nie można załadować zadań. Odśwież, aby sprawdzić swój dostęp.",
+        "sort": {
+          "updated": "Ostatnia aktualizacja",
+          "due": "Termin",
+          "name": "Nazwa zadania",
+          "project": "Projekt"
+        },
+        "columns": {
+          "task": "Zadanie projektu",
+          "project": "Projekt",
+          "workspace": "Obszar roboczy",
+          "state": "Status",
+          "assignee": "Osoba przypisana",
+          "due": "Termin"
+        }
+      },
       "assignment": {
         "title": "Przypisanie do MSP",
         "unassigned": "Nieprzypisane do MSP",

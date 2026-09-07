@@ -2,7 +2,7 @@
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
-import { getCoManagedProjectTaskAssignment, listCoManagedProjectTaskAssignees, assignCoManagedProjectTask, CoManagedTaskAssignmentError, type CoManagedTaskAssignmentRequest, getCoManagedProjectTaskEditor, getCoManagedProjectTaskStatuses, listCoManagedProjectTaskHistory, listCoManagedProjectTasks, CoManagedTaskEditError, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTaskEditRequest } from '@alga-psa/co-managed';
+import { getCoManagedProjectTaskQueue, type CoManagedTaskQueueRequest, getCoManagedProjectTaskAssignment, listCoManagedProjectTaskAssignees, assignCoManagedProjectTask, CoManagedTaskAssignmentError, type CoManagedTaskAssignmentRequest, getCoManagedProjectTaskEditor, getCoManagedProjectTaskStatuses, listCoManagedProjectTaskHistory, listCoManagedProjectTasks, CoManagedTaskEditError, CoManagedSharedWorkError, type CoManagedSharedResource, type CoManagedTaskEditRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { editSharedProjectTask } from '../co-managed/editProjectTask';
 
@@ -53,4 +53,9 @@ export const assignSharedProjectTaskAction = withAuth(async (user, { tenant }, r
     if (error instanceof CoManagedLifecycleError) return { ok: false as const, code: 'readOnly' };
     return { ok: false as const, code: 'unknownOutcome' };
   }
+});
+
+export const getSharedProjectTaskQueueAction = withAuth(async (user, { tenant }, request: CoManagedTaskQueueRequest) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex();
+  return getCoManagedProjectTaskQueue(knex, actor, request);
 });

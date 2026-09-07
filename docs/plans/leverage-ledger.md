@@ -300,3 +300,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Shared identity engine and project task assignee admission.
 - **Gate:** Recipients and assignment candidates use the same active user/role/team locks with different resource authority. ACT / in-pass.
 - **Status:** revised. The identity engine exposes its non-session subject contract explicitly; notification admission retains its prior adapter. Assignment commands evaluate candidate policy against the proposed qualified assignment while separately retaining the editor's actual resource authority.
+
+## qualified-queue-policy — pattern
+- **What:** Ticket and task queues must compile the same home policy projections and fail closed on unsupported constraints before counts and pagination.
+- **Where:** Ticket queue and project task queue.
+- **Gate:** Two real resource families, high authorization cost, stable compiler contract. ACT / bounded-now.
+- **Status:** extracted. A shared queue policy adapter accepts the resource family and available owner/board projections. Ticket behavior is preserved; task projections use native project ownership or a verified MSP assignment reference. Resource/lifecycle discovery remains separate because customer-home task queues and MSP ticket queues have different entry contracts.
