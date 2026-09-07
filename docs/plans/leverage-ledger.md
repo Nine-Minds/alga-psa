@@ -270,3 +270,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** WorkflowEventPublisher, email and business-operation actions, server/workflow-worker startup, and TicketModel event error handling.
 - **Gate:** Native, inbound, scheduled and workflow producers share the stable commit/retention boundary. Domain imports from shared would create a cycle; process composition is already established for workflow email. ACT / bounded-now as a staged producer migration.
 - **Status:** revised. A typed runtime registry injects domain retention without a reverse package dependency. The model declares transaction-critical comment publishers; business actions use the transaction engine's after-commit owner, and email initial ticket/comment creation shares that owner. Workflow context resolves the exact executing version and current authority. Publisher-less import/system paths remain explicit follow-up contracts, avoiding accidental notification behavior changes.
+
+## scheduled-command-queue-ownership — friction
+- **What:** Rescheduling canceled/created queue jobs inside the write transaction, while initial scheduling could attach a stale queue response after a concurrent schedule change.
+- **Where:** Native comment creation, rescheduling and cancellation actions.
+- **Gate:** Three callers share a stable committed-source queue handoff; a queue call cannot roll back with PostgreSQL. ACT / bounded-now.
+- **Status:** revised. Committed schedule state owns publication. Queue cancellation and arming run as independent after-commit hooks; arming checks the current scheduled instant before submission and conditionally attaches the returned job. A stale response cancels its own job. Existing maintenance recovers due co-managed sources after queue failures. Browser command authority is distinct from deferred author authority, allowing current technicians to cancel a departed author's work.

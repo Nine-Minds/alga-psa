@@ -2,6 +2,7 @@
 // TODO: Comment model method signature changes
 'use server'
 
+import { admitScheduledCommentCommand } from '../../lib/scheduledCommentCommands';
 import Comment from '../../models/comment';
 import { IComment } from '@alga-psa/types';
 import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
@@ -26,6 +27,22 @@ import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionEr
 import { scheduleJobAt as scheduleBackgroundJobAt, cancelScheduledJob } from '@alga-psa/core';
 
 const SCHEDULED_COMMENT_JOB = 'publish-scheduled-comment';
+
+/** Database state owns publication. Queue operations may fail after commit;
+ * maintenance recovers due co-managed rows without relying on a job ID. */
+function scheduleCommentAfterCommit(trx: Knex.Transaction, db: Knex, tenant: string,
+  source: { commentId: string; ticketId: string; at: Date; timeZone: string; previousJobId?: string | null }) {
+  if (source.previousJobId) registerAfterCommit(trx, () => cancelScheduledJob(source.previousJobId!, tenant), `cancel previous comment schedule ${source.commentId}`);
+  registerAfterCommit(trx, async () => {
+    const current = () => tenantDb(db, tenant).table('comments').where({ comment_id: source.commentId, ticket_id: source.ticketId,
+      publish_state: 'scheduled', scheduled_publish_at: source.at.toISOString() }).whereNull('deleted_at');
+    if (!await current().first('comment_id')) return;
+    const scheduled = await scheduleBackgroundJobAt(SCHEDULED_COMMENT_JOB,
+      { tenantId: tenant, ticketId: source.ticketId, commentId: source.commentId }, source.at,
+      { singletonKey: `publish-comment:${source.commentId}:${source.at.toISOString()}`, metadata: { scheduledPublishTz: source.timeZone } });
+    if (!await current().update({ schedule_job_id: scheduled.jobId })) await cancelScheduledJob(scheduled.jobId, tenant);
+  }, `schedule comment publication ${source.commentId}`);
+}
 
 function normalizeScheduledPublication(comment: Omit<IComment, 'tenant'>): void {
   if (!comment.scheduled_publish_at) return;
@@ -302,6 +319,9 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       await assertClientCanCreateComment(trx, commentTenant!, user, commentToInsert);
 
       const commentId = await Comment.insert(trx, commentTenant!, commentToInsert);
+      const assertScheduleCurrent = comment.publish_state === 'scheduled'
+        ? await admitScheduledCommentCommand(trx, commentTenant!, user, { commentId, ticketId: comment.ticket_id!, operation: 'create' })
+        : async () => {};
       console.log(`[createComment] Comment inserted with ID:`, commentId);
 
       // Verify the comment was inserted correctly
@@ -417,18 +437,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       // could otherwise run, see nothing, and be lost forever. The boot
       // reconciler repairs a post-commit scheduling failure.
       if (isScheduled && commentTenant && comment.ticket_id && comment.scheduled_publish_at) {
-        const publishAt = new Date(comment.scheduled_publish_at);
-        registerAfterCommit(trx, async () => {
-          const scheduled = await scheduleBackgroundJobAt(
-            SCHEDULED_COMMENT_JOB,
-            { tenantId: commentTenant, ticketId: comment.ticket_id!, commentId }, publishAt,
-            { singletonKey: `publish-comment:${commentId}`, metadata: { scheduledPublishTz: comment.scheduled_publish_tz } },
-          );
-          const { knex } = await createTenantKnex();
-          await tenantScopedTable(knex, 'comments', commentTenant)
-            .where({ comment_id: commentId, publish_state: 'scheduled' })
-            .update({ schedule_job_id: scheduled.jobId });
-        }, `schedule comment publication ${commentId}`);
+        scheduleCommentAfterCommit(trx, db, commentTenant, { commentId, ticketId: comment.ticket_id!, at: new Date(comment.scheduled_publish_at), timeZone: comment.scheduled_publish_tz! });
       }
 
       // A scheduled public comment is not a client reply until publication.
@@ -509,6 +518,7 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         });
       }
 
+      await assertScheduleCurrent();
       return commentId;
     });
   } catch (error) {
@@ -795,22 +805,22 @@ export const rescheduleScheduledComment = withAuth(async (user, { tenant }, id: 
   try { Intl.DateTimeFormat(undefined, { timeZone: scheduledPublishTz }); } catch { throw new Error('A valid IANA time zone is required'); }
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const existing = await Comment.get(trx, tenant, id);
+    const locator = await tenantScopedTable(trx, 'comments', tenant).where('comment_id', id).first('ticket_id');
+    if (!locator?.ticket_id) throw new Error('Scheduled comment not found');
+    const assertCurrent = await admitScheduledCommentCommand(trx, tenant, user, { commentId: id, ticketId: locator.ticket_id, operation: 'reschedule' });
+    const existing = await tenantScopedTable(trx, 'comments', tenant).where('comment_id', id).forUpdate().first();
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be rescheduled');
     if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only reschedule your own comments');
-    if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
-    const scheduled = await scheduleBackgroundJobAt(
-      SCHEDULED_COMMENT_JOB, { tenantId: tenant, ticketId: existing.ticket_id!, commentId: id }, at,
-      { singletonKey: `publish-comment:${id}`, metadata: { scheduledPublishTz } },
-    );
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
-      scheduled_publish_retry_at: null, scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz, schedule_job_id: scheduled.jobId, updated_at: trx.fn.now(),
+      scheduled_publish_retry_at: null, scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz, schedule_job_id: null, updated_at: trx.fn.now(),
     });
+    scheduleCommentAfterCommit(trx, db, tenant, { commentId: id, ticketId: existing.ticket_id, at, timeZone: scheduledPublishTz, previousJobId: existing.schedule_job_id });
     await writeTicketActivity(trx, {
       tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_RESCHEDULED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
       entityId: id, actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user?.user_id ?? existing.user_id ?? null },
       source: TICKET_ACTIVITY_SOURCE.UI, details: { scheduled_publish_at: at.toISOString(), scheduled_publish_tz: scheduledPublishTz },
     });
+    await assertCurrent();
   });
 });
 
@@ -819,17 +829,21 @@ export const cancelScheduledComment = withAuth(async (user, { tenant }, id: stri
   if (!tenant) throw new Error('Tenant is required to cancel a comment');
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
-    const existing = await Comment.get(trx, tenant, id);
+    const locator = await tenantScopedTable(trx, 'comments', tenant).where('comment_id', id).first('ticket_id');
+    if (!locator?.ticket_id) throw new Error('Scheduled comment not found');
+    const assertCurrent = await admitScheduledCommentCommand(trx, tenant, user, { commentId: id, ticketId: locator.ticket_id, operation: 'cancel' });
+    const existing = await tenantScopedTable(trx, 'comments', tenant).where('comment_id', id).forUpdate().first();
     if (!existing || existing.publish_state !== 'scheduled') throw new Error('Only scheduled comments can be canceled');
     if (user?.user_id !== existing.user_id && user?.user_type !== 'internal') throw new Error('You can only cancel your own comments');
     await tenantScopedTable(trx, 'comments', tenant).where({ comment_id: id, publish_state: 'scheduled' }).update({
       publish_state: 'canceled', scheduled_publish_retry_at: null, deleted_at: trx.fn.now(), schedule_job_id: null, updated_at: trx.fn.now(),
     });
-    if (existing.schedule_job_id) await cancelScheduledJob(existing.schedule_job_id, tenant);
+    if (existing.schedule_job_id) registerAfterCommit(trx, () => cancelScheduledJob(existing.schedule_job_id, tenant), `cancel scheduled comment ${id}`);
     await writeTicketActivity(trx, {
       tenant, ticketId: existing.ticket_id!, eventType: 'TICKET_COMMENT_SCHEDULE_CANCELED', entityType: TICKET_ACTIVITY_ENTITY.COMMENT,
       entityId: id, actor: { actorType: TICKET_ACTIVITY_ACTOR.USER, userId: user?.user_id ?? existing.user_id ?? null },
       source: TICKET_ACTIVITY_SOURCE.UI, details: { canceled: true },
     });
+    await assertCurrent();
   });
 });

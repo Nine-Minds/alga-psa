@@ -22,6 +22,10 @@
       "types": "./src/inboundRequesterReply.ts",
       "import": "./dist/inboundRequesterReply.js"
     },
+    "./scheduledCommentCommands": {
+      "types": "./src/scheduledCommentCommands.ts",
+      "import": "./dist/scheduledCommentCommands.js"
+    },
     "./workflowConversationEvents": {
       "types": "./src/workflowConversationEvents.ts",
       "import": "./dist/workflowConversationEvents.js"

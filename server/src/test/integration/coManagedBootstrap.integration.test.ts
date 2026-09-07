@@ -10306,3 +10306,124 @@ it('rejects a workflow comment whose internal author differs from the executing 
   await expect(createModel({ authorId: principal.userId })).rejects.toThrow();
   expect(await customer.table('comments')).toEqual(before); expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
 }));
+
+async function withScheduleCommandFixture(work: (fixture: any) => Promise<void>) {
+  return withScheduledCommentFixture(async (fixture: any) => {
+    const { customer, resource, customerPrincipal, comment } = fixture;
+    const auth = await import('@alga-psa/auth'), core = await import('@alga-psa/core');
+    const user = await customer.table('users').where('user_id', customerPrincipal.userId).first();
+    const apiOverride = vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined);
+    const session = vi.spyOn(auth, 'getSession').mockResolvedValue({ session_id: customerPrincipal.sessionId,
+      user: { id: customerPrincipal.userId, tenant: resource.tenant, user_type: 'internal' } } as any);
+    const schedule = vi.spyOn(core, 'scheduleJobAt').mockResolvedValue({ jobId: randomUUID() });
+    const cancel = vi.spyOn(core, 'cancelScheduledJob').mockResolvedValue(true);
+    const at = new Date(Date.now() + 60_000).toISOString();
+    const previousJobId = randomUUID();
+    await customer.table('comments').where('comment_id', comment.id).update({ schedule_job_id: previousJobId });
+    const command = (kind: string) => kind === 'cancel'
+      ? fixture.actions.cancelScheduledComment(comment.id)
+      : fixture.actions.rescheduleScheduledComment(comment.id, at, 'UTC');
+    try { await auth.runWithApiKeyUser(user, () => runWithTenant(resource.tenant, () => work({ ...fixture, user, apiOverride, session, schedule, cancel, command, at, previousJobId }))); }
+    finally { schedule.mockRestore(); cancel.mockRestore(); session.mockRestore(); apiOverride.mockRestore(); }
+  });
+}
+
+it.each(['reschedule', 'cancel'])('commits scheduled comment %s before touching the queue', async kind => withScheduleCommandFixture(async ({ customer, comment, schedule, cancel, command, at, previousJobId }: any) => {
+  cancel.mockImplementation(async () => {
+    const visible = await customer.table('comments').where('comment_id', comment.id).first();
+    expect(visible).toMatchObject({ publish_state: kind === 'cancel' ? 'canceled' : 'scheduled', schedule_job_id: null });
+    if (kind === 'reschedule') expect(new Date(visible.scheduled_publish_at).toISOString()).toBe(at);
+    return true;
+  });
+  await command(kind);
+  expect(cancel).toHaveBeenCalledWith(previousJobId, expect.any(String));
+  if (kind === 'reschedule') expect(schedule).toHaveBeenCalledTimes(1); else expect(schedule).not.toHaveBeenCalled();
+}));
+
+it.each(['inactive_user', 'missing_role', 'expired_session', 'revoked_session', 'api_override', 'lapsed_license'])(
+  'denies both schedule commands under current %s authority without queue effects', async reason => withScheduleCommandFixture(async ({ customer, customerPrincipal, operation, user, apiOverride, schedule, cancel, command }: any) => {
+    if (reason === 'inactive_user') await customer.table('users').where('user_id', customerPrincipal.userId).update({ is_inactive: true });
+    if (reason === 'missing_role') await customer.table('user_roles').where('user_id', customerPrincipal.userId).del();
+    if (reason === 'expired_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+    if (reason === 'revoked_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    if (reason === 'api_override') apiOverride.mockReturnValue(user);
+    if (reason === 'lapsed_license') await expireCoManagedEntitlement(operation.tenant);
+    const before = await customer.table('comments');
+    await expect(command('reschedule')).rejects.toThrow(); await expect(command('cancel')).rejects.toThrow();
+    expect(await customer.table('comments')).toEqual(before); expect(schedule).not.toHaveBeenCalled(); expect(cancel).not.toHaveBeenCalled();
+  }));
+
+it.each(['reschedule', 'cancel'])('rolls back scheduled comment %s without changing queue state when audit insertion fails', async kind => withScheduleCommandFixture(async ({ customer, resource, schedule, cancel, command }: any) => {
+  const constraint = `schedule_audit_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE ticket_audit_logs ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type NOT IN ('TICKET_COMMENT_RESCHEDULED','TICKET_COMMENT_SCHEDULE_CANCELED'))", [constraint, resource.tenant]).toQuery());
+  const before = await customer.table('comments');
+  try { await expect(command(kind)).rejects.toThrow(); }
+  finally { await db.raw('ALTER TABLE ticket_audit_logs DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('comments')).toEqual(before); expect(schedule).not.toHaveBeenCalled(); expect(cancel).not.toHaveBeenCalled();
+}));
+
+it('cancels a newly queued stale schedule when cancellation commits while the queue is responding', async () => withScheduleCommandFixture(async ({ customer, comment, schedule, cancel, command }: any) => {
+  let reached!: () => void, release!: () => void;
+  const waiting = new Promise<void>(resolve => { reached = resolve; }), released = new Promise<void>(resolve => { release = resolve; });
+  const jobId = randomUUID(); schedule.mockImplementation(async () => { reached(); await released; return { jobId }; });
+  const pending = command('reschedule');
+  try { await waiting; await command('cancel'); }
+  finally { release(); await pending; }
+  expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'canceled', schedule_job_id: null });
+  expect(cancel).toHaveBeenCalledWith(jobId, expect.any(String));
+}));
+
+it('recovers a rescheduled co-managed source after both queue operations fail', async () => withScheduleCommandFixture(async ({ customer, comment, schedule, cancel, command, recover, at }: any) => {
+  cancel.mockRejectedValue(new Error('Queue unavailable')); schedule.mockRejectedValue(new Error('Queue unavailable'));
+  await command('reschedule');
+  const source = await customer.table('comments').where('comment_id', comment.id).first();
+  expect(new Date(source.scheduled_publish_at).toISOString()).toBe(at); expect(source.schedule_job_id).toBeNull();
+  expect(schedule).toHaveBeenCalledTimes(1);
+  await customer.table('comments').where('comment_id', comment.id).update({ scheduled_publish_at: new Date(Date.now() - 1000) });
+  expect(await recover()).toEqual({ processed: 1, failed: 0 });
+  expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'published' });
+}));
+
+it.each([false, true])('admits new scheduled comments under the current browser identity (expired=%s)', async expired => withScheduleCommandFixture(async ({ customer, resource, customerPrincipal, actions, schedule, at }: any) => {
+  if (expired) await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  const before = await customer.table('comments');
+  const create = () => actions.createComment({ ticket_id: resource.id, note: 'New scheduled body', user_id: customerPrincipal.userId,
+    is_internal: false, is_resolution: false, scheduled_publish_at: at, scheduled_publish_tz: 'UTC' });
+  if (expired) {
+    await expect(create()).rejects.toThrow(); expect(await customer.table('comments')).toEqual(before); expect(schedule).not.toHaveBeenCalled();
+  } else {
+    const id = await create(); expect(await customer.table('comments').where('comment_id', id).first()).toMatchObject({ publish_state: 'scheduled' });
+    expect(schedule).toHaveBeenCalledTimes(1); expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+  }
+}));
+
+it('allows a currently authorized technician to cancel a departed authors scheduled comment', async () => withScheduleCommandFixture(async ({ customer, customerPrincipal, comment, command, user }: any) => {
+  const authorId = randomUUID();
+  await customer.table('users').insert({ ...user, user_id: authorId, username: `departed-${randomUUID()}`, email: `${randomUUID()}@example.test`, is_inactive: true });
+  await customer.table('comments').where('comment_id', comment.id).update({ user_id: authorId });
+  await command('cancel');
+  expect(await customer.table('comments').where('comment_id', comment.id).first()).toMatchObject({ publish_state: 'canceled', user_id: authorId });
+  expect(authorId).not.toBe(customerPrincipal.userId);
+}));
+
+it.each(['scope', 'body', 'schedule'])('denies schedule commands narrowed by the current %s bundle policy', async policy => withScheduleCommandFixture(async ({ customer, resource, customerPrincipal, command, schedule, cancel }: any) => {
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule command policy', actorUserId: customerPrincipal.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'ticket', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [policy === 'scope' ? randomUUID() : ticket.client_id], redactedFields: policy === 'body' ? ['comments.note'] : policy === 'schedule' ? ['scheduled_publish_at'] : [] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: customerPrincipal.userId });
+  const before = await customer.table('comments'); await expect(command('reschedule')).rejects.toThrow(); await expect(command('cancel')).rejects.toThrow();
+  expect(await customer.table('comments')).toEqual(before); expect(schedule).not.toHaveBeenCalled(); expect(cancel).not.toHaveBeenCalled();
+}));
+
+it.each(['deleted', 'unpublished'])('allows cancellation but denies rescheduling beneath a %s conversation root', async state => withScheduleCommandFixture(async ({ customer, addCustomer, actions, at, schedule }: any) => {
+  const root = await addCustomer({ note: 'Unavailable root' });
+  const reply = await addCustomer({ note: 'Withheld reply', parent: root, state: 'scheduled' });
+  await customer.table('comments').where('comment_id', root.id).update(state === 'deleted' ? { deleted_at: new Date() } : { publish_state: 'scheduled' });
+  await expect(actions.rescheduleScheduledComment(reply.id, at, 'UTC')).rejects.toThrow();
+  await actions.cancelScheduledComment(reply.id);
+  expect(await customer.table('comments').where('comment_id', reply.id).first()).toMatchObject({ publish_state: 'canceled' });
+  expect(schedule).not.toHaveBeenCalled();
+}));
