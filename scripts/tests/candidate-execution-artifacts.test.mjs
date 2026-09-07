@@ -44,3 +44,20 @@ test('artifact reader rejects unknown evidence schemas and missing producer root
   writeFileSync(path.join(directory, 'evidence.json'), JSON.stringify({ schemaVersion: 999 }));
   assert.throws(() => readCandidateExecutionBundle({ id: 'unit', directory, sourceRoot: '/repo' }), /Unsupported execution evidence/);
 });
+
+test('a filtered or unspecified run cannot become full execution through an empty filter list', t => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'candidate-selection-'));
+  t.after(() => rmSync(directory, { recursive: true, force: true }));
+  for (const file of ['collected.json', 'collected-tests.json', 'results.json']) {
+    writeFileSync(path.join(directory, file), '[]');
+  }
+  writeFileSync(path.join(directory, 'events.jsonl'), '');
+  for (const format of ['vitest', 'playwright', 'node-events']) {
+    for (const mode of ['filtered', 'affected', undefined]) {
+      writeFileSync(path.join(directory, 'evidence.json'), JSON.stringify({
+        schemaVersion: 1, status: 'passed', selection: { mode, filters: [] },
+      }));
+      assert.throws(() => readCandidateExecutionBundle({ id: 'required', format, directory, sourceRoot: '/repo' }), /full selection/);
+    }
+  }
+});

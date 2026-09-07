@@ -11,6 +11,7 @@ export function readCandidateExecutionBundle({ id, format, directory, sourceRoot
   };
   const evidence = read('evidence', 'evidence.json');
   if (evidence.schemaVersion !== 1) throw new Error(`Unsupported execution evidence: ${id}`);
+  if (evidence.selection?.mode !== 'full') throw new Error(`Required execution must declare full selection: ${id}`);
   const bundle = { id, sourceRoot, outcome, source: evidence.source, producerStatus: evidence.status,
     filters: evidence.selection?.filters };
   if (format === 'node-events') {

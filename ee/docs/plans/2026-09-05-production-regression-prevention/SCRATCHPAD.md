@@ -2219,3 +2219,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Legacy email OAuth tests primarily simulate provider records. Added canonical browser coverage for missing code/state, malformed state and unsigned state. Assertions inspect the actual callback postMessage received by its same-origin opener, popup closure and absence of an authenticated session, rather than generated HTML strings.
 - Four headed enterprise cases pass without retries (9.0 seconds), using only synthetic invalid callback parameters against the existing local production app. Community collects all four. Evidence: evidence/microsoft-oauth-rejection-browser.json.
 - Cached build verification is not native candidate evidence. Provider success/refresh and DB non-mutation are not established by these rejection cases; legacy email test assignment remains open. No broad flags changed.
+
+### 2026-09-07 — require explicit full selection in mandatory artifact ingestion
+
+- Shared candidate artifact reader now rejects filtered/affected/missing mode even when the producer provides an empty filters list. The mandatory consumers require full execution; current browser, database and Node producers already declare it.
+- Twelve focused reader/candidate/database/fresh-install tests pass. New regression covers all three report formats. Evidence: evidence/candidate-explicit-full-selection.json. This strengthens evidence ingestion but does not establish global assertion coverage or native CI. No broad flags changed.
