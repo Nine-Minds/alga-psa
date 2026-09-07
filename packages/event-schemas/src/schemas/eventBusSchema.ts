@@ -757,7 +757,7 @@ export const TaskCommentDeletedPayloadSchema = BasePayloadSchema.extend({
 });
 
 const ticketCommentMutationSchema = z.object({
-  kind: z.enum(['edit', 'delete']), threadId: z.string().uuid(),
+  kind: z.enum(['edit', 'delete', 'audience']), threadId: z.string().uuid(),
   audience: z.enum(['requester', 'shared_it', 'organization_private']),
 }).strict();
 function validateTicketCommentMutation(payload: any, ctx: z.RefinementCtx, kind: 'edit' | 'delete') {
@@ -768,7 +768,7 @@ function validateTicketCommentMutation(payload: any, ctx: z.RefinementCtx, kind:
     }
     return;
   }
-  if (mutation.kind !== kind || !payload.commentId || payload.oldComment || payload.newComment || payload.comment ||
+  if ((mutation.kind !== kind && !(kind === 'edit' && mutation.kind === 'audience')) || !payload.commentId || payload.oldComment || payload.newComment || payload.comment ||
       payload.isInternal !== (mutation.audience !== 'requester')) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Qualified mutation events contain identity and audience only.' });
   }

@@ -648,6 +648,16 @@
       "removeUnknownOutcome": "We could not confirm removal. Retry to check the same file.",
       "removing": "Removing…",
       "removeNamed": "Remove {{name}}"
+    },
+    "disclosure": {
+      "title": "Change thread audience",
+      "review": "Review again",
+      "confirm": "Confirm audience change",
+      "scope": "This changes the audience of the entire thread: {{comments}} messages and {{attachments}} attachments.",
+      "current": "Current audience: {{audience}}",
+      "help": "Replies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.",
+      "pending": "An attachment upload is still pending. Finish the upload before changing the audience.",
+      "unknownOutcome": "The result is unknown. Retry to check the same audience change."
     }
   }
 }

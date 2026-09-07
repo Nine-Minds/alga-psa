@@ -16,7 +16,7 @@ The provisioning page (`/msp/co-managed`) and access editor (`/msp/co-management
 use this boundary. Customer access navigation and the MSP workspace access link
 are also hidden while the flag is off. Shared and customer ticket screens use the
 same boundary for the unified conversation reader and its new-message, reply,
-edit and delete controls, including comment attachment pickers and removal confirmations, staged new-message/reply file selection and cancellation, and download links. Requester attachment links in portal conversation cards use the same boundary through the portal composition provider. New collaboration controls must use the same boundary.
+edit and delete controls, including whole-thread audience disclosure confirmations, comment attachment pickers and removal confirmations, staged new-message/reply file selection and cancellation, and download links. Requester attachment links in portal conversation cards use the same boundary through the portal composition provider. New collaboration controls must use the same boundary.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
 This is a UI-only release switch. Routes remain registered. APIs, server actions,

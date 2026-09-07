@@ -4,8 +4,9 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketConversation from '../../../components/co-managed/CoManagedTicketConversation';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(), abandon: vi.fn(), preview: vi.fn(), disclose: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
+vi.mock('../../../lib/actions/coManagedThreadDisclosureActions', () => ({ previewCoManagedThreadDisclosureAction: mocks.preview, discloseCoManagedThreadAction: mocks.disclose }));
 vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/conversationDraftSubmission', () => ({ prepareConversationDraft: mocks.prepare, submitConversationDraft: mocks.submitDraft }));
 vi.mock('../../../lib/actions/coManagedConversationDraftActions', () => ({ abandonCoManagedConversationDraftAction: mocks.abandon }));
@@ -39,6 +40,8 @@ beforeEach(() => {
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(data());
   mocks.prepare.mockImplementation(async input => ({ resource: input.resource, storeTenant: input.resource.tenant, request: { operationId: input.operationId }, files: input.files }));
   mocks.submitDraft.mockResolvedValue({ ok: true, receipt: {} });
+  mocks.preview.mockResolvedValue({ actor: data().actor, preview: { storeTenant: 'customer', threadId: 'thread', audience: 'shared_it', snapshot: 'a'.repeat(64), comments: 2, attachments: 1, pendingAttachments: 0 } });
+  mocks.disclose.mockImplementation(async (_resource, request) => ({ ok: true, receipt: { storeTenant: request.storeTenant, threadId: request.threadId, operationId: request.operationId, audience: request.audience, appliedAt: '2026-09-07T00:00:00.000Z' } }));
   mocks.abandon.mockResolvedValue({ ok: true, result: { status: 'abandoned' } });
   for (const action of [mocks.create, mocks.mutate, mocks.private]) action.mockResolvedValue({ ok: true, receipt: {} });
 });
@@ -225,4 +228,49 @@ it('retains local content after expiration and starts a new draft only on explic
   expect(message()).toHaveValue('Still wanted'); expect(message()).not.toBeDisabled(); expect(mocks.prepare).toHaveBeenCalledOnce();
   fireEvent.click(button('send')); await waitFor(() => expect(mocks.prepare).toHaveBeenCalledTimes(2));
   expect(mocks.prepare.mock.calls[1][0].operationId).not.toBe(mocks.prepare.mock.calls[0][0].operationId);
+});
+
+
+it('confirms the complete canonical thread audience with the qualified snapshot and hides private-store transitions', async () => {
+  mount(); await screen.findByText('Shared content');
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.title' }));
+  await screen.findByText('coManaged.disclosure.scope'); expect(mocks.disclose).not.toHaveBeenCalled();
+  const select = screen.getByLabelText('coManaged.conversation.audience');
+  expect(select.querySelector('option[value="organization_private"]')).toBeNull();
+  fireEvent.change(select, { target: { value: 'requester' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' }));
+  await waitFor(() => expect(mocks.disclose).toHaveBeenCalledOnce());
+  expect(mocks.disclose.mock.calls[0]).toEqual([resource, { storeTenant: 'customer', threadId: 'thread', operationId: expect.any(String), expectedSnapshot: 'a'.repeat(64), audience: 'requester', confirmed: true }]);
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+});
+it('freezes an uncertain audience change and retries the same confirmation without a new snapshot', async () => {
+  mocks.disclose.mockRejectedValueOnce(new Error('Acknowledgement lost'));
+  mount(); await screen.findByText('Shared content'); fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.title' }));
+  await screen.findByText('coManaged.disclosure.scope');
+  fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'requester' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' }));
+  await screen.findByText('coManaged.disclosure.unknownOutcome');
+  expect(screen.getByLabelText('coManaged.conversation.audience')).toBeDisabled(); expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).toBeDisabled();
+  const original = mocks.disclose.mock.calls[0]; fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' }));
+  await waitFor(() => expect(mocks.disclose).toHaveBeenCalledTimes(2)); expect(mocks.disclose.mock.calls[1]).toEqual(original);
+});
+it('requires another review after a stale audience confirmation and clears the dialog on session replacement', async () => {
+  mocks.disclose.mockResolvedValueOnce({ ok: false, code: 'conflict' });
+  const view = mount(); await screen.findByText('Shared content'); fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.title' }));
+  await screen.findByText('coManaged.disclosure.scope'); fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'requester' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' })); await screen.findByText('coManaged.editor.errors.conflict');
+  mocks.preview.mockResolvedValue({ actor: data().actor, preview: { storeTenant: 'customer', threadId: 'thread', audience: 'shared_it', snapshot: 'b'.repeat(64), comments: 3, attachments: 1, pendingAttachments: 0 } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.review' })); await waitFor(() => expect(screen.queryByRole('alert')).toBeNull());
+  expect(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' })).toBeDisabled();
+  (mocks.session as any).session_id = 'replacement'; view.rerender(<CoManagedTicketConversation resource={resource} />);
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()); expect(mocks.disclose).toHaveBeenCalledOnce();
+});
+it('blocks audience confirmation while files are pending and clears its review when current access fails', async () => {
+  vi.useFakeTimers(); mocks.preview.mockResolvedValue({ actor: data().actor, preview: { storeTenant: 'customer', threadId: 'thread', audience: 'shared_it', snapshot: 'a'.repeat(64), comments: 2, attachments: 0, pendingAttachments: 1 } });
+  await act(async () => { mount(); }); await act(async () => fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.title' })));
+  expect(screen.getByText('coManaged.disclosure.pending')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'requester' } });
+  expect(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' })).toBeDisabled();
+  mocks.preview.mockRejectedValue(new Error('Scope lost')); await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+  expect(screen.queryByRole('dialog')).toBeNull(); expect(mocks.disclose).not.toHaveBeenCalled();
 });

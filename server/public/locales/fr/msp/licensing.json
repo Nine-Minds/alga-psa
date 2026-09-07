@@ -561,6 +561,16 @@
       "removeUnknownOutcome": "Nous n’avons pas pu confirmer le retrait. Réessayez pour vérifier le même fichier.",
       "removing": "Retrait…",
       "removeNamed": "Retirer {{name}}"
+    },
+    "disclosure": {
+      "title": "Modifier la visibilité du fil",
+      "review": "Vérifier à nouveau",
+      "confirm": "Confirmer la modification",
+      "scope": "Cela modifie la visibilité de tout le fil : {{comments}} messages et {{attachments}} pièces jointes.",
+      "current": "Visibilité actuelle : {{audience}}",
+      "help": "Les réponses et les pièces jointes héritent de cette visibilité. Restreindre l’accès ne retire pas les informations déjà lues ou téléchargées.",
+      "pending": "Une pièce jointe est en cours d’envoi. Terminez l’envoi avant de modifier la visibilité.",
+      "unknownOutcome": "Le résultat est inconnu. Réessayez pour vérifier la même modification."
     }
   }
 }

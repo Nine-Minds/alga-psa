@@ -559,6 +559,16 @@
       "removeUnknownOutcome": "We konden de verwijdering niet bevestigen. Probeer opnieuw om hetzelfde bestand te controleren.",
       "removing": "Verwijderen…",
       "removeNamed": "{{name}} verwijderen"
+    },
+    "disclosure": {
+      "title": "Zichtbaarheid van gesprek wijzigen",
+      "review": "Opnieuw controleren",
+      "confirm": "Wijziging bevestigen",
+      "scope": "Dit wijzigt de zichtbaarheid van het hele gesprek: {{comments}} berichten en {{attachments}} bijlagen.",
+      "current": "Huidige zichtbaarheid: {{audience}}",
+      "help": "Antwoorden en bijlagen nemen deze zichtbaarheid over. Beperkte toegang haalt eerder gelezen of gedownloade informatie niet terug.",
+      "pending": "Er staat nog een bijlage-upload open. Voltooi de upload voordat u de zichtbaarheid wijzigt.",
+      "unknownOutcome": "Het resultaat is onbekend. Probeer opnieuw om dezelfde wijziging te controleren."
     }
   }
 }

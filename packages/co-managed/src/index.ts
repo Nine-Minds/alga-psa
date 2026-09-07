@@ -24,3 +24,4 @@ export * from './conversationAttachments';
 export * from './conversationDrafts';
 
 export * from './uploadCleanup';
+export * from './threadDisclosure';

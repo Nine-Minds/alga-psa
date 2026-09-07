@@ -7107,3 +7107,130 @@ it('rechecks session expiry after an attachment removal lock wait before marking
     expect(await customer.table('co_management_conversation_attachments').where('attachment_id', ready.attachmentId).first()).toMatchObject({ discarded_at: null, removal_actor_tenant: null });
   } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));
+
+it('discloses a customer-owned thread and its files atomically with confirmed scope, attribution and exact retry', async () => withPortalAttachmentFixture(async ({
+  customerPrincipal, principal, requester, portal, resource, customer, create, attachments, upload, download,
+}) => {
+  const { previewCoManagedThreadDisclosure } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer note' });
+  const reply = await create(customerPrincipal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Customer reply' });
+  const ready = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource, { attachmentId: randomUUID(), comment: attachmentComment(reply),
+    fileName: 'Evidence.txt', mimeType: 'text/plain', content: Buffer.from('Evidence') }, upload);
+  const target = { storeTenant: resource.tenant, threadId: root.threadId };
+  await expect(previewCoManagedThreadDisclosure(db, principal, resource, target)).rejects.toBeDefined();
+  await customer.table('comments').where('comment_id', root.commentId).update({ updated_at: db.raw("clock_timestamp() + interval '1 day'") });
+  const originalVersion = await customer.table('comments').where('comment_id', root.commentId).select({ value: db.raw('updated_at::text') }).first();
+  const preview = await previewCoManagedThreadDisclosure(db, customerPrincipal, resource, target);
+  expect(preview).toMatchObject({ audience: 'organization_private', comments: 2, attachments: 1, pendingAttachments: 0 });
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
+  vi.mocked(publishEvent).mockClear();
+  const [receipt, duplicate] = await Promise.all([1, 2].map(() => discloseSharedTicketThread(db, customerPrincipal, resource, request)));
+  expect(duplicate).toEqual(receipt); expect(vi.mocked(publishEvent).mock.calls).toHaveLength(2);
+  for (const [event] of vi.mocked(publishEvent).mock.calls) expect(event).toMatchObject({ eventType: 'TICKET_COMMENT_UPDATED', payload: { collaborationMutation: { kind: 'audience', audience: 'requester' } } });
+  expect(await portal.listPortalConversationAttachments(db, requester, portalAttachmentTarget(resource, reply))).toEqual([{ ...ready, audience: 'requester' }]);
+  expect((await attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).attachment.audience).toBe('requester');
+  const comments = await customer.table('comments').where('thread_id', root.threadId);
+  expect(await customer.table('comments').where('comment_id', root.commentId).whereRaw('updated_at > ?::timestamptz', [originalVersion.value]).first()).toBeDefined();
+  expect(comments.every(row => row.user_id === customerPrincipal.userId && row.is_internal === false)).toBe(true);
+  expect(comments.find(row => row.comment_id === root.commentId).markdown_content).toContain('Customer note');
+  const again = await previewCoManagedThreadDisclosure(db, customerPrincipal, resource, target);
+  await discloseSharedTicketThread(db, customerPrincipal, resource, { ...request, operationId: randomUUID(), expectedSnapshot: again.snapshot, audience: 'organization_private' });
+  await expect(portal.listPortalConversationAttachments(db, requester, portalAttachmentTarget(resource, reply))).rejects.toBeDefined();
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).rejects.toBeDefined();
+  expect(await discloseSharedTicketThread(db, customerPrincipal, resource, request)).toEqual(receipt);
+}));
+
+it('rejects stale disclosure confirmation after new replies, attachment changes and conflicting operation reuse', async () => withAttachmentFixture(async ({
+  principal, resource, create, attachments, upload,
+}) => {
+  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Internal discussion' });
+  const target = { storeTenant: resource.tenant, threadId: root.threadId }, apply = vi.fn();
+  const initial = await previewCoManagedThreadDisclosure(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: initial.snapshot, audience: 'requester' as const, confirmed: true as const };
+  await create(principal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'New reply' });
+  await expect(discloseCoManagedTicketThread(db, principal, resource, request, apply)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' });
+  const next = await previewCoManagedThreadDisclosure(db, principal, resource, target);
+  await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'New.txt', mimeType: 'text/plain', content: Buffer.from('New file') }, upload);
+  await expect(discloseCoManagedTicketThread(db, principal, resource, { ...request, expectedSnapshot: next.snapshot }, apply)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' });
+  expect(apply).not.toHaveBeenCalled();
+  const current = await previewCoManagedThreadDisclosure(db, principal, resource, target);
+  const confirmed = { ...request, expectedSnapshot: current.snapshot };
+  await discloseCoManagedTicketThread(db, principal, resource, confirmed, apply);
+  await expect(discloseCoManagedTicketThread(db, principal, resource, { ...confirmed, audience: 'shared_it' }, apply)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_OPERATION_CONFLICT' });
+  expect(apply).toHaveBeenCalledOnce();
+}));
+
+it('requires the thread author and explicit confirmation, blocks pending uploads and preserves caller rollback', async () => withAttachmentFixture(async ({
+  principal, customerPrincipal, resource, customer, create, attachments,
+}) => {
+  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Whole discussion' });
+  const target = { storeTenant: resource.tenant, threadId: root.threadId }, apply = vi.fn();
+  await expect(previewCoManagedThreadDisclosure(db, customerPrincipal, resource, target)).rejects.toBeDefined();
+  const initial = await previewCoManagedThreadDisclosure(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: initial.snapshot, audience: 'requester' as const, confirmed: true as const };
+  await expect(discloseCoManagedTicketThread(db, principal, resource, { ...request, confirmed: false } as any, apply)).rejects.toMatchObject({ code: 'INVALID_THREAD_DISCLOSURE' });
+  await expect(discloseCoManagedTicketThread(db, principal, resource, { ...request, audience: 'organization_private' }, apply)).rejects.toBeDefined();
+  await expect(db.transaction(async trx => { await discloseCoManagedTicketThread(trx, principal, resource, request, apply); throw new Error('Rollback audience'); })).rejects.toThrow('Rollback audience');
+  expect((await customer.table('comment_threads').where('thread_id', root.threadId).first()).collaboration_audience).toBe('shared_it');
+  expect(await customer.table('co_management_command_receipts').where('operation_id', request.operationId).first()).toBeUndefined();
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root),
+    fileName: 'Pending.txt', mimeType: 'text/plain', content: Buffer.from('Pending') }, async () => { throw new Error('Lost acknowledgement'); })).rejects.toThrow('Lost acknowledgement');
+  const pending = await previewCoManagedThreadDisclosure(db, principal, resource, target); expect(pending.pendingAttachments).toBe(1);
+  await expect(discloseCoManagedTicketThread(db, principal, resource, { ...request, expectedSnapshot: pending.snapshot }, apply)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' });
+}));
+
+it('retains audience admission after grant loss, license lapse and session expiry behind a thread lock', async () => withAttachmentFixture(async ({
+  principal, resource, sponsor, customer, create,
+}) => {
+  const { previewCoManagedThreadDisclosure, discloseCoManagedTicketThread } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Timed disclosure' });
+  const target = { storeTenant: resource.tenant, threadId: root.threadId }, apply = vi.fn();
+  const preview = await previewCoManagedThreadDisclosure(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('comment_threads').where('thread_id', root.threadId).forUpdate().first();
+  let signal!: () => void; const waiting = new Promise<void>(resolve => { signal = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('comment_threads') && query.sql.includes('for update')) signal(); }; db.on('query', listener);
+  const attempt = discloseCoManagedTicketThread(db, principal, resource, request, apply).catch(error => error);
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Disclosure completed without waiting'); })]);
+    await blocker.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(apply).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(discloseCoManagedTicketThread(db, principal, resource, request, apply)).rejects.toBeDefined();
+  await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).delete();
+  await expect(discloseCoManagedTicketThread(db, principal, resource, request, apply)).rejects.toBeDefined();
+  expect((await customer.table('comment_threads').where('thread_id', root.threadId).first()).collaboration_audience).toBe('shared_it');
+}));
+
+it('keeps published draft files attached across disclosure and rejects old-audience staged replies', async () => withPortalAttachmentFixture(async ({
+  principal, requester, portal, resource, drafts, publishCustomer, file, upload, attachments, customer,
+}) => {
+  const { previewCoManagedThreadDisclosure } = await import('../../../../packages/co-managed/src/threadDisclosure');
+  const { discloseSharedTicketThread } = await import('../../lib/co-managed/discloseTicketThread');
+  const { publishEvent } = await import('@alga-psa/event-bus/publishers');
+  const part = file('Whole-thread evidence'), request = { operationId: randomUUID(), audience: 'shared_it' as const, content: { text: 'Published root' }, files: [part.descriptor] };
+  const draft = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+  const ready = await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(draft), part.descriptor.attachmentId, part.content, upload);
+  const root = await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer);
+  const stagedFile = file('Private unfinished reply');
+  const staged = await drafts.beginCoManagedConversationDraft(db, principal, resource, { operationId: randomUUID(), parent: attachmentComment(root), expectedAudience: 'shared_it',
+    content: { text: 'Still internal' }, files: [stagedFile.descriptor] });
+  await drafts.uploadCoManagedDraftAttachment(db, principal, resource, draftRef(staged), stagedFile.descriptor.attachmentId, stagedFile.content, upload);
+  const target = { storeTenant: resource.tenant, threadId: root.threadId }, preview = await previewCoManagedThreadDisclosure(db, principal, resource, target);
+  expect(preview).toMatchObject({ comments: 1, attachments: 1, pendingAttachments: 0 });
+  vi.mocked(publishEvent).mockClear();
+  await discloseSharedTicketThread(db, principal, resource, { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester', confirmed: true });
+  expect(vi.mocked(publishEvent).mock.calls[0][0]).toMatchObject({ payload: { actorType: 'COLLABORATOR', actorReference: { tenantId: principal.tenant, userId: principal.userId }, collaborationMutation: { kind: 'audience' } } });
+  expect(await portal.listPortalConversationAttachments(db, requester, portalAttachmentTarget(resource, root))).toEqual([{ ...ready, audience: 'requester' }]);
+  await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(staged), publishCustomer)).rejects.toBeDefined();
+  expect(await customer.table('comments').where('comment_id', staged.operationId).first()).toBeUndefined();
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(root))).toEqual([{ ...ready, audience: 'requester' }]);
+}));

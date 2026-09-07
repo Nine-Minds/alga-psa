@@ -559,6 +559,16 @@
       "removeUnknownOutcome": "Das Entfernen konnte nicht bestätigt werden. Versuchen Sie es erneut, um dieselbe Datei zu prüfen.",
       "removing": "Wird entfernt…",
       "removeNamed": "{{name}} entfernen"
+    },
+    "disclosure": {
+      "title": "Sichtbarkeit des Verlaufs ändern",
+      "review": "Erneut prüfen",
+      "confirm": "Änderung bestätigen",
+      "scope": "Dies ändert die Sichtbarkeit des gesamten Verlaufs: {{comments}} Nachrichten und {{attachments}} Anhänge.",
+      "current": "Aktuelle Sichtbarkeit: {{audience}}",
+      "help": "Antworten und Anhänge übernehmen diese Sichtbarkeit. Bereits gelesene oder heruntergeladene Informationen können nicht zurückgerufen werden.",
+      "pending": "Ein Anhang wird noch hochgeladen. Schließen Sie den Upload ab, bevor Sie die Sichtbarkeit ändern.",
+      "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen."
     }
   }
 }

@@ -563,6 +563,16 @@
       "removeUnknownOutcome": "Nie można potwierdzić usunięcia. Spróbuj ponownie, aby sprawdzić ten sam plik.",
       "removing": "Usuwanie…",
       "removeNamed": "Usuń {{name}}"
+    },
+    "disclosure": {
+      "title": "Zmień widoczność wątku",
+      "review": "Sprawdź ponownie",
+      "confirm": "Potwierdź zmianę",
+      "scope": "To zmienia widoczność całego wątku: {{comments}} wiadomości i {{attachments}} załączników.",
+      "current": "Obecna widoczność: {{audience}}",
+      "help": "Odpowiedzi i załączniki dziedziczą tę widoczność. Ograniczenie dostępu nie cofa informacji już przeczytanych lub pobranych.",
+      "pending": "Przesyłanie załącznika oczekuje na zakończenie. Zakończ je przed zmianą widoczności.",
+      "unknownOutcome": "Wynik jest nieznany. Ponów próbę, aby sprawdzić tę samą zmianę."
     }
   }
 }

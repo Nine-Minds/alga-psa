@@ -561,6 +561,16 @@
       "removeUnknownOutcome": "No pudimos confirmar la eliminación. Reintente para comprobar el mismo archivo.",
       "removing": "Quitando…",
       "removeNamed": "Quitar {{name}}"
+    },
+    "disclosure": {
+      "title": "Cambiar la audiencia del hilo",
+      "review": "Revisar de nuevo",
+      "confirm": "Confirmar cambio de audiencia",
+      "scope": "Esto cambia la audiencia de todo el hilo: {{comments}} mensajes y {{attachments}} archivos adjuntos.",
+      "current": "Audiencia actual: {{audience}}",
+      "help": "Las respuestas y los adjuntos heredan esta audiencia. Restringir el acceso no recupera la información ya leída o descargada.",
+      "pending": "Hay una carga de adjunto pendiente. Complétela antes de cambiar la audiencia.",
+      "unknownOutcome": "Se desconoce el resultado. Reintente para comprobar el mismo cambio de audiencia."
     }
   }
 }

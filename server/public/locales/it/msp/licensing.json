@@ -561,6 +561,16 @@
       "removeUnknownOutcome": "Impossibile confermare la rimozione. Riprova per verificare lo stesso file.",
       "removing": "Rimozione…",
       "removeNamed": "Rimuovi {{name}}"
+    },
+    "disclosure": {
+      "title": "Modifica il pubblico della discussione",
+      "review": "Rivedi",
+      "confirm": "Conferma modifica",
+      "scope": "Questo cambia il pubblico dell’intera discussione: {{comments}} messaggi e {{attachments}} allegati.",
+      "current": "Pubblico attuale: {{audience}}",
+      "help": "Risposte e allegati ereditano questo pubblico. Limitare l’accesso non recupera le informazioni già lette o scaricate.",
+      "pending": "Il caricamento di un allegato è in sospeso. Completalo prima di modificare il pubblico.",
+      "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica."
     }
   }
 }

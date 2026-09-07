@@ -561,6 +561,16 @@
       "removeUnknownOutcome": "Não foi possível confirmar a remoção. Tente novamente para verificar o mesmo arquivo.",
       "removing": "Removendo…",
       "removeNamed": "Remover {{name}}"
+    },
+    "disclosure": {
+      "title": "Alterar o público da conversa",
+      "review": "Rever novamente",
+      "confirm": "Confirmar alteração",
+      "scope": "Isto altera o público de toda a conversa: {{comments}} mensagens e {{attachments}} anexos.",
+      "current": "Público atual: {{audience}}",
+      "help": "As respostas e os anexos herdam este público. Restringir o acesso não recupera informações já lidas ou transferidas.",
+      "pending": "O envio de um anexo está pendente. Conclua o envio antes de alterar o público.",
+      "unknownOutcome": "O resultado é desconhecido. Tente novamente para verificar a mesma alteração."
     }
   }
 }
