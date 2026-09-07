@@ -5,7 +5,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { encryptActionReplay, decryptActionReplay } from '../../../../shared/workflow/runtime/utils/actionReplayCipher';
 import WorkflowActionInvocationModelV2 from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
-import { getActionRegistryV2 } from '@alga-psa/workflows/runtime/core';
+import { getActionRegistryV2, initializeWorkflowRuntimeV2 } from '@alga-psa/workflows/runtime/core';
 
 const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', canRead: true }));
 vi.mock('@alga-psa/db/admin', () => ({
@@ -24,7 +24,7 @@ vi.mock('@alga-psa/auth', async importOriginal => {
   };
 });
 import { listWorkflowRunStepsAction, exportWorkflowRunDetailAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
-import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
+import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep, executeWorkflowRuntimeV2NodeStep } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
 
 let db: Knex;
 beforeAll(async () => {
@@ -216,4 +216,76 @@ it('replays legacy completed invocations without a replay key and without repeat
   vi.stubEnv('NEXTAUTH_SECRET', '');
   expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual({ value: 'legacy-result' });
   expect(handler).not.toHaveBeenCalled();
+});
+
+
+it('runs the real email parser through the activity and persists sanitized content and parser metadata', async () => {
+  const f = await fixture();
+  const scopes = { payload: { text: 'Please help with the printer.', html: '<p>Please help with the printer.</p><script>alert("unsafe")</script><img src="x" onerror="alert(1)"><a href="javascript:alert(2)">unsafe link</a><a href="https://example.invalid/help">Help link</a>' },
+    workflow: {}, lexical: [], system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1,
+      tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } };
+  const input = { ...f, tenantId: f.tenant, scopes, step: { type: 'email.parseBody', config: {
+    text: { $expr: 'payload.text' }, html: { $expr: 'payload.html' }, saveAs: 'vars.parsedEmail' } } };
+  const result = await executeWorkflowRuntimeV2NodeStep(input);
+  const parsed = result.scopes.workflow.parsedEmail as any;
+  expect(parsed.sanitizedText).toContain('Please help with the printer.');
+  expect(parsed.sanitizedHtml).toContain('Please help with the printer.');
+  expect(parsed.sanitizedHtml).not.toMatch(/<script|onerror|javascript:|alert\(/i);
+  expect(parsed.sanitizedHtml).toContain('https://example.invalid/help');
+  expect(['high', 'medium', 'low']).toContain(parsed.confidence);
+  expect(parsed.metadata.parser).toMatchObject({ confidence: parsed.confidence });
+  const invocation = await state.trx!('workflow_action_invocations').where({ run_id: f.runId }).first();
+  expect(invocation, invocation.error_message).toMatchObject({ action_id: 'parse_email_reply', status: 'SUCCEEDED' });
+  expect(invocation.output_json.success).toBe(true);
+  expect(invocation.output_json.parsed.tokens).toBeNull();
+  expect(parsed.confidence).toBe(invocation.output_json.parsed.confidence);
+  const snapshot = await complete(f, { payload: result.scopes.payload, vars: result.scopes.workflow });
+  expect(snapshot.envelope_json.vars.parsedEmail).toEqual(parsed);
+  expect((await executeWorkflowRuntimeV2NodeStep(input)).scopes.workflow.parsedEmail).toEqual(parsed);
+  expect(await state.trx!('workflow_action_invocations').where({ run_id: f.runId })).toHaveLength(1);
+});
+
+it.each(['unavailable', 'throws'])('persists readable comment blocks when HTML conversion %s', async failure => {
+  const f = await fixture();
+  initializeWorkflowRuntimeV2();
+  const action = getActionRegistryV2().get('convert_html_to_blocks', 1)!;
+  const handler = vi.spyOn(action, 'handler');
+  if (failure === 'throws') handler.mockRejectedValue(new Error('synthetic converter failure'));
+  else handler.mockResolvedValue({ success: false, blocks: [] });
+  try {
+    const result = await executeWorkflowRuntimeV2NodeStep({ ...f, tenantId: f.tenant,
+      step: { type: 'email.renderCommentBlocks', config: { html: { $expr: 'payload.html' }, text: { $expr: 'payload.text' }, saveAs: 'payload.blocks' } },
+      scopes: { payload: { html: '<p>Keep this reply</p>', text: 'Keep this reply' }, workflow: {}, lexical: [],
+        system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1, tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } } });
+    const blocks = [{ type: 'paragraph', content: [{ type: 'text', text: 'Keep this reply' }] }];
+    expect(result.scopes.payload.blocks).toEqual(blocks);
+    expect(handler).toHaveBeenCalledOnce();
+    const snapshot = await complete(f, { payload: result.scopes.payload });
+    expect(snapshot.envelope_json.payload.blocks).toEqual(blocks);
+    expect(await state.trx!('workflow_action_invocations').where({ run_id: f.runId }).first())
+      .toMatchObject({ action_id: 'convert_html_to_blocks', status: failure === 'throws' ? 'FAILED' : 'SUCCEEDED' });
+  } finally { handler.mockRestore(); }
+});
+
+
+it.each(['unavailable', 'throws'])('sanitizes HTML even when the reply parser %s', async failure => {
+  const f = await fixture();
+  initializeWorkflowRuntimeV2();
+  const action = getActionRegistryV2().get('parse_email_reply', 1)!;
+  const handler = vi.spyOn(action, 'handler');
+  if (failure === 'throws') handler.mockRejectedValue(new Error('synthetic parser failure'));
+  else handler.mockResolvedValue({ success: false, parsed: null });
+  try {
+    const result = await executeWorkflowRuntimeV2NodeStep({ ...f, tenantId: f.tenant,
+      step: { type: 'email.parseBody', config: { html: { $expr: 'payload.html' }, text: { $expr: 'payload.text' }, saveAs: 'vars.parsedEmail' } },
+      scopes: { payload: { html: '<p>Keep this reply</p><script>alert(1)</script><img src="x" onerror="alert(2)">', text: 'Keep this reply' }, workflow: {}, lexical: [],
+        system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1, tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } } });
+    const parsed = result.scopes.workflow.parsedEmail as any;
+    expect(parsed).toMatchObject({ sanitizedText: 'Keep this reply', confidence: 'low' });
+    expect(parsed.sanitizedHtml).toContain('<p>Keep this reply</p>');
+    expect(parsed.sanitizedHtml).not.toMatch(/<script|onerror|alert\(/i);
+    expect(parsed.metadata.parser.warnings).toContain(failure === 'throws' ? 'parser-error' : 'parser-unavailable');
+    const snapshot = await complete(f, { vars: result.scopes.workflow });
+    expect(snapshot.envelope_json.vars.parsedEmail.sanitizedHtml).toBe(parsed.sanitizedHtml);
+  } finally { handler.mockRestore(); }
 });

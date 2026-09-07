@@ -14,8 +14,7 @@ import WorkflowRunModelV2 from '@alga-psa/workflows/persistence/workflowRunModel
 import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
 import { getActionRegistryV2, getSchemaRegistry } from '@alga-psa/workflows/runtime';
 import {
-  ensureWorkflowRuntimeV2TestRegistrations,
-  TEST_SCHEMA_REF
+  ensureWorkflowRuntimeV2TestRegistrations
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
 vi.mock('server/src/lib/db', () => ({
@@ -186,15 +185,7 @@ describe.skip('workflow runtime v2 email workflow integration tests', () => {
       expect(vars.processedAt).toBeDefined();
     });
 
-    it('email.parseBody node parses body and stores parsedEmail with confidence. Mocks: non-target dependencies.', () => {
-      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.parsedEmail.confidence).toBe('high');
-    });
 
-    it('email.parseBody sanitizes HTML and strips unsafe content. Mocks: non-target dependencies.', () => {
-      const vars = snapshots[snapshots.length - 1].envelope_json.vars;
-      expect(vars.parsedEmail.sanitizedHtml).toBe('<p>Sanitized</p>');
-    });
 
     it('Existing ticket resolution runs before branching. Mocks: non-target dependencies.', () => {
       expect(resolveExistingSpy).toHaveBeenCalled();
@@ -395,57 +386,6 @@ describe.skip('workflow runtime v2 email workflow integration tests', () => {
     const result = await startWorkflowRunAction({ workflowId: EMAIL_WORKFLOW_ID, workflowVersion: emailWorkflowVersion, payload: baseEmailPayload() });
     const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, result.runId);
     expect(snapshots[snapshots.length - 1].envelope_json.meta.state).toBe('ERROR_NO_TICKET_DEFAULTS');
-  });
-
-  it('email.renderCommentBlocks uses HTML->blocks conversion fallback when needed. Mocks: non-target dependencies.', async () => {
-    await resetWorkflowRuntimeTables(db);
-    const workflowId = await (async () => {
-      const definition = {
-        id: uuidv4(),
-        version: 1,
-        name: 'Render Blocks',
-        // The strict EmailWorkflowPayload.v1 schema rejects this test's
-        // {html, text} payload; the permissive test schema exercises the
-        // renderCommentBlocks node without dragging in email trigger fields.
-        payloadSchemaRef: TEST_SCHEMA_REF,
-        steps: [
-          {
-            id: 'render',
-            type: 'email.renderCommentBlocks',
-            config: {
-              html: { $expr: 'payload.html' },
-              text: { $expr: 'payload.text' },
-              saveAs: 'payload.blocks'
-            }
-          }
-        ]
-      };
-      const record = await WorkflowDefinitionModelV2.create(db, tenantId, {
-        workflow_id: definition.id,
-        name: definition.name,
-        payload_schema_ref: definition.payloadSchemaRef,
-        draft_definition: definition,
-        draft_version: 1,
-        status: 'published'
-      });
-      await WorkflowDefinitionVersionModelV2.create(db, {
-        workflow_id: record.workflow_id,
-        tenant: tenantId,
-        version: 1,
-        definition_json: definition,
-        payload_schema_json: getSchemaRegistry().toJsonSchema(TEST_SCHEMA_REF) as any,
-        published_by: userId,
-        published_at: new Date().toISOString()
-      });
-      return record.workflow_id;
-    })();
-
-    stubAction('convert_html_to_blocks', 1, vi.fn().mockResolvedValue({ success: false, blocks: [] }));
-
-    const result = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { html: '<p>Hi</p>', text: 'Hi' } });
-    const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, result.runId);
-    const blocks = snapshots[snapshots.length - 1].envelope_json.payload.blocks;
-    expect(blocks).toBeDefined();
   });
 
   it('Outer catch sets ERROR_PROCESSING_EMAIL and AWAITING_MANUAL_RESOLUTION. Mocks: non-target dependencies.', async () => {
