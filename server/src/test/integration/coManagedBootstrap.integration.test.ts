@@ -5044,3 +5044,93 @@ it('does not use public comment side effects to mutate a restricted response-sta
   await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Permitted internal note' });
   expect(await customer.table('comments')).toHaveLength(1);
 }));
+
+async function withPortalConversationFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
+  portalRead: (ticketId?: string) => Promise<any>; requester: any; avatars: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  await withConversationFixture(async fixture => {
+    const { customer, resource, operation } = fixture;
+    const auth = await import('@alga-psa/auth');
+    const dbModule = await import('@alga-psa/db');
+    const avatarActions = await import('@alga-psa/user-composition/actions/avatarActions');
+    const portal = await import('../../../../packages/client-portal/src/actions/client-portal-actions/client-tickets');
+    const contact = await customer.table('contacts').where('client_id', operation.customer_client_id).first();
+    const [requester] = await customer.table('users').insert({ tenant: resource.tenant, user_id: randomUUID(), username: `portal-${randomUUID()}`,
+      email: 'requester@example.test', first_name: 'Portal', last_name: 'Requester', hashed_password: 'not-a-login',
+      user_type: 'client', contact_id: contact.contact_name_id, is_inactive: false }).returning('*');
+    const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'read', msp: false, client: true }).first();
+    const roleId = randomUUID();
+    await customer.table('roles').insert({ tenant: resource.tenant, role_id: roleId, role_name: 'Portal reader', msp: false, client: true });
+    await customer.table('role_permissions').insert({ tenant: resource.tenant, role_id: roleId, permission_id: permission.permission_id });
+    await customer.table('user_roles').insert({ tenant: resource.tenant, role_id: roleId, user_id: requester.user_id });
+    const avatars = vi.spyOn(avatarActions, 'getUserAvatarUrlAction').mockResolvedValue(null);
+    const realRbac = await vi.importActual<typeof import('@alga-psa/auth/rbac')>('@alga-psa/auth/rbac');
+    const permissionMock = vi.mocked(auth.hasPermission);
+    const previousPermissionImplementation = permissionMock.getMockImplementation();
+    permissionMock.mockImplementation(realRbac.hasPermission);
+    const spies = [vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db), avatars,
+      vi.spyOn(avatarActions, 'getContactAvatarUrlAction').mockResolvedValue(null)];
+    try {
+      const portalRead = (ticketId = resource.id) => auth.runWithApiKeyUser(requester,
+        () => runWithTenant(resource.tenant, () => portal.getClientTicketDetails(ticketId)));
+      await work({ ...fixture, requester, portalRead, avatars });
+    } finally {
+      for (const spy of spies.reverse()) spy.mockRestore();
+      permissionMock.mockImplementation(previousPermissionImplementation!);
+    }
+  });
+}
+
+it('filters portal bodies and author enumeration by the published root audience, including inconsistent legacy replies', async () => withPortalConversationFixture(async ({
+  customer, customerPrincipal, resource, addCustomer, addPrivate, portalRead, avatars,
+}) => {
+  const publicRoot = await addCustomer({ note: 'Public root' });
+  const publicReply = await addCustomer({ note: 'Public reply', parent: publicRoot, foreign: true });
+  const hiddenRoot = await addCustomer({ note: 'Hidden root', internal: true });
+  const hiddenReply = await addCustomer({ note: 'Public flag under hidden root', parent: hiddenRoot });
+  const draftRoot = await addCustomer({ note: 'Draft root', state: 'scheduled' });
+  await addCustomer({ note: 'Published reply under draft root', parent: draftRoot });
+  const mismatch = await addCustomer({ note: 'Thread differs from root' });
+  await customer.table('comments').where('comment_id', mismatch.id).update({ is_internal: true });
+  await addCustomer({ note: 'Reply under inconsistent root', parent: mismatch });
+  await addCustomer({ note: 'Shared IT', internal: true, audience: 'shared_it', foreign: true });
+  await addCustomer({ note: 'Customer private', internal: true, audience: 'organization_private' });
+  await addPrivate({ note: 'MSP private canary' });
+  const local = await customer.table('users').where('user_id', customerPrincipal.userId).first();
+  const hiddenUserId = randomUUID();
+  await customer.table('users').insert({ ...local, user_id: hiddenUserId, username: `hidden-${randomUUID()}`, email: 'hidden-author@example.test' });
+  await customer.table('comments').where('comment_id', hiddenReply.id).update({ user_id: hiddenUserId });
+  const result = await portalRead();
+  expect(result.ticket_id).toBe(resource.id);
+  expect(result.conversations.map((c: any) => c.comment_id).sort()).toEqual([publicRoot.id, publicReply.id].sort());
+  expect(result.conversations.find((c: any) => c.comment_id === publicReply.id)).toMatchObject({ user_id: null,
+    actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP', parent_comment_id: publicRoot.id });
+  expect(result.userMap[hiddenUserId]).toBeUndefined();
+  expect(avatars.mock.calls.some(([id]) => id === hiddenUserId)).toBe(false);
+  expect(JSON.stringify(result)).not.toContain('hidden-author@example.test');
+  await customer.table('comments').where('comment_id', publicRoot.id).update({ is_internal: true });
+  expect((await portalRead()).conversations).toEqual([]);
+}));
+
+it('redacts retained portal tombstone bodies and hidden parent IDs while preserving ticket and board authorization', async () => withPortalConversationFixture(async ({
+  customer, operation, resource, requester, addCustomer, portalRead,
+}) => {
+  const root = await addCustomer({ note: 'Retained deleted body canary', deleted: true });
+  const draft = await addCustomer({ note: 'Hidden intermediate parent', state: 'scheduled', parent: root });
+  const visible = await addCustomer({ note: 'Visible reply', parent: draft });
+  const result = await portalRead();
+  expect(result.conversations).toHaveLength(2);
+  expect(result.conversations.find((c: any) => c.comment_id === root.id)).toMatchObject({ note: null, markdown_content: null, metadata: null });
+  expect(result.conversations.find((c: any) => c.comment_id === visible.id)).toMatchObject({ note: 'Visible reply', parent_comment_id: null });
+  expect(JSON.stringify(result)).not.toContain(draft.id);
+  expect(JSON.stringify(result)).not.toContain('Retained deleted body canary');
+  expect(result.conversations.every((c: any) => !('note_index' in c) && !('scheduled_publish_event_id' in c))).toBe(true);
+  const groupId = randomUUID();
+  await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId,
+    client_id: operation.customer_client_id, name: 'No boards' });
+  await customer.table('contacts').where('contact_name_id', requester.contact_id).update({ portal_visibility_group_id: groupId });
+  expect(await portalRead()).toMatchObject({ actionError: 'Ticket not found or access denied' });
+  await customer.table('contacts').where('contact_name_id', requester.contact_id).update({ portal_visibility_group_id: null });
+  await customer.table('user_roles').where('user_id', requester.user_id).del();
+  expect(await portalRead()).toMatchObject({ permissionError: expect.any(String) });
+}));

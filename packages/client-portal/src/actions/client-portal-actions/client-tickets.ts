@@ -7,6 +7,7 @@ import { COMMENT_RESPONSE_SOURCES, IComment, ITicket, ITicketListItem, ITicketWi
 import { IDocument } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { z } from 'zod';
+import { commentAudienceSql } from '@shared/lib/commentAudience';
 import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
@@ -358,17 +359,25 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         'd.is_client_visible': true,
       });
 
-      // Only derive involved-user ids from comments the contact can actually
-      // see — internal-only commenters must not be enumerated here. Comment
-      // visibility mirrors the thread root (Comment model enforces replies
-      // match thread visibility), so the comment flag alone is sufficient.
-      const commentUserIdsSubquery = scopedDb.table('comments as c')
-        .select('c.user_id')
-        .where('c.ticket_id', ticketId)
-        .where('c.is_internal', false)
-        // Do not enumerate authors of scheduled/canceled comments before
-        // publication — mirror the conversations query's publish_state gate.
-        .where('c.publish_state', 'published');
+      // Body and author enumeration share one predicate: a public reply must
+      // belong to a published public root in this ticket and tenant. Legacy
+      // inconsistent rows do not gain requester visibility from a reply flag.
+      const visibleCommentsQuery = scopedDb.table('comments');
+      scopedDb.tenantJoin(visibleCommentsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', {
+        on: join => join.andOn('ct.ticket_id', '=', 'comments.ticket_id'),
+      });
+      scopedDb.tenantJoin(visibleCommentsQuery, 'comments as root', 'ct.root_comment_id', 'root.comment_id', {
+        on: join => join.andOn('root.thread_id', '=', 'ct.thread_id').andOn('root.ticket_id', '=', 'comments.ticket_id'),
+      });
+      visibleCommentsQuery.where({
+        'comments.ticket_id': ticketId,
+        'comments.publish_state': 'published',
+        'root.publish_state': 'published',
+      }).whereRaw('? = ?', [commentAudienceSql(trx, 'ct', 'root', 'comments'), 'requester']);
+      const commentUserIdsSubquery = visibleCommentsQuery.clone().select('comments.user_id')
+        .whereNull('comments.actor_reference_id')
+        .whereNull('comments.actor_display_name')
+        .whereNull('comments.actor_organization_name');
       const assignedUserIdSubquery = scopedDb.table('tickets as assigned_ticket')
         .select('assigned_ticket.assigned_to')
         .where('assigned_ticket.ticket_id', ticketId);
@@ -420,27 +429,26 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
           'aa.relationship_type',
         );
 
-      // Portal contacts must never receive MSP-internal notes. A comment is
-      // hidden when its own is_internal flag is set or when it belongs to an
-      // internal thread (comment_threads.is_internal carries the thread root's
-      // flag — the same "internal thread" definition the MSP thread tabs use
-      // in buildTicketThreadTabState).
-      const conversationsQuery = scopedDb.table('comments');
-      scopedDb.tenantJoin(conversationsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
-      conversationsQuery
-        .select('comments.*')
-        .where({
-          'comments.ticket_id': ticketId,
-          'comments.is_internal': false,
-          // Scheduled comments are an MSP-only draft state.  Keep this in the
-          // query (rather than the UI) so portal callers cannot infer them.
-          'comments.publish_state': 'published',
-        })
-        .where(function (this: Knex.QueryBuilder) {
-          this.whereNull('ct.is_internal')
-            .orWhere('ct.is_internal', false);
-        })
-        .orderBy('comments.created_at', 'asc');
+      const conversationsQuery = visibleCommentsQuery.clone();
+      scopedDb.tenantJoin(conversationsQuery, 'comments as parent', 'comments.parent_comment_id', 'parent.comment_id', {
+        type: 'left', on: join => join.andOn('parent.thread_id', '=', 'ct.thread_id').andOn('parent.ticket_id', '=', 'comments.ticket_id'),
+      });
+      conversationsQuery.select([
+        'comments.tenant', 'comments.comment_id', 'comments.ticket_id', 'comments.thread_id',
+        'comments.user_id', 'comments.contact_id', 'comments.author_type',
+        'comments.actor_reference_id', 'comments.actor_display_name', 'comments.actor_organization_name',
+        'comments.is_internal', 'comments.is_resolution', 'comments.is_system_generated',
+        'comments.created_at', 'comments.updated_at', 'comments.deleted_at',
+        'comments.publish_state', 'comments.published_at',
+      ]).select({
+        // Retain tombstones and visible replies without exposing retained bodies
+        // or identifiers of unpublished/private intermediate parents.
+        note: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.note ELSE NULL END'),
+        markdown_content: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.markdown_content ELSE NULL END'),
+        metadata: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.metadata ELSE NULL END'),
+        parent_comment_id: trx.raw("CASE WHEN parent.publish_state = 'published' AND ? = 'requester' THEN parent.comment_id ELSE NULL END",
+          [commentAudienceSql(trx, 'ct', 'root', 'parent')]),
+      }).orderBy('comments.created_at', 'asc');
 
       const [ticket, conversations, documents, users, linkedAssets] = await Promise.all([
         ticketQuery,

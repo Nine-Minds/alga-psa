@@ -93,7 +93,7 @@ function makeTicket(overrides: Record<string, unknown> = {}) {
 function makeChainable(result: any = []) {
   const builder: any = {};
   for (const method of [
-    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereNull', 'whereIn', 'clone',
     'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
   ]) {
     builder[method] = vi.fn(() => builder);

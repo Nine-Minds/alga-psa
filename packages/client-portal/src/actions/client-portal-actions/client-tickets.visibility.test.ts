@@ -129,7 +129,7 @@ function makeListBuilder(rows: any[]) {
 function makeChainable(result: any = []) {
   const builder: any = {};
   for (const method of [
-    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereIn',
+    'select', 'distinct', 'where', 'whereRaw', 'whereNotNull', 'whereNull', 'whereIn', 'clone',
     'orWhereIn', 'join', 'leftJoin', 'innerJoin', 'orderBy', 'as', 'first',
   ]) {
     builder[method] = vi.fn(() => builder);
@@ -433,7 +433,6 @@ describe('client portal ticket visibility enforcement', () => {
       closed_at: null,
     });
     const conversationsBuilder = makeChainable();
-    const commentUserIdsBuilder = makeChainable();
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) => {
       const trx = Object.assign(
@@ -448,10 +447,6 @@ describe('client portal ticket visibility enforcement', () => {
 
           if (table === 'comments') {
             return conversationsBuilder;
-          }
-
-          if (table === 'comments as c') {
-            return commentUserIdsBuilder;
           }
 
           if (table === 'documents as d') {
@@ -499,21 +494,17 @@ describe('client portal ticket visibility enforcement', () => {
     const { getClientTicketDetails } = await import('./client-tickets');
     await getClientTicketDetails('ticket-1');
 
-    // The serialized conversation list filters out internal comments at the
-    // query (not just in the client component) and joins comment_threads so
-    // internal threads are excluded too. Scheduled (unpublished) comments are an
-    // MSP-only draft state, so the query also restricts to published comments and
-    // portal callers cannot infer a pending one.
+    // Both body and author queries clone the same published-root predicate.
     expect(conversationsBuilder.where).toHaveBeenCalledWith({
       'comments.ticket_id': 'ticket-1',
-      'comments.is_internal': false,
       'comments.publish_state': 'published',
+      'root.publish_state': 'published',
     });
-    expect(conversationsBuilder.leftJoin).toHaveBeenCalled();
+    expect(conversationsBuilder.join).toHaveBeenCalledTimes(2);
+    expect(conversationsBuilder.clone).toHaveBeenCalledTimes(2);
+    expect(conversationsBuilder.whereRaw).toHaveBeenCalledWith('? = ?', expect.arrayContaining(['requester']));
+    expect(conversationsBuilder.whereNull).toHaveBeenCalledWith('comments.actor_reference_id');
 
-    // Comment-derived involved-user ids are likewise restricted to
-    // client-visible comments so internal-only commenters aren't enumerated.
-    expect(commentUserIdsBuilder.where).toHaveBeenCalledWith('c.is_internal', false);
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {
