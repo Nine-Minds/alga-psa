@@ -63,7 +63,7 @@ function buildComment(overrides: Partial<IComment>): IComment {
   } as IComment;
 }
 
-function renderComment(comment: IComment) {
+function renderComment(comment: IComment, overrides: Partial<React.ComponentProps<typeof CommentItem>> = {}) {
   return render(
     <CommentItem
       conversation={comment}
@@ -78,6 +78,7 @@ function renderComment(comment: IComment) {
       onClose={() => {}}
       onEdit={() => {}}
       onDelete={() => {}}
+      {...overrides}
     />
   );
 }
@@ -114,4 +115,29 @@ describe('CommentItem unresolved-author avatar', () => {
 
     expect(screen.getByText('UU')).toBeInTheDocument();
   });
+});
+
+
+it('shows a foreign technician’s saved organization and initials without exposing local edit or email controls', () => {
+  const comment = buildComment({ author_type: 'internal', actor_reference_id: 'owner-reference', actor_display_name: 'Morgan Provider', actor_organization_name: 'Historical MSP',
+    metadata: { email: { fromName: 'Untrusted fallback', fromAddress: 'private@example.test' } } });
+  renderComment(comment, { currentUserId: 'owner-reference', isEditing: true, currentComment: comment });
+  expect(screen.getByText('Morgan Provider (Historical MSP)')).toBeInTheDocument();
+  expect(screen.getByText('MP')).toBeInTheDocument();
+  expect(screen.queryByText('Untrusted fallback')).not.toBeInTheDocument();
+  expect(screen.queryByText('private@example.test')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'conversation.editCommentAriaLabel' })).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'conversation.deleteCommentAriaLabel' })).not.toBeInTheDocument();
+  expect(screen.queryByTestId('text-editor')).not.toBeInTheDocument();
+});
+
+it('does not grant native editing or fall back to an inbound identity when a foreign DTO contains a colliding local user ID', () => {
+  const comment = buildComment({ author_type: 'internal', user_id: 'user-1', actor_reference_id: 'owner-reference', actor_display_name: 'Morgan Provider', actor_organization_name: 'MSP',
+    metadata: { email: { fromName: 'Untrusted fallback', fromAddress: 'private@example.test' } } });
+  renderComment(comment, { isEditing: true, currentComment: comment, userMap: { 'user-1': { user_id: 'user-1', first_name: 'Local', last_name: 'Collision', user_type: 'internal', avatarUrl: '/local-avatar', email: 'local@example.test' } } });
+  expect(screen.queryByText('Local Collision')).not.toBeInTheDocument();
+  expect(screen.queryByText('Untrusted fallback')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'conversation.editCommentAriaLabel' })).not.toBeInTheDocument();
+  expect(screen.queryByTestId('text-editor')).not.toBeInTheDocument();
+  expect(screen.queryByRole('img')).not.toBeInTheDocument();
 });

@@ -36,7 +36,7 @@ async function collaborationAttribution(trx: Knex.Transaction, tenant: string, c
     return {};
   }
   if (context.audience === 'organization_private' || comment.user_id != null || !context.actorReferenceId) throw new Error('Invalid foreign collaboration author');
-  const reference = await tenantScopedTable(trx, 'collaboration_actor_references', tenant)
+  const reference = await tenantScopedTable<{ actor_reference_id: string; actor_tenant: string; actor_user_id: string; display_name: string; organization_name: string }>(trx, 'collaboration_actor_references', tenant)
     .where({ actor_reference_id: context.actorReferenceId, actor_tenant: context.actorTenant, actor_user_id: context.actorUserId }).forShare().first();
   if (!reference) throw new Error('Invalid foreign collaboration author');
   return { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name };

@@ -48,7 +48,7 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { getContactAvatarUrlAction, getUserContactId, searchUsersForMentions } from '@alga-psa/user-composition/actions';
-import type { CommentContactAuthor, CommentUserAuthor } from '../../lib/commentAuthorResolution';
+import { hasCommentCollaborationAttribution, type CommentContactAuthor, type CommentUserAuthor } from '../../lib/commentAuthorResolution';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTicketRichTextUploadSession } from './useTicketRichTextUploadSession';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
@@ -379,7 +379,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
       
       // Find all client users in the conversations
       for (const conversation of conversations) {
-        if (conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
+        if (!hasCommentCollaborationAttribution(conversation) && conversation.user_id && userMap[conversation.user_id]?.user_type === 'client') {
           try {
             const contactId = await getUserContactId(conversation.user_id);
             

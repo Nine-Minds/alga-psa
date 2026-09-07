@@ -1,5 +1,6 @@
 'use server'
 
+import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
@@ -748,6 +749,7 @@ export const getConsolidatedTicketData = withAuth(async (user, { tenant }, ticke
     const extraAuthorIds = Array.from(
       new Set(
         (comments as Array<{ user_id?: string | null }>)
+          .filter((comment) => !hasCommentCollaborationAttribution(comment))
           .map((comment) => comment.user_id)
           .filter((userId): userId is string => Boolean(userId))
       )

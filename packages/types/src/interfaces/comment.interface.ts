@@ -36,6 +36,11 @@ export interface CommentMetadata {
 }
 
 export interface IComment extends TenantEntity {
+  /** Owner-local attribution and saved labels for a foreign technician. These
+   * fields never identify a local login, contact, or avatar. */
+  actor_reference_id?: string | null;
+  actor_display_name?: string | null;
+  actor_organization_name?: string | null;
   comment_id?: string;
   ticket_id?: string;
   thread_id?: string;
