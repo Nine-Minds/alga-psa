@@ -6,6 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 import { reconcileNodeExecution } from '../lib/node-test-execution.mjs';
+import { readRunnerCollection } from '../lib/read-runner-collection.mjs';
 
 const reporter = fileURLToPath(new URL('../lib/node-test-reporter.mjs', import.meta.url));
 function run(t, sources, flags = []) {
@@ -33,15 +34,22 @@ test('Node evidence reconciles separate files, nested suites and dynamic subtest
   assert.equal(evidence.status, 'passed', evidence.failures.join('\n'));
   assert.equal(evidence.counts.tests, 3);
   assert.deepEqual(evidence.executedFiles, input.files);
+  const artifact = { runner: 'node-fixture', format: 'node-events', sourceRoot: input.root,
+    collectionFile: 'events.jsonl', evidenceFile: 'evidence.json' };
+  fs.writeFileSync(path.join(input.root, artifact.collectionFile), input.events.map(event => JSON.stringify(event)).join('\n'));
+  fs.writeFileSync(path.join(input.root, artifact.evidenceFile), JSON.stringify(evidence));
+  assert.deepEqual(readRunnerCollection(artifact, input.root).files, input.files);
   assert.deepEqual(evidence.tests.map(({ file, name }) => [file, name]), [
     [input.files[0], 'dynamic'], [input.files[0], 'outer'], [input.files[1], 'another file'],
   ]);
   const missingFile = reconcileNodeExecution({ ...input, files: [...input.files, 'omitted.test.mjs'] });
   assert.equal(missingFile.status, 'failed');
-  assert.ok(missingFile.failures.some((failure) => failure.includes('Missing completed file')));
+    assert.ok(missingFile.failures.some((failure) => failure.includes('Missing completed file')));
   for (const drop of ['test:pass', 'test:summary']) {
     const damaged = reconcileNodeExecution({ ...input, events: input.events.filter(({ type }) => type !== drop) });
     assert.equal(damaged.status, 'failed');
+    fs.writeFileSync(path.join(input.root, artifact.collectionFile), input.events.filter(({ type }) => type !== drop).map(event => JSON.stringify(event)).join('\n'));
+    assert.throws(() => readRunnerCollection(artifact, input.root), /Invalid Node collection/);
   }
 });
 
