@@ -3,8 +3,10 @@ import fs from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import knex from 'knex';
 import dotenv from 'dotenv';
+import { createTestDbConnection } from '../../../test-utils/dbConfig';
 
-// Opt-in local acceptance fixture. Uses the wired stack, creates only synthetic source
+// Generation variants use the isolated migrated test database; remaining opt-in
+// acceptance cases use the wired stack. Both create only synthetic source
 // records, and leaves the invoice for live designer/PDF inspection. Authentication is
 // supplied by a real fixture user's identity; charge math, DB, transactions and reads
 // are not mocked. No completed snapshots are inserted.
@@ -285,14 +287,17 @@ it.runIf(process.env.INVOICE_TICKET_CUSTOM === '1')('renders the UI-saved transf
   } finally { await db.destroy(); }
 }, 120000);
 
-it.runIf(process.env.INVOICE_TICKET_EXTENDED === '1').each(['cap', 'recurring-cap', 'bucket', 'multi-tax-long', 'task-identities', 'hour-block'])('verifies %s production generation and persistence', async (variant) => {
+it.each(['cap', 'recurring-cap', 'bucket', 'multi-tax-long', 'task-identities', 'hour-block'])('verifies %s production generation and persistence', async (variant) => {
   const dir = `${evidenceDir}/${variant}`;
   fs.mkdirSync(dir, { recursive: true });
-  const env = dotenv.parse(fs.readFileSync('.env.local'));
-  Object.assign(process.env, env, { DB_PORT: '5472' });
-  const db = knex({ client: 'pg', connection: { host: env.DB_HOST, port: 5472, database: env.DB_NAME_SERVER, user: env.DB_USER_ADMIN, password: env.DB_PASSWORD_ADMIN } });
+  const db = await createTestDbConnection();
   try {
-    state.user = await db('users').where({ email: 'invoice-draft-verifier@example.invalid' }).first();
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
     state.tenant = state.user.tenant;
     let projectConfigId: string | undefined;
     let cappedProjectId: string | undefined;
@@ -465,9 +470,10 @@ it.runIf(process.env.INVOICE_TICKET_EXTENDED === '1').each(['cap', 'recurring-ca
       expect(bucketCharges).toHaveLength(1);
       expect(Number(bucketCharges[0].net_amount)).toBe(60000);
       expect(vm.ticketPresentationRows!.find((row) => row.id === bucketCharges[0].item_id)?.contributions).toEqual([{ itemId: bucketCharges[0].item_id, entryId: null, amount: 60000 }]);
-      // The original source fixture intentionally has both Hourly and Bucket
-      // configurations. Preserve its separate canonical charges and arithmetic.
-      expect(vm.subtotal).toBe(147500);
+      // Bucket-covered work is priced once: four overage hours at $150,
+      // plus one $50 usage unit. The hourly configuration must not rebill it.
+      expect(charges.filter((charge) => charge.billing_charge_type === 'hourly')).toHaveLength(0);
+      expect(vm.subtotal).toBe(4 * 15000 + 5000);
       const periods = await db('recurring_service_periods').where({ tenant: ids.tenant, invoice_id: result.invoice_id });
       expect(periods.length).toBeGreaterThan(0);
       expect(periods.every((period) => period.lifecycle_state === 'billed' && period.invoice_charge_detail_id)).toBe(true);
@@ -514,7 +520,7 @@ it.runIf(process.env.INVOICE_TICKET_EXTENDED === '1').each(['cap', 'recurring-ca
     if (variant === 'multi-tax-long') {
       expect(links).toHaveLength(74);
       expect(vm.subtotal).toBe(1137500); expect(vm.tax).toBe(167750);
-      expect(vm.ticketPresentationRows!.find((row) => row.contributions.length > 2)?.taxRate).toBeUndefined();
+      expect(vm.ticketPresentationRows!.find((row) => row.contributions.length > 2)).not.toHaveProperty('taxRate');
     }
     const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
     const standard = await db('standard_invoice_templates').where({ standard_invoice_template_code: 'standard-invoice-by-ticket' }).first();
@@ -558,6 +564,7 @@ it.runIf(Boolean(process.env.INVOICE_TICKET_REVIEW_LAYOUT))('saves and verifies 
         { id: 'ticket-label', type: 'text', content: { type: 'path', path: 'group.label' } },
         { id: 'entry-detail', type: 'dynamic-table', repeat: { sourceBinding: { bindingId: 'nestedEntries' }, itemBinding: 'entry' }, columns },
       ] };
+      if (!ast.layout.children) throw new Error('Standard invoice template must have layout children');
       const totalsIndex = ast.layout.children.findIndex((node) => node.id === 'totals-wrap');
       ast.layout.children.splice(totalsIndex < 0 ? ast.layout.children.length : totalsIndex, 0,
         { id: 'detail-notice', type: 'text', content: { type: 'literal', value: 'Billed-time detail — included in the charges above' } },
@@ -630,7 +637,7 @@ it.runIf(process.env.INVOICE_TICKET_DIAGNOSTICS === '1')('surfaces declared scal
     const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
     const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
     const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
-    const sources = [];
+    const sources: Array<{ path: string; templateId: string; invoiceId: string; invoiceNumber: string }> = [];
     for (const path of ['invoiceNumber', 'missing.path']) {
       const ast = structuredClone(getStandardTemplateAstByCode('standard-invoice-by-ticket'))!;
       ast.bindings!.collections!.bad = { id: 'bad', kind: 'collection', path };
@@ -703,6 +710,7 @@ it.runIf(process.env.INVOICE_TICKET_AUTH === '1')('generates through real authen
     fs.writeFileSync(`${dir}/invoice.pdf`, await pdf.generatePDF({ invoiceId, userId: ids.userId, templateId: standard.template_id }));
     const supporting = structuredClone(ast);
     supporting.transforms = { sourceBindingId: 'timeEntries', outputBindingId: 'private-check-detail', operations: [{ id: 'sort-detail', type: 'sort', keys: [{ path: 'amount', direction: 'desc' }] }] };
+    if (!supporting.layout.children) throw new Error('Standard invoice template must have layout children');
     supporting.layout.children.push({ id: 'private-check-table', type: 'dynamic-table', repeat: { sourceBinding: { bindingId: 'private-check-detail' }, itemBinding: 'entry' }, columns: [{ id: 'description', header: 'Public detail', value: { type: 'path', path: 'entry.description' } }] } as any);
     const detail = await pdf.renderInvoicePreview({ invoiceId, templateAst: supporting });
     expect(detail.html).not.toContain('PRIVATE');

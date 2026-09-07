@@ -3683,7 +3683,9 @@ export async function createInvoiceFromBillingResultImpl(
         tx: trx,
         tenant,
         invoiceId: newInvoice!.invoice_id,
-        selectorInputs: options.recurringSelectorInputs,
+        // Unresolved time/usage selections identify source records, not
+        // recurring obligations. Their invoice linkage is handled by charges.
+        selectorInputs: options.recurringSelectorInputs.filter((selector) => !isUnresolvedSelectorInput(selector)),
         linkedAt: Temporal.Now.instant().toString(),
         omittedUsagePeriods: selectUnreportedUsageStatuses(billingResult.usageServicePeriodStatuses ?? []),
       });
