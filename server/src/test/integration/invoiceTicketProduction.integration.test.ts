@@ -72,6 +72,26 @@ async function createSourceFixture(db: ReturnType<typeof knex>, customize?: (ids
     return { tenant, userId, clientId, contractId, lineId, serviceId, cycleId, profileId, usageLineId, usageServiceId, taxRateId, regionCode };
 }
 
+async function addLongInvoiceSources(db: ReturnType<typeof knex>, ids: any) {
+  const { tenant, clientId, lineId, serviceId } = ids;
+        const secondService = randomUUID(), secondTax = randomUUID(), configId = randomUUID(), regionCode = `SECOND-${clientId}`;
+        const original = await db('service_catalog').where({ tenant, service_id: serviceId }).first();
+        await db('tax_regions').insert({ tenant, region_code: regionCode, region_name: 'Acceptance 20%' });
+        await db('tax_rates').insert({ tenant, tax_rate_id: secondTax, region_code: regionCode, tax_percentage: 20, start_date: '2026-01-01', is_active: true });
+        await db('client_tax_rates').insert({ tenant, client_id: clientId, tax_rate_id: secondTax, is_default: false });
+        await db('service_catalog').insert({ ...original, service_id: secondService, service_name: 'Acceptance 20 percent service', tax_rate_id: secondTax });
+        await db('service_prices').insert({ tenant, price_id: randomUUID(), service_id: secondService, currency_code: 'USD', rate: 15000 });
+        await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: secondService, quantity: 1, custom_rate: 15000 });
+        await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: lineId, service_id: secondService, configuration_type: 'Hourly', custom_rate: 15000, quantity: 1 });
+        await db('contract_line_service_hourly_config').insert({ tenant, config_id: configId, minimum_billable_time: 0, round_up_to_nearest: 0 });
+        const overtime = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 120 }).first();
+        const single = await db('time_entries').where({ tenant, work_item_id: overtime.work_item_id, billable_duration: 60 }).first();
+        await db('time_entries').where({ tenant, entry_id: single.entry_id }).update({ service_id: secondService });
+        // Source entries, not manufactured renderer rows: a real long invoice.
+        for (let i = 0; i < 70; i++) await db('time_entries').insert({ ...single, entry_id: randomUUID(), service_id: i % 2 ? secondService : serviceId, start_time: `2026-08-${String(17 + i % 10).padStart(2, '0')}T10:00:00Z`, end_time: `2026-08-${String(17 + i % 10).padStart(2, '0')}T11:00:00Z`, work_date: `2026-08-${String(17 + i % 10).padStart(2, '0')}` });
+        await db('tickets').where({ tenant, client_id: clientId }).update({ title: 'Long public ticket title for nested detail wrapping and invoice readability', attributes: { description: 'Public investigation, remediation and validation across the customer environment. '.repeat(5) } });
+}
+
 it('generates immutable ticket presentation from approved source records', async () => {
   fs.mkdirSync(evidenceDir, { recursive: true });
   const db = await createTestDbConnection();
@@ -389,24 +409,7 @@ it.each(['cap', 'recurring-cap', 'bucket', 'multi-tax-long', 'task-identities', 
           fs.writeFileSync(`${dir}/bucket-usage.json`, JSON.stringify(actual, null, 2));
         });
       }
-      if (variant === 'multi-tax-long') {
-        const secondService = randomUUID(), secondTax = randomUUID(), configId = randomUUID(), regionCode = `SECOND-${clientId}`;
-        const original = await db('service_catalog').where({ tenant, service_id: serviceId }).first();
-        await db('tax_regions').insert({ tenant, region_code: regionCode, region_name: 'Acceptance 20%' });
-        await db('tax_rates').insert({ tenant, tax_rate_id: secondTax, region_code: regionCode, tax_percentage: 20, start_date: '2026-01-01', is_active: true });
-        await db('client_tax_rates').insert({ tenant, client_id: clientId, tax_rate_id: secondTax, is_default: false });
-        await db('service_catalog').insert({ ...original, service_id: secondService, service_name: 'Acceptance 20 percent service', tax_rate_id: secondTax });
-        await db('service_prices').insert({ tenant, price_id: randomUUID(), service_id: secondService, currency_code: 'USD', rate: 15000 });
-        await db('contract_line_services').insert({ tenant, contract_line_id: lineId, service_id: secondService, quantity: 1, custom_rate: 15000 });
-        await db('contract_line_service_configuration').insert({ tenant, config_id: configId, contract_line_id: lineId, service_id: secondService, configuration_type: 'Hourly', custom_rate: 15000, quantity: 1 });
-        await db('contract_line_service_hourly_config').insert({ tenant, config_id: configId, minimum_billable_time: 0, round_up_to_nearest: 0 });
-        const overtime = await db('time_entries').where({ tenant, contract_line_id: lineId, billable_duration: 120 }).first();
-        const single = await db('time_entries').where({ tenant, work_item_id: overtime.work_item_id, billable_duration: 60 }).first();
-        await db('time_entries').where({ tenant, entry_id: single.entry_id }).update({ service_id: secondService });
-        // Source entries, not manufactured renderer rows: a real long invoice.
-        for (let i = 0; i < 70; i++) await db('time_entries').insert({ ...single, entry_id: randomUUID(), service_id: i % 2 ? secondService : serviceId, start_time: `2026-08-${String(17 + i % 10).padStart(2, '0')}T10:00:00Z`, end_time: `2026-08-${String(17 + i % 10).padStart(2, '0')}T11:00:00Z`, work_date: `2026-08-${String(17 + i % 10).padStart(2, '0')}` });
-        await db('tickets').where({ tenant, client_id: clientId }).update({ title: 'Long public ticket title for nested detail wrapping and invoice readability', attributes: { description: 'Public investigation, remediation and validation across the customer environment. '.repeat(5) } });
-      }
+      if (variant === 'multi-tax-long') await addLongInvoiceSources(db, ids);
     });
     const { generateInvoice, generateProjectInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
     let result: any;
@@ -539,25 +542,34 @@ it.each(['cap', 'recurring-cap', 'bucket', 'multi-tax-long', 'task-identities', 
   } finally { await db.destroy(); }
 }, 180000);
 
-it.runIf(Boolean(process.env.INVOICE_TICKET_REVIEW_LAYOUT))('saves and verifies a named nested alias on the generated long invoice through production preview/PDF', async () => {
+it('saves and verifies a named nested alias on the generated long invoice through production preview/PDF', async () => {
   const dir = `${evidenceDir}/designer`;
   fs.mkdirSync(dir, { recursive: true });
-  const env = dotenv.parse(fs.readFileSync('.env.local'));
-  Object.assign(process.env, env, { DB_PORT: '5472' });
-  const db = knex({ client: 'pg', connection: { host: env.DB_HOST, port: 5472, database: env.DB_NAME_SERVER, user: env.DB_USER_ADMIN, password: env.DB_PASSWORD_ADMIN } });
+  const db = await createTestDbConnection();
   try {
-    state.user = await db('users').where({ email: 'invoice-draft-verifier@example.invalid' }).first(); state.tenant = state.user.tenant;
-    const generated = JSON.parse(fs.readFileSync(`${evidenceDir}/multi-tax-long/generated.json`, 'utf8'));
+    state.user = await db('users as u')
+      .join('user_roles as ur', function () { this.on('ur.user_id', 'u.user_id').andOn('ur.tenant', 'u.tenant'); })
+      .join('roles as r', function () { this.on('r.role_id', 'ur.role_id').andOn('r.tenant', 'ur.tenant'); })
+      .where({ 'u.user_type': 'internal', 'r.role_name': 'Admin', 'r.msp': true })
+      .select('u.*').orderBy('u.user_id').first();
+    if (!state.user) throw new Error('Migrated test database must seed an internal fixture user');
+    state.tenant = state.user.tenant;
+    const ids = await createSourceFixture(db, (ids) => addLongInvoiceSources(db, ids));
+    const { generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration');
+    const invoice = await generateInvoice(ids.cycleId) as any;
+    expect(invoice.invoice_id, JSON.stringify(invoice)).toBeTruthy();
+    const generated = { ids, invoiceId: invoice.invoice_id, invoiceNumber: invoice.invoice_number };
     const { getStandardTemplateAstByCode } = await import('@alga-psa/billing/lib/invoice-template-ast/standardTemplates');
     const { saveInvoiceTemplate } = await import('@alga-psa/billing/actions/invoiceTemplates');
-    let templateId = process.env.INVOICE_TICKET_REVIEW_TEMPLATE;
-    if (process.env.INVOICE_TICKET_REVIEW_LAYOUT === 'seed') {
+    let templateId: string | undefined;
+    {
       // Seed an existing custom layout through the supported save action. The
       // visual editor exposes collection selection, but no alias-declaration UI.
       const ast = structuredClone(getStandardTemplateAstByCode('standard-invoice-by-ticket'))!;
       ast.bindings!.collections!.nestedEntries = { id: 'nestedEntries', kind: 'collection', path: 'group.entries' };
-      ast.transforms = { sourceBindingId: 'timeEntries', outputBindingId: 'selectedTime', operations: [{ id: 'mixed-filter', type: 'filter', predicate: { type: 'comparison', path: 'rateKind', op: 'eq', value: 'mixed' } }] };
+      ast.transforms = { sourceBindingId: 'timeEntries', outputBindingId: 'selectedTime', operations: [{ id: 'mixed-filter', type: 'filter', predicate: { type: 'comparison', path: 'rateKind', op: 'eq', value: 'mixed' } }, { id: 'rate-sort', type: 'sort', keys: [{ path: 'rateDisplay', direction: 'asc' }] }] };
       const columns: any[] = [
+        { id: 'description', header: 'Description', value: { type: 'path', path: 'entry.description' }, format: 'text' },
         { id: 'ticket', header: 'Ticket', value: { type: 'path', path: 'entry.ticketNumber' }, format: 'text' },
         { id: 'hours', header: 'Hours', value: { type: 'path', path: 'entry.hours' }, format: 'number' },
         { id: 'rate', header: 'Rate', value: { type: 'path', path: 'entry.rateDisplay' }, format: 'currency' },
@@ -587,7 +599,7 @@ it.runIf(Boolean(process.env.INVOICE_TICKET_REVIEW_LAYOUT))('saves and verifies 
     const { PDFGenerationService } = await import('@alga-psa/billing/services/pdfGenerationService');
     const vm = mapDbInvoiceToWasmViewModel(await Invoice.getFullInvoiceById(db, state.tenant, generated.invoiceId))!;
     const ast = template.templateAst;
-    if (process.env.INVOICE_TICKET_REVIEW_LAYOUT === 'verify') {
+    {
       const region = ast.layout.children.find((node: any) => node.id === 'ticket-region');
       const detail = region.children.find((node: any) => node.id === 'entry-detail');
       expect(detail.repeat.sourceBinding.bindingId).toBe('nestedEntries');
@@ -620,7 +632,9 @@ it.runIf(Boolean(process.env.INVOICE_TICKET_REVIEW_LAYOUT))('saves and verifies 
     const info = execFileSync('pdfinfo', [`${dir}/nested.pdf`], { encoding: 'utf8' });
     fs.writeFileSync(`${dir}/nested.txt`, text); fs.writeFileSync(`${dir}/pdfinfo.txt`, info);
     expect(Number(info.match(/Pages:\s+(\d+)/)?.[1])).toBeGreaterThan(1);
-    expect(text).toContain('375,00'); expect(text).toContain('Tarifs variables');
+    const readingOrderText = execFileSync('pdftotext', ['-raw', `${dir}/nested.pdf`, '-'], { encoding: 'utf8' });
+    expect(text).toContain('375,00');
+    expect(readingOrderText.replace(/\s+/g, ' ')).toContain('Tarifs variables');
     expect(text).toContain('included in the charges above');
     expect(text.replace(/\s/g, '')).toContain(new Intl.NumberFormat('fr', { minimumFractionDigits: 2 }).format(vm.total / 100).replace(/\s/g, ''));
     const pages = text.split('\f');
