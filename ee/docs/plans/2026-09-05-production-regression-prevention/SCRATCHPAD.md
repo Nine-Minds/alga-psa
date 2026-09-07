@@ -2337,3 +2337,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Added nullable project_id to invitation/response tables, tenant-composite project FK with cascade, indexed tenant/project lookup, and exactly-one ticket-or-project constraint. Existing ticket rows remain valid. Down refuses any project rows before modifying schema, avoiding lossy rollback.
 - Behavioral migration test creates isolated relational fixtures, applies real up/down SQL and tests preservation, cross-tenant rejection, ambiguous/missing subject rejection, cascade and safe re-upgrade. Passes on PostgreSQL and distributed single-node Citus; schemas/data rolled back. Evidence: evidence/project-survey-storage-migration.json. Test is discoverable in the workspace DB migration lane.
 - This is storage foundation only. Invitation content, token/response handling, analytics/UI and end-to-end project dispatch remain open. No skipped test removed or broad completion flag changed.
+
+### 2026-09-07 — preserve project identity in survey lifecycle events
+
+- Invitation/token/response audit found all four lifecycle builders/schemas only represent ticket subjects. Added optional projectId to sent/reminder/response/expired events, preserving existing ticket and subjectless events. Builders and runtime schemas reject ambiguous ticket-plus-project payloads.
+- Behavioral builder-to-runtime-schema tests initially failed eight of 12 cases; all 12 pass after change. Evidence: evidence/project-survey-event-contracts.json. Registry accepts ZodTypeAny; schema refinement remains compatible with that contract.
+- Next wire project subject through invitation service, token resolution and response submission, then analytics/UI and real DB/email journey. No skipped project test removed or broad flags changed.
