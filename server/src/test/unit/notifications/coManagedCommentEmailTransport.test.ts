@@ -95,3 +95,26 @@ it.each([undefined, 'cm2:" injected', `cm1:${'a'.repeat(43)}`])('rejects invalid
   await expect(sendCoManagedCustomerCommentEmail({ replyToken } as any)).rejects.toThrow('Invalid customer technician reply token');
   expect(runtime.mailbox).not.toHaveBeenCalled(); expect(runtime.send).not.toHaveBeenCalled();
 });
+
+it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('renders task email in %s with qualified navigation and no ticket reply authority', async locale => {
+  runtime.locale.mockResolvedValue(locale);
+  const source = delivery(), item: CoManagedEmailDelivery = { ...source, message: { resource: { ...source.message.resource, kind: 'project_task' },
+    commentId: source.message.commentId, threadId: source.message.threadId, audience: 'shared_it', note: source.message.note, author: source.message.author,
+    taskName: '<img src=x onerror=alert(1)>', projectName: 'Customer project' } };
+  expect(await sendCoManagedCommentEmail(item)).toEqual({ status: 'delivered' });
+  const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
+  expect(content.text).toContain(`/msp/co-management/tasks/${item.message.resource.tenant}/${item.message.resource.relationshipId}/${item.message.resource.id}`);
+  expect(content.html).toContain('&lt;img'); expect(content.html).not.toContain('<script>'); expect(content.html).not.toContain('<img');
+  expect(content.text).not.toContain('ALGA-REPLY-TOKEN'); expect(content.html).not.toContain('data-alga-reply-token');
+  expect(runtime.mailbox).not.toHaveBeenCalled(); expect(params).toMatchObject({ tenantId: item.tenant, userId: item.recipientUserId, retryPolicy: 'caller', headers: { 'Message-ID': item.messageId } });
+  if (locale.startsWith('en')) expect(content.subject).toBe('New comment on a task');
+});
+
+it('uses the admitted owner task path after separation and does not restore masked title or author fields', async () => {
+  const source = delivery(), path = `/msp/projects/${randomUUID()}?phaseId=${randomUUID()}&taskId=${source.message.resource.id}`;
+  const item: CoManagedEmailDelivery = { ...source, message: { resource: { ...source.message.resource, tenant: source.tenant, kind: 'project_task' },
+    commentId: source.message.commentId, threadId: source.message.threadId, audience: 'organization_private', note: 'Only current content', ownerTaskPath: path } };
+  await sendCoManagedCommentEmail(item);
+  const content = await runtime.send.mock.calls[0][0].templateProcessor.process();
+  expect(content.text).toContain(path); expect(content.text).not.toContain('/co-management/'); expect(content.text).not.toContain('Customer project'); expect(content.text).not.toContain('A < B');
+});

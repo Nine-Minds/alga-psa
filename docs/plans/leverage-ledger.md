@@ -372,3 +372,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `coManagedNotificationClassification.ts`, `coManagedInbox.ts`, `notificationDelivery.ts`.
 - **Gate:** Two callers with identical source classification and high disclosure cost. ACT / bounded-now.
 - **Status:** extracted. One SQL predicate identifies markers, receipts and legacy task/mention notices in current or retained customer ownership. Identified legacy notices without authoritative receipts are omitted; pending retained creation events join recovery, while published pre-rollout notices are not replayed as new alerts.
+
+## qualified-comment-email-queue — friction
+- **What:** The MSP ticket email queue's ticket-only columns prevented current task recipient admission from using its stable identity, retry and completion engine.
+- **Where:** `commentEmailDeliveries.ts`, email consumer catalog/subscriber, maintenance recovery and `coManagedCommentEmailTransport.ts`.
+- **Gate:** Two concrete source families; task delivery needs the same transaction-owned discovery, preference checks and current-source send boundary. ACT / bounded-now.
+- **Status:** revised. Task recipients from both organizations enter the existing queue through one retained-identity helper. Resource-specific readers and routing checks feed the existing completion engine; task preferences select the existing task subtype. The current renderer accepts admitted task names/owner paths and shares escaping, locale resolution, caller-owned retries and stable Message-ID handling. No task-specific SMTP queue or maintenance scanner was introduced. Ticket customer/requester reply-token preparation remains separate; task mail does not manufacture ticket reply authority.

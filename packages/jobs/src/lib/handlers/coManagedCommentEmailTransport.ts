@@ -1,5 +1,5 @@
 import { resolveCoManagedRequesterEmailRouting, resolveCoManagedTicketEmailMailbox } from './coManagedRequesterEmailRouting';
-import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult } from '@alga-psa/co-managed';
+import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult, CoManagedTaskCommentNotification, CoManagedTicketCommentNotification } from '@alga-psa/co-managed';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
@@ -18,10 +18,26 @@ const COPY: Record<string, { subject: string; customerSubject: string; open: str
   yy: { customerSubject: '[New comment on a ticket]', subject: '[New comment on a shared ticket]', open: '[Open ticket]' },
 };
 const escape = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]!));
+const TASK_COPY: Record<string, { subject: string; open: string }> = {
+  en: { subject: 'New comment on a task', open: 'Open task' },
+  fr: { subject: 'Nouveau commentaire sur une tâche', open: 'Ouvrir la tâche' },
+  de: { subject: 'Neuer Kommentar zu einer Aufgabe', open: 'Aufgabe öffnen' },
+  es: { subject: 'Nuevo comentario en una tarea', open: 'Abrir tarea' },
+  it: { subject: 'Nuovo commento su un’attività', open: 'Apri attività' },
+  nl: { subject: 'Nieuwe reactie op een taak', open: 'Taak openen' },
+  pl: { subject: 'Nowy komentarz do zadania', open: 'Otwórz zadanie' },
+  pt: { subject: 'Novo comentário em uma tarefa', open: 'Abrir tarefa' },
+  xx: { subject: '[Ñéŵ çômméñţ ôñ å ţåšķ]', open: '[Öpéñ ţåšķ]' },
+  yy: { subject: '[New comment on a task]', open: '[Open task]' },
+};
 /** Worker-safe transport uses only the authority-filtered message supplied by
  * the queue. Its qualified link never impersonates a home-tenant ticket. */
 export async function sendCoManagedCommentEmail(delivery: CoManagedEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
   const source = delivery.message.resource;
+  if (source.kind === 'project_task') {
+    const message = delivery.message as CoManagedTaskCommentNotification;
+    return sendAuthorizedCommentEmail(delivery, message.ownerTaskPath ?? `/msp/co-management/tasks/${source.tenant}/${source.relationshipId}/${source.id}`, 'subject');
+  }
   return sendAuthorizedCommentEmail(delivery, `/msp/co-management/tickets/${source.tenant}/${source.relationshipId}/${source.id}`, 'subject');
 }
 export async function sendCoManagedCustomerCommentEmail(delivery: CoManagedCustomerEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
@@ -42,13 +58,16 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
   const locale = await resolveEmailLocale(delivery.tenant, requester
     ? { email: delivery.email, clientId: delivery.recipient.clientId, userType: 'client' }
     : { email: delivery.email, userId: delivery.recipientUserId, userType: 'internal' });
-  const copy = COPY[locale] ?? COPY[locale.split('-')[0]] ?? COPY.en;
+  const task = delivery.message.resource.kind === 'project_task';
+  const taskCopy = TASK_COPY[locale] ?? TASK_COPY[locale.split('-')[0]] ?? TASK_COPY.en;
+  const copy = task ? { ...taskCopy, customerSubject: taskCopy.subject } : COPY[locale] ?? COPY[locale.split('-')[0]] ?? COPY.en;
   const base = new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000');
   if (!['https:', 'http:'].includes(base.protocol)) throw new Error('Invalid email application URL');
   const { message } = delivery;
   const url = new URL(path, base.origin).toString();
   const subject = copy[subjectKey];
-  const title = [message.ticketNumber, message.ticketTitle].filter(Boolean).join(' — ');
+  const title = (task ? [(message as CoManagedTaskCommentNotification).taskName, (message as CoManagedTaskCommentNotification).projectName]
+    : [(message as CoManagedTicketCommentNotification).ticketNumber, (message as CoManagedTicketCommentNotification).ticketTitle]).filter(Boolean).join(' — ');
   const author = message.author?.displayName ? [message.author.displayName, message.author.organizationName].filter(Boolean).join(' — ') : '—';
   const body = extractTicketRichTextPlainText(message.note);
   let html = `<h2>${escape(subject)}</h2>${title ? `<p>${escape(title)}</p>` : ''}<p>${escape(author)}</p><div style="white-space:pre-wrap">${escape(body)}</div><p><a href="${escape(url)}">${escape(copy.open)}</a></p>`;

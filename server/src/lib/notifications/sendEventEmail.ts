@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { getConnection } from '../db/db';
 // Note: Email sending is routed through TenantEmailService
 import logger from '@alga-psa/core/logger';
@@ -223,6 +224,9 @@ export async function sendEventEmailWithOutcome(params: SendEmailParams): Promis
 
     // Get the template content using tenant-aware connection
     const knex = await getConnection(params.tenantId);
+    // Older event retries retain rendered context, not current task authority.
+    // Co-managed tasks use the qualified queue and never fall back to this path.
+    if (params.template === 'task-comment-added' && await withTransaction(knex, trx => hasCoManagedConversationOwnership(trx, params.tenantId))) return 'skipped';
     logger.debug('[SendEventEmail] Database connection established:', {
       tenantId: params.tenantId,
       database: knex.client.config.connection.database

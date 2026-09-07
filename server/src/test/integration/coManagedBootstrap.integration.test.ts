@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -11352,7 +11352,7 @@ it('task events retain metadata-only qualified intent and consumer work atomical
   expect(rows.map((row: any) => row.publication.payload.collaboration.revision)).toEqual([1, 2, 3]);
   expect(rows.every((row: any) => row.ticket_id === null && row.resource_type === 'project_task' && row.resource_id === resource.id)).toBe(true);
   expect(JSON.stringify(rows)).not.toMatch(/Never retain|Changed body|MSP private content|actor_display_name/);
-  expect(await customer.table('co_management_event_consumers')).toHaveLength(4);
+  expect(await customer.table('co_management_event_consumers')).toHaveLength(5);
   expect(await sponsor.table('co_management_event_outbox')).toHaveLength(0);
   const { EventSchemas } = await import('@alga-psa/event-schemas');
   for (const row of rows) {
@@ -11392,8 +11392,8 @@ it('task events replay stable identities after transport loss and recover incomp
   expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 1, cancelled: 0, failed: 0 });
   expect(send.mock.calls[0][1]).toBe(root.operationId); expect(send.mock.calls[1]).toEqual(send.mock.calls[0]);
   await customer.table('co_management_event_consumers').update({ next_attempt_at: new Date(0) });
-  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 2, cancelled: 0, failed: 0 });
-  expect(replay.mock.calls.map(call => call[2]).sort()).toEqual(['internal-notifications', 'search-index']);
+  const replay = vi.fn(); expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 3, cancelled: 0, failed: 0 });
+  expect(replay.mock.calls.map(call => call[2]).sort()).toEqual(['co-managed-email', 'internal-notifications', 'search-index']);
   const event = { id: root.operationId, eventType: 'PROJECT_TASK_COMMENT_CREATED', payload: { tenantId: resource.tenant, taskId: randomUUID(), taskCommentId: randomUUID(), commentContent: 'Forged transport body' } };
   const effect = vi.fn();
   await Promise.all([consume(db, event, 'search-index', effect), consume(db, event, 'search-index', effect)]);
@@ -11944,4 +11944,161 @@ it('task notification owner reads reject expiry after assembling content and rol
     await tenantDb(context.trx, resource.tenant).table('sessions').where('session_id', localActor.sessionId).update({ expires_at: new Date(0) }); return true;
   })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(new Date((await customer.table('sessions').where('session_id', localActor.sessionId).first()).expires_at).getTime()).toBeGreaterThan(Date.now());
+}));
+
+async function withTaskEmailFixture(work: (fixture: any) => Promise<void>) {
+  await withTaskNotificationFixture(async fixture => {
+    const { enqueueCoManagedTaskEmailDeliveries: enqueue, processCoManagedCommentEmailDeliveries: processEmail } = await import('@alga-psa/co-managed');
+    const queue = (comment: any) => enqueue(db, { ownerTenant: fixture.resource.tenant, taskId: fixture.resource.id, commentId: comment.commentId, eventId: comment.operationId });
+    await work({ ...fixture, enqueue, queue, processEmail });
+  });
+}
+
+it('task email queues qualified identities for both organizations and retries current content/address with a stable message ID', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, localId, resource, add, write, ref, queue, processEmail }: any) => {
+  const comment = await add(customerPrincipal, 'shared_it', 'Original task email'); await Promise.all([queue(comment), queue(comment)]);
+  for (const home of [customer, sponsor]) {
+    const rows = await home.table('co_management_email_deliveries'); expect(rows).toHaveLength(1); expect(rows[0]).toMatchObject({ resource_type: 'project_task', resource_id: resource.id, ticket_id: null });
+    expect(JSON.stringify(rows)).not.toMatch(/Original task email|@example.test/);
+  }
+  const failed = vi.fn(async () => ({ status: 'failed', retryable: true, errorCode: 'provider_unavailable' }));
+  await processEmail(db, resource.tenant, failed); await processEmail(db, principal.tenant, failed);
+  const before = failed.mock.calls.map(([delivery]: any[]) => delivery);
+  await customer.table('users').where('user_id', localId).update({ email: 'current-task-recipient@example.test' });
+  await write(customerPrincipal, { kind: 'edit', operationId: randomUUID(), comment: ref(comment), expectedRevision: 1, text: 'Current task email' });
+  for (const home of [customer, sponsor]) await home.table('co_management_email_deliveries').update({ next_attempt_at: new Date(0) });
+  const sent: any[] = [], send = async (delivery: any) => { sent.push(delivery); return { status: 'delivered' as const }; };
+  await Promise.all([processEmail(db, resource.tenant, send), processEmail(db, resource.tenant, send)]); await processEmail(db, principal.tenant, send);
+  expect(sent).toHaveLength(2); expect(sent.map(item => item.messageId).sort()).toEqual(before.map((item: any) => item.messageId).sort());
+  expect(sent.every(item => item.message.note.includes('Current task email'))).toBe(true);
+  expect(sent.find(item => item.tenant === resource.tenant)).toMatchObject({ email: 'current-task-recipient@example.test', message: { ownerTaskPath: expect.stringContaining(`taskId=${resource.id}`) } });
+  await queue(comment); expect(await processEmail(db, resource.tenant, send)).toEqual({ examined: 0, processed: 0 });
+}));
+
+it('task email keeps private customer notes local and excludes qualified authors', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, add, queue }: any) => {
+  await queue(await add(customerPrincipal, 'organization_private', 'Customer private task email'));
+  expect(await customer.table('co_management_email_deliveries')).toHaveLength(1); expect(await sponsor.table('co_management_email_deliveries')).toHaveLength(0);
+  await queue(await add(principal, 'shared_it', 'MSP shared task email'));
+  expect(await customer.table('co_management_email_deliveries')).toHaveLength(2); expect(await sponsor.table('co_management_email_deliveries')).toHaveLength(0);
+}));
+
+it.each(['scope', 'role', 'staff', 'assignment', 'inactive', 'deleted', 'private', 'preferences'])(
+  'task email rejects current %s changes before sending cached work', async reason => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, queue, processEmail }: any) => {
+    const comment = await add(customerPrincipal, 'shared_it', 'Protected task mail'); await queue(comment);
+    if (reason === 'scope') await customer.table('co_management_project_scopes').del();
+    if (reason === 'role') await sponsor.table('user_roles').where('user_id', principal.userId).del();
+    if (reason === 'staff') await sponsor.table('co_management_staff_assignments').del();
+    if (reason === 'assignment') await sponsor.table('co_managed_project_task_references').update({ active: false });
+    if (reason === 'inactive') await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+    if (reason === 'deleted') await customer.table('project_task_comments').where('task_comment_id', comment.commentId).update({ deleted_at: new Date() });
+    if (reason === 'private') await customer.table('comment_threads').where('thread_id', comment.threadId).update({ collaboration_audience: 'organization_private', is_internal: true });
+    if (reason === 'preferences') {
+      const subtype = await sponsor.table('notification_subtypes').where('name', 'Task Comment Added').first();
+      expect(subtype).toBeTruthy(); await sponsor.table('user_notification_preferences').insert({ tenant: principal.tenant, user_id: principal.userId, subtype_id: subtype.id, is_enabled: false });
+    }
+    const send = vi.fn(); expect(await processEmail(db, principal.tenant, send)).toEqual({ examined: 1, processed: 1 }); expect(send).not.toHaveBeenCalled();
+    expect(await sponsor.table('co_management_email_deliveries').first()).toMatchObject({ status: 'skipped' });
+  }));
+
+it('task email retains customer-owned delivery after separation while terminating queued MSP delivery', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, queue, processEmail }: any) => {
+  await queue(await add(customerPrincipal, 'shared_it', 'Retained customer task mail'));
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() }); await customer.table('tenants').update({ product_code: 'psa' });
+  const send = vi.fn(async () => ({ status: 'delivered' as const }));
+  await processEmail(db, principal.tenant, send); expect(send).not.toHaveBeenCalled(); await processEmail(db, resource.tenant, send); expect(send).toHaveBeenCalledTimes(1);
+  expect(await sponsor.table('co_management_email_deliveries').first()).toMatchObject({ status: 'skipped' });
+}));
+
+it('task email migration preserves rolling ticket writers, enrolls only pending task events, and refuses retained task loss', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, queue }: any) => {
+  const migration = require('../../../migrations/20260907190000_qualify_co_managed_email_deliveries.cjs');
+  const pending = await add(customerPrincipal, 'shared_it', 'Pending task email'), published = await add(customerPrincipal, 'shared_it', 'Published task email');
+  await customer.table('co_management_event_consumers').where('consumer', 'co-managed-email').del();
+  await customer.table('co_management_event_outbox').where('event_id', published.operationId).update({ status: 'published', completed_at: new Date() });
+  await migration.up(db); await migration.up(db);
+  expect(await customer.table('co_management_event_consumers').where({ consumer: 'co-managed-email', event_id: pending.operationId }).first()).toMatchObject({ status: 'pending' });
+  expect(await customer.table('co_management_event_consumers').where({ consumer: 'co-managed-email', event_id: published.operationId }).first()).toMatchObject({ status: 'cancelled', error_code: 'legacy_native_delivery' });
+  const ticketId = randomUUID();
+  await sponsor.table('co_management_email_deliveries').insert({ tenant: principal.tenant, delivery_key: 'rolling-ticket', event_id: randomUUID(), recipient_user_id: principal.userId,
+    customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: ticketId, comment_id: randomUUID(), thread_id: randomUUID(), audience: 'shared_it' });
+  expect(await sponsor.table('co_management_email_deliveries').where('delivery_key', 'rolling-ticket').first()).toMatchObject({ resource_type: 'ticket', resource_id: ticketId });
+  await queue(pending); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained task email deliveries');
+  await expect(sponsor.table('co_management_email_deliveries').where('resource_type', 'project_task').update({ audience: 'organization_private' })).rejects.toMatchObject({ constraint: 'co_management_email_resource_check' });
+}));
+
+it('task email discovery commits both organizations before transport and recovers failures through the actual maintenance handler', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add }: any) => {
+  const { handleCoManagedTaskCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
+  const { coManagedNotificationRecoveryHandler: recover } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
+  const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
+  const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
+  const send = vi.spyOn(transport, 'sendCoManagedCommentEmail').mockResolvedValue({ status: 'failed', retryable: true, errorCode: 'test_provider_unavailable' });
+  try {
+    const comment = await add(customerPrincipal, 'shared_it', 'Authoritative task email subscriber'), row = await customer.table('co_management_event_outbox').where('event_id', comment.operationId).first();
+    const event = { id: row.event_id, timestamp: new Date().toISOString(), eventType: row.event_type, payload: { ...row.publication.payload, taskId: randomUUID(), taskCommentId: randomUUID() } };
+    await Promise.all([handle(event), handle(event)]); expect(send).toHaveBeenCalledTimes(2);
+    expect(await customer.table('co_management_event_consumers').where({ event_id: row.event_id, consumer: 'co-managed-email' }).first()).toMatchObject({ status: 'completed' });
+    send.mockImplementation(async delivery => {
+      expect(await customer.table('co_management_event_consumers').where({ event_id: row.event_id, consumer: 'co-managed-email' }).first()).toMatchObject({ status: 'completed' });
+      expect(delivery.message.note).toContain('Authoritative task email subscriber'); return { status: 'delivered' };
+    });
+    for (const home of [customer, sponsor]) await home.table('co_management_email_deliveries').update({ next_attempt_at: new Date(0) });
+    expect((await recover({ tenantId: principal.tenant })).emails).toEqual({ examined: 1, processed: 1 });
+    expect((await recover({ tenantId: resource.tenant })).emails).toEqual({ examined: 1, processed: 1 });
+    expect(send).toHaveBeenCalledTimes(4); await handle(event); await handle({ ...event, id: randomUUID() }); expect(send).toHaveBeenCalledTimes(4);
+    for (const home of [customer, sponsor]) expect(await home.table('co_management_email_deliveries').first()).toMatchObject({ status: 'delivered' });
+  } finally { send.mockRestore(); connection.mockRestore(); }
+}));
+
+it('task email consumer rolls discovery and effects back when completion fails', async () => withTaskEmailFixture(async ({ customer, sponsor, customerPrincipal, resource, add }: any) => {
+  const { handleCoManagedTaskCommentEmailEvent: handle } = await import('../../lib/eventBus/subscribers/coManagedCommentEmailSubscriber');
+  const transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport'), database = await import('@alga-psa/db');
+  const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db), send = vi.spyOn(transport, 'sendCoManagedCommentEmail').mockResolvedValue({ status: 'delivered' });
+  const comment = await add(customerPrincipal, 'shared_it', 'Atomic task email'), row = await customer.table('co_management_event_outbox').where('event_id', comment.operationId).first();
+  const event = { id: row.event_id, timestamp: new Date().toISOString(), eventType: row.event_type, payload: row.publication.payload };
+  const name = `task_email_completion_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_event_consumers ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR consumer <> 'co-managed-email' OR status <> 'completed')", [name, resource.tenant]).toQuery());
+  try {
+    await expect(handle(event)).rejects.toMatchObject({ constraint: name });
+    expect(await customer.table('co_management_email_deliveries')).toHaveLength(0); expect(await sponsor.table('co_management_email_deliveries')).toHaveLength(0); expect(send).not.toHaveBeenCalled();
+  } finally { await db.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT ??', [name]); send.mockRestore(); connection.mockRestore(); }
+}));
+
+it('task email suppresses legacy native events and cached event-email retries for retained customer ownership', async () => withTaskEmailFixture(async ({ customer, customerPrincipal, resource, project, add }: any) => {
+  const database = await import('@alga-psa/db');
+  const spies = [vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant }), vi.spyOn(database, 'getConnection').mockResolvedValue(db)];
+  try {
+    const comment = await add(customerPrincipal, 'shared_it', 'Current native task content');
+    const { projectEmailSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/projectEmailSubscriber');
+    await projectEmailSubscriberTestHarness.handleProjectEvent({ id: randomUUID(), timestamp: new Date().toISOString(), eventType: 'TASK_COMMENT_ADDED', payload: {
+      tenantId: resource.tenant, taskId: resource.id, projectId: project.project_id, userId: customerPrincipal.userId,
+      taskCommentId: comment.commentId, taskName: 'Cached task title', commentContent: 'Cached private task email' } } as any);
+    const { sendEventEmailWithOutcome } = await import('../../lib/notifications/sendEventEmail');
+    const params = { tenantId: resource.tenant, to: 'stale@example.test', subject: 'Legacy task notice', template: 'task-comment-added', context: { comment: { contentText: 'Cached private task email' } }, locale: 'en' as const };
+    expect(await sendEventEmailWithOutcome(params)).toBe('skipped');
+    await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() }); await customer.table('tenants').update({ product_code: 'psa' });
+    expect(await sendEventEmailWithOutcome(params)).toBe('skipped');
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
+}));
+
+it.each(['conversation', 'author', 'values.task_name'])('task email applies current %s field policy before transport', async field => withTaskEmailFixture(async ({ sponsor, principal, customerPrincipal, operation, add, queue, processEmail }: any) => {
+  await queue(await add(customerPrincipal, 'shared_it', 'Task email mask source'));
+  const bundles = await import('@alga-psa/authorization'), { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Task mail field policy', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId }); await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const send = vi.fn(async () => ({ status: 'delivered' as const })); await processEmail(db, principal.tenant, send);
+  if (field === 'conversation') { expect(send).not.toHaveBeenCalled(); expect(await sponsor.table('co_management_email_deliveries').first()).toMatchObject({ status: 'skipped' }); }
+  else { expect(send).toHaveBeenCalledTimes(1); expect((send.mock.calls[0] as any)[0].message).not.toHaveProperty(field === 'author' ? 'author' : 'taskName'); }
+}));
+
+it('task email retains source and recipient locks through SMTP and recovers an uncertain provider acknowledgement', async () => withTaskEmailFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, queue, processEmail }: any) => {
+  const comment = await add(customerPrincipal, 'shared_it', 'Task transport race'); await queue(comment);
+  const lockResults: string[] = [];
+  const send = vi.fn(async (delivery: any) => {
+    lockResults.push(await db.transaction(trx => tenantDb(trx, resource.tenant).table('project_task_comments').where('task_comment_id', comment.commentId).forUpdate().noWait().first()).then(() => 'unlocked', error => error.code));
+    lockResults.push(await db.transaction(trx => tenantDb(trx, principal.tenant).table('users').where('user_id', delivery.recipientUserId).forUpdate().noWait().first()).then(() => 'unlocked', error => error.code));
+    throw new Error('SMTP accepted; acknowledgement lost');
+  });
+  expect(await processEmail(db, principal.tenant, send)).toEqual({ examined: 1, processed: 1 });
+  expect(lockResults).toEqual(['55P03', '55P03']);
+  expect(await sponsor.table('co_management_email_deliveries').first()).toMatchObject({ status: 'pending', attempt_count: 1 });
+  await sponsor.table('co_management_email_deliveries').update({ next_attempt_at: new Date(0) });
+  const retry = vi.fn(async () => ({ status: 'delivered' as const })); await processEmail(db, principal.tenant, retry);
+  expect((retry.mock.calls[0] as any)[0].messageId).toBe(send.mock.calls[0][0].messageId);
 }));
