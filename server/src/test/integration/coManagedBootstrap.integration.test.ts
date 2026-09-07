@@ -6025,3 +6025,57 @@ it('honors preferences changed after queue creation without hiding the already a
   expect(await readCoManagedStoredCommentNotification(db, principal, notification.internal_notification_id)).not.toBeNull();
   expect((await sponsor.table('co_management_notification_deliveries').where('recipient_user_id', principal.userId)).every(row => row.status === 'skipped')).toBe(true);
 }));
+
+it('issues notification signal tokens only for a current bound home session and caps them at its expiry', async () => withInAppCommentFixture(async ({
+  principal, sponsor,
+}) => {
+  const { issueNotificationLiveToken } = await import('../../lib/notifications/notificationLiveToken');
+  const jwt = (await import('jsonwebtoken')).default;
+  const { getHocuspocusJwtSecret } = await import('../../lib/hocuspocusJwt');
+  const actor = { ...principal, userType: 'internal' as const };
+  const expires = new Date(Date.now() + 20000);
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: expires });
+  const issued = await issueNotificationLiveToken(db, actor);
+  expect(issued).toMatchObject({ tenant: principal.tenant, userId: principal.userId });
+  const claims = jwt.verify(issued!.token, await getHocuspocusJwtSecret(), { audience: 'notification-signals', algorithms: ['HS256'] }) as any;
+  expect(claims).toMatchObject({ scope: 'notification-signals', tenantId: principal.tenant, userId: principal.userId, sessionId: principal.sessionId });
+  expect(claims.exp * 1000).toBeLessThanOrEqual(expires.getTime()); expect(claims.exp - claims.iat).toBeLessThanOrEqual(60);
+  expect(await issueNotificationLiveToken(db, { ...actor, userId: randomUUID() })).toBeNull();
+  expect(await issueNotificationLiveToken(db, { ...actor, sessionId: randomUUID() })).toBeNull();
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ revoked_at: new Date() });
+  expect(await issueNotificationLiveToken(db, actor)).toBeNull();
+}));
+
+it('binds the actual notification live-token route to its browser session and refuses API overrides', async () => withInAppInboxFixture(async ({
+  principal, apiOverride,
+}) => {
+  const dbModule = await import('@alga-psa/db');
+  const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
+  try {
+    const { GET } = await import('../../app/api/notifications/live-token/route');
+    const response = await (GET as any)(new Request(`http://localhost/api/notifications/live-token?tenant=${randomUUID()}&userId=${randomUUID()}`));
+    expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ tenant: principal.tenant, userId: principal.userId });
+    expect(response.headers.get('Cache-Control')).toContain('no-store');
+    apiOverride.mockReturnValue({ user_id: principal.userId, tenant: principal.tenant } as any);
+    expect((await GET()).status).toBe(401);
+  } finally { connection.mockRestore(); }
+}));
+
+it('does not issue a notification signal token if the session expires while waiting for a home identity lock', async () => withInAppCommentFixture(async ({
+  principal, sponsor,
+}) => {
+  const { issueNotificationLiveToken } = await import('../../lib/notifications/notificationLiveToken');
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, principal.tenant).table('users').where('user_id', principal.userId).forUpdate().first();
+  let signal!: () => void;
+  const waiting = new Promise<void>(resolve => { signal = resolve; });
+  const listener = (query: any) => { if (query.sql.includes('users') && query.sql.includes('for share')) signal(); };
+  db.on('query', listener);
+  const attempt = issueNotificationLiveToken(db, { ...principal, userType: 'internal' });
+  try {
+    await Promise.race([waiting, attempt.then(() => { throw new Error('Token finished before identity wait'); })]);
+    await blocker.raw('select pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toBeNull();
+  } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));
