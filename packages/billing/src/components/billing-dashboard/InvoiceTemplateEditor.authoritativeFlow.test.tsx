@@ -15,6 +15,11 @@ const getInvoiceForRenderingMock = vi.fn();
 const mapDbInvoiceToWasmViewModelMock = vi.fn();
 const runAuthoritativeInvoiceTemplatePreviewMock = vi.fn();
 
+// Exercise the existing feature behavior with the release flag enabled.
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: true, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: pushMock }),
   useSearchParams: () => ({ toString: () => '', get: () => null }),

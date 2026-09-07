@@ -115,8 +115,10 @@ jobs:
       # each package's own `npm run test` -> vitest — not the broken
       # @nx/vite:test executor). A red step here is a real test failure; fix the
       # cause, never re-add continue-on-error.
+      # Stream output so a failed task cannot lose its final diagnostics when
+      # Nx exits after printing a large buffered test log.
       - name: Nx affected tests (libraries, parallel)
-        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
+        run: npx nx affected -t test --base="$NX_BASE" --head="$NX_HEAD" --output-style=stream --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=4096'

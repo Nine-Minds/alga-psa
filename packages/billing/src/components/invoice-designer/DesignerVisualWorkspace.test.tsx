@@ -16,6 +16,11 @@ const getTenantBrandingForDocumentPreviewMock = vi.fn();
 const templateRendererMock = vi.fn();
 const paperInvoiceMock = vi.fn();
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
   fetchInvoicesPaginated: (...args: unknown[]) => fetchInvoicesPaginatedMock(...args),
   getInvoiceForRendering: (...args: unknown[]) => getInvoiceForRenderingMock(...args),
@@ -168,6 +173,7 @@ const openExistingInvoiceSelect = async () => {
 
 describe('DesignerVisualWorkspace', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     vi.useRealTimers();
     // writable matters: jsdom is reused across files in the shared fork, and
     // a non-writable descriptor here makes every later file's plain

@@ -1,5 +1,6 @@
 'use client';
 
+import { useFeatureFlag } from '../hooks/useFeatureFlag';
 import { useEffect, useRef, useState, MutableRefObject } from 'react';
 import { Button } from '../components/Button';
 import { useTranslation } from '../lib/i18n/client';
@@ -185,6 +186,7 @@ export default function TextEditor({
 }: TextEditorProps) {
   useShortcutScope('editor');
   const { t } = useTranslation('common');
+  const { enabled: releaseV16Enabled } = useFeatureFlag('release-v1-6-feature');
   const filePickerRef = useRef<HTMLInputElement>(null);
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -492,7 +494,7 @@ export default function TextEditor({
   return (
     <div className="w-full h-full min-w-0" data-keyboard-shortcuts-editor-root="true">
       {children}
-      {allowFileAttachments && uploadFile && <div className="mb-2 flex items-center gap-2">
+      {releaseV16Enabled && allowFileAttachments && uploadFile && <div className="mb-2 flex items-center gap-2">
         <input id={`${id}-attachment-input`} ref={filePickerRef} type="file" multiple hidden onChange={async event => {
           const files = Array.from(event.target.files || []);
           event.target.value = '';

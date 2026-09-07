@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import TransformsWorkspace from './TransformsWorkspace';
 import { importTemplateAstToWorkspace, exportWorkspaceToTemplateAst } from '../ast/workspaceAst';
@@ -15,6 +15,11 @@ import {
   DEFAULT_PREVIEW_SAMPLE_ID,
   getPreviewSampleScenarioById,
 } from '../preview/sampleScenarios';
+
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
 
 const previewInvoice = {
   invoiceNumber: 'INV-TRANSFORMS-1',
@@ -115,6 +120,7 @@ const selectCustomOption = async (triggerId: string, optionText: string) => {
 
 describe('TransformsWorkspace', () => {
   beforeEach(() => {
+    releaseFlag.enabled = true;
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
       writable: true,
