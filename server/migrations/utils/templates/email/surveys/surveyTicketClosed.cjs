@@ -139,7 +139,7 @@ function buildBodyHtml(lang, c, subject) {
               <p style="margin:0 0 20px 0;font-size:14px;color:#475569;white-space:pre-line;">{{rating_links_text}}</p>
               <p style="margin:0;font-size:16px;line-height:1.6;">${c.thankYou}</p>
               <p style="margin:20px 0 0 0;font-size:12px;color:#94a3b8;">
-                {{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #{{ticket_number}} \u00b7 {{ticket_closed_at}}
+                {{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #${c.subjectNumber || '{{ticket_number}}'} \u00b7 ${c.closedAt || '{{ticket_closed_at}}'}
               </p>
             </td>
           </tr>
@@ -166,7 +166,7 @@ ${c.fallback}
 
 ${c.thankYou}
 
-{{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #{{ticket_number}} \u00b7 {{ticket_closed_at}}`;
+{{tenant_name}} \u00b7 ${c.ticketLabel || 'Ticket'} #${c.subjectNumber || '{{ticket_number}}'} \u00b7 ${c.closedAt || '{{ticket_closed_at}}'}`;
 }
 
 function getTemplate() {
@@ -182,4 +182,4 @@ function getTemplate() {
   };
 }
 
-module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, SURVEY_CATEGORY_NAME, getTemplate };
+module.exports = { TEMPLATE_NAME, SUBTYPE_NAME, SURVEY_CATEGORY_NAME, getTemplate, COPY, buildBodyHtml, buildText };

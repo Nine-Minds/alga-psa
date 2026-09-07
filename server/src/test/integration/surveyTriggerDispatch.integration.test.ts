@@ -169,13 +169,9 @@ describe('Survey trigger dispatch integration', () => {
     expect(getState().sendMock).not.toHaveBeenCalled();
   });
 
-  // Skipped: production gap, not test drift. 9e5525cbb7 silenced a type error
-  // by dispatching { ticketId: projectId } (surveySubscriber.ts:141), and
-  // sendSurveyInvitation loads a ticket by that id → throws → the subscriber
-  // swallows it, so project-completion surveys never send. A real fix needs
-  // project support in survey_invitations (ticket_id is NOT NULL, no project
-  // column) and the invitation email variables. Unskip with that feature.
-  it.skip('sends surveys when a project completes and matches trigger conditions', async () => {
+  // The real invitation/template/token/response journey is covered by
+  // packages/surveys/src/actions/surveyResponseActions.db.test.ts.
+  it('sends surveys when a project completes and matches trigger conditions', async () => {
     await seedTenantGraphWithProject();
 
     await insertSurveyTrigger({

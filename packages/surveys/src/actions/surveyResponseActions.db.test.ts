@@ -3,7 +3,7 @@ import knex, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 
-const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', events: [] as any[], workflows: [] as any[] }));
+const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', events: [] as any[], workflows: [] as any[], emails: [] as any[], failEmail: false }));
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
   return { ...actual,
@@ -20,10 +20,32 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: async (event: unknown) => { state.events.push(event); },
   publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
 }));
+vi.mock('../../../../server/src/lib/db', async () => {
+  const db = await import('@alga-psa/db');
+  return { createTenantKnex: db.createTenantKnex, runWithTenant: db.runWithTenant };
+});
+vi.mock('../../../../server/src/lib/eventBus/publishers', () => ({
+  publishWorkflowEvent: async (event: unknown) => { state.workflows.push(event); },
+}));
+vi.mock('@alga-psa/email', async () => {
+  const { DatabaseTemplateProcessor } = await import('../../../email/src/templateProcessors');
+  return { DatabaseTemplateProcessor, TenantEmailService: { getInstance: () => ({
+    sendEmail: async (options: any) => {
+      const rendered = await options.templateProcessor.process(options);
+      state.emails.push({ ...rendered, to: options.to, headers: options.headers });
+      return state.failEmail ? { success: false, error: 'Synthetic transport failure' } : { success: true, messageId: 'test-message' };
+    },
+  }) } };
+});
+import { sendSurveyInvitation } from '../../../../server/src/services/surveyService';
 import { getSurveyInvitationForToken, submitSurveyResponse } from './surveyResponseActions';
 import { issueSurveyToken } from './surveyTokenService';
 import { EventSchemas } from '@alga-psa/event-schemas';
 
+const require = createRequire(import.meta.url);
+const emailMigration = require('../../../../server/migrations/20260907200000_add_project_survey_email_template.cjs');
+const { upsertEmailTemplate } = require('../../../../server/migrations/utils/templates/_shared/upsertEmailTemplates.cjs');
+const ticketTemplate = require('../../../../server/migrations/utils/templates/email/surveys/surveyTicketClosed.cjs');
 const migration = createRequire(import.meta.url)('../../../../server/migrations/20260907190000_add_project_survey_subjects.cjs');
 let db: Knex;
 beforeAll(() => {
@@ -36,17 +58,19 @@ beforeAll(() => {
 });
 afterAll(async () => { await db?.destroy(); });
 beforeEach(async () => {
-  state.events = []; state.workflows = [];
+  state.events = []; state.workflows = []; state.emails = []; state.failEmail = false;
   const trx = state.trx = await db.transaction();
   const schema = `survey_response_${randomUUID().replaceAll('-', '')}`;
   await trx.raw('CREATE SCHEMA ??', [schema]);
   await trx.raw('SET LOCAL search_path TO ??, public', [schema]);
   // Clone the migrated column/default/check definitions. Fixtures and all writes
   // remain in a transaction-owned schema; the shared baseline stays untouched.
-  for (const table of ['projects', 'tickets', 'clients', 'contacts', 'survey_templates', 'survey_invitations', 'survey_responses']) {
+  for (const table of ['projects', 'tickets', 'clients', 'contacts', 'users', 'tenants', 'survey_templates', 'survey_invitations', 'survey_responses', 'notification_categories', 'notification_subtypes', 'system_email_templates', 'tenant_email_templates']) {
     await trx.raw('CREATE TABLE ?? (LIKE ?? INCLUDING ALL)', [table, `public.${table}`]);
   }
   if (!(await trx.schema.hasColumn('survey_invitations', 'project_id'))) await migration.up(trx);
+  await emailMigration.up(trx);
+  await upsertEmailTemplate(trx, ticketTemplate.getTemplate());
 });
 afterEach(async () => { await state.trx?.rollback(); state.trx = null; });
 
@@ -57,8 +81,9 @@ async function fixture(kind: 'ticket' | 'project') {
   const tenant = randomUUID(), otherTenant = randomUUID(), subjectId = randomUUID(), templateId = randomUUID();
   const clientId = randomUUID(), contactId = randomUUID();
   const name = 'Correct tenant';
+  await trx('tenants').insert({ tenant, client_name: name, email: 'tenant@example.test' });
   await trx('clients').insert({ tenant, client_id: clientId, client_name: name });
-  await trx('contacts').insert({ tenant, contact_name_id: contactId, full_name: name, client_id: clientId });
+  await trx('contacts').insert({ tenant, contact_name_id: contactId, full_name: name, client_id: clientId, email: 'survey@example.test' });
   if (kind === 'project') {
     await trx('projects').insert({ tenant, project_id: subjectId, project_number: 'P-123', project_name: name, wbs_code: '1', client_id: clientId, contact_name_id: contactId, status: randomUUID() });
   } else {
@@ -107,6 +132,41 @@ describe.each(['ticket', 'project'] as const)('%s survey response persistence', 
     expect(state.events[1].payload.companyName).toBeUndefined();
     expect(state.events[1].payload.contactName).toBeUndefined();
   });
+  it('renders an invitation whose link resolves and accepts a response', async () => {
+    const f = await fixture(kind);
+    await state.trx!('survey_invitations').delete();
+    const params = { tenantId: f.tenant, locale: 'en', ...(kind === 'project' ? { projectId: f.subjectId } : { ticketId: f.subjectId }) };
+    const invitation = await sendSurveyInvitation(params);
+    const delivered = state.emails[0];
+    expect(delivered.to).toBe('survey@example.test');
+    expect(delivered.subject).toContain(`${kind} ${kind === 'project' ? 'P-123' : 'T-123'}`);
+    expect(delivered.text).toContain('Correct tenant');
+    expect(delivered.html).toContain(invitation.surveyUrl);
+    expect(delivered.html).not.toContain('{{');
+    expect(delivered.text).not.toContain('{{');
+    const token = decodeURIComponent(new URL(invitation.surveyUrl).pathname.split('/').at(-1)!);
+    expect(await getSurveyInvitationForToken(token)).toMatchObject({ [`${kind}Id`]: f.subjectId });
+    expect(await submitSurveyResponse({ token, rating: 5 })).toHaveProperty('responseId');
+    expect(state.workflows.find(event => event.eventType === 'SURVEY_SENT')?.payload).toMatchObject({ [`${kind}Id`]: f.subjectId });
+    await sendSurveyInvitation(params);
+    expect(state.workflows.find(event => event.eventType === 'SURVEY_REMINDER_SENT')?.payload).toMatchObject({ [`${kind}Id`]: f.subjectId, reminderNumber: 2 });
+  });
+  it('rejects a recipient from another tenant before sending or persisting an invitation', async () => {
+    const f = await fixture(kind);
+    await state.trx!('survey_invitations').delete();
+    await state.trx!('contacts').where({ contact_name_id: f.contactId }).update({ tenant: f.otherTenant });
+    await expect(sendSurveyInvitation({ tenantId: f.tenant, locale: 'en', ...(kind === 'project' ? { projectId: f.subjectId } : { ticketId: f.subjectId }) })).rejects.toThrow('active contact with an email address');
+    expect(await state.trx!('survey_invitations').select('*')).toHaveLength(0);
+    expect(state.emails).toHaveLength(0);
+  });
+  it('removes the invitation when delivery fails and publishes no sent event', async () => {
+    const f = await fixture(kind);
+    await state.trx!('survey_invitations').delete();
+    state.failEmail = true;
+    await expect(sendSurveyInvitation({ tenantId: f.tenant, locale: 'en', ...(kind === 'project' ? { projectId: f.subjectId } : { ticketId: f.subjectId }) })).rejects.toThrow('Synthetic transport failure');
+    expect(await state.trx!('survey_invitations').select('*')).toHaveLength(0);
+    expect(state.workflows).toHaveLength(0);
+  });
   it('rejects an out-of-range rating without consuming the invitation', async () => {
     const f = await fixture(kind);
     expect(await submitSurveyResponse({ token: f.token, rating: 6 })).toHaveProperty('actionError');
@@ -114,4 +174,26 @@ describe.each(['ticket', 'project'] as const)('%s survey response persistence', 
     expect(await state.trx!('survey_invitations').where({ invitation_id: f.invitationId }).first()).toMatchObject({ responded: false });
     expect(state.events).toHaveLength(0);
   });
+});
+
+it('installs all project email translations idempotently and rolls back without removing ticket templates', async () => {
+  const trx = state.trx!;
+  await emailMigration.up(trx);
+  const projects = await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' });
+  expect(projects.map(row => row.language_code).sort()).toEqual(['de', 'en', 'es', 'fr', 'it', 'nl', 'pl', 'pt']);
+  const { DatabaseTemplateProcessor } = await import('@alga-psa/email');
+  for (const row of projects) {
+    const rendered = await new DatabaseTemplateProcessor(trx, 'SURVEY_PROJECT_CLOSED').process({ locale: row.language_code,
+      templateData: { project_number: 'P-123', project_name: 'Migration project', project_closed_at: '', contact_name: 'Customer', technician_name: 'Technician', prompt_text: 'Rate your project', thank_you_text: 'Thanks', tenant_name: 'Team', survey_url: 'https://example.test/survey', rating_buttons_html: '<a href="https://example.test/survey">5</a>', rating_links_text: '5: https://example.test/survey' },
+    });
+    expect(rendered.subject).toContain('P-123');
+    expect(rendered.html).toContain('Migration project');
+    expect(rendered.html).not.toContain('{{');
+    expect(rendered.text).not.toContain('{{');
+  }
+  await emailMigration.down(trx);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(0);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_TICKET_CLOSED' })).toHaveLength(8);
+  await emailMigration.up(trx);
+  expect(await trx('system_email_templates').where({ name: 'SURVEY_PROJECT_CLOSED' })).toHaveLength(8);
 });
