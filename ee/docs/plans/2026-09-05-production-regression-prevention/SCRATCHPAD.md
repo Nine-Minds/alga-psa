@@ -1555,3 +1555,9 @@
 - Removed schedule exclusions from both Temporal behavioral lanes and their always-evaluated aggregate. Nightly execution now runs readiness, engine tests and reconciliation alongside existing Docker parity; a scheduled run can no longer omit both behavioral lanes by design.
 - Readiness artifact upload now errors when evidence files are absent, matching engine evidence handling.
 - Validation: actionlint passes; all 11 Temporal/workspace aggregate behavioral and CLI tests pass. Native scheduled execution remains unverified until publication.
+
+### 2026-09-07 — Published 9180 browser failure isolated
+
+- Downloaded native run 34109001526 browser artifacts to /tmp/alga-browser-34109001526. Community: 22 passed, one unexpected; enterprise: 24 passed, one unexpected; zero skipped/flaky in both raw reports. Both attempts fail invoice-ticket-ownership.spec.ts:57: subtotal expected 87500, received 82500. Earlier generation, four snapshot links and authenticated foreign-tenant checks pass. PDF assertions remain unreached for this case.
+- Difference equals the fixture usage charge (5000); root cause remains unproven. Inspect seeded service periods versus production materialization and selector execution before changing expected totals. Existing source fixture seeds one August usage record and separate hourly/usage obligations.
+- Browser jobs still executing API checks when inspected; do not publish queued commits until run terminal. Other native jobs need fresh inspection. Full plan remains incomplete.
