@@ -16,7 +16,7 @@ interface TimeSaveInput {
   entry_id?: string | null; user_id: string; time_sheet_id?: string;
   work_item_id: string; work_item_type: string; approval_status?: string;
 }
-export interface CoManagedNativeTimeAccess { workItem: IWorkItem; subjectUserId: string; redactedTimeFields: readonly string[]; assertCurrent(): Promise<void> }
+export interface CoManagedNativeTimeAccess { clientId?: string | null; workItem: IWorkItem; subjectUserId: string; redactedTimeFields: readonly string[]; assertCurrent(): Promise<void> }
 
 /** Retain actual local work, entry ownership and editable sheets through the
  * native save. Source locators are hints until their parent and entry locks
@@ -111,7 +111,7 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
   const tasks = await taskQuery.select('task.task_id', 'task.task_name', 'task.description', 'phase.project_id', 'phase.phase_name');
   if (tasks.length !== taskIds.length || tasks.some(task => hints.find(row => row.task_id === task.task_id)?.project_id !== task.project_id)) throw new CoManagedSharedWorkError();
 
-  const projections = new Map<string, IWorkItem>(), redactedTimeFields: string[] = [];
+  const projections = new Map<string, IWorkItem>(), projectedClients = new Map<string, string | null>(), redactedTimeFields: string[] = [];
   const uniqueSources = [...new Map(sources.map(source => [`${source.work_item_type}:${source.work_item_id}`, source])).entries()].sort(([a], [b]) => a.localeCompare(b));
   for (const [key, source] of uniqueSources) {
     let resourceType: string | null = null, record: AuthorizationRecord = {}, fields: string[] = [];
@@ -161,6 +161,7 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
     if (hidden(['project_name', 'projectName', 'project'])) delete workItem.project_name;
     if (hidden(['phase_name', 'phaseName', 'phase'])) delete workItem.phase_name;
     if (hidden(['ticket_number'])) delete workItem.ticket_number;
+    projectedClients.set(key, hidden(['client_id', 'clientId', 'client']) || isNativeTimeFieldHidden(timeFields, ['client_id', 'clientId', 'client']) ? null : record.clientId ?? null);
     projections.set(key, workItem);
   }
   if (hint) {
@@ -169,5 +170,5 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
   }
   const assertCurrent = async () => { await assertAuthenticationCurrent(); if (!reading) await assertCoManagedOperationalWrite(trx, actor.tenant); };
   await assertCurrent();
-  return { subjectUserId, redactedTimeFields, workItem: projections.get(`${input.work_item_type}:${input.work_item_id}`)!, assertCurrent };
+  return { clientId: projectedClients.get(`${input.work_item_type}:${input.work_item_id}`), subjectUserId, redactedTimeFields, workItem: projections.get(`${input.work_item_type}:${input.work_item_id}`)!, assertCurrent };
 }

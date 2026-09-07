@@ -98,27 +98,29 @@ export const timeEntryResponseSchema = z.object({
   end_time: z.string().datetime(),
   work_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   work_timezone: z.string().optional(),
-  billable_duration: z.number(), // in minutes
+  billable_duration: z.number().nullable(), // in minutes
   notes: z.string().nullable(),
   user_id: uuidSchema,
   time_sheet_id: uuidSchema.nullable(),
-  approval_status: approvalStatusSchema,
+  approval_status: approvalStatusSchema.nullable(),
   service_id: uuidSchema.nullable(),
   tax_region: z.string().nullable(),
   contract_line_id: uuidSchema.nullable(),
   tax_rate_id: uuidSchema.nullable(),
-  tax_percentage: z.number().nullable(),
+  tax_percentage: z.number().nullable().optional(),
   created_at: z.string().datetime(),
   updated_at: z.string().datetime(),
   tenant: uuidSchema,
   
   // Computed/joined fields
-  user_name: z.string().optional(),
+  user_name: z.string().nullable().optional(),
   work_item_title: z.string().optional(),
-  service_name: z.string().optional(),
+  service_name: z.string().nullable().optional(),
   client_name: z.string().optional(),
   duration_hours: z.number().optional(),
-  is_billable: z.boolean().optional()
+  elapsed_minutes: z.number().optional(),
+  client_id: uuidSchema.nullable().optional(),
+  is_billable: z.boolean().nullable().optional()
 });
 
 // Time entry with details response schema
@@ -131,7 +133,7 @@ export const timeEntryWithDetailsResponseSchema = timeEntryResponseSchema.extend
   }).optional(),
   
   work_item: z.object({
-    id: uuidSchema,
+    id: uuidSchema.nullable(),
     title: z.string(),
     type: workItemTypeSchema,
     client_id: uuidSchema.optional(),
@@ -209,14 +211,15 @@ export const timeTemplateResponseSchema = z.object({
 // Time entry statistics
 export const timeEntryStatsResponseSchema = z.object({
   total_entries: z.number(),
-  total_billable_hours: z.number(),
-  total_non_billable_hours: z.number(),
-  billable_percentage: z.number(),
+  total_hours: z.number().optional(),
+  total_billable_hours: z.number().nullable(),
+  total_non_billable_hours: z.number().nullable(),
+  billable_percentage: z.number().nullable(),
   entries_by_type: z.record(z.number()),
   entries_by_status: z.record(z.number()),
   entries_by_user: z.record(z.number()),
   entries_by_service: z.record(z.number()),
-  total_revenue: z.number(),
+  total_revenue: z.number().nullable(),
   average_entry_duration: z.number(),
   entries_this_week: z.number(),
   entries_this_month: z.number(),

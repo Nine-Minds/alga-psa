@@ -13163,3 +13163,74 @@ it('hour-block entry serialization skips time invoiced during a reconciliation l
   expect(await balance()).toBe(30);
   expect(await customer.table('hour_block_time_allocations')).toHaveLength(1);
 }));
+
+it('native time API collections count elapsed operational effort across list search statistics and exports', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, operation, principal }: any) => {
+  const listed = await service.list({ filters: { client_id: operation.customer_client_id, duration_min: 90 }, limit: 1, page: 1 }, context);
+  expect(listed).toMatchObject({ total: 1, data: [{ entry_id: entry.entry_id, duration_hours: 1.5, elapsed_minutes: 90, is_billable: false, work_item_title: 'Verify rollout' }] });
+  expect(await service.searchTimeEntries({ query: 'Verify', fields: ['work_item_title'], limit: 25 }, context)).toMatchObject({ total: 1, data: [{ entry_id: entry.entry_id }] });
+  expect(await service.search({ query: 'Private API', limit: 25 }, context)).toHaveLength(1);
+  expect(await service.getTimeEntryStatistics(undefined, context)).toMatchObject({ total_entries: 1, total_hours: 1.5, total_billable_hours: 0, total_non_billable_hours: 1.5, average_entry_duration: 90, top_work_items: [{ total_hours: 1.5 }] });
+  expect(await service.exportTimeEntries({ format: 'json' }, context)).toMatchObject([{ entry_id: entry.entry_id, duration_hours: 1.5 }]);
+  expect(await service.exportTimeEntries({ format: 'csv' }, context)).toContain('"1.5","No","Private API effort"');
+  await expireCoManagedEntitlement(principal.tenant);
+  expect((await service.list({}, context)).total).toBe(1);
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect((await service.list({}, context)).total).toBe(1);
+}));
+
+it('native time API collections apply source scope before paging counts and aggregation', async () => withNativeTimeSheetReadFixture(async ({ create, service, context, user, resource }: any) => {
+  const visible = await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Visible planning' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API time source restriction', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: user.user_id });
+  expect(await service.list({ page: 1, limit: 1 }, context)).toMatchObject({ total: 1, data: [{ entry_id: visible.entry_id }] });
+  expect(await service.list({ page: 2, limit: 1 }, context)).toMatchObject({ total: 1, data: [] });
+  expect(await service.searchTimeEntries({ query: 'Private', limit: 25 }, context)).toEqual({ total: 0, data: [] });
+  expect(await service.getStatistics(context)).toMatchObject({ total_entries: 1, total_hours: 1, average_entry_duration: 60, top_work_items: [] });
+  expect(JSON.stringify(await service.exportTimeEntries({ format: 'json' }, context))).not.toMatch(/Private API|Verify rollout/);
+}));
+
+it('native time API collections cannot infer masked notes or billing from search filters exports or statistics', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, user, resource, operation, apiKeyId }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API collection masking', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['notes', 'billing', 'user_name', 'client_id', 'approval_status'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  expect(await service.list({}, context)).toMatchObject({ total: 1, data: [{ entry_id: entry.entry_id, notes: '', billable_duration: null, is_billable: null, user_name: null, client_id: null }] });
+  for (const filters of [{ is_billable: false }, { client_id: operation.customer_client_id }, { approval_status: 'DRAFT' }]) expect(await service.list({ filters }, context)).toEqual({ total: 0, data: [] });
+  expect(await service.searchTimeEntries({ query: 'Private API', limit: 25 }, context)).toEqual({ total: 0, data: [] });
+  expect(await service.getTimeEntryStatistics(undefined, context)).toMatchObject({ total_entries: 1, total_hours: 1.5, total_billable_hours: null, total_non_billable_hours: null, entries_by_user: {}, entries_by_status: {} });
+  expect(await service.exportTimeEntries({ format: 'csv' }, context)).not.toMatch(/Private API|"No"|"DRAFT"/);
+  const schemas = await import('../../lib/api/schemas/timeEntry');
+  expect(schemas.timeEntryResponseSchema.parse((await service.list({}, context)).data[0])).toMatchObject({ billable_duration: null, approval_status: null });
+  expect(schemas.timeEntryStatsResponseSchema.parse(await service.getStatistics(context))).toMatchObject({ total_hours: 1.5, total_billable_hours: null });
+  await expect(service.list({}, { ...context, apiKeyId: randomUUID() })).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('native time API collections honor all search array values and actual interval duration filters', async () => withNativeTimeSheetReadFixture(async ({ create, entry, service, context, user }: any) => {
+  const next = await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z', notes: 'Private planning' });
+  expect(await service.searchTimeEntries({ query: 'Private', user_ids: [randomUUID(), user.user_id], work_item_types: ['non_billable_category', 'project_task'], limit: 1 }, context)).toMatchObject({ total: 2, data: [{ entry_id: next.entry_id }] });
+  expect(await service.list({ filters: { duration_min: 61, duration_max: 90 } }, context)).toMatchObject({ total: 1, data: [{ entry_id: entry.entry_id }] });
+  expect(await service.getStatistics(context, { work_item_type: 'non_billable_category' })).toMatchObject({ total_entries: 1, total_hours: 1 });
+  expect(await service.exportTimeEntries({ format: 'json', work_item_types: ['project_task'] }, context)).toMatchObject([{ entry_id: entry.entry_id }]);
+}));
+
+it('native time API collections reject the whole result when a key expires during a source wait', async () => withNativeTimeSheetReadFixture(async ({ customer, context, resource, apiKeyId }: any) => {
+  const domain = await import('../../../../packages/co-managed/src/nativeTimeRead'), blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
+  let pid: number | undefined;
+  const reading = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return domain.readCoManagedNativeTimeEntries(trx, context.tenant, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId }));
+  });
+  const rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await db.raw('SELECT pg_sleep(1.6)');
+  } finally { await blocker.rollback(); }
+  await rejected;
+}));

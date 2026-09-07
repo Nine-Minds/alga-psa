@@ -425,9 +425,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 
 ## native-time-collection-authority — pattern
 - **What:** Sheet entry and review-history readers need the same current source/field policy as individual time details; independent joins leak excluded work through review comments or derived totals.
-- **Where:** Native `fetchTimeEntriesForTimeSheet`, `fetchTimeEntryChangeRequestsForTimeSheet`, retained time detail projection.
+- **Where:** Native sheet/review readers and retained time detail projection; REST list, both search methods, statistics and CSV/JSON exports.
 - **Gate:** Shared authority/projection shape with high disclosure cost. ACT / bounded-now in the approved time workstream.
-- **Status:** extended the retained reader to independently admit sheet entries and current-sheet review history; reused home ownership/delegation and a tracked-browser identity resolver. Shared read locks preserve concurrent reads. Broader API collections, summaries and exports remain pending.
+- **Status:** extended the retained reader to independently admit sheet entries and current-sheet review history; reused home ownership/delegation and a tracked-browser identity resolver. Shared read locks preserve concurrent reads. REST list/search/statistics/CSV/JSON export now consume the same projected entries before filters, pagination or aggregation; collection owners/sheets are retained before source parents. Five focused API checks cover actual effort, omitted scope, masked-field inference, array filters, expiry and response schemas. Native broader sheet summaries/time search remain pending. Collection scans currently admit all tenant entries; scalable SQL candidate narrowing/batching and wider lock-order validation remain for the later review pass.
 
 
 ## native-time-deletion — pattern

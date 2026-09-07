@@ -28,10 +28,11 @@ import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
-  NativeTimeTrackingError, NativeTimeDeletionError, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  NativeTimeTrackingError, NativeTimeDeletionError, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 
+import { filterVisibleTimeEntries, sortVisibleTimeEntries, visibleTimeEntryStatistics, visibleTimeEntriesCsv } from './timeEntryCollection';
 import { reverseDeletedTimeEntryBilling } from '@alga-psa/scheduling/lib/timeEntryDeletionBilling';
 
 interface TimeApiAdmission {
@@ -247,6 +248,12 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async list(options: ListOptions, context: ServiceContext): Promise<ListResult<any>> {
+    const current = await this.readCurrentTimeEntries(context);
+    if (current.handled) {
+      const entries = sortVisibleTimeEntries(filterVisibleTimeEntries(current.entries, options.filters), options.sort, options.order);
+      const { page = 1, limit = 25 } = options;
+      return { data: entries.slice((page - 1) * limit, page * limit), total: entries.length };
+    }
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -295,6 +302,11 @@ export class TimeEntryService extends BaseService<any> {
       data,
       total: parseInt(count as string)
     };
+  }
+
+  private async readCurrentTimeEntries(context: ServiceContext) {
+    const { knex } = await this.getKnex();
+    return this.withTimeErrors(() => readCoManagedNativeTimeEntries(knex, context.tenant, async () => this.timeActor(context)));
   }
 
   private async readCurrentTimeEntry(id: string, context: ServiceContext) {
@@ -761,6 +773,12 @@ export class TimeEntryService extends BaseService<any> {
   }
   
   async exportTimeEntries(exportQuery: TimeEntryExportQuery, context: ServiceContext): Promise<any> {
+    const current = await this.readCurrentTimeEntries(context);
+    if (current.handled) {
+      const entries = sortVisibleTimeEntries(filterVisibleTimeEntries(current.entries, exportQuery));
+      if (exportQuery.format === 'xlsx') throw new NotImplementedError('XLSX time export is not supported; use CSV or JSON');
+      return exportQuery.format === 'csv' ? visibleTimeEntriesCsv(entries) : entries;
+    }
     const { knex } = await this.getKnex();
     
     // Build query with filters
@@ -948,6 +966,11 @@ export class TimeEntryService extends BaseService<any> {
 
   // Search and export
   async searchTimeEntries(searchData: TimeEntrySearchData, context: ServiceContext): Promise<{ data: any[], total: number }> {
+    const current = await this.readCurrentTimeEntries(context);
+    if (current.handled) {
+      const entries = sortVisibleTimeEntries(filterVisibleTimeEntries(current.entries, searchData, searchData));
+      return { data: entries.slice(0, searchData.limit || 25), total: entries.length };
+    }
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -1016,6 +1039,8 @@ export class TimeEntryService extends BaseService<any> {
   }
   
   async search(searchData: TimeEntrySearchData, context: ServiceContext): Promise<any[]> {
+    const current = await this.readCurrentTimeEntries(context);
+    if (current.handled) return sortVisibleTimeEntries(filterVisibleTimeEntries(current.entries, searchData, searchData)).slice(0, searchData.limit || 25);
     const { knex } = await this.getKnex();
     const query = this.buildTenantScopedQuery(knex, context);
 
@@ -1079,7 +1104,7 @@ export class TimeEntryService extends BaseService<any> {
   async getTimeEntryStatistics(filters: TimeEntryFilterData | undefined, context: ServiceContext): Promise<any> {
     const stats = await this.getStatistics(context, filters);
     return {
-      total_hours: stats.total_billable_hours + stats.total_non_billable_hours,
+      total_hours: stats.total_hours ?? stats.total_billable_hours + stats.total_non_billable_hours,
       billable_hours: stats.total_billable_hours,
       non_billable_hours: stats.total_non_billable_hours,
       total_entries: stats.total_entries,
@@ -1088,6 +1113,8 @@ export class TimeEntryService extends BaseService<any> {
   }
   
   async getStatistics(context: ServiceContext, filters?: TimeEntryFilterData): Promise<any> {
+    const current = await this.readCurrentTimeEntries(context);
+    if (current.handled) return visibleTimeEntryStatistics(filterVisibleTimeEntries(current.entries, filters));
     const { knex } = await this.getKnex();
     let query = this.buildTenantScopedQuery(knex, context);
 

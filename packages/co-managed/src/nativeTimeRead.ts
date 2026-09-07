@@ -34,7 +34,7 @@ export async function readCoManagedNativeTimeEntry(db: Knex, tenant: string, ent
   });
 }
 
-async function readNativeTimeEntry(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, hint: any, changes = false) {
+async function readNativeTimeEntry(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, hint: any, changes = false, collection = false) {
     const owner = tenantDb(trx, actor.tenant);
     // Source locks precede the completed entry lock, matching native writers.
     const access = await admitCoManagedNativeTimeSource(trx, actor, { ...hint, work_item_id: hint.work_item_id || '__non_billable__' }, 'read');
@@ -61,6 +61,20 @@ async function readNativeTimeEntry(trx: Knex.Transaction, actor: CoManagedAuthen
       result.change_requests = requests;
       result.latest_change_request = requests[0];
       result.change_request_state = requests.length ? requests.some((request: any) => !request.handled_at) ? 'unresolved' : 'handled' : null;
+    }
+    if (collection) {
+      result.client_id = hidden(['client', 'client_id', 'clientId']) ? null : access.clientId ?? null;
+      result.user_name = null;
+      if (!hidden(['user', 'user_id', 'user_name'])) {
+        const user = await owner.table('users').where('user_id', entry.user_id).forShare().first('first_name', 'last_name');
+        result.user_name = user ? `${user.first_name ?? ''} ${user.last_name ?? ''}`.trim() : null;
+      }
+      result.service_name = null;
+      if (result.service_id && !hidden(['billing', 'service', 'service_id', 'service_name'])) {
+        const service = await owner.table('service_catalog').where('service_id', result.service_id).forShare().first('service_name');
+        result.service_name = service?.service_name ?? null;
+      }
+      result.work_item_title = result.workItem.name;
     }
     await access.assertCurrent();
     return result;
@@ -112,6 +126,38 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
     // whole response, including an otherwise empty sheet.
     await credential.assertCurrent();
     entries.sort((a, b) => b.start_time.localeCompare(a.start_time) || a.entry_id.localeCompare(b.entry_id));
+    return { handled: true, entries };
+  });
+}
+
+/** All collection consumers share detail authority and projection. Filtering,
+ * counts and aggregation must operate on these projections, never raw hints.
+ * Retain one credential through the complete read so expiry cannot produce a
+ * misleading partial result. Ordinary independent PSA queries stay unchanged. */
+export async function readCoManagedNativeTimeEntries(db: Knex, tenant: string,
+  identify: () => Promise<CoManagedAuthenticatedActor>): Promise<{ handled: false } | { handled: true; entries: any[] }> {
+  if (!isCoManagedUuid(tenant)) throw new CoManagedSharedWorkError();
+  return withTransaction(db, async trx => {
+    await getCoManagedOperationalState(trx, tenant);
+    const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
+    const operational = await owner.table('time_entries').where('billing_mode', 'operational').first('entry_id');
+    if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
+    if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
+    const actor = snapshotCoManagedAuthenticatedActor(await identify());
+    if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
+    const credential = await lockCoManagedLocalAuthentication(trx, actor);
+    if (!await hasCoManagedLocalPermission(trx, actor, 'time_entry', 'read', true)) throw new CoManagedSharedWorkError();
+    const hints = await owner.table('time_entries').orderBy('entry_id').select('*'), entries: any[] = [];
+    // Native writers acquire owners and sheets before source parents. Retain
+    // the complete collection's owners/sheets in that order before its first
+    // source, avoiding a later sheet wait while holding an earlier parent.
+    await owner.table('users').whereIn('user_id', [...new Set(hints.map(row => row.user_id))]).orderBy('user_id').forShare().select('user_id');
+    await owner.table('time_sheets').whereIn('id', [...new Set(hints.map(row => row.time_sheet_id).filter(Boolean))]).orderBy('id').forShare().select('id');
+    for (const hint of hints) {
+      try { entries.push(await readNativeTimeEntry(trx, actor, hint, false, true)); }
+      catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
+    }
+    await credential.assertCurrent();
     return { handled: true, entries };
   });
 }
