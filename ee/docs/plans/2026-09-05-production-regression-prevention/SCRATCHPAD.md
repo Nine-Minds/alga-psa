@@ -1869,3 +1869,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - GitHub latest release metadata: v1.5.0 published 2026-08-28. Asked the user asynchronously to identify the previous supported upgrade release and deployment target; latest tag alone does not resolve supported upgrade policy or authorize a guessed deployment target. Requirements F020–F023 remain open. Refreshed effective main rules via GitHub API without mutations; evidence/release-and-rule-refresh-sep7.json.
 - Native integration job 101729712868 still live on recheck. Preserve its terminal evidence before pushing queued fixes; do not declare it stopped on elapsed time alone.
+
+### 2026-09-07 — retain unit evidence when revision inspection fails
+
+- Wrapped actual Git checkout inspection in the unit verification entry point. Missing checkout metadata now produces persisted failed execution evidence instead of throwing before the artifact writer. The lane still fails closed.
+- Behavioral test uses a real temporary directory without Git metadata and verifies the saved failure; verifier/reconciliation tests pass 8/8 (/tmp/alga-unit-metadata-failure.log). No full tooling rerun claimed for this follow-up.

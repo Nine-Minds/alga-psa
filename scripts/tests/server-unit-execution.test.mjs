@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { verifyServerUnitExecution } from '../verify-server-unit-execution.mjs';
+import { verifyServerUnitExecution, runServerUnitVerification } from '../verify-server-unit-execution.mjs';
 
 test('unit file artifacts must reconcile completely at the candidate revision', () => {
   const root = mkdtempSync(path.join(tmpdir(), 'unit-evidence-'));
@@ -36,5 +36,17 @@ test('unit file artifacts must reconcile completely at the candidate revision', 
     rmSync(path.join(root, 'server/test-results.json'));
     assert.equal(verify().status, 'failed');
     assert.equal(JSON.parse(readFileSync(path.join(directory, 'evidence.json'), 'utf8')).status, 'failed');
+  } finally { rmSync(root, { recursive: true, force: true }); }
+});
+
+test('unavailable checkout metadata still writes failed execution evidence', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'unit-missing-checkout-'));
+  try {
+    const result = runServerUnitVerification(root, { GITHUB_SHA: 'candidate', SERVER_UNIT_RUN_OUTCOME: 'success' });
+    assert.equal(result.status, 'failed');
+    assert.ok(result.failures.some(message => message.includes('Cannot inspect unit checkout')));
+    const persisted = JSON.parse(readFileSync(path.join(root, 'test-results/server-coverage/evidence.json'), 'utf8'));
+    assert.equal(persisted.status, 'failed');
+    assert.deepEqual(persisted.failures, result.failures);
   } finally { rmSync(root, { recursive: true, force: true }); }
 });

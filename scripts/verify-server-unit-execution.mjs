@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
-export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision }) {
+export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty = false, candidateRevision, sourceError }) {
   const directory = path.join(root, 'test-results/server-coverage');
   let evidence;
   try {
@@ -19,6 +19,7 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
   } catch (error) {
     evidence = { schemaVersion: 1, suite: 'server-unit', revision, status: 'failed', failures: [error.message] };
   }
+  if (sourceError) evidence.failures.push(`Cannot inspect unit checkout: ${sourceError}`);
   if (sourceDirty) evidence.failures.push('Unit checkout changed before execution verification');
   if (!candidateRevision || revision !== candidateRevision) evidence.failures.push('Unit checkout does not match candidate revision');
   evidence.status = evidence.failures.length ? 'failed' : 'passed';
@@ -27,11 +28,18 @@ export function verifyServerUnitExecution({ root, revision, outcome, sourceDirty
   return evidence;
 }
 
+export function runServerUnitVerification(root, env = process.env) {
+  let source;
+  let sourceError;
+  try { source = testRevision(root); }
+  catch (error) { sourceError = error.message; }
+  return verifyServerUnitExecution({ root, revision: source?.revision, sourceDirty: source?.dirty,
+    sourceError, candidateRevision: env.GITHUB_SHA, outcome: env.SERVER_UNIT_RUN_OUTCOME });
+}
+
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = fileURLToPath(new URL('../', import.meta.url));
-  const source = testRevision(root);
-  const evidence = verifyServerUnitExecution({ root, revision: source.revision, sourceDirty: source.dirty,
-    candidateRevision: process.env.GITHUB_SHA, outcome: process.env.SERVER_UNIT_RUN_OUTCOME });
+  const evidence = runServerUnitVerification(root);
   for (const failure of evidence.failures) console.error(failure);
   console.log(`Server unit execution: ${evidence.status}`);
   process.exitCode = evidence.status === 'passed' ? 0 : 1;
