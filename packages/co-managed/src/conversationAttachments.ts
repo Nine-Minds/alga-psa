@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { CoManagedLifecycleError, assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
@@ -149,4 +149,16 @@ export async function downloadCoManagedConversationAttachment(db: Knex, inputAct
     if (content.length !== row.file_size || createHash('sha256').update(content).digest('hex') !== row.content_hash) throw new CoManagedAttachmentError('ATTACHMENT_CONTENT_MISMATCH');
     return { attachment: summary(row, context.audience), content };
   });
+}
+
+/** UI hint only. Upload repeats this complete authority check and does not trust
+ * author IDs or an enabled button supplied by a browser. */
+export async function canUploadCoManagedConversationAttachment(db: Knex, inputActor: CoManagedSessionActor,
+  inputResource: CoManagedSharedResource, inputComment: CoManagedCommentReference): Promise<boolean> {
+  const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), comment = reference(inputComment);
+  try { return await withComment(db, actor, resource, comment, 'update', async () => true); }
+  catch (error) {
+    if (error instanceof CoManagedSharedWorkError || error instanceof CoManagedLifecycleError) return false;
+    throw error;
+  }
 }

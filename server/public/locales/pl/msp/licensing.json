@@ -531,6 +531,17 @@
         "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
       },
       "unknownOutcome": "Nie udało się potwierdzić zapisania wiadomości. Ponów próbę, aby sprawdzić to samo żądanie."
+    },
+    "attachments": {
+      "title": "Załączniki",
+      "add": "Dołącz plik",
+      "choose": "Wybierz plik",
+      "help": "Pliki dziedziczą widoczność tej wiadomości. Maksymalnie {{size}} MiB.",
+      "uploading": "Przesyłanie…",
+      "upload": "Prześlij",
+      "invalid": "Wybierz dozwolony plik mieszczący się w limicie rozmiaru.",
+      "loadError": "Załączniki są niedostępne. Odśwież, aby sprawdzić dostęp.",
+      "unknownOutcome": "Nie udało się potwierdzić przesłania. Spróbuj ponownie z tym samym plikiem."
     }
   }
 }

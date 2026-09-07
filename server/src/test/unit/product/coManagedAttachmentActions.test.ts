@@ -1,13 +1,13 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ upload: vi.fn(), list: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
+const mocks = vi.hoisted(() => ({ upload: vi.fn(), list: vi.fn(), hint: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {},
   Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Command: class extends Error { constructor(public code: string) { super(code); } } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
-vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedAttachmentError: mocks.Command, listCoManagedConversationAttachments: mocks.list }));
+vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedAttachmentError: mocks.Command, listCoManagedConversationAttachments: mocks.list, canUploadCoManagedConversationAttachment: mocks.hint }));
 vi.mock('../../../lib/co-managed/conversationAttachments', () => ({ uploadConversationAttachment: mocks.upload }));
-import { uploadCoManagedAttachmentAction, listCoManagedAttachmentsAction } from '../../../lib/actions/coManagedAttachmentActions';
+import { uploadCoManagedAttachmentAction, listCoManagedAttachmentsAction, getCoManagedAttachmentsScreenAction } from '../../../lib/actions/coManagedAttachmentActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 const comment = { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' };
 const form = () => { const value = new FormData(); value.append('file', new Blob(['Bytes'], { type: 'text/plain' }), 'Upload.txt'); return value; };
@@ -35,4 +35,11 @@ it('distinguishes invalid files, conflicts and lifecycle rejection from uncertai
     [new mocks.Lifecycle(), 'readOnly'], [new Error('Lost upload acknowledgement'), 'unknownOutcome']] as const) {
     mocks.upload.mockRejectedValue(error); expect(await uploadCoManagedAttachmentAction(resource, comment, 'upload', form())).toEqual({ ok: false, code });
   }
+});
+
+it('returns current attachment write hints and transport limits with the actual browser identity', async () => {
+  mocks.hint.mockResolvedValue(false); mocks.list.mockResolvedValue([]);
+  const result = await getCoManagedAttachmentsScreenAction(resource, comment);
+  expect(result).toMatchObject({ canUpload: false, attachments: [], actor: { tenant: 'home-tenant', userId: 'home-user' } });
+  expect(result.maxBytes).toBeGreaterThan(0); expect(result.maxBytes).toBeLessThan(20 * 1048576);
 });

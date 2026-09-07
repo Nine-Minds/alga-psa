@@ -12,6 +12,7 @@ import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coMana
 import { createCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentActions';
 import { mutateCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicketCommentMutationActions';
 import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManagedPrivateTicketCommentActions';
+import CoManagedCommentAttachments from './CoManagedCommentAttachments';
 import { conversationText, conversationDocument } from './conversationText';
 
 const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
@@ -143,6 +144,7 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
           {content ? <Document key={`${id}:${item.updatedAt}`} id={`${id}-body`} document={content} />
             : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
+          {!item.deleted && <CoManagedCommentAttachments resource={target.current} comment={reference(item)} />}
           {writable && !draft && <div className="flex flex-wrap gap-2">
             <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>
             {own && content !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}

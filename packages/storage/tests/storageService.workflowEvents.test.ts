@@ -47,7 +47,7 @@ vi.mock('file-type', () => ({
 import { createTenantKnex } from '@alga-psa/db';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { StorageProviderFactory } from '../src/StorageProviderFactory';
-import { getProviderConfig, getStorageConfig } from '../src/config/storage';
+import { getProviderConfig, getStorageConfig, validateFileUpload } from '../src/config/storage';
 import { FileStoreModel } from '../src/models/storage';
 import { StorageService } from '../src/StorageService';
 
@@ -168,4 +168,15 @@ describe('StorageService.uploadFile workflow events', () => {
       })
     );
   });
+});
+
+it('awaits configured upload validation and propagates a denied file before returning success', async () => {
+  let reject!: (error: Error) => void;
+  const pending = new Promise<void>((_resolve, fail) => { reject = fail; });
+  vi.mocked(validateFileUpload).mockReturnValueOnce(pending);
+  let settled = false;
+  const result = StorageService.validateFileUpload('tenant', 'text/plain', 50).finally(() => { settled = true; });
+  const assertion = expect(result).rejects.toThrow('File type not allowed');
+  await Promise.resolve(); expect(settled).toBe(false);
+  reject(new Error('File type not allowed')); await assertion;
 });

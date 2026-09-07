@@ -616,6 +616,17 @@
         "organization_private": "Visible only to authorized staff in your organization."
       },
       "unknownOutcome": "We could not confirm whether the message was saved. Retry to check the same request."
+    },
+    "attachments": {
+      "title": "Attachments",
+      "add": "Attach file",
+      "choose": "Choose file",
+      "help": "Files inherit this message’s audience. Maximum {{size}} MiB.",
+      "uploading": "Uploading…",
+      "upload": "Upload",
+      "invalid": "Choose an allowed file within the size limit.",
+      "loadError": "Attachments are unavailable. Refresh to check your access.",
+      "unknownOutcome": "We could not confirm the upload. Retry to check the same file."
     }
   }
 }

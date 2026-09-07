@@ -529,6 +529,17 @@
         "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
       },
       "unknownOutcome": "Non è stato possibile confermare il salvataggio del messaggio. Riprova per verificare la stessa richiesta."
+    },
+    "attachments": {
+      "title": "Allegati",
+      "add": "Allega file",
+      "choose": "Scegli file",
+      "help": "I file ereditano la visibilità di questo messaggio. Massimo {{size}} MiB.",
+      "uploading": "Caricamento…",
+      "upload": "Carica",
+      "invalid": "Scegli un file consentito entro il limite di dimensione.",
+      "loadError": "Gli allegati non sono disponibili. Aggiorna per verificare il tuo accesso.",
+      "unknownOutcome": "Impossibile confermare il caricamento. Riprova con lo stesso file."
     }
   }
 }

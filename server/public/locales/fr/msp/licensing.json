@@ -529,6 +529,17 @@
         "organization_private": "Visible uniquement par le personnel autorisé de votre organisation."
       },
       "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement du message. Réessayez pour vérifier la même demande."
+    },
+    "attachments": {
+      "title": "Pièces jointes",
+      "add": "Joindre un fichier",
+      "choose": "Choisir un fichier",
+      "help": "Les fichiers héritent de la visibilité de ce message. Maximum {{size}} Mio.",
+      "uploading": "Envoi en cours…",
+      "upload": "Envoyer",
+      "invalid": "Choisissez un fichier autorisé respectant la taille maximale.",
+      "loadError": "Les pièces jointes sont indisponibles. Actualisez pour vérifier votre accès.",
+      "unknownOutcome": "Nous n’avons pas pu confirmer l’envoi. Réessayez avec le même fichier."
     }
   }
 }

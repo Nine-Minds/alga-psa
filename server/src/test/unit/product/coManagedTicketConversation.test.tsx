@@ -6,6 +6,7 @@ import CoManagedTicketConversation from '../../../components/co-managed/CoManage
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
 const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
+vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: () => null }));
 vi.mock('next/dynamic', () => ({ default: () => ({ id, label, document, editable, onChange }: any) => label
   ? <label>{label}<textarea id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} /></label>

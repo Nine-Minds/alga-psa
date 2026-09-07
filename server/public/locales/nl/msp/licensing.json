@@ -527,6 +527,17 @@
         "organization_private": "Alleen zichtbaar voor bevoegde medewerkers van je organisatie."
       },
       "unknownOutcome": "We konden niet bevestigen of het bericht is opgeslagen. Probeer opnieuw om hetzelfde verzoek te controleren."
+    },
+    "attachments": {
+      "title": "Bijlagen",
+      "add": "Bestand bijvoegen",
+      "choose": "Bestand kiezen",
+      "help": "Bestanden nemen de zichtbaarheid van dit bericht over. Maximaal {{size}} MiB.",
+      "uploading": "Uploaden…",
+      "upload": "Uploaden",
+      "invalid": "Kies een toegestaan bestand binnen de maximale grootte.",
+      "loadError": "Bijlagen zijn niet beschikbaar. Vernieuw om uw toegang te controleren.",
+      "unknownOutcome": "We konden de upload niet bevestigen. Probeer hetzelfde bestand opnieuw."
     }
   }
 }

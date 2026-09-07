@@ -527,6 +527,17 @@
         "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
       },
       "unknownOutcome": "Das Speichern der Nachricht konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage zur Prüfung."
+    },
+    "attachments": {
+      "title": "Anhänge",
+      "add": "Datei anhängen",
+      "choose": "Datei auswählen",
+      "help": "Dateien übernehmen den Empfängerkreis dieser Nachricht. Maximal {{size}} MiB.",
+      "uploading": "Wird hochgeladen…",
+      "upload": "Hochladen",
+      "invalid": "Wählen Sie eine zulässige Datei innerhalb der Größenbegrenzung.",
+      "loadError": "Anhänge sind nicht verfügbar. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+      "unknownOutcome": "Der Upload konnte nicht bestätigt werden. Versuchen Sie es mit derselben Datei erneut."
     }
   }
 }

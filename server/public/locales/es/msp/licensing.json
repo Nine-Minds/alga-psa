@@ -529,6 +529,17 @@
         "organization_private": "Visible solo para el personal autorizado de tu organización."
       },
       "unknownOutcome": "No pudimos confirmar si se guardó el mensaje. Reintenta para comprobar la misma solicitud."
+    },
+    "attachments": {
+      "title": "Archivos adjuntos",
+      "add": "Adjuntar archivo",
+      "choose": "Elegir archivo",
+      "help": "Los archivos heredan la visibilidad de este mensaje. Máximo {{size}} MiB.",
+      "uploading": "Subiendo…",
+      "upload": "Subir",
+      "invalid": "Elija un archivo permitido que no supere el límite de tamaño.",
+      "loadError": "Los archivos adjuntos no están disponibles. Actualice para comprobar su acceso.",
+      "unknownOutcome": "No pudimos confirmar la subida. Reintente con el mismo archivo."
     }
   }
 }

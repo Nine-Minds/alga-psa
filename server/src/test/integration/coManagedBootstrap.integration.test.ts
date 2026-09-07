@@ -6482,3 +6482,26 @@ it('uses the production attachment provider adapter and leaves incomplete provid
     expect(await customer.table('co_management_conversation_attachments').where('attachment_id', input.attachmentId).first()).toMatchObject({ status: 'ready' });
   } finally { transport.mockRestore(); validate.mockRestore(); }
 }));
+
+it('derives attachment upload controls from actual qualified authorship, content redactions and lifecycle', async () => withAttachmentFixture(async ({
+  principal, customerPrincipal, resource, create, attachments, operation, sponsor,
+}) => {
+  const own = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Owned by MSP' });
+  const customer = await create(customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Owned by customer' });
+  expect(await attachments.canUploadCoManagedConversationAttachment(db, principal, resource, attachmentComment(own))).toBe(true);
+  expect(await attachments.canUploadCoManagedConversationAttachment(db, principal, resource, attachmentComment(customer))).toBe(false);
+  expect(await attachments.canUploadCoManagedConversationAttachment(db, customerPrincipal, resource, attachmentComment(customer))).toBe(true);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Attachment controls', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'update', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['attachments'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect(await attachments.canUploadCoManagedConversationAttachment(db, principal, resource, attachmentComment(own))).toBe(false);
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(own))).toEqual([]);
+  await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [] } });
+  expect(await attachments.canUploadCoManagedConversationAttachment(db, principal, resource, attachmentComment(own))).toBe(true);
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await attachments.canUploadCoManagedConversationAttachment(db, customerPrincipal, resource, attachmentComment(customer))).toBe(false);
+  expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, attachmentComment(customer))).toEqual([]);
+}));

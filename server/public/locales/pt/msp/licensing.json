@@ -529,6 +529,17 @@
         "organization_private": "Visível somente para o pessoal autorizado da sua organização."
       },
       "unknownOutcome": "Não foi possível confirmar se a mensagem foi salva. Tente novamente para verificar a mesma solicitação."
+    },
+    "attachments": {
+      "title": "Anexos",
+      "add": "Anexar ficheiro",
+      "choose": "Escolher ficheiro",
+      "help": "Os ficheiros herdam a visibilidade desta mensagem. Máximo {{size}} MiB.",
+      "uploading": "A carregar…",
+      "upload": "Carregar",
+      "invalid": "Escolha um ficheiro permitido dentro do limite de tamanho.",
+      "loadError": "Os anexos estão indisponíveis. Atualize para verificar o seu acesso.",
+      "unknownOutcome": "Não foi possível confirmar o carregamento. Tente novamente com o mesmo ficheiro."
     }
   }
 }

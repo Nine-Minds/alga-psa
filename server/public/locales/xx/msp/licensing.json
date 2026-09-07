@@ -527,6 +527,17 @@
         "organization_private": "11111"
       },
       "unknownOutcome": "11111"
+    },
+    "attachments": {
+      "title": "11111",
+      "add": "11111",
+      "choose": "11111",
+      "help": "11111 {{size}} 11111",
+      "uploading": "11111",
+      "upload": "11111",
+      "invalid": "11111",
+      "loadError": "11111",
+      "unknownOutcome": "11111"
     }
   }
 }
