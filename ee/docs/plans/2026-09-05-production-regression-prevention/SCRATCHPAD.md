@@ -1230,3 +1230,10 @@
 - Real-runner regression now proves worker-owned mandatory cases execute during docs-only direct invocation and stale worker manifest paths fail. Full/affected/fallback and skip-detection checks remain green. Evidence: `evidence/worker-integration-floor.json`.
 - Published browser workflow 34093073839 completed: EE image succeeded, CE image failed on the known locally fixed project cycle. Browser jobs 101659290911/101659290969 rejected BUILD_RESULT=failure before setup; neither ran browser assertions. Do not describe these as runtime browser failures.
 - Full integration job 101650631428 remains active on the published revision; its terminal report is still pending.
+
+### 2026-09-07 — Explicit Citus workflow test bootstrap in progress
+
+- Added TEST_DB_BACKEND=citus to the isolated DB helper, using the real extension and four-shard database setting. Workflow suite asserts actual hash distribution of runs, steps, snapshots and invocations.
+- Temporary migration directory outside server failed relative dependency/template resolution. Switched to ignored server/combined-migrations, matching CI. That run reached migration 363 but hit the existing 180-second bootstrap limit; its process terminated and active-query count was zero.
+- Restarted with a Citus-only 30-minute migration hook budget. Current live session: 52670; log: /tmp/alga-workflow-citus-runtime-full.log. Scratch DB workflow_citus_82cc and test-only role workflow_citus_82cc_admin are in owned alga-regression-citus; retain while validating.
+- Default PostgreSQL regression suite still passes 7/7, and targeted TypeScript passes. Citus runtime and native-job wiring remain incomplete. Evidence: `evidence/workflow-citus-bootstrap.json`.

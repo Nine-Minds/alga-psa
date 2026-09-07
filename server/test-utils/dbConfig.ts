@@ -149,7 +149,13 @@ export async function createTestDbConnection(
   // dozens of migrations; on plain Postgres each one ERRORs server-side before
   // its try/catch concludes "not Citus". An empty stand-in catalog makes every
   // probe succeed with is_distributed=false — same behavior, silent logs.
-  await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+  if (process.env.TEST_DB_BACKEND === 'citus') {
+    await adminKnex.raw('CREATE EXTENSION IF NOT EXISTS citus');
+    await adminKnex.raw('ALTER DATABASE ?? SET citus.shard_count = 4', [databaseName]);
+    await adminKnex.raw('SET citus.shard_count = 4');
+  } else {
+    await adminKnex.raw('CREATE TABLE IF NOT EXISTS public.pg_dist_partition (logicalrelid regclass)');
+  }
 
   await adminKnex.migrate.latest();
   if (runSeeds) {

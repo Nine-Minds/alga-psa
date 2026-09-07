@@ -63,7 +63,17 @@ it('stores redacted bounded step snapshots with idempotent writes and retention'
   expect(remaining[0].envelope_json.size).toBeGreaterThan(256 * 1024);
   expect(JSON.parse(JSON.stringify(remaining[0].envelope_json))).toEqual(remaining[0].envelope_json);
 });
-beforeAll(async () => { db = await createTestDbConnection(); }, 180_000);
+beforeAll(async () => {
+  db = await createTestDbConnection();
+  if (process.env.TEST_DB_BACKEND === 'citus') {
+    const { rows } = await db.raw(`SELECT logicalrelid::regclass::text AS name FROM pg_dist_partition
+      WHERE partmethod = 'h' AND logicalrelid IN ('workflow_runs'::regclass, 'workflow_run_steps'::regclass,
+        'workflow_run_snapshots'::regclass, 'workflow_action_invocations'::regclass)`);
+    expect(rows.map((row: { name: string }) => row.name).sort()).toEqual([
+      'workflow_action_invocations', 'workflow_run_snapshots', 'workflow_run_steps', 'workflow_runs',
+    ]);
+  }
+}, process.env.TEST_DB_BACKEND === 'citus' ? 30 * 60_000 : 180_000);
 afterAll(async () => { await db?.destroy(); });
 it('persists one concurrent invocation per tenant key and isolates lookup and updates', async () => {
   const tenants = [randomUUID(), randomUUID()];
