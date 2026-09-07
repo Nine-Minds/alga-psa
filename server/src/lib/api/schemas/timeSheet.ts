@@ -56,20 +56,20 @@ export const timeSheetResponseSchema = z.object({
   period_id: uuidSchema,
   user_id: uuidSchema,
   approval_status: approvalStatusSchema,
-  submitted_at: z.string().datetime().nullable(),
-  approved_at: z.string().datetime().nullable(),
-  approved_by: uuidSchema.nullable(),
-  notes: z.string().nullable(),
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  submitted_at: z.string().datetime().nullish(),
+  approved_at: z.string().datetime().nullish(),
+  approved_by: uuidSchema.nullish(),
+  notes: z.string().nullish(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema,
   
   // Computed/joined fields
   user_name: z.string().optional(),
   approver_name: z.string().optional(),
-  total_hours: z.number().optional(),
-  billable_hours: z.number().optional(),
-  entry_count: z.number().optional()
+  total_hours: z.number().nullish(),
+  billable_hours: z.number().nullish(),
+  entry_count: z.number().nullish()
 });
 
 // Time sheet with details response schema
@@ -90,9 +90,9 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
   
   time_period: z.object({
     period_id: uuidSchema,
-    start_date: dateSchema,
-    end_date: dateSchema,
-    is_current: z.boolean()
+    start_date: z.union([z.string().date(), z.string().datetime()]),
+    end_date: z.union([z.string().date(), z.string().datetime()]),
+    is_current: z.boolean().optional()
   }).optional(),
   
   time_entries: z.array(timeEntryResponseSchema).optional(),
@@ -101,18 +101,18 @@ export const timeSheetWithDetailsResponseSchema = timeSheetResponseSchema.extend
     comment_id: uuidSchema,
     comment_text: z.string(),
     user_id: uuidSchema,
-    user_name: z.string(),
+    user_name: z.string().optional(),
     user_role: z.string(),
     created_at: z.string().datetime()
   })).optional(),
   
   summary: z.object({
-    total_hours: z.number(),
-    billable_hours: z.number(),
-    non_billable_hours: z.number(),
+    total_hours: z.number().nullable(),
+    billable_hours: z.number().nullable(),
+    non_billable_hours: z.number().nullable(),
     entries_by_type: z.record(z.number()),
     entries_by_day: z.record(z.number()),
-    approval_ready: z.boolean()
+    approval_ready: z.boolean().nullable()
   }).optional()
 });
 

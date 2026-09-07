@@ -98,7 +98,7 @@ async function readChangeRequests(trx: Knex.Transaction, tenant: string, entry: 
 /** A timesheet is a collection of independently admitted work records. Hidden
  * entries and their review comments never enter the returned collection. */
 export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, sheetId: string,
-  identify: () => Promise<CoManagedAuthenticatedActor>, options: { view?: boolean; comments?: boolean; requireCompleteContent?: boolean; approval?: boolean; employee?: boolean } = {}
+  identify: () => Promise<CoManagedAuthenticatedActor>, options: { view?: boolean; comments?: boolean; requireCompleteContent?: boolean; approval?: boolean; employee?: boolean; summary?: boolean } = {}
 ): Promise<{ handled: false } | { handled: true; entries: any[]; sheet?: any; comments: any[]; visibility: { completeEntries: boolean; redactedFields: readonly string[] } }> {
   if (!isCoManagedUuid(tenant) || !isCoManagedUuid(sheetId)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
@@ -155,6 +155,22 @@ export async function readCoManagedNativeTimeSheet(db: Knex, tenant: string, she
       if (!hidden(['total_hours', 'total_minutes', 'hoursEntered', 'hours_entered', 'duration', 'elapsed_minutes'])) {
         view.total_minutes = entries.reduce((sum, entry) => sum + entry.elapsed_minutes, 0); view.total_hours = view.total_minutes / 60;
       }
+      if (options.summary) {
+        const billable = hidden(['billing', 'billable_hours', 'summary.billable_hours']) || entries.some(entry => entry.billable_duration == null)
+          ? null : entries.reduce((sum, entry) => sum + Number(entry.billable_duration), 0) / 60;
+        view.billable_hours = billable;
+        if (!hidden(['summary'])) {
+          const group = (field: string) => Object.fromEntries(entries.reduce((counts, entry) => {
+            if (entry[field] != null) counts.set(String(entry[field]), (counts.get(String(entry[field])) ?? 0) + 1);
+            return counts;
+          }, new Map<string, number>()));
+          view.summary = { total_hours: hidden(['summary.total_hours']) ? null : view.total_hours ?? null, billable_hours: billable,
+            non_billable_hours: hidden(['summary.non_billable_hours', 'non_billable_hours']) || view.total_hours == null || billable == null ? null : Math.max(0, view.total_hours - billable),
+            entries_by_type: hidden(['summary.entries_by_type', 'entries_by_type']) ? {} : group('work_item_type'),
+            entries_by_day: hidden(['summary.entries_by_day', 'entries_by_day']) ? {} : group('work_date'),
+            approval_ready: hidden(['summary.approval_ready', 'approval_ready', 'entry_count', 'total_entries']) || entries.length !== hints.length ? null : entries.length > 0 };
+        }
+      }
     }
     // A sheet comment can mention any of its work. No entry filtering or field
     // masking can safely redact that free text, so withhold the whole stream.
@@ -202,7 +218,7 @@ export async function readCoManagedNativeTimeEntries(db: Knex, tenant: string,
 
 async function readSheetComments(trx: Knex.Transaction, tenant: string, sheetId: string, fields: readonly string[]) {
   const owner = tenantDb(trx, tenant);
-  if (isNativeTimeFieldHidden(fields, ['comments.comment', 'comments.comment_id', 'comments.user_id', 'comments.created_at',
+  if (isNativeTimeFieldHidden(fields, ['comment_text', 'user_role', 'comments.comment_text', 'comments.user_role', 'time_sheet_comments.comment_text', 'time_sheet_comments.user_role', 'comments.comment', 'comments.comment_id', 'comments.user_id', 'comments.created_at',
     'comments.is_approver', 'time_sheet_comments.is_approver',
     'time_sheet_comments.comment', 'time_sheet_comments.comment_id', 'time_sheet_comments.user_id', 'time_sheet_comments.created_at'])) return [];
   const rows = await owner.table('time_sheet_comments').where('time_sheet_id', sheetId).orderBy('created_at', 'desc').orderBy('comment_id').forShare().select('*');

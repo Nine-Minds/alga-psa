@@ -126,7 +126,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -147,11 +147,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get time sheet with details within tenant context
         const timeSheet = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getWithDetails(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getWithDetails(id, apiRequest.context);
         });
 
         if (!timeSheet) {
@@ -200,7 +196,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -234,11 +230,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Submit time sheet within tenant context
         const timeSheet = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.submitTimeSheet(id, submitData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.submitTimeSheet(id, submitData, apiRequest.context);
         });
 
         return createSuccessResponse(timeSheet);
@@ -283,7 +275,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -317,11 +309,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Approve time sheet within tenant context
         const timeSheet = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.approveTimeSheet(id, approveData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.approveTimeSheet(id, approveData, apiRequest.context);
         });
 
         return createSuccessResponse(timeSheet);
@@ -366,7 +354,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -400,11 +388,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Request changes within tenant context
         const timeSheet = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.requestChanges(id, requestChangesData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.requestChanges(id, requestChangesData, apiRequest.context);
         });
 
         return createSuccessResponse(timeSheet);
@@ -449,7 +433,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -483,11 +467,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Reverse approval within tenant context
         const timeSheet = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.reverseApproval(id, reverseData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.reverseApproval(id, reverseData, apiRequest.context);
         });
 
         return createSuccessResponse(timeSheet);
@@ -532,7 +512,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -561,11 +541,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Bulk approve within tenant context
         const results = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.bulkApprove(bulkApproveData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.bulkApprove(bulkApproveData, apiRequest.context);
         });
 
         return createSuccessResponse({
@@ -613,7 +589,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -635,11 +611,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get comments within tenant context
         const comments = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getTimeSheetComments(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getTimeSheetComments(id, apiRequest.context);
         });
 
         return createSuccessResponse(comments);
@@ -684,7 +656,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -718,11 +690,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Add comment within tenant context
         const comment = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.addComment(id, commentData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.addComment(id, commentData, apiRequest.context);
         });
 
         return createSuccessResponse(comment, 201);
@@ -767,7 +735,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -798,11 +766,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Search within tenant context
         const timeSheets = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.search(searchParams as any, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.search(searchParams as any, apiRequest.context);
         });
 
         return createSuccessResponse(timeSheets);
@@ -847,7 +811,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -878,11 +842,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Export within tenant context
         const result = await runWithTenant(tenantId!, async () => {
-          const timeSheets = await this.timeSheetService.list({}, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          const timeSheets = await this.timeSheetService.list({}, apiRequest.context);
           return timeSheets.data;
         });
 
@@ -939,7 +899,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -956,11 +916,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get statistics within tenant context
         const stats = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getStatistics({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getStatistics(apiRequest.context);
         });
 
         return createSuccessResponse(stats);
@@ -1007,7 +963,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1024,11 +980,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get time periods within tenant context
         const periods = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getTimePeriods({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getTimePeriods(apiRequest.context);
         });
 
         return createSuccessResponse(periods);
@@ -1073,7 +1025,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1094,11 +1046,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get time period within tenant context
         const period = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getTimePeriod(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getTimePeriod(id, apiRequest.context);
         });
 
         if (!period) {
@@ -1147,7 +1095,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1172,11 +1120,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get current time period within tenant context
         const period = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getCurrentTimePeriod({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          }, date);
+          return await this.timeSheetService.getCurrentTimePeriod(apiRequest.context, date);
         });
 
         if (!period) {
@@ -1225,7 +1169,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1254,11 +1198,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Create time period within tenant context
         const period = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.createTimePeriod(periodData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.createTimePeriod(periodData, apiRequest.context);
         });
 
         return createSuccessResponse(period, 201);
@@ -1303,7 +1243,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1336,11 +1276,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Update time period within tenant context
         const period = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.updateTimePeriod(id, periodData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.updateTimePeriod(id, periodData, apiRequest.context);
         });
 
         return createSuccessResponse(period);
@@ -1385,7 +1321,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1406,11 +1342,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Delete time period within tenant context
         await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.deleteTimePeriod(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.deleteTimePeriod(id, apiRequest.context);
         });
 
         return new NextResponse(null, { status: 204 });
@@ -1455,7 +1387,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1484,11 +1416,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Generate time periods within tenant context
         const periods = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.generateTimePeriods(generateData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.generateTimePeriods(generateData, apiRequest.context);
         });
 
         return createSuccessResponse({
@@ -1536,7 +1464,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1553,11 +1481,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getTimePeriodSettings({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getTimePeriodSettings(apiRequest.context);
         });
 
         return createSuccessResponse(settings);
@@ -1602,7 +1526,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1631,11 +1555,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Create settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.createTimePeriodSettings(settingsData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.createTimePeriodSettings(settingsData, apiRequest.context);
         });
 
         return createSuccessResponse(settings, 201);
@@ -1680,7 +1600,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1713,11 +1633,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Update settings within tenant context
         const settings = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.updateTimePeriodSettings(id, settingsData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.updateTimePeriodSettings(id, settingsData, apiRequest.context);
         });
 
         return createSuccessResponse(settings);
@@ -1764,7 +1680,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1798,11 +1714,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Get schedule entries within tenant context
         const entries = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntries({
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          }, filters);
+          return await this.timeSheetService.getScheduleEntries(apiRequest.context, filters);
         });
 
         return createSuccessResponse(entries);
@@ -1848,7 +1760,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1868,11 +1780,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const id = pathParts[pathParts.length - 1];
 
         const entry = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getScheduleEntry(id, apiRequest.context);
         });
 
         if (!entry) {
@@ -1946,7 +1854,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -1991,11 +1899,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Create schedule entry within tenant context
         const entry = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.createScheduleEntry(scheduleData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.createScheduleEntry(scheduleData, apiRequest.context);
         });
 
         return createSuccessResponse(entry, 201);
@@ -2040,7 +1944,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -2068,11 +1972,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         }
 
         const existing = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getScheduleEntry(id, apiRequest.context);
         });
 
         if (!existing) {
@@ -2099,11 +1999,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Update schedule entry within tenant context
         const entry = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.updateScheduleEntry(id, scheduleData, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.updateScheduleEntry(id, scheduleData, apiRequest.context);
         });
 
         return createSuccessResponse(entry);
@@ -2148,7 +2044,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         assertInternalApiUser(user);
 
-        await this.assertManualProductAccess(req, keyRecord, user);
+        const apiRequest = await this.assertManualProductAccess(req, keyRecord, user);
 
         // Check permissions
         const db = await getConnection(tenantId!);
@@ -2164,11 +2060,7 @@ export class ApiTimeSheetController extends ApiBaseController {
         const id = pathParts[pathParts.length - 1];
 
         const existing = await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.getScheduleEntry(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.getScheduleEntry(id, apiRequest.context);
         });
 
         if (!existing) {
@@ -2189,11 +2081,7 @@ export class ApiTimeSheetController extends ApiBaseController {
 
         // Delete schedule entry within tenant context
         await runWithTenant(tenantId!, async () => {
-          return await this.timeSheetService.deleteScheduleEntry(id, {
-            userId: user.user_id,
-            user,
-            tenant: tenantId!,
-          });
+          return await this.timeSheetService.deleteScheduleEntry(id, apiRequest.context);
         });
 
         return new NextResponse(null, { status: 204 });

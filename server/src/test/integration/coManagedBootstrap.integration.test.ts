@@ -13641,3 +13641,93 @@ it('native time sheet lifecycle applies creation permission to automatic API she
   expect(second.time_sheet_id).toBe(first.time_sheet_id);
   expect(await customer.table('time_sheets').where('period_id', periodId)).toHaveLength(1);
 }));
+
+async function withTimeSheetApiFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeTimeSheetCommandFixture(async (fixture: any) => {
+    const { TimeSheetService } = await import('../../lib/api/services/TimeSheetService');
+    const sheetService = new TimeSheetService();
+    const connection = vi.spyOn(sheetService as any, 'getKnex').mockResolvedValue({ knex: db, tenant: fixture.context.tenant });
+    try { await work({ ...fixture, sheetService }); } finally { connection.mockRestore(); }
+  });
+}
+
+it('customer sheet API returns scoped operational summaries and authentic private comment DTOs', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context }: any) => {
+  const schemas = await import('../../lib/api/schemas/timeSheet');
+  const comment = await sheetService.addComment(entry.time_sheet_id, { comment_text: 'Private API feedback' }, context);
+  expect(comment).toMatchObject({ comment_text: 'Private API feedback', user_id: context.userId, user_role: 'owner' });
+  expect(schemas.timeSheetCommentResponseSchema.safeParse(comment).success).toBe(true);
+  const detail = await sheetService.getWithDetails(entry.time_sheet_id, context);
+  expect(detail).toMatchObject({ total_hours: 1.5, billable_hours: 0, entry_count: 1, time_entries: [{ entry_id: entry.entry_id }],
+    comments: [{ comment_id: comment.comment_id }], summary: { total_hours: 1.5, billable_hours: 0, non_billable_hours: 1.5, entries_by_type: { project_task: 1 }, approval_ready: true } });
+  schemas.timeSheetWithDetailsResponseSchema.parse(detail);
+  expect(await sheetService.getById(entry.time_sheet_id, context)).toEqual(detail);
+  expect(await sheetService.list({ filters: { has_entries: true } }, context)).toMatchObject({ total: 1, data: [{ id: entry.time_sheet_id, total_hours: 1.5 }] });
+  expect(await sheetService.list({}, context, { approval_status: 'APPROVED' })).toMatchObject({ total: 0, data: [] });
+  expect(await sheetService.search({ query: '', include_entries: true, limit: 10, user_ids: [context.userId] }, context)).toMatchObject([{ id: entry.time_sheet_id, time_entries: [{ entry_id: entry.entry_id }] }]);
+  await expect(sheetService.getById(entry.time_sheet_id, { ...context, apiKeyId: undefined })).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer sheet API submits reviews and reverses real entries while storing feedback privately', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, publish }: any) => {
+  expect(await sheetService.submitTimeSheet(entry.time_sheet_id, { submission_notes: 'Submission private context' }, context)).toMatchObject({ approval_status: 'SUBMITTED' });
+  expect(await sheetService.requestChanges(entry.time_sheet_id, { change_reason: 'Correct duration', detailed_feedback: 'Private detail' }, context)).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
+  await sheetService.submitTimeSheet(entry.time_sheet_id, {}, context);
+  expect(await sheetService.approveTimeSheet(entry.time_sheet_id, { approval_notes: 'Reviewed privately' }, context)).toMatchObject({ approval_status: 'APPROVED', approved_by: context.userId });
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+  expect(await sheetService.reverseApproval(entry.time_sheet_id, { reversal_reason: 'Revisit private detail' }, context)).toMatchObject({ approval_status: 'CHANGES_REQUESTED' });
+  const comments = await sheetService.getTimeSheetComments(entry.time_sheet_id, context);
+  expect(comments.map((row: any) => row.comment_text)).toEqual(expect.arrayContaining(['Submission private context', 'Correct duration\n\nPrivate detail', 'Reviewed privately', 'Approval reversed: Revisit private detail']));
+  expect(JSON.stringify(publish.mock.calls)).not.toContain('Private detail');
+  expect(publish.mock.calls.map((args: any[]) => args[0].eventType)).toEqual(expect.arrayContaining(['TIME_ENTRY_APPROVED', 'TIME_ENTRY_SUBMITTED', 'TIME_ENTRY_CHANGES_REQUESTED']));
+  await expect(sheetService.delete(entry.time_sheet_id, context)).rejects.toMatchObject({ statusCode: 409 });
+}));
+
+it('customer sheet API omits hidden source effort and forbids whole-sheet commands over excluded entries', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, create, resource, user, customer }: any) => {
+  const visible = await create({ work_item_type: 'non_billable_category', work_item_id: undefined, start_time: '2026-09-07T11:00:00Z', end_time: '2026-09-07T12:00:00Z' });
+  await sheetService.addComment(entry.time_sheet_id, { comment_text: 'Mentions hidden project' }, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API sheet project scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await sheetService.getWithDetails(entry.time_sheet_id, context)).toMatchObject({ total_hours: 1, time_entries: [{ entry_id: visible.entry_id }], comments: [], summary: { approval_ready: null } });
+  const schemas = await import('../../lib/api/schemas/timeSheet');
+  schemas.timeSheetWithDetailsResponseSchema.parse(await sheetService.getWithDetails(entry.time_sheet_id, context));
+  expect(await sheetService.list({}, context)).toMatchObject({ total: 1, data: [{ total_hours: 1, entry_count: 1 }] });
+  await expect(sheetService.submitTimeSheet(entry.time_sheet_id, {}, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(sheetService.addComment(entry.time_sheet_id, { comment_text: 'Blind feedback' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+}));
+
+it('customer sheet API rolls status feedback and events back when its actual key expires', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, publish }: any) => {
+  publish.mockClear();
+  await db.raw(`CREATE FUNCTION expire_sheet_api_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_sheet_api_key AFTER INSERT ON time_sheet_comments FOR EACH ROW EXECUTE FUNCTION expire_sheet_api_key()');
+  try {
+    await expect(sheetService.submitTimeSheet(entry.time_sheet_id, { submission_notes: 'Must roll back' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+    expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+    expect(await customer.table('time_sheet_comments')).toHaveLength(0);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_sheet_api_key ON time_sheet_comments'); await db.raw('DROP FUNCTION expire_sheet_api_key()'); }
+}));
+
+it('customer sheet API honors metric and comment aliases and keeps history readable after write expiry', async () => withTimeSheetApiFixture(async ({ sheetService, entry, context, customer, resource, user, principal, operations }: any) => {
+  const empty = await operations.fetchOrCreateTimeSheet(context.userId, await newSheetPeriod(customer, context.tenant));
+  await sheetService.addComment(empty.id, { comment_text: 'Removed with empty sheet' }, context);
+  await sheetService.delete(empty.id, context);
+  expect(await customer.table('time_sheet_comments').where('time_sheet_id', empty.id)).toHaveLength(0);
+  await sheetService.addComment(entry.time_sheet_id, { comment_text: 'Hidden feedback' }, context);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'API sheet masks', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_sheet', action: 'read', templateKey: 'own', config: { redactedFields: ['total_hours', 'billing', 'comments.comment_text', 'user_name'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const detail = await sheetService.getWithDetails(entry.time_sheet_id, context);
+  expect(detail).toMatchObject({ billable_hours: null, comments: [], user_name: '', summary: { total_hours: null, billable_hours: null, non_billable_hours: null } });
+  expect(detail.total_hours).toBeUndefined();
+  const schemas = await import('../../lib/api/schemas/timeSheet'); schemas.timeSheetWithDetailsResponseSchema.parse(detail);
+  await expect(sheetService.addComment(entry.time_sheet_id, { comment_text: 'Blind comment alias' }, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await sheetService.getWithDetails(entry.time_sheet_id, context)).toEqual(detail);
+  await expect(sheetService.submitTimeSheet(entry.time_sheet_id, {}, context)).rejects.toMatchObject({ statusCode: 403 });
+}));

@@ -14,9 +14,9 @@ import { readCoManagedNativeTimeSheet } from './nativeTimeRead';
  * One outer transaction retains credentials and all owners/sheets before any
  * source parent, including when several sheets are shown together. */
 export async function listCoManagedNativeTimeSheets(db: Knex, tenant: string,
-  identify: () => Promise<CoManagedAuthenticatedActor>, options: { userId?: string; approval?: boolean; includeApproved?: boolean; periods?: boolean } = {}
+  identify: () => Promise<CoManagedAuthenticatedActor>, options: { userId?: string; approval?: boolean; includeApproved?: boolean; periods?: boolean; details?: boolean } = {}
 ): Promise<{ handled: false } | { handled: true; sheets: any[]; periods: any[] }> {
-  const { userId, approval, includeApproved, periods: includePeriods } = options;
+  const { userId, approval, includeApproved, periods: includePeriods, details } = options;
   if (!isCoManagedUuid(tenant) || (userId && !isCoManagedUuid(userId)) || (includePeriods && !userId)) throw new CoManagedSharedWorkError();
   return withTransaction(db, async trx => {
     await getCoManagedOperationalState(trx, tenant);
@@ -40,11 +40,11 @@ export async function listCoManagedNativeTimeSheets(db: Knex, tenant: string,
     const admitted = new Map<string, Extract<Awaited<ReturnType<typeof readCoManagedNativeTimeSheet>>, { handled: true }>>();
     for (const hint of hints) {
       try {
-        const current = await readCoManagedNativeTimeSheet(trx, tenant, hint.id, async () => actor, { view: true, comments: !!approval, approval, employee: !!approval });
+        const current = await readCoManagedNativeTimeSheet(trx, tenant, hint.id, async () => actor, { view: true, comments: !!approval || details, approval, employee: !!approval || details, summary: details });
         if (current.handled) admitted.set(hint.id, current);
       } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
     }
-    let sheets = [...admitted.values()].map(current => ({ ...current.sheet, ...(approval ? { comments: current.comments } : {}) }));
+    let sheets = [...admitted.values()].map(current => ({ ...current.sheet, ...(approval || details ? { comments: current.comments } : {}), ...(details ? { time_entries: current.entries } : {}) }));
     if (userId) sheets = sheets.filter(sheet => sheet.user_id === userId);
     if (approval) sheets = sheets.filter(sheet => (includeApproved ? ['SUBMITTED', 'CHANGES_REQUESTED', 'APPROVED'] : ['SUBMITTED', 'CHANGES_REQUESTED']).includes(sheet.approval_status));
     sheets.sort((a, b) => (b.time_period?.start_date ?? '').localeCompare(a.time_period?.start_date ?? '') || a.id.localeCompare(b.id));

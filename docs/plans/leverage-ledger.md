@@ -471,3 +471,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `fetchOrCreateTimeSheet`, `deleteTimeSheets`, `TimeEntryService.getOrCreateTimeSheetForWorkDate`, shared `nativeTimeSheetLifecycle`.
 - **Gate:** Three adapters share current identity, owner/period, creation permission and retained emptiness invariants. ACT / bounded-now in the approved time workstream.
 - **Status:** shared open/remove commands retain current authority and serialize creation on target users. Existing history is a read; missing sheets require create permission/current write entitlement. Empty-draft deletion checks actual children, clears private feedback atomically and retains final credential checks. Seven focused scenarios verified across the initial six-case run and a two-case API follow-up. Standalone sheet/period API services and wider concurrency/scale verification remain pending.
+
+## native-time-sheet-api-adapters — pattern
+- **What:** Standalone API sheet readers and workflow methods rebuilt raw queries and state changes independently of the current native time authority, with placeholder permission checks and columns absent from the actual schema.
+- **Where:** `TimeSheetService`, manual `ApiTimeSheetController` handlers, shared native sheet read/list/command/comment/lifecycle domains.
+- **Gate:** The existing domains already own the same permission, visibility and transition invariants. ACT / bounded-now as API adapters, with a pure projection-to-DTO/filter/sort helper.
+- **Status:** Sheet reads/list/search/comments/workflow/removal now reuse current domains and actual API credentials. Command feedback and safe response reads share the mutation transaction. Five focused source-mode scenarios verified across the initial and corrected three-case follow-up. Generic create/update/notes, statistics, export fidelity, period/schedule adapters and broader verification remain pending.

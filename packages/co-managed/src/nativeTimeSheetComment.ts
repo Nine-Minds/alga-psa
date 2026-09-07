@@ -30,7 +30,7 @@ export async function addCoManagedNativeTimeSheetComment(db: Knex, tenant: strin
     const isApprover = actor.userId !== current.sheet.user_id;
     const read = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_sheet', 'read', record);
     const write = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_sheet', isApprover ? 'approve' : 'submit', record);
-    if (isNativeTimeFieldHidden([...read.redactedFields, ...write.redactedFields], ['comments', 'comment', 'time_sheet_comments',
+    if (isNativeTimeFieldHidden([...read.redactedFields, ...write.redactedFields], ['comments', 'comment', 'time_sheet_comments', 'comment_text', 'user_role', 'comments.comment_text', 'comments.user_role', 'time_sheet_comments.comment_text', 'time_sheet_comments.user_role',
       'comments.comment', 'comments.user_id', 'comments.comment_id', 'comments.created_at', 'comments.is_approver',
       'time_sheet_comments.comment', 'time_sheet_comments.user_id', 'time_sheet_comments.comment_id', 'time_sheet_comments.created_at', 'time_sheet_comments.is_approver'])) throw new CoManagedSharedWorkError();
     const [row] = await owner.table('time_sheet_comments').insert({ tenant, time_sheet_id: sheetId, user_id: actor.userId,
