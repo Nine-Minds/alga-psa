@@ -1,0 +1,27 @@
+{
+  "scope": "Redis transport latency reproduction; not yet a complete event-bus regression",
+  "observedNativeFailure": {
+    "run": 34109001526,
+    "job": 101707718598,
+    "case": "supports explicit API reactivation of a client, contacts and users",
+    "timeoutMs": 20000,
+    "enterpriseSameCaseMs": 10637
+  },
+  "codeEvidence": {
+    "file": "packages/event-bus/src/eventBus.ts",
+    "boundary": "startEventProcessing and publish share getClient(); XREADGROUP BLOCK defaults to 5000ms"
+  },
+  "localExperiment": {
+    "service": "owned Redis on 127.0.0.1:56379",
+    "temporaryStream": "unique random stream deleted in finally",
+    "blockMs": 2000,
+    "publishAfterReadStartMs": 100,
+    "sharedConnectionPublishMs": 1929,
+    "isolatedCommandPublishMs": 1
+  },
+  "nextAction": "Add a permanent real-Redis event-bus publish-during-idle-read regression, isolate blocking reads and verify shutdown/reconnection behavior. Do not widen the client test timeout as a substitute.",
+  "limits": [
+    "Transport mechanism reproduced; direct causal attribution to the native timeout is not proven.",
+    "No production change applied in this experiment."
+  ]
+}

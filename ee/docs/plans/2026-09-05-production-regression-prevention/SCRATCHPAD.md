@@ -1580,3 +1580,9 @@
 - CLI now requires a nonblank collectionFile on every runner descriptor. Existing reader still rejects simultaneous inline/artifact data, missing files and invalid source roots. The reusable reconcileDiscovery evaluator remains available for already-loaded runtime collections.
 - All 21 discovery, actual Vitest/Node execution and Playwright evidence tests pass after repair. F004 remains incomplete until all repository candidates are assigned and the full registry runs in native CI.
 - Browser step budget is 25 minutes versus approximately eight minutes for the last enterprise execution; no speculative timeout increase. Current browser run 34109001526 remains active, so queued commits are not yet published.
+
+### 2026-09-07 — Redis blocking publish latency reproduced
+
+- Native API client reactivation: community timed out at20s; enterprise passed10.637s. Several native client/project cases cluster near5s multiples. Code inspection found event-bus blocking XREADGROUP shares getClient with writes.
+- Owned Redis transport reproduction uses unique temporary stream/group and cleanup: BLOCK2000, publish after100ms. Shared connection publication took1929ms; redis4 commandOptions({isolated:true}) publication took1ms. Evidence: evidence/redis-blocking-publish-latency.json.
+- This establishes the transport hazard, not direct causality for the CI case. Next add actual event-bus behavioral regression and isolate blocking reads with shutdown/recovery validation. No timeout relaxation or production change made yet. Published a02bfb4136 browser run34113539423 is active.
