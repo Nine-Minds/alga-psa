@@ -34,6 +34,7 @@ export const HEADER = [
   'duration_s', 'run_url',
   'executed', 'run_status', 'files_measured', 'files_total',
   'schema_version', 'run_kind', 'event_name', 'coverage_methodology',
+  'expected_files', 'collected_tests', 'execution_gate_status', 'tested_sha',
 ];
 
 export const DETAIL_HEADER = [
@@ -53,6 +54,24 @@ function runKind(env) {
     case 'push': return env.GITHUB_REF_NAME === 'main' ? 'main' : 'branch';
     default: return 'other';
   }
+}
+
+function executionMetrics(execution, revision) {
+  const unknown = { expectedFiles: '', collectedTests: '', gateStatus: 'incomplete' };
+  if (execution === undefined) return { ...unknown, gateStatus: 'unverified' };
+  if (execution?.schemaVersion !== 1 || (revision && execution.revision !== revision)
+    || !['passed', 'failed'].includes(execution.status) || !Array.isArray(execution.failures)) return unknown;
+  const files = execution.expectedFiles;
+  const tests = execution.expectedTests;
+  const validFiles = Array.isArray(files) && files.every(file => typeof file === 'string' && file.length)
+    && new Set(files).size === files.length;
+  const validTests = Array.isArray(tests) && tests.every(entry => Number.isSafeInteger(entry.count) && entry.count > 0);
+  return {
+    expectedFiles: validFiles ? files.length : '',
+    collectedTests: validTests ? tests.reduce((sum, entry) => sum + entry.count, 0) : '',
+    gateStatus: execution.status === 'failed' || execution.failures.length ? 'failed'
+      : validFiles && files.length && validTests && tests.length ? 'passed' : 'incomplete',
+  };
 }
 
 function readJson(path) {
@@ -104,11 +123,7 @@ export function testCounts(results, execution, revision) {
   const todo = results.numTodoTests ?? 0;
   const total = results.numTotalTests ?? passed + failed + skipped + todo;
   const executed = passed + failed;
-  const evidenceRejected = execution !== undefined && (
-    execution?.schemaVersion !== 1 || execution?.status !== 'passed'
-    || !Array.isArray(execution?.failures) || execution.failures.length > 0
-    || (revision && execution?.revision !== revision)
-  );
+  const evidenceRejected = execution !== undefined && executionMetrics(execution, revision).gateStatus !== 'passed';
   // Evidence can only downgrade this diagnostic. It does not replace raw
   // report checks or independently prove release readiness.
   const status = evidenceRejected ? 'partial' : runStatus(results);
@@ -248,6 +263,7 @@ export function buildRow() {
   const execution = process.env.TEST_METRICS_EXECUTION
     ? readJson(process.env.TEST_METRICS_EXECUTION) : undefined;
   const counts = testCounts(readJson(process.env.TEST_METRICS_RESULTS), execution, process.env.GITHUB_SHA);
+  const executionData = executionMetrics(execution, process.env.GITHUB_SHA);
   const summary = readJson(process.env.TEST_METRICS_COVERAGE);
   const cov = coveragePcts(summary);
   const files = coverageFileCounts(summary);
@@ -272,6 +288,8 @@ export function buildRow() {
     files.measured, files.total,
     METRICS_SCHEMA_VERSION, runKind(process.env), process.env.GITHUB_EVENT_NAME ?? '',
     summary ? COVERAGE_METHODOLOGY : '',
+    executionData.expectedFiles, executionData.collectedTests, executionData.gateStatus,
+    process.env.GITHUB_SHA ?? execution?.revision ?? '',
   ];
 }
 
@@ -374,6 +392,8 @@ function writeJobSummary(row) {
     process.env.GITHUB_STEP_SUMMARY,
     [
       `### Test metrics — ${row[1]}${row[17] === 'partial' ? ' (partial run)' : ''}`,
+      '',
+      `Execution gate: **${cell(row[26])}**. Expected files: ${cell(row[24])}; collected tests: ${cell(row[25])}; executed: ${cell(row[16])}.`,
       '',
       '| passed | failed | skipped | executed | pass % | lines % | branches % | duration |',
       '|---|---|---|---|---|---|---|---|',

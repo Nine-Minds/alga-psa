@@ -54,6 +54,9 @@ preserved when all managed headings match.
 | `run_kind` | `pr`, `main`, `branch`, `nightly`, `manual`, `local`, or `other`, derived from the triggering event |
 | `event_name` | original GitHub event name; blank for local invocations |
 | `coverage_methodology` | `v8-loaded-files/source-inventory-v1` when a coverage report is present; otherwise blank |
+| `expected_files`, `collected_tests` | declared file count and sum of collected assertion identities from current-revision execution evidence; blank when unavailable |
+| `execution_gate_status` | reported lane gate: `passed`, `failed`, `incomplete`, or `unverified` when no execution evidence was requested |
+| `tested_sha` | full GitHub tested SHA, or local evidence revision when available |
 
 The four version fields occupy U:X on `metrics` and N:Q on
 `coverage_by_dir`. All prior positions retain their meanings. The source
@@ -64,6 +67,12 @@ roots are not comprehensively included; this is not whole-repository coverage.
 Keep historical unversioned rows separate when interpreting methodology changes.
 The event fields label recorded rows; they do not enable recording for workflows
 whose metrics steps are currently excluded.
+
+Execution counts, gate status and full SHA occupy Y:AB on `metrics`.
+These summarize the producer's declared lane evidence, not the global release
+gate. Unknown counts are blank; an unavailable evidence file is incomplete.
+The existing `executed` column remains the raw passed-plus-failed assertion count.
+Job summaries show the lane gate and collection counts before percentages.
 
 For charts, add a second tab with `=QUERY(metrics!A:T, "select A, J where B = 'unit-coverage'")`
 style pulls and chart those ranges. Native Sheets charts update as rows arrive.

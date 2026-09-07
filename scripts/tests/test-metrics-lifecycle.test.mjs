@@ -61,7 +61,8 @@ test('required execution evidence can reject a superficially passing raw report'
     assert.equal(result.passPct, '');
     assert.equal(result.passed, 1);
   }
-  assert.equal(testCounts(raw, { schemaVersion: 1, revision, status: 'passed', failures: [] }, revision).passPct, 100);
+  assert.equal(testCounts(raw, { schemaVersion: 1, revision, status: 'passed', failures: [],
+    expectedFiles: ['server/example.test.ts'], expectedTests: [{ count: 1 }] }, revision).passPct, 100);
 });
 
 function buildIsolatedRow({ results, coverage, execution, requestResults = true, context = {} } = {}) {
@@ -153,4 +154,36 @@ test('the recorder loads required execution evidence from its configured path', 
   assert.equal(row.run_status, 'partial');
   assert.equal(row.pass_pct, '');
   assert.equal(row.passed, 1);
+  assert.equal(row.execution_gate_status, 'incomplete');
+  assert.equal(row.expected_files, '');
+  assert.equal(row.collected_tests, '');
+});
+
+test('versioned rows preserve declared collection and the exact tested revision', () => {
+  const revision = 'c'.repeat(40);
+  const row = buildIsolatedRow({
+    results: JSON.stringify(report([{ status: 'passed', assertionResults: [assertion('passed')] }],
+      { numPassedTests: 1, numTotalTests: 1, numPendingTests: 0, numFailedTestSuites: 0 })),
+    execution: { schemaVersion: 1, revision, status: 'failed', failures: ['Missing second file'],
+      expectedFiles: ['server/a.test.ts', 'server/b.test.ts'],
+      expectedTests: [{ identity: ['server/a.test.ts', 'saves'], count: 1 }, { identity: ['server/b.test.ts', 'rejects'], count: 2 }] },
+    context: { GITHUB_SHA: revision },
+  });
+  assert.equal(row.expected_files, 2);
+  assert.equal(row.collected_tests, 3);
+  assert.equal(row.executed, 1);
+  assert.equal(row.execution_gate_status, 'failed');
+  assert.equal(row.tested_sha, revision);
+  assert.equal(row.pass_pct, '');
+});
+
+test('a passing flag without collection counts remains incomplete', () => {
+  const revision = 'c'.repeat(40);
+  const row = buildIsolatedRow({
+    results: JSON.stringify(report([], { numPassedTests: 1, numTotalTests: 1, numFailedTestSuites: 0 })),
+    execution: { schemaVersion: 1, revision, status: 'passed', failures: [] },
+    context: { GITHUB_SHA: revision },
+  });
+  assert.equal(row.execution_gate_status, 'incomplete');
+  assert.equal(row.pass_pct, '');
 });
