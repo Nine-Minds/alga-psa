@@ -149,3 +149,17 @@ export async function stopNativeTimeTracking(db: Knex, actor: CoManagedAuthentic
     await access.assertCurrent(); return presentCompletedEntry(result, access);
   });
 }
+
+/** Abandoning one's own clock grants no work access and creates no effort.
+ * It remains possible after source scope or the writing entitlement is lost.
+ * The required clock ID makes a retry harmless if a newer timer has started. */
+export async function cancelNativeTimeTracking(db: Knex, actor: CoManagedAuthenticatedActor, sessionId: string) {
+  if (!isCoManagedUuid(sessionId)) throw new NativeTimeTrackingError('TIMER_NOT_FOUND');
+  return withTimerIdentity(db, actor, true, async (trx, home) => {
+    const owner = tenantDb(trx, home.tenant);
+    const clock = await owner.table(TABLE).where({ session_id: sessionId, user_id: home.userId }).forUpdate().first('completed_entry_id');
+    if (clock?.completed_entry_id) throw new NativeTimeTrackingError('TIMER_STOP_CONFLICT');
+    if (clock) await owner.table(TABLE).where({ session_id: sessionId, user_id: home.userId }).whereNull('completed_entry_id').del();
+    return { session_id: sessionId, status: 'canceled' as const };
+  });
+}

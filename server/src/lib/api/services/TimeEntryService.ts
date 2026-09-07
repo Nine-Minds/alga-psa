@@ -28,7 +28,7 @@ import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
-  NativeTimeTrackingError, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  NativeTimeTrackingError, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 
@@ -704,6 +704,11 @@ export class TimeEntryService extends BaseService<any> {
       await access.assertCurrent();
       return result;
     }));
+  }
+
+  async cancelTimeTracking(sessionId: string, context: ServiceContext): Promise<any> {
+    const { knex } = await this.getKnex();
+    return this.withTimeErrors(() => cancelNativeTimeTracking(knex, this.timerActor(context), sessionId));
   }
 
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {

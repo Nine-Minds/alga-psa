@@ -473,6 +473,20 @@ export class ApiTimeEntryController extends ApiBaseController {
     };
   }
 
+  /** Cancel only the authenticated user's identified clock, without writing effort. */
+  cancelTracking() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+        const path = new URL(req.url).pathname.split('/');
+        const sessionId = path[path.indexOf('cancel-tracking') + 1];
+        const result = await this.runWithApiKeyContext(apiRequest,
+          () => this.timeEntryService.cancelTimeTracking(sessionId, apiRequest.context));
+        return createSuccessResponse(result);
+      } catch (error) { return handleApiError(error); }
+    };
+  }
+
   /**
    * Get active tracking session
    */

@@ -12699,3 +12699,73 @@ it('native timers mask optional fields equally on first completion and replay', 
   expect(await service.getActiveSession(context.userId, context)).toMatchObject({ service_id: null, work_item_title: '' });
   for (const entry of [await stop(timer), await stop(timer)]) expect(entry).toMatchObject({ entry_id: timer.session_id, billable_duration: null, is_billable: null, updated_at: null, work_item_title: '' });
 }));
+
+it('native timer cancellation releases only the named clock after source scope is lost and leaves newer clocks intact on retry', async () => withNativeTimerFixture(async ({ start, stop, service, context, customer, resource, operation, user, apiKeyId, publish }: any) => {
+  const timer = await start(), bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Unavailable timer work', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await service.cancelTimeTracking(timer.session_id, context)).toEqual({ session_id: timer.session_id, status: 'canceled' });
+  expect(await customer.table('native_time_tracking_sessions')).toHaveLength(0);
+  expect(await customer.table('time_entries')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+  const newer = await start({ work_item_type: 'non_billable_category', work_item_id: undefined });
+  await service.cancelTimeTracking(timer.session_id, context);
+  expect((await customer.table('native_time_tracking_sessions').first()).session_id).toBe(newer.session_id);
+  expect(Number((await customer.table('project_tasks').where('task_id', resource.id).first()).actual_hours)).toBe(123);
+}));
+
+it('native timer cancellation remains available after license expiry but requires a current owned credential', async () => withNativeTimerFixture(async ({ start, service, context, customer, principal, apiKeyId }: any) => {
+  const timer = await start(); await expireCoManagedEntitlement(principal.tenant);
+  await expect(service.cancelTimeTracking(timer.session_id, { ...context, apiKeyId: randomUUID() })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+  await expect(service.cancelTimeTracking(timer.session_id, context)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await customer.table('native_time_tracking_sessions')).toHaveLength(1);
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: true });
+  expect(await service.cancelTimeTracking(timer.session_id, context)).toMatchObject({ status: 'canceled' });
+  expect(await customer.table('native_time_tracking_sessions')).toHaveLength(0);
+}));
+
+it('native timer cancellation cannot remove another user clock or completed effort receipts', async () => withNativeTimerFixture(async ({ start, stop, service, context, customer, sponsor, sponsorActor }: any) => {
+  const timer = await start(), user = await sponsor.table('users').where('user_id', sponsorActor.userId).first(), apiKeyId = randomUUID();
+  await sponsor.table('api_keys').insert({ tenant: sponsorActor.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: user.user_id, active: true });
+  await service.cancelTimeTracking(timer.session_id, { tenant: sponsorActor.tenant, userId: user.user_id, user, apiKeyId });
+  expect(await customer.table('native_time_tracking_sessions')).toHaveLength(1);
+  await stop(timer);
+  await expect(service.cancelTimeTracking(timer.session_id, context)).rejects.toMatchObject({ statusCode: 409 });
+  expect(await customer.table('native_time_tracking_sessions')).toHaveLength(1);
+  expect(await customer.table('time_entries')).toHaveLength(1);
+}));
+
+it('native timer cancellation and stop serialize to one final outcome without orphaned effort', async () => withNativeTimerFixture(async ({ start, stop, service, context, customer }: any) => {
+  const timer = await start();
+  const outcomes = await Promise.allSettled([stop(timer), service.cancelTimeTracking(timer.session_id, context)]);
+  expect(outcomes.filter(outcome => outcome.status === 'fulfilled')).toHaveLength(1);
+  const entry = await customer.table('time_entries').first(), clock = await customer.table('native_time_tracking_sessions').first();
+  if (entry) expect(clock).toMatchObject({ completed_entry_id: entry.entry_id });
+  else expect(clock).toBeUndefined();
+}));
+
+it('native timer cancellation controller forwards the verified credential and exact path identity', async () => withNativeTimerFixture(async ({ start, service, customer, context, user, apiKeyId }: any) => {
+  const { ApiTimeEntryController } = await import('../../lib/api/controllers/ApiTimeEntryController');
+  const { ApiKeyServiceForApi } = await import('../../lib/services/apiKeyServiceForApi');
+  const users = await import('@alga-psa/users/actions'), limiter = await import('../../lib/api/rateLimit/enforce');
+  const key = await customer.table('api_keys').where('api_key_id', apiKeyId).first();
+  const validate = vi.spyOn(ApiKeyServiceForApi, 'validateApiKeyForTenant').mockResolvedValue(key);
+  const findUser = vi.spyOn(users, 'findUserByIdForApi').mockResolvedValue(user);
+  const limit = vi.spyOn(limiter, 'enforceApiRateLimit').mockResolvedValue(undefined as any);
+  const controller = new ApiTimeEntryController(); (controller as any).timeEntryService = service;
+  const product = vi.spyOn(controller as any, 'assertProductApiAccess').mockResolvedValue(undefined);
+  const request = (id: string) => ({ url: `http://localhost/api/v1/time-entries/cancel-tracking/${id}?unused=value`, headers: new Headers({ 'x-api-key': 'fixture-key', 'x-tenant-id': context.tenant }) }) as any;
+  try {
+    const timer = await start();
+    const response = await controller.cancelTracking()(request(timer.session_id));
+    expect(response.status).toBe(200); expect(await response.json()).toMatchObject({ data: { session_id: timer.session_id, status: 'canceled' } });
+    const next = await start();
+    await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+    const denied = await controller.cancelTracking()(request(next.session_id));
+    expect(denied.status).toBe(403);
+    expect((await customer.table('native_time_tracking_sessions').first()).session_id).toBe(next.session_id);
+  } finally { product.mockRestore(); limit.mockRestore(); findUser.mockRestore(); validate.mockRestore(); }
+}));
