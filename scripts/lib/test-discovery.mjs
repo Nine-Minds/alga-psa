@@ -44,7 +44,8 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || file === 'ee/temporal-workflows/src/workflows/__tests__/generic-job-workflow.temporal.test.ts'
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/workflow-runtime-v2-(interpreter|run-workflow|simulator-contract)\.test\.ts$/.test(file)
       || /^ee\/temporal-workflows\/src\/schedules\/__tests__\/.*\.test\.ts$/.test(file)
-      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|sla-activities|marketing-activities|tenant-suspension-activities)\.test\.ts$/.test(file);
+      || file === 'ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts'
+      || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities)\.test\.ts$/.test(file);
   }
   if (lane === 'api-e2e') {
     return /^server\/src\/test\/e2e\/api\//.test(file)

@@ -1372,3 +1372,8 @@
 - Downloaded mobile-execution from run 34104450446 and independently recomputed execution reconciliation from its raw collection, assertion collection and results: 134 files, 901 passes, zero skips/missing, no failures. Native artifact reporting works.
 - Three schedule suites failed because vi.fn arrow implementations cannot construct Client in Vitest 4. Replaced only those constructor implementations with functions; all ten schedule/tenant-suspension cases then passed without assertion removal.
 - Added schedule suites and tenant-suspension activities to fast readiness and its candidate classifier. Full expanded suite: 12 files, 106 passes, 4.09 seconds; native verification pending. Evidence: evidence/temporal-schedules-and-mobile-native.json.
+
+### 2026-09-07 — Email lifecycle seams join reconciled readiness
+
+- Added tenant-email-ingestion activities (seven provider pause/resume/teardown cases) and tenant email-settings defaults (two cases) to readiness and its independent candidate classifier. Both existing suites passed without assertion changes.
+- Expanded direct suite: 14 files, 115 passes. Then ran the actual CI entry point `node scripts/run-additional-workspace-tests.mjs temporal-readiness` to verify independent discovery plus assertion/execution reconciliation: all passed, exact 14-file execution, 115 passes, no skips. Evidence: evidence/temporal-email-readiness.json. Local source records the uncommitted additions; no claim of final native readiness.
