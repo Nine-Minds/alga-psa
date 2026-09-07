@@ -1,4 +1,5 @@
-import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedEmailDeliveryResult } from '@alga-psa/co-managed';
+import { resolveCoManagedRequesterEmailRouting } from './coManagedRequesterEmailRouting';
+import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult } from '@alga-psa/co-managed';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
 import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
@@ -26,11 +27,19 @@ export async function sendCoManagedCommentEmail(delivery: CoManagedEmailDelivery
 export async function sendCoManagedCustomerCommentEmail(delivery: CoManagedCustomerEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
   return sendAuthorizedCommentEmail(delivery, `/msp/tickets/${delivery.message.resource.id}`, 'customerSubject');
 }
-/** Both delivery adapters supply only current, admitted content and their own
+export async function sendCoManagedRequesterCommentEmail(delivery: CoManagedRequesterEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
+  if (!/^cm1:[A-Za-z0-9_-]{43}$/.test(delivery.replyToken)) throw new Error('Invalid requester reply token');
+  const routing = await resolveCoManagedRequesterEmailRouting(delivery);
+  return sendAuthorizedCommentEmail(delivery, routing.url, 'customerSubject', routing);
+}
+/** Delivery adapters supply only current, admitted content and their own
  * navigation target. Rendering and caller-owned transport completion are shared. */
-async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoManagedCustomerEmailDelivery, path: string,
-  subjectKey: 'subject' | 'customerSubject'): Promise<CoManagedEmailDeliveryResult> {
-  const locale = await resolveEmailLocale(delivery.tenant, { email: delivery.email, userId: delivery.recipientUserId, userType: 'internal' });
+async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoManagedCustomerEmailDelivery | CoManagedRequesterEmailDelivery, path: string,
+  subjectKey: 'subject' | 'customerSubject', routing?: { from?: { email: string; name?: string }; replyTo?: { email: string; name?: string } }): Promise<CoManagedEmailDeliveryResult> {
+  const requester = 'replyToken' in delivery;
+  const locale = await resolveEmailLocale(delivery.tenant, requester
+    ? { email: delivery.email, clientId: delivery.recipient.clientId, userType: 'client' }
+    : { email: delivery.email, userId: delivery.recipientUserId, userType: 'internal' });
   const copy = COPY[locale] ?? COPY[locale.split('-')[0]] ?? COPY.en;
   const base = new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000');
   if (!['https:', 'http:'].includes(base.protocol)) throw new Error('Invalid email application URL');
@@ -40,10 +49,14 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
   const title = [message.ticketNumber, message.ticketTitle].filter(Boolean).join(' — ');
   const author = message.author?.displayName ? [message.author.displayName, message.author.organizationName].filter(Boolean).join(' — ') : '—';
   const body = extractTicketRichTextPlainText(message.note);
-  const html = `<h2>${escape(subject)}</h2>${title ? `<p>${escape(title)}</p>` : ''}<p>${escape(author)}</p><div style="white-space:pre-wrap">${escape(body)}</div><p><a href="${escape(url)}">${escape(copy.open)}</a></p>`;
-  const text = [subject, title, author, body, `${copy.open}: ${url}`].filter(Boolean).join('\n\n');
+  let html = `<h2>${escape(subject)}</h2>${title ? `<p>${escape(title)}</p>` : ''}<p>${escape(author)}</p><div style="white-space:pre-wrap">${escape(body)}</div><p><a href="${escape(url)}">${escape(copy.open)}</a></p>`;
+  let text = [subject, title, author, body, `${copy.open}: ${url}`].filter(Boolean).join('\n\n');
+  if (requester) {
+    html = `<div data-alga-reply-boundary="true"></div>${html}<div style="display:none" data-alga-reply-token="${delivery.replyToken}"></div>`;
+    text = `--- Please reply above this line ---\n\n${text}\n\n[ALGA-REPLY-TOKEN ${delivery.replyToken}]`;
+  }
   const result = await TenantEmailService.getInstance(delivery.tenant).sendEmail({ tenantId: delivery.tenant, to: delivery.email,
-    userId: delivery.recipientUserId, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
+    userId: requester ? undefined : delivery.recipientUserId, from: routing?.from, replyTo: routing?.replyTo, notificationSubtypeId: delivery.subtypeId, locale, retryPolicy: 'caller',
     templateProcessor: new StaticTemplateProcessor(subject, html, text),
     headers: { ...AUTO_GENERATED_MAIL_HEADERS, 'Message-ID': delivery.messageId },
   });

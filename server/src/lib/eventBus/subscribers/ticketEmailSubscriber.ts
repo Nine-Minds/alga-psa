@@ -1,3 +1,4 @@
+import { handleCoManagedRequesterCommentEmailEvent, deliverCoManagedRequesterCommentEmailEvent } from './coManagedRequesterCommentEmailSubscriber';
 import { handleCoManagedCustomerCommentEmailEvent, deliverCoManagedCustomerCommentEmailEvent } from './coManagedCustomerCommentEmailSubscriber';
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
 import { handleCoManagedCommentEmailEvent } from './coManagedCommentEmailSubscriber';
@@ -65,6 +66,7 @@ function normalizeHost(host: string): string {
   return host.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
 }
 
+// LEVERAGE: pattern ticket-email-routing — requester worker transport resolves these same sender settings and active portal-domain links.
 async function resolveTicketingFromAddress(
   knex: Knex,
   tenantId: string
@@ -2427,8 +2429,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
   try {
     const db = await getConnection(tenantId);
     // The durable consumer owns customer technician completion. Its separate
-    // targeted subscriber never replays this native requester-email path.
+    // targeted subscriber never replays the native notification fanout.
     if (await handleCoManagedCustomerCommentEmailEvent(event, db)) suppression.suppressInternalNotifications = true;
+    const requesterEmailHandled = await handleCoManagedRequesterCommentEmailEvent(event, db);
     const currentPayload = await resolveTicketCommentNotificationPayload(db, payload);
     if (!currentPayload) return;
     payload = currentPayload;
@@ -2675,6 +2678,9 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const activeWatcherEmails = extractActiveWatcherEmails(ticket.attributes);
 
     const sentEmails = new Set<string>();
+    // The primary queue owns this recipient only. Preserve native watcher
+    // eligibility checks while excluding a duplicate to the current primary.
+    if (requesterEmailHandled && primaryEmail) sentEmails.add(normalizeRecipientEmail(primaryEmail));
     const sendIfUnique = async (
       params: SendEmailParams,
       subtypeName: string,
@@ -2716,6 +2722,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Send to primary email if available - external user, no userId
     if (
+      !requesterEmailHandled &&
       primaryEmail &&
       isPublicComment &&
       isFromAgent &&
@@ -3453,6 +3460,7 @@ export async function registerTicketEmailSubscriber(): Promise<void> {
     ] as const;
 
     const channel = getEmailEventChannel();
+    await getEventBus().subscribe('TICKET_COMMENT_ADDED', deliverCoManagedRequesterCommentEmailEvent, { channel, subscriberId: 'requester-email' });
     await getEventBus().subscribe('TICKET_COMMENT_ADDED', deliverCoManagedCustomerCommentEmailEvent, { channel, subscriberId: 'customer-internal-email' });
     await getEventBus().subscribe('TICKET_COMMENT_ADDED', handleCoManagedCommentEmailEvent, { channel, subscriberId: 'co-managed-email' });
     console.log(`[TicketEmailSubscriber] Using channel "${channel}" for ticket email events`);

@@ -185,3 +185,16 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: licensing lifecycle contract and inboundEmailCoreProcessor.ts.
 - Gate: verified worker runtime boundary, high retained-intake cost, stable error contract; ACT / bounded error-contract predicate.
 - Status: revised (2026-09-07). A checked lifecycle predicate recognizes only the named non-writable lifecycle states with the matching error code. The durable core defers and refunds a newly claimed attempt after rollback. Plain Node verification loads both actual compiled constructors and proves the shared contract works when instanceof does not.
+
+
+## Requester delivery activation and ticket email routing — pattern
+- What: primary requester delivery now consumes committed co-managed intent and shares current, localized rendering with technician delivery; native sender and portal routing still have a second implementation in the worker adapter.
+- Where: coManagedRequesterCommentEmailSubscriber.ts, coManagedRequesterEmailRouting.ts, ticketEmailSubscriber.ts and coManagedCommentEmailTransport.ts.
+- Gate: shared rendering has three concrete recipients; sender/portal settings are stable but native watcher delivery still has a separate authority path. Reuse rendering now, mark routing duplication for a later bounded extraction.
+- Status: connected (2026-09-07). Discovery completion and recipient obligations commit together before token preparation or transport. Dedicated targeted replay and scheduled delivery cannot invoke native fanout. Rollout keeps already-published events with the native primary sender; co-managed watcher and bundle-child exclusions remain intact. Settings lookup errors retry instead of silently choosing a guessed routing context.
+
+## HTML reply boundary trimming — friction
+- What: the shared parser cut at the boundary attribute itself, leaving an incomplete opening tag in an HTML-only answer.
+- Where: replyParser.ts and the actual co-managed requester rendering/parser round trip.
+- Gate: reproduced malformed canonical reply input, stable explicit marker contract; ACT / bounded parser correction.
+- Status: revised (2026-09-07). An attribute inside an opening tag trims from that tag's start. Requester notifications place their boundary before the quoted notification, so the answer excludes old mail in both text and HTML while token extraction remains intact. Native parser fixtures and delimiter regressions remain covered.

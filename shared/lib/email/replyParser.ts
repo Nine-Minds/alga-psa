@@ -441,8 +441,12 @@ function trimHtmlAtBoundary(html: string, config: ReplyParserConfig): TrimResult
   const attributeIndex = html.toLowerCase().indexOf(config.htmlBoundaryAttribute.toLowerCase());
 
   if (attributeIndex >= 0) {
+    // Cut before the marker's opening tag, not inside its attribute list.
+    // Otherwise an HTML-only reply retains an incomplete `<div` or `<p`.
+    const tagStart = html.lastIndexOf('<', attributeIndex);
+    const boundaryStart = tagStart >= 0 && html.lastIndexOf('>', attributeIndex) < tagStart ? tagStart : attributeIndex;
     return {
-      text: html.slice(0, attributeIndex).trim(),
+      text: html.slice(0, boundaryStart).trim(),
       matched: config.htmlBoundaryAttribute,
       heuristic: 'html-boundary',
     };

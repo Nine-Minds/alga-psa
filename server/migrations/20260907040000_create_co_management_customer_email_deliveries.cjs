@@ -13,9 +13,13 @@ exports.up = async function (knex) {
     // Owner-local soft references retain completion history after source/user deletion.
   });
   await ensureTenantDistribution(knex, TABLE);
-  await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_check');
-  await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_consumer_check');
-  await knex.raw("ALTER TABLE co_management_event_consumers ADD CONSTRAINT co_management_event_consumers_consumer_check CHECK (consumer IN ('search-index', 'internal-notifications', 'co-managed-email', 'customer-internal-email') AND attempts >= 0)");
+  const existing = await knex.raw("SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint WHERE conrelid = 'co_management_event_consumers'::regclass AND conname = 'co_management_event_consumers_consumer_check'");
+  // Replay must preserve any later consumer catalog extension.
+  if (!existing.rows[0]?.definition.includes("'customer-internal-email'")) {
+    await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_check');
+    await knex.raw('ALTER TABLE co_management_event_consumers DROP CONSTRAINT IF EXISTS co_management_event_consumers_consumer_check');
+    await knex.raw("ALTER TABLE co_management_event_consumers ADD CONSTRAINT co_management_event_consumers_consumer_check CHECK (consumer IN ('search-index', 'internal-notifications', 'co-managed-email', 'customer-internal-email') AND attempts >= 0)");
+  }
   // Published pre-rollout events belonged to the native sender. Do not replay
   // historical customer email through the new worker. A retained marker leaves
   // these events on the existing native sender, including an undelivered Redis event.

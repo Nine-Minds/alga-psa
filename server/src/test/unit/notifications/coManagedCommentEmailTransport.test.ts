@@ -1,8 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
-const runtime = vi.hoisted(() => ({ send: vi.fn(), locale: vi.fn(), tenant: vi.fn() }));
+const runtime = vi.hoisted(() => ({ send: vi.fn(), locale: vi.fn(), tenant: vi.fn(), routing: vi.fn() }));
 vi.mock('@alga-psa/email', () => ({ TenantEmailService: { getInstance: (tenant: string) => { runtime.tenant(tenant); return { sendEmail: runtime.send }; } },
   StaticTemplateProcessor: class { constructor(private subject: string, private html: string, private text: string) {} async process() { return { subject: this.subject, html: this.html, text: this.text }; } } }));
+vi.mock('@alga-psa/jobs/handlers/coManagedRequesterEmailRouting', () => ({ resolveCoManagedRequesterEmailRouting: runtime.routing }));
 vi.mock('@alga-psa/notifications/notifications/emailLocaleResolver', () => ({ resolveEmailLocale: runtime.locale }));
 import { sendCoManagedCommentEmail } from '@alga-psa/jobs/handlers/coManagedCommentEmailTransport';
 import type { CoManagedEmailDelivery } from '@alga-psa/co-managed';
@@ -48,4 +49,35 @@ it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('
   expect(content.text).not.toContain('/co-management/');
   expect(content.html).toContain('&lt;script&gt;');
   if (locale.startsWith('en')) expect(content.subject).toBe('New comment on a ticket');
+});
+
+it.each(['en', 'en-AU', 'fr', 'es', 'de', 'nl', 'it', 'pl', 'pt', 'xx', 'yy'])('renders requester email in %s with committed tokens, customer locale and portal navigation', async locale => {
+  const { sendCoManagedRequesterCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  const { parseEmailReply } = await import('../../../../../shared/lib/email/replyParser');
+  runtime.locale.mockResolvedValue(locale);
+  const source = delivery(), clientId = randomUUID(), contactId = randomUUID();
+  const item = { tenant: source.tenant, email: source.email, messageId: source.messageId, subtypeId: source.subtypeId,
+    recipient: { kind: 'requester_contact' as const, tenant: source.tenant, clientId, contactId }, replyToken: `cm1:${'a'.repeat(43)}`,
+    message: { ...source.message, audience: 'requester' as const, resource: { tenant: source.tenant, kind: 'ticket' as const, id: source.message.resource.id } } };
+  const url = `https://customer.example.test/client-portal/tickets/${item.message.resource.id}`;
+  runtime.routing.mockResolvedValue({ url, from: { email: 'support@example.test', name: 'Support' }, replyTo: { email: 'inbound@example.test' } });
+  expect(await sendCoManagedRequesterCommentEmail(item)).toEqual({ status: 'delivered' });
+  const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
+  expect(runtime.locale).toHaveBeenCalledWith(item.tenant, { email: item.email, clientId, userType: 'client' });
+  expect(params).toMatchObject({ to: item.email, retryPolicy: 'caller', from: { email: 'support@example.test' }, replyTo: { email: 'inbound@example.test' }, headers: { 'Message-ID': item.messageId } });
+  expect(params.userId).toBeUndefined(); expect(params).not.toHaveProperty('replyContext'); expect(params).not.toHaveProperty('entityId');
+  expect(content.html).toContain(url); expect(content.html).not.toContain('/msp/'); expect(content.html).toContain('&lt;script&gt;');
+  const textReply = parseEmailReply({ text: `Requester answer\n\n${content.text}` });
+  expect(textReply.tokens?.conversationToken).toBe(item.replyToken);
+  expect(textReply.sanitizedText).toBe('Requester answer');
+  const htmlReply = parseEmailReply({ text: '', html: `<p>Requester answer</p>${content.html}` });
+  expect(htmlReply.tokens?.conversationToken).toBe(item.replyToken);
+  expect(htmlReply.sanitizedHtml).toBe('<p>Requester answer</p>');
+  expect(parseEmailReply({ text: '', html: content.html }).tokens?.conversationToken).toBe(item.replyToken);
+});
+
+it('rejects malformed requester reply markers before rendering or transport', async () => {
+  const { sendCoManagedRequesterCommentEmail } = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  await expect(sendCoManagedRequesterCommentEmail({ replyToken: 'cm1:" injected' } as any)).rejects.toThrow('Invalid requester reply token');
+  expect(runtime.send).not.toHaveBeenCalled();
 });

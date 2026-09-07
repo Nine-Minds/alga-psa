@@ -51,7 +51,8 @@
     "./lib/tickets/clientPortalVisibility": "./dist/lib/tickets/clientPortalVisibility.js",
     "./lib/tickets/clientPortalVisibility.server": "./dist/lib/tickets/clientPortalVisibility.server.js",
     "./*": "./dist/*",
-    "./lib/email/senderAuthVerification": "./dist/lib/email/senderAuthVerification.js"
+    "./lib/email/senderAuthVerification": "./dist/lib/email/senderAuthVerification.js",
+    "./utils/tenantSlug": "./dist/utils/tenantSlug.js"
   },
   "scripts": {
     "build": "tsup",
