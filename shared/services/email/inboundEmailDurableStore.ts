@@ -1000,6 +1000,7 @@ export interface InboundArtifactRecord {
   next_attempt_at: Date | string | null;
   file_id: string | null;
   document_id: string | null;
+  conversation_attachment_id?: string | null;
   last_error: string | null;
   completed_at: Date | string | null;
 }
@@ -1177,9 +1178,12 @@ export async function transitionArtifact(db: DurableDb, params: {
   token: string;
   version: number;
   status: 'succeeded' | 'skipped' | 'retryable_failed' | 'terminal_failed';
+  requireUnexpired?: boolean;
   file_id?: string | null;
   document_id?: string | null;
   storage_key?: string | null;
+  conversation_attachment_id?: string | null;
+  content_digest?: string | null;
   nextAttemptAt?: Date | null;
   error?: string | null;
 }): Promise<boolean> {
@@ -1190,6 +1194,8 @@ export async function transitionArtifact(db: DurableDb, params: {
   if (params.file_id !== undefined) patch.file_id = params.file_id;
   if (params.document_id !== undefined) patch.document_id = params.document_id;
   if (params.storage_key !== undefined) patch.storage_key = params.storage_key;
+  if (params.conversation_attachment_id !== undefined) patch.conversation_attachment_id = params.conversation_attachment_id;
+  if (params.content_digest !== undefined) patch.content_digest = params.content_digest;
   if (['succeeded', 'skipped', 'terminal_failed'].includes(params.status)) {
     patch.completed_at = db.fn.now();
     patch.lease_owner = null;
@@ -1212,6 +1218,7 @@ export async function transitionArtifact(db: DurableDb, params: {
       lease_token: params.token,
       lease_version: params.version,
     })
+    .modify(query => { if (params.requireUnexpired) query.where('lease_expires_at', '>', db.raw('clock_timestamp()')); })
     .update(patch);
   return updated > 0;
 }

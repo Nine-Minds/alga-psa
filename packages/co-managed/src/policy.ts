@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { hasCoManagedLocalPermission } from './localPermission';
-import { getCoManagedOperationalState, CoManagedLifecycleError } from '@alga-psa/licensing';
+import { getCoManagedOperationalState, CoManagedLifecycleError } from '@alga-psa/licensing/lifecycle';
 
 /** Authentication adapters supply the live home identity, never request fields. */
 export interface CoManagedHomeActor { tenant: string; userId: string }

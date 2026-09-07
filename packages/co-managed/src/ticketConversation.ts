@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { CoManagedLifecycleError } from '@alga-psa/licensing';
+import { isCoManagedLifecycleError } from '@alga-psa/licensing';
 import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources, coManagedConversationAttachmentSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
@@ -141,7 +141,7 @@ export async function getCoManagedConversationContributionHints(db: Knex, inputA
       return { writeAudiences, attachmentAudiences: isCoManagedReadFieldHidden(hidden, [...coManagedConversationAttachmentSources, 'co_management_conversation_drafts']) ? [] : writeAudiences };
     }));
   } catch (error) {
-    if (error instanceof CoManagedSharedWorkError || error instanceof CoManagedLifecycleError) return { writeAudiences: [], attachmentAudiences: [] };
+    if (error instanceof CoManagedSharedWorkError || isCoManagedLifecycleError(error)) return { writeAudiences: [], attachmentAudiences: [] };
     throw error;
   }
 }

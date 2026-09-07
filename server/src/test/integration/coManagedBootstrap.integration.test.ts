@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -919,11 +919,11 @@ it('deduplicates co-managed outbox consumers even with installation rollout off'
   expect(await customer.table('inbound_email_event_deliveries')).toEqual([expect.objectContaining({ status: 'delivered' })]);
 });
 
-async function runCoManagedArtifact(tenantId: string, inboxId: string, artifactKey: string) {
+async function runCoManagedArtifact(tenantId: string, inboxId: string, artifactKey: string, qualifiedReplyArtifacts?: import('../../../../shared/services/email/qualifiedReplyArtifacts').QualifiedReplyArtifactProcessor) {
   const { processInboundArtifactJob } = await import('../../../../shared/services/email/inboundEmailArtifactWorker');
   return processInboundArtifactJob({ version: 2, jobId: randomUUID(), tenantId, inboxId, recordId: artifactKey,
     workType: 'process_artifact', providerId: '', providerType: 'google', enqueuedAt: new Date().toISOString() } as any,
-  { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} });
+  { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} }, qualifiedReplyArtifacts);
 }
 async function expireCoManagedEntitlement(sponsorTenant: string) {
   const lapse = new Date(Date.now() - 31 * 86_400_000);
@@ -9508,4 +9508,152 @@ it('rolls technician canonical writes back when durable MIME identity disagrees'
   expect(await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
   expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
   expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+}));
+
+
+async function technicianArtifacts(fixture: { emailData: any; run: () => Promise<any>; customer: ReturnType<typeof tenantDb>; inbox: any; resource: { tenant: string } }) {
+  fixture.emailData.attachments = [{ id: 'diagnostics', name: 'diagnostics.txt', contentType: 'text/plain', size: 10, content: Buffer.from('diagnostic').toString('base64') }];
+  expect(await fixture.run()).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes, path) => ({ path, size: bytes.length }));
+  const { processCoManagedReplyArtifact } = await import('../../../../packages/co-managed/src/inboundEmailAttachments');
+  const artifacts = await fixture.customer.table('inbound_email_artifacts').where('inbox_id', fixture.inbox.inbox_id);
+  return { artifacts, process: (key: string) => runCoManagedArtifact(fixture.resource.tenant, fixture.inbox.inbox_id, key, processCoManagedReplyArtifact) };
+}
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('materializes technician MIME files only in their admitted %s conversation and retains MIME separately', async audience => withTechnicianInboundFixture(async fixture => {
+  const { customer, resource, inbox, customerPrincipal, principal } = fixture;
+  const { artifacts, process } = await technicianArtifacts(fixture);
+  const generic = await customer.table('external_files');
+  for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  const receipt = await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first();
+  const rows = await customer.table('co_management_conversation_attachments').where('comment_id', receipt.comment_id);
+  expect(rows).toHaveLength(1); expect(rows[0]).toMatchObject({ status: 'ready', file_name: 'diagnostics.txt', file_size: 10, actor_user_id: receipt.actor_user_id });
+  const completed = await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id);
+  expect(completed.find(row => row.artifact_type === 'attachment')).toMatchObject({ status: 'succeeded', conversation_attachment_id: rows[0].attachment_id, file_id: null, document_id: null });
+  expect(completed.find(row => row.artifact_type === 'original_email')).toMatchObject({ status: 'succeeded', storage_key: inbox.source_object_key,
+    content_digest: inbox.source_sha256, conversation_attachment_id: null, file_id: null, document_id: null });
+  const { listCoManagedConversationAttachments: list } = await import('../../../../packages/co-managed/src/conversationAttachments');
+  const comment = { storeTenant: resource.tenant, commentId: receipt.comment_id, threadId: receipt.thread_id };
+  expect(await list(db, customerPrincipal, resource, comment)).toEqual([expect.objectContaining({ attachmentId: rows[0].attachment_id, audience })]);
+  if (audience === 'organization_private') await expect(list(db, principal, resource, comment)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  else expect(await list(db, principal, resource, comment)).toHaveLength(1);
+  for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(artifactStorage.upload).toHaveBeenCalledTimes(1); expect(await customer.table('external_files')).toEqual(generic);
+}, audience));
+
+it.each(['deleted', 'disclosed', 'inactive', 'no_update', 'missing_receipt', 'changed_actor', 'changed_source'] as const)('retains technician MIME artifacts after current %s authority fails', async condition => withTechnicianInboundFixture(async fixture => {
+  const { customer, recipient, inbox } = fixture;
+  const { artifacts, process } = await technicianArtifacts(fixture);
+  const receipt = await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first();
+  if (condition === 'deleted') await customer.table('comments').where('comment_id', receipt.comment_id).update({ deleted_at: new Date() });
+  if (condition === 'disclosed') {
+    await customer.table('comment_threads').where('thread_id', receipt.thread_id).update({ collaboration_audience: 'requester', is_internal: false });
+    await customer.table('comments').where('thread_id', receipt.thread_id).update({ is_internal: false });
+  }
+  if (condition === 'inactive') await customer.table('users').where('user_id', recipient.userId).update({ is_inactive: true });
+  if (condition === 'no_update') {
+    const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).first();
+    await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+  }
+  if (condition === 'missing_receipt') await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).del();
+  if (condition === 'changed_actor') await customer.table('comments').where('comment_id', receipt.comment_id).update({ user_id: fixture.customerPrincipal.userId });
+  if (condition === 'changed_source') await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).update({ source_sha256: 'f'.repeat(64) });
+  for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'defer', reason: 'co_managed_artifact_authority_unavailable' });
+  expect(artifactStorage.upload).not.toHaveBeenCalled();
+  expect(await customer.table('co_management_conversation_attachments').where('comment_id', receipt.comment_id)).toHaveLength(0);
+  expect((await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id)).every(row => row.status === 'pending' && row.attempt_count === 0)).toBe(true);
+}));
+
+it('retries technician artifact object acknowledgement loss at the same path without duplicating canonical effects', async () => withTechnicianInboundFixture(async fixture => {
+  const { customer, inbox } = fixture, { artifacts, process } = await technicianArtifacts(fixture);
+  const artifact = artifacts.find(row => row.artifact_type === 'attachment');
+  artifactStorage.upload.mockImplementationOnce(async () => { throw new Error('Lost object acknowledgement'); });
+  expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'retry' });
+  const first = await customer.table('co_management_conversation_attachments').first(); expect(first.status).toBe('pending');
+  await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id).update({ next_attempt_at: new Date(0) });
+  expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(await customer.table('co_management_conversation_attachments')).toHaveLength(1);
+  expect(artifactStorage.upload.mock.calls[0][1]).toBe(artifactStorage.upload.mock.calls[1][1]);
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
+}));
+
+it('materializes accepted technician files after token deletion and editable metadata removal', async () => withTechnicianInboundFixture(async fixture => {
+  const { artifacts, process } = await technicianArtifacts(fixture);
+  await fixture.customer.table('co_management_customer_reply_tokens').del();
+  await fixture.customer.table('comments').update({ metadata: {} });
+  for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(artifactStorage.upload).toHaveBeenCalledTimes(1);
+}));
+
+
+it('rolls back technician file publication if artifact completion loses its fence after upload', async () => withTechnicianInboundFixture(async fixture => {
+  const { customer, inbox } = fixture, { artifacts, process } = await technicianArtifacts(fixture);
+  const artifact = artifacts.find(row => row.artifact_type === 'attachment');
+  const store = await import('../../../../shared/services/email/inboundEmailDurableStore'), original = store.transitionArtifact;
+  const complete = vi.spyOn(store, 'transitionArtifact').mockImplementationOnce(async (...args) => { await original(...args); return false; });
+  try {
+    expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'defer', reason: 'co_managed_artifact_authority_unavailable' });
+    expect((await customer.table('co_management_conversation_attachments').first()).status).toBe('pending');
+    expect(await customer.table('inbound_email_artifacts').where({ inbox_id: inbox.inbox_id, artifact_key: artifact.artifact_key }).first()).toMatchObject({ status: 'pending', conversation_attachment_id: null });
+  } finally { complete.mockRestore(); }
+  await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id).update({ next_attempt_at: new Date(0) });
+  expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(await customer.table('co_management_conversation_attachments')).toHaveLength(1);
+}));
+
+it('does not publish technician artifact bytes after the retained claim expires during transport', async () => withTechnicianInboundFixture(async fixture => {
+  const { customer, inbox, resource } = fixture, { artifacts } = await technicianArtifacts(fixture);
+  const artifact = artifacts.find(row => row.artifact_type === 'attachment');
+  const { processCoManagedReplyArtifact } = await import('../../../../packages/co-managed/src/inboundEmailAttachments');
+  const { claimArtifact } = await import('../../../../shared/services/email/inboundEmailDurableStore');
+  const claim = await claimArtifact(db, { tenant: resource.tenant, inbox_id: inbox.inbox_id, artifact_key: artifact.artifact_key, owner: 'expiry-test', leaseTtlMs: 2000 });
+  expect(claim.claimed).toBe(true); if (!claim.claimed) throw new Error('Expected artifact claim');
+  const upload = vi.fn(async () => { await db.raw('select pg_sleep(2.1)'); });
+  await expect(processCoManagedReplyArtifact(db, { tenant: resource.tenant, inboxId: inbox.inbox_id, artifactKey: artifact.artifact_key, sourceSha256: inbox.source_sha256,
+    claim: { owner: 'expiry-test', token: claim.row.lease_token!, version: Number(claim.row.lease_version) },
+    payload: { kind: 'attachment', fileName: 'diagnostics.txt', mimeType: 'text/plain', content: Buffer.from('diagnostic') } },
+  upload)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(upload).toHaveBeenCalledTimes(1);
+  expect((await customer.table('co_management_conversation_attachments').first()).status).toBe('pending');
+  expect((await customer.table('inbound_email_artifacts').where('artifact_key', artifact.artifact_key).first()).conversation_attachment_id).toBeNull();
+}));
+
+it('materializes one selected embedded image without processing sibling artifacts', async () => withTechnicianInboundFixture(async fixture => {
+  fixture.emailData.body.html = `<p>Screenshot</p><img src="data:image/png;base64,aW1hZ2U="><p>${fixture.emailData.body.text}</p>`;
+  const { artifacts, process } = await technicianArtifacts(fixture);
+  const embedded = artifacts.find(row => row.artifact_type === 'embedded_image'); expect(embedded).toBeTruthy();
+  expect(await process(embedded.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(artifactStorage.upload).toHaveBeenCalledTimes(1);
+  expect(Buffer.from(artifactStorage.upload.mock.calls[0][0]).toString()).toBe('image');
+  const rows = await fixture.customer.table('inbound_email_artifacts').where('inbox_id', fixture.inbox.inbox_id);
+  expect(rows.filter(row => row.artifact_key !== embedded.artifact_key).every(row => row.status === 'pending')).toBe(true);
+}));
+
+it('keeps receipt and source policy locks throughout technician artifact transport', async () => withTechnicianInboundFixture(async fixture => {
+  const { customer, resource, inbox, recipient } = fixture, { artifacts, process } = await technicianArtifacts(fixture);
+  const artifact = artifacts.find(row => row.artifact_type === 'attachment');
+  const receipt = await customer.table('co_management_inbound_reply_receipts').where('inbox_id', inbox.inbox_id).first();
+  const results: PromiseSettledResult<unknown>[] = [];
+  artifactStorage.upload.mockImplementationOnce(async (bytes, path) => {
+    for (const [table, identity] of [
+      ['co_management_inbound_reply_receipts', { inbox_id: inbox.inbox_id }], ['inbound_email_artifacts', { inbox_id: inbox.inbox_id, artifact_key: artifact.artifact_key }],
+      ['tickets', { ticket_id: resource.id }], ['comment_threads', { thread_id: receipt.thread_id }], ['comments', { comment_id: receipt.comment_id }], ['users', { user_id: recipient.userId }],
+    ] as const) results.push(...await Promise.allSettled([db.transaction(trx => tenantDb(trx, resource.tenant).table(table).where(identity).forUpdate().noWait().first())]));
+    return { path, size: bytes.length };
+  });
+  expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(results).toHaveLength(6); expect(results.every(result => result.status === 'rejected' && (result.reason as any).code === '55P03')).toBe(true);
+}));
+
+
+it('defers technician artifacts on lapse and resumes retained customer ownership after an independent PSA upgrade', async () => withTechnicianInboundFixture(async fixture => {
+  const { customer, operation, resource, inbox } = fixture, { artifacts, process } = await technicianArtifacts(fixture);
+  await expireCoManagedEntitlement(operation.tenant);
+  for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'defer' });
+  expect(artifactStorage.upload).not.toHaveBeenCalled();
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id).update({ next_attempt_at: new Date(0) });
+  for (const artifact of artifacts) expect(await process(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(artifactStorage.upload).toHaveBeenCalledTimes(1);
 }));

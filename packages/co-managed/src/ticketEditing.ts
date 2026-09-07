@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite, CoManagedLifecycleError } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alga-psa/licensing';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
@@ -114,7 +114,7 @@ export async function getCoManagedTicketEditor(db: Knex, inputActor: CoManagedSe
       withCoManagedSharedWork(context.trx, actor, resource, 'read', async readContext =>
         readEditor(readContext, await editableFields(context, readContext, await ticketRow(context)))));
   } catch (error) {
-    if (!(error instanceof CoManagedSharedWorkError) && !(error instanceof CoManagedLifecycleError)) throw error;
+    if (!(error instanceof CoManagedSharedWorkError) && !(isCoManagedLifecycleError(error))) throw error;
     return withCoManagedSharedWork(db, actor, resource, 'read', context => readEditor(context));
   }
 }

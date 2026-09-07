@@ -225,3 +225,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: inboundEmailArtifactWorker.ts and the future conversation artifact adapter.
 - Gate: concrete private email replies now reach the canonical inbox writer; current native folder defaults are the wrong authority boundary. Full conversation attachment materialization remains required.
 - Status: pending adapter (2026-09-07). Digest-verified original MIME identifies reserved technician tokens before any native upload. Its artifact manifest/source stays pending with fenced, attempt-preserving deferral until the conversation attachment adapter is connected. No production outgoing technician token issuance has been enabled. The generic pause helper is shared with lifecycle callers without changing their lease/failure preservation. This retention boundary is interim protection, not completed attachment handling.
+
+
+## conversation-transfer-authority — friction
+- **What:** The existing durable file reservation/transfer engine assumed an interactive session, preventing accepted email artifacts from using current worker authority.
+- **Where:** `packages/co-managed/src/conversationAttachments.ts` and `inboundEmailAttachments.ts`.
+- **Gate:** Interactive published comments and drafts already share stable immutable file identities, checksums, reservation and publication. Email is the third real caller; duplicating transport or inventing a session would add authority and retry risk. ACT / bounded-now within the approved mail integration work.
+- **Status:** revised. The transfer engine consumes a retained transaction, owner-qualified actor/source and an explicit write-authority assertion. Interactive wrappers preserve session/lifecycle checks. The worker supplies committed reply provenance, current RBAC/source/audience and a live fenced artifact claim. An optional completion callback runs atomically with ready publication, including exact ready retries. The compiled worker entry uses the licensing runtime surface. Storage-provider composition remains separately marked while its error policy settles.

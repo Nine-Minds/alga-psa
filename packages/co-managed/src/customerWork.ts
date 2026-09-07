@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite, getCoManagedOperationalState } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite, getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
 import type { AuthorizationRecord } from '@alga-psa/authorization';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, lockCoManagedSessionIdentity, assertCoManagedSessionUnexpired,
   authorizeCoManagedWorkRecord, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';

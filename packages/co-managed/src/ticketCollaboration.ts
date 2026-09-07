@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
+import { isCoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import { getCoManagedSharedWorkSummary } from './sharedWorkRead';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
@@ -36,7 +36,7 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
         ? await withCoManagedCustomerTicket(trx, actor, inputResource, 'update', allow)
         : await withCoManagedSharedWork(trx, actor, inputResource, 'update', allow);
     } catch (error) {
-      if (!(error instanceof CoManagedLifecycleError) && !(error instanceof CoManagedSharedWorkError)) throw error;
+      if (!(isCoManagedLifecycleError(error)) && !(error instanceof CoManagedSharedWorkError)) throw error;
     }
     const summary = await getCoManagedSharedWorkSummary(trx, actor, inputResource);
     const resource = summary.resource, customer = tenantDb(trx, resource.tenant);

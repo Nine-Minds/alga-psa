@@ -1,3 +1,4 @@
+import { processCoManagedReplyArtifact } from '@alga-psa/co-managed/inboundEmailAttachments';
 import { admitCoManagedEmailReply } from '@alga-psa/co-managed/inboundEmailReply';
 import dotenv from 'dotenv';
 import logger from '@alga-psa/core/logger';
@@ -66,7 +67,7 @@ async function start() {
       pollDelayMs: 250,
       renewPostgresLease: renewPostgresLeaseForV2Job,
       handleJob: async (job, ctx) => {
-        return processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply });
+        return processUnifiedInboundEmailDurableJob(job, ctx, { qualifiedReplyAdmission: admitCoManagedEmailReply, qualifiedReplyArtifacts: processCoManagedReplyArtifact });
       },
     });
     durableConsumerTask = durableConsumer.start().catch((error) => {

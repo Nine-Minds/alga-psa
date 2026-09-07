@@ -2,7 +2,7 @@ import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { CoManagedLifecycleError, assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { isCoManagedLifecycleError, assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { withCoManagedCustomerTicket } from './customerWork';
@@ -127,7 +127,33 @@ export async function uploadCoManagedConversationAttachment(db: Knex, inputActor
 export async function transferCoManagedAttachment(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource, input: CoManagedAttachmentUpload,
   withAuthority: <T>(work: (context: CoManagedAttachmentContext) => Promise<T>) => Promise<T>,
   upload: (path: string, content: Uint8Array, mimeType: string) => Promise<void>): Promise<CoManagedConversationAttachment> {
-  const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), comment = reference(input?.comment);
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  return transferAuthorizedCoManagedAttachment(db, actor, inputResource, input, work => withAuthority(context => {
+    if (context.sessionId !== actor.sessionId || context.action !== 'update') deny();
+    return work({ ...context, action: 'update', assertWriteAuthority: async () => {
+      await assertCoManagedSessionUnexpired(context.trx, actor);
+      await assertCoManagedOperationalWrite(context.trx, context.resource.tenant);
+    } });
+  }), upload);
+}
+
+/** Transfer mechanics consume retained write authority rather than assuming a
+ * session. Interactive callers retain their session checks; durable workers
+ * retain their receipt, current actor/source policy and live fenced claim. */
+export interface CoManagedAttachmentTransferContext {
+  trx: Knex.Transaction; actor: { tenant: string; userId: string }; resource: CoManagedSharedResource;
+  comment: CoManagedCommentReference; audience: CommentAudience; action: 'update'; draftOperationId?: string;
+  assertWriteAuthority: () => Promise<void>;
+}
+export async function transferAuthorizedCoManagedAttachment(db: Knex, inputActor: { tenant: string; userId: string },
+  inputResource: CoManagedSharedResource, input: CoManagedAttachmentUpload,
+  withAuthority: <T>(work: (context: CoManagedAttachmentTransferContext) => Promise<T>) => Promise<T>,
+  upload: (path: string, content: Uint8Array, mimeType: string) => Promise<void>,
+  complete?: (context: CoManagedAttachmentTransferContext, attachment: CoManagedConversationAttachment, digest: string) => Promise<void>,
+): Promise<CoManagedConversationAttachment> {
+  if (!inputActor || ![inputActor.tenant, inputActor.userId].every(isCoManagedUuid)) deny();
+  const actor = { tenant: inputActor.tenant, userId: inputActor.userId };
+  const resource = resourceSnapshot(inputResource), comment = reference(input?.comment);
   const invalid = (): never => { throw new CoManagedAttachmentError('INVALID_ATTACHMENT'); };
   // LEVERAGE: pattern co-managed-attachment-metadata — manifests and byte transfers must accept the same metadata limits.
   if ((db as Knex.Transaction).isTransaction || !input || Object.keys(input).some(key => !['attachmentId', 'comment', 'fileName', 'mimeType', 'content'].includes(key)) || !isCoManagedUuid(input.attachmentId) ||
@@ -138,8 +164,8 @@ export async function transferCoManagedAttachment(db: Knex, inputActor: CoManage
   const attachmentId = input.attachmentId.toLowerCase(), fileName = input.fileName, mimeType = input.mimeType.toLowerCase();
   const hash = createHash('sha256').update(JSON.stringify({ resource, comment, actor: { tenant: actor.tenant, userId: actor.userId }, attachmentId,
     fileName, mimeType, contentHash, size: content.length })).digest('hex');
-  const assertContext = (context: CoManagedAttachmentContext) => {
-    if (context.action !== 'update' || context.sessionId !== actor.sessionId || context.actor.tenant !== actor.tenant || context.actor.userId !== actor.userId ||
+  const assertContext = (context: CoManagedAttachmentTransferContext) => {
+    if (!context.trx.isTransaction || typeof context.assertWriteAuthority !== 'function' || context.action !== 'update' || context.actor.tenant !== actor.tenant || context.actor.userId !== actor.userId ||
         context.resource.tenant !== resource.tenant || context.resource.relationshipId !== resource.relationshipId || context.resource.id !== resource.id || context.resource.kind !== 'ticket' ||
         context.comment.storeTenant !== comment.storeTenant || context.comment.threadId !== comment.threadId || context.comment.commentId !== comment.commentId) deny();
   };
@@ -160,11 +186,14 @@ export async function transferCoManagedAttachment(db: Knex, inputActor: CoManage
     const row = await attachmentQuery(context).where('attachment_id', attachmentId).forUpdate().first();
     if (!row || row.discarded_at || row.request_hash !== hash || row.draft_operation_id !== (context.draftOperationId ?? null)) throw new CoManagedAttachmentError('ATTACHMENT_OPERATION_CONFLICT');
     if (row.storage_path !== `co-management/${comment.storeTenant}/${attachmentId}`) deny();
-    if (row.status === 'ready') return summary(row, context.audience);
-    await upload(row.storage_path, content, mimeType);
-    await assertCoManagedSessionUnexpired(context.trx, actor); await assertCoManagedOperationalWrite(context.trx, resource.tenant);
-    await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()'), last_activity_at: context.trx.raw('clock_timestamp()') });
-    return summary(row, context.audience);
+    if (row.status !== 'ready') {
+      await upload(row.storage_path, content, mimeType);
+      await context.assertWriteAuthority();
+      await attachmentQuery(context).where('attachment_id', attachmentId).update({ status: 'ready', ready_at: context.trx.raw('clock_timestamp()'), last_activity_at: context.trx.raw('clock_timestamp()') });
+    } else await context.assertWriteAuthority();
+    const attachment = summary(row, context.audience);
+    await complete?.(context, attachment, contentHash);
+    return attachment;
   });
 }
 export async function listCoManagedConversationAttachments(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource,
@@ -229,7 +258,7 @@ export async function canManageCoManagedConversationAttachments(db: Knex, inputA
   const actor = snapshotCoManagedSessionActor(inputActor), resource = resourceSnapshot(inputResource), comment = reference(inputComment);
   try { return await withComment(db, actor, resource, comment, 'update', async () => true); }
   catch (error) {
-    if (error instanceof CoManagedSharedWorkError || error instanceof CoManagedLifecycleError) return false;
+    if (error instanceof CoManagedSharedWorkError || isCoManagedLifecycleError(error)) return false;
     throw error;
   }
 }
