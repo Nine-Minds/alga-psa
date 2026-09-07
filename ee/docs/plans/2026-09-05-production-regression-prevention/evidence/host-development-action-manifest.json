@@ -1,0 +1,42 @@
+{
+  "status": "verified in host development: billing compiles and authenticated designer persistence journey passes",
+  "environment": "enterprise host Next.js 16.2.12 webpack development server, macOS ARM64",
+  "releaseValidation": false,
+  "before": {
+    "manifestBytes": 224520089,
+    "actionCount": 1178,
+    "workerCount": 1562,
+    "maximumModuleIdCharacters": 215829,
+    "billingFailure": "RangeError: Invalid string length in FlightClientEntryPlugin.createActionAssets JSON.stringify",
+    "log": "/tmp/alga-designer-host-12gb.log",
+    "browserSession": 19194,
+    "browserExitCode": 1
+  },
+  "change": "Use optimization.moduleIds=deterministic for development server compilations only",
+  "reference": "https://webpack.js.org/configuration/optimization/#optimizationmoduleids",
+  "verification": {
+    "browserSession": 21557,
+    "exitCode": 0,
+    "passed": 1,
+    "failed": 0,
+    "retries": 0,
+    "durationSeconds": 36.4,
+    "log": "/tmp/alga-designer-host-browser-warm.log",
+    "report": "e2e-tests/test-results/local/results.json",
+    "scope": "real login, author date descending sort, save through UI, database AST readback, clear editor cache, reload/reopen, same dates and persisted AST",
+    "limitations": [
+      "Development server only; production build/native CI pending",
+      "Previous cold run saved the database row but failed return-navigation assertion; warm run passed without retries. Cold-start navigation stability remains unproven."
+    ]
+  },
+  "afterDashboard": {
+    "manifestBytes": 414041,
+    "actionCount": 1178,
+    "maximumModuleIdCharacters": 6
+  },
+  "afterBilling": {
+    "manifestBytes": 777208,
+    "actionCount": 1951,
+    "maximumModuleIdCharacters": 6
+  }
+}

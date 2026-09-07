@@ -28,8 +28,8 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await page.locator('#invoice-designer-transforms-output-binding').fill(outputBinding);
   await page.locator('#invoice-designer-transforms-output-binding').press('Tab');
   await page.getByRole('button', { name: '+ Sort', exact: true }).first().click();
-  await choose('[id^="transform-sort-field-"]', 'date');
-  await choose('[id^="transform-sort-direction-"]', 'Descending');
+  await choose('[role="combobox"][id^="transform-sort-field-"]', 'date');
+  await choose('[role="combobox"][id^="transform-sort-direction-"]', 'Descending');
   await assertDates();
   await page.locator('#save-template-button').click();
   await expect(page).not.toHaveURL(/templateId=/);

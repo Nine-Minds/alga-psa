@@ -7,6 +7,25 @@ credentials, and runs the tracked specs here. It installs dependencies from this
 
 ## Run locally
 
+For fast development feedback, run the application directly on the host against
+an isolated database and existing emulator services, then use
+`npm run test:local -- tests/<journey>.spec.ts`. This executes the same journeys
+headed, with no retries, and writes results under `test-results/local/` with
+`releaseValidation: false` and a host-development lifecycle label. It does not
+produce the production runner's execution evidence. Supply the same isolated
+database and real sign-in credentials described below. A host dev server can set
+`NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true` at startup for the
+billed-time designer journey. Reserve full production image builds for final
+packaging and installation validation.
+
+Keep the browser base URL and the application's authentication origin identical:
+cookies set on `127.0.0.1` do not follow a redirect to `localhost`. If a host test
+reports `ERR_CONNECTION_REFUSED`, check the server log before adding retries.
+Next.js can automatically restart its development server when heap usage crosses
+its threshold, briefly dropping the listener. Size `NODE_OPTIONS` for the host's
+available memory and reuse the compilation cache; the local runner keeps retries
+disabled so these interruptions remain visible.
+
 Start an isolated production installation first. Set `E2E_USER_EMAIL` and
 `E2E_USER_PASSWORD` to its credentials, then use Node 22.13 or later (through Node 26). The tenant fixtures
 also require `E2E_DATABASE_ISOLATED=true`, `E2E_DB_NAME`, and `E2E_DB_PASSWORD`.

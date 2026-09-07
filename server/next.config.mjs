@@ -537,6 +537,12 @@ const nextConfig = {
   // This is required to support PostHog trailing slash API requests
   skipTrailingSlashRedirect: true,
   webpack: (config, { isServer, dev }) => {
+    if (dev && isServer) {
+      // Named action-entry IDs embed the entire loader query. Repeating those
+      // IDs for every action made the dev manifest exceed V8's string limit
+      // when billing compiled. Compact IDs retain all actions and source maps.
+      config.optimization = { ...config.optimization, moduleIds: 'deterministic' };
+    }
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
     // node_modules/.cache/webpack so it survives `.next` clears.

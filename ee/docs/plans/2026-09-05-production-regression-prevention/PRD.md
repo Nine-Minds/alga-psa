@@ -196,3 +196,16 @@ These decisions do not block WP1. Resolve them before the dependent operational 
 - Release readiness and scorecard distinguish failures, flakes, skipped/incomplete execution and unmeasured code.
 - Mutation/property pilots produce reviewed findings and reproducible failures, with an owned regression record for each chosen escaped-defect exemplar.
 - Deployed smoke is operational in isolated test resources, and a controlled failure reaches the designated owner without affecting customer data.
+
+### Development feedback and final release validation
+
+Use targeted host-run unit/component/integration tests and a host-run application for iterative Playwright feedback, reusing existing isolated database and emulator services. Defer full Docker/Colima image builds and installation checks to final validation, preferably native CI. Development browser results must be labeled and stored separately from production artifact evidence; they do not satisfy packaging, installation, or immutable promotion requirements. This execution policy follows the user’s request to reduce repeated Mac image builds.
+
+Apply this order within each work package:
+
+1. Run the smallest relevant behavioral unit/component suite directly on macOS; use watch mode when iterating on the same behavior.
+2. Run affected integration suites as host Node processes against migrated, isolated databases and reusable emulator services. Rebuild a service only when its changed behavior requires it; batch such validation at the final checkpoint.
+3. Run the affected Playwright journey against the host development server with `npm run test:local -- tests/<journey>.spec.ts` from `e2e-tests`. Verify persisted outcomes and failure recovery using the real application clients and emulator endpoints.
+4. At final validation, run the required production builds, CE/EE installation, worker/service packaging, upgrade and Citus checks. Prefer native CI for this checkpoint; host development results do not close these acceptance items.
+
+The current Mac is ARM64 and both inspected Colima profiles are configured as aarch64. Architecture conversion is unnecessary. Record build time separately from test time so infrastructure startup does not obscure the cost of the tests themselves.

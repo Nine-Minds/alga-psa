@@ -1,6 +1,6 @@
 {
   "suite": "e2e-tests/tests/invoice-designer-persistence.spec.ts",
-  "status": "authored; collected in CE and EE; runtime execution pending",
+  "status": "Host EE development execution passed; CE/EE production execution pending",
   "executionPassed": false,
   "prerequisite": "Rebuild and run the isolated CE/EE production images; fresh-install CI now passes NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true to both server Dockerfiles.",
   "coverageIntended": [
@@ -11,7 +11,7 @@
     "Evaluated preview order retained and persisted AST unchanged"
   ],
   "limitations": [
-    "No runtime/browser pass yet",
+    "Host development pass does not prove production artifact behavior",
     "No generated invoice or PDF layout assertion",
     "Both remaining invoice layout acceptance cases remain outstanding",
     "No native CI proof"
@@ -21,6 +21,14 @@
     "scope": "client feature flags only",
     "normalBuildDefault": "empty override",
     "reportedBy": "E2E_BUILD_FEATURE_FLAGS -> Playwright config metadata",
-    "verification": "EE collection report contains expected metadata; 19 related component/hook tests passed; production build/browser execution pending"
+    "verification": "EE host browser verifies visible billed-time authoring; 19 related component/hook tests passed; production build/browser execution pending"
+  },
+  "executionScope": "production installation",
+  "developmentExecution": {
+    "passed": true,
+    "testsPassed": 1,
+    "retries": 0,
+    "durationSeconds": 36.4,
+    "evidence": "host-development-action-manifest.json"
   }
 }
