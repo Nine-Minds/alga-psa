@@ -1480,3 +1480,9 @@
 - Added temporal-database config, independent discovery and reconciled runner selection for product-upgrade-operations.integration.test.ts. Runner preserves explicit DB credentials for this lane and rejects missing explicit connection settings. Initial runner attempt exposed its default DB-less credential stripping; corrected lane behavior and exact rerun passes one file / ten cases in 6.55 seconds.
 - Citus workflow now executes database lane against the migrated citus_runtime DB after workflow/invoice regressions, uploads evidence even on failure, and includes runner/seed/core dependency triggers. Native verification pending publication.
 - Evidence: evidence/temporal-database-and-portal-gates.json.
+
+### 2026-09-07 — Portal resource reconciliation harness restored
+
+- Existing two cases failed because they depended on implicit service-host defaults and mocked the obsolete Kubernetes client path; current application uses Git/kubectl commands. Replaced obsolete transport mock with existing command-runner injection, explicit dummy Git/service configuration and temporary manifest files. No real Git or Kubernetes effects.
+- Preserved routing and stale-resource deletion assertions. New harness parses the actual multidocument YAML passed to apply, simulates stale manifest deletion and checks generated VirtualService host. Added admin retry boundary double used by current implementation. No production changes.
+- Focused cases pass; exact readiness runner session 86809 passes 27 files / 194 cases, zero skipped/missing, 9.21 seconds. Added file to readiness config and independent discovery. Evidence: evidence/portal-resource-reconciliation.json. Certificate issuance itself remains outside these simulated command checks.

@@ -25,6 +25,7 @@ export default defineConfig({
       'src/activities/__tests__/gmail-adapter-secret-log-hygiene.test.ts',
       'src/activities/__tests__/microsoft-email-filesystem-secret-provider.test.ts',
       'src/activities/__tests__/portal-domain-activities.test.ts',
+      'src/activities/__tests__/portal-domain-reconcile.integration.test.ts',
       'src/activities/__tests__/portal-domain-activities.git.test.ts',
       'src/activities/__tests__/portal-domain-nextauth-url.test.ts',
       'src/workflows/__tests__/marketing-fanout-workflow.test.ts',
