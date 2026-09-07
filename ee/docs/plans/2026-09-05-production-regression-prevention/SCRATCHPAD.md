@@ -1389,3 +1389,9 @@
 - Existing product-upgrade activity tests cover invalid subscription/price refusal, no-op target detection, seat quantity preservation, annual mapping and fallback price configuration. Product-bootstrap resolver tests cover unsupported products and actual temporary-directory seed enumeration. Eleven cases pass unchanged.
 - Added both suites to readiness config and independent discovery classifier. Actual run-additional-workspace-tests temporal-readiness entry point passes 16 files / 126 cases with complete discovery and execution reconciliation. Evidence: evidence/temporal-product-readiness.json.
 - Does not satisfy previous-release schema upgrade or live Stripe parity requirements. Native expanded readiness verification is still pending.
+
+### 2026-09-07 — Awaited email helper assertions and comment recovery
+
+- Comment recovery forwarding behavior passed unchanged but was unassigned. Email helper suite failed 17/24 cases and emitted an unhandled rejection: test assumptions were synchronous although password/service creation is async, and Context mock used logger instead of log. Password uniqueness tests had falsely compared distinct promises.
+- Await actual password values and service instances, assert the unknown-provider promise rejection, and update Context mock. All 24 email helper assertions now pass; no product behavior changed.
+- Added both suites to readiness/configured discovery. Actual required runner: 18 files, 151 passed, zero skips or unhandled errors, full discovery/execution reconciliation. Evidence: evidence/temporal-email-helper-readiness.json. Native verification pending.
