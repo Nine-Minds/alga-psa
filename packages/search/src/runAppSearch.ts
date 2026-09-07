@@ -1,4 +1,6 @@
 import type { Knex } from 'knex';
+import { withProjectSearchAccess, type SearchAuthentication } from './projectSearchAccess';
+export type { SearchAuthentication } from './projectSearchAccess';
 
 import type { IUserWithRoles } from '@alga-psa/types';
 import { SEARCH_OBJECT_TYPES, type SearchObjectType } from '@alga-psa/types';
@@ -11,11 +13,15 @@ import {
 } from './acl';
 import {
   countSearchMatchesByType,
+  countSearchMatches,
+  runSearchTypeaheadQuery,
   encodeSearchCursor,
   runSearchQuery,
 } from './query';
 import {
   searchAppResultSchema,
+  searchTypeaheadResultSchema,
+  type SearchTypeaheadResult,
   type SearchAppInput,
   type SearchAppResult,
   type SearchResultRow,
@@ -144,56 +150,79 @@ export function toSearchResultRow(
  * limiting, no telemetry) so both callers enforce ACL/permission filtering
  * identically — keeping the security-critical logic single-sourced. Callers
  * are responsible for authentication, tenant context, and providing a
- * permissioned `user` (with roles) plus an explicit tenant `knex`.
+ * permissioned `user` (with roles), an explicit tenant `knex`, and the verified
+ * session/API-key identity for co-managed or retained customer-owned projects.
  */
 export async function runAppSearch(
   knex: Knex,
   tenant: string,
   user: IUserWithRoles,
   input: SearchAppInput,
+  authentication?: SearchAuthentication,
 ): Promise<SearchAppResult> {
-  const limit = normalizeLimit(input.limit);
-  const requestedTypes = resolveAllowedTypes(input.types);
-  const clientAccess = resolveClientAccess(user);
-  const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
-  const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
+  user = { ...user };
+  input = { ...input, types: input.types ? [...input.types] : undefined };
+  return withProjectSearchAccess(knex, tenant, user, authentication, async (knex, searchIndex) => {
+    const limit = normalizeLimit(input.limit);
+    const requestedTypes = resolveAllowedTypes(input.types);
+    const clientAccess = resolveClientAccess(user);
+    const acl = await resolveSearchAclPrincipal(knex, user, clientAccess);
+    const allowedTypes = filterTypesByPermission(requestedTypes, acl.permissions);
 
-  const [hits, typeCounts] = await Promise.all([
-    runSearchQuery({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      limit: limit + 1,
-      cursor: input.cursor,
-      sort: input.sort,
-      includeSnippets: true,
-      acl,
-    }),
-    countSearchMatchesByType({
-      knex,
-      tenant,
-      query: input.query,
-      allowedTypes,
-      acl,
-    }),
-  ]);
+    const [hits, typeCounts] = await Promise.all([
+      runSearchQuery({
+        knex,
+        tenant,
+        query: input.query,
+        allowedTypes,
+        limit: limit + 1,
+        cursor: input.cursor,
+        sort: input.sort,
+        includeSnippets: true,
+        acl,
+        searchIndex,
+      }),
+      countSearchMatchesByType({
+        knex,
+        tenant,
+        query: input.query,
+        allowedTypes,
+        acl,
+        searchIndex,
+      }),
+    ]);
 
-  const visibleHits = await verifyResultVisibility(knex, acl, hits);
-  const pageHits = visibleHits.slice(0, limit);
-  const groups = emptyGroups();
-  for (const [type, count] of Object.entries(typeCounts) as Array<[SearchObjectType, number]>) {
-    groups[type] = count;
-  }
-  const totalCount = Object.values(typeCounts).reduce((sum, value) => sum + value, 0);
+    const visibleHits = await verifyResultVisibility(knex, acl, hits);
+    const pageHits = visibleHits.slice(0, limit);
+    const groups = emptyGroups();
+    for (const [type, count] of Object.entries(typeCounts) as Array<[SearchObjectType, number]>) {
+      groups[type] = count;
+    }
+    const totalCount = Object.values(typeCounts).reduce((sum, value) => sum + value, 0);
 
-  const lastHit = pageHits[pageHits.length - 1];
-  const result: SearchAppResult = {
-    results: pageHits.map(toSearchResultRow),
-    groups,
-    totalCount,
-    nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
-  };
+    const lastHit = pageHits[pageHits.length - 1];
+    const result: SearchAppResult = {
+      results: pageHits.map(toSearchResultRow),
+      groups,
+      totalCount,
+      nextCursor: visibleHits.length > limit && lastHit ? encodeSearchCursor(lastHit) : undefined,
+    };
 
-  return searchAppResultSchema.parse(result) as SearchAppResult;
+    return searchAppResultSchema.parse(result) as SearchAppResult;
+  });
+}
+
+/** Typeahead shares the same retained relation as full and REST search. */
+export async function runAppTypeaheadSearch(knex: Knex, tenant: string, user: IUserWithRoles,
+  input: Pick<SearchAppInput, 'query' | 'types' | 'cursor'>, authentication?: SearchAuthentication): Promise<SearchTypeaheadResult> {
+  user = { ...user };
+  input = { ...input, types: input.types ? [...input.types] : undefined };
+  return withProjectSearchAccess(knex, tenant, user, authentication, async (knex, searchIndex) => {
+    const acl = await resolveSearchAclPrincipal(knex, user, resolveClientAccess(user));
+    const allowedTypes = filterTypesByPermission(resolveAllowedTypes(input.types), acl.permissions);
+    const options = { knex, tenant, query: input.query, allowedTypes, cursor: input.cursor, acl, searchIndex };
+    const [hits, totalCount] = await Promise.all([runSearchTypeaheadQuery(options), countSearchMatches(options)]);
+    const visibleHits = await verifyResultVisibility(knex, acl, hits);
+    return searchTypeaheadResultSchema.parse({ results: visibleHits.slice(0, 5).map(hit => ({ ...toSearchResultRow(hit), snippet: undefined })), totalCount });
+  });
 }

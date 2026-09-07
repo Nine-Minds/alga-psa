@@ -10438,7 +10438,12 @@ async function withSharedProjectTaskFixture(work: (fixture: any) => Promise<void
   const project = await model.create(db, actor.tenant, { project_name: 'Joint rollout', project_number: 'JOINT-1', client_id: operation.customer_client_id,
     status: status.status_id, wbs_code: '1' } as any);
   const phase = await model.addPhase(db, actor.tenant, { project_id: project.project_id, phase_name: 'Delivery', wbs_code: '1.1', status: 'planning', order_number: 1 } as any);
-  for (const name of ['Ready', 'Verified']) await model.addStatusToProject(db, actor.tenant, project.project_id, { name, status_type: 'project_task', item_type: 'project_task', order_number: name === 'Ready' ? 100 : 200, is_closed: name === 'Verified', is_default: false } as any);
+  for (const name of ['Ready', 'Verified']) {
+    const added = await model.addStatusToProject(db, actor.tenant, project.project_id, { name, status_type: 'project_task', item_type: 'project_task', order_number: name === 'Ready' ? 100 : 200, is_closed: name === 'Verified', is_default: false } as any);
+    // The native model gives every new mapping display_order=0. This fixture
+    // indexes Ready/Verified by position, so explicitly establish their order.
+    await customer.table('project_status_mappings').where({ project_id: project.project_id, status_id: added.status_id }).update({ display_order: name === 'Ready' ? 100 : 200 });
+  }
   const mappings = await model.getProjectStatusMappings(db, actor.tenant, project.project_id), taskId = randomUUID();
   await customer.table('project_tasks').insert({ tenant: actor.tenant, task_id: taskId, phase_id: phase.phase_id, task_name: 'Verify rollout', wbs_code: '1.1.1',
     project_status_mapping_id: mappings[0].project_status_mapping_id, task_type_key: 'task', description: 'Private detailed work', actual_hours: 123 });
@@ -11466,4 +11471,144 @@ it('task events reject cached content and mismatched resource identities instead
   await customer.table('co_management_event_outbox').where('event_id', root.operationId).update({ resource_id: randomUUID() });
   const send = vi.fn(); expect(await dispatch(db, resource.tenant, send)).toEqual({ published: 0, cancelled: 0, failed: 1 });
   expect(send).not.toHaveBeenCalled();
+}));
+
+async function withProjectSearchFixture(work: (fixture: any) => Promise<void>) {
+  await withNativeTaskCommentsFixture(async fixture => {
+    const { customer, resource, project, phase, user, customerPrincipal, add } = fixture;
+    await customer.table('projects').where('project_id', project.project_id).update({ project_name: 'Marigoldenterprise', description: 'quasarspectroscopy body', updated_at: new Date() });
+    await customer.table('project_phases').where('phase_id', phase.phase_id).update({ phase_name: 'Neutronstage', description: 'quasarspectroscopy body', updated_at: new Date() });
+    await customer.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Cobaltworkitem', description: 'quasarspectroscopy body', updated_at: new Date() });
+    const root = await add(customerPrincipal, 'organization_private', 'quasarspectroscopy body');
+    const indexers = await import('../../../../packages/search/src/index'), { upsertSearchDoc } = await import('../../../../packages/search/src/upsert');
+    const objects = [['project', project.project_id], ['project_phase', phase.phase_id], ['project_task', resource.id], ['project_task_comment', root.commentId]] as const;
+    const reindex = async () => { for (const [kind, id] of objects) { const doc = await indexers.getIndexer(kind)!.loadOne(db, resource.tenant, id); if (doc) await upsertSearchDoc(db, doc); } };
+    await reindex();
+    const search = await import('../../../../packages/search/src/runAppSearch');
+    const authentication = { kind: 'session' as const, sessionId: customerPrincipal.sessionId };
+    const input = (query = 'quasarspectroscopy') => ({ query, types: objects.map(([kind]) => kind) });
+    const full = (query?: string, extra: any = {}, auth: any = authentication) => search.runAppSearch(db, resource.tenant, user, { ...input(query), ...extra }, auth);
+    const ahead = (query?: string) => search.runAppTypeaheadSearch(db, resource.tenant, user, input(query), authentication);
+    const restrict = async (config: any, targetType = 'user', targetId = user.user_id) => {
+      const bundles = await import('@alga-psa/authorization');
+      const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Search policy', actorUserId: user.user_id });
+      await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config });
+      await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+      await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: targetType as any, targetId });
+      return bundleId;
+    };
+    await work({ ...fixture, root, full, ahead, restrict, reindex, input, search, authentication });
+  });
+}
+
+it('project search admits the current parent policy before full results, typeahead, counts and pagination', async () => withProjectSearchFixture(async ({ customer, full, ahead, restrict }: any) => {
+  expect((await full()).results).toHaveLength(4);
+  expect((await ahead()).totalCount).toBe(4);
+  const first = await full(undefined, { limit: 1 }); expect(first.totalCount).toBe(4); expect(first.nextCursor).toBeTruthy();
+  const bundleId = await restrict({ selectedClientIds: [randomUUID()] });
+  expect(await full(undefined, { limit: 1, cursor: first.nextCursor })).toMatchObject({ results: [], totalCount: 0, nextCursor: undefined });
+  expect(await ahead()).toEqual({ results: [], totalCount: 0 });
+  expect(await customer.table('app_search_index')).toHaveLength(4);
+  await customer.table('authorization_bundle_assignments').where('bundle_id', bundleId).del();
+  expect((await full()).totalCount).toBe(4);
+}));
+
+it('project search removes masked bodies from matching, snippets, scores and counts while retaining visible names', async () => withProjectSearchFixture(async ({ operation, full, ahead, restrict }: any) => {
+  await restrict({ selectedClientIds: [operation.customer_client_id], redactedFields: ['description', 'conversation'] });
+  expect(await full()).toMatchObject({ results: [], totalCount: 0 });
+  expect(await ahead()).toEqual({ results: [], totalCount: 0 });
+  for (const name of ['Marigoldenterprise', 'Neutronstage', 'Cobaltworkitem']) {
+    const visible = await full(name); expect(visible.totalCount).toBe(name === 'Marigoldenterprise' ? 3 : 1); expect(JSON.stringify(visible)).not.toContain('quasarspectroscopy');
+  }
+}));
+
+it.each([['project_name', 'task_name'], ['projectName', 'values.task_name']])('project search masks cached titles and subtitles using %s and %s before text matching', async (projectField, taskField) => withProjectSearchFixture(async ({ operation, full, ahead, restrict }: any) => {
+  await restrict({ selectedClientIds: [operation.customer_client_id], redactedFields: [projectField, taskField] });
+  for (const name of ['Marigoldenterprise', 'Cobaltworkitem']) {
+    expect(await full(name)).toMatchObject({ results: [], totalCount: 0 });
+    expect(await ahead(name)).toEqual({ results: [], totalCount: 0 });
+  }
+  const result = await full(); expect(result.totalCount).toBe(4);
+  expect(JSON.stringify(result)).not.toContain('Marigoldenterprise'); expect(JSON.stringify(result)).not.toContain('Cobaltworkitem');
+}));
+
+it('project search uses current sources and suppresses stale or deleted task-comment bodies without waiting for indexing', async () => withProjectSearchFixture(async ({ customer, resource, root, customerPrincipal, write, ref, full, reindex }: any) => {
+  await write(customerPrincipal, { operationId: randomUUID(), kind: 'edit', comment: ref(root), expectedRevision: 1, text: 'astrophotography replacement' });
+  expect((await full()).totalCount).toBe(3);
+  await reindex(); expect((await full('astrophotography')).totalCount).toBe(1);
+  await write(customerPrincipal, { operationId: randomUUID(), kind: 'delete', comment: ref(root), expectedRevision: 2 });
+  expect((await full('astrophotography')).totalCount).toBe(0);
+  await customer.table('project_tasks').where('task_id', resource.id).update({ task_name: 'Renamed task', description: 'Replacement task description' });
+  expect((await full('Cobaltworkitem')).totalCount).toBe(0);
+}));
+
+it.each(['expired_session', 'revoked_session', 'inactive_user', 'missing_role'])(
+  'project search enforces current %s for full search and typeahead', async reason => withProjectSearchFixture(async ({ customer, customerPrincipal, user, full, ahead }: any) => {
+    if (reason === 'expired_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+    if (reason === 'revoked_session') await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    if (reason === 'inactive_user') await customer.table('users').where('user_id', user.user_id).update({ is_inactive: true });
+    if (reason === 'missing_role') {
+      await customer.table('user_roles').where('user_id', user.user_id).del();
+      expect(await full()).toMatchObject({ results: [], totalCount: 0 }); expect(await ahead()).toEqual({ results: [], totalCount: 0 });
+    } else { await expect(full()).rejects.toThrow(); await expect(ahead()).rejects.toThrow(); }
+  }));
+
+it('project API search retains the actual key and applies key-specific bundle narrowing', async () => withProjectSearchFixture(async ({ customer, resource, user, full, restrict }: any) => {
+  const apiKeyId = randomUUID();
+  await customer.table('api_keys').insert({ tenant: resource.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: user.user_id, active: true });
+  const auth = { kind: 'api_key', apiKeyId };
+  expect((await full(undefined, {}, auth)).totalCount).toBe(4);
+  const bundleId = await restrict({ selectedClientIds: [randomUUID()] }, 'api_key', apiKeyId);
+  expect((await full(undefined, {}, auth)).totalCount).toBe(0); expect((await full()).totalCount).toBe(4);
+  await customer.table('authorization_bundle_assignments').where('bundle_id', bundleId).del();
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(0) });
+  await expect(full(undefined, {}, auth)).rejects.toThrow();
+  await expect(full(undefined, {}, { kind: 'api_key', apiKeyId: randomUUID() })).rejects.toThrow();
+}));
+
+it('project search action and typeahead bind the actual browser session and reject override authority', async () => withProjectSearchFixture(async ({ input, override, user }: any) => {
+  const actions = await import('../../lib/actions/searchActions');
+  expect((await actions.searchAppAction(input())).totalCount).toBe(4);
+  expect((await actions.searchAppTypeaheadAction(input())).totalCount).toBe(4);
+  override.mockReturnValue(user);
+  await expect(actions.searchAppAction(input())).rejects.toThrow();
+  await expect(actions.searchAppTypeaheadAction(input())).rejects.toThrow();
+}));
+
+it('project search follows current client scope even when cached parent ACLs have not been reindexed', async () => withProjectSearchFixture(async ({ customer, operation, project, full, ahead, restrict }: any) => {
+  await restrict({ selectedClientIds: [operation.customer_client_id] });
+  expect((await full()).totalCount).toBe(4);
+  const client = await customer.table('clients').where('client_id', operation.customer_client_id).first(), nextClient = randomUUID();
+  await customer.table('clients').insert({ ...client, client_id: nextClient, client_name: 'Restricted client' });
+  await customer.table('projects').where('project_id', project.project_id).update({ client_id: nextClient });
+  expect(await full()).toMatchObject({ results: [], totalCount: 0 }); expect(await ahead()).toEqual({ results: [], totalCount: 0 });
+}));
+
+it('project search suppresses rolling task-comment entries without source revision evidence', async () => withProjectSearchFixture(async ({ customer, root, full, reindex }: any) => {
+  await customer.table('app_search_index').where({ object_type: 'project_task_comment', object_id: root.commentId }).update({ metadata: {} });
+  expect((await full()).totalCount).toBe(3);
+  await reindex(); expect((await full()).totalCount).toBe(4);
+}));
+
+it('project search rechecks session expiry after producing the admitted result', async () => withProjectSearchFixture(async ({ customer, resource, user, customerPrincipal, authentication, input }: any) => {
+  const { withProjectSearchAccess } = await import('../../../../packages/search/src/projectSearchAccess');
+  const { runSearchQuery } = await import('../../../../packages/search/src/query');
+  const { resolveSearchAclPrincipal } = await import('../../../../packages/search/src/acl');
+  await expect(withProjectSearchAccess(db, resource.tenant, user, authentication, async (trx, searchIndex) => {
+    const acl = await resolveSearchAclPrincipal(trx, user);
+    const result = await runSearchQuery({ knex: trx, tenant: resource.tenant, ...input(), allowedTypes: input().types, acl, searchIndex });
+    expect(result).toHaveLength(4);
+    await tenantDb(trx, resource.tenant).table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+    return result;
+  })).rejects.toThrow();
+  expect(new Date((await customer.table('sessions').where('session_id', customerPrincipal.sessionId).first()).expires_at).getTime()).toBeGreaterThan(Date.now());
+}));
+
+it('project search retains customer-owned history after separation and applies policy after a PSA upgrade', async () => withProjectSearchFixture(async ({ customer, resource, operation, full, ahead, restrict }: any) => {
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  expect((await full()).totalCount).toBe(4); expect((await ahead()).totalCount).toBe(4);
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect((await full()).totalCount).toBe(4);
+  await restrict({ selectedClientIds: [operation.customer_client_id], redactedFields: ['conversation'] });
+  expect((await full()).totalCount).toBe(3);
 }));

@@ -342,3 +342,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `projectTaskAudience.ts`, task conversation reader/writer, native actions and task event source resolver.
 - **Gate:** Three live callers and stable compatibility rules. ACT / bounded-now.
 - **Status:** extracted. Pure task audience SQL/value helpers preserve legacy privacy without importing the task mutation engine into event delivery.
+
+## admitted-search-relation — friction
+- **What:** Post-query visibility checks cannot remove information already exposed by ranking, snippets, pagination, type counts and typeahead.
+- **Where:** Search query engine, full search, typeahead server action and REST search.
+- **Gate:** Three live query consumers share one indexed relation; disclosure cost is high and the query boundary is stable. ACT / bounded-now.
+- **Status:** revised. The engine accepts a trusted admitted relation built inside a retained search transaction. Co-managed/retained customer project families join current owner-local projects through the existing queue policy compiler, project current fields through masks, then rebuild search vectors. Full search and typeahead share this boundary. Transport adapters supply actual session/API-key identity; API-key bundles participate in evaluation. Cached task-comment bodies need matching current revision/timestamp evidence. Other search families still require their own authority audit.
+
+## project-search-field-sources — pattern
+- **What:** Task editors, assignment projections, task queues and global search must recognize aliases of the same masked project/task field.
+- **Where:** `projectTaskEditing.ts`, `projectTaskAssignments.ts`, `projectTaskQueue.ts`, `projectSearchAccess.ts`.
+- **Gate:** Repeated stable names, but projections expose different dependencies (e.g. project names versus navigable parent IDs). WATCH before combining whole maps.
+- **Status:** watching. Search now honors task value aliases and project/phase display aliases; retain source-specific masks and test derived search effects before extracting a field dependency map.

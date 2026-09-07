@@ -49,6 +49,10 @@
     "./inboundEmailReply": {
       "types": "./src/inboundEmailReply.ts",
       "import": "./dist/inboundEmailReply.js"
+    },
+    "./localProjectSearchPolicy": {
+      "types": "./src/localProjectSearchPolicy.ts",
+      "import": "./dist/localProjectSearchPolicy.js"
     }
   },
   "scripts": {

@@ -7,6 +7,7 @@ import type { EntityIndexer, SearchDoc } from '@alga-psa/types';
 interface ProjectTaskCommentSearchRow {
   task_comment_id: string;
   task_id: string;
+  collaboration_revision: number;
   note: string | null;
   markdown_content: string | null;
   created_at?: Date | string | null;
@@ -38,6 +39,7 @@ function toSearchDoc(tenant: string, row: ProjectTaskCommentSearchRow): SearchDo
     objectId: row.task_comment_id,
     parentType: 'project_task',
     parentId: row.task_id,
+    metadata: { sourceRevision: row.collaboration_revision },
     title: row.task_name ?? row.task_id,
     subtitle: row.project_name ?? undefined,
     body: bodyFromRow(row),
@@ -61,6 +63,7 @@ function baseProjectTaskCommentQuery(knex: Knex, tenant: string) {
     .select(
       'pc.task_comment_id',
       'pc.task_id',
+      'pc.collaboration_revision',
       'pc.note',
       'pc.markdown_content',
       'pc.created_at',

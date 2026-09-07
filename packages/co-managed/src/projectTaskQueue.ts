@@ -20,6 +20,7 @@ export interface CoManagedTaskQueuePage {
   items: CoManagedTaskQueueItem[]; workspaces: Array<{ tenant: string; name: string }>;
   totalCount: number; openCount: number; closedCount: number; page: number; pageSize: number; canOversight: boolean;
 }
+// LEVERAGE: pattern project-search-field-sources — task editors, queues and global search must hide aliases of the same canonical value.
 const sources = {
   task_name: ['task_name', 'values.task_name', 'project_tasks.task_name'], project_name: ['project', 'projectName', 'project_id', 'project_name', 'projects'],
   phase_name: ['phase', 'phaseName', 'phase_id', 'phase_name', 'project_phases'],

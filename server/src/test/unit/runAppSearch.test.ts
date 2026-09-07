@@ -1,3 +1,4 @@
+vi.mock('../../../../packages/search/src/projectSearchAccess', () => ({ withProjectSearchAccess: (db: any, _tenant: string, _user: any, _auth: any, work: any) => work(db) }));
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SEARCH_OBJECT_TYPES } from '@alga-psa/types';
