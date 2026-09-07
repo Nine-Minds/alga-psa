@@ -51,9 +51,9 @@ const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoic
 export class XeroEmulatorCore implements EmulatorCore {
   accessTokenTtlSeconds = 1800;
   authorizeRequests: XeroAuthorizeRequest[] = [];
-  private codes = new Map<string, { clientId: string; scope: string }>();
+  private codes = new Map<string, { clientId: string; redirectUri: string; scope: string }>();
   private accessTokens = new Map<string, { expiresAt: number; scope: string }>();
-  private refreshTokens = new Map<string, { scope: string }>();
+  private refreshTokens = new Map<string, { clientId: string; scope: string }>();
   private organisations: XeroOrganisation[] = [];
   private orgData = new Map<string, OrgData>();
   private invoiceNumberCounter = 0;
@@ -104,35 +104,35 @@ export class XeroEmulatorCore implements EmulatorCore {
       code,
       query,
     });
-    this.codes.set(code, { clientId: query.client_id, scope });
+    this.codes.set(code, { clientId: query.client_id, redirectUri, scope });
     return { redirectUri, code, state: query.state ?? '' };
   }
 
   grantToken(params: Record<string, string>): XeroTokenResponse {
     if (params.grant_type === 'authorization_code') {
       const record = this.codes.get(String(params.code));
-      if (!record) {
+      if (!record || record.clientId !== params.client_id || record.redirectUri !== params.redirect_uri) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
       this.codes.delete(String(params.code));
-      return this.issueTokens(record.scope || DEFAULT_SCOPE);
+      return this.issueTokens(record.scope || DEFAULT_SCOPE, record.clientId);
     }
     if (params.grant_type === 'refresh_token') {
       const record = this.refreshTokens.get(String(params.refresh_token));
-      if (!record) {
+      if (!record || record.clientId !== params.client_id) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
       }
       this.refreshTokens.delete(String(params.refresh_token));
-      return this.issueTokens(record.scope);
+      return this.issueTokens(record.scope, record.clientId);
     }
     throw new XeroWireError(400, { error: 'unsupported_grant_type' });
   }
 
-  private issueTokens(scope: string): XeroTokenResponse {
+  private issueTokens(scope: string, clientId: string): XeroTokenResponse {
     const accessToken = this.newId('access');
     const refreshToken = this.newId('refresh');
     this.accessTokens.set(accessToken, { expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000, scope });
-    this.refreshTokens.set(refreshToken, { scope });
+    this.refreshTokens.set(refreshToken, { scope, clientId });
     return {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -157,14 +157,14 @@ export class XeroEmulatorCore implements EmulatorCore {
     return this.accessTokens.size;
   }
 
-  tokens(): { accessTokens: Array<{ token: string; expiresAt: string; scope: string }>; refreshTokens: Array<{ token: string; scope: string }> } {
+  tokens(): { accessTokens: Array<{ token: string; expiresAt: string; scope: string }>; refreshTokens: Array<{ token: string; scope: string; clientId: string }> } {
     return {
       accessTokens: [...this.accessTokens.entries()].map(([token, record]) => ({
         token,
         expiresAt: new Date(record.expiresAt).toISOString(),
         scope: record.scope,
       })),
-      refreshTokens: [...this.refreshTokens.entries()].map(([token, record]) => ({ token, scope: record.scope })),
+      refreshTokens: [...this.refreshTokens.entries()].map(([token, record]) => ({ token, scope: record.scope, clientId: record.clientId })),
     };
   }
 

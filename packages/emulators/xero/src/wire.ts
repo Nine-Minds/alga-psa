@@ -31,7 +31,19 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
   // Client credentials arrive either as HTTP Basic or in the form body (the
   // Alga client sends them in the body); the emulator accepts both.
   router.post('/connect/token', (req, res) => {
-    res.json(core.grantToken(req.body ?? {}));
+    const params = { ...(req.body ?? {}) };
+    if (req.headers.authorization) {
+      const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(req.headers.authorization);
+      const decoded = match ? Buffer.from(match[1], 'base64').toString('utf8') : '';
+      const separator = decoded.indexOf(':');
+      const clientId = decoded.slice(0, separator);
+      if (separator < 1 || (params.client_id && params.client_id !== clientId)) {
+        throw new XeroWireError(401, { error: 'invalid_client' });
+      }
+      params.client_id = clientId;
+      params.client_secret = decoded.slice(separator + 1);
+    }
+    res.json(core.grantToken(params));
   });
 
   const authenticate = (req: Request, res: Response, next: NextFunction) => {

@@ -111,6 +111,37 @@ describe('xero emulator', { shuffle: false }, () => {
     accessToken = rotated.access_token;
   });
 
+  it('binds codes and refresh tokens to the originating client and redirect', async () => {
+    const redirectUri = 'http://localhost/bound-callback';
+    const authorize = new URL(`${base}/identity/connect/authorize`);
+    authorize.search = new URLSearchParams({ response_type: 'code', client_id: 'bound-app', redirect_uri: redirectUri }).toString();
+    const response = await fetch(authorize, { redirect: 'manual' });
+    const code = new URL(response.headers.get('location')!).searchParams.get('code')!;
+    const exchange = (body: Record<string, string>, basic?: string) => fetch(`${base}/connect/token`, {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded', ...(basic ? { authorization: `Basic ${Buffer.from(basic).toString('base64')}` } : {}) },
+      body: new URLSearchParams(body),
+    });
+    const request = { grant_type: 'authorization_code', code, client_id: 'bound-app', redirect_uri: redirectUri };
+    for (const patch of [{ client_id: 'different-app' }, { client_id: '' }, { redirect_uri: 'http://localhost/different' }]) {
+      const denied = await exchange({ ...request, ...patch });
+      expect(denied.status).toBe(400);
+      expect(await denied.json()).toEqual({ error: 'invalid_grant' });
+    }
+    const valid = await exchange(request);
+    expect(valid.status).toBe(200);
+    const token = await valid.json();
+    const refresh = { grant_type: 'refresh_token', refresh_token: token.refresh_token };
+    for (const client_id of ['different-app', '']) {
+      const denied = await exchange({ ...refresh, client_id });
+      expect(denied.status).toBe(400);
+      expect(await denied.json()).toEqual({ error: 'invalid_grant' });
+    }
+    const rotated = await exchange(refresh, 'bound-app:synthetic-secret');
+    expect(rotated.status).toBe(200);
+    expect((await rotated.json()).refresh_token).not.toBe(token.refresh_token);
+    expect((await exchange(request)).status).toBe(400);
+  });
+
   it('lists connected organisations, including seeded additional ones', async () => {
     const seeded = await controlPost('/control/xero/seed/organisation', { tenantName: 'Second Org Ltd' });
     expect(seeded.ok).toBe(true);
@@ -264,11 +295,12 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(rejected.status).toBe(401);
 
     const tokensView = (await (await fetch(`${control}/control/xero/state/tokens`)).json()) as any;
-    const refreshToken = tokensView.result.refreshTokens.at(-1).token;
+    const refreshRecord = tokensView.result.refreshTokens.at(-1);
+    const refreshToken = refreshRecord.token;
     const refreshed = await fetch(`${base}/connect/token`, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken }),
+      body: new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken, client_id: refreshRecord.clientId }),
     });
     expect(refreshed.status).toBe(200);
     accessToken = (await refreshed.json()).access_token;

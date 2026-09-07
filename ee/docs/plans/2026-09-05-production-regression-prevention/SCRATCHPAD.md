@@ -1612,3 +1612,9 @@
 - Deleted test-file-check.test.ts: it allocated an empty temporary directory, printed a nonexistent file path and performed no assertion or application call. No behavior coverage was removed or replaced with a passing exclusion.
 - Full readiness execution:30files,216passed,zero skipped (9.55s). Direct diagnostic commands initially lacked bootstrap bypass, then used root Vitest4 instead of the runner's server Vitest3; final run matches server binary and TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1. Two subprocess tests required local IPC outside sandbox; authorized execution passed without changing their assertions.
 - Global repository inventory remains incomplete; the earlier mixed-revision orphan list is not a current count. Native verification pending publication after current browser run.
+
+### 2026-09-07 — Xero emulator OAuth client binding
+
+- Wire regression reproduced authorization code accepted for different client (200 instead of400). Codes now require original client and exact redirect; refresh tokens retain and require client identity. Invalid attempts leave valid grants usable. Token route resolves HTTP Basic credentials and rejects conflicting header/body client IDs.
+- Existing expiry fixture had refreshed without a client; now supplies client identity exposed in control token diagnostics. Full9wiretests pass and package typecheck passes. Basic secret values remain unverified; application registration, PKCE and organisation consent still outstanding. No F037 completion claim.
+- Official standard-flow reference and before/after details: evidence/xero-oauth-client-binding.json. Native verification remains pending; preserve active browser run.
