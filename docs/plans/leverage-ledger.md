@@ -131,3 +131,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - `ApiKeysSetup.tsx` and `AdminApiKeysSetup.tsx` are near-duplicate components (profile vs admin
   API keys). Worth a separate `apikeys-setup-dup` candidate if it recurs / diverges — left
   unmarked this pass to keep the table-focused ledger clean.
+
+## Targeted durable subscriber replay — friction
+- What: retrying one unfinished co-managed consumer through ordinary event fanout could resend email or trigger workflows; global processed markers also suppressed another channel carrying the same stable event ID.
+- Where: event-bus publisher/stream processing, co-managed search and internal-notification completion recovery.
+- Gate: high duplicate/lost-delivery cost, stable subscriber/channel identities, two concrete transactional consumers; ACT / bounded engine revision with regression coverage.
+- Status: revised (2026-09-07). Explicit targeted force replay bypasses fanout/workflow publication and only dispatches its named subscriber. Processed event/handler tuples include the channel. Existing untargeted publication semantics remain covered by pending/poison tests; durable consumer effects and completion stay in their own source-owned transaction.

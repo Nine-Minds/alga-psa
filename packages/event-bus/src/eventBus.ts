@@ -299,16 +299,18 @@ export class EventBus {
     return typeof tenantId === 'string' && tenantId.length > 0 ? tenantId : 'unknown';
   }
 
-  private async isEventProcessed(event: Event): Promise<boolean> {
+  private async isEventProcessed(event: Event, channel: string): Promise<boolean> {
     const client = await getClient();
     const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
-    return await client.sIsMember(setKey, event.id);
+    // A stable producer ID is shared across channel publications. Completion
+    // on global must not suppress email or internal-notification consumers.
+    return await client.sIsMember(setKey, JSON.stringify([event.id, channel]));
   }
 
-  private async markEventProcessed(event: Event): Promise<void> {
+  private async markEventProcessed(event: Event, channel: string): Promise<void> {
     const client = await getClient();
     const setKey = this.getProcessedSetKey(this.getEventTenantId(event));
-    await client.sAdd(setKey, event.id);
+    await client.sAdd(setKey, JSON.stringify([event.id, channel]));
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
   }
@@ -321,16 +323,16 @@ export class EventBus {
     return `processed_event_handlers:${tenantId}`;
   }
 
-  private async isHandlerProcessed(event: Event, handlerKey: string): Promise<boolean> {
+  private async isHandlerProcessed(event: Event, channel: string, handlerKey: string): Promise<boolean> {
     const client = await getClient();
     const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
-    return await client.sIsMember(setKey, `${event.id}:${handlerKey}`);
+    return await client.sIsMember(setKey, JSON.stringify([event.id, channel, handlerKey]));
   }
 
-  private async markHandlerProcessed(event: Event, handlerKey: string): Promise<void> {
+  private async markHandlerProcessed(event: Event, channel: string, handlerKey: string): Promise<void> {
     const client = await getClient();
     const setKey = this.getProcessedHandlersSetKey(this.getEventTenantId(event));
-    await client.sAdd(setKey, `${event.id}:${handlerKey}`);
+    await client.sAdd(setKey, JSON.stringify([event.id, channel, handlerKey]));
     // Set expiration to prevent unbounded growth (3 days)
     await client.expire(setKey, 60 * 60 * 24 * 3);
   }
@@ -499,23 +501,32 @@ export class EventBus {
       // are bypassed to let incomplete consumer deliveries re-run. Consumers
       // that already completed are skipped by their own ledger.
       const forceRedelivery = message.message.force === '1';
+      const targetSubscriber = message.message.targetSubscriber;
+      if (targetSubscriber !== undefined && (!forceRedelivery || !/^[a-zA-Z0-9:_-]{1,128}$/.test(targetSubscriber))) {
+        throw new Error('Invalid targeted event recovery');
+      }
+      const selectedHandlers = targetSubscriber
+        ? handlers.filter(handler => this.getHandlerKey(handler) === targetSubscriber) : handlers;
+      // Keep a targeted message pending when this process has not registered
+      // its consumer. An unrelated handler cannot acknowledge its recovery.
+      if (targetSubscriber && selectedHandlers.length === 0) return;
 
-      if (handlers.length > 0) {
-        const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event);
+      if (selectedHandlers.length > 0) {
+        const isProcessed = forceRedelivery ? false : await this.isEventProcessed(event, subscription.channel);
         if (!isProcessed) {
           // Invoke every registered handler for (eventType, channel) — not
           // just the first — and track success per (event, handler) so a
           // failing handler's redelivery never re-runs co-subscribers that
           // already succeeded.
           let anyFailure = false;
-          for (const handler of handlers) {
+          for (const handler of selectedHandlers) {
             const handlerKey = this.getHandlerKey(handler);
             try {
-              if (!forceRedelivery && await this.isHandlerProcessed(event, handlerKey)) {
+              if (!forceRedelivery && await this.isHandlerProcessed(event, subscription.channel, handlerKey)) {
                 continue;
               }
               await handler(event);
-              await this.markHandlerProcessed(event, handlerKey);
+              await this.markHandlerProcessed(event, subscription.channel, handlerKey);
             } catch (error) {
               anyFailure = true;
               logger.error('[EventBus] Error in event handler:', {
@@ -532,7 +543,7 @@ export class EventBus {
             return;
           }
           if (!forceRedelivery) {
-            await this.markEventProcessed(event);
+            await this.markEventProcessed(event, subscription.channel);
           }
         } else {
           logger.info('[EventBus] Skipping already processed event:', {
@@ -762,8 +773,14 @@ export class EventBus {
        * inbound-email outbox recovery sweeper.
        */
       force?: boolean;
+      /** Replay only this stable subscriber on the selected channel. Requires
+       * force and a stable event ID; never emits another workflow trigger. */
+      targetSubscriber?: string;
     }
   ): Promise<void> {
+    if (options?.targetSubscriber !== undefined && (!options.force || !options.eventId || !/^[a-zA-Z0-9:_-]{1,128}$/.test(options.targetSubscriber))) {
+      throw new Error('Targeted event recovery requires force, a stable event ID and a valid subscriber');
+    }
     if (eventBusDisabled) {
       logger.debug('[EventBus] Skipping publish because the event bus is disabled');
       if (options?.strict) {
@@ -802,7 +819,7 @@ export class EventBus {
       const client = await getClient();
 
       // Publish to the workflow stream only when using the default channel; channel-specific events stay isolated.
-      if (channel === this.defaultChannel) {
+      if (channel === this.defaultChannel && !options?.targetSubscriber) {
         const globalStream = 'workflow:events:global';
         await this.ensureStreamAndGroup(globalStream);
 
@@ -862,6 +879,7 @@ export class EventBus {
           event: JSON.stringify(fullEvent),
           channel,
           ...(options?.force ? { force: '1' } : {}),
+          ...(options?.targetSubscriber ? { targetSubscriber: options.targetSubscriber } : {}),
         },
         {
           TRIM: {

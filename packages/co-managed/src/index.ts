@@ -28,3 +28,6 @@ export * from './threadDisclosure';
 export * from './privateThreadDisclosure';
 export * from './privateThreadTransferCleanup';
 export * from './conversationEventOutbox';
+
+export { consumeCoManagedConversationEvent, recoverCoManagedEventConsumers, coManagedConversationEventConsumers } from './conversationEventConsumers';
+export type { CoManagedEventConsumer } from './conversationEventConsumers';

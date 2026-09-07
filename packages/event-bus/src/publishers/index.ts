@@ -24,6 +24,8 @@ export interface PublishOptions {
    * that already completed are skipped by their own idempotency ledger.
    */
   force?: boolean;
+  /** Recovery for one durable subscriber; bypasses normal channel fanout. */
+  targetSubscriber?: string;
 }
 
 const EMAIL_EVENT_TYPES = new Set<Event['eventType']>([
@@ -77,6 +79,10 @@ export async function publishEvent(
   options?: PublishOptions
 ): Promise<void> {
   try {
+    if (options?.targetSubscriber !== undefined) {
+      await getEventBus().publish(event as any, options);
+      return;
+    }
     const isEmailEvent = EMAIL_EVENT_TYPES.has(event.eventType as Event['eventType']);
     const isInternalNotificationEvent = INTERNAL_NOTIFICATION_EVENT_TYPES.has(event.eventType as Event['eventType']);
     const channel = options?.channel;

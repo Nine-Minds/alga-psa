@@ -157,7 +157,7 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox'] : [table]);
+      ? [table, 'co_management_event_outbox', 'co_management_event_consumers'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
@@ -175,6 +175,14 @@ describe('runMaintenanceJob', () => {
 
   it('throws for an unknown job name', async () => {
     await expect(runMaintenanceJob('not-a-real-job')).rejects.toThrow(/Unknown maintenance job/);
+  });
+
+  it('discovers an owner whose publication succeeded but whose consumer has not completed', async () => {
+    listTenantsMock.mockReturnValue([{ tenant: 'customer' }]);
+    selectTenantsMock.mockImplementation(table => table === 'co_management_event_consumers' ? [{ tenant: 'customer' }] : []);
+    const result = await runMaintenanceJob('co-managed-notification-recovery');
+    expect(result.total).toBe(1);
+    expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-notification-recovery', { tenantId: 'customer' });
   });
 
   it('reports known jobs via isKnownMaintenanceJob', () => {

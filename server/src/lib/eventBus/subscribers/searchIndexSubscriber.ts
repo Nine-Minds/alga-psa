@@ -2,6 +2,7 @@ import logger from '@alga-psa/core/logger';
 import type { Event, EventType } from '@alga-psa/event-schemas';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { Knex } from 'knex';
+import { consumeCoManagedConversationEvent, isCoManagedUuid } from '@alga-psa/co-managed';
 
 import { getEventBus } from '../index';
 import { allIndexers, getIndexer } from '@alga-psa/search';
@@ -372,7 +373,7 @@ export async function registerSearchIndexSubscriber(): Promise<void> {
   subscribedEventTypes = [...indexersByEvent.keys()];
 
   for (const eventType of subscribedEventTypes) {
-    await getEventBus().subscribe(eventType, handleSearchIndexEvent);
+    await getEventBus().subscribe(eventType, handleSearchIndexEvent, { subscriberId: 'search-index' });
   }
 
   isRegistered = true;
@@ -398,6 +399,18 @@ export async function unregisterSearchIndexSubscriber(): Promise<void> {
 
 async function handleSearchIndexEvent(event: Event): Promise<void> {
   const indexers = resolveSearchIndexersForEvent(event.eventType);
+  if (['TICKET_COMMENT_ADDED', 'TICKET_COMMENT_UPDATED', 'TICKET_COMMENT_DELETED'].includes(event.eventType) &&
+    isCoManagedUuid(event.id) && isCoManagedUuid(extractTenant(event))) {
+    const tenant = extractTenant(event);
+    if (!tenant) throw new Error('Missing co-managed search event owner');
+    const { knex } = await createTenantKnex(tenant);
+    if (await consumeCoManagedConversationEvent(knex, event as any, 'search-index', async (trx, current) => {
+      if (isSearchIndexLiveEnabled()) {
+        if (!indexers.length) throw new Error('Missing co-managed conversation indexer');
+        await dispatchSearchIndexEvent({ ...event, payload: current.payload } as Event, tenant, indexers, trx);
+      }
+    })) return;
+  }
 
   if (indexers.length === 0) {
     logger.warn('[SearchIndexSubscriber] Received event without a registered indexer', {
@@ -482,9 +495,10 @@ async function handleSearchIndexEvent(event: Event): Promise<void> {
 async function dispatchSearchIndexEvent(
   event: Event,
   tenant: string,
-  indexers: EntityIndexer[]
+  indexers: EntityIndexer[],
+  transaction?: Knex.Transaction
 ): Promise<void> {
-  const { knex } = await createTenantKnex(tenant);
+  const knex = transaction ?? (await createTenantKnex(tenant)).knex;
 
   if (isDeleteEvent(event.eventType)) {
     for (const indexer of indexers) {

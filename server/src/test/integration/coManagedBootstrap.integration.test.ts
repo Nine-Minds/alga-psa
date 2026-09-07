@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6003,10 +6003,10 @@ it('recovers committed channels through the scheduled server job handler without
   await persist(db, event);
   expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
   const { coManagedNotificationRecoveryJobHandler } = await import('../../lib/jobs/handlers/coManagedNotificationRecoveryHandler');
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, notifications: { examined: 6, processed: 6 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, notifications: { examined: 6, processed: 6 } });
   expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
   expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, notifications: { examined: 0, processed: 0 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, notifications: { examined: 0, processed: 0 } });
 }));
 
 it('honors preferences changed after queue creation without hiding the already authorized inbox history', async () => withInAppCommentFixture(async ({
@@ -7574,4 +7574,140 @@ it('holds current source visibility locks through co-managed event outbox transp
   await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
   expect(await dispatchCoManagedConversationEvents(db, resource.tenant, publish, { eventId: row.event_id })).toEqual({ published: 0, cancelled: 1, failed: 0 });
   expect(publish).toHaveBeenCalledTimes(1);
+}));
+
+it('declares co-managed consumer obligations before publication and rolls transactional effects back with completion failure', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { consumeCoManagedConversationEvent: consume, recoverCoManagedEventConsumers: recover } = await import('@alga-psa/co-managed');
+  const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Current consumer content' });
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  const event = { id: row.event_id, eventType: row.event_type, payload: { tenantId: resource.tenant, ticketId: randomUUID(), comment: { content: 'Forged stale body' } } };
+  expect((await customer.table('co_management_event_consumers')).map(item => item.consumer).sort()).toEqual(['internal-notifications', 'search-index']);
+  const originalTitle = (await customer.table('tickets').where('ticket_id', resource.id).first()).title;
+  await expect(consume(db, event, 'search-index', async (trx, current) => {
+    expect(current.payload).toMatchObject({ ticketId: resource.id, comment: { content: expect.stringContaining('Current consumer content') } });
+    await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ title: 'Rolled back effect' });
+    throw new Error('effect failed');
+  })).rejects.toThrow('effect failed');
+  expect((await customer.table('tickets').where('ticket_id', resource.id).first()).title).toBe(originalTitle);
+  expect((await customer.table('co_management_event_consumers')).every(item => item.status === 'pending')).toBe(true);
+  const effect = vi.fn(async () => {});
+  await Promise.all([consume(db, event, 'search-index', effect), consume(db, event, 'search-index', effect)]);
+  expect(effect).toHaveBeenCalledTimes(1);
+  await customer.table('co_management_event_consumers').update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  const replay = vi.fn().mockResolvedValue(undefined);
+  expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 1, cancelled: 0, failed: 0 });
+  expect(replay.mock.calls[0].slice(1)).toEqual([row.event_id, 'internal-notifications']);
+  expect((await customer.table('co_management_event_consumers').where('consumer', 'internal-notifications').first()).status).toBe('pending');
+  await consume(db, event, 'internal-notifications', effect);
+  expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 0, cancelled: 0, failed: 0 });
+  const migration = require('../../../migrations/20260907020000_create_co_management_event_consumers.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+
+it('recovers co-managed consumers that never saw Redis and cancels replay after source restriction without rerunning completed siblings', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { recoverCoManagedEventConsumers: recover, consumeCoManagedConversationEvent: consume } = await import('@alga-psa/co-managed');
+  const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Do not replay after restriction' });
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  const event = { id: row.event_id, eventType: row.event_type, payload: { tenantId: resource.tenant } };
+  const due = () => customer.table('co_management_event_consumers').update({ next_attempt_at: db.raw("clock_timestamp() - interval '1 second'") });
+  await due();
+  const replay = vi.fn().mockRejectedValueOnce(new Error('lost replay acknowledgement')).mockResolvedValue(undefined);
+  expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 1, cancelled: 0, failed: 1 });
+  const failed = await customer.table('co_management_event_consumers').whereNotNull('error_code').first();
+  expect(failed).toMatchObject({ status: 'pending', attempts: 1, error_code: 'consumer_replay_failed' });
+  const completed = failed.consumer === 'search-index' ? 'internal-notifications' : 'search-index';
+  await consume(db, event, completed, async () => {});
+  await due(); await recover(db, resource.tenant, replay);
+  expect(replay.mock.calls[2].slice(1)).toEqual([row.event_id, failed.consumer]);
+  await customer.table('comment_threads').where('thread_id', receipt.threadId).update({ collaboration_audience: 'organization_private' });
+  await due();
+  expect(await recover(db, resource.tenant, replay)).toEqual({ queued: 0, cancelled: 1, failed: 0 });
+  const effect = vi.fn(); await consume(db, event, failed.consumer, effect); expect(effect).not.toHaveBeenCalled();
+  expect((await customer.table('co_management_event_consumers').where('consumer', completed).first()).status).toBe('completed');
+}));
+
+it('commits actual co-managed search indexing with its consumer receipt and applies metadata-only deletion once', async () => withCommentMutationFixture(async ({ principal, resource, customer, read, mutateComment }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { handleSearchIndexEventForTest: handle } = await import('../../lib/eventBus/subscribers/searchIndexSubscriber');
+  const database = await import('@alga-psa/db');
+  const connection = vi.spyOn(database, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+  vi.stubEnv('SEARCH_INDEX_LIVE', 'true');
+  try {
+    const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Search durable source' });
+    const event = async (eventType: string) => { const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: eventType }).first();
+      return { id: row.event_id, timestamp: new Date().toISOString(), eventType, payload: row.publication.payload } as any; };
+    const added = await event('TICKET_COMMENT_ADDED');
+    await Promise.all([handle(added), handle(added)]);
+    const indexed = await customer.table('app_search_index').where({ object_type: 'ticket_comment', object_id: receipt.commentId }).first();
+    expect(indexed.body).toContain('Search durable source');
+    const item = (await read(db, principal, resource)).items.find(item => item.commentId === receipt.commentId)!;
+    await mutateComment(db, principal, resource, { kind: 'delete', operationId: randomUUID(), expectedUpdatedAt: item.updatedAt,
+      comment: { storeTenant: receipt.storeTenant, threadId: receipt.threadId, commentId: receipt.commentId } });
+    const deleted = await event('TICKET_COMMENT_DELETED');
+    await handle(deleted); await handle(deleted);
+    expect(await customer.table('app_search_index').where({ object_type: 'ticket_comment', object_id: receipt.commentId }).first()).toBeUndefined();
+    expect((await customer.table('co_management_event_consumers').where('consumer', 'search-index')).every(row => row.status === 'completed')).toBe(true);
+  } finally { vi.unstubAllEnvs(); connection.mockRestore(); }
+}));
+
+it('rolls actual co-managed in-app consumers back when completion fails and emits channels only after a successful retry', async () => withCoManagedNotificationSubscriberFixture(async ({ customerPrincipal, resource, customer, sponsor, handle, observed, broadcast, hooks }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const receipt = await createSharedTicketComment(db, customerPrincipal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Durable inbox source' });
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  const event = { id: row.event_id, timestamp: new Date().toISOString(), eventType: row.event_type, payload: { ...row.publication.payload, comment: { ...row.publication.payload.comment, audience: undefined, content: 'Corrupted transport body' } } };
+  const name = `fail_consumer_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(`CREATE FUNCTION ??() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.consumer = 'internal-notifications' AND NEW.status = 'completed' THEN RAISE EXCEPTION 'completion rejected'; END IF; RETURN NEW; END $$`, [name]);
+  await db.raw('CREATE TRIGGER ?? BEFORE UPDATE ON co_management_event_consumers FOR EACH ROW EXECUTE FUNCTION ??()', [name, name]);
+  try {
+    await expect(handle(event)).rejects.toThrow('completion rejected');
+    expect(await sponsor.table('co_management_in_app_receipts').where('event_id', row.event_id)).toEqual([]);
+    expect(await sponsor.table('internal_notifications')).toEqual([]);
+    expect(observed).toEqual([]); expect(broadcast).not.toHaveBeenCalled(); expect(hooks).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER ?? ON co_management_event_consumers', [name]); await db.raw('DROP FUNCTION ??()', [name]); }
+  await Promise.all([handle(event), handle(event)]);
+  expect(await sponsor.table('co_management_in_app_receipts').where('event_id', row.event_id)).toHaveLength(2);
+  await vi.waitFor(() => expect(observed).toHaveLength(2)); expect(observed.every(item => item.committed)).toBe(true);
+  expect((await customer.table('co_management_event_consumers').where({ event_id: row.event_id, consumer: 'internal-notifications' }).first()).status).toBe('completed');
+  expect(broadcast).toHaveBeenCalledTimes(2); await vi.waitFor(() => expect(hooks).toHaveBeenCalledTimes(2));
+}));
+
+it('routes co-managed consumer recovery through the actual job with isolated targets and skips unpublished work before its batch limit', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { coManagedNotificationRecoveryHandler } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
+  const { recoverCoManagedEventConsumers } = await import('@alga-psa/co-managed');
+  const database = await import('@alga-psa/db'), events = await import('@alga-psa/event-bus/publishers');
+  const publish = vi.mocked(events.publishEvent);
+  const pending = await db.transaction(trx => createSharedTicketComment(trx, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Not yet published' }));
+  await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Published but not consumed' });
+  await customer.table('co_management_event_consumers').update({ next_attempt_at: '2020-01-02T00:00:00Z' });
+  const blocked = await customer.table('co_management_event_outbox').where({ comment_id: pending.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  await customer.table('co_management_event_consumers').where('event_id', blocked.event_id).update({ next_attempt_at: '2020-01-01T00:00:00Z' });
+  const replay = vi.fn().mockResolvedValue(undefined);
+  expect(await recoverCoManagedEventConsumers(db, resource.tenant, replay, { limit: 1 })).toEqual({ queued: 1, cancelled: 0, failed: 0 });
+  expect(replay.mock.calls[0][1]).not.toBe(blocked.event_id);
+  await customer.table('co_management_event_consumers').update({ next_attempt_at: '2020-01-01T00:00:00Z' });
+  const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
+  publish.mockClear();
+  try { expect((await coManagedNotificationRecoveryHandler({ tenantId: resource.tenant })).consumers).toEqual({ queued: 4, cancelled: 0, failed: 0 }); }
+  finally { connection.mockRestore(); }
+  const targets = publish.mock.calls.filter(call => call[1]?.targetSubscriber).map(call => call[1]);
+  expect(targets).toHaveLength(4);
+  for (const options of targets) expect(options).toMatchObject({ strict: true, force: true, eventId: expect.any(String),
+    channel: options!.targetSubscriber === 'search-index' ? 'global' : 'internal-notifications' });
+}));
+
+it('does not consume foreign or mismatched co-managed event identities and rolls caller transactions back without completing work', async () => withCommentCreationFixture(async ({ principal, resource, customer }) => {
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { consumeCoManagedConversationEvent: consume } = await import('@alga-psa/co-managed');
+  const receipt = await createSharedTicketComment(db, principal, resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Consumer identity' });
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: receipt.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  const event = { id: row.event_id, eventType: row.event_type, payload: { tenantId: resource.tenant } }, effect = vi.fn(async () => {});
+  expect(await consume(db, { ...event, payload: { tenantId: principal.tenant } }, 'search-index', effect)).toBe(false);
+  await expect(consume(db, { ...event, eventType: 'TICKET_COMMENT_DELETED' }, 'search-index', effect)).rejects.toThrow('identity mismatch');
+  expect(effect).not.toHaveBeenCalled();
+  await expect(db.transaction(async trx => { await consume(trx, event, 'search-index', effect); throw new Error('outer rollback'); })).rejects.toThrow('outer rollback');
+  expect((await customer.table('co_management_event_consumers').where({ event_id: row.event_id, consumer: 'search-index' }).first()).status).toBe('pending');
+  await consume(db, event, 'search-index', effect); expect(effect).toHaveBeenCalledTimes(2);
 }));

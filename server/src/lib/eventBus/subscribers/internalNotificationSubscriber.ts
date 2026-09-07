@@ -1,4 +1,5 @@
 import { recoverCoManagedNotificationDeliveries } from '@alga-psa/notifications/lib/coManagedDeliveryRuntime';
+import { consumeCoManagedConversationEvent } from '@alga-psa/co-managed';
 import { persistCoManagedCommentNotifications } from '../../co-managed/persistCommentNotifications';
 import { registerNotificationCreatedEffects } from '@alga-psa/notifications/actions/internal-notification-actions/notificationCreatedEffects';
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
@@ -2978,6 +2979,12 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
   }
 
   const validatedEvent = eventSchema.parse(event);
+  if (validatedEvent.eventType === 'TICKET_COMMENT_ADDED') {
+    const db = await getConnection(validatedEvent.payload.tenantId);
+    if (await consumeCoManagedConversationEvent(db, validatedEvent as any, 'internal-notifications', async (trx, current) => {
+      await dispatchInternalNotificationHandlers({ ...validatedEvent, payload: current.payload }, { db: trx, propagateErrors: true });
+    })) return;
+  }
 
   // Durable inbound outbox events carry a stable event id (the outbox row id).
   // The delivery ledger is a recoverable reservation, and internal notifications
@@ -3257,7 +3264,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
     const channel = 'internal-notifications';
 
     for (const eventType of eventTypes) {
-      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel });
+      await getEventBus().subscribe(eventType as any, handleInternalNotificationEvent, { channel, subscriberId: 'internal-notifications' });
       logger.info(`[InternalNotificationSubscriber] Subscribed to ${eventType} on channel "${channel}"`);
     }
 
