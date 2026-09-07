@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6313,4 +6313,172 @@ it('keeps rich private notes and edits exclusively in the MSP store and snapshot
   document[0].content[0].text = 'Another mutation';
   const receipt = await canonical;
   expect(JSON.parse((await customer.table('comments').where('comment_id', receipt.commentId).first()).note)[0].content[0].text).toBe('Mutated after admission');
+}));
+
+async function withAttachmentFixture(work: (fixture: Parameters<Parameters<typeof withCommentCreationFixture>[0]>[0] & {
+  attachments: typeof import('../../../../packages/co-managed/src/conversationAttachments');
+  objects: Map<string, Uint8Array>; upload: ReturnType<typeof vi.fn<(path: string, content: Uint8Array, mime: string) => Promise<void>>>;
+  download: ReturnType<typeof vi.fn<(path: string) => Promise<Uint8Array>>>;
+}) => Promise<void>) {
+  await withCommentCreationFixture(async fixture => {
+    const attachments = await import('../../../../packages/co-managed/src/conversationAttachments');
+    const objects = new Map<string, Uint8Array>();
+    const upload = vi.fn(async (path: string, content: Uint8Array, _mime: string) => { objects.set(path, Uint8Array.from(content)); });
+    const download = vi.fn(async (path: string) => { const data = objects.get(path); if (!data) throw new Error('Missing test object'); return data; });
+    await work({ ...fixture, attachments, objects, upload, download });
+  });
+}
+const attachmentComment = (comment: { storeTenant: string; threadId: string; commentId: string }) => ({ storeTenant: comment.storeTenant, threadId: comment.threadId, commentId: comment.commentId });
+const attachmentReference = (attachment: { storeTenant: string; threadId: string; commentId: string; attachmentId: string }) => ({ ...attachmentComment(attachment), attachmentId: attachment.attachmentId });
+
+it('uploads qualified conversation attachments once under concurrent retries without creating generic downloadable files', async () => withAttachmentFixture(async ({
+  principal, customerPrincipal, resource, customer, create, attachments, upload, download,
+}) => {
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Attachment parent' });
+  const request = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Shared.txt', mimeType: 'text/plain', content: Buffer.from('Shared bytes') };
+  const [first, retry] = await Promise.all([attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload),
+    attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload)]);
+  expect(first).toEqual(retry); expect(upload).toHaveBeenCalledOnce();
+  expect(first).toMatchObject({ audience: 'shared_it', fileName: 'Shared.txt', size: 12 });
+  expect(await attachments.listCoManagedConversationAttachments(db, customerPrincipal, resource, request.comment)).toEqual([first]);
+  const result = await attachments.downloadCoManagedConversationAttachment(db, customerPrincipal, resource, attachmentReference(first), download);
+  expect(Buffer.from(result.content).toString()).toBe('Shared bytes');
+  expect(await customer.table('external_files').where('file_id', first.attachmentId).first()).toBeUndefined();
+  expect(await customer.table('documents').where('file_id', first.attachmentId).first()).toBeUndefined();
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, { ...request, content: Buffer.from('Changed') }, upload)).rejects.toMatchObject({ code: 'ATTACHMENT_OPERATION_CONFLICT' });
+  await expect(attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource, { ...request, attachmentId: randomUUID() }, upload)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('inherits private attachment audiences from their actual home or customer comment and denies forged stores and threads', async () => withAttachmentFixture(async ({
+  principal, customerPrincipal, resource, customer, sponsor, create, attachments, upload, download,
+}) => {
+  const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  const roots = [await create(customerPrincipal, { operationId: randomUUID(), audience: 'organization_private', text: 'Customer private' }),
+    await mutateCoManagedPrivateTicketComment(db, principal, resource, { operationId: randomUUID(), kind: 'create', text: 'MSP private' })];
+  for (const [index, root] of roots.entries()) {
+    const actor = index === 0 ? customerPrincipal : principal, other = index === 0 ? principal : customerPrincipal;
+    const uploaded = await attachments.uploadCoManagedConversationAttachment(db, actor, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Private.txt', mimeType: 'text/plain', content: Buffer.from('Private bytes') }, upload);
+    expect(uploaded.audience).toBe('organization_private');
+    expect((await attachments.downloadCoManagedConversationAttachment(db, actor, resource, attachmentReference(uploaded), download)).content.length).toBe(13);
+    await expect(attachments.downloadCoManagedConversationAttachment(db, other, resource, attachmentReference(uploaded), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(attachments.downloadCoManagedConversationAttachment(db, actor, resource, { ...attachmentReference(uploaded), threadId: randomUUID() }, download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await (index === 0 ? sponsor : customer).table('co_management_conversation_attachments').where('attachment_id', uploaded.attachmentId).first()).toBeUndefined();
+  }
+}));
+
+it('keeps interrupted attachment uploads pending and hidden, snapshots bytes, and retries the same immutable object', async () => withAttachmentFixture(async ({
+  principal, resource, customer, create, attachments, objects, upload, download,
+}) => {
+  const root = await create(principal, { operationId: randomUUID(), audience: 'requester', text: 'Requester root' });
+  const request = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Retry.txt', mimeType: 'text/plain', content: Buffer.from('Original') };
+  const original = Buffer.from(request.content);
+  const failed = attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, async (path, content) => { objects.set(path, Uint8Array.from(content)); throw new Error('Lost upload acknowledgement'); });
+  request.content.fill(65);
+  await expect(failed).rejects.toThrow('Lost upload acknowledgement');
+  const pending = await customer.table('co_management_conversation_attachments').where('attachment_id', request.attachmentId).first();
+  expect(pending).toMatchObject({ status: 'pending', ready_at: null }); expect(Buffer.from(objects.get(pending.storage_path)!).toString()).toBe('Original');
+  expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, request.comment)).toEqual([]);
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, { ...request.comment, attachmentId: request.attachmentId }, download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(download).not.toHaveBeenCalled();
+  const ready = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { ...request, content: original }, upload);
+  expect(upload).toHaveBeenCalledWith(pending.storage_path, original, 'text/plain'); expect(ready.audience).toBe('requester');
+  objects.set(pending.storage_path, Buffer.from('Tampered'));
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).rejects.toMatchObject({ code: 'ATTACHMENT_CONTENT_MISMATCH' });
+  await expect(db.transaction(trx => attachments.uploadCoManagedConversationAttachment(trx, principal, resource, { ...request, attachmentId: randomUUID() }, upload))).rejects.toMatchObject({ code: 'INVALID_ATTACHMENT' });
+}));
+
+it('revalidates attachment read scope, deleted parents and live grants before reaching storage', async () => withAttachmentFixture(async ({
+  principal, resource, customer, sponsor, sponsorActor, operation, create, attachments, upload, download,
+}) => {
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Scoped file' });
+  const uploaded = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Scoped.txt', mimeType: 'text/plain', content: Buffer.from('Scoped') }, upload);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Attachment scope', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['attachments'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(uploaded), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  for (const field of ['file_name', 'mime_type', 'attachment_id']) {
+    await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
+    await expect(attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(root))).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [] } });
+  await customer.table('comments').where('comment_id', root.commentId).update({ deleted_at: new Date() });
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(uploaded), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('comments').where('comment_id', root.commentId).update({ deleted_at: null });
+  await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).delete();
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(uploaded), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(download).not.toHaveBeenCalled();
+}));
+
+it('keeps attachment transport expiry pending, permits an exact renewed retry and retains reads during license lapse', async () => withAttachmentFixture(async ({
+  principal, resource, customer, sponsor, create, attachments, upload, download,
+}) => {
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Timed attachment' });
+  const request = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Timed.txt', mimeType: 'text/plain', content: Buffer.from('Timed') };
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, async (...args) => {
+    await upload(...args); await db.raw('SELECT pg_sleep(1.1)');
+  })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('co_management_conversation_attachments').where('attachment_id', request.attachmentId).first()).toMatchObject({ status: 'pending', ready_at: null });
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+  const ready = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload);
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), async path => {
+    const content = await download(path); await db.raw('SELECT pg_sleep(1.1)'); return content;
+  })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect((await attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(ready), download)).content.length).toBe(5);
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, request, upload)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  const migration = require('../../../migrations/20260906200000_create_co_management_conversation_attachments.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+
+it('retains attachment access on surviving replies after root deletion while excluding unpublished and deleted parent content', async () => withAttachmentFixture(async ({
+  principal, resource, customer, create, attachments, upload, download,
+}) => {
+  const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Root' });
+  const reply = await create(principal, { operationId: randomUUID(), parent: attachmentComment(root), text: 'Surviving reply' });
+  const input = { attachmentId: randomUUID(), comment: attachmentComment(reply), fileName: 'Reply.txt', mimeType: 'text/plain', content: Buffer.from('Reply file') };
+  const attachment = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, input, upload);
+  await customer.table('comments').where('comment_id', root.commentId).update({ deleted_at: new Date() });
+  expect((await attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(attachment), download)).content.length).toBe(10);
+  await customer.table('comments').where('comment_id', reply.commentId).update({ publish_state: 'scheduled' });
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(attachment), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('comments').where('comment_id', reply.commentId).update({ publish_state: 'published' });
+  for (const change of [{ fileName: '../outside.txt' }, { mimeType: 'text/plain\r\nInjected: true' }, { attachmentId: 'invalid' }, { audience: 'requester' }]) {
+    await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, { ...input, ...change }, upload)).rejects.toMatchObject({ code: 'INVALID_ATTACHMENT' });
+  }
+  const row = await customer.table('co_management_conversation_attachments').where('attachment_id', attachment.attachmentId).first();
+  await customer.table('co_management_conversation_attachments').where('attachment_id', attachment.attachmentId).update({ storage_path: 'other-owner/private' });
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(attachment), download)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(attachments.uploadCoManagedConversationAttachment(db, principal, resource, input, upload)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(row.storage_path).toBe(`co-management/${resource.tenant}/${attachment.attachmentId}`);
+}));
+
+it('uses the production attachment provider adapter and leaves incomplete provider acknowledgements unpublished', async () => withAttachmentFixture(async ({
+  principal, resource, create, customer, attachments, objects,
+}) => {
+  const { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
+  const { StorageService } = await import('@alga-psa/storage/StorageService');
+  const production = await import('../../lib/co-managed/conversationAttachments');
+  let acknowledge = false;
+  const provider = { upload: vi.fn(async (content: Buffer, path: string, options: { mime_type: string }) => {
+    objects.set(path, Buffer.from(content)); return { path, size: acknowledge ? content.length : content.length - 1, mime_type: options.mime_type };
+  }), download: vi.fn(async (path: string) => Buffer.from(objects.get(path)!)) };
+  const transport = vi.spyOn(StorageProviderFactory, 'createProvider').mockResolvedValue(provider as any);
+  const validate = vi.spyOn(StorageService, 'validateFileUpload').mockResolvedValue();
+  try {
+    const root = await create(principal, { operationId: randomUUID(), audience: 'shared_it', text: 'Production attachment' });
+    const input = { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Production.txt', mimeType: 'text/plain', content: Buffer.from('Production bytes') };
+    await expect(production.uploadConversationAttachment(db, principal, resource, input)).rejects.toThrow('did not confirm');
+    expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, input.comment)).toEqual([]);
+    acknowledge = true; const attachment = await production.uploadConversationAttachment(db, principal, resource, input);
+    expect(Buffer.from((await production.downloadConversationAttachment(db, principal, resource, attachmentReference(attachment))).content).toString()).toBe('Production bytes');
+    expect(validate).toHaveBeenCalledWith(resource.tenant, 'text/plain', input.content.length);
+    expect(provider.download).toHaveBeenCalledWith(`co-management/${resource.tenant}/${input.attachmentId}`);
+    expect(await customer.table('co_management_conversation_attachments').where('attachment_id', input.attachmentId).first()).toMatchObject({ status: 'ready' });
+  } finally { transport.mockRestore(); validate.mockRestore(); }
 }));
