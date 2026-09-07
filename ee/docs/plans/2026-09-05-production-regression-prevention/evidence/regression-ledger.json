@@ -505,6 +505,32 @@
         "status": "passed-first-attempt",
         "currentCandidateReadiness": false
       }
+    },
+    {
+      "id": "tax-compound-base-and-zero-rate",
+      "classification": "discovered-during-regression-audit",
+      "incident": null,
+      "journey": "Calculate and preview composite taxes in the configured sequence",
+      "missingBoundary": "Compound flag semantics and non-positive amounts to service results and UI preview",
+      "ownerRole": "Billing maintainers",
+      "testFiles": [
+        "packages/billing/tests/tax/taxService.thresholdsAndComposite.test.ts",
+        "packages/billing/src/components/settings/tax/TaxComponentEditor.preview.test.tsx",
+        "server/src/test/unit/taxService.test.ts",
+        "server/src/test/unit/taxCalculation.test.ts"
+      ],
+      "ci": {
+        "workflow": ".github/workflows/unit-tests.yml",
+        "job": "Server unit suite + coverage"
+      },
+      "evidence": "tax-compound-regression.json",
+      "baseRevision": "a8fd74d09fd762930ac792d118d4a3fb1549c847",
+      "status": "local-before-and-after-verified",
+      "limits": [
+        "Local focused validation; no current native CI or release readiness claim.",
+        "13 pre-existing tax TODOs remain; full-suite readiness still fails until omissions are addressed.",
+        "No production incident ID was supplied."
+      ]
     }
   ]
 }

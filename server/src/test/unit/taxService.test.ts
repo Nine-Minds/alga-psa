@@ -97,7 +97,7 @@ describe('TaxService', () => {
             expect(result.taxRate).toBe(10);
         });
 
-        it.todo('should calculate composite tax correctly', async () => {
+        it('should calculate composite tax correctly', async () => {
             const mockTaxSettings: IClientTaxSettings = {
                 tenant: 'test_tenant',
                 client_id: 'client1',
@@ -142,13 +142,13 @@ describe('TaxService', () => {
             mockClientTaxSettings.getCompositeTaxComponents.mockResolvedValue(mockTaxComponents);
             mockClientTaxSettings.getTaxHolidays.mockResolvedValue([]);
 
-            const result = await taxService.calculateTax('client1', 100, '2023-06-01');
+            const result = await taxService.calculateTax('client1', 10000, '2023-06-01');
 
             // Expected calculation:
-            // State Tax: 100 * 5% = 5
-            // City Tax: (100 + 5) * 2% = 2.1
-            // Total Tax: 5 + 2.1 = 7.1
-            expect(result.taxAmount).toBeCloseTo(7.1, 2);
+            // Amounts are cents. State Tax: 10000 * 5% = 500
+            // City Tax: (10000 + 500) * 2% = 210
+            // Total Tax: 500 + 210 = 710 cents (7.1%).
+            expect(result.taxAmount).toBe(710);
             expect(result.taxRate).toBeCloseTo(7.1, 2);
             expect(result.taxComponents).toEqual(mockTaxComponents);
         });

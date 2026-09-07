@@ -217,20 +217,17 @@ export class TaxService {
   private async calculateCompositeTax(taxRate: ITaxRate, netAmount: number, date: ISO8601String): Promise<ITaxCalculationResult> {
     const { knex } = await createTenantKnex();
     const components = await ClientTaxSettings.getCompositeTaxComponents(taxRate.tax_rate_id);
+    if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, taxComponents: [] };
     let totalTaxAmount = 0;
-    let taxableAmount = netAmount;
     const appliedComponents: ITaxComponent[] = [];
 
     for (const component of components) {
       if (!this.isComponentApplicable(component, date)) continue;
 
+      const taxableAmount = component.is_compound ? netAmount + totalTaxAmount : netAmount;
       const componentTax = await this.calculateComponentTax(component, taxableAmount, date);
       totalTaxAmount += componentTax;
       appliedComponents.push(component);
-
-      if (component.is_compound) {
-        taxableAmount += componentTax;
-      }
     }
 
     const effectiveTaxRate = (totalTaxAmount / netAmount) * 100;
@@ -263,6 +260,7 @@ export class TaxService {
     console.log(`Calculating threshold-based tax for net amount: ${netAmount}`);
     console.log(`Number of thresholds: ${thresholds.length}`);
 
+    if (netAmount <= 0) return { taxAmount: 0, taxRate: 0, appliedThresholds: [] };
     let taxAmount = 0;
     let remainingAmount = netAmount;
     const appliedThresholds: ITaxRateThreshold[] = [];
