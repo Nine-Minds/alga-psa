@@ -102,7 +102,7 @@ it('persists one real email comment and ticket response state across activity re
   await db('tickets').insert({ tenant, ticket_id: ticketId, ticket_number: 'EMAIL-REPLAY', title: 'Email reply', client_id: env.clientId, entered_at: db.fn.now(), updated_at: db.fn.now() });
   const { registerEmailWorkflowActionsV2 } = await import('@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions');
   const { getActionRegistryV2 } = await import('@alga-psa/shared/workflow/runtime/registries/actionRegistry');
-  registerEmailWorkflowActionsV2();
+  if (!getActionRegistryV2().get('create_comment_from_parsed_email', 1)) registerEmailWorkflowActionsV2();
   registeredAction.current = getActionRegistryV2().get('create_comment_from_parsed_email', 1);
   expect(registeredAction.current).toBeDefined();
   try {
@@ -125,6 +125,48 @@ it('persists one real email comment and ticket response state across activity re
     expect(first.output).toEqual({ comment_id: comments[0].comment_id });
     expect(comments[0].note).toContain('Customer reply');
     expect((await db('tickets').where({ tenant, ticket_id: ticketId }).first()).response_state).toBe('awaiting_internal');
+    expect(await Invocation.listByRun(db, run.run_id, tenant)).toHaveLength(1);
+  } finally { registeredAction.current = null; }
+});
+
+it('creates one real ticket and initial comment across activity replay', async () => {
+  const { createTestEnvironment, createClientLocation } = await import('../../../test-utils/testDataFactory');
+  const env = await createTestEnvironment(db);
+  const tenant = env.tenantId;
+  const locationId = await createClientLocation(db, env.clientId, tenant);
+  const boardId = randomUUID();
+  const statusId = randomUUID();
+  const priorityId = randomUUID();
+  await db('priorities').insert({ tenant, priority_id: priorityId, priority_name: 'Normal', item_type: 'ticket', order_number: 1, color: '#888888', created_by: env.userId });
+  await db('boards').insert({ tenant, board_id: boardId, board_name: 'Email intake', is_default: true, display_order: 1 });
+  await db('statuses').insert({ tenant, status_id: statusId, name: 'New', status_type: 'ticket', item_type: 'ticket', board_id: boardId, order_number: 1, is_closed: false, is_default: true });
+  const { registerEmailWorkflowActionsV2 } = await import('@alga-psa/shared/workflow/runtime/actions/registerEmailWorkflowActions');
+  const { getActionRegistryV2 } = await import('@alga-psa/shared/workflow/runtime/registries/actionRegistry');
+  if (!getActionRegistryV2().get('create_ticket_with_initial_comment', 1)) registerEmailWorkflowActionsV2();
+  registeredAction.current = getActionRegistryV2().get('create_ticket_with_initial_comment', 1);
+  try {
+    const workflow = await WorkflowDefinition.create(db, tenant, { name: 'Real inbound ticket', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
+    const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+    const input: any = {
+      runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
+      step: { type: 'action.call', config: { actionId: 'create_ticket_with_initial_comment', version: 1,
+        inputMapping: { emailData: { id: 'new-email', subject: 'Printer offline', from: { email: 'sender@example.com' }, body: { text: 'Please repair printer' } },
+          parsedEmail: { sanitizedText: 'Please repair printer' }, ticketDefaults: { board_id: boardId, status_id: statusId, priority_id: priorityId, entered_by: env.userId },
+          targetClientId: env.clientId, targetContactId: null, targetAuthorUserId: null, targetLocationId: locationId },
+        idempotencyKey: { $expr: 'payload.messageId' } } },
+      scopes: { payload: { messageId: 'new-email' }, workflow: {}, lexical: [], meta: {}, error: null,
+        system: { runId: run.run_id, workflowId: workflow.workflow_id, workflowVersion: 1, tenantId: tenant } },
+    };
+    const first = await executeWorkflowRuntimeV2ActionStep(input);
+    expect(await executeWorkflowRuntimeV2ActionStep(input)).toEqual(first);
+    const tickets = await db('tickets').where({ tenant });
+    expect(tickets).toHaveLength(1);
+    expect(tickets[0]).toMatchObject({ title: 'Printer offline', client_id: env.clientId, board_id: boardId, status_id: statusId, location_id: locationId });
+    const comments = await db('comments').where({ tenant, ticket_id: tickets[0].ticket_id });
+    expect(comments).toHaveLength(1);
+    expect(comments[0].note).toContain('Please repair printer');
+    expect(first.output).toMatchObject({ ticket_id: tickets[0].ticket_id, comment_id: comments[0].comment_id });
     expect(await Invocation.listByRun(db, run.run_id, tenant)).toHaveLength(1);
   } finally { registeredAction.current = null; }
 });
