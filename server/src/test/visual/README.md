@@ -2,7 +2,8 @@
 
 Pixel-golden layout regression for the standard invoice templates shipped by
 the migrations (`standard_invoice_templates`: standard-default,
-standard-detailed, standard-grouped, standard-invoice-by-location — plus any
+standard-detailed, standard-grouped, standard-invoice-by-location,
+standard-invoice-by-ticket — plus any
 template a future migration adds; the suite reads the table, it does not
 hardcode the list).
 
@@ -10,11 +11,16 @@ One fully deterministic invoice — fixed names, dates, invoice number, PO,
 one recurring and one one-time charge, two client locations — goes through
 the real template pipeline (the same AST evaluation and server-rendered HTML
 document the PDF print uses), is screenshotted in headless Chromium at a
-fixed A4-at-96dpi viewport (794x1123, print media), and compared pixel by
+fixed A4-at-96dpi viewport (794x1123, print media, explicit light color scheme), and compared pixel by
 pixel against the PNGs in `__baselines__/`. A pixel counts as different when
 any RGBA channel deviates by more than 12/255; the test fails when more than
 1% of page pixels differ. On failure the actual render and a red-highlight
 diff are written to `__output__/` (gitignored).
+
+The by-ticket baseline covers the no-ticket fallback; this fixture does not
+exercise billed-time ticket groups. Monetary totals and line amounts are asserted
+separately because pixel tolerance can miss small digit changes. Rendered HTML
+is also retained in `__output__/` for diagnostics.
 
 ## Running
 

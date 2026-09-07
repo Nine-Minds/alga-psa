@@ -476,6 +476,9 @@ describeDb('visual goldens: standard invoice templates', () => {
       : dbInvoiceData;
     const viewModel = mapDbInvoiceToWasmViewModel(enrichedData);
     expect(viewModel, 'invoice view model').toBeTruthy();
+    // Pixel tolerance can miss small digit changes: verify money separately.
+    expect(viewModel).toMatchObject({ subtotal: 40000, tax: 3550, total: 43550 });
+    expect(viewModel!.items.map(item => item.total).sort((a, b) => a - b)).toEqual([15000, 25000]);
 
     // getInvoiceCharges has no ORDER BY, so heap order decides item order.
     // Pin it before groups are derived: sort by description (the two items
@@ -495,6 +498,7 @@ describeDb('visual goldens: standard invoice templates', () => {
         'standard-detailed',
         'standard-grouped',
         'standard-invoice-by-location',
+        'standard-invoice-by-ticket',
       ]),
     );
 
@@ -508,6 +512,7 @@ describeDb('visual goldens: standard invoice templates', () => {
     try {
       await page.setViewport({ width: PAGE_WIDTH, height: PAGE_HEIGHT, deviceScaleFactor: 1 });
       await page.emulateMediaType('print');
+      await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
 
       for (const code of codes) {
         const template = templates.find(
@@ -523,6 +528,9 @@ describeDb('visual goldens: standard invoice templates', () => {
           knex: db,
         });
 
+        await fs.mkdir(OUTPUT_DIR, { recursive: true });
+        await fs.writeFile(path.join(OUTPUT_DIR, '.gitignore'), '*\n');
+        await fs.writeFile(path.join(OUTPUT_DIR, `${code}.actual.html`), html);
         await page.setContent(html, { waitUntil: 'load' });
         await page.evaluate(() => (document as any).fonts?.ready ?? Promise.resolve());
         const actualPng = Buffer.from(

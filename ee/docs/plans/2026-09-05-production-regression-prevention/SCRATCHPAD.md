@@ -1813,3 +1813,9 @@ visual suite collects with RUN_VISUAL=1 and a required DB TCP probe. Did not run
 its destructive reset hook or compare actual rendered images, and no checked-in
 PNGs changed. README documents review and update mode. Visual suite remains an
 open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.json`.
+
+### 2026-09-07 — reviewed visual baseline and native fresh-install green
+
+- Native run 34118119011 completed successfully for CE/EE browser and API lanes at merge revision 3072eefdf9ecd8ccd551e7dfaf8d595eb6b2908f (PR head d8cf156). Downloaded and inspected actual execution evidence; summary and SHA-256 hashes are in evidence/fresh-install-native-d8cf.json. This does not prove whole-PR readiness: workspace fixture failure is fixed locally, and unit/full integration were still running.
+- Full invoice visual execution on owned disposable visual_regression_82cc_test initially exposed host dark color scheme and a missing by-ticket baseline. Explicit light print media restores all four existing baselines unchanged. Reviewed and added only the missing by-ticket no-ticket fallback PNG; this is not ticket-group coverage.
+- Added exact 40000 subtotal / 3550 tax / 43550 total and 15000/25000 line assertions, since pixel tolerance misses small numeric changes. HTML diagnostics retained. Comparison-only rerun passed all five templates (1 test, 18.79 seconds), CI=1 and UPDATE_VISUAL_BASELINES=0; log /tmp/alga-visual-render-reviewed.log. Visual lane still requires a reproducible mandatory runner before it counts toward global inventory completion.
