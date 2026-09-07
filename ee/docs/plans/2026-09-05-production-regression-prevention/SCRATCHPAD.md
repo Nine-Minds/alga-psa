@@ -1874,3 +1874,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Wrapped actual Git checkout inspection in the unit verification entry point. Missing checkout metadata now produces persisted failed execution evidence instead of throwing before the artifact writer. The lane still fails closed.
 - Behavioral test uses a real temporary directory without Git metadata and verifies the saved failure; verifier/reconciliation tests pass 8/8 (/tmp/alga-unit-metadata-failure.log). No full tooling rerun claimed for this follow-up.
+
+### 2026-09-07 — remove legacy email unavailable-service false passes
+
+- Removed seven 404 early-success returns across legacy OAuth/webhook suites and the validation-token branch that accepted 404 as successful coverage. Required endpoints now fail assertions when unavailable; the OAuth request helper no longer synthesizes a mock 404 for connection refusal.
+- Existing suites collected 13 cases after the edit (/tmp/alga-legacy-email-collection.json). This is collection only: service fixtures/CI assignment and stale OAuth/refresh expectations remain unresolved; do not count this as runtime passing evidence or close inventory requirements. No source-string regression tests were added.

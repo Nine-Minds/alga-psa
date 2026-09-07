@@ -97,13 +97,7 @@ describe('Email Settings OAuth Flow Tests', () => {
       console.log(`     📥 Received response with status: ${response.status}`);
       
       // Handle case where Next.js server isn't running
-      if (response.status === 404) {
-        console.log('  3️⃣ Next.js server not running - test skipped...');
-        console.log('     ⚠️ To test OAuth error handling, start Next.js server with: npm run dev');
-        console.log('     ✓ OAuth callback gracefully handled missing server');
-        console.log('\n  ✅ OAuth error scenarios test completed (server not available)!\n');
-        return;
-      }
+      expect(response.status, 'Required email endpoint is unavailable').not.toBe(404);
       
       // OAuth callback pages return 200 (HTML loads successfully) but contain error info
       console.log('  3️⃣ Verifying error response handling...');
@@ -160,21 +154,9 @@ describe('Email Settings OAuth Flow Tests', () => {
       );
       console.log(`     📥 Received response with status: ${response.status}`);
       
-      // If the endpoint exists, it should return the validation token
-      // If not, we'll get a 404 which is expected for now
-      console.log('  3️⃣ Verifying webhook validation response...');
-      if (response.status === 200) {
-        const body = await response.text();
-        expect(body).toBe(validationToken);
-        console.log(`     ✓ Webhook validation successful - returned token: ${body}`);
-        console.log('     ✓ Microsoft webhook endpoint is implemented and working');
-      } else {
-        console.log(await response.text());
-        expect(response.status).toBe(404); // Expected until endpoint is implemented
-        console.log(`     ⚠️ Webhook endpoint not found (status ${response.status}) - implementation pending`);
-        console.log('     ✓ 404 response handled correctly');
-      }
-      
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe(validationToken);
+
       console.log('\n  ✅ Microsoft webhook validation test completed!\n');
     });
   });
