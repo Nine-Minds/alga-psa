@@ -21,12 +21,18 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 
+export const METRICS_SCHEMA_VERSION = 2;
+// Increment when the source inventory/coverage interpretation changes. This
+// describes measured coverage, never whole-repository execution readiness.
+export const COVERAGE_METHODOLOGY = 'v8-loaded-files/source-inventory-v1';
+
 export const HEADER = [
   'timestamp_utc', 'suite', 'branch', 'commit',
   'passed', 'failed', 'skipped', 'todo', 'total', 'pass_pct',
   'lines_pct', 'statements_pct', 'branches_pct', 'functions_pct',
   'duration_s', 'run_url',
   'executed', 'run_status', 'files_measured', 'files_total',
+  'schema_version', 'run_kind', 'event_name', 'coverage_methodology',
 ];
 
 export const DETAIL_HEADER = [
@@ -34,7 +40,19 @@ export const DETAIL_HEADER = [
   'lines_pct', 'lines_covered', 'lines_total',
   'statements_pct', 'branches_pct', 'functions_pct',
   'files_measured', 'files_total', 'run_url',
+  'schema_version', 'run_kind', 'event_name', 'coverage_methodology',
 ];
+
+function runKind(env) {
+  switch (env.GITHUB_EVENT_NAME) {
+    case undefined: case '': return 'local';
+    case 'pull_request': case 'pull_request_target': return 'pr';
+    case 'schedule': return 'nightly';
+    case 'workflow_dispatch': return 'manual';
+    case 'push': return env.GITHUB_REF_NAME === 'main' ? 'main' : 'branch';
+    default: return 'other';
+  }
+}
 
 function readJson(path) {
   if (!path || !existsSync(path)) return null;
@@ -242,6 +260,8 @@ export function buildRow() {
     runUrl,
     counts?.executed ?? '', counts?.runStatus ?? (missingRequiredReport ? 'partial' : ''),
     files.measured, files.total,
+    METRICS_SCHEMA_VERSION, runKind(process.env), process.env.GITHUB_EVENT_NAME ?? '',
+    summary ? COVERAGE_METHODOLOGY : '',
   ];
 }
 
@@ -362,6 +382,7 @@ async function main() {
         d.lines, d.linesCovered, d.linesTotal,
         d.statements, d.branches, d.functions,
         d.filesMeasured, d.filesTotal, row[15],
+        ...row.slice(20, 24),
       ])
     : [];
 

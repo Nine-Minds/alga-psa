@@ -50,6 +50,20 @@ preserved when all managed headings match.
 | `executed` | `passed + failed` — how many tests actually ran |
 | `run_status` | `complete` or `partial` (see below); blank when the run recorded coverage only |
 | `files_measured`, `files_total` | source files in the coverage report vs. on disk; blank without coverage |
+| `schema_version` | `2` for versioned rows; historical blank values are unversioned |
+| `run_kind` | `pr`, `main`, `branch`, `nightly`, `manual`, `local`, or `other`, derived from the triggering event |
+| `event_name` | original GitHub event name; blank for local invocations |
+| `coverage_methodology` | `v8-loaded-files/source-inventory-v1` when a coverage report is present; otherwise blank |
+
+The four version fields occupy U:X on `metrics` and N:Q on
+`coverage_by_dir`. All prior positions retain their meanings. The source
+inventory v1 denominator includes `server/src`, `shared`, and each
+`packages/*/src`, excluding generated/declaration/test files and the existing
+build, migration, seed and double-underscore directories. EE and service source
+roots are not comprehensively included; this is not whole-repository coverage.
+Keep historical unversioned rows separate when interpreting methodology changes.
+The event fields label recorded rows; they do not enable recording for workflows
+whose metrics steps are currently excluded.
 
 For charts, add a second tab with `=QUERY(metrics!A:T, "select A, J where B = 'unit-coverage'")`
 style pulls and chart those ranges. Native Sheets charts update as rows arrive.

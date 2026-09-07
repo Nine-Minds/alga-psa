@@ -47,10 +47,10 @@ test('a fully passing suite keeps legacy counts and percentage', () => {
   assert.equal(result.passPct, 100);
 });
 
-function buildIsolatedRow({ results, coverage, requestResults = true } = {}) {
+function buildIsolatedRow({ results, coverage, requestResults = true, context = {} } = {}) {
   const dir = mkdtempSync(join(tmpdir(), 'metrics-report-'));
   try {
-    const env = { PATH: process.env.PATH, TEST_METRICS_SUITE: 'required-tests' };
+    const env = { PATH: process.env.PATH, TEST_METRICS_SUITE: 'required-tests', ...context };
     if (requestResults) env.TEST_METRICS_RESULTS = join(dir, 'results.json');
     if (results !== undefined) writeFileSync(env.TEST_METRICS_RESULTS, results);
     if (coverage) {
@@ -90,4 +90,34 @@ test('intentional coverage-only reporting preserves its legacy blank execution s
   assert.equal(row.run_status, '');
   assert.equal(row.lines_pct, 80);
   assert.equal(row.executed, '');
+});
+
+test('versioned metrics distinguish CI event kinds without changing original counts', () => {
+  for (const [event, branch, kind] of [
+    ['pull_request', '3343/merge', 'pr'],
+    ['push', 'main', 'main'],
+    ['push', 'feature', 'branch'],
+    ['schedule', 'main', 'nightly'],
+    ['workflow_dispatch', 'main', 'manual'],
+    ['repository_dispatch', 'main', 'other'],
+  ]) {
+    const row = buildIsolatedRow({
+      results: JSON.stringify(report([{ status: 'passed', assertionResults: [assertion('passed')] }],
+        { numPassedTests: 1, numTotalTests: 1, numPendingTests: 0, numFailedTestSuites: 0 })),
+      context: { GITHUB_EVENT_NAME: event, GITHUB_REF_NAME: branch },
+    });
+    assert.equal(row.schema_version, 2);
+    assert.equal(row.event_name, event);
+    assert.equal(row.run_kind, kind);
+    assert.equal(row.passed, 1);
+    assert.equal(row.pass_pct, 100);
+    assert.equal(row.coverage_methodology, '');
+  }
+});
+
+test('coverage-only rows identify their measured-source methodology', () => {
+  const row = buildIsolatedRow({ requestResults: false, coverage: { total: { lines: { pct: 80 } } } });
+  assert.equal(row.schema_version, 2);
+  assert.equal(row.run_kind, 'local');
+  assert.equal(row.coverage_methodology, 'v8-loaded-files/source-inventory-v1');
 });

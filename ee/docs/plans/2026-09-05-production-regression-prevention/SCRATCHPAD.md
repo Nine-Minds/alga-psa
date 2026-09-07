@@ -1054,3 +1054,8 @@
 ### Append-only metrics header migration — 2026-09-07
 - Existing Sheet header check read only A1, preventing older tabs from gaining appended managed headings and permitting values under reordered columns. Updated it to validate the complete managed prefix and write only missing suffix cells; matching user-added trailing columns remain intact.
 - Before behavior: two intended failures/one pass. Final: five schema boundary cases and seven lifecycle cases pass (12 total, zero skips), covering legacy prefix, mismatched order, custom suffix, empty tab and AA expansion. No live Sheet writes performed. Evidence: metrics-header-migration.json. F024/F025 remain incomplete.
+
+### Versioned metrics rows and event classification — 2026-09-07
+- Appended schema_version=2, run_kind, event_name and coverage_methodology to summary and directory rows, preserving all existing positions. GitHub event context distinguishes PR/main/branch/nightly/manual/local/other without inferring readiness. Historical rows remain unversioned.
+- Documented source-inventory-v1 restricted denominator (server/src, shared, packages/*/src), explicitly excluding whole-repository claims. This metadata does not silently expand coverage scope or enable currently disabled PR reporting.
+- Before: seven pass/two intended failures. After: 14 combined lifecycle/schema cases pass, zero skips; subprocess cases exercise actual row generation. Evidence: metrics-versioned-rows.json. F024/F025 remain false pending remaining fields, comprehensive inventory, live workbook and cancellation reconciliation.
