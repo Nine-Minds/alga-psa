@@ -1,6 +1,7 @@
-import { Knex, knex as createKnex } from 'knex';
+import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
-import { createTestDbConnection } from '../../../../test-utils/dbConfig';
+import { connectApplicationTestDatabase } from './applicationTestDatabase';
+import { ensureApiServerRunning } from './apiServerManager';
 import { createTestEnvironment } from '../../../../test-utils/testDataFactory';
 import { createTestApiKey, ApiTestClient } from './apiTestHelpers';
 import { cleanupTestContacts } from './contactTestDataFactory';
@@ -32,26 +33,16 @@ export async function setupE2ETestEnvironment(options: {
   clientName?: string;
   userName?: string;
 } = {}): Promise<E2ETestEnvironment> {
-  const resolvedDbHost = process.env.E2E_DB_HOST
-    || process.env.PGBOUNCER_HOST
-    || process.env.DB_HOST
-    || '127.0.0.1';
-  const resolvedDbPort = process.env.E2E_DB_PORT
-    || process.env.PGBOUNCER_PORT
-    || process.env.DB_PORT
-    || (resolvedDbHost === '127.0.0.1' ? '5432' : '6432');
-
-  process.env.DB_HOST = resolvedDbHost;
-  process.env.DB_PORT = resolvedDbPort;
-  process.env.DB_DIRECT_HOST = process.env.E2E_DB_DIRECT_HOST || process.env.DB_DIRECT_HOST || resolvedDbHost;
-  process.env.DB_DIRECT_PORT = process.env.E2E_DB_DIRECT_PORT || process.env.DB_DIRECT_PORT || resolvedDbPort;
-  process.env.DB_NAME_SERVER = process.env.E2E_DB_NAME || process.env.DB_NAME_SERVER || 'server';
-
-  const db = await createTestDbConnection();
-
-  await normalizeServiceBillingConstraints(db);
+  const baseUrl = options.baseUrl || process.env.TEST_API_BASE_URL;
+  if (!baseUrl) throw new Error('API E2E tests require an explicit TEST_API_BASE_URL');
+  const target = new URL(baseUrl);
+  if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) {
+    throw new Error('API E2E tests require an HTTP application URL without embedded credentials');
+  }
+  const db = connectApplicationTestDatabase();
 
   try {
+    await ensureApiServerRunning(baseUrl);
     // Create test environment with tenant, client, address and user
     const { tenantId, clientId, locationId, userId } = await createTestEnvironment(db, {
       clientName: options.clientName,
@@ -69,7 +60,7 @@ export async function setupE2ETestEnvironment(options: {
 
     // Create API client with the API key and tenant ID
     const apiClient = new ApiTestClient({
-      baseUrl: options.baseUrl || process.env.TEST_API_BASE_URL || 'http://127.0.0.1:3000',
+      baseUrl,
       apiKey: apiKeyRecord.api_key,
     });
 
@@ -186,26 +177,6 @@ export async function setupE2ETestEnvironment(options: {
   }
 }
 
-async function normalizeServiceBillingConstraints(db: Knex): Promise<void> {
-  const adminDb = createKnex({
-    client: 'pg',
-    connection: {
-      host: process.env.DB_HOST || '127.0.0.1',
-      port: parseInt(process.env.DB_PORT || '5432', 10),
-      database: process.env.DB_NAME_SERVER || 'server',
-      user: process.env.DB_USER_ADMIN || 'postgres',
-      password: process.env.DB_PASSWORD_ADMIN || process.env.DB_PASSWORD_SERVER || 'postpass123',
-    },
-  });
-
-  try {
-    await adminDb.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS service_catalog_billing_method_check');
-    await adminDb.raw('ALTER TABLE service_catalog DROP CONSTRAINT IF EXISTS billing_method_check');
-    await adminDb.raw("ALTER TABLE service_catalog ADD CONSTRAINT service_catalog_billing_method_check CHECK (billing_method IN ('fixed','hourly','usage'))");
-  } finally {
-    await adminDb.destroy();
-  }
-}
 
 /**
  * Setup function for use in beforeEach hooks
@@ -372,7 +343,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
   }
 
   // Check if statuses already exist for this tenant
-  const existingStatuses = await statuses().count('* as count');
+  const existingStatuses = await statuses().count<{ count: string }[]>('* as count');
   if (parseInt(existingStatuses[0].count) > 0) {
     return; // Statuses already exist
   }
@@ -406,7 +377,7 @@ async function createDefaultStatuses(db: Knex, tenantId: string, userId: string)
   }
 
   // Create default priorities for tickets
-  const existingPriorities = await priorityRows().count('* as count');
+  const existingPriorities = await priorityRows().count<{ count: string }[]>('* as count');
   if (parseInt(existingPriorities[0].count) === 0) {
     const priorities = [
       { name: 'Low', order: 1, color: '#10B981' },

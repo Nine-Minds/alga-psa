@@ -394,7 +394,9 @@ const _middleware = auth((request) => {
     // full validation happens in API route handlers (Node runtime)
     if (!apiKey) {
       const errorResponse = NextResponse.json(
-        { error: 'Unauthorized: API key missing' },
+        pathname.startsWith('/api/v1/')
+          ? { error: { code: 'UNAUTHORIZED', message: 'API key required' } }
+          : { error: 'Unauthorized: API key missing' },
         { status: 401 }
       );
       return applyCorsHeaders(errorResponse, origin);
