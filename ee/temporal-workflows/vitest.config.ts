@@ -1,9 +1,11 @@
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
 import path from 'path';
 
 export default defineConfig({
   test: {
     globals: true,
+    // These suites use the server integration runner and its migrated DB.
+    exclude: [...configDefaults.exclude, 'src/__tests__/integration/**'],
     environment: 'node',
     setupFiles: ['./src/test-utils/setup.ts'],
     testTimeout: 120000, // 2 minutes for E2E tests

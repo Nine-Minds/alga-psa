@@ -41,6 +41,7 @@
     "src/test/integration/imports/importWorkflow.integration.test.ts",
     "src/test/integration/payments/stripePaymentIntegration.test.ts",
     "src/test/integration/webhookDelivery.happyPath.test.ts",
-    "src/test/integration/webhookDelivery.tenantIsolation.test.ts"
+    "src/test/integration/webhookDelivery.tenantIsolation.test.ts",
+    "../ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts"
   ]
 }

@@ -2,7 +2,7 @@ import { buildWorkflowDiagnosticSnapshot } from '@alga-psa/workflows/runtime/uti
 import { beforeAll, beforeEach, afterAll, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
-import { createTestDbConnection } from '../../../test-utils/dbConfig';
+import { createTestDbConnection } from '../../../../../server/test-utils/dbConfig';
 import WorkflowDefinition from '@alga-psa/workflows/persistence/workflowDefinitionModelV2';
 import WorkflowRun from '@alga-psa/workflows/persistence/workflowRunModelV2';
 import Invocation, { type WorkflowActionInvocationRecord } from '@alga-psa/workflows/persistence/workflowActionInvocationModelV2';
@@ -33,7 +33,7 @@ beforeEach(() => { actionHandler.mockReset(); registeredAction.current = null; }
 it('stores redacted bounded step snapshots with idempotent writes and retention', async () => {
   const Step = (await import('@alga-psa/workflows/persistence/workflowRunStepModelV2')).default;
   const Snapshot = (await import('@alga-psa/workflows/persistence/workflowRunSnapshotModelV2')).default;
-  const { projectWorkflowRuntimeV2StepCompletion: complete } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const { projectWorkflowRuntimeV2StepCompletion: complete } = await import('../../activities/workflow-runtime-v2-activities');
   const tenant = randomUUID();
   const definition = await WorkflowDefinition.create(db, tenant, { name: 'Snapshots', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
   const run = await WorkflowRun.create(db, { workflow_id: definition.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
@@ -107,7 +107,7 @@ it('retries a failed activity on its persisted row and replays success without a
     name: 'Activity retry regression', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1,
   });
   const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
-  const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const { executeWorkflowRuntimeV2ActionStep } = await import('../../activities/workflow-runtime-v2-activities');
   const input: any = {
     runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
     step: { type: 'action.call', config: { actionId: 'email-retry-regression', version: 1,
@@ -130,7 +130,7 @@ it('retries a failed activity on its persisted row and replays success without a
 });
 
 it('persists one real email comment and ticket response state across activity replay', async () => {
-  const { createTestEnvironment } = await import('../../../test-utils/testDataFactory');
+  const { createTestEnvironment } = await import('../../../../../server/test-utils/testDataFactory');
   const env = await createTestEnvironment(db);
   const tenant = env.tenantId;
   const ticketId = randomUUID();
@@ -143,7 +143,7 @@ it('persists one real email comment and ticket response state across activity re
   try {
     const workflow = await WorkflowDefinition.create(db, tenant, { name: 'Real email reply', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
     const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
-    const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../../activities/workflow-runtime-v2-activities');
     const input: any = {
       runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
       step: { type: 'action.call', config: { actionId: 'create_comment_from_parsed_email', version: 1,
@@ -165,7 +165,7 @@ it('persists one real email comment and ticket response state across activity re
 });
 
 it('creates one real ticket and initial comment across activity replay', async () => {
-  const { createTestEnvironment, createClientLocation } = await import('../../../test-utils/testDataFactory');
+  const { createTestEnvironment, createClientLocation } = await import('../../../../../server/test-utils/testDataFactory');
   const env = await createTestEnvironment(db);
   const tenant = env.tenantId;
   const locationId = await createClientLocation(db, env.clientId, tenant);
@@ -182,7 +182,7 @@ it('creates one real ticket and initial comment across activity replay', async (
   try {
     const workflow = await WorkflowDefinition.create(db, tenant, { name: 'Real inbound ticket', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
     const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
-    const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../../activities/workflow-runtime-v2-activities');
     const input: any = {
       runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
       step: { type: 'action.call', config: { actionId: 'create_ticket_with_initial_comment', version: 1,
@@ -211,7 +211,7 @@ it('redacts secret references in persisted action inputs without changing handle
   const workflow = await WorkflowDefinition.create(db, tenant, { name: 'Input redaction', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
   const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
   actionHandler.mockReset().mockResolvedValue({ accepted: true });
-  const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const { executeWorkflowRuntimeV2ActionStep } = await import('../../activities/workflow-runtime-v2-activities');
   const args = { connection: { secretRef: 'synthetic-private-reference', label: 'Mailbox' }, values: [{ secretRef: 'nested-private-reference' }] };
   await executeWorkflowRuntimeV2ActionStep({
     runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
@@ -229,7 +229,7 @@ it('redacts secret references in persisted action inputs without changing handle
 
 it('rejects missing or mismatched step completion without modifying either run', async () => {
   const Step = (await import('@alga-psa/workflows/persistence/workflowRunStepModelV2')).default;
-  const { projectWorkflowRuntimeV2StepCompletion } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const { projectWorkflowRuntimeV2StepCompletion } = await import('../../activities/workflow-runtime-v2-activities');
   const tenant = randomUUID();
   const workflow = await WorkflowDefinition.create(db, tenant, {
     name: 'Step completion ownership regression', payload_schema_ref: 'payload.EmailWorkflowPayload.v1',

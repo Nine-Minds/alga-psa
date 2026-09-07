@@ -1205,3 +1205,9 @@
 
 - Extracted a pure diagnostic snapshot builder and call it before each completion activity. The activity receives bounded/redacted diagnostic data rather than a raw duplicate of execution scopes; it still sanitizes at persistence and accepts older scopes-based inputs. This does not redact all Temporal history.
 - Validated seven DB cases, 72 Temporal readiness cases, four utility cases and targeted TypeScript. Added the utility directory to shared Vitest collection after the normal config reported no matching test file. Evidence: `evidence/snapshot-activity-boundary.json`.
+
+### 2026-09-07 — Fix regression-test ownership in the Nx build graph
+
+- Native revision 9a0ea31e57 introduced a server -> temporal-workflows cycle via the workflow DB test. The cycle guard failed, Nx dependency-plan assertions failed, and CE build-deps attempted an inappropriate worker build with missing EE modules.
+- Relocated the full seven-case suite to `ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts`; updated full/affected integration selection, discovery reconciliation, direct scripts and mandatory Tier-1 floor. Worker standalone Vitest excludes this DB lane. No tests or cycle baseline entries were removed.
+- Actual graph now has only the three existing cycles. Focused Nx workspace tests: 4/4; relocated database suite: 7/7; real runner selection test and targeted TypeScript passed. Evidence: `evidence/workflow-db-test-project-ownership.json`. Native image rebuild verification remains pending.

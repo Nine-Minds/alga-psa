@@ -27,6 +27,7 @@ export default defineConfig({
     // This repo keeps a large number of tests under workspace packages (e.g. ../packages/*).
     // Include them explicitly because Vitest's default include globs do not match paths outside the config root.
     include: [
+      '../ee/temporal-workflows/src/__tests__/integration/**/*.test.ts',
       'src/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       'migrations/__tests__/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',

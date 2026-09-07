@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Runs the Tier-1 integration gate: the explicit manifest at
 // server/src/test/integration/tier1.manifest.json, unioned with every
-// integration suite whose static import graph reaches a file changed since
+// server- or Temporal-owned integration suite whose static import graph reaches a file changed since
 // TIER1_BASE_SHA (the PR base, or the previous tip on push). The manifest is
 // the fixed floor — money paths, intake, authorization, journeys — and the
 // affected set is what stops a change deep in shared/services/email from
@@ -23,6 +23,8 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const serverDir = path.join(repoRoot, 'server');
 const manifestPath = path.join(serverDir, 'src/test/integration/tier1.manifest.json');
 const integrationDir = 'src/test/integration';
+const integrationDirs = [integrationDir, '../ee/temporal-workflows/src/__tests__/integration'];
+const isIntegrationPath = (file) => path.posix.normalize(file) === file && integrationDirs.some(dir => file === dir || file.startsWith(`${dir}/`));
 
 function warn(message) {
   // `::warning::` surfaces in the GitHub checks UI; plain text everywhere else.
@@ -45,7 +47,7 @@ function collectIntegrationFiles(args) {
     return files.map((entry) => {
       if (typeof entry.file !== 'string') throw new Error('Missing file identity');
       const file = path.relative(serverDir, path.resolve(serverDir, entry.file)).split(path.sep).join('/');
-      if (!file.startsWith(`${integrationDir}/`)) throw new Error(`Unexpected affected file: ${file}`);
+      if (!isIntegrationPath(file)) throw new Error(`Unexpected affected file: ${file}`);
       return file;
     });
   } finally {
@@ -55,7 +57,7 @@ function collectIntegrationFiles(args) {
 
 function affectedSuites(base) {
   try {
-    return collectIntegrationFiles(['--changed', base, integrationDir]);
+    return collectIntegrationFiles(['--changed', base, ...integrationDirs]);
   } catch (error) {
     warn(`Affected collection failed; running the full integration suite. ${error.message}`);
     return null;
@@ -78,8 +80,8 @@ mkdirSync(path.dirname(reportPath), { recursive: true });
 writeFileSync(reportPath, 'null\n');
 
 const { paths } = JSON.parse(readFileSync(manifestPath, 'utf8'));
-if (!Array.isArray(paths) || !paths.length || paths.some((entry) => typeof entry !== 'string' || !entry.startsWith(`${integrationDir}/`) || entry.split('/').includes('..'))) {
-  throw new Error('tier1.manifest.json requires a nonempty floor of paths inside src/test/integration');
+if (!Array.isArray(paths) || !paths.length || paths.some((entry) => typeof entry !== 'string' || !isIntegrationPath(entry))) {
+  throw new Error('tier1.manifest.json requires a nonempty floor of paths inside owned integration directories');
 }
 const missing = paths.filter((p) => !existsSync(path.join(serverDir, p)));
 if (missing.length > 0) {
@@ -107,11 +109,11 @@ const decision = selectIntegration(changed);
 let selection = paths;
 let mode = decision.reason;
 if (decision.full) {
-  selection = [integrationDir];
+  selection = integrationDirs;
 } else if (decision.shouldRun) {
   const affected = affectedSuites(base);
   if (affected === null) {
-    selection = [integrationDir];
+    selection = integrationDirs;
     mode = 'full integration suite (import graph unavailable)';
   } else {
     const extra = affected.filter((file) => !coveredByManifest(file, paths));
@@ -127,8 +129,8 @@ let evidence;
 try {
   const collected = collectIntegrationFiles(selection).map(file => ({ file: path.join(serverDir, file) }));
   save('collected', collected);
-  const candidates = repositoryTestFiles(repoRoot).filter(file => file.startsWith('server/')
-    && coveredByManifest(file.slice('server/'.length), selection));
+  const candidates = repositoryTestFiles(repoRoot).filter(file =>
+    coveredByManifest(path.relative(serverDir, path.join(repoRoot, file)).split(path.sep).join('/'), selection));
   const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: collected }] });
   save('discovery', discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));

@@ -74,7 +74,10 @@ process.exit(result.status ?? 1);
     assert.equal(evidence.expectedTests.length, execution.numTotalTests);
     return execution.testResults.map((file) => path.basename(file.name)).sort();
   };
-  const full = ['affected.test.js', 'floor.test.js', 'other.test.js'];
+  write('ee/temporal-workflows/src/__tests__/integration/worker.test.js', "test('worker database lane', () => expect(3 + 4).toBe(7));");
+  write('server/vitest.config.mjs', 'export default {test:{include:["src/test/integration/**/*.test.js","../ee/temporal-workflows/src/__tests__/integration/**/*.test.js"],globals:true,maxWorkers:1,fileParallelism:false}};');
+  commit();
+  const full = ['affected.test.js', 'floor.test.js', 'other.test.js', 'worker.test.js'];
   for (const [file, content] of [
     ['package-lock.json', '{}'],
     ['server/src/test/setup.ts', 'export {};'],
