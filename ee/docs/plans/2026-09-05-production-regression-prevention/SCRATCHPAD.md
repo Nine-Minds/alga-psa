@@ -1706,3 +1706,14 @@ The initial remaining-Temporal selector query was narrower than the whole CI
 inventory: workflowInvocationPersistence.integration.test.ts already executes in
 scripts/run-citus-runtime-tests.mjs and must not be counted as an uncovered test.
 API CI was still running at the last authoritative inspection; no push yet.
+
+### Native API results for a02 (2026-09-07)
+
+Downloaded both API evidence artifacts from run 34113539423, merge revision
+a3183ff88b0dae6ad4601e025c19a363f60e99e6. EE passed 335/335; CE passed334 and
+failed1 with zero skipped. CE client-only reactivation timed out at20006ms;
+EE's same case passed in15305ms. Both browser editions already passed (23CE/27EE).
+The event-bus isolated reader fix is still queued locally and must be validated
+on the next candidate; do not attribute this timeout conclusively to it yet.
+Evidence: `evidence/api-native-a02.json`. At final inspection both edition jobs
+had finished and fresh-install-e2e aggregate was queued; preserve run until terminal.
