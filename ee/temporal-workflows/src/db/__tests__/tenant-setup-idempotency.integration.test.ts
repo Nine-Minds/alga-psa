@@ -21,7 +21,14 @@ it('repeating tenant setup preserves existing settings and completes successfull
     expect(second.setupSteps).toContain('tenant_settings');
     expect(await db('tenant_email_settings').where({ tenant: tenantId }).first()).toEqual(before);
     expect((await db('tenant_settings').where({ tenant: tenantId }).first()).onboarding_completed).toBe(false);
+
+    await db('tenant_settings').where({ tenant: tenantId }).update({ onboarding_completed: true });
+    const completed = await db('tenant_settings').where({ tenant: tenantId }).first();
+    await activity.run(setupTenantDataInDB, { tenantId });
+    expect(await db('tenant_settings').where({ tenant: tenantId }).first()).toEqual(completed);
+    expect(await db('tenant_email_settings').where({ tenant: tenantId }).first()).toEqual(before);
   } finally {
     await activity.run(rollbackTenantInDB, tenantId);
+    expect(await db('tenants').where({ tenant: tenantId }).first()).toBeUndefined();
   }
 });

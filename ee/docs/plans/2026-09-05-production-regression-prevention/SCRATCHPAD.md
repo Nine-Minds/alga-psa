@@ -1511,3 +1511,9 @@
 - Each of four optional setup groups now executes in a nested transaction/savepoint. Caught duplicate SQL errors roll back that group without leaving the parent transaction aborted. No broad conflict suppression or changed defaults. Updated existing email-settings mock to support savepoints.
 - Required temporal-database runner passes two files / 11 tests; readiness passes 29 files / 213 tests. Evidence: evidence/tenant-setup-savepoint-recovery.json. Initial harness attempts needed activity context and current result shape; one incomplete synthetic tenant from that attempt was explicitly removed (one fixture). Subsequent fixture cleanup completed.
 - Native verification remains pending.
+
+### 2026-09-07 — Setup recovery preserves completed onboarding
+
+- Strengthened the new real-DB regression with a third setup invocation after onboarding_completed becomes true. Entire tenant_settings row and email settings must remain unchanged; cleanup must actually remove the tenant, not merely return from rollback.
+- Exact temporal-database runner session 77177 exited zero: two files / 11 cases, 7.17 seconds, no skips/missing cases. Evidence: evidence/tenant-setup-preservation.json.
+- Current browser run 34109001526 has CE job 101707718598 and EE job 101707718632 in progress. Preserve them until terminal; known engine failure has a queued repair.
