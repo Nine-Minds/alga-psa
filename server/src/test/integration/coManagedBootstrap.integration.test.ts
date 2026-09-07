@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -5396,3 +5396,95 @@ it('qualifies production comment event identities by owner when different tenant
   expect(new Set(owners).size).toBe(2);
   expect(new Set(eventIds).size).toBe(6);
 });
+
+async function withInAppCommentFixture(work: (fixture: Parameters<Parameters<typeof withRoutedCommentFixture>[0]>[0] & {
+  event: any; subtypeId: number; categoryId: number;
+  persist: typeof import('../../lib/co-managed/persistCommentNotifications').persistCoManagedCommentNotifications;
+}) => Promise<void>) {
+  await withRoutedCommentFixture(async fixture => {
+    const { request, customerPrincipal } = fixture;
+    const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+    await db('internal_notification_templates').insert([
+      { name: 'ticket-comment-added', language_code: 'en', title: 'EN {{ticketId}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id },
+      { name: 'ticket-comment-added', language_code: 'fr', title: 'FR {{ticketId}}', message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id },
+    ]).onConflict(['name', 'language_code']).ignore();
+    const { persistCoManagedCommentNotifications: persist } = await import('../../lib/co-managed/persistCommentNotifications');
+    const event = { id: request.eventId, timestamp: new Date().toISOString(), eventType: 'TICKET_COMMENT_ADDED', payload: {
+      tenantId: request.ownerTenant, ticketId: request.ticketId, userId: customerPrincipal.userId,
+      comment: { id: request.commentId, content: 'Stale event body canary', author: 'Stale event author', authorType: 'internal', isInternal: true, audience: 'shared_it' },
+    } };
+    await work({ ...fixture, event, persist, subtypeId: subtype.internal_notification_subtype_id, categoryId: subtype.internal_category_id });
+  });
+}
+
+it('persists co-managed notifications and disabled receipts using recipient locale, priority and current content', async () => withInAppCommentFixture(async ({
+  principal, customer, sponsor, resource, eligibleIds, subtypeId, categoryId, persist, event,
+}) => {
+  await sponsor.table('user_preferences').insert({ tenant: principal.tenant, user_id: eligibleIds[0], setting_name: 'locale', setting_value: JSON.stringify('fr') });
+  await sponsor.table('user_internal_notification_preferences').insert([
+    { tenant: principal.tenant, user_id: eligibleIds[0], category_id: categoryId, subtype_id: subtypeId, is_enabled: true, priority: 'high' },
+    { tenant: principal.tenant, user_id: eligibleIds[1], category_id: categoryId, subtype_id: subtypeId, is_enabled: false },
+  ]);
+  await persist(db, event);
+  const notifications = await sponsor.table('internal_notifications');
+  expect(notifications).toHaveLength(1);
+  expect(notifications[0]).toMatchObject({ tenant: principal.tenant, user_id: eligibleIds[0], language_code: 'fr', title: 'FR SHARED-1', priority: 'high',
+    link: `/msp/co-management/tickets/${resource.tenant}/${resource.relationshipId}/${resource.id}`, delivery_status: 'pending' });
+  expect(notifications[0].message).toContain('Customer shared reply');
+  expect(notifications[0].message).not.toContain('Stale event');
+  const metadata = typeof notifications[0].metadata === 'string' ? JSON.parse(notifications[0].metadata) : notifications[0].metadata;
+  expect(metadata).toMatchObject({ coManaged: { version: 1, resource, commentId: event.payload.comment.id, audience: 'shared_it', author: { tenant: resource.tenant } } });
+  expect(metadata).not.toHaveProperty('ticketId'); expect(metadata).not.toHaveProperty('userId');
+  const receipts = await sponsor.table('co_management_in_app_receipts').orderBy('recipient_user_id');
+  expect(receipts.map(row => row.outcome)).toEqual(['created', 'disabled']);
+  expect(receipts[0].notification_id).toBe(notifications[0].internal_notification_id);
+  expect(await customer.table('internal_notifications')).toEqual([]); expect(await customer.table('co_management_in_app_receipts')).toEqual([]);
+  await sponsor.table('user_internal_notification_preferences').where('user_id', eligibleIds[1]).update({ is_enabled: true });
+  await persist(db, event);
+  expect(await sponsor.table('internal_notifications')).toHaveLength(1);
+  expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+}));
+
+it('creates exactly one in-app notification per qualified recipient under concurrent retries and rolls back outer transactions', async () => withInAppCommentFixture(async ({
+  sponsor, eligibleIds, persist, event,
+}) => {
+  await expect(db.transaction(async trx => { await persist(trx, event); throw new Error('Rollback in-app storage'); })).rejects.toThrow('Rollback in-app storage');
+  expect(await sponsor.table('internal_notifications')).toEqual([]); expect(await sponsor.table('co_management_in_app_receipts')).toEqual([]);
+  await Promise.all([persist(db, event), persist(db, event)]);
+  const rows = await sponsor.table('internal_notifications').orderBy('user_id');
+  expect(rows.map(row => row.user_id)).toEqual(eligibleIds);
+  expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+  await sponsor.table('internal_notifications').where('user_id', eligibleIds[0]).del();
+  await persist(db, event);
+  expect(await sponsor.table('internal_notifications')).toHaveLength(1);
+  const migration = require('../../../migrations/20260906180000_create_co_management_in_app_receipts.cjs');
+  await migration.up(db);
+  expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+  const receipt = await sponsor.table('co_management_in_app_receipts').first();
+  await expect(sponsor.table('co_management_in_app_receipts').insert({ ...receipt, delivery_key: randomUUID(), outcome: null, notification_id: randomUUID() }))
+    .rejects.toMatchObject({ code: '23514' });
+}));
+
+it('leaves no receipt after template failure and suppresses internal, revoked and private deliveries before storage', async () => withInAppCommentFixture(async ({
+  sponsor, customer, resource, persist, event,
+}) => {
+  await persist(db, { ...event, payload: { ...event.payload, suppressInternalNotifications: true } });
+  expect(await sponsor.table('co_management_in_app_receipts')).toEqual([]);
+  const templates = await db('internal_notification_templates').where('name', 'ticket-comment-added');
+  await db('internal_notification_templates').where('name', 'ticket-comment-added').del();
+  try { await expect(persist(db, event)).rejects.toMatchObject({ name: 'AggregateError' }); }
+  finally { await db('internal_notification_templates').insert(templates); }
+  expect(await sponsor.table('co_management_in_app_receipts')).toEqual([]); expect(await sponsor.table('internal_notifications')).toEqual([]);
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  await persist(db, event);
+  expect(await sponsor.table('co_management_in_app_receipts')).toEqual([]);
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: null });
+  const comment = await customer.table('comments').where('comment_id', event.payload.comment.id).first();
+  await customer.table('comment_threads').where('thread_id', comment.thread_id).update({ collaboration_audience: 'organization_private' });
+  await persist(db, event);
+  expect(await sponsor.table('internal_notifications')).toEqual([]);
+  await customer.table('comment_threads').where('thread_id', comment.thread_id).update({ collaboration_audience: 'shared_it' });
+  await persist(db, event);
+  expect(await sponsor.table('internal_notifications')).toHaveLength(2);
+}));
