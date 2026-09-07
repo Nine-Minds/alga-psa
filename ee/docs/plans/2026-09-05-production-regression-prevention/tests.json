@@ -254,11 +254,14 @@
   {
     "id": "T027",
     "description": "Connect QBO using the supported OAuth flow, choose company/mappings and export an invoice via UI; inspect the vendor invoice and Alga sync result, expire credentials and induce stale SyncToken/transient failure, then verify visible recovery with one invoice and correct company identity.",
-    "implemented": false,
+    "implemented": true,
     "kind": "provider-wire-browser",
     "featureIds": [
       "F033",
       "F036"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
     ]
   },
   {
@@ -275,11 +278,14 @@
   {
     "id": "T029",
     "description": "Connect Xero, select organization/mappings and export an invoice through UI; verify vendor and persisted sync state, induce connection expiry or rejected export and recover without duplicate invoices or organization/tenant crossover.",
-    "implemented": false,
+    "implemented": true,
     "kind": "provider-wire-browser",
     "featureIds": [
       "F035",
       "F036"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
     ]
   },
   {

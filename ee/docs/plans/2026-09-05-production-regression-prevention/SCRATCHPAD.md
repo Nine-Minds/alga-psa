@@ -1448,3 +1448,9 @@
 - Shared source fixture now accepts materializeServicePeriods:false while keeping its default real synchronizer for existing DB tests. New standalone browser fixture explicitly seeds the August arrears periods due in September, following existing recurring-billing fixture behavior. Invoice generation, four snapshot links, subtotal, foreign-tenant rejection and PDF assertions remain intact.
 - Temporary standalone Playwright DB check executed fixture against owned invoice_citus_82cc and rolled back. Both hourly/usage periods and four source entries verified. Initial temporary check incorrectly stringified a PostgreSQL Date; corrected to ISO and passed. Temporary diagnostic spec moved to /tmp, not added to CI.
 - Full repaired browser journey requires native rerun. Evidence: evidence/browser-invoice-fixture-boundary.json.
+
+### 2026-09-07 — Accounting browser acceptance verified natively
+
+- Independently reconciled raw Playwright collection/results from enterprise artifact 10013131758, run 34104450316, merge revision 7c52ed7d53ade3306f2ec7fae2971bd5868efaf2. Full counts reproduce 24 pass / one failed invoice fixture / zero missing/skipped/flaky.
+- QBO and Xero each passed on the first attempt (32.991s and 29.135s). Inspected test bodies against R6: real OAuth and UI mapping, export batch, vendor invoice readback, selected realm/organisation identity, injected 500, expired token refresh, successful recovery and no duplicate invoice. QBO also verifies external edit/CDC drift and stale SyncToken re-export recovery.
+- Marked F033/F035 and T027/T029 implemented with evidence/accounting-native-browser.json. Xero selection follows its supported first-connected-organisation behavior, explicitly documented in the evidence. No claim of a separate Alga organisation picker or live-provider parity. F036 aggregate enforcement/fault-matrix and full browser green remain incomplete.

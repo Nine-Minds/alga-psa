@@ -439,7 +439,7 @@
   {
     "id": "F033",
     "description": "Verify QBO connection, company/mapping selection and invoice export through the UI with vendor-side readback and idempotent recovery.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4E",
     "priority": "P1",
     "prdRefs": [
@@ -447,6 +447,9 @@
     ],
     "dependsOn": [
       "F031"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
     ]
   },
   {
@@ -466,7 +469,7 @@
   {
     "id": "F035",
     "description": "Verify Xero connection/organization selection and invoice export through the UI with vendor-side readback and correct recovery identity.",
-    "implemented": false,
+    "implemented": true,
     "workPackage": "WP4E",
     "priority": "P1",
     "prdRefs": [
@@ -474,6 +477,9 @@
     ],
     "dependsOn": [
       "F031"
+    ],
+    "evidence": [
+      "evidence/accounting-native-browser.json"
     ]
   },
   {
