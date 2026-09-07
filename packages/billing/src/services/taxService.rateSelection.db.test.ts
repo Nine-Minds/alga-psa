@@ -7,12 +7,7 @@ vi.mock('@alga-psa/db', async importOriginal => ({
   ...await importOriginal<typeof import('@alga-psa/db')>(),
   createTenantKnex: async () => ({ knex: context.db, tenant: context.tenant }),
 }));
-// Isolate rate selection from default-profile provisioning. Rate queries and
-// tenant scoping use real Knex/PostgreSQL; no query results are substituted.
-vi.mock('../models/clientTaxSettings', () => ({ default: {
-  get: async () => ({ is_reverse_charge_applicable: false }),
-  getTaxRateThresholds: async () => [],
-} }));
+import ClientTaxSettings from '../models/clientTaxSettings';
 import { TaxService } from './taxService';
 
 let db: Knex;
@@ -62,6 +57,40 @@ beforeEach(async () => {
 afterEach(async () => { await context.db?.rollback(); context.db = undefined; });
 
 describe('TaxService PostgreSQL rate selection', () => {
+  it('uses the default billing profile when another profile has a conflicting reverse-charge setting', async () => {
+    const service = new TaxService();
+    await service.calculateTax(clientId, 10000, '2026-06-01', region);
+    const [sibling] = await context.db!('client_billing_profiles').insert({
+      tenant: context.tenant, client_id: clientId, name: 'Separate billing entity',
+      is_default: false, is_active: true,
+    }).returning('billing_profile_id');
+    await context.db!('client_tax_settings').insert({
+      tenant: context.tenant, client_id: clientId, billing_profile_id: sibling.billing_profile_id,
+      is_reverse_charge_applicable: true,
+    });
+    expect((await ClientTaxSettings.get(clientId, sibling.billing_profile_id))?.is_reverse_charge_applicable).toBe(true);
+    expect(await service.calculateTax(clientId, 10000, '2026-06-01', region))
+      .toEqual({ taxAmount: 500, taxRate: 5 });
+    await ClientTaxSettings.update(clientId, { is_reverse_charge_applicable: true });
+    await ClientTaxSettings.update(clientId, { is_reverse_charge_applicable: false }, sibling.billing_profile_id);
+    expect(await service.calculateTax(clientId, 10000, '2026-06-01', region))
+      .toEqual({ taxAmount: 0, taxRate: 0 });
+  });
+  it('persists default-profile reverse charge and applies it before regional rate lookup', async () => {
+    const service = new TaxService();
+    expect(await service.calculateTax(clientId, 10000, '2026-06-01', region, true, 'EUR'))
+      .toEqual({ taxAmount: 500, taxRate: 5 });
+    const settings = await ClientTaxSettings.get(clientId);
+    expect(settings?.is_reverse_charge_applicable).toBe(false);
+    await ClientTaxSettings.update(clientId, { is_reverse_charge_applicable: true });
+    expect((await ClientTaxSettings.get(clientId))?.is_reverse_charge_applicable).toBe(true);
+    // No rate exists for this region: exemption must happen before rate lookup.
+    expect(await new TaxService().calculateTax(clientId, 10000, '2026-06-01', 'UNCONFIGURED', true, 'EUR'))
+      .toEqual({ taxAmount: 0, taxRate: 0 });
+    await ClientTaxSettings.update(clientId, { is_reverse_charge_applicable: false });
+    await expect(new TaxService().calculateTax(clientId, 10000, '2026-06-01', 'UNCONFIGURED', true, 'EUR'))
+      .rejects.toMatchObject({ code: 'NO_TAX_RATE' });
+  });
   it.each([['2026-01-01', 5], ['2026-06-30', 5], ['2026-07-01', 7]] as const)(
     'selects the active rate at %s, excluding other tenants and regions', async (date, taxRate) => {
       expect(await new TaxService().calculateTax(clientId, 10000, date, region)).toEqual({ taxAmount: taxRate * 100, taxRate });
