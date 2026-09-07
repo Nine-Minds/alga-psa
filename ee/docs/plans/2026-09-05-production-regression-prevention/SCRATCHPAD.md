@@ -1414,3 +1414,9 @@
 - Existing appliance tenant creation (two cases) and SLA workflow (ten cases) passed on actual ephemeral Temporal servers. Covers supplied tenant identity/password and hosted-step selection; SLA signal transitions, pause/resume, cancel and missed-close recovery. Activities remain stubbed; no real customer state modified.
 - Added both files to temporal-engine config and independent candidate classification. Exact CI runner passes three files / 16 tests, zero skips, reconciled collection/execution, 5.47 seconds. Evidence: evidence/temporal-engine-appliance-sla.json.
 - Native browser jobs 101692993747 (CE) and 101692993738 (EE) are now running in run 34104450316, confirming the previous prerequisite wiring no longer stops startup. Do not publish while their current runtime evidence is still being gathered.
+
+### 2026-09-07 — Domain engine suites and SLA integration investigation
+
+- Managed-email workflow: six cases pass (verification success/failure/deadline, reuse, delete trigger and in-flight delete). Portal-registration workflow: three cases pass against the ephemeral engine. Added both to required engine selection and independent inventory. Exact runner passes five files / 25 tests, zero skips, 8.51 seconds. Evidence: evidence/temporal-engine-domains.json.
+- Separate sla-ticket-workflow.integration.test.ts failed four cases during bundling because workflowsPath pointed to src without an entry module. Local uncommitted repair points its three worker constructions to ../sla-ticket-workflow.ts.
+- Rerun session 58160 remains live, log /tmp/alga-temporal-sla-transitions-after-82cc.log. It reached the lifecycle workflow and appears to wait on responseNotification without enabling virtual time skipping. Investigate after terminal confirmation; do not restart while live. Suspect its Date.now-based deadline mock also needs the workflow-supplied clock after time skips. This suite is not included in the passing engine count.
