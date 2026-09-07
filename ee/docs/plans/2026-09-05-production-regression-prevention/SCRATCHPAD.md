@@ -1303,3 +1303,9 @@
 
 - Session 69541 completed: two required files, eight passed, zero failures/skips/todos/pending, and exact collected/executed identities. Duration 631.50 seconds; evidence/citus-combined-runtime.json.
 - Community API job 101670277218 had 334 passes and one 20-second timeout in explicit client/contact/user reactivation. Parallelized its five independent final reads into one group and retained all active-state checks plus explicit response status assertions; no timeout increase. Native runtime verification still pending.
+
+### 2026-09-07 — Native guard exceeds default subprocess buffer
+
+- New native standalone browser collection passed in 13 seconds, confirming the browser dependency repair.
+- Env-backup guard job 101678731400 failed with ENOBUFS because git ls-files exceeded the default 1 MiB buffer. Replaced buffered execution with streaming NUL-delimited filenames; no filename rules relaxed.
+- Real 9000-entry Git index reproduces the old failure; new guard passes large clean index and catches a prohibited late entry. Git-error fail-closed coverage and actual worktree guard also pass. Evidence: evidence/env-backup-guard-large-index.json.
