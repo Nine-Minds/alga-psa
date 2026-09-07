@@ -1960,3 +1960,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Full integration now selects four independent CI jobs; each has its own PostgreSQL, Redis and SMTP services. Tier-1 uses one job. Runner validates the existing floor and selected inventory, deterministically partitions files, checks exact filtered collection, then collects assertions and executes only its partition. No required assertions were removed.
 - New combined integration job verifies raw reports against evidence, all shard identities/revisions, the complete full-run repository inventory (or Tier-1 floor), and successful matrix outcome. Missing/cancelled/stale execution fails. Metrics now come from one combined report instead of per-shard partial rows; progress and raw reports are preserved in each shard artifact.
 - Actual Vitest process fixture runs three shards, verifies all five fixture files once, and rejects stale/missing evidence. Combined shard tests 4/4 pass (5.63 seconds); actionlint passes after correcting YAML placement during editing. Native workload validation is required next; a passing fixture does not prove the 287-file native suite fits or passes.
+
+### 2026-09-07 — integration aggregate rejects ambiguous evidence
+
+- While external push approval remains pending, strengthened local integration aggregation: require explicit full/Tier-1 selection, reject extra shard directories, require empty source change lists and explicit unfiltered execution metadata.
+- Extended the actual Vitest shard fixture to reject extra directories, cleared raw results behind a passing manifest and inconsistent source change records, then recover after restoring valid evidence. Four shard tests pass in 5.75 seconds; git diff check passes.
+- Publication remains pending explicit approval after automatic review rejected the combined commit/push to origin. Verified origin URL is https://github.com/nine-minds/alga-psa.git; no push workaround was attempted.

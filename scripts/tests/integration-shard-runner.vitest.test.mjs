@@ -46,11 +46,23 @@ test('actual integration runner partitions, executes and rejects missing or stal
   assert.equal(combined.status, 0, combined.stdout + combined.stderr);
   assert.equal(read('test-results/integration-aggregate/aggregate.json').counts.passed, 5);
 
+  const duplicateDirectory = path.join(root, 'test-results/integration-shards/unexpected-shard');
+  mkdirSync(duplicateDirectory);
+  assert.equal(run('verify-integration-shards.mjs').status, 1);
+  rmSync(duplicateDirectory, { recursive: true });
+  const reportFile = 'test-results/integration-shards/server-integration-shard-1/results.json';
+  const originalReport = read(reportFile);
+  write(reportFile, JSON.stringify({ ...originalReport, testResults: [] }));
+  assert.equal(run('verify-integration-shards.mjs').status, 1);
+  write(reportFile, JSON.stringify(originalReport));
   const last = 'test-results/integration-shards/server-integration-shard-3/evidence.json';
   const original = read(last);
   write(last, JSON.stringify({ ...original, revision: 'stale' }));
   assert.equal(run('verify-integration-shards.mjs').status, 1);
+  write(last, JSON.stringify({ ...original, source: { ...original.source, after: { ...original.source.after, changes: [{ file: 'changed.ts' }] } } }));
+  assert.equal(run('verify-integration-shards.mjs').status, 1);
   write(last, JSON.stringify(original));
+  assert.equal(run('verify-integration-shards.mjs').status, 0);
   rmSync(path.join(root, 'test-results/integration-shards/server-integration-shard-3'), { recursive: true });
   assert.equal(run('verify-integration-shards.mjs').status, 1);
 });
