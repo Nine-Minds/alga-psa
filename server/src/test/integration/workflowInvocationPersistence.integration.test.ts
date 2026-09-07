@@ -89,7 +89,7 @@ it('retries a failed activity on its persisted row and replays success without a
   const rows = await Invocation.listByRun(db, run.run_id, tenant);
   expect(rows).toHaveLength(1);
   expect(rows[0]).toMatchObject({ invocation_id: failed?.invocation_id, status: 'SUCCEEDED', attempt: 2,
-    input_json: { messageId: 'message-retry' }, output_json: { commentId: 'comment-recovered' } });
+    input_json: { messageId: 'message-retry' }, output_json: { commentId: 'comment-recovered' }, error_json: null, error_message: null });
   expect(actionHandler).toHaveBeenCalledTimes(2);
   expect(actionHandler).toHaveBeenLastCalledWith({ messageId: 'message-retry' }, expect.objectContaining({ attempt: 2, idempotencyKey: `${tenant}:message-retry` }));
 });

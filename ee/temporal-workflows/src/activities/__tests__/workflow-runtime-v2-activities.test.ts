@@ -187,7 +187,7 @@ describe('workflow-runtime-v2 activities', () => {
   });
 
   it.each([true, false])('executes a failed retry only when the atomic claim succeeds: %s', async (claimed) => {
-    mocks.findInvocationByIdempotency.mockResolvedValue({ invocation_id: 'failed-invocation', status: 'FAILED' });
+    mocks.findInvocationByIdempotency.mockResolvedValue({ invocation_id: 'failed-invocation', status: 'FAILED', error_json: { message: 'Previous failure' } });
     mocks.claimFailed.mockResolvedValue(claimed ? { invocation_id: 'failed-invocation', attempt: 2 } : null);
     const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
     const execution = executeWorkflowRuntimeV2ActionStep({
@@ -199,7 +199,7 @@ describe('workflow-runtime-v2 activities', () => {
     if (claimed) {
       await execution;
       expect(mocks.actionHandler).toHaveBeenCalledWith({}, expect.objectContaining({ attempt: 2 }));
-      expect(mocks.updateInvocation).toHaveBeenCalledWith(expect.anything(), 'failed-invocation', expect.objectContaining({ status: 'SUCCEEDED' }), 'tenant-1');
+      expect(mocks.updateInvocation).toHaveBeenCalledWith(expect.anything(), 'failed-invocation', expect.objectContaining({ status: 'SUCCEEDED', error_json: null }), 'tenant-1');
     } else {
       await expect(execution).rejects.toThrow('already in progress');
       expect(mocks.actionHandler).not.toHaveBeenCalled();

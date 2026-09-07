@@ -904,6 +904,10 @@ async function executeActionInvocation(input: {
       status: 'SUCCEEDED',
       output_json: parsedOutput as Record<string, unknown>,
       completed_at: new Date().toISOString(),
+      // A recovered invocation must not retain its previous failure. Only
+      // write the optional column when the fetched row proves it exists,
+      // preserving workers deployed before the error_json migration.
+      ...(existing?.error_json != null ? { error_json: null } : {}),
     }, input.tenantId);
     return parsedOutput;
   } catch (error) {
