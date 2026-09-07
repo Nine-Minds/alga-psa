@@ -318,18 +318,8 @@ export async function sendSurveyInvitation(params: SendSurveyInvitationParams): 
         error: error instanceof Error ? error.message : error,
       });
 
-      const message = error instanceof Error ? error.message : String(error);
-      const isDomainNotVerified = message.includes('domain is not verified');
-
-      if (isDomainNotVerified) {
-        logger.warn('[SurveyService] Proceeding despite email failure (unverified domain)', {
-          tenantId: params.tenantId,
-          ...subjectIds,
-        });
-      } else {
-        await removeInvitationSafe(params.tenantId, invitation.invitation_id);
-        throw error;
-      }
+      await removeInvitationSafe(params.tenantId, invitation.invitation_id);
+      throw error;
     }
 
     const workflowCtx = {

@@ -2362,3 +2362,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Expanded real database suite passes 13 cases: invitation rendering → usable token → persisted response; reminders; delivery-failure cleanup; cross-tenant recipient rejection; all-language rendering; idempotent template up/down/up. Three new project cases fail against the original service (10 others pass). Email transport and publishers are captured boundaries.
 - Restored previously skipped project dispatch case. All three dispatch tests pass after fresh task-owned PostgreSQL migration/seed bootstrap; all 13 journey tests also pass against that freshly migrated schema. Evidence: evidence/project-survey-invitation-journey.json.
 - Analytics/UI remain project-unaware. Existing unverified-domain send failure bypass remains a separate delivery correctness gap. Actual SMTP, Citus full chain and native candidate CI remain unverified here. No broad completion flags changed.
+
+### 2026-09-07 — reject false-success survey email delivery
+
+- Removed the unverified-domain catch bypass, which returned a successful invitation and emitted SURVEY_SENT after a failed email. All provider failures now follow the existing cleanup-and-rethrow path.
+- Parameterized real PostgreSQL journey tests reproduce two failures against the old code (13 pass); corrected code passes all 15. Failure leaves no invitation/events; a successful retry yields one usable invitation and a sent event without a false reminder. Evidence: evidence/survey-delivery-false-success.json; recorded in regression-ledger.json without inventing a production incident.
+- Transport is synthetic; native CI and real provider delivery remain unverified. Analytics/UI project support remains next. No broad completion flags changed.

@@ -3,7 +3,7 @@ import knex, { type Knex } from 'knex';
 import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 
-const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', events: [] as any[], workflows: [] as any[], emails: [] as any[], failEmail: false }));
+const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', events: [] as any[], workflows: [] as any[], emails: [] as any[], emailError: null as string | null }));
 vi.mock('@alga-psa/db', async () => {
   const actual = await vi.importActual<typeof import('@alga-psa/db')>('@alga-psa/db');
   return { ...actual,
@@ -33,7 +33,7 @@ vi.mock('@alga-psa/email', async () => {
     sendEmail: async (options: any) => {
       const rendered = await options.templateProcessor.process(options);
       state.emails.push({ ...rendered, to: options.to, headers: options.headers });
-      return state.failEmail ? { success: false, error: 'Synthetic transport failure' } : { success: true, messageId: 'test-message' };
+      return state.emailError ? { success: false, error: state.emailError } : { success: true, messageId: 'test-message' };
     },
   }) } };
 });
@@ -58,7 +58,7 @@ beforeAll(() => {
 });
 afterAll(async () => { await db?.destroy(); });
 beforeEach(async () => {
-  state.events = []; state.workflows = []; state.emails = []; state.failEmail = false;
+  state.events = []; state.workflows = []; state.emails = []; state.emailError = null;
   const trx = state.trx = await db.transaction();
   const schema = `survey_response_${randomUUID().replaceAll('-', '')}`;
   await trx.raw('CREATE SCHEMA ??', [schema]);
@@ -159,13 +159,19 @@ describe.each(['ticket', 'project'] as const)('%s survey response persistence', 
     expect(await state.trx!('survey_invitations').select('*')).toHaveLength(0);
     expect(state.emails).toHaveLength(0);
   });
-  it('removes the invitation when delivery fails and publishes no sent event', async () => {
+  it.each(['Synthetic transport failure', 'Sender domain is not verified'])('rejects delivery failure (%s) without persisting an invitation or publishing sent events', async error => {
     const f = await fixture(kind);
     await state.trx!('survey_invitations').delete();
-    state.failEmail = true;
-    await expect(sendSurveyInvitation({ tenantId: f.tenant, locale: 'en', ...(kind === 'project' ? { projectId: f.subjectId } : { ticketId: f.subjectId }) })).rejects.toThrow('Synthetic transport failure');
+    state.emailError = error;
+    await expect(sendSurveyInvitation({ tenantId: f.tenant, locale: 'en', ...(kind === 'project' ? { projectId: f.subjectId } : { ticketId: f.subjectId }) })).rejects.toThrow(error);
     expect(await state.trx!('survey_invitations').select('*')).toHaveLength(0);
     expect(state.workflows).toHaveLength(0);
+    state.emailError = null;
+    const retry = await sendSurveyInvitation({ tenantId: f.tenant, locale: 'en', ...(kind === 'project' ? { projectId: f.subjectId } : { ticketId: f.subjectId }) });
+    expect(await state.trx!('survey_invitations').select('*')).toHaveLength(1);
+    expect(state.workflows.map(event => event.eventType)).toEqual(['SURVEY_SENT']);
+    const token = decodeURIComponent(new URL(retry.surveyUrl).pathname.split('/').at(-1)!);
+    expect(await getSurveyInvitationForToken(token)).toMatchObject({ [`${kind}Id`]: f.subjectId });
   });
   it('rejects an out-of-range rating without consuming the invitation', async () => {
     const f = await fixture(kind);
