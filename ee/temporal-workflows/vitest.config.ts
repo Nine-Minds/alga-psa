@@ -50,6 +50,14 @@ export default defineConfig({
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       // Workspace packages resolved from source — their package.json entries
       // point at dist/, which is not built in test environments.
+      { find: /^@alga-psa\/jobs$/, replacement: path.resolve(__dirname, '../../packages/jobs/src/index.ts') },
+      { find: /^@alga-psa\/jobs\/fanout$/, replacement: path.resolve(__dirname, '../../packages/jobs/src/lib/fanout/index.ts') },
+      { find: /^@alga-psa\/jobs\/runner$/, replacement: path.resolve(__dirname, '../../packages/jobs/src/lib/jobRunnerAccessor.ts') },
+      { find: /^@alga-psa\/jobs\/scheduler$/, replacement: path.resolve(__dirname, '../../packages/jobs/src/lib/jobSchedulerAccessor.ts') },
+      { find: /^@alga-psa\/jobs\/runners\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/jobs/src/lib/jobs/runners')}/$1` },
+      { find: /^@alga-psa\/jobs\/handlers\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/jobs/src/lib/handlers')}/$1` },
+      { find: /^@alga-psa\/jobs\/handler-utils\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/jobs/src/lib/handler-utils')}/$1` },
+      { find: /^@alga-psa\/jobs\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/jobs/src')}/$1` },
       { find: /^@alga-psa\/email\/providerConfig$/, replacement: path.resolve(__dirname, '../../packages/email/src/providerConfig.ts') },
       { find: /^@alga-psa\/workflows$/, replacement: path.resolve(__dirname, '../packages/workflows/src/index.ts') },
       { find: /^@alga-psa\/workflows\/runtime$/, replacement: path.resolve(__dirname, '../packages/workflows/src/runtime/index.ts') },

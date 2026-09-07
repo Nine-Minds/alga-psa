@@ -2313,3 +2313,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Canonical tooling suite passes 503 tests across 53 required files. Discovery passes, zero failures/skips/TODOs/cancellations, before/after source identical and clean at 346a1c6292e4cca012aecc8126a630604ae42110.
 - Includes independent server unit CLI gate and critical browser journey deletion regression. Evidence: evidence/node-tooling-local-346a1c.json. Existing manual localization baseline exclusion remains explicit. Native CI and full plan completion remain unverified; no broad flags changed.
+
+### 2026-09-07 — repair new native tenant workflow collection failure
+
+- PR3343 advanced externally to 7b170294a7; current checks now expose fresh Citus, Temporal engine and integration shard failures. Citus job101833124798/run34151013464 fails tenant collection on jobs/handlers/workflowScheduledRunHandlers. Local generated jobs dist had concealed the missing Vitest source aliases.
+- Mirrored existing worker tsconfig jobs mappings into Temporal Vitest. Full six-file tenant lane against owned Citus passes 27 tests in 17.41 seconds. Temporarily parked only the ignored jobs dist directory; assertion collection still succeeds, then restored directory in finally. Evidence: evidence/temporal-jobs-source-resolution.json.
+- Separate native engine error: production-index worker bundle cannot resolve workflows/runtime/utils/redactionUtils, workflows/lib/workflowRuntimeV2TemporalContract and workflows/runtime/expressionEngine. Investigate real bundler resolution next; integration shard failure also outstanding. No native pass or broad completion flags claimed.
