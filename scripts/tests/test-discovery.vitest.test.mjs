@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { reconcileDiscovery, repositoryTestFiles } from '../lib/test-discovery.mjs';
-import { reconcileExecution } from '../lib/test-execution-evidence.mjs';
+import { normalizeTestFile, reconcileExecution } from '../lib/test-execution-evidence.mjs';
 import { testRevision } from '../lib/test-revision.mjs';
 
 const vitest = fileURLToPath(new URL('../../server/node_modules/vitest/vitest.mjs', import.meta.url));
@@ -71,6 +71,20 @@ test('actual Vitest collection detects additions/moves, and repaired collection 
   config(['**/*.test.js']);
   const collected = collect();
   assert.equal(inspect(collected).status, 'passed');
+  const artifactRunner = { runner: 'artifact-vitest', status: 'passed', owner: 'fixture-maintainer',
+    runtime: 'node', mandatory: true, collectionFile: 'collected.json', sourceRoot: root };
+  assert.equal(inspect(collected, { collections: [artifactRunner] }).status, 'passed');
+  for (const patch of [{ collectionFile: 'absent.json' }, { sourceRoot: '/wrong-checkout' }, { files: collected }]) {
+    assert.equal(inspect(collected, { collections: [{ ...artifactRunner, ...patch }] }).status, 'failed');
+  }
+  // CI artifacts carry absolute producer paths. Rebase only against the declared
+  // producer checkout; never discard arbitrary prefixes or accept traversal.
+  const producerRoot = '/ci/producer/repository';
+  write('collected.json', JSON.stringify(collected.map(entry => ({ file: path.join(producerRoot, normalizeTestFile(entry.file, root)) }))));
+  assert.equal(inspect(collected, { collections: [{ ...artifactRunner, sourceRoot: producerRoot }] }).status, 'passed');
+  write('collected.json', JSON.stringify([{ file: '/ci/producer/outside.test.js' }]));
+  assert.equal(inspect(collected, { collections: [{ ...artifactRunner, sourceRoot: producerRoot }] }).status, 'failed');
+  write('collected.json', JSON.stringify(collected));
   invoke(['list', '--json=tests.json']);
   invoke(['run', '--reporter=json', '--outputFile=results.json']);
   const evidence = reconcileExecution({
