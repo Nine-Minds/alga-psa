@@ -5,7 +5,7 @@ export default {
   ...base,
   test: {
     ...base.test,
-    include: ['src/db/__tests__/product-upgrade-operations.integration.test.ts', 'src/db/__tests__/tenant-setup-idempotency.integration.test.ts'],
+    include: ['src/activities/__tests__/tenant-activities.test.ts', 'src/db/__tests__/product-upgrade-operations.integration.test.ts', 'src/db/__tests__/tenant-setup-idempotency.integration.test.ts'],
     coverage: { provider: 'v8', enabled: false },
     fileParallelism: false,
     maxWorkers: 1,

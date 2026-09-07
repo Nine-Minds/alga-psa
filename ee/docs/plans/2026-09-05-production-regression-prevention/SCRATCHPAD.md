@@ -1645,3 +1645,24 @@ This supersedes the consent limitation in earlier Xero evidence; real-provider
 parity and native execution of the updated fixture remain outstanding (F037 open).
 Browser run 34113539423 remains live in both editions, executing Playwright;
 queued commits remain local to avoid cancelling it.
+
+### Tenant activity database suite (2026-09-07)
+
+Repaired the previously unassigned tenant-activities suite. It now invokes real
+activities in MockActivityEnvironment against migrated Citus and covers optional
+client naming/fallbacks, normalized email, duplicate display names, setup retry,
+rollback isolation, rejected-write atomicity and blank-name validation. Removed
+an empty database failure placeholder and obsolete expectations that setup creates
+roles/statuses (onboarding seeds own those). The restored empty-name regression
+exposed a persisted blank tenant; createTenantInDB now raises non-retryable
+ValidationError before writing. Failed client writes use PostgreSQL's rejected
+NUL byte to exercise transaction rollback rather than a guessed length limit.
+
+All 20 DB cases across 3 files passed; 216 readiness cases across 30 files and
+6 discovery checks passed. Runner configuration and independent selector include
+the repaired suite. The earlier providerConfig alias also passed the exact runner
+at f0a6f2c243 (11 DB cases before this suite was added). Native browser run
+34113539423 remains active; community reached API dependency installation while
+enterprise was still executing Playwright. No queued commits pushed yet.
+Evidence: `evidence/tenant-activity-database.json`. Full inventory and native
+candidate verification remain open.

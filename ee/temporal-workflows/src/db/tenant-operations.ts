@@ -106,6 +106,10 @@ export async function createTenantInDB(
     licenseCount: input.licenseCount
   });
 
+  if (typeof input.tenantName !== 'string' || !input.tenantName.trim()) {
+    throw ApplicationFailure.nonRetryable('Tenant name is required', 'ValidationError');
+  }
+
   try {
     const knex = await getAdminConnection();
 
