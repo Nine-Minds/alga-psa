@@ -1,0 +1,17 @@
+{
+  "status": "incomplete",
+  "localServerUnitCollectedFiles": 2692,
+  "combinedAccountedFor": 3348,
+  "candidateCount": 3944,
+  "unmatchedCount": 596,
+  "validation": [
+    "Actual Vitest filesOnly collection succeeded with DB access disabled.",
+    "Workflow YAML parsed and extracted Bash step passed bash -n."
+  ],
+  "limits": [
+    "Assertion collection remains running in session 42692; log /tmp/alga-server-unit-collection-82cc.log.",
+    "Local assertion collection started with existing default pool settings; committed workflow explicitly isolates per-file workers.",
+    "Native workflow verification is pending.",
+    "Mixed local collection and older native artifacts are not release readiness evidence."
+  ]
+}

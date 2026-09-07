@@ -200,7 +200,13 @@ jobs:
       # collection/coverage scope. The progress journal records any recurrence.
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
+        run: |
+          selection=(src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions)
+          mkdir -p ../test-results/server-coverage
+          npx vitest list "${selection[@]}" --filesOnly --json=../test-results/server-coverage/collected.json
+          npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --json=../test-results/server-coverage/collected-tests.json
+          node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../test-results/server-coverage/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory collection: " + file); }'
+          npx vitest run "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results.json
         env:
           TEST_PROGRESS_PATH: ${{ github.workspace }}/test-results/server-coverage/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=14336'
@@ -229,6 +235,8 @@ jobs:
         with:
           name: server-unit-execution
           path: |
+            test-results/server-coverage/collected.json
+            test-results/server-coverage/collected-tests.json
             test-results/server-coverage/progress.jsonl
             server/test-results.json
             server/coverage/coverage-summary.json
