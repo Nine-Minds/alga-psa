@@ -8,6 +8,15 @@ import { repositoryTestFiles, isAdditionalWorkspaceTest } from './lib/test-disco
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
+// These product journeys remain required even if a test file disappears from
+// the candidate checkout. Newly landed journeys are added by tracked discovery.
+const criticalBrowserFiles = [
+  'e2e-tests/tests/login.spec.ts',
+  'e2e-tests/tests/usage-invoice-preview.spec.ts',
+  'e2e-tests/tests/portal-ticket-roundtrip.spec.ts',
+  'e2e-tests/tests/invoice-generation.spec.ts',
+];
+
 function browserDirectory(directory) {
   const found = [];
   const visit = current => {
@@ -40,8 +49,9 @@ export function verifyFreshInstallExecution({ root, revision, input, sourceRoot 
     for (const edition of ['community', 'enterprise']) {
       for (const format of ['vitest', 'playwright']) {
         const id = `${format}-${edition}`;
-        requirements.push({ id, format, candidates: candidates.filter(file => format === 'vitest'
-          ? isAdditionalWorkspaceTest(file, 'api-e2e') : file.startsWith('e2e-tests/tests/')) });
+        requirements.push({ id, format, candidates: format === 'vitest'
+          ? candidates.filter(file => isAdditionalWorkspaceTest(file, 'api-e2e'))
+          : [...new Set([...criticalBrowserFiles, ...candidates.filter(file => file.startsWith('e2e-tests/tests/'))])] });
         try {
           const directory = format === 'vitest' ? path.join(input, `fresh-install-api-${edition}`)
             : browserDirectory(path.join(input, `fresh-install-playwright-${edition}`));

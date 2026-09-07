@@ -2290,3 +2290,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Consumer inventory covers server unit, packages, shared and workflow actions while leaving DB-designated tests in their own lane. Current actual Vitest list matches all 2,700 required files without omissions.
 - CLI behavioral regression uses a temporary git checkout and actual report ingestion: green artifacts pass; omissions from each root, newly tracked tests, skipped/TODO/failed assertions, malformed/missing reports, dirty checkout and mismatched revision fail. Four producer/consumer tests and actionlint pass. Evidence: evidence/server-unit-independent-gate.json.
 - Collection is not runtime proof; remaining tax TODOs, native execution, effective protections and global aggregate work remain open. No broad flags changed.
+
+### 2026-09-07 — retain critical journeys when tracked inventory shrinks
+
+- Fresh-install gate already automatically requires landed browser files, but deleting a critical file could remove it from both producer and consumer inventories. Added consumer-owned minimum for login, usage invoice preview, portal ticket round-trip and invoice generation, required independently for CE and EE. Other landed files remain automatically discovered.
+- Behavioral artifact regression removes each of four required files from candidate inventory and one edition’s otherwise green collection/results. All eight scenarios fail with the missing journey named. Fresh-install and shared candidate gate tests pass; evidence: evidence/browser-critical-floor.json.
+- Does not claim full product runtime or semantic assertion coverage, native CI or effective protections. Broad F018 remains open until current native execution proves the landed journey set. No broad flags changed.
