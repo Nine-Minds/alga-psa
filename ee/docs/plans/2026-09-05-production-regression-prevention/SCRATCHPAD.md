@@ -1666,3 +1666,23 @@ at f0a6f2c243 (11 DB cases before this suite was added). Native browser run
 enterprise was still executing Playwright. No queued commits pushed yet.
 Evidence: `evidence/tenant-activity-database.json`. Full inventory and native
 candidate verification remain open.
+
+### Native browser success and real admin-user coverage (2026-09-07)
+
+Downloaded both browser execution reports from run 34113539423. Community passed
+23 journeys and enterprise passed 27, with zero skipped/unexpected/flaky results.
+Both used merge revision a3183ff88b0dae6ad4601e025c19a363f60e99e6 for PR head a02.
+This includes the repaired invoice snapshot/PDF boundary and expanded calendar
+fault scenarios. API validation remains live; this is not full-run green evidence.
+Report hashes and counts: `evidence/browser-native-a02.json`.
+
+Replaced user-activities-simple's copied DB operations with the shipped activities
+against migrated Citus. Five cases cover usable generated/supplied passwords,
+MSP versus portal roles, duplicate internal email across tenants, missing-role
+transaction rollback and tenant-isolated cleanup. The fixture supplies its own
+synthetic encryption key and restores environment. Client account-manager behavior
+from the old copied helper is not implemented by the shipped activity and is not
+claimed covered. Assigned suite to temporal-database and independent discovery.
+All 25 DB cases across four files passed. Removing the MSP/client role predicates
+made the missing-MSP-role case fail with incorrect successful account creation;
+source restored. Evidence: `evidence/user-activity-database.json`.
