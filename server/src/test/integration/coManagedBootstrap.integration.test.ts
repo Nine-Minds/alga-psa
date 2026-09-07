@@ -5287,3 +5287,94 @@ it('holds comment audience and body locks through delivery and reads current con
   expect(await notify(db, recipient, resource, comment.id, deliver)).toBeNull();
   expect(deliver).not.toHaveBeenCalled();
 }));
+
+async function withRoutedCommentFixture(work: (fixture: Parameters<Parameters<typeof withConversationFixture>[0]>[0] & {
+  request: import('../../../../packages/co-managed/src/ticketCommentRecipients').CoManagedTicketCommentDeliveryRequest;
+  fanout: typeof import('../../../../packages/co-managed/src/ticketCommentRecipients').deliverCoManagedTicketCommentToAssignees;
+  teamId: string; eligibleIds: string[]; unassignedId: string; unpermittedId: string;
+}) => Promise<void>) {
+  await withConversationFixture(async fixture => {
+    const { principal, resource, sponsor, addCustomer } = fixture;
+    const sourceUser = await sponsor.table('users').where('user_id', principal.userId).first();
+    const roles = await sponsor.table('user_roles').where('user_id', principal.userId);
+    const staff = await sponsor.table('co_management_staff_assignments').where('principal_id', principal.userId).first();
+    const eligibleId = randomUUID(), unassignedId = randomUUID(), unpermittedId = randomUUID(), teamId = randomUUID();
+    for (const id of [eligibleId, unassignedId, unpermittedId]) {
+      await sponsor.table('users').insert({ ...sourceUser, user_id: id, username: `recipient-${id}`, email: `recipient-${id}@example.test` });
+      await sponsor.table('co_management_staff_assignments').insert({ ...staff, principal_id: id, relationship_role: 'viewer' });
+      if (id !== unpermittedId) await sponsor.table('user_roles').insert(roles.map(role => ({ ...role, user_id: id })));
+    }
+    await sponsor.table('teams').insert({ tenant: principal.tenant, team_id: teamId, manager_id: principal.userId, team_name: 'Shared ticket routing' });
+    await sponsor.table('team_members').insert([principal.userId, eligibleId, unpermittedId].map(id => ({ tenant: principal.tenant, team_id: teamId, user_id: id })));
+    await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).update({ assigned_to: principal.userId, assigned_team_id: teamId });
+    const comment = await addCustomer({ note: 'Customer shared reply', internal: true, audience: 'shared_it' });
+    const { deliverCoManagedTicketCommentToAssignees: fanout } = await import('../../../../packages/co-managed/src/ticketCommentRecipients');
+    await work({ ...fixture, teamId, eligibleIds: [principal.userId, eligibleId].sort(), unassignedId, unpermittedId, fanout,
+      request: { ownerTenant: resource.tenant, ticketId: resource.id, commentId: comment.id, eventId: randomUUID(), channel: 'in_app' } });
+  });
+}
+
+it('fans out only to authorized MSP routing users with qualified per-channel retry identities', async () => withRoutedCommentFixture(async ({
+  principal, resource, customer, sponsor, eligibleIds, unassignedId, unpermittedId, fanout, request, addCustomer,
+}) => {
+  const calls: { userId: string; key: string; resource: unknown }[] = [];
+  const deliver = async (context: any, message: any, key: string) => { calls.push({ userId: context.actor.userId, key, resource: message.resource }); };
+  await fanout(db, request, deliver);
+  expect(calls.map(call => call.userId)).toEqual(eligibleIds);
+  expect(calls.every(call => call.userId !== unassignedId && call.userId !== unpermittedId)).toBe(true);
+  expect(calls.every(call => JSON.stringify(call.resource) === JSON.stringify(resource))).toBe(true);
+  const originalKeys = calls.map(call => call.key);
+  calls.length = 0;
+  await fanout(db, { ...request, eventId: request.eventId.toUpperCase() }, deliver);
+  expect(calls.map(call => call.key)).toEqual(originalKeys);
+  calls.length = 0;
+  await fanout(db, { ...request, channel: 'email' }, deliver);
+  expect(calls.map(call => call.key)).toEqual(eligibleIds.map(id => `co-managed-comment:${request.ownerTenant}:${request.ticketId}:${request.commentId}:${request.eventId}:email:${principal.tenant}:${id}`));
+  expect(calls.every(call => !originalKeys.includes(call.key))).toBe(true);
+  calls.length = 0;
+  const anotherComment = await addCustomer({ note: 'Different qualified comment' });
+  await fanout(db, { ...request, commentId: anotherComment.id }, deliver);
+  expect(calls).toHaveLength(2);
+  expect(calls.every(call => !originalKeys.includes(call.key))).toBe(true);
+  calls.length = 0;
+  await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).update({ work_id: randomUUID() });
+  await fanout(db, request, deliver);
+  expect(calls).toEqual([]);
+  expect((await customer.table('tickets').where('ticket_id', resource.id).first()).assigned_to).toBeNull();
+}));
+
+it('rechecks routing between candidate discovery and delivery and does not treat remaining staff access as assignment', async () => withRoutedCommentFixture(async ({
+  principal, resource, sponsor, teamId, fanout, request,
+}) => {
+  const { registerAfterCommit } = await import('@alga-psa/db');
+  const delivered: string[] = [];
+  await fanout(db, request, async (context) => {
+    delivered.push(context.actor.userId);
+    registerAfterCommit(context.trx, async () => {
+      await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).update({ assigned_to: null });
+      await sponsor.table('team_members').where('team_id', teamId).whereNot('user_id', context.actor.userId).del();
+    }, 'test reassignment before next notification recipient');
+  });
+  expect(delivered).toHaveLength(1);
+  // Both viewer and technician staff grants still exist. Selection was narrowed
+  // by current routing, without revoking either user's underlying read access.
+  expect(await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant)).toHaveLength(4);
+  expect(await sponsor.table('sessions').where('user_id', principal.userId)).toHaveLength(1);
+}));
+
+it('continues independent recipient delivery after a channel failure and surfaces failures for retry without widening revoked access', async () => withRoutedCommentFixture(async ({
+  resource, customer, eligibleIds, fanout, request,
+}) => {
+  const observed: string[] = [];
+  const failure = new Error('Channel unavailable');
+  await expect(fanout(db, request, async context => {
+    observed.push(context.actor.userId);
+    if (context.actor.userId === eligibleIds[0]) throw failure;
+  })).rejects.toMatchObject({ name: 'AggregateError', errors: [failure] });
+  expect(observed).toEqual(eligibleIds);
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  const deliver = vi.fn();
+  await fanout(db, request, deliver);
+  expect(deliver).not.toHaveBeenCalled();
+  await expect(fanout(db, { ...request, channel: 'sms' as any }, deliver)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
