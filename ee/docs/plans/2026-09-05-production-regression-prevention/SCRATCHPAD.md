@@ -1586,3 +1586,10 @@
 - Native API client reactivation: community timed out at20s; enterprise passed10.637s. Several native client/project cases cluster near5s multiples. Code inspection found event-bus blocking XREADGROUP shares getClient with writes.
 - Owned Redis transport reproduction uses unique temporary stream/group and cleanup: BLOCK2000, publish after100ms. Shared connection publication took1929ms; redis4 commandOptions({isolated:true}) publication took1ms. Evidence: evidence/redis-blocking-publish-latency.json.
 - This establishes the transport hazard, not direct causality for the CI case. Next add actual event-bus behavioral regression and isolate blocking reads with shutdown/recovery validation. No timeout relaxation or production change made yet. Published a02bfb4136 browser run34113539423 is active.
+
+### 2026-09-07 — Event-bus read isolation fixes reproducible publication stall
+
+- Permanent infrastructure regression initially hit unit Redis alias; corrected invocation to REAL_REDIS=1. First blocked-client observation was too broad and saw other local consumers; restricted to newly created bus connections. Correct before-fix assertion then failed at4999.76ms publication against a2000ms bound.
+- EventBus now leases a Redis isolation-pool connection for blocking reads and tracks it for explicit interruption before hard-timeout reset or close. Writes retain the command connection. Existing pending/poison/hard-timeout doubles implement the lease callback.
+- Real regression passes publication/delivery, actively blocked close under2s, and recreation/repeated delivery (2.45s total). Calendar/search real Redis regression also passes; four existing timeout/pending/poison tests pass; package tsc --noEmit passes. Synthetic prefix keys and processed markers cleaned.
+- New file is independently discovered by the infrastructure runner; CI config already supplies REAL_REDIS=1. Native verification and exact causality of earlier API timeout remain pending. Preserve current browser run before publishing this follow-up.

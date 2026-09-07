@@ -19,9 +19,21 @@
     "sharedConnectionPublishMs": 1929,
     "isolatedCommandPublishMs": 1
   },
-  "nextAction": "Add a permanent real-Redis event-bus publish-during-idle-read regression, isolate blocking reads and verify shutdown/reconnection behavior. Do not widen the client test timeout as a substitute.",
+  "nextAction": "Verify native CI with the isolated reader fix; original community API timeout attribution remains unproven.",
   "limits": [
-    "Transport mechanism reproduced; direct causal attribution to the native timeout is not proven.",
-    "No production change applied in this experiment."
-  ]
+    "Transport and actual bus delay reproduced; direct causal attribution to native API timeout remains unproven.",
+    "Production bus fix is locally verified; native CI verification pending."
+  ],
+  "busRegression": {
+    "file": "server/src/test/infrastructure/eventBusPublishLatency.test.ts",
+    "beforePublishMs": 4999.761625,
+    "after": "passed: publish under 2000ms, one delivery, close under 2000ms while blocked, recreate and repeat",
+    "validation": [
+      "Real Redis regression passed in 2.45s",
+      "Calendar/search real Redis subscriber regression passed",
+      "Four pending/poison/hard-timeout tests passed",
+      "Event-bus TypeScript check passed"
+    ],
+    "ci": "Infrastructure runner independently discovers server/src/test/infrastructure tests; REAL_REDIS=1 configured in integration-tests.yml"
+  }
 }

@@ -187,6 +187,13 @@ export class EventBus {
   private processingEvents: boolean = false;
   private defaultChannel: string;
   private closed = false;
+  private blockingReader: Awaited<ReturnType<typeof createRedisClient>> | null = null;
+
+  private async stopBlockingRead(): Promise<void> {
+    const reader = this.blockingReader;
+    this.blockingReader = null;
+    if (reader?.isOpen) await reader.disconnect();
+  }
 
   private constructor() {
     this.handlers = new Map();
@@ -372,15 +379,26 @@ export class EventBus {
 
         // xReadGroup expects flat stream descriptors; reuse the subscriptions list we built above.
         const readStartedAt = Date.now();
-        const readPromise = client.xReadGroup(
-          config.eventBus.consumerGroup,
-          this.consumerName,
-          subscriptions.map(({ stream }) => ({ key: stream, id: '>' })),
-          {
-            COUNT: config.eventBus.batchSize,
-            BLOCK: config.eventBus.blockingTimeout
+        // A blocking command on the publishing socket queues every write behind
+        // the read timeout. Lease a separate connection and retain it so a stuck
+        // read can be interrupted before resetting or draining the parent pool.
+        const readPromise = client.executeIsolated(async (reader) => {
+          if (!this.processingEvents) return null;
+          this.blockingReader = reader;
+          try {
+            return await reader.xReadGroup(
+                config.eventBus.consumerGroup,
+                this.consumerName,
+                subscriptions.map(({ stream }) => ({ key: stream, id: '>' })),
+                {
+                  COUNT: config.eventBus.batchSize,
+                  BLOCK: config.eventBus.blockingTimeout
+                }
+            );
+          } finally {
+            if (this.blockingReader === reader) this.blockingReader = null;
           }
-        );
+        });
 
         // In practice, a Redis socket drop while a blocking XREADGROUP is in-flight can leave the
         // promise pending indefinitely even after the client reports "ready" again. That stalls
@@ -419,6 +437,7 @@ export class EventBus {
             isReconnecting
           });
 
+          await this.stopBlockingRead();
           await resetClient('xreadgroup_hard_timeout', {
             hardTimeoutMs,
             blockingTimeoutMs: config.eventBus.blockingTimeout
@@ -918,6 +937,7 @@ export class EventBus {
     this.processingEvents = false;
     const currentClient = client;
     try {
+      await this.stopBlockingRead();
       if (currentClient) await currentClient.quit();
     } finally {
       client = null;
