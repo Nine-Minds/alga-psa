@@ -2,6 +2,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, expect, it, vi } from 'vite
 import type { Knex } from 'knex';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
 import { randomUUID } from 'node:crypto';
+import { z } from 'zod';
+import { getActionRegistryV2 } from '@alga-psa/workflows/runtime/core';
 
 const state = vi.hoisted(() => ({ trx: null as Knex.Transaction | null, tenant: '', canRead: true }));
 vi.mock('@alga-psa/db/admin', () => ({
@@ -20,7 +22,7 @@ vi.mock('@alga-psa/auth', async importOriginal => {
   };
 });
 import { listWorkflowRunStepsAction } from '../../../../ee/packages/workflows/src/actions/workflow-runtime-v2-actions';
-import { projectWorkflowRuntimeV2StepCompletion } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
+import { projectWorkflowRuntimeV2StepCompletion, executeWorkflowRuntimeV2ActionStep } from '../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities';
 
 let db: Knex;
 beforeAll(async () => {
@@ -107,4 +109,26 @@ it('reads activity-written snapshot references through the run-history action wi
   state.tenant = f.tenant;
   state.canRead = false;
   await expect(listWorkflowRunStepsAction({ runId: f.runId })).rejects.toThrow('Forbidden');
+});
+
+it('redacts invocation inputs while preserving the successful result and avoiding repeated action effects', async () => {
+  const f = await fixture();
+  const actionId = `test.snapshot-input.${randomUUID()}`;
+  const handler = vi.fn(async () => ({ result: 'completed' }));
+  getActionRegistryV2().register({ id: actionId, version: 1,
+    inputSchema: z.object({ credentials: z.object({ secretRef: z.string() }) }),
+    outputSchema: z.object({ result: z.string() }), sideEffectful: true,
+    idempotency: { mode: 'engineProvided' }, ui: { label: 'Invocation storage probe', category: 'Test' }, handler,
+  });
+  const input = { runId: f.runId, stepId: f.stepId, stepPath: f.stepPath, tenantId: f.tenant,
+    step: { type: 'action.call' as const, config: { actionId, version: 1, inputMapping: { credentials: { secretRef: 'synthetic-secret-reference' } } } },
+    scopes: { payload: {}, workflow: {}, lexical: [], system: { runId: f.runId, workflowId: randomUUID(), workflowVersion: 1, tenantId: f.tenant, definitionHash: null, runtimeSemanticsVersion: null } },
+  };
+  expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual({ result: 'completed' });
+  const row = await state.trx!('workflow_action_invocations').where({ run_id: f.runId }).first();
+  expect(row.input_json).toEqual({ credentials: { secretRef: '[REDACTED]' } });
+  expect(row.status).toBe('SUCCEEDED');
+  expect((await executeWorkflowRuntimeV2ActionStep(input)).output).toEqual({ result: 'completed' });
+  expect(handler).toHaveBeenCalledOnce();
+  expect(handler).toHaveBeenCalledWith({ credentials: { secretRef: 'synthetic-secret-reference' } }, expect.anything());
 });
