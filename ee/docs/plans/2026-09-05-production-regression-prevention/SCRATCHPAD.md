@@ -1988,3 +1988,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Replaced fixed localhost Temporal connection with an owned TestWorkflowEnvironment and separate client, verifying a service request plus gRPC SERVING health and test-clock advancement. Cleanup is guaranteed after the suite/client. Assigned to the Temporal engine config and independent discovery.
 - Relocated the existing SELECT 1 PostgreSQL smoke to the database lane's configured admin connection, removing hardcoded temporal credentials/port. Assigned database config and discovery; no application rows are modified.
 - Owned Temporal 2/2 pass (634ms); configured task-owned PostgreSQL 1/1 pass. Logs /tmp/alga-owned-temporal-connection.log and /tmp/alga-temporal-db-connection.log. Initial additional nonempty-version expectation failed because the ephemeral server returns an empty version string; readiness now uses its real health status rather than version text. Full engine/database native execution remains pending publication approval.
+
+### 2026-09-07 — validate complete engine/database lanes after connection assignment
+
+- Complete Temporal engine runner passed eight files / 36 cases in 12.63 seconds, using owned ephemeral Temporal servers. Complete Temporal database runner passed five files / 26 cases in 10.80 seconds on the task-owned single-node Citus database workflow_citus_82cc. Both reconciled clean bf719bcbb1 with zero skips.
+- Evidence: evidence/temporal-engine-database-local-bf719.json. Logs: /tmp/alga-temporal-engine-bf719.log and /tmp/alga-temporal-database-bf719.log. These establish complete current local lane execution, not native CI, a previous-supported-release upgrade, or remaining unassigned suites. Push authorization is still pending.
