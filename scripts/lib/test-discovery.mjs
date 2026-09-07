@@ -49,6 +49,16 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|tenant-creation-appliance|sla-ticket-workflow|managed-email-domain-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {
+    if ([
+      'ee/temporal-workflows/src/__tests__/marketing-worker-registration.test.ts',
+      'ee/temporal-workflows/src/__tests__/worker-registration.test.ts',
+      'ee/temporal-workflows/src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
+      'ee/temporal-workflows/src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
+      'ee/temporal-workflows/src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
+      'ee/temporal-workflows/src/workflows/__tests__/tenant-creation-product-bootstrap.contract.test.ts',
+      'ee/temporal-workflows/src/workflows/__tests__/tenant-email-ingestion-workflow.contract.test.ts',
+      'ee/temporal-workflows/src/workflows/__tests__/tenant-suspension-workflow.contract.test.ts',
+    ].includes(file)) return true;
     if (file === 'ee/temporal-workflows/src/db/__tests__/product-upgrade-role-grants.contract.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;

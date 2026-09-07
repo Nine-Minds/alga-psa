@@ -2003,3 +2003,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Added an engine test that bundles both source production workflow indexes, starts workers on owned Temporal servers and executes readinessWorkflow and marketingFanoutWorkflow by registered name. It verifies echo identity, per-tenant activity calls and exact fan-out results. Assigned to engine config and independent discovery.
 - Both cases pass in 1.80 seconds (/tmp/alga-production-index-engine.log). This catches bundle/export/dispatch problems missed by individual-workflow imports. Activity implementations are synthetic, so this does not prove production activity-index registration, built-image packaging or provider side effects. Existing unassigned registration/source-contract files are not silently removed or counted as covered.
+
+### 2026-09-07 — assign remaining lightweight Temporal contract suites
+
+- Audited eight unassigned lightweight suites. Seven source-contract suites passed 18 existing assertions; worker-registration initially failed during import. Aligned Vitest aliases with the worker's enterprise domain entry, workDate and EE db paths, and its real worker-side notification implementation (confirmed in built output). No production behavior changed and no replacement no-op was introduced.
+- Assigned all eight existing suites to readiness config and independent discovery. Source-text checks remain supplemental rather than proof of customer outcomes; existing/new engine and database tests supply runtime coverage separately.
+- Full readiness runner passes 42 files / 263 cases, zero skips, in 12.87 seconds (/tmp/alga-temporal-readiness-registration.log). This run included uncommitted harness changes, so its source metadata is dirty and cannot establish candidate readiness. Native publication remains awaiting approval.

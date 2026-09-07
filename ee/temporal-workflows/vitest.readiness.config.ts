@@ -8,6 +8,15 @@ export default defineConfig({
   test: {
     ...base.test,
     include: [
+      'src/__tests__/marketing-worker-registration.test.ts',
+      'src/__tests__/worker-registration.test.ts',
+      'src/activities/__tests__/portalDomainActivitiesTenantScoped.contract.test.ts',
+      'src/activities/__tests__/slaActivitiesTenantScoped.contract.test.ts',
+      'src/workflows/__tests__/kb-article-import-wiring.contract.test.ts',
+      'src/workflows/__tests__/tenant-creation-product-bootstrap.contract.test.ts',
+      'src/workflows/__tests__/tenant-email-ingestion-workflow.contract.test.ts',
+      'src/workflows/__tests__/tenant-suspension-workflow.contract.test.ts',
+
       'src/__tests__/worker-queue-ownership.test.ts',
       'src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts',
       'src/config/__tests__/**/*.test.ts',
