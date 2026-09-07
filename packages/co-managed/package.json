@@ -17,6 +17,10 @@
     "./conversationContent": {
       "types": "./src/conversationContent.ts",
       "import": "./src/conversationContent.ts"
+    },
+    "./inboundRequesterReply": {
+      "types": "./src/inboundRequesterReply.ts",
+      "import": "./dist/inboundRequesterReply.js"
     }
   },
   "scripts": {

@@ -18,10 +18,11 @@
  * mere inbox-row existence check.
  */
 
+import type { RequesterReplyAdmission } from './requesterReplyAdmission';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite, CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite, isCoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa/licensing';
 import type {
   InboundEmailInboxRecord,
   UnifiedInboundEmailQueueJobV2,
@@ -59,6 +60,7 @@ export interface ProcessInboundInboxParams {
   tenantId: string;
   inboxId: string;
   owner: string;
+  requesterReplyAdmission?: RequesterReplyAdmission;
   leaseTtlMs: number;
   /** In shadow mode no core entities are created; used for source-stage coverage validation. */
   mode?: 'shadow' | 'enforce';
@@ -254,11 +256,12 @@ export async function processInboundInbox(
         trx,
         inbox: locked,
         emailData: parsed.emailData,
+        requesterReplyAdmission: params.requesterReplyAdmission,
       });
       return { terminalReplay: false as const, ...result };
     });
   } catch (error: any) {
-    if (error instanceof CoManagedLifecycleError && !error.lifecycle.canWrite) {
+    if (isCoManagedLifecycleError(error)) {
       const until = new Date(Date.now() + 60_000);
       const released = await deferInboxForCoManagedLifecycle(db, {
         tenant: params.tenantId, inboxId: params.inboxId, state: error.lifecycle.state, until,
@@ -319,6 +322,7 @@ async function runCommitPhase(params: {
   tenantId: string;
   inboxId: string;
   owner: string;
+  requesterReplyAdmission?: RequesterReplyAdmission;
   mode?: 'shadow' | 'enforce';
   trx: Knex.Transaction;
   inbox: InboundEmailInboxRecord;
@@ -356,6 +360,7 @@ async function runCommitPhase(params: {
         mode: 'enforce',
         trx,
         inboxId: params.inboxId,
+        requesterReplyAdmission: params.requesterReplyAdmission,
         eventPublishers: { ticket: ticketPublisher, comment: commentPublisher },
       },
     }
@@ -423,6 +428,18 @@ async function runCommitPhase(params: {
       });
       if (!written) throw new Error('inbox_terminal_write_fence_lost');
       return { kind: 'replied', ticketId: result.ticketId, commentId: result.commentId };
+    }
+    case 'quarantined': {
+      // Retain the staged source for review, without creating tickets, artifacts
+      // or reply effects and without letting another matching strategy run.
+      const reason = `quarantined:${result.reason}`;
+      const written = await transitionInbox(trx, {
+        tenant: tenantId, inbox_id: params.inboxId, token: String(inbox.lease_token),
+        version: Number(inbox.lease_version), owner: params.owner,
+        status: 'skipped', outcome_kind: 'skipped', outcome_reason: reason,
+      });
+      if (!written) throw new Error('inbox_terminal_write_fence_lost');
+      return { kind: 'skipped', reason };
     }
     case 'skipped': {
       const written = await transitionInbox(trx, {

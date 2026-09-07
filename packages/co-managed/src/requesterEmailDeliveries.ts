@@ -57,7 +57,7 @@ async function finish(trx: Knex.Transaction, row: any, result: CoManagedEmailDel
  * expose it. The second transaction reacquires current source/recipient authority
  * and holds it through transport. A lost SMTP acknowledgement can repeat a send
  * with the same Message-ID/token; this is not exactly-once external delivery.
- * Callers must not activate sending until the cm1 inbound adapter is installed. */
+ * Requires the cm1 admission adapter in the receiving durable inbox workers. */
 export async function processCoManagedRequesterEmailDeliveries(db: Knex, tenant: string,
   send: (delivery: CoManagedRequesterEmailDelivery) => Promise<CoManagedEmailDeliveryResult>, options: { limit?: number } = {}) {
   const limit = options.limit ?? 30;

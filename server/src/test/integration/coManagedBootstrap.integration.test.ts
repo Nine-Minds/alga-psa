@@ -8624,3 +8624,247 @@ it.each(['address', 'audience', 'revocation', 'preferences'] as const)('rechecks
     }
   } finally { issue.mockRestore(); await mutation; }
 }));
+
+async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters<typeof withRequesterReplyTokenFixture>[0]>[0] & {
+  inbox: any; emailData: any; run: () => Promise<import('../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
+  nativeTokenLookup: ReturnType<typeof vi.spyOn>; nativeThreadLookup: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>) {
+  await withRequesterReplyTokenFixture(async fixture => {
+    const issued = await fixture.issue();
+    const inbox = await stagedCoManagedInbox(fixture.resource.tenant);
+    const emailData = { id: inbox.provider_message_id, provider: 'google', providerId: inbox.provider_id, tenant: fixture.resource.tenant,
+      receivedAt: new Date().toISOString(), from: { email: issued!.email, name: 'Customer requester' }, to: [{ email: 'helpdesk@example.test' }],
+      subject: 'Re: Requester reply', body: { text: `Here is the requested information.\n\n[ALGA-REPLY-TOKEN ${issued!.token}]` },
+      attachments: [], sourceSha256: inbox.source_sha256,
+      headers: { 'authentication-results': 'mx.example.test; spf=pass smtp.mailfrom=example.test' } };
+    const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
+    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const nativeTokenLookup = vi.spyOn(workflow, 'findTicketByReplyToken'), nativeThreadLookup = vi.spyOn(workflow, 'findTicketByEmailThread');
+    intake.process.mockReset(); intake.process.mockImplementation(actual.processInboundEmailInApp);
+    intake.read.mockReset(); intake.read.mockResolvedValue(Buffer.from('Requester MIME source'));
+    intake.parse.mockReset(); intake.parse.mockImplementation(async () => ({ emailData }));
+    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+    const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
+    try {
+      await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
+        run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(),
+          leaseTtlMs: 30_000, mode: 'enforce', requesterReplyAdmission: admitCoManagedRequesterReply }) });
+    } finally { nativeTokenLookup.mockRestore(); nativeThreadLookup.mockRestore(); intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
+  });
+}
+
+it('processes an actual qualified requester email reply atomically in its canonical thread with durable effects and replay', async () => withRequesterInboundFixture(async ({
+  customer, resource, contactId, commentId, inbox, emailData, nativeTokenLookup, nativeThreadLookup, run,
+}) => {
+  const source = await customer.table('comments').where('comment_id', commentId).first();
+  // A legacy Message-ID collision on an agent comment must not replace the
+  // qualified reply identity with that existing comment (or its thread).
+  await customer.table('comments').where('comment_id', commentId).update({ metadata: { email: { messageId: emailData.id } } });
+  emailData.cc = [{ email: 'not-an-authorized-watcher@example.test' }];
+  const before = await customer.table('tickets').where('ticket_id', resource.id).first('attributes');
+  const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+  const reply = await customer.table('comments').where('comment_id', (result as any).commentId).first();
+  expect(reply).toMatchObject({ ticket_id: resource.id, parent_comment_id: commentId, thread_id: source.thread_id, contact_id: contactId,
+    user_id: null, author_type: 'client', is_internal: false, publish_state: 'published' });
+  expect(reply.note).toContain('Here is the requested information.'); expect(reply.note).not.toContain('ALGA-REPLY-TOKEN');
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_internal', attributes: before.attributes });
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
+  const outbox = await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id);
+  expect(outbox.map(row => row.event_type)).toEqual(expect.arrayContaining(['TICKET_COMMENT_ADDED', 'INBOUND_EMAIL_REPLY_RECEIVED']));
+  expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ status: 'succeeded', outcome_kind: 'replied' });
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
+  expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(outbox.length);
+  expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+}));
+
+it.each(['sender', 'authentication', 'contact', 'private', 'revoked', 'expired', 'unknown_token', 'malformed_token', 'case_variant'] as const)(
+  'quarantines actual requester email after %s rejection without native matching or new-ticket side effects', async condition => withRequesterInboundFixture(async ({
+    customer, resource, contactId, inbox, emailData, nativeTokenLookup, nativeThreadLookup, run,
+  }) => {
+    if (condition === 'sender') emailData.from.email = 'unrelated@example.test';
+    if (condition === 'authentication') emailData.headers = {};
+    if (condition === 'contact') await customer.table('contacts').where('contact_name_id', contactId).update({ is_inactive: true });
+    if (condition === 'private') await customer.table('comment_threads').where('ticket_id', resource.id).update({ collaboration_audience: 'organization_private', is_internal: true });
+    if (condition === 'revoked') await customer.table('co_management_requester_reply_tokens').update({ revoked_at: new Date() });
+    if (condition === 'expired') await customer.table('co_management_requester_reply_tokens').update({ expires_at: '2000-01-01T00:00:00Z' });
+    if (condition === 'unknown_token') emailData.body.text = `This must not fall through\n\n[ALGA-REPLY-TOKEN cm1:${'A'.repeat(43)}]`;
+    if (condition === 'malformed_token') emailData.body.text = 'This must not fall through\n\n[ALGA-REPLY-TOKEN cm1:***]';
+    if (condition === 'case_variant') emailData.body.text = emailData.body.text.replace('cm1:', 'CM1:');
+    emailData.inReplyTo = '<an-existing-native-thread@example.test>';
+    nativeTokenLookup.mockResolvedValue({ ticketId: resource.id } as any); nativeThreadLookup.mockResolvedValue({ ticketId: resource.id } as any);
+    const before = await customer.table('comments').where('ticket_id', resource.id);
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_requester_reply' });
+    expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ status: 'skipped', source_object_key: inbox.source_object_key, outcome_reason: 'quarantined:unauthorized_requester_reply' });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+    for (const table of ['inbound_email_effects', 'inbound_email_outbox', 'inbound_email_artifacts']) expect(await customer.table(table).where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_requester_reply' });
+    expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+  }));
+
+it('rolls qualified requester reply writes and outbox back before retaining quarantine after expiry during the writer', async () => withRequesterInboundFixture(async ({
+  customer, resource, inbox, run,
+}) => {
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), original = workflow.createCommentFromEmail;
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementationOnce(async (...args) => {
+    const comment = await original(...args);
+    const trx = args[3]!.existingConnection!;
+    await tenantDb(trx, resource.tenant).table('co_management_requester_reply_tokens').update({ expires_at: trx.raw("clock_timestamp() + interval '0.1 second'") });
+    await trx.raw('SELECT pg_sleep(0.2)'); return comment;
+  });
+  try {
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_requester_reply' });
+    expect(writer).toHaveBeenCalledTimes(1);
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+    expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  } finally { writer.mockRestore(); }
+}));
+
+it('retries actual requester email writer failures without quarantining valid authority or duplicating the eventual reply', async () => withRequesterInboundFixture(async ({
+  customer, resource, inbox, run,
+}) => {
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockRejectedValueOnce(new Error('transient reply database failure'));
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  try {
+    expect(await run()).toMatchObject({ disposition: 'retry' });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    writer.mockRestore();
+    await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).update({ next_attempt_at: new Date(0) });
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length + 1);
+  } finally { writer.mockRestore(); }
+}));
+
+it.each(['reopen', 'cutoff', 'hidden_destination', 'foreign_rule_client', 'rate_limited', 'automated'] as const)(
+  'applies requester email %s policy inside the admitted transaction and destination scope', async scenario => withRequesterInboundFixture(async ({
+    customer, customerPrincipal, resource, operation, contactId, inbox, emailData, run,
+  }) => {
+    await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true,
+      inbound_reply_reopen_cutoff_hours: 1, inbound_reply_ai_ack_suppression_enabled: false });
+    await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: new Date(Date.now() - (['reopen', 'rate_limited', 'automated'].includes(scenario) ? 60000 : 7200000)) });
+    const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
+    const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+    const defaults = { client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id,
+      priority_id: priority.priority_id, entered_by: customerPrincipal.userId };
+    if (scenario === 'hidden_destination') {
+      const groupId = randomUUID();
+      await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'Reply destination scope' });
+      await customer.table('contacts').where('contact_name_id', contactId).update({ portal_visibility_group_id: groupId });
+      await customer.table('client_portal_visibility_group_boards').insert({ tenant: resource.tenant, group_id: groupId, board_id: operation.customer_board_id });
+      const board = await customer.table('boards').where('board_id', operation.customer_board_id).first();
+      defaults.board_id = randomUUID();
+      await customer.table('boards').insert({ ...board, board_id: defaults.board_id, board_name: 'Outside requester scope', is_default: false });
+    }
+    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const providerDefaults = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
+    const effectiveDefaults = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
+    const rules = await import('../../../../shared/services/email/inboundEmailRules');
+    const evaluate = vi.spyOn(rules, 'evaluateInboundEmailRules');
+    if (scenario === 'foreign_rule_client') evaluate.mockResolvedValue({ outcome: { kind: 'assign_client', clientId: randomUUID(), ruleId: randomUUID(), ruleName: 'Wrong client', matchSource: 'rule' }, trace: [] } as any);
+    const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+    const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: scenario !== 'rate_limited', count: scenario === 'rate_limited' ? 4 : 1, limit: 3, windowSeconds: 3600 });
+    if (scenario === 'automated') emailData.headers['auto-submitted'] = 'auto-replied';
+    if (scenario === 'cutoff') await customer.table('tickets').where('ticket_id', resource.id).update({ email_metadata: {
+      messageId: emailData.id, providerId: inbox.provider_id,
+    } }); // A flat legacy match cannot redirect the qualified cutoff operation.
+    const originalCount = (await customer.table('tickets')).length;
+    try {
+      const result = await run();
+      if (scenario === 'reopen') {
+        expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+        expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ is_closed: false, closed_at: null });
+      } else if (scenario === 'rate_limited' || scenario === 'automated') {
+        expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+        expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ is_closed: true });
+        if (scenario === 'automated') expect(rateLimit).not.toHaveBeenCalled();
+      } else if (scenario === 'cutoff') {
+        expect(result).toMatchObject({ disposition: 'ack', outcome: 'created' }); expect((result as any).ticketId).not.toBe(resource.id);
+        const created = await customer.table('tickets').where('ticket_id', (result as any).ticketId).first();
+        expect(created).toMatchObject({ client_id: operation.customer_client_id, contact_name_id: contactId, board_id: operation.customer_board_id });
+        expect(await customer.table('comments').where('comment_id', (result as any).commentId).first()).toMatchObject({ contact_id: contactId, user_id: null, author_type: 'client' });
+        expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(2);
+        expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ is_closed: true });
+        expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'created', reason: 'terminal_replay' });
+        expect(await customer.table('tickets')).toHaveLength(originalCount + 1);
+      } else {
+        expect(result).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_requester_reply' });
+        expect(await customer.table('tickets')).toHaveLength(originalCount);
+        expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+      }
+    } finally { providerDefaults.mockRestore(); effectiveDefaults.mockRestore(); evaluate.mockRestore(); rateLimit.mockRestore(); }
+  }));
+
+it('keeps a default-location requester reply customer-authored without resolving the address to a privileged user', async () => withRequesterInboundFixture(async ({
+  customer, resource, operation, contactId, localResource, commentId, makeLocation, discover, emailData, run,
+}) => {
+  await customer.table('contacts').where('contact_name_id', contactId).update({ email: null });
+  await customer.table('client_locations').where('client_id', operation.customer_client_id).update({ is_default: false });
+  await makeLocation({ email: 'location-requester@example.test' });
+  const requester = await discover();
+  const { issueCoManagedRequesterReplyToken } = await import('../../../../packages/co-managed/src/requesterReplyTokens');
+  const issued = await issueCoManagedRequesterReplyToken(db, { recipient: requester!.recipient, resource: localResource, commentId, deliveryKey: 'location-inbound' });
+  emailData.from.email = issued!.email;
+  emailData.body.text = `Location reply\n\n[ALGA-REPLY-TOKEN ${issued!.token}]`;
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const sender = vi.spyOn(workflow, 'findContactByEmail').mockRejectedValue(new Error('Requester must not acquire another sender identity'));
+  try {
+    const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+    expect(await customer.table('comments').where('comment_id', (result as any).commentId).first()).toMatchObject({ user_id: null, contact_id: null, author_type: 'client' });
+    expect(sender).not.toHaveBeenCalled();
+  } finally { sender.mockRestore(); }
+}));
+
+it('retains requester email for retry when its worker lacks the required admission adapter', async () => withRequesterInboundFixture(async ({
+  customer, resource, inbox, nativeTokenLookup, nativeThreadLookup,
+}) => {
+  expect(await runCoManagedInbox(resource.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'retry' });
+  expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ status: 'retryable_failed', source_object_key: inbox.source_object_key });
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+}));
+
+it('defers and rolls back requester email when a separately compiled admission adapter reports a lifecycle pause', async () => withRequesterInboundFixture(async ({
+  customer, resource, inbox,
+}) => {
+  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+  const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  const result = await processInboundInbox({ tenantId: resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce',
+    requesterReplyAdmission: async (trx, input, write) => {
+      await admitCoManagedRequesterReply(trx, input, write);
+      // This intentionally has another constructor, as the worker's compiled
+      // package and source-compiled core do at runtime. Its contract is identical.
+      throw Object.assign(new Error('Workspace became read-only'), { name: 'CoManagedLifecycleError', code: 'CO_MANAGED_READ_ONLY',
+        lifecycle: { state: 'read_only', canWrite: false, graceEndsAt: null } });
+    },
+  });
+  expect(result).toMatchObject({ disposition: 'defer', reason: 'co_managed_read_only' });
+  expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ status: 'received', attempt_count: 0, source_object_key: inbox.source_object_key });
+}));
+
+it.each(['attribute', 'comment'] as const)('admits a requester reply using its HTML %s token marker without native fallback', async format => withRequesterInboundFixture(async ({
+  resource, issue, emailData, nativeTokenLookup, nativeThreadLookup, run,
+}) => {
+  const issued = await issue();
+  emailData.body = { html: `<p>Requester reply from an HTML email.</p>${format === 'attribute'
+    ? `<div data-alga-reply-token="${issued!.token}"></div>`
+    : `<!-- alga:reply-token:${issued!.token}-->`}` };
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+  expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+}));
+
+it('skips HTML-only requester mail containing just a token, markup and non-content without creating a reply', async () => withRequesterInboundFixture(async ({
+  customer, inbox, issue, emailData, nativeTokenLookup, nativeThreadLookup, run,
+}) => {
+  const issued = await issue();
+  emailData.body = { html: `<style>p { color: red; }</style><script>ignored()</script><div data-alga-reply-token="${issued!.token}">&nbsp;</div>` };
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'self_notification' });
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+}));

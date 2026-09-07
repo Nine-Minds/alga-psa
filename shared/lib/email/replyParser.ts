@@ -275,13 +275,13 @@ const KNOWN_QUOTE_MARKER_TOKENS = ['gmail_quote', 'yahoo_quoted', 'protonmail_qu
 const REPLY_HEADER_LOOKBEHIND_CHARS = 300;
 
 /** Convert an HTML fragment to visible text, preserving block-level line breaks. */
-function htmlToVisibleText(html: string): string {
+export function htmlToVisibleText(html: string): string {
   const withBreaks = html
     .replace(/<(?:style|script)\b[\s\S]*?<\/(?:style|script)>/gi, ' ')
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<(?:br|\/p|\/div|\/li|\/tr|\/h[1-6]|\/blockquote|\/table)\b[^>]*>/gi, '\n')
     .replace(/<[^>]+>/g, ' ');
-  return decodeHtml(withBreaks)
+  return decodeHtml(withBreaks.replace(/&nbsp;/gi, ' '))
     .split('\n')
     .map((line) => line.replace(/\s+/g, ' ').trim())
     .join('\n');

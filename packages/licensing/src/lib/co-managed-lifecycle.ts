@@ -19,6 +19,18 @@ export class CoManagedLifecycleError extends Error {
   }
 }
 
+/** Worker adapters can load a separately compiled copy of this package. Match
+ * the explicit error contract rather than relying on a shared JS constructor. */
+export function isCoManagedLifecycleError(error: unknown): error is CoManagedLifecycleError & { lifecycle: Extract<CoManagedOperationalState, { canWrite: false }> } {
+  if (!error || typeof error !== 'object') return false;
+  const candidate = error as Partial<CoManagedLifecycleError>;
+  const state = candidate.lifecycle;
+  return candidate.name === 'CoManagedLifecycleError' && Boolean(state && state.canWrite === false &&
+    ['pending_acceptance', 'terminated', 'read_only'].includes(state.state) &&
+    (state.graceEndsAt === null || typeof state.graceEndsAt === 'string') &&
+    candidate.code === (state.state === 'pending_acceptance' ? 'CO_MANAGED_NOT_ACTIVE' : 'CO_MANAGED_READ_ONLY'));
+}
+
 /** Read under the same lock order as acceptance, allocation, and termination:
  * sponsor entitlement, sponsor tenant, customer relationship, customer tenant.
  * The caller retains these locks until its operational write commits. This is

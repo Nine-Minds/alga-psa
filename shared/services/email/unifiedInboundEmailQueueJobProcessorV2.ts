@@ -4,6 +4,7 @@
  * both the Redis claim and the Postgres lease together.
  */
 
+import type { RequesterReplyAdmission } from './requesterReplyAdmission';
 import type { InboundEmailQueueDisposition, UnifiedInboundEmailQueueJobV2 } from '../../interfaces/inbound-email.interfaces';
 import type { InboundEmailDurableMode } from '../../interfaces/inbound-email.interfaces';
 import type { InboundPostgresLease } from './unifiedInboundEmailQueueConsumerV2';
@@ -44,7 +45,8 @@ export async function renewPostgresLeaseForV2Job(
 
 export async function processUnifiedInboundEmailDurableJob(
   job: UnifiedInboundEmailQueueJobV2,
-  ctx: InboundV2JobContext
+  ctx: InboundV2JobContext,
+  options: { requesterReplyAdmission?: RequesterReplyAdmission } = {}
 ): Promise<InboundEmailQueueDisposition> {
   const mode = await getInboundDurableModeForTenant(job.tenantId);
   if (mode === 'off') {
@@ -55,7 +57,7 @@ export async function processUnifiedInboundEmailDurableJob(
   }
   switch (job.workType) {
     case 'process_inbox':
-      return handleProcessInbox(job, ctx, mode);
+      return handleProcessInbox(job, ctx, mode, options.requesterReplyAdmission);
     case 'stage_ingress':
       return handleStageIngress(job, ctx);
     case 'process_artifact':
@@ -70,12 +72,13 @@ export async function processUnifiedInboundEmailDurableJob(
 }
 
 async function handleProcessInbox(job: UnifiedInboundEmailQueueJobV2, ctx: InboundV2JobContext,
-  mode: Exclude<InboundEmailDurableMode, 'off'>): Promise<InboundEmailQueueDisposition> {
+  mode: Exclude<InboundEmailDurableMode, 'off'>, requesterReplyAdmission?: RequesterReplyAdmission): Promise<InboundEmailQueueDisposition> {
   const owner = newInboundProcessorOwner();
   return processInboundInbox({
     tenantId: job.tenantId,
     inboxId: job.recordId,
     owner,
+    requesterReplyAdmission,
     leaseTtlMs: getDurableLeaseTtlMs(),
     mode: mode === 'enforce' ? 'enforce' : 'shadow',
     onClaim: (lease) => ctx.registerPostgresLease(lease),

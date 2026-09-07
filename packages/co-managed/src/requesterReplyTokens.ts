@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { randomBytes } from 'node:crypto';
 import { tenantDb, withTransaction } from '@alga-psa/db';
-import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
 import { allowsContactSenderAttribution, type SenderAuthResults } from '@alga-psa/shared/lib/email/senderAuthVerification';
 import { withCoManagedRequesterCommentEmail, type CoManagedRequesterEmailRecipient } from './requesterCommentEmail';
 import type { CoManagedCustomerTicketResource } from './customerCommentNotification';

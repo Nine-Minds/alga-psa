@@ -1,3 +1,5 @@
+import { htmlToVisibleText } from '../../lib/email/replyParser';
+import { isRequesterReplyToken, requesterReplyTokenFromBody, type RequesterReplyAdmission, type AdmittedRequesterReply } from './requesterReplyAdmission';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -85,6 +87,7 @@ export interface ProcessInboundEmailInAppOptions {
     mode: 'shadow' | 'enforce';
     trx: any;
     inboxId: string;
+    requesterReplyAdmission?: RequesterReplyAdmission;
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
@@ -181,6 +184,11 @@ type ProcessInboundEmailInAppBaseResult =
       reason: 'unauthorized_thread_header_sender';
       ticketId: string;
       matchedBy: 'thread_headers';
+    }
+  | {
+      outcome: 'quarantined';
+      reason: 'unauthorized_requester_reply';
+      matchedBy: 'reply_token';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -338,7 +346,7 @@ function withDiagnostics<T extends ProcessInboundEmailInAppBaseResult>(
               }
             : {
                 kind: result.outcome,
-                ticketId: result.ticketId,
+                ...('ticketId' in result ? { ticketId: result.ticketId } : {}),
                 matchedBy: result.matchedBy,
               };
 
@@ -377,7 +385,11 @@ function hasSubstantiveReplyContent(parsedEmail: any, emailData: EmailMessageDet
     emailData.body?.text ??
     '';
 
-  return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  if (String(candidateText).trim()) return stripAutomatedReplyMarkers(String(candidateText)).length > 0;
+  // HTML-only mail has no sanitizedText in the reply parser. Use its existing
+  // HTML text projection, without reviving quoted HTML when a text part exists.
+  if (emailData.body?.text?.trim()) return false;
+  return stripAutomatedReplyMarkers(htmlToVisibleText(parsedEmail?.sanitizedHtml ?? emailData.body?.html ?? '')).length > 0;
 }
 
 function normalizePositiveInteger(value: unknown, fallback: number): number {
@@ -425,6 +437,7 @@ function isClosedTicketBeyondReopenCutoff(params: {
 async function loadInboundReplyPolicyContext(params: {
   tenantId: string;
   ticketId: string;
+  existingConnection?: any;
 }): Promise<InboundReplyReopenPolicyContext | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
     const ticket = await db.table('tickets')
@@ -484,13 +497,14 @@ async function loadInboundReplyPolicyContext(params: {
       clientId: ticket.client_id ?? null,
       attributes: ticket.attributes,
     };
-  });
+  }, params.existingConnection);
 }
 
 async function resolveBoardReopenStatusTarget(params: {
   tenantId: string;
   boardId: string;
   explicitStatusId: string | null;
+  existingConnection?: any;
 }): Promise<{ statusId: string; source: 'explicit' | 'board_default' }> {
   const { TicketModel } = await import('../../models/ticketModel');
 
@@ -522,7 +536,7 @@ async function resolveBoardReopenStatusTarget(params: {
       statusId: defaultStatusId,
       source: 'board_default' as const,
     };
-  });
+  }, params.existingConnection);
 }
 
 async function applyInboundReplyReopenTransition(params: {
@@ -655,6 +669,7 @@ async function findExistingEmailComment(params: {
   ticketId: string;
   messageId: string;
   sourceSha256?: string;
+  existingConnection?: any;
 }): Promise<string | null> {
   return withTenantAdminTransaction(params.tenantId, async (_trx: any, db: any) => {
     const forms = rfcMessageIdLookupForms(params.messageId);
@@ -671,7 +686,7 @@ async function findExistingEmailComment(params: {
       })
       .first();
     return row?.commentId ?? null;
-  });
+  }, params.existingConnection);
 }
 
 async function findExistingEmailTicket(params: {
@@ -1047,7 +1062,8 @@ export async function processInboundEmailInApp(
   const skipInlineArtifacts = Boolean(durableExecution);
 
   // Fast-path: if we've already created a ticket for this email, never create a second one.
-  const existingTicket = await findExistingEmailTicket({
+  const reservedRequesterToken = requesterReplyTokenFromBody(emailData.body);
+  const existingTicket = reservedRequesterToken ? null : await findExistingEmailTicket({
     tenantId,
     providerId,
     messageId: emailData.id,
@@ -1159,7 +1175,7 @@ export async function processInboundEmailInApp(
     });
   }
 
-  const conversationToken = extractConversationToken(parsedEmail);
+  const conversationToken = reservedRequesterToken ?? extractConversationToken(parsedEmail);
   const diagnostics = options.collectDiagnostics
     ? buildDiagnostics({
         emailData,
@@ -1301,12 +1317,16 @@ export async function processInboundEmailInApp(
     ticketId: string;
     matchedBy: 'reply_token' | 'thread_headers';
     parentCommentId?: string | null;
+    requester?: AdmittedRequesterReply;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
-    const existingCommentId = await findExistingEmailComment({
+    // Qualified replies use the fenced inbox/effect identity. Legacy message-ID
+    // lookup can point at a different comment/thread and cannot replace it.
+    const existingCommentId = params.requester ? null : await findExistingEmailComment({
       tenantId,
       ticketId: params.ticketId,
       messageId: emailData.id,
       sourceSha256: emailData.sourceSha256,
+      existingConnection: durableExecution?.trx,
     });
     if (existingCommentId) {
       if (diagnostics) {
@@ -1328,7 +1348,11 @@ export async function processInboundEmailInApp(
       text: parsedText,
     });
     const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = await resolveSenderContact({ ticketId: params.ticketId });
+    const matchedSenderContact = params.requester ? {
+      contact_id: params.requester.contactId, client_id: params.requester.clientId,
+      email: params.requester.senderEmail, matched_email: params.requester.senderEmail,
+      user_type: 'client', user_id: undefined,
+    } : await resolveSenderContact({ ticketId: params.ticketId });
     const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
     const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
     const senderKind = matchedSenderIsInternalUser ? 'internal' : 'client';
@@ -1338,8 +1362,10 @@ export async function processInboundEmailInApp(
       policyContext = await loadInboundReplyPolicyContext({
         tenantId,
         ticketId: params.ticketId,
+        existingConnection: durableExecution?.trx,
       });
     } catch (error) {
+      if (params.requester) throw error;
       console.warn('processInboundEmailInApp: failed to load inbound reply reopen policy (continuing)', {
         tenantId,
         providerId,
@@ -1500,7 +1526,7 @@ export async function processInboundEmailInApp(
       // RFC 5230 backstop: cap inbound-triggered reopens per ticket per window so that an
       // auto-responder which slips past the auto-reply header detection cannot drive a
       // runaway reopen loop. Only consulted on the reopen path so ordinary comment-only
-      // replies are not counted. Fails open (see inboundReopenRateLimiter).
+      // replies are not counted. Fails closed (see inboundReopenRateLimiter).
       const reopenRateLimit = await checkInboundReopenRateLimit({
         tenantId,
         ticketId: params.ticketId,
@@ -1524,6 +1550,7 @@ export async function processInboundEmailInApp(
           tenantId,
           boardId: policyContext.boardId,
           explicitStatusId: policyContext.inboundReplyReopenStatusId,
+          existingConnection: durableExecution?.trx,
         });
         await applyInboundReplyReopenTransition({
           tenantId,
@@ -1538,7 +1565,7 @@ export async function processInboundEmailInApp(
       }
     }
 
-    const watchListRecipients = params.matchedBy === 'thread_headers'
+    const watchListRecipients = params.requester ? [] : params.matchedBy === 'thread_headers'
       ? buildInboundWatchListRecipients({
           to: emailData.to,
           cc: emailData.cc,
@@ -1642,7 +1669,364 @@ export async function processInboundEmailInApp(
     }, diagnostics);
   };
 
+  const handleNewTicket = async (requester?: AdmittedRequesterReply): Promise<ProcessInboundEmailInAppResult> => {
+  // New ticket path.
+  // Inbound email rules run only here — replies that threaded above never reach
+  // this point — and before defaults resolution so skip rules work even for
+  // tenants with no inbound defaults configured.
+  const ruleEvaluation = await evaluateInboundEmailRules({ tenantId, providerId, emailData });
+  const ruleOutcome = ruleEvaluation.outcome;
+  if (ruleEvaluation.trace.length > 0 || ruleOutcome.kind !== 'none') {
+    console.info('processInboundEmailInApp: inbound email rules evaluated', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      rulesConsidered: ruleEvaluation.trace.length,
+      matchedRuleId: 'ruleId' in ruleOutcome ? ruleOutcome.ruleId : null,
+      matchedRuleName: 'ruleName' in ruleOutcome ? ruleOutcome.ruleName : null,
+      outcome: ruleOutcome.kind,
+    });
+  }
+
+  if (ruleOutcome.kind === 'skip') {
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'rule_skip';
+    }
+    return withDiagnostics(
+      {
+        outcome: 'skipped',
+        reason: 'rule_skip',
+        rule: { ruleId: ruleOutcome.ruleId, ruleName: ruleOutcome.ruleName },
+      },
+      diagnostics
+    );
+  }
+
+  const ruleAssignedClientId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.clientId : null;
+  const ruleDestinationDefaults =
+    ruleOutcome.kind === 'set_destination' || ruleOutcome.kind === 'fallback_destination'
+      ? (ruleOutcome.defaults as any)
+      : null;
+  const appliedRule =
+    ruleOutcome.kind !== 'none'
+      ? { ruleId: ruleOutcome.ruleId, ruleName: ruleOutcome.ruleName }
+      : null;
+
+  const providerDefaults = await resolveInboundTicketDefaults(tenantId, providerId);
+  if (!providerDefaults && !ruleDestinationDefaults) {
+    console.warn('processInboundEmailInApp: missing inbound ticket defaults; skipping email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+    });
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'missing_defaults';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
+  }
+
+  const matchedSenderContact = requester ? {
+    contact_id: requester.contactId, client_id: requester.clientId, email: requester.senderEmail,
+    matched_email: requester.senderEmail, user_type: 'client', user_id: undefined,
+  } : await resolveSenderContact({
+    defaultClientId: ruleAssignedClientId ?? providerDefaults?.client_id ?? null,
+  });
+
+  let domainMatchedClientId: string | null = null;
+  let domainMatchedContactId: string | null = null;
+  if (!ruleAssignedClientId && !matchedSenderContact && senderEmail) {
+    const senderDomain = extractEmailDomain(senderEmail);
+    if (senderDomain) {
+      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
+      if (domainMatchedClientId) {
+        domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
+      }
+    }
+  }
+
+  const matchedSenderClientId = matchedSenderContact?.client_id || undefined;
+  const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
+
+  // A rule-assigned client wins over sender-based matching: the sender is a
+  // service mailbox, not the client the email is about. The sender contact is
+  // only kept when it belongs to the assigned client.
+  const senderContactInRuleClient = Boolean(
+    ruleAssignedClientId &&
+      matchedSenderContact?.contact_id &&
+      matchedSenderClientId === ruleAssignedClientId
+  );
+  let ruleAssignedContactId: string | null = null;
+  if (ruleAssignedClientId && !requester) {
+    ruleAssignedContactId = senderContactInRuleClient
+      ? matchedSenderContactId ?? null
+      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
+  }
+
+  // Rule destination defaults (set_destination / non-match fallback) sit above
+  // the contact/client/provider cascade.
+  let defaults: any = ruleDestinationDefaults;
+  let destinationSource: string | null = ruleDestinationDefaults
+    ? ruleOutcome.kind === 'set_destination'
+      ? 'rule_destination'
+      : 'rule_fallback_destination'
+    : null;
+  let destinationFallbackReason: string | null = null;
+
+  if (!defaults) {
+    const destinationResolution = await resolveEffectiveInboundTicketDefaults({
+      tenant: tenantId,
+      providerId,
+      providerDefaults,
+      matchedContactId: ruleAssignedClientId
+        ? senderContactInRuleClient
+          ? matchedSenderContactId ?? null
+          : null
+        : matchedSenderContactId ?? null,
+      matchedContactClientId: ruleAssignedClientId
+        ? senderContactInRuleClient
+          ? ruleAssignedClientId
+          : null
+        : matchedSenderClientId ?? null,
+      domainMatchedClientId: ruleAssignedClientId
+        ? senderContactInRuleClient
+          ? null
+          : ruleAssignedClientId
+        : domainMatchedClientId,
+    });
+    defaults = destinationResolution.defaults;
+    destinationSource = destinationResolution.source;
+    destinationFallbackReason = destinationResolution.fallbackReason ?? null;
+  }
+
+  if (!defaults) {
+    console.warn('processInboundEmailInApp: no effective inbound destination resolved; skipping email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      source: destinationSource,
+      fallbackReason: destinationFallbackReason,
+    });
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'missing_defaults';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
+  }
+
+  console.debug('processInboundEmailInApp: resolved inbound destination source', {
+    tenantId,
+    providerId,
+    emailId: emailData.id,
+    source: destinationSource,
+    fallbackReason: destinationFallbackReason,
+  });
+  let targetClientId = ruleAssignedClientId ?? matchedSenderClientId ?? defaults.client_id;
+  let targetContactId = ruleAssignedClientId
+    ? ruleAssignedContactId ?? undefined
+    : matchedSenderContactId;
+
+  if (requester) {
+    await requester.assertDestination({ clientId: ruleAssignedClientId ?? requester.clientId, boardId: defaults.board_id });
+    targetClientId = requester.clientId;
+    targetContactId = requester.contactId;
+  }
+
+  // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
+  if (!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId) {
+    targetClientId = domainMatchedClientId;
+    targetContactId = domainMatchedContactId ?? undefined;
+  }
+
+  // Only treat the email as authored by a contact when we have an exact sender
+  // email match that is consistent with the ticket's client.
+  const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
+  const senderContactUsableAsAuthor = !ruleAssignedClientId || senderContactInRuleClient;
+  const commentAuthorContactId =
+    matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
+  const commentAuthorUserId = senderContactUsableAsAuthor
+    ? matchedSenderContact?.user_id ?? null
+    : null;
+  const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
+
+  const clientMatchSource =
+    ruleOutcome.kind === 'assign_client'
+      ? ruleOutcome.matchSource
+      : matchedSenderContact?.contact_id
+        ? 'email_match'
+        : domainMatchedClientId
+          ? 'domain_match'
+          : 'provider_default';
+
+  // Ticket creation requires a client. If neither defaults nor sender/domain matching
+  // can resolve one, skip without failing the webhook.
+  if (!targetClientId) {
+    console.warn('processInboundEmailInApp: no target client resolved; skipping email', {
+      tenantId,
+      providerId,
+      emailId: emailData.id,
+      senderEmail,
+    });
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'missing_defaults';
+    }
+    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
+  }
+
+  // New-ticket idempotency: ticket could have been created in another parallel process.
+  const existingTicketAfterDefaults = requester ? null : await findExistingEmailTicket({
+    tenantId,
+    providerId,
+    messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
+  });
+  if (existingTicketAfterDefaults) {
+    if (diagnostics) {
+      diagnostics.threading.matchedTicketId = existingTicketAfterDefaults.ticketId;
+      diagnostics.threading.failureReason = 'deduped';
+    }
+    return withDiagnostics({
+      outcome: 'deduped',
+      dedupeKey,
+      ticketId: existingTicketAfterDefaults.ticketId,
+    }, diagnostics);
+  }
+
+  const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
+  const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
+  const blocks = await blocksFromEmailBody({
+    html: parsedHtml,
+    text: parsedText,
+  });
+  const serializedBlocks = JSON.stringify(blocks);
+  const seededWatchList = requester ? [] : mergeTicketWatchListRecipients(
+    inboundWatchListRecipients,
+    buildUnmatchedSenderWatchListRecipients(commentAuthorContactId ?? null)
+  );
+  const seededAttributes = setTicketWatchListOnAttributes(undefined, seededWatchList);
+
+  const ticketResult = await createTicketFromEmail(
+    {
+      title: emailData.subject || '(no subject)',
+      description: serializedBlocks,
+      client_id: targetClientId,
+      contact_id: targetContactId,
+      source: 'email',
+      board_id: defaults.board_id,
+      status_id: defaults.status_id,
+      priority_id: defaults.priority_id,
+      category_id: defaults.category_id,
+      subcategory_id: defaults.subcategory_id,
+      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
+      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
+      entered_by: defaults.entered_by,
+      email_metadata: {
+        messageId: normalizeStoredMessageId(emailData.id),
+        sourceSha256: emailData.sourceSha256,
+        threadId: emailData.threadId,
+        from: emailData.from,
+        inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
+        references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
+        providerId,
+        authResults: senderAuthResults,
+        clientMatchSource,
+        ...(appliedRule
+          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
+          : {}),
+      },
+      attributes: seededAttributes ?? undefined,
+    },
+    tenantId,
+    ...helperExtraArgs('ticket')
+  );
+
+  const commentId = await createCommentFromEmail(
+    {
+      ticket_id: ticketResult.ticket_id,
+      content: serializedBlocks,
+      source: 'email',
+      // First comment on a brand-new ticket: the TICKET_CREATED email already notifies
+      // the tech with the same body, so keep this comment in-app only to avoid a duplicate.
+      suppressTechEmailNotification: true,
+      // Unmatched inbound senders are still customer-originated replies even
+      // when we cannot resolve them to an existing contact record.
+      author_type: commentAuthorType,
+      author_id: commentAuthorUserId ?? undefined,
+      contact_id: commentAuthorContactId ?? undefined,
+      metadata: {
+        email: buildCommentEmailMetadata({
+          matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
+          primaryContactEmail: matchedSenderContact?.email ?? null,
+        }),
+        parser: {
+          confidence: parsedEmail?.confidence,
+          strategy: parsedEmail?.strategy,
+          heuristics: parsedEmail?.appliedHeuristics,
+          warnings: parsedEmail?.warnings,
+        },
+        unmatchedSender: !matchedSenderContact,
+        inboundReopenDecision: rerouteReasonMetadata ?? undefined,
+      },
+    },
+    tenantId,
+    ...helperExtraArgs('comment')
+  );
+
+  if (!skipInlineArtifacts) {
+    const artifactsResult = await processInboundEmailArtifactsBestEffort({
+      tenantId,
+      providerId,
+      ticketId: ticketResult.ticket_id,
+      emailData,
+      scopeLabel: 'new-ticket',
+      clientVisibleAttachments: Boolean(
+        !matchedSenderIsInternalUser
+        && matchedSenderContact?.client_id
+        && matchedSenderContact.client_id === targetClientId
+      ),
+    });
+    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
+      tenantId,
+      commentId,
+      html: parsedHtml,
+      text: parsedText,
+      originalCommentContent: serializedBlocks,
+      artifactsResult,
+    });
+  }
+
+  if (diagnostics) {
+    diagnostics.threading.failureReason = 'new_ticket_created';
+  }
+  return withDiagnostics({
+    outcome: 'created',
+    ticketId: ticketResult.ticket_id,
+    ticketNumber: ticketResult.ticket_number,
+    commentId,
+  }, diagnostics);
+  };
+
   const token = conversationToken;
+  if (isRequesterReplyToken(token)) {
+    if (!durableExecution?.requesterReplyAdmission) throw new Error('Requester reply requires durable inbox admission');
+    const admitted = await durableExecution.requesterReplyAdmission(durableExecution.trx, {
+      tenant: tenantId, token, senderEmail: senderEmail ?? '', senderAuth: senderAuthResults,
+    }, async requester => {
+      if (diagnostics) {
+        diagnostics.threading.tokenLookupMatched = true;
+        diagnostics.threading.tokenLookupMissReason = null;
+        diagnostics.threading.matchedBy = 'reply_token';
+        diagnostics.threading.matchedTicketId = requester.ticketId;
+      }
+      const reply = await handleThreadedReply({ ticketId: requester.ticketId, parentCommentId: requester.parentCommentId, matchedBy: 'reply_token', requester });
+      return reply ?? handleNewTicket(requester);
+    });
+    if (admitted.admitted) return admitted.result;
+    if (diagnostics) {
+      diagnostics.threading.failureReason = 'quarantined';
+      diagnostics.threading.matchedTicketId = null;
+      diagnostics.threading.matchedCommentId = null;
+    }
+    return withDiagnostics({ outcome: 'quarantined', reason: 'unauthorized_requester_reply', matchedBy: 'reply_token' }, diagnostics);
+  }
   if (token) {
     try {
       const match = await findTicketByReplyToken(String(token), tenantId);
@@ -1778,327 +2162,6 @@ export async function processInboundEmailInApp(
     }
   }
 
-  // New ticket path.
-  // Inbound email rules run only here — replies that threaded above never reach
-  // this point — and before defaults resolution so skip rules work even for
-  // tenants with no inbound defaults configured.
-  const ruleEvaluation = await evaluateInboundEmailRules({ tenantId, providerId, emailData });
-  const ruleOutcome = ruleEvaluation.outcome;
-  if (ruleEvaluation.trace.length > 0 || ruleOutcome.kind !== 'none') {
-    console.info('processInboundEmailInApp: inbound email rules evaluated', {
-      tenantId,
-      providerId,
-      emailId: emailData.id,
-      rulesConsidered: ruleEvaluation.trace.length,
-      matchedRuleId: 'ruleId' in ruleOutcome ? ruleOutcome.ruleId : null,
-      matchedRuleName: 'ruleName' in ruleOutcome ? ruleOutcome.ruleName : null,
-      outcome: ruleOutcome.kind,
-    });
-  }
+  return handleNewTicket();
 
-  if (ruleOutcome.kind === 'skip') {
-    if (diagnostics) {
-      diagnostics.threading.failureReason = 'rule_skip';
-    }
-    return withDiagnostics(
-      {
-        outcome: 'skipped',
-        reason: 'rule_skip',
-        rule: { ruleId: ruleOutcome.ruleId, ruleName: ruleOutcome.ruleName },
-      },
-      diagnostics
-    );
-  }
-
-  const ruleAssignedClientId = ruleOutcome.kind === 'assign_client' ? ruleOutcome.clientId : null;
-  const ruleDestinationDefaults =
-    ruleOutcome.kind === 'set_destination' || ruleOutcome.kind === 'fallback_destination'
-      ? (ruleOutcome.defaults as any)
-      : null;
-  const appliedRule =
-    ruleOutcome.kind !== 'none'
-      ? { ruleId: ruleOutcome.ruleId, ruleName: ruleOutcome.ruleName }
-      : null;
-
-  const providerDefaults = await resolveInboundTicketDefaults(tenantId, providerId);
-  if (!providerDefaults && !ruleDestinationDefaults) {
-    console.warn('processInboundEmailInApp: missing inbound ticket defaults; skipping email', {
-      tenantId,
-      providerId,
-      emailId: emailData.id,
-    });
-    if (diagnostics) {
-      diagnostics.threading.failureReason = 'missing_defaults';
-    }
-    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
-  }
-
-  const matchedSenderContact = await resolveSenderContact({
-    defaultClientId: ruleAssignedClientId ?? providerDefaults?.client_id ?? null,
-  });
-
-  let domainMatchedClientId: string | null = null;
-  let domainMatchedContactId: string | null = null;
-  if (!ruleAssignedClientId && !matchedSenderContact && senderEmail) {
-    const senderDomain = extractEmailDomain(senderEmail);
-    if (senderDomain) {
-      domainMatchedClientId = await findClientIdByInboundEmailDomain(senderDomain, tenantId);
-      if (domainMatchedClientId) {
-        domainMatchedContactId = await findValidClientPrimaryContactId(domainMatchedClientId, tenantId);
-      }
-    }
-  }
-
-  const matchedSenderClientId = matchedSenderContact?.client_id || undefined;
-  const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
-
-  // A rule-assigned client wins over sender-based matching: the sender is a
-  // service mailbox, not the client the email is about. The sender contact is
-  // only kept when it belongs to the assigned client.
-  const senderContactInRuleClient = Boolean(
-    ruleAssignedClientId &&
-      matchedSenderContact?.contact_id &&
-      matchedSenderClientId === ruleAssignedClientId
-  );
-  let ruleAssignedContactId: string | null = null;
-  if (ruleAssignedClientId) {
-    ruleAssignedContactId = senderContactInRuleClient
-      ? matchedSenderContactId ?? null
-      : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
-  }
-
-  // Rule destination defaults (set_destination / non-match fallback) sit above
-  // the contact/client/provider cascade.
-  let defaults: any = ruleDestinationDefaults;
-  let destinationSource: string | null = ruleDestinationDefaults
-    ? ruleOutcome.kind === 'set_destination'
-      ? 'rule_destination'
-      : 'rule_fallback_destination'
-    : null;
-  let destinationFallbackReason: string | null = null;
-
-  if (!defaults) {
-    const destinationResolution = await resolveEffectiveInboundTicketDefaults({
-      tenant: tenantId,
-      providerId,
-      providerDefaults,
-      matchedContactId: ruleAssignedClientId
-        ? senderContactInRuleClient
-          ? matchedSenderContactId ?? null
-          : null
-        : matchedSenderContactId ?? null,
-      matchedContactClientId: ruleAssignedClientId
-        ? senderContactInRuleClient
-          ? ruleAssignedClientId
-          : null
-        : matchedSenderClientId ?? null,
-      domainMatchedClientId: ruleAssignedClientId
-        ? senderContactInRuleClient
-          ? null
-          : ruleAssignedClientId
-        : domainMatchedClientId,
-    });
-    defaults = destinationResolution.defaults;
-    destinationSource = destinationResolution.source;
-    destinationFallbackReason = destinationResolution.fallbackReason ?? null;
-  }
-
-  if (!defaults) {
-    console.warn('processInboundEmailInApp: no effective inbound destination resolved; skipping email', {
-      tenantId,
-      providerId,
-      emailId: emailData.id,
-      source: destinationSource,
-      fallbackReason: destinationFallbackReason,
-    });
-    if (diagnostics) {
-      diagnostics.threading.failureReason = 'missing_defaults';
-    }
-    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
-  }
-
-  console.debug('processInboundEmailInApp: resolved inbound destination source', {
-    tenantId,
-    providerId,
-    emailId: emailData.id,
-    source: destinationSource,
-    fallbackReason: destinationFallbackReason,
-  });
-  let targetClientId = ruleAssignedClientId ?? matchedSenderClientId ?? defaults.client_id;
-  let targetContactId = ruleAssignedClientId
-    ? ruleAssignedContactId ?? undefined
-    : matchedSenderContactId;
-
-  // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
-  if (!ruleAssignedClientId && !matchedSenderContact && domainMatchedClientId) {
-    targetClientId = domainMatchedClientId;
-    targetContactId = domainMatchedContactId ?? undefined;
-  }
-
-  // Only treat the email as authored by a contact when we have an exact sender
-  // email match that is consistent with the ticket's client.
-  const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-  const senderContactUsableAsAuthor = !ruleAssignedClientId || senderContactInRuleClient;
-  const commentAuthorContactId =
-    matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
-  const commentAuthorUserId = senderContactUsableAsAuthor
-    ? matchedSenderContact?.user_id ?? null
-    : null;
-  const commentAuthorType = matchedSenderIsInternalUser ? 'internal' : 'contact';
-
-  const clientMatchSource =
-    ruleOutcome.kind === 'assign_client'
-      ? ruleOutcome.matchSource
-      : matchedSenderContact?.contact_id
-        ? 'email_match'
-        : domainMatchedClientId
-          ? 'domain_match'
-          : 'provider_default';
-
-  // Ticket creation requires a client. If neither defaults nor sender/domain matching
-  // can resolve one, skip without failing the webhook.
-  if (!targetClientId) {
-    console.warn('processInboundEmailInApp: no target client resolved; skipping email', {
-      tenantId,
-      providerId,
-      emailId: emailData.id,
-      senderEmail,
-    });
-    if (diagnostics) {
-      diagnostics.threading.failureReason = 'missing_defaults';
-    }
-    return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
-  }
-
-  // New-ticket idempotency: ticket could have been created in another parallel process.
-  const existingTicketAfterDefaults = await findExistingEmailTicket({
-    tenantId,
-    providerId,
-    messageId: emailData.id,
-    sourceSha256: emailData.sourceSha256,
-  });
-  if (existingTicketAfterDefaults) {
-    if (diagnostics) {
-      diagnostics.threading.matchedTicketId = existingTicketAfterDefaults.ticketId;
-      diagnostics.threading.failureReason = 'deduped';
-    }
-    return withDiagnostics({
-      outcome: 'deduped',
-      dedupeKey,
-      ticketId: existingTicketAfterDefaults.ticketId,
-    }, diagnostics);
-  }
-
-  const parsedHtml = parsedEmail?.sanitizedHtml ?? emailData.body?.html;
-  const parsedText = parsedEmail?.sanitizedText ?? emailData.body?.text;
-  const blocks = await blocksFromEmailBody({
-    html: parsedHtml,
-    text: parsedText,
-  });
-  const serializedBlocks = JSON.stringify(blocks);
-  const seededWatchList = mergeTicketWatchListRecipients(
-    inboundWatchListRecipients,
-    buildUnmatchedSenderWatchListRecipients(commentAuthorContactId ?? null)
-  );
-  const seededAttributes = setTicketWatchListOnAttributes(undefined, seededWatchList);
-
-  const ticketResult = await createTicketFromEmail(
-    {
-      title: emailData.subject || '(no subject)',
-      description: serializedBlocks,
-      client_id: targetClientId,
-      contact_id: targetContactId,
-      source: 'email',
-      board_id: defaults.board_id,
-      status_id: defaults.status_id,
-      priority_id: defaults.priority_id,
-      category_id: defaults.category_id,
-      subcategory_id: defaults.subcategory_id,
-      // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
-      location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
-      entered_by: defaults.entered_by,
-      email_metadata: {
-        messageId: normalizeStoredMessageId(emailData.id),
-        sourceSha256: emailData.sourceSha256,
-        threadId: emailData.threadId,
-        from: emailData.from,
-        inReplyTo: normalizeStoredMessageId(emailData.inReplyTo),
-        references: (emailData.references ?? []).map((reference) => normalizeStoredMessageId(reference)),
-        providerId,
-        authResults: senderAuthResults,
-        clientMatchSource,
-        ...(appliedRule
-          ? { appliedRuleId: appliedRule.ruleId, appliedRuleName: appliedRule.ruleName }
-          : {}),
-      },
-      attributes: seededAttributes ?? undefined,
-    },
-    tenantId,
-    ...helperExtraArgs('ticket')
-  );
-
-  const commentId = await createCommentFromEmail(
-    {
-      ticket_id: ticketResult.ticket_id,
-      content: serializedBlocks,
-      source: 'email',
-      // First comment on a brand-new ticket: the TICKET_CREATED email already notifies
-      // the tech with the same body, so keep this comment in-app only to avoid a duplicate.
-      suppressTechEmailNotification: true,
-      // Unmatched inbound senders are still customer-originated replies even
-      // when we cannot resolve them to an existing contact record.
-      author_type: commentAuthorType,
-      author_id: commentAuthorUserId ?? undefined,
-      contact_id: commentAuthorContactId ?? undefined,
-      metadata: {
-        email: buildCommentEmailMetadata({
-          matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
-          primaryContactEmail: matchedSenderContact?.email ?? null,
-        }),
-        parser: {
-          confidence: parsedEmail?.confidence,
-          strategy: parsedEmail?.strategy,
-          heuristics: parsedEmail?.appliedHeuristics,
-          warnings: parsedEmail?.warnings,
-        },
-        unmatchedSender: !matchedSenderContact,
-        inboundReopenDecision: rerouteReasonMetadata ?? undefined,
-      },
-    },
-    tenantId,
-    ...helperExtraArgs('comment')
-  );
-
-  if (!skipInlineArtifacts) {
-    const artifactsResult = await processInboundEmailArtifactsBestEffort({
-      tenantId,
-      providerId,
-      ticketId: ticketResult.ticket_id,
-      emailData,
-      scopeLabel: 'new-ticket',
-      clientVisibleAttachments: Boolean(
-        !matchedSenderIsInternalUser
-        && matchedSenderContact?.client_id
-        && matchedSenderContact.client_id === targetClientId
-      ),
-    });
-    await maybeRewriteCommentWithEmbeddedAttachmentUrls({
-      tenantId,
-      commentId,
-      html: parsedHtml,
-      text: parsedText,
-      originalCommentContent: serializedBlocks,
-      artifactsResult,
-    });
-  }
-
-  if (diagnostics) {
-    diagnostics.threading.failureReason = 'new_ticket_created';
-  }
-  return withDiagnostics({
-    outcome: 'created',
-    ticketId: ticketResult.ticket_id,
-    ticketNumber: ticketResult.ticket_number,
-    commentId,
-  }, diagnostics);
 }

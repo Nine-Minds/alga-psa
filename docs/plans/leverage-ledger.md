@@ -173,3 +173,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: requesterEmailDeliveries.ts and requesterReplyTokens.ts.
 - Gate: high replyability and stale-authority cost, stable existing requester admission; ACT / bounded two-phase delivery engine.
 - Status: added (2026-09-07). Preparation commits an address-bound token, then delivery reacquires current source, recipient and tenant preference locks before sending. Address changes between phases defer for fresh preparation; lost acknowledgements reuse the same token and Message-ID. First event discovery fixes the requester identity across replays. Tenant comment-email preference gates are shared with internal recipients, whose own user preferences remain separate. Completion-loop extraction remains deferred because requester preparation differs from internal delivery. This queue is not registered with production consumers until the qualified inbound reply adapter is connected.
+
+## Qualified requester admission in durable mail — friction
+- What: native token lookup returns unqualified IDs and falls through on rejection; using it for co-managed replies would lose current requester authority and could commit partial writes before recording quarantine.
+- Where: requesterReplyAdmission.ts, inboundRequesterReply.ts, processInboundEmailInApp.ts, durable core/dispatcher and both worker entry points.
+- Gate: high tenant/audience and transaction cost; one stable current-authority callback needed by two actual compositions; ACT / bounded mail-engine injection.
+- Status: revised (2026-09-07). Worker roots inject requester admission into the durable core without a shared-to-domain package cycle. The domain uses a savepoint so expiry/destination rejection rolls back reply writes before quarantine is persisted. Canonical comment, reopen and cutoff creation share the outer inbox transaction. Cutoff destinations retain client/contact identity and current board visibility; the reply token cannot add CC watchers or acquire an internal identity. Recognized malformed/case-variant/HTML tokens cannot fall through to native matching. The staged source remains available after quarantine. HTML-only replies use the parser's existing visible-text projection for substantive-content detection.
+
+## Lifecycle errors across compiled worker packages — friction
+- What: an independently compiled admission adapter and the source-compiled mail core can load different constructors for the same lifecycle error; instanceof then misclassifies a pause as retryable processing failure.
+- Where: licensing lifecycle contract and inboundEmailCoreProcessor.ts.
+- Gate: verified worker runtime boundary, high retained-intake cost, stable error contract; ACT / bounded error-contract predicate.
+- Status: revised (2026-09-07). A checked lifecycle predicate recognizes only the named non-writable lifecycle states with the matching error code. The durable core defers and refunds a newly claimed attempt after rollback. Plain Node verification loads both actual compiled constructors and proves the shared contract works when instanceof does not.
