@@ -1927,3 +1927,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Added candidate-execution-gate composition for independently supplied mandatory requirements and raw Vitest, Playwright and Node events. It checks candidate revision/source cleanliness, successful job outcome, complete unfiltered selection, collected/executed identities and tracked candidate inventory; duplicate/missing bundles, unsupported formats and malformed requirement containers fail closed.
 - Five behavioral cases pass, including an actual child Node runner whose missing terminal pass events then fail the gate. Earlier combined run with existing Node and Temporal verifiers passed 15 cases before adding the final child-runner case (/tmp/alga-candidate-gate-tests.log).
 - This is the aggregation library, not enforcement. F007 remains false: committed repository-wide requirement selection, cross-workflow artifact retrieval/source-path normalization, shard composition, global orphan resolution and the stable required CI check remain to be wired and verified. No GitHub protection changed.
+
+### 2026-09-07 — capture unit source before collection
+
+- Server unit CI now captures checkout revision and changes before collection, preserves that artifact, and rejects a dirty start. Its execution verifier requires clean matching before/after source records and emits the same source/selection fields needed by candidate aggregation.
+- Eight focused unit-evidence/candidate-gate tests pass, including a real temporary Git checkout that records a clean revision and rejects/preserves an untracked change. Missing/stale/dirty before records fail verification. Native CI execution remains pending publication; the old active integration job still reports in_progress.

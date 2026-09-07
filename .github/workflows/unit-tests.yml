@@ -204,6 +204,7 @@ jobs:
         run: |
           selection=(src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions)
           mkdir -p ../test-results/server-coverage
+          node ../scripts/verify-server-unit-execution.mjs --capture-source
           npx vitest list "${selection[@]}" --filesOnly --json=../test-results/server-coverage/collected.json
           npx vitest list "${selection[@]}" --poolOptions.forks.singleFork=false --maxWorkers=1 --json=../test-results/server-coverage/collected-tests.json
           node -e 'for (const file of ["collected.json", "collected-tests.json"]) { const entries = require("../test-results/server-coverage/" + file); if (!Array.isArray(entries) || entries.length === 0) throw new Error("Empty mandatory collection: " + file); }'
@@ -245,6 +246,7 @@ jobs:
             test-results/server-coverage/collected-tests.json
             test-results/server-coverage/progress.jsonl
             test-results/server-coverage/evidence.json
+            test-results/server-coverage/source-before.json
             server/test-results.json
             server/coverage/coverage-summary.json
           retention-days: 30
