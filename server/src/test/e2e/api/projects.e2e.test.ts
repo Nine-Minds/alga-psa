@@ -148,10 +148,9 @@ describe('Projects API E2E Tests', () => {
       for (let i = 0; i < 5; i++) {
         const projectData = createProjectTestData({ client_id: env.clientId });
         const response = await env.apiClient.post('/api/v1/projects', projectData);
-        if (response.status === 201) {
-          projects.push(response.data.data);
-          createdProjectIds.push(response.data.data.project_id);
-        }
+        expect(response.status, JSON.stringify(response.data)).toBe(201);
+        projects.push(response.data.data);
+        createdProjectIds.push(response.data.data.project_id);
       }
       
       // List projects
@@ -159,7 +158,7 @@ describe('Projects API E2E Tests', () => {
       
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
-      expect(response.data.data.length).toBeLessThanOrEqual(3);
+      expect(response.data.data).toHaveLength(3);
       expect(response.data.pagination).toMatchObject({
         page: 1,
         limit: 3,
@@ -181,9 +180,8 @@ describe('Projects API E2E Tests', () => {
         const response = await env.apiClient.post('/api/v1/projects', 
           createProjectTestData({ ...project, client_id: env.clientId })
         );
-        if (response.status === 201) {
-          createdProjectIds.push(response.data.data.project_id);
-        }
+        expect(response.status, JSON.stringify(response.data)).toBe(201);
+        createdProjectIds.push(response.data.data.project_id);
       }
     });
 
@@ -390,9 +388,8 @@ describe('Projects API E2E Tests', () => {
         const response = await env.apiClient.post('/api/v1/projects', 
           createProjectTestData({ ...project, client_id: env.clientId })
         );
-        if (response.status === 201) {
-          createdProjectIds.push(response.data.data.project_id);
-        }
+        expect(response.status, JSON.stringify(response.data)).toBe(201);
+        createdProjectIds.push(response.data.data.project_id);
       }
     });
 
@@ -411,22 +408,27 @@ describe('Projects API E2E Tests', () => {
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
       
-      // Filter only projects that have the active status
-      const activeProjects = response.data.data.filter((p: any) => p.status === activeStatus.status_id);
-      expect(activeProjects.length).toBeGreaterThan(0);
-      
-      activeProjects.forEach((project: any) => {
+      // Check every returned row: filtering the response in the test would
+      // conceal an API that ignores the requested status.
+      expect(response.data.data.length).toBeGreaterThan(0);
+      response.data.data.forEach((project: any) => {
         expect(project.status).toBe(activeStatus.status_id);
       });
     });
 
-    it('should filter projects by type', async () => {
-      // Skip this test as project_type is not implemented in the current schema
-      // The projects table doesn't have a project_type column
-      const response = await env.apiClient.get('/api/v1/projects');
-      
+    it('filters projects by name and returns no rows for an unmatched name', async () => {
+      const name = `Name filter ${randomUUID()}`;
+      const created = await env.apiClient.post('/api/v1/projects',
+        createProjectTestData({ project_name: name, client_id: env.clientId }));
+      expect(created.status, JSON.stringify(created.data)).toBe(201);
+      createdProjectIds.push(created.data.data.project_id);
+      const response = await env.apiClient.get(`/api/v1/projects?project_name=${encodeURIComponent(name)}`);
       expect(response.status).toBe(200);
-      expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data.map((project: any) => project.project_id)).toEqual([created.data.data.project_id]);
+      const missing = await env.apiClient.get(`/api/v1/projects?project_name=${randomUUID()}`);
+      expect(missing.status).toBe(200);
+      expect(missing.data.data).toEqual([]);
+      expect(missing.data.pagination.total).toBe(0);
     });
 
     it('should filter projects by client', async () => {
@@ -434,9 +436,14 @@ describe('Projects API E2E Tests', () => {
       
       expect(response.status).toBe(200);
       expect(response.data.data).toBeInstanceOf(Array);
+      expect(response.data.data.length).toBeGreaterThan(0);
       response.data.data.forEach((project: any) => {
         expect(project.client_id).toBe(env.clientId);
       });
+      const missing = await env.apiClient.get(`/api/v1/projects?client_id=${randomUUID()}`);
+      expect(missing.status).toBe(200);
+      expect(missing.data.data).toEqual([]);
+      expect(missing.data.pagination.total).toBe(0);
     });
   });
 
@@ -457,19 +464,54 @@ describe('Projects API E2E Tests', () => {
   });
 
   describe('Permissions', () => {
-    it('should enforce read permissions for listing', async () => {
-      const response = await env.apiClient.get('/api/v1/projects');
-      expect(response.status).toBe(200);
+    async function withoutProjectPermission(action: string, verify: () => Promise<void>) {
+      // Remove only this synthetic tenant user's grants, then restore the exact
+      // mappings so a denial assertion cannot change later tests' permissions.
+      const roles = await env.db('user_roles')
+        .where({ tenant: env.tenant, user_id: env.userId }).pluck('role_id');
+      const permissions = await env.db('permissions')
+        .where({ tenant: env.tenant, resource: 'project', action }).pluck('permission_id');
+      const grants = await env.db('role_permissions')
+        .where({ tenant: env.tenant }).whereIn('role_id', roles)
+        .whereIn('permission_id', permissions);
+      expect(grants.length).toBeGreaterThan(0);
+      await env.db('role_permissions').where({ tenant: env.tenant })
+        .whereIn('role_id', roles).whereIn('permission_id', permissions).delete();
+      try {
+        await verify();
+      } finally {
+        await env.db('role_permissions').insert(grants);
+      }
+    }
+
+    it('denies listing without project read permission and permits it after restoration', async () => {
+      expect((await env.apiClient.get('/api/v1/projects')).status).toBe(200);
+      await withoutProjectPermission('read', async () => {
+        const denied = await env.apiClient.get('/api/v1/projects');
+        expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+        expect(denied.data.error.message).toBeTruthy();
+        // The API key remains valid and unrelated read permission still works.
+        expect((await env.apiClient.get('/api/v1/clients')).status).toBe(200);
+      });
+      expect((await env.apiClient.get('/api/v1/projects')).status).toBe(200);
     });
 
-    it('should enforce create permissions', async () => {
+    it('denies creation without project create permission without persisting a project', async () => {
       const projectData = createProjectTestData({ client_id: env.clientId });
-      const response = await env.apiClient.post('/api/v1/projects', projectData);
-      
-      expect([201, 403]).toContain(response.status);
-      if (response.status === 201) {
-        createdProjectIds.push(response.data.data.project_id);
-      }
+      await withoutProjectPermission('create', async () => {
+        const before = await env.db('projects').where({ tenant: env.tenant }).select('*');
+        const denied = await env.apiClient.post('/api/v1/projects', projectData);
+        expect(denied.status, JSON.stringify(denied.data)).toBe(403);
+        expect(denied.data.error.message).toBeTruthy();
+        expect(await env.db('projects').where({ tenant: env.tenant }).select('*')).toEqual(before);
+        expect((await env.apiClient.get('/api/v1/projects')).status).toBe(200);
+      });
+      const allowed = await env.apiClient.post('/api/v1/projects', projectData);
+      expect(allowed.status, JSON.stringify(allowed.data)).toBe(201);
+      createdProjectIds.push(allowed.data.data.project_id);
+      expect(await env.db('projects').where({
+        tenant: env.tenant, project_id: allowed.data.data.project_id,
+      }).first()).toMatchObject({ project_name: projectData.project_name, client_id: env.clientId });
     });
   });
 });
