@@ -16,6 +16,10 @@ import { bootstrapCoManagedWorkspace } from '../../../../ee/temporal-workflows/s
 import { deliverCoManagedAdministratorInvitation } from '../../../../ee/temporal-workflows/src/activities/co-managed-provisioning-activities';
 import { createTenantInDB } from '../../../../ee/temporal-workflows/src/db/tenant-operations';
 
+vi.mock('@alga-psa/event-bus/publishers', async importOriginal => ({
+  ...await importOriginal<typeof import('@alga-psa/event-bus/publishers')>(), publishEvent: vi.fn(async () => {}), publishWorkflowEvent: vi.fn(async () => {}),
+}));
+
 vi.mock('next/cache', async importOriginal => ({
   ...await importOriginal<typeof import('next/cache')>(), revalidatePath: vi.fn(),
 }));
@@ -9865,3 +9869,128 @@ it('keeps ordinary PSA inbox comment events in their native outbox', async () =>
   expect(await owner.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toEqual([expect.objectContaining({ event_type: 'TICKET_COMMENT_ADDED', payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Native PSA comment' }) }) })]);
   expect(await owner.table('co_management_event_outbox')).toHaveLength(0);
 });
+
+async function withNativeCommentFixture(work: (fixture: any) => Promise<void>) {
+  return withConversationFixture(async fixture => {
+    const { customer, resource, customerPrincipal } = fixture;
+    const dbModule = await import('@alga-psa/db'), auth = await import('@alga-psa/auth');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: resource.tenant });
+    const currentUser = await customer.table('users').where('user_id', customerPrincipal.userId).first();
+    const actions = await import('../../../../packages/tickets/src/actions/comment-actions/commentActions');
+    const optimized = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const simple = await import('../../../../packages/tickets/src/actions/ticketActions');
+    const { service, publish: legacy } = await ticketServiceForTest();
+    const context = { tenant: resource.tenant, userId: currentUser.user_id, user: currentUser };
+    const run = (work: () => Promise<unknown>) => auth.runWithApiKeyUser(currentUser, () => runWithTenant(resource.tenant, work));
+    const create = async (writer: string, internal = false) => {
+      const before = new Set((await customer.table('comments').select('comment_id')).map((row: any) => row.comment_id));
+      if (writer === 'api') await service.addComment(resource.id, { comment_text: 'Native comment body', is_internal: internal }, context);
+      else await run(async () => {
+        if (writer === 'generic') return actions.createComment({ ticket_id: resource.id, note: 'Native comment body', user_id: currentUser.user_id, is_internal: internal, is_resolution: false });
+        if (writer === 'optimized') return optimized.addTicketCommentWithCache(resource.id, 'Native comment body', internal, false);
+        return simple.addTicketComment(resource.id, 'Native comment body', internal);
+      });
+      const rows = await customer.table('comments').where('ticket_id', resource.id);
+      const created = rows.filter((row: any) => !before.has(row.comment_id));
+      expect(created).toHaveLength(1);
+      return created[0];
+    };
+    try { await work({ ...fixture, actions, service, legacy, context, run, create }); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it.each(['api', 'generic', 'optimized', 'simple'])('retains native %s comment delivery atomically and recovers the current body', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, legacy, create }: any) => {
+  publish.mockRejectedValue(new Error('Redis unavailable')); workflow.mockRejectedValue(new Error('Redis unavailable'));
+  const comment = await create(writer);
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  expect(row).toMatchObject({ status: 'pending', audience: 'requester', publication: { payload: { comment: { content: '' } } } });
+  expect(legacy).not.toHaveBeenCalled();
+  await customer.table('comments').where('comment_id', comment.comment_id).update({ note: 'Current native body' });
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const send = vi.fn();
+  expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(send.mock.calls[0]).toEqual([expect.objectContaining({ payload: expect.objectContaining({ comment: expect.objectContaining({ content: 'Current native body' }) }) }), row.event_id]);
+}));
+
+it.each(['api', 'generic', 'optimized', 'simple'])('keeps native %s internal roots organization-private and delivers only after commit', async writer => withNativeCommentFixture(async ({ customer, publish, workflow, create }: any) => {
+  const observed: any[] = [];
+  publish.mockImplementation(async (event: any) => {
+    if (event.eventType === 'TICKET_COMMENT_ADDED') observed.push(await customer.table('comments').where('comment_id', event.payload.commentId).first());
+  });
+  const comment = await create(writer, true);
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_ADDED' }).first();
+  expect(row).toMatchObject({ status: 'published', audience: 'organization_private', publication: { payload: { comment: { isInternal: true, audience: 'organization_private' } } } });
+  expect(observed).toEqual([expect.objectContaining({ comment_id: comment.comment_id, note: 'Native comment body' })]);
+  const { EventSchemas, buildWorkflowPayload } = await import('@alga-psa/event-schemas');
+  for (const [event, options] of publish.mock.calls) {
+    if (event.eventType === 'TICKET_COMMENT_ADDED') expect(EventSchemas.TICKET_COMMENT_ADDED.safeParse({ ...event, id: options.eventId, timestamp: new Date().toISOString() }).success).toBe(true);
+  }
+  const messages = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_MESSAGE_ADDED' });
+  if (writer !== 'api') expect(messages).toEqual([expect.objectContaining({ audience: 'organization_private', publication: expect.objectContaining({ payload: expect.objectContaining({ audience: 'organization_private', visibility: 'internal' }) }) })]);
+  for (const [event, options] of workflow.mock.calls) {
+    if (['TICKET_MESSAGE_ADDED', 'TICKET_INTERNAL_NOTE_ADDED'].includes(event.eventType))
+      expect((EventSchemas as any)[event.eventType].safeParse({ eventType: event.eventType, id: options.eventId, timestamp: new Date().toISOString(), payload: buildWorkflowPayload(event.payload, event.ctx) }).success).toBe(true);
+  }
+}));
+
+it.each(['api', 'generic', 'optimized', 'simple'])('rolls back native %s comments when durable event retention fails', async writer => withNativeCommentFixture(async ({ customer, publish, workflow, create }: any) => {
+  const constraint = `test_event_retention_${randomUUID().replaceAll('-', '')}`;
+  const tenant = (await customer.table('tenants').first()).tenant;
+  await db.raw(db.raw('ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid)', [constraint, tenant]).toQuery());
+  const before = await customer.table('comments'); publish.mockClear();
+  try { await expect(create(writer)).rejects.toMatchObject({ code: 'co_managed_event_retention_failed' }); }
+  finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('comments')).toEqual(before);
+  expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+  expect(publish).not.toHaveBeenCalled();
+}));
+
+it.each(['api', 'generic'])('retains native %s edit invalidations without either old or new bodies', async writer => withNativeCommentFixture(async ({ customer, resource, publish, actions, service, context, run, create }: any) => {
+  const comment = await create('api'); publish.mockClear();
+  if (writer === 'api') await service.updateComment(resource.id, comment.comment_id, { comment_text: 'Changed native body' }, context);
+  else await run(() => actions.updateComment(comment.comment_id, { note: 'Changed native body' }));
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_UPDATED' }).first();
+  expect(row).toMatchObject({ status: 'published', publication: { payload: { commentId: comment.comment_id, collaborationMutation: { kind: 'edit' } } } });
+  expect(JSON.stringify(row.publication)).not.toMatch(/Native comment body|Changed native body/);
+  expect(publish.mock.calls.find(([event]: any[]) => event.eventType === 'TICKET_COMMENT_UPDATED')?.[0].payload).toEqual(row.publication.payload);
+  expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toMatchObject({ note: 'Changed native body' });
+}));
+
+it('retains native deletion invalidation before removing a leaf and recovers it after source removal', async () => withNativeCommentFixture(async ({ customer, resource, publish, actions, run, create }: any) => {
+  const comment = await create('api'); publish.mockRejectedValue(new Error('Redis unavailable'));
+  await run(() => actions.deleteComment(comment.comment_id));
+  expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toBeUndefined();
+  const row = await customer.table('co_management_event_outbox').where({ comment_id: comment.comment_id, event_type: 'TICKET_COMMENT_DELETED' }).first();
+  expect(row).toMatchObject({ status: 'pending', publication: { payload: { collaborationMutation: { kind: 'delete' } } } });
+  await customer.table('co_management_event_outbox').where('event_id', row.event_id).update({ next_attempt_at: new Date(0) });
+  const { dispatchCoManagedConversationEvents } = await import('../../../../packages/co-managed/src/conversationEventOutbox');
+  const send = vi.fn(); expect(await dispatchCoManagedConversationEvents(db, resource.tenant, send, { eventId: row.event_id })).toEqual({ published: 1, cancelled: 0, failed: 0 });
+  expect(JSON.stringify(send.mock.calls)).not.toContain('Native comment body');
+}));
+
+it.each(['generic', 'optimized', 'simple'])('rolls back native %s comment and earlier intents if a later workflow intent fails', async writer => withNativeCommentFixture(async ({ customer, resource, publish, workflow, create }: any) => {
+  const constraint = `test_workflow_retention_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type <> 'TICKET_MESSAGE_ADDED')", [constraint, resource.tenant]).toQuery());
+  const before = await customer.table('comments'); publish.mockClear(); workflow.mockClear();
+  try { await expect(create(writer)).rejects.toMatchObject({ code: 'co_managed_event_retention_failed' }); }
+  finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('comments')).toEqual(before);
+  expect(await customer.table('co_management_event_outbox')).toHaveLength(0);
+  expect(await customer.table('co_management_event_consumers')).toHaveLength(0);
+  expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+}));
+
+it.each(['edit', 'delete'])('rolls back native %s when its invalidation cannot be retained', async mutation => withNativeCommentFixture(async ({ customer, resource, publish, actions, run, create }: any) => {
+  const comment = await create('api'), constraint = `test_mutation_retention_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_event_outbox ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR event_type = 'TICKET_COMMENT_ADDED')", [constraint, resource.tenant]).toQuery());
+  publish.mockClear();
+  try {
+    await expect(run(() => mutation === 'edit' ? actions.updateComment(comment.comment_id, { note: 'Do not commit' }) : actions.deleteComment(comment.comment_id)))
+      .rejects.toMatchObject({ code: 'co_managed_event_retention_failed' });
+  } finally { await db.raw('ALTER TABLE co_management_event_outbox DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('comments').where('comment_id', comment.comment_id).first()).toEqual(comment);
+  expect(await customer.table('co_management_event_outbox').whereNot('event_type', 'TICKET_COMMENT_ADDED')).toHaveLength(0);
+  expect(publish).not.toHaveBeenCalled();
+}));

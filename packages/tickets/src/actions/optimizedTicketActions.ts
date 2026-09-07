@@ -1,5 +1,7 @@
 'use server'
 
+import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
+
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
@@ -3439,8 +3441,7 @@ export const addTicketCommentWithCache = withAuth(async (
     }
 
     // Publish comment added event after the comment transaction commits.
-    if (!isScheduled) registerAfterCommit(trx, () =>
-      publishEvent({
+    if (!isScheduled) await publishNativeCommentEvent(trx, { tenant, ticketId, commentId: newCommentId }, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -3458,12 +3459,10 @@ export const addTicketCommentWithCache = withAuth(async (
           suppressContactNotifications,
           suppressInternalNotifications,
         }
-      }),
-      `TICKET_COMMENT_ADDED ticket=${ticketId}`
-    );
+      });
 
     // Publish workflow v2 ticket message events (additive).
-    if (!isScheduled) try {
+    if (!isScheduled) {
       const occurredAt = newComment.created_at ?? new Date().toISOString();
       const workflowCtx = {
         tenantId: tenant,
@@ -3482,14 +3481,9 @@ export const addTicketCommentWithCache = withAuth(async (
       });
 
       for (const ev of events) {
-        registerAfterCommit(
-          trx,
-          () => publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx }),
-          `${ev.eventType} ticket=${ticketId}`
-        );
+        await publishNativeCommentWorkflowEvent(trx, { tenant, ticketId, commentId: newCommentId },
+          { eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
       }
-    } catch (eventError) {
-      console.error('[addTicketCommentWithCache] Failed to build workflow ticket message events:', eventError);
     }
 
     registerAfterCommit(trx, () =>
@@ -3543,7 +3537,7 @@ export const addTicketCommentWithCache = withAuth(async (
       registerAfterCommit(trx, async () => {
         const job = await scheduleBackgroundJobAt(
           SCHEDULED_COMMENT_JOB,
-          { tenantId: tenant, ticketId, commentId: newComment.comment_id },
+          { tenantId: tenant, ticketId, commentId: newCommentId },
           scheduledPublishAt,
           { singletonKey: `publish-comment:${newComment.comment_id}`, metadata: { scheduledPublishTz: schedule.timeZone } },
         );

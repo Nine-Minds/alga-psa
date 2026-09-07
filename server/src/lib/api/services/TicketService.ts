@@ -1,3 +1,4 @@
+import { retainNativeConversationEvent } from '@alga-psa/tickets/lib/nativeConversationEvents';
 import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 /**
  * Ticket Service
@@ -2208,9 +2209,7 @@ export class TicketService extends BaseService<ITicket> {
         author_contact_email: null
       };
 
-      return {
-        response,
-        eventPayload: {
+      const eventPayload = {
           ticketId: ticketId,
           userId: context.userId,
           comment: {
@@ -2220,14 +2219,12 @@ export class TicketService extends BaseService<ITicket> {
             isInternal: comment.is_internal
           },
           ...notificationSuppression,
-        }
-      };
+        };
+      await retainNativeConversationEvent(trx, { tenant: context.tenant, ticketId, commentId: comment.comment_id },
+        { kind: 'event', eventType: 'TICKET_COMMENT_ADDED', payload: { ...eventPayload, tenantId: context.tenant } },
+        { legacyPublish: () => this.safePublishEvent('TICKET_COMMENT_ADDED', context, eventPayload) });
+      return { response };
     });
-
-    // Publish after the transaction commits so email and in-app notification
-    // subscribers can load the ticket/comment rows reliably.
-    await this.safePublishEvent('TICKET_COMMENT_ADDED', context, result.eventPayload);
-
     return result.response;
   }
 
@@ -2307,6 +2304,9 @@ export class TicketService extends BaseService<ITicket> {
         .update(update)
         .returning('*');
 
+      await retainNativeConversationEvent(trx, { tenant: context.tenant, ticketId, commentId },
+        { kind: 'event', eventType: 'TICKET_COMMENT_UPDATED', payload: { tenantId: context.tenant, ticketId, commentId, userId: context.userId } },
+        { legacyPublish: async () => {} });
       return {
         ...updated,
         comment_text: updated.note,

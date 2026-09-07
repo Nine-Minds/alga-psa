@@ -19,6 +19,8 @@ const ticketUpdates: Record<string, unknown>[] = [];
 // transaction resolves, matching production's flush-after-commit semantics.
 const afterCommitHooksQueue: Array<() => unknown | Promise<unknown>> = [];
 
+vi.mock('@alga-psa/co-managed/nativeConversationEvents', () => ({ retainCoManagedNativeCommentEvent: vi.fn(async () => false) }));
+
 // Real lifecycle admission and lock waits are exercised in the PostgreSQL suite.
 vi.mock('@alga-psa/licensing', () => ({ assertCoManagedOperationalWrite: vi.fn(async () => {}) }));
 

@@ -1,5 +1,7 @@
 'use server'
 
+import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
+
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
 
 import type {
@@ -1504,6 +1506,8 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         throw new Error('Permission denied: Cannot add comment');
       }
 
+      await assertCoManagedOperationalWrite(trx, tenant);
+
       // Verify ticket exists
       const ticket = await tenantScopedTable(trx, 'tickets', tenant)
       .where({
@@ -1554,7 +1558,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       }).returning('*');
 
       // Publish comment added event
-      await publishEvent({
+      await publishNativeCommentEvent(trx, { tenant, ticketId, commentId: newComment.comment_id }, {
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
@@ -1572,7 +1576,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       });
 
       // Publish workflow v2 ticket message events (additive).
-      try {
+      {
         const occurredAt = new Date().toISOString();
         const workflowCtx = {
           tenantId: tenant,
@@ -1594,10 +1598,8 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         });
 
         for (const ev of events) {
-          await publishWorkflowEvent({ eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
+          await publishNativeCommentWorkflowEvent(trx, { tenant, ticketId, commentId: newComment.comment_id }, { eventType: ev.eventType, payload: ev.payload, ctx: workflowCtx });
         }
-      } catch (eventError) {
-        console.error('[addTicketComment] Failed to publish workflow ticket message events:', eventError);
       }
     });
   } catch (error) {

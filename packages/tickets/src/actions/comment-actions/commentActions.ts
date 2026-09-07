@@ -8,7 +8,7 @@ import { createTenantKnex, tenantDb, registerAfterCommit } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { convertBlockNoteToMarkdown } from '@alga-psa/formatting/blocknoteUtils';
-import { publishEvent, publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
+import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../../lib/nativeConversationEvents';
 import { TicketResponseState } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { withAuth } from '@alga-psa/auth';
@@ -128,7 +128,8 @@ async function updateTicketResponseState(
   ticketId: string,
   authorType: 'internal' | 'client' | 'unknown',
   isInternal: boolean,
-  userId: string | null
+  userId: string | null,
+  commentId: string
 ): Promise<{ previousState: TicketResponseState; newState: TicketResponseState }> {
   // Skip response state tracking when disabled for this tenant
   const trackingEnabled = await isResponseStateTrackingEnabled(tenant, trx);
@@ -166,8 +167,8 @@ async function updateTicketResponseState(
       .update({ response_state: newState });
 
     // Publish response state change event
-    try {
-      await publishEvent({
+    {
+      await publishNativeCommentEvent(trx, { tenant, ticketId, commentId }, {
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
@@ -182,9 +183,6 @@ async function updateTicketResponseState(
         }
       });
       console.log(`[updateTicketResponseState] Published event: ${previousState} -> ${newState}`);
-    } catch (eventError) {
-      console.error(`[updateTicketResponseState] Failed to publish event:`, eventError);
-      // Don't throw - allow comment creation to succeed even if event publishing fails
     }
   }
 
@@ -325,7 +323,8 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
           comment.ticket_id,
           comment.author_type as 'internal' | 'client' | 'unknown',
           comment.is_internal || false,
-          comment.user_id || null
+          comment.user_id || null,
+          commentId
         );
         console.log(`[createComment] Response state updated: ${previousState} -> ${newState}`);
       }
@@ -340,10 +339,10 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
         const authorName = user ? `${user.first_name} ${user.last_name}` : 'Unknown User';
 
         // Publish TICKET_COMMENT_ADDED event for mention notifications
-        // Note: Using try-catch to avoid blocking comment creation if event publishing fails
-        try {
+        // Durable intent failures roll back the comment; transport runs after commit.
+        {
           const eventComment = await Comment.get(trx, commentTenant, commentId);
-          await publishEvent({
+          await publishNativeCommentEvent(trx, { tenant: commentTenant, ticketId: comment.ticket_id!, commentId }, {
             eventType: 'TICKET_COMMENT_ADDED',
             payload: {
               tenantId: commentTenant,
@@ -367,13 +366,10 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
             }
           });
           console.log(`[createComment] Published TICKET_COMMENT_ADDED event for comment:`, commentId);
-        } catch (eventError) {
-          console.error(`[createComment] Failed to publish TICKET_COMMENT_ADDED event:`, eventError);
-          // Don't throw - allow comment creation to succeed even if event publishing fails
         }
 
         // Publish workflow v2 domain ticket message events (additive; no impact on legacy comment events).
-        try {
+        {
           const insertedComment = await Comment.get(trx, commentTenant, commentId);
           const createdAt = insertedComment?.created_at ?? undefined;
           const visibility = comment.is_internal ? 'internal' : 'public';
@@ -408,14 +404,12 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
           });
 
           for (const ev of events) {
-            await publishWorkflowEvent({
+            await publishNativeCommentWorkflowEvent(trx, { tenant: commentTenant, ticketId: comment.ticket_id!, commentId }, {
               eventType: ev.eventType,
               payload: ev.payload,
               ctx: workflowCtx,
             });
           }
-        } catch (eventError) {
-          console.error(`[createComment] Failed to publish workflow ticket message events:`, eventError);
         }
       }
 
@@ -653,20 +647,20 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       }
 
       // Publish TICKET_COMMENT_UPDATED event if the comment was updated and we have user info
-      if (updatedComment && comment.user_id && commentTenant) {
+      if (updatedComment && commentTenant) {
         const newAuthor = await tenantScopedTable(trx, 'users', commentTenant)
           .select('first_name', 'last_name')
-          .where({ user_id: comment.user_id })
+          .where({ user_id: comment.user_id ?? updatedComment.user_id ?? user.user_id })
           .first();
         const newAuthorName = newAuthor ? `${newAuthor.first_name} ${newAuthor.last_name}` : 'Unknown User';
 
-        try {
-          await publishEvent({
+        {
+          await publishNativeCommentEvent(trx, { tenant: commentTenant, ticketId: updatedComment.ticket_id!, commentId: id }, {
             eventType: 'TICKET_COMMENT_UPDATED',
             payload: {
               tenantId: commentTenant,
               ticketId: updatedComment.ticket_id!,
-              userId: comment.user_id,
+              userId: user.user_id,
               oldComment: {
                 id: oldCommentData.id,
                 content: oldCommentData.content,
@@ -682,9 +676,6 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
             }
           });
           console.log(`[updateComment] Published TICKET_COMMENT_UPDATED event for comment:`, id);
-        } catch (eventError) {
-          console.error(`[updateComment] Failed to publish TICKET_COMMENT_UPDATED event:`, eventError);
-          // Don't throw - allow comment update to succeed even if event publishing fails
         }
       }
 
@@ -742,7 +733,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
   const { knex: db } = await createTenantKnex();
   const tenant = _ctx?.tenant;
   try {
-    const deletedTicketId = await withTransaction(db, async (trx: Knex.Transaction) => {
+    await withTransaction(db, async (trx: Knex.Transaction) => {
       if (!tenant) {
         throw new Error('Tenant is required to delete comment');
       }
@@ -761,6 +752,13 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
         .where({ comment_id: id })
         .update({ comment_id: null });
 
+      // Capture the canonical thread before a leaf deletion removes it. Intent
+      // and deletion share this transaction; delivery begins only after commit.
+      if (existingComment?.ticket_id) await publishNativeCommentEvent(trx,
+        { tenant, ticketId: existingComment.ticket_id, commentId: id }, {
+          eventType: 'TICKET_COMMENT_DELETED',
+          payload: { tenantId: tenant, ticketId: existingComment.ticket_id, commentId: id, userId: user?.user_id },
+        });
       await Comment.delete(trx, tenant, id);
 
       if (existingComment?.ticket_id) {
@@ -776,26 +774,7 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
         });
       }
 
-      return existingComment?.ticket_id ?? null;
     });
-
-    if (tenant && deletedTicketId) {
-      try {
-        await publishEvent({
-          eventType: 'TICKET_COMMENT_DELETED',
-          payload: {
-            tenantId: tenant,
-            ticketId: deletedTicketId,
-            commentId: id,
-            userId: user?.user_id,
-          },
-        });
-      } catch (eventError) {
-        // Comment is already deleted; the search index self-heals via the
-        // daily reconcile pass if this event fails to publish.
-        console.error(`[deleteComment] Failed to publish TICKET_COMMENT_DELETED event:`, eventError);
-      }
-    }
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {
