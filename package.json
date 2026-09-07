@@ -58,6 +58,7 @@
     "search:backfill": "tsx server/src/scripts/search-backfill.ts",
     "lint": "eslint \"{server,ee/server,ee/packages,shared,services,packages}/**/*.{js,mjs,cjs,ts,jsx,tsx}\"",
     "guard:temporal-packaging-contract": "node scripts/check-temporal-worker-packaging-contract.mjs",
+    "test:temporal-snapshot-runtime": "node scripts/temporal-snapshot-runtime-smoke.cjs",
     "guard:temporal-dist-smoke": "node scripts/temporal-worker-dist-import-smoke.mjs",
     "test:temporal-readiness:fast": "node scripts/run-additional-workspace-tests.mjs temporal-readiness",
     "guard:temporal-readiness:fast": "npm run guard:temporal-packaging-contract && npm run guard:temporal-dist-smoke && npm run test:temporal-readiness:fast",

@@ -55,6 +55,9 @@ jobs:
       - name: Temporal readiness fast gate
         run: npm run guard:temporal-readiness:fast
 
+      - name: Execute built snapshot workflow in Temporal test server
+        run: npm run test:temporal-snapshot-runtime
+
       - name: Upload Temporal readiness execution evidence
         if: always()
         uses: actions/upload-artifact@v4

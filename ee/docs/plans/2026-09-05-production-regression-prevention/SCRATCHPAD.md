@@ -1211,3 +1211,10 @@
 - Native revision 9a0ea31e57 introduced a server -> temporal-workflows cycle via the workflow DB test. The cycle guard failed, Nx dependency-plan assertions failed, and CE build-deps attempted an inappropriate worker build with missing EE modules.
 - Relocated the full seven-case suite to `ee/temporal-workflows/src/__tests__/integration/workflowInvocationPersistence.integration.test.ts`; updated full/affected integration selection, discovery reconciliation, direct scripts and mandatory Tier-1 floor. Worker standalone Vitest excludes this DB lane. No tests or cycle baseline entries were removed.
 - Actual graph now has only the three existing cycles. Focused Nx workspace tests: 4/4; relocated database suite: 7/7; real runner selection test and targeted TypeScript passed. Evidence: `evidence/workflow-db-test-project-ownership.json`. Native image rebuild verification remains pending.
+
+### 2026-09-07 — Built workflow executes in real Temporal sandbox
+
+- Full `guard:temporal-readiness:fast` passed, including rebuilt workspace packages, worker TypeScript/alias emission, built worker imports and all 72 readiness cases.
+- Added `npm run test:temporal-snapshot-runtime`: an isolated Temporal test server executes the built workflow with a return step; activity assertions verify redacted diagnostic data, no raw scopes argument, and unchanged live execution data. Test passed locally. Activity bodies are doubles; DB behavior remains independently tested.
+- CI runs this command after compilation and uploads its running/passed/failed JSON evidence with the readiness artifact. Source: `scripts/temporal-snapshot-runtime-smoke.cjs`; evidence: `evidence/temporal-built-snapshot-runtime.json`.
+- Native full integration job 101650631428 still reports its full-suite execution step in progress. Leave it intact before publishing queued commits.
