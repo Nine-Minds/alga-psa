@@ -1,3 +1,4 @@
+import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { isCoManagedUuid, CoManagedSharedWorkError } from './sharedWorkIdentity';
@@ -39,7 +40,7 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
         const owner = tenantDb(trx, tenant), row = await owner.table(FILES).where('attachment_id', candidate.attachment_id).whereNotNull('discarded_at').whereNull('purged_at')
           .where('cleanup_next_attempt_at', '<=', trx.raw('clock_timestamp()')).forUpdate().skipLocked().first();
         if (!row) return;
-        if (row.storage_path !== `co-management/${tenant}/${row.attachment_id}`) throw new Error('Invalid cleanup path');
+        assertCoManagedAttachmentPath(row);
         const explicitRemoval = row.status === 'ready' && row.removal_actor_tenant === row.actor_tenant && row.removal_actor_user_id === row.actor_user_id;
         if (row.draft_operation_id) {
           const draft = await owner.table(DRAFTS).where('operation_id', row.draft_operation_id).first();

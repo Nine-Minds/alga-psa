@@ -657,7 +657,8 @@
       "current": "Current audience: {{audience}}",
       "help": "Replies and attachments inherit this audience. Restricting access cannot recall information people have already read or downloaded.",
       "pending": "An attachment upload is still pending. Finish the upload before changing the audience.",
-      "unknownOutcome": "The result is unknown. Retry to check the same audience change."
+      "unknownOutcome": "The result is unknown. Retry to check the same audience change.",
+      "transferHelp": "Sharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history."
     }
   }
 }

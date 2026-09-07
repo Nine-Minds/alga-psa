@@ -568,7 +568,8 @@
       "current": "Huidige zichtbaarheid: {{audience}}",
       "help": "Antwoorden en bijlagen nemen deze zichtbaarheid over. Beperkte toegang haalt eerder gelezen of gedownloade informatie niet terug.",
       "pending": "Er staat nog een bijlage-upload open. Voltooi de upload voordat u de zichtbaarheid wijzigt.",
-      "unknownOutcome": "Het resultaat is onbekend. Probeer opnieuw om dezelfde wijziging te controleren."
+      "unknownOutcome": "Het resultaat is onbekend. Probeer opnieuw om dezelfde wijziging te controleren.",
+      "transferHelp": "Delen verplaatst dit gesprek en de bijlagen naar de werkruimte van de klant. Het oorspronkelijke privégesprek van de MSP blijft bewaard als alleen-lezen geschiedenis."
     }
   }
 }

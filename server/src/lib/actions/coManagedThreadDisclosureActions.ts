@@ -2,13 +2,14 @@
 import { withAuth } from '@alga-psa/auth';
 import { createTenantKnex } from '@alga-psa/db';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
-import { previewCoManagedThreadDisclosure, CoManagedThreadDisclosureError, CoManagedSharedWorkError, type CoManagedSharedResource,
+import { previewCoManagedThreadDisclosure, previewCoManagedPrivateThreadDisclosure, CoManagedThreadDisclosureError, CoManagedSharedWorkError, type CoManagedSharedResource,
   type CoManagedThreadReference, type CoManagedThreadDisclosureRequest } from '@alga-psa/co-managed';
 import { coManagedBrowserActor } from '../co-managed/browserActor';
 import { discloseSharedTicketThread } from '../co-managed/discloseTicketThread';
 export const previewCoManagedThreadDisclosureAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, reference: CoManagedThreadReference) => {
   const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
-  return { preview: await previewCoManagedThreadDisclosure(knex, actor, resource, reference), actor: { tenant: actor.tenant, userId: actor.userId } };
+  const preview = reference.storeTenant.toLowerCase() === resource.tenant.toLowerCase() ? previewCoManagedThreadDisclosure : previewCoManagedPrivateThreadDisclosure;
+  return { preview: await preview(knex, actor, resource, reference), actor: { tenant: actor.tenant, userId: actor.userId } };
 });
 export const discloseCoManagedThreadAction = withAuth(async (user, { tenant }, resource: CoManagedSharedResource, request: CoManagedThreadDisclosureRequest) => {
   try {

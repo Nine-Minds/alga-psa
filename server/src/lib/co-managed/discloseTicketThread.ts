@@ -1,7 +1,9 @@
+import { StorageProviderFactory } from '@alga-psa/storage/StorageProviderFactory';
+import { uploadConversationAttachmentObject } from './conversationAttachments';
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
 import { tenantDb, registerAfterCommit } from '@alga-psa/db';
-import { discloseCoManagedTicketThread, type CoManagedThreadDisclosureRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
+import { discloseCoManagedTicketThread, discloseCoManagedPrivateTicketThread, CoManagedAttachmentError, CoManagedThreadDisclosureError, type CoManagedThreadDisclosureContext, type CoManagedThreadDisclosureRequest, type CoManagedSharedResource, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import { writeTicketActivity } from '@alga-psa/shared/lib/ticketActivity';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { EventSchemas } from '@alga-psa/event-schemas';
@@ -10,7 +12,7 @@ import { collaborationActorReferenceSchema } from '@alga-psa/event-schemas/colla
 /** Persist the audience audit with the entire thread change, then invalidate
  * each comment's search representation without emitting its old or new body. */
 export async function discloseSharedTicketThread(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, request: CoManagedThreadDisclosureRequest) {
-  return discloseCoManagedTicketThread(db, actor, resource, request, async context => {
+  const afterChange = async (context: CoManagedThreadDisclosureContext) => {
     const { trx, actor, resource } = context, owner = tenantDb(trx, resource.tenant);
     const saved = context.actorReferenceId ? await owner.table('collaboration_actor_references').where('actor_reference_id', context.actorReferenceId).first() : null;
     const reference = saved ? collaborationActorReferenceSchema.parse({ ownerTenantId: resource.tenant, referenceId: context.actorReferenceId,
@@ -27,5 +29,15 @@ export async function discloseSharedTicketThread(db: Knex, actor: CoManagedSessi
       EventSchemas.TICKET_COMMENT_UPDATED.parse({ id: eventId, timestamp: context.appliedAt, eventType: 'TICKET_COMMENT_UPDATED', payload });
       registerAfterCommit(trx, () => publishEvent({ eventType: 'TICKET_COMMENT_UPDATED', payload } as any, { eventId }), `Thread audience comment=${commentId}`);
     }
-  });
+  };
+  const customer = resource.tenant.toLowerCase();
+  return request.storeTenant.toLowerCase() === customer
+    ? discloseCoManagedTicketThread(db, actor, resource, request, afterChange)
+    : discloseCoManagedPrivateTicketThread(db, actor, resource, request, {
+      download: async path => (await StorageProviderFactory.createProvider()).download(path),
+      upload: async (path, bytes, mime) => {
+        try { await uploadConversationAttachmentObject(customer, path, bytes, mime); }
+        catch (error) { if (error instanceof CoManagedAttachmentError) throw new CoManagedThreadDisclosureError('INVALID_THREAD_DISCLOSURE'); throw error; }
+      },
+    }, afterChange);
 }

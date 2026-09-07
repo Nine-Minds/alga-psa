@@ -570,7 +570,8 @@
       "current": "Visibilité actuelle : {{audience}}",
       "help": "Les réponses et les pièces jointes héritent de cette visibilité. Restreindre l’accès ne retire pas les informations déjà lues ou téléchargées.",
       "pending": "Une pièce jointe est en cours d’envoi. Terminez l’envoi avant de modifier la visibilité.",
-      "unknownOutcome": "Le résultat est inconnu. Réessayez pour vérifier la même modification."
+      "unknownOutcome": "Le résultat est inconnu. Réessayez pour vérifier la même modification.",
+      "transferHelp": "Le partage transfère ce fil et ses pièces jointes dans l’espace de travail du client. Le fil privé d’origine du MSP est conservé en lecture seule."
     }
   }
 }

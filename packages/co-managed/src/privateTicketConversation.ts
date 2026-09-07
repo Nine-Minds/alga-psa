@@ -80,7 +80,7 @@ export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: 
         if (target) {
           const thread = await home.table('co_management_private_threads').where({ thread_id: target.threadId, customer_tenant: resource.tenant,
             relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id }).forUpdate().first();
-          if (!thread) throw new CoManagedSharedWorkError();
+          if (!thread || thread.disclosure_operation_id) throw new CoManagedSharedWorkError();
           threadId = thread.thread_id;
           const root = await home.table('co_management_private_comments').where({ thread_id: threadId, comment_id: thread.root_comment_id }).forShare().first('deleted_at');
           if (!root || (request.kind === 'create' && root.deleted_at)) throw new CoManagedSharedWorkError();

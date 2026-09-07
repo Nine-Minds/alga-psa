@@ -181,3 +181,10 @@ it('cleans only eligible upload owners, including suspended tenants, while other
   expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-upload-cleanup', { tenantId: 'suspended' });
   await runMaintenanceJob('auto-close-tickets'); expect(suspendedFilter).toHaveBeenCalledWith('suspended_at');
 });
+
+it('includes owners whose only pending cleanup is a private thread transfer', async () => {
+  tenantHandlerMock.mockClear(); listTenantsMock.mockReturnValue([{ tenant: 'transfer-owner' }, { tenant: 'unrelated' }]);
+  selectTenantsMock.mockImplementation(table => table === 'co_management_thread_transfers' ? [{ tenant: 'transfer-owner' }] : []);
+  expect(await runMaintenanceJob('co-managed-upload-cleanup')).toMatchObject({ total: 1, succeeded: 1 });
+  expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-upload-cleanup', { tenantId: 'transfer-owner' });
+});

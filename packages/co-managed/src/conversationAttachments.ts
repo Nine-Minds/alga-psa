@@ -1,3 +1,4 @@
+import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -55,7 +56,7 @@ async function withComment<T>(db: Knex, actor: CoManagedSessionActor, resource: 
     if (privateStore) {
       const thread = await owner.table('co_management_private_threads').where({ thread_id: comment.threadId,
         customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id }).forShare().first();
-      if (!thread) deny();
+      if (!thread || thread.disclosure_operation_id) deny();
       const rows = await owner.table('co_management_private_comments').where('thread_id', comment.threadId)
         .whereIn('comment_id', [thread.root_comment_id, comment.commentId]).forShare();
       const row = rows.find(row => row.comment_id === comment.commentId), root = rows.find(row => row.comment_id === thread.root_comment_id);
@@ -214,7 +215,8 @@ export async function readPublishedCoManagedAttachment(context: CoManagedAttachm
   download: (path: string) => Promise<Uint8Array>): Promise<{ attachment: CoManagedConversationAttachment; content: Uint8Array }> {
   if (!context.trx.isTransaction || !isCoManagedUuid(attachmentId)) deny();
   const row = await visibleAttachmentQuery(context).where({ attachment_id: attachmentId.toLowerCase(), status: 'ready' }).forShare().first();
-  if (!row || row.storage_path !== `co-management/${context.comment.storeTenant}/${attachmentId.toLowerCase()}`) deny();
+  if (!row) deny();
+  assertCoManagedAttachmentPath(row);
   const content = await download(row.storage_path);
   if (content.length !== row.file_size || createHash('sha256').update(content).digest('hex') !== row.content_hash) throw new CoManagedAttachmentError('ATTACHMENT_CONTENT_MISMATCH');
   return { attachment: summary(row, context.audience), content };

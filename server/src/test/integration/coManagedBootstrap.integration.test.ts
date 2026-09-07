@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -7233,4 +7233,221 @@ it('keeps published draft files attached across disclosure and rejects old-audie
   await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(staged), publishCustomer)).rejects.toBeDefined();
   expect(await customer.table('comments').where('comment_id', staged.operationId).first()).toBeUndefined();
   expect(await attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(root))).toEqual([{ ...ready, audience: 'requester' }]);
+}));
+
+async function withPrivateThreadTransferFixture(work: (fixture: Parameters<Parameters<typeof withPortalAttachmentFixture>[0]>[0] & {
+  previewPrivate: typeof import('../../../../packages/co-managed/src/privateThreadDisclosure').previewCoManagedPrivateThreadDisclosure;
+  transferPrivate: typeof import('../../../../packages/co-managed/src/privateThreadDisclosure').discloseCoManagedPrivateTicketThread;
+  disclose: typeof import('../../lib/co-managed/discloseTicketThread').discloseSharedTicketThread;
+  privateComment: (request: import('../../../../packages/co-managed/src/privateTicketConversation').CoManagedPrivateCommentCommand) => Promise<import('../../../../packages/co-managed/src/privateTicketConversation').CoManagedPrivateCommentReceipt>;
+}) => Promise<void>) {
+  await withPortalAttachmentFixture(async fixture => {
+    const { previewCoManagedPrivateThreadDisclosure: previewPrivate, discloseCoManagedPrivateTicketThread: transferPrivate } = await import('../../../../packages/co-managed/src/privateThreadDisclosure');
+    const { mutateCoManagedPrivateTicketComment } = await import('../../../../packages/co-managed/src/privateTicketConversation');
+    const { discloseSharedTicketThread: disclose } = await import('../../lib/co-managed/discloseTicketThread');
+    artifactStorage.download.mockReset().mockImplementation(async path => Buffer.from(fixture.objects.get(path)!));
+    artifactStorage.upload.mockReset().mockImplementation(async (bytes, path, options) => { fixture.objects.set(path, Uint8Array.from(bytes)); return { path, size: bytes.length, mime_type: options.mime_type }; });
+    artifactStorage.delete.mockReset().mockImplementation(async path => { fixture.objects.delete(path); });
+    await work({ ...fixture, previewPrivate, transferPrivate, disclose,
+      privateComment: request => mutateCoManagedPrivateTicketComment(db, fixture.principal, fixture.resource, request) });
+  });
+}
+
+it('transfers a confirmed MSP-private thread and files atomically with historical authors and empty tombstones', async () => withPrivateThreadTransferFixture(async ({
+  principal, customerPrincipal, requester, portal, resource, customer, sponsor, privateComment, previewPrivate, disclose, attachments, upload, objects,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Private origin' });
+  const reply = await privateComment({ kind: 'create', operationId: randomUUID(), parent: attachmentComment(root), text: 'Former technician reply' });
+  const deleted = await privateComment({ kind: 'create', operationId: randomUUID(), parent: attachmentComment(reply), text: 'Deleted private secret' });
+  const formerUser = randomUUID(); await sponsor.table('co_management_private_comments').where('comment_id', reply.commentId).update({ actor_user_id: formerUser, actor_display_name: 'Former colleague' });
+  await privateComment({ kind: 'delete', operationId: randomUUID(), comment: attachmentComment(deleted), expectedRevision: deleted.revision });
+  const ready = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root),
+    fileName: 'Evidence.txt', mimeType: 'text/plain', content: Buffer.from('Customer-owned evidence') }, upload);
+  await sponsor.table('co_management_private_comments').where('comment_id', root.commentId).update({ created_at: '2026-09-07T00:00:00.123456Z' });
+  const target = { storeTenant: principal.tenant, threadId: root.threadId };
+  await expect(previewPrivate(db, customerPrincipal, resource, target)).rejects.toBeDefined();
+  const preview = await previewPrivate(db, principal, resource, target); expect(preview).toMatchObject({ comments: 2, attachments: 1, audience: 'organization_private' });
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
+  const uploadImpl = artifactStorage.upload.getMockImplementation()!;
+  artifactStorage.upload.mockImplementation(async (...args) => {
+    expect(await customer.table('comments').where('thread_id', request.operationId)).toEqual([]);
+    expect(await customer.table('co_management_conversation_attachments').where('thread_id', request.operationId)).toEqual([]);
+    return uploadImpl(...args);
+  });
+  const { publishEvent } = await import('@alga-psa/event-bus/publishers'); vi.mocked(publishEvent).mockClear();
+  const [receipt, duplicate] = await Promise.all([1, 2].map(() => disclose(db, principal, resource, request)));
+  expect(duplicate).toEqual(receipt);
+  expect(receipt).toMatchObject({ storeTenant: resource.tenant, threadId: request.operationId, sourceStoreTenant: principal.tenant, sourceThreadId: root.threadId });
+  const comments = await customer.table('comments').where('thread_id', receipt.threadId); expect(comments).toHaveLength(3);
+  expect(await customer.table('comments').where('comment_id', receipt.threadId).whereRaw('created_at = ?::timestamptz', ['2026-09-07T00:00:00.123456Z']).first()).toBeDefined();
+  expect(comments.find(row => row.deleted_at)).toMatchObject({ note: '', markdown_content: '' });
+  const former = comments.find(row => row.actor_display_name === 'Former colleague');
+  expect(await customer.table('collaboration_actor_references').where('actor_reference_id', former.actor_reference_id).first()).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: formerUser });
+  expect(await customer.table('users').whereIn('user_id', [principal.userId, formerUser])).toEqual([]);
+  const files = await portal.listPortalConversationAttachments(db, requester, { ticketId: resource.id, threadId: receipt.threadId, commentId: receipt.threadId });
+  expect(files).toHaveLength(1); expect(files[0]).toMatchObject({ fileName: ready.fileName, storeTenant: resource.tenant, audience: 'requester' });
+  expect(files[0].attachmentId).not.toBe(ready.attachmentId);
+  const downloaded = await portal.downloadPortalConversationAttachment(db, requester, { ticketId: resource.id, threadId: receipt.threadId, commentId: receipt.threadId }, files[0].attachmentId, async path => Buffer.from(objects.get(path)!));
+  expect(Buffer.from(downloaded.content).toString()).toBe('Customer-owned evidence');
+  expect(vi.mocked(publishEvent).mock.calls).toHaveLength(3);
+  const { getCoManagedTicketConversation } = await import('../../../../packages/co-managed/src/ticketConversation');
+  const timeline = await getCoManagedTicketConversation(db, principal, resource); expect(timeline.items.every(item => item.storeTenant === resource.tenant)).toBe(true);
+  await expect(privateComment({ kind: 'edit', operationId: randomUUID(), comment: attachmentComment(root), expectedRevision: root.revision, text: 'Archived edit' })).rejects.toBeDefined();
+  await expect(attachments.listCoManagedConversationAttachments(db, principal, resource, attachmentComment(root))).rejects.toBeDefined();
+  const copies = artifactStorage.upload.mock.calls.length; expect(await disclose(db, principal, resource, request)).toEqual(receipt); expect(artifactStorage.upload).toHaveBeenCalledTimes(copies);
+  const migration = require('../../../migrations/20260907000000_create_co_management_thread_transfers.cjs'); await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+
+it('resumes a partial private-thread copy at the same reserved path without publishing an incomplete customer thread', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, customer, sponsor, privateComment, previewPrivate, disclose, attachments, upload,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Two files' });
+  for (const text of ['First', 'Second']) await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root),
+    fileName: `${text}.txt`, mimeType: 'text/plain', content: Buffer.from(text) }, upload);
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'shared_it' as const, confirmed: true as const };
+  const original = artifactStorage.upload.getMockImplementation()!; let copies = 0;
+  artifactStorage.upload.mockImplementation(async (...args) => { const result = await original(...args); if (++copies === 2) throw new Error('Lost copy acknowledgement'); return result; });
+  await expect(disclose(db, principal, resource, request)).rejects.toThrow('Lost copy acknowledgement');
+  expect(await customer.table('comments').where('thread_id', request.operationId)).toEqual([]);
+  const ledger = await sponsor.table('co_management_thread_transfers').where('operation_id', request.operationId).first();
+  expect(ledger.status).toBe('prepared'); expect(ledger.manifest.map((file: any) => file.copied)).toEqual([true, false]);
+  const paths = artifactStorage.upload.mock.calls.map(call => call[1]);
+  await disclose(db, principal, resource, request);
+  expect(artifactStorage.upload.mock.calls.map(call => call[1])).toEqual([paths[0], paths[1], paths[1]]);
+  expect(await customer.table('co_management_conversation_attachments').where('thread_id', request.operationId)).toHaveLength(2);
+}));
+
+it('rejects a changed private source after staging and cleans only abandoned destination objects with retry history', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, customer, sponsor, privateComment, previewPrivate, disclose, attachments, upload, objects,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Original private body' });
+  const file = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root),
+    fileName: 'Evidence.txt', mimeType: 'text/plain', content: Buffer.from('Original bytes') }, upload);
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
+  const original = artifactStorage.upload.getMockImplementation()!;
+  artifactStorage.upload.mockImplementationOnce(async (...args) => { await original(...args); throw new Error('Lost acknowledgement'); });
+  await expect(disclose(db, principal, resource, request)).rejects.toThrow('Lost acknowledgement');
+  await privateComment({ kind: 'edit', operationId: randomUUID(), comment: attachmentComment(root), expectedRevision: root.revision, text: 'Changed private body' });
+  await expect(disclose(db, principal, resource, request)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' });
+  expect(await customer.table('comments').where('thread_id', request.operationId)).toEqual([]);
+  await sponsor.table('co_management_thread_transfers').where('operation_id', request.operationId).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
+  const { cleanupCoManagedThreadTransfers } = await import('../../../../packages/co-managed/src/privateThreadTransferCleanup');
+  const remove = vi.fn(async path => { objects.delete(path); });
+  expect(await cleanupCoManagedThreadTransfers(db, resource.tenant, remove)).toMatchObject({ cleanedTransfers: 0 });
+  expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ abandonedTransfers: 1, cleanedTransfers: 1, failedTransfers: 0 });
+  expect(remove).toHaveBeenCalledOnce(); expect(objects.has(`co-management/${principal.tenant}/${file.attachmentId}`)).toBe(true);
+  expect(await sponsor.table('co_management_thread_transfers').where('operation_id', request.operationId).first()).toMatchObject({ status: 'abandoned', manifest: [], comment_map: {}, cleaned_at: expect.any(Date) });
+  await expect(disclose(db, principal, resource, request)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' });
+}));
+
+it('rolls final private-thread publication back without repeating committed file copies', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, customer, sponsor, privateComment, previewPrivate, transferPrivate, attachments, upload, download,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Rollback transfer' });
+  await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'File.txt', mimeType: 'text/plain', content: Buffer.from('File') }, upload);
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'shared_it' as const, confirmed: true as const };
+  await expect(db.transaction(trx => transferPrivate(trx, principal, resource, request, { download, upload }, vi.fn()))).rejects.toMatchObject({ code: 'INVALID_THREAD_DISCLOSURE' });
+  upload.mockClear();
+  await expect(transferPrivate(db, principal, resource, request, { download, upload }, async () => { throw new Error('Audit failure'); })).rejects.toThrow('Audit failure');
+  expect(await customer.table('comments').where('thread_id', request.operationId)).toEqual([]);
+  expect(await sponsor.table('co_management_private_threads').where('thread_id', root.threadId).first()).toMatchObject({ disclosure_operation_id: null });
+  expect((await sponsor.table('co_management_thread_transfers').where('operation_id', request.operationId).first()).manifest[0].copied).toBe(true);
+  await transferPrivate(db, principal, resource, request, { download, upload }, vi.fn()); expect(upload).toHaveBeenCalledOnce();
+}));
+
+it('checks source checksums and session expiry before sending private bytes into customer storage', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, customer, sponsor, privateComment, previewPrivate, disclose, attachments, upload,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Timed transfer' });
+  await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'File.txt', mimeType: 'text/plain', content: Buffer.from('Original') }, upload);
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
+  const original = artifactStorage.download.getMockImplementation()!;
+  artifactStorage.download.mockResolvedValueOnce(Buffer.from('Corrupt'));
+  await expect(disclose(db, principal, resource, request)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_CONFLICT' }); expect(artifactStorage.upload).not.toHaveBeenCalled();
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  artifactStorage.download.mockImplementationOnce(async (...args) => { const bytes = await original(...args); await db.raw('SELECT pg_sleep(1.1)'); return bytes; });
+  await expect(disclose(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(artifactStorage.upload).not.toHaveBeenCalled();
+  await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(Date.now() + 3600000) });
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(disclose(db, principal, resource, request)).rejects.toBeDefined();
+  expect(await customer.table('comments').where('thread_id', request.operationId)).toEqual([]); expect(artifactStorage.upload).not.toHaveBeenCalled();
+}));
+
+it('removes a disclosed attachment from its customer-owned path while preserving original private history', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, customer, sponsor, privateComment, previewPrivate, disclose, attachments, upload, download, objects,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Transferred attachment removal' });
+  const original = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'File.txt', mimeType: 'text/plain', content: Buffer.from('Original') }, upload);
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const request = { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'shared_it' as const, confirmed: true as const };
+  const receipt = await disclose(db, principal, resource, request);
+  const [file] = await attachments.listCoManagedConversationAttachments(db, principal, resource, { storeTenant: receipt.storeTenant, threadId: receipt.threadId, commentId: receipt.threadId });
+  await attachments.removeCoManagedConversationAttachment(db, principal, resource, attachmentReference(file));
+  await expect(attachments.downloadCoManagedConversationAttachment(db, principal, resource, attachmentReference(file), download)).rejects.toBeDefined();
+  const { cleanupCoManagedUploads } = await import('../../../../packages/co-managed/src/uploadCleanup');
+  const { cleanupCoManagedThreadTransfers } = await import('../../../../packages/co-managed/src/privateThreadTransferCleanup');
+  const remove = vi.fn(async path => { objects.delete(path); });
+  expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ cleanedTransfers: 0 });
+  expect(await cleanupCoManagedUploads(db, resource.tenant, remove)).toMatchObject({ purgedFiles: 1, failedFiles: 0 });
+  expect(objects.has(`co-management/${principal.tenant}/${original.attachmentId}`)).toBe(true);
+  expect(await sponsor.table('co_management_private_comments').where('comment_id', root.commentId).first()).toMatchObject({ markdown_content: 'Transferred attachment removal' });
+  expect(await customer.table('comments').where('comment_id', receipt.threadId).first()).toBeDefined();
+}));
+
+it('retries abandoned private-transfer deletion after lost acknowledgements and isolates corrupted paths', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, sponsor, privateComment, previewPrivate, disclose, attachments, upload, objects,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Cleanup transfer paths' });
+  const original = await attachments.uploadCoManagedConversationAttachment(db, principal, resource, { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'File.txt', mimeType: 'text/plain', content: Buffer.from('Original') }, upload);
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const copy = artifactStorage.upload.getMockImplementation()!;
+  artifactStorage.upload.mockImplementation(async (...args) => { await copy(...args); throw new Error('Copy acknowledgement lost'); });
+  const operationIds = [randomUUID(), randomUUID()];
+  for (const operationId of operationIds) await expect(disclose(db, principal, resource, { ...target, operationId, expectedSnapshot: preview.snapshot, audience: 'requester', confirmed: true })).rejects.toThrow('Copy acknowledgement lost');
+  const corrupted = await sponsor.table('co_management_thread_transfers').where('operation_id', operationIds[0]).first();
+  await sponsor.table('co_management_thread_transfers').where('operation_id', operationIds[0]).update({ manifest: JSON.stringify([{ ...corrupted.manifest[0], path: `co-management/${principal.tenant}/${original.attachmentId}` }]) });
+  await sponsor.table('co_management_thread_transfers').whereIn('operation_id', operationIds).update({ last_activity_at: db.raw("clock_timestamp() - interval '8 days'") });
+  const { cleanupCoManagedThreadTransfers } = await import('../../../../packages/co-managed/src/privateThreadTransferCleanup');
+  let lost = false;
+  const remove = vi.fn(async path => { objects.delete(path); if (!lost) { lost = true; throw new Error('Delete acknowledgement lost'); } });
+  expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ abandonedTransfers: 2, cleanedTransfers: 0, failedTransfers: 2 });
+  expect(remove).toHaveBeenCalledOnce(); expect(objects.has(`co-management/${principal.tenant}/${original.attachmentId}`)).toBe(true);
+  expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ cleanedTransfers: 0, failedTransfers: 0 });
+  await sponsor.table('co_management_thread_transfers').where('operation_id', operationIds[0]).update({ manifest: JSON.stringify(corrupted.manifest) });
+  await sponsor.table('co_management_thread_transfers').whereIn('operation_id', operationIds).update({ cleanup_next_attempt_at: db.fn.now() });
+  expect(await cleanupCoManagedThreadTransfers(db, principal.tenant, remove)).toMatchObject({ cleanedTransfers: 2, failedTransfers: 0 });
+  expect(remove).toHaveBeenCalledTimes(3); expect(objects.size).toBe(1);
+}));
+
+it('denies private disclosure counts and transfers when home policy redacts the source store', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, operation, privateComment, previewPrivate, disclose,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Policy-restricted source' });
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Private disclosure scope', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['co_management_private_threads'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  await expect(previewPrivate(db, principal, resource, target)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(disclose(db, principal, resource, { ...target, operationId: randomUUID(), expectedSnapshot: preview.snapshot, audience: 'requester', confirmed: true })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(artifactStorage.download).not.toHaveBeenCalled(); expect(artifactStorage.upload).not.toHaveBeenCalled();
+}));
+
+it('rejects a colliding private-transfer destination without overwriting an existing customer conversation', async () => withPrivateThreadTransferFixture(async ({
+  principal, resource, customer, sponsor, create, privateComment, previewPrivate, disclose,
+}) => {
+  const root = await privateComment({ kind: 'create', operationId: randomUUID(), text: 'Private source' });
+  const target = { storeTenant: principal.tenant, threadId: root.threadId }, preview = await previewPrivate(db, principal, resource, target);
+  const operationId = randomUUID(); await create(principal, { operationId, audience: 'shared_it', text: 'Existing customer conversation' });
+  const request = { ...target, operationId, expectedSnapshot: preview.snapshot, audience: 'requester' as const, confirmed: true as const };
+  await expect(disclose(db, principal, resource, request)).rejects.toMatchObject({ code: 'THREAD_DISCLOSURE_OPERATION_CONFLICT' });
+  expect(await customer.table('comments').where('comment_id', operationId).first()).toMatchObject({ markdown_content: 'Existing customer conversation', is_internal: true });
+  expect(await sponsor.table('co_management_private_threads').where('thread_id', root.threadId).first()).toMatchObject({ disclosure_operation_id: null });
+  expect(await sponsor.table('co_management_thread_transfers').where('operation_id', operationId).first()).toMatchObject({ status: 'prepared' });
 }));

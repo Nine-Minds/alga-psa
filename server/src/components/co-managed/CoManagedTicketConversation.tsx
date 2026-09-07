@@ -216,7 +216,7 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
           {writable && !draft && !disclosure && <div className="flex flex-wrap gap-2">
             <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>
             {own && content !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
-            {own && !item.parentCommentId && item.storeTenant === resource.tenant && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
+            {own && !item.parentCommentId && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
             {own && <Button id={`${id}-delete`} variant="ghost" size="sm" onClick={() => open({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
           </div>}
         </li>;

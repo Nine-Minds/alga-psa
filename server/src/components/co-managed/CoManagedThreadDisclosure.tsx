@@ -47,7 +47,10 @@ export default function CoManagedThreadDisclosure({ resource, thread, actor, aud
       if (!mounted.current) return;
       if (result.ok) {
         const request = submission.current!;
-        if ((['storeTenant', 'threadId', 'operationId', 'audience'] as const).some(key => result.receipt[key] !== request[key]) ||
+        const transferred = request.storeTenant !== target.current.resource.tenant;
+        if (result.receipt.storeTenant !== (transferred ? target.current.resource.tenant : request.storeTenant) ||
+          result.receipt.threadId !== (transferred ? request.operationId : request.threadId) || result.receipt.operationId !== request.operationId || result.receipt.audience !== request.audience ||
+          (transferred && (!('sourceStoreTenant' in result.receipt) || !('sourceThreadId' in result.receipt) || result.receipt.sourceStoreTenant !== request.storeTenant || result.receipt.sourceThreadId !== request.threadId)) ||
           !Number.isFinite(Date.parse(result.receipt.appliedAt))) throw new Error('Invalid disclosure receipt');
         onSaved();
       } else if (result.code === 'forbidden' || result.code === 'readOnly') onClosed();
@@ -72,6 +75,7 @@ export default function CoManagedThreadDisclosure({ resource, thread, actor, aud
           onValueChange={value => setAudience(value as typeof audience)} />
         {audience && <p>{t(`coManaged.conversation.audienceHelp.${audience}`)}</p>}
         <p className="text-sm text-muted-foreground">{t('coManaged.disclosure.help')}</p>
+        {thread.storeTenant !== resource.tenant && <p>{t('coManaged.disclosure.transferHelp')}</p>}
         {preview.pendingAttachments > 0 && <p role="status">{t('coManaged.disclosure.pending')}</p>}
       </>}
       {error && <p role="alert" className="text-destructive">{t(uncertain ? 'coManaged.disclosure.unknownOutcome' : `coManaged.editor.errors.${error}`)}</p>}

@@ -568,7 +568,8 @@
       "current": "Aktuelle Sichtbarkeit: {{audience}}",
       "help": "Antworten und Anhänge übernehmen diese Sichtbarkeit. Bereits gelesene oder heruntergeladene Informationen können nicht zurückgerufen werden.",
       "pending": "Ein Anhang wird noch hochgeladen. Schließen Sie den Upload ab, bevor Sie die Sichtbarkeit ändern.",
-      "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen."
+      "unknownOutcome": "Das Ergebnis ist unbekannt. Wiederholen Sie die Anfrage, um dieselbe Änderung zu prüfen.",
+      "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten."
     }
   }
 }

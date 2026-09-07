@@ -570,7 +570,8 @@
       "current": "Público atual: {{audience}}",
       "help": "As respostas e os anexos herdam este público. Restringir o acesso não recupera informações já lidas ou transferidas.",
       "pending": "O envio de um anexo está pendente. Conclua o envio antes de alterar o público.",
-      "unknownOutcome": "O resultado é desconhecido. Tente novamente para verificar a mesma alteração."
+      "unknownOutcome": "O resultado é desconhecido. Tente novamente para verificar a mesma alteração.",
+      "transferHelp": "A partilha transfere esta conversa e os seus anexos para o espaço de trabalho do cliente. A conversa privada original do MSP é mantida como histórico só de leitura."
     }
   }
 }

@@ -86,7 +86,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
     const home = tenantDb(trx, actor.tenant);
     const privateComments = home.table('co_management_private_comments as c');
     home.tenantJoin(privateComments, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
-    privateComments.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id });
+    privateComments.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id }).whereNull('t.disclosure_operation_id');
     home.tenantJoin(privateComments, 'co_management_private_comments as parent', 'c.parent_comment_id', 'parent.comment_id', { type: 'left',
       on: join => join.andOn('parent.thread_id', '=', 'c.thread_id') });
     privateComments.select({ store_tenant: 'c.tenant', comment_id: 'c.comment_id', thread_id: 'c.thread_id', parent_comment_id: 'parent.comment_id',

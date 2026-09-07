@@ -1,53 +1,12 @@
-import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { resolveCommentAudience, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
-import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
-import { withCoManagedCustomerTicket } from './customerWork';
-import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
-import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
-import { coManagedConversationBodySources, coManagedConversationAuthorSources, coManagedConversationAttachmentSources } from './conversationPolicy';
+import { type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
+import { snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, isCoManagedUuid, type CoManagedSessionActor } from './sharedWorkIdentity';
 
-export interface CoManagedThreadReference { storeTenant: string; threadId: string }
-export interface CoManagedThreadDisclosurePreview extends CoManagedThreadReference {
-  audience: CommentAudience; snapshot: string; comments: number; attachments: number; pendingAttachments: number;
-}
-export interface CoManagedThreadDisclosureRequest extends CoManagedThreadReference {
-  operationId: string; expectedSnapshot: string; audience: CommentAudience; confirmed: true;
-}
-export interface CoManagedThreadDisclosureReceipt extends CoManagedThreadReference { operationId: string; audience: CommentAudience; appliedAt: string }
-export class CoManagedThreadDisclosureError extends Error {
-  constructor(public readonly code: 'INVALID_THREAD_DISCLOSURE' | 'THREAD_DISCLOSURE_CONFLICT' | 'THREAD_DISCLOSURE_OPERATION_CONFLICT') {
-    super({ INVALID_THREAD_DISCLOSURE: 'The audience change is not valid.', THREAD_DISCLOSURE_CONFLICT: 'The conversation changed. Review it again before changing its audience.',
-      THREAD_DISCLOSURE_OPERATION_CONFLICT: 'This operation was already used for a different audience change.' }[code]);
-    this.name = 'CoManagedThreadDisclosureError';
-  }
-}
-const deny = (): never => { throw new CoManagedSharedWorkError(); };
-const invalid = (): never => { throw new CoManagedThreadDisclosureError('INVALID_THREAD_DISCLOSURE'); };
-const conflict = (): never => { throw new CoManagedThreadDisclosureError('THREAD_DISCLOSURE_CONFLICT'); };
-const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-function target(input: CoManagedThreadReference): CoManagedThreadReference {
-  if (!input || ![input.storeTenant, input.threadId].every(isCoManagedUuid)) invalid();
-  return { storeTenant: input.storeTenant.toLowerCase(), threadId: input.threadId.toLowerCase() };
-}
-function resourceSnapshot(input: CoManagedSharedResource): CoManagedSharedResource {
-  if (!input || input.kind !== 'ticket' || ![input.tenant, input.relationshipId, input.id].every(isCoManagedUuid)) deny();
-  return { kind: 'ticket', tenant: input.tenant.toLowerCase(), relationshipId: input.relationshipId.toLowerCase(), id: input.id.toLowerCase() };
-}
-async function withAuthority<T>(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource,
-  work: (context: CoManagedSharedWorkContext) => Promise<T>): Promise<T> {
-  const authorize = actor.tenant === resource.tenant ? withCoManagedCustomerTicket : withCoManagedSharedWork;
-  return authorize(db, actor, resource, 'update', context => authorize(context.trx, actor, resource, 'read', async read => {
-    if (isCoManagedReadFieldHidden([...context.redactedFields, ...read.redactedFields], [...coManagedConversationBodySources,
-      ...coManagedConversationAuthorSources, ...coManagedConversationAttachmentSources, 'comments', 'comment_threads', 'co_management_conversation_drafts'])) deny();
-    await assertCoManagedSessionUnexpired(context.trx, actor);
-    const result = await work(context);
-    await assertCoManagedSessionUnexpired(context.trx, actor); await assertCoManagedOperationalWrite(context.trx, resource.tenant);
-    return result;
-  }));
-}
+import { withAuthority, target, resourceSnapshot, hash, deny, invalid, conflict, CoManagedThreadDisclosureError, type CoManagedThreadReference, type CoManagedThreadDisclosurePreview, type CoManagedThreadDisclosureRequest, type CoManagedThreadDisclosureReceipt } from './threadDisclosureAdmission';
+export { CoManagedThreadDisclosureError, type CoManagedThreadReference, type CoManagedThreadDisclosurePreview, type CoManagedThreadDisclosureRequest, type CoManagedThreadDisclosureReceipt } from './threadDisclosureAdmission';
 /** Customer-owned threads retain their identity and files when their audience
  * changes. MSP-private storage needs a separate transfer, not a relabeled row. */
 async function lockedThread(context: CoManagedSharedWorkContext, reference: CoManagedThreadReference) {

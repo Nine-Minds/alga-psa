@@ -572,7 +572,8 @@
       "current": "Obecna widoczność: {{audience}}",
       "help": "Odpowiedzi i załączniki dziedziczą tę widoczność. Ograniczenie dostępu nie cofa informacji już przeczytanych lub pobranych.",
       "pending": "Przesyłanie załącznika oczekuje na zakończenie. Zakończ je przed zmianą widoczności.",
-      "unknownOutcome": "Wynik jest nieznany. Ponów próbę, aby sprawdzić tę samą zmianę."
+      "unknownOutcome": "Wynik jest nieznany. Ponów próbę, aby sprawdzić tę samą zmianę.",
+      "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu."
     }
   }
 }

@@ -87,7 +87,7 @@ async function destination(context: CoManagedSharedWorkContext, request: CoManag
     if (privateStore) {
       const thread = await owner.table('co_management_private_threads').where({ thread_id: request.parent.threadId, customer_tenant: resource.tenant,
         relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id }).forShare().first();
-      if (!thread) deny();
+      if (!thread || thread.disclosure_operation_id) deny();
       const rows = await owner.table('co_management_private_comments').where('thread_id', thread.thread_id)
         .whereIn('comment_id', [request.parent.commentId, thread.root_comment_id]).whereNull('deleted_at').forShare();
       if (!rows.some(row => row.comment_id === request.parent!.commentId) || !rows.some(row => row.comment_id === thread.root_comment_id)) deny();

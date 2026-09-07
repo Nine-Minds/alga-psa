@@ -274,3 +274,25 @@ it('blocks audience confirmation while files are pending and clears its review w
   mocks.preview.mockRejectedValue(new Error('Scope lost')); await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
   expect(screen.queryByRole('dialog')).toBeNull(); expect(mocks.disclose).not.toHaveBeenCalled();
 });
+
+it('explains private-thread ownership transfer and accepts only a receipt qualified by both source and destination', async () => {
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), storeTenant: 'msp', audience: 'organization_private', revision: 1 }] });
+  mocks.preview.mockResolvedValue({ actor: data().actor, preview: { storeTenant: 'msp', threadId: 'thread', audience: 'organization_private', snapshot: 'a'.repeat(64), comments: 2, attachments: 1, pendingAttachments: 0 } });
+  mocks.disclose.mockImplementation(async (_resource, request) => ({ ok: true, receipt: { storeTenant: 'customer', threadId: request.operationId, operationId: request.operationId,
+    audience: request.audience, sourceStoreTenant: 'msp', sourceThreadId: 'thread', appliedAt: '2026-09-07T00:00:00.000Z' } }));
+  mount(); await screen.findByText('Shared content'); fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.title' }));
+  await screen.findByText('coManaged.disclosure.transferHelp');
+  fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'shared_it' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull()); expect(mocks.disclose.mock.calls[0][1]).toMatchObject({ storeTenant: 'msp', threadId: 'thread', audience: 'shared_it', confirmed: true });
+});
+it('keeps an incorrectly qualified transfer receipt uncertain for an exact retry', async () => {
+  mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), storeTenant: 'msp', audience: 'organization_private', revision: 1 }] });
+  mocks.preview.mockResolvedValue({ actor: data().actor, preview: { storeTenant: 'msp', threadId: 'thread', audience: 'organization_private', snapshot: 'a'.repeat(64), comments: 2, attachments: 0, pendingAttachments: 0 } });
+  mocks.disclose.mockImplementation(async (_resource, request) => ({ ok: true, receipt: { storeTenant: 'customer', threadId: request.operationId, operationId: request.operationId,
+    audience: request.audience, sourceStoreTenant: 'msp', sourceThreadId: 'wrong-thread', appliedAt: '2026-09-07T00:00:00.000Z' } }));
+  mount(); await screen.findByText('Shared content'); fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.title' }));
+  await screen.findByText('coManaged.disclosure.transferHelp'); fireEvent.change(screen.getByLabelText('coManaged.conversation.audience'), { target: { value: 'requester' } });
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' })); await screen.findByText('coManaged.disclosure.unknownOutcome');
+  expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).toBeDisabled();
+});

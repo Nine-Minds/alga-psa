@@ -66,7 +66,10 @@ const tenantsWithAbandonedCoManagedUploads: TenantSelector = async (db) => {
   const files = await db.unscoped<{ tenant: string }>('co_management_conversation_attachments', 'upload cleanup discovers owners of discarded or stale pending files')
     .whereNull('purged_at').where(query => query.whereNotNull('discarded_at').orWhere(pending => pending.where('status', 'pending').whereNull('draft_operation_id')
       .whereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS]))).distinct('tenant');
-  return [...new Set([...drafts, ...files].map(row => row.tenant))].map(tenant => ({ tenant }));
+  const transfers = await db.unscoped<{ tenant: string }>('co_management_thread_transfers', 'upload cleanup discovers owners of abandoned thread transfers')
+    .whereNull('cleaned_at').where(query => query.where('status', 'abandoned').orWhere(expired => expired.where('status', 'prepared')
+      .whereRaw("last_activity_at <= clock_timestamp() - ? * interval '1 day'", [CO_MANAGED_UPLOAD_RETENTION_DAYS]))).distinct('tenant');
+  return [...new Set([...drafts, ...files, ...transfers].map(row => row.tenant))].map(tenant => ({ tenant }));
 };
 
 const tenantsWithPendingCoManagedNotifications: TenantSelector = (db) => db

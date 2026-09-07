@@ -570,7 +570,8 @@
       "current": "Pubblico attuale: {{audience}}",
       "help": "Risposte e allegati ereditano questo pubblico. Limitare l’accesso non recupera le informazioni già lette o scaricate.",
       "pending": "Il caricamento di un allegato è in sospeso. Completalo prima di modificare il pubblico.",
-      "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica."
+      "unknownOutcome": "Il risultato è sconosciuto. Riprova per verificare la stessa modifica.",
+      "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura."
     }
   }
 }

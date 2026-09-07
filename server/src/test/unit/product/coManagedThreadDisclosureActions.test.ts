@@ -1,11 +1,11 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ mutate: vi.fn(), preview: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
+const mocks = vi.hoisted(() => ({ mutate: vi.fn(), preview: vi.fn(), privatePreview: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {},
   Forbidden: class extends Error {}, Lifecycle: class extends Error {}, Command: class extends Error { constructor(public code: string) { super(code); } } }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
 vi.mock('@alga-psa/licensing', () => ({ CoManagedLifecycleError: mocks.Lifecycle }));
-vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedThreadDisclosureError: mocks.Command, previewCoManagedThreadDisclosure: mocks.preview }));
+vi.mock('@alga-psa/co-managed', () => ({ CoManagedSharedWorkError: mocks.Forbidden, CoManagedThreadDisclosureError: mocks.Command, previewCoManagedThreadDisclosure: mocks.preview, previewCoManagedPrivateThreadDisclosure: mocks.privatePreview }));
 vi.mock('../../../lib/co-managed/discloseTicketThread', () => ({ discloseSharedTicketThread: mocks.mutate }));
 import { previewCoManagedThreadDisclosureAction, discloseCoManagedThreadAction } from '../../../lib/actions/coManagedThreadDisclosureActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
@@ -40,4 +40,10 @@ it('qualifies preview counts with the actual browser identity and denies an API 
   expect(mocks.preview).toHaveBeenCalledWith(mocks.knex, { kind: 'session', tenant: 'home-tenant', userId: 'home-user', sessionId: 'tracked-session' }, resource, thread);
   mocks.override.mockReturnValue(mocks.user); await expect(previewCoManagedThreadDisclosureAction(resource, thread)).rejects.toBeDefined();
   expect(mocks.preview).toHaveBeenCalledOnce();
+});
+
+it('routes a private-store preview through retained private-thread authority without changing the browser actor', async () => {
+  const thread = { storeTenant: 'home-tenant', threadId: 'private-thread' }; mocks.privatePreview.mockResolvedValue({ ...thread, audience: 'organization_private' });
+  expect(await previewCoManagedThreadDisclosureAction(resource, thread)).toMatchObject({ actor: { tenant: 'home-tenant', userId: 'home-user' } });
+  expect(mocks.preview).not.toHaveBeenCalled(); expect(mocks.privatePreview).toHaveBeenCalledWith(mocks.knex, expect.objectContaining({ tenant: 'home-tenant', userId: 'home-user' }), resource, thread);
 });
