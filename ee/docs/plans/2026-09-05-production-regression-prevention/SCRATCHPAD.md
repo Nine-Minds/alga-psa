@@ -2283,3 +2283,10 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Executed canonical runtime then complete Temporal database suite sequentially at clean 2acda405cb76ac2ab35dc9eeffb94463a333a1d4. Runtime: eight passed; tenant database: 27 passed. Zero failures/skips/TODOs/pending. Both actual discoveries pass and source before/after remains identical and clean.
 - Copied raw bundles to the aggregate input and ran verify-citus-execution CLI at the same revision; aggregate passes both requirements. Terminal process exit 0 confirmed. Evidence: evidence/citus-complete-local-2acda4.json with raw-report hashes.
 - Verified all 1,138 combined migration/utility files match current sources. Quiet migration and cleanup phases were observed as live database queries; run was never restarted. Local single-node evidence does not close supported-release/multi-node upgrades, native CI or effective protections. No broad flags changed.
+
+### 2026-09-07 — independent full server unit aggregate
+
+- Added always-running Server unit execution complete job after coverage-report. It downloads the raw artifact directory layout and independently reconciles required tracked files, assertion collection, actual report outcomes and clean candidate source. Missing download or unsuccessful producer cannot become green.
+- Consumer inventory covers server unit, packages, shared and workflow actions while leaving DB-designated tests in their own lane. Current actual Vitest list matches all 2,700 required files without omissions.
+- CLI behavioral regression uses a temporary git checkout and actual report ingestion: green artifacts pass; omissions from each root, newly tracked tests, skipped/TODO/failed assertions, malformed/missing reports, dirty checkout and mismatched revision fail. Four producer/consumer tests and actionlint pass. Evidence: evidence/server-unit-independent-gate.json.
+- Collection is not runtime proof; remaining tax TODOs, native execution, effective protections and global aggregate work remain open. No broad flags changed.

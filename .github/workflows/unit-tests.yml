@@ -270,5 +270,35 @@ jobs:
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
+  server-unit-complete:
+    name: Server unit execution complete
+    needs: [coverage-report]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SERVER_UNIT_JOB_RESULT: ${{ needs.coverage-report.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download raw unit execution evidence
+        if: always()
+        uses: actions/download-artifact@v4
+        with:
+          name: server-unit-execution
+          path: test-results/server-unit-input
+      - name: Independently reconcile required files and assertions
+        if: always()
+        run: node scripts/verify-server-unit-aggregate.mjs
+      - name: Upload unit aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-unit-aggregate
+          path: test-results/server-unit-gate/
+          if-no-files-found: error
+
   # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
   # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.
