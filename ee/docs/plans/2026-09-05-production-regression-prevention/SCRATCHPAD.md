@@ -1434,3 +1434,10 @@
 - Retained all four behavioral cases, corrected workflow entry paths and virtual-clock fixtures, and strengthened restart verification to require exactly [50, 75, 90, 100] notifications after a fresh worker resumes the same workflow.
 - Added SLA integration to engine config and independent candidate discovery. Exact runner session 71496 exited zero: six files / 29 tests, no skips or missing cases, 10.41 seconds. Evidence: evidence/temporal-engine-sla-replay.json.
 - PR 3343 checks still show browser CE/EE, server unit coverage and full integration pending. Known Nx billing failure has a local committed fix; native verification and publication of the current batch remain pending. Full plan is not complete.
+
+### 2026-09-07 — Provider credential behavior becomes required
+
+- Audited unassigned Temporal candidates and selected two existing behavioral suites: Gmail adapter log hygiene (one case), Microsoft profile filesystem credentials (three cases: dummy secret resolution, missing-secret failure, polling delegation). No source-string tests or production changes added.
+- First local run ended two passes/two failures because sandbox denied the tsx subprocess IPC socket. Authorized rerun passed all four; only test-generated temporary dummy secrets were accessed.
+- Added both suites to readiness config and independent inventory selection. Exact runner session 4808 exited zero: 25 files / 188 tests, zero skips/missing identities, 3.65 seconds. Evidence: evidence/temporal-provider-secret-readiness.json. Native CI remains pending.
+- Current PR checks confirm both browser jobs, full integration and server coverage remain in progress; preserve browser run 34104450316 until terminal before publishing queued commits.
