@@ -503,6 +503,34 @@
         "msp": "MSP",
         "customer": "IT klienta"
       }
+    },
+    "conversation": {
+      "title": "Rozmowa",
+      "new": "Nowa wiadomość",
+      "reply": "Odpowiedz",
+      "edit": "Edytuj wiadomość",
+      "delete": "Usuń wiadomość",
+      "send": "Zapisz wiadomość",
+      "message": "Wiadomość",
+      "audience": "Widoczne dla",
+      "empty": "Nie ma jeszcze widocznych wiadomości.",
+      "deleted": "Ta wiadomość została usunięta.",
+      "restrictedAuthor": "Autor niedostępny",
+      "older": "Starsze wiadomości",
+      "newer": "Nowsze wiadomości",
+      "loadError": "Nie można wczytać rozmowy. Odśwież, aby sprawdzić dostęp.",
+      "deleteHelp": "Usunąć tę wiadomość? Odpowiedzi i informacje o autorze zostaną zachowane.",
+      "audiences": {
+        "requester": "Zgłaszający i zespoły IT",
+        "shared_it": "Wspólne zespoły IT",
+        "organization_private": "Tylko moja organizacja"
+      },
+      "audienceHelp": {
+        "requester": "Widoczne dla uprawnionych zgłaszających i pracowników IT obu organizacji.",
+        "shared_it": "Widoczne dla uprawnionych pracowników IT obu organizacji, bez dostępu dla zgłaszającego.",
+        "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
+      },
+      "unknownOutcome": "Nie udało się potwierdzić zapisania wiadomości. Ponów próbę, aby sprawdzić to samo żądanie."
     }
   }
 }

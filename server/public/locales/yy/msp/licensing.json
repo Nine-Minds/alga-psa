@@ -499,6 +499,34 @@
         "msp": "〖ḾŞƤ ··〗",
         "customer": "〖Ƈŭşŧȯḿḗř ĪŦ ·····〗"
       }
+    },
+    "conversation": {
+      "title": "22222",
+      "new": "22222",
+      "reply": "22222",
+      "edit": "22222",
+      "delete": "22222",
+      "send": "22222",
+      "message": "22222",
+      "audience": "22222",
+      "empty": "22222",
+      "deleted": "22222",
+      "restrictedAuthor": "22222",
+      "older": "22222",
+      "newer": "22222",
+      "loadError": "22222",
+      "deleteHelp": "22222",
+      "audiences": {
+        "requester": "22222",
+        "shared_it": "22222",
+        "organization_private": "22222"
+      },
+      "audienceHelp": {
+        "requester": "22222",
+        "shared_it": "22222",
+        "organization_private": "22222"
+      },
+      "unknownOutcome": "22222"
     }
   }
 }

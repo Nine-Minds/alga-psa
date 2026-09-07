@@ -501,6 +501,34 @@
         "msp": "MSP",
         "customer": "Équipe informatique du client"
       }
+    },
+    "conversation": {
+      "title": "Conversation",
+      "new": "Nouveau message",
+      "reply": "Répondre",
+      "edit": "Modifier le message",
+      "delete": "Supprimer le message",
+      "send": "Enregistrer le message",
+      "message": "Message",
+      "audience": "Visible par",
+      "empty": "Aucun message visible pour le moment.",
+      "deleted": "Ce message a été supprimé.",
+      "restrictedAuthor": "Auteur indisponible",
+      "older": "Messages plus anciens",
+      "newer": "Messages plus récents",
+      "loadError": "Impossible de charger cette conversation. Actualisez pour vérifier vos accès.",
+      "deleteHelp": "Supprimer ce message ? Les réponses et l’attribution de l’auteur seront conservées.",
+      "audiences": {
+        "requester": "Demandeur et équipes informatiques",
+        "shared_it": "Équipes informatiques partagées",
+        "organization_private": "Mon organisation uniquement"
+      },
+      "audienceHelp": {
+        "requester": "Visible par les demandeurs autorisés et les équipes informatiques des deux organisations.",
+        "shared_it": "Visible par les équipes informatiques autorisées des deux organisations, sans accès pour le demandeur.",
+        "organization_private": "Visible uniquement par le personnel autorisé de votre organisation."
+      },
+      "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement du message. Réessayez pour vérifier la même demande."
     }
   }
 }

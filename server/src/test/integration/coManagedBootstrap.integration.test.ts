@@ -6248,3 +6248,25 @@ it('rechecks shared edit authority after a thread lock wait and leaves no receip
     expect(publish).not.toHaveBeenCalled();
   } finally { db.removeListener('query', listener); if (!blocker.isCompleted()) await blocker.rollback(); }
 }));
+
+it('derives conversation write audiences from actual content policy and preserves read-only conversation access', async () => withConversationFixture(async ({
+  principal, customerPrincipal, resource, operation, sponsor, addCustomer, read,
+}) => {
+  const { getCoManagedConversationWriteAudiences: permissions } = await import('../../../../packages/co-managed/src/ticketConversation');
+  expect(await permissions(db, principal, resource)).toEqual(['requester', 'shared_it', 'organization_private']);
+  expect(await permissions(db, customerPrincipal, resource)).toEqual(['requester', 'shared_it', 'organization_private']);
+  await addCustomer({ note: 'Readable history' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Conversation write controls', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'update', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['comments'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  expect(await permissions(db, principal, resource)).toEqual(['organization_private']);
+  await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: ['conversation'] } });
+  expect(await permissions(db, principal, resource)).toEqual([]);
+  expect((await read(db, principal, resource)).items.map(row => row.note)).toContain('Readable history');
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await permissions(db, customerPrincipal, resource)).toEqual([]);
+  expect((await read(db, customerPrincipal, resource)).items.map(row => row.note)).toContain('Readable history');
+}));

@@ -1,10 +1,10 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ read: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
+const mocks = vi.hoisted(() => ({ read: vi.fn(), permissions: vi.fn(), session: vi.fn(), override: vi.fn(), db: vi.fn(),
   user: { user_id: 'home-user', tenant: 'home-tenant', user_type: 'internal' }, knex: {}, Forbidden: class extends Error {} }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (fn: any) => (...args: any[]) => fn(mocks.user, { tenant: mocks.user.tenant }, ...args), getSession: mocks.session, getApiKeyUserOverride: mocks.override }));
 vi.mock('@alga-psa/db', () => ({ createTenantKnex: mocks.db }));
-vi.mock('@alga-psa/co-managed', () => ({ getCoManagedTicketConversation: mocks.read, CoManagedSharedWorkError: mocks.Forbidden }));
-import { getCoManagedTicketConversationAction } from '../../../lib/actions/coManagedTicketConversationActions';
+vi.mock('@alga-psa/co-managed', () => ({ getCoManagedTicketConversation: mocks.read, getCoManagedConversationWriteAudiences: mocks.permissions, CoManagedSharedWorkError: mocks.Forbidden }));
+import { getCoManagedTicketConversationAction, getCoManagedTicketConversationScreenAction } from '../../../lib/actions/coManagedTicketConversationActions';
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 beforeEach(() => { vi.resetAllMocks(); mocks.user.user_type = 'internal'; mocks.db.mockResolvedValue({ knex: mocks.knex });
   mocks.session.mockResolvedValue({ session_id: 'tracked-session', user: { id: mocks.user.user_id, tenant: mocks.user.tenant, user_type: 'internal' } }); });
@@ -21,4 +21,10 @@ it.each(['api', 'client', 'missing', 'foreign-session'])('rejects %s identity be
   if (kind === 'foreign-session') mocks.session.mockResolvedValue({ session_id: 'tracked', user: { id: 'different', tenant: 'other', user_type: 'internal' } });
   await expect(getCoManagedTicketConversationAction(resource)).rejects.toBeInstanceOf(mocks.Forbidden);
   expect(mocks.db).not.toHaveBeenCalled(); expect(mocks.read).not.toHaveBeenCalled();
+});
+
+it('returns the actual home actor and current write hints with each authorized conversation page', async () => {
+  mocks.permissions.mockResolvedValue(['shared_it']); mocks.read.mockResolvedValue({ resource, items: [], nextBefore: null });
+  expect(await getCoManagedTicketConversationScreenAction(resource)).toEqual({ resource, items: [], nextBefore: null,
+    actor: { tenant: 'home-tenant', userId: 'home-user' }, writeAudiences: ['shared_it'] });
 });

@@ -501,6 +501,34 @@
         "msp": "MSP",
         "customer": "TI do cliente"
       }
+    },
+    "conversation": {
+      "title": "Conversa",
+      "new": "Nova mensagem",
+      "reply": "Responder",
+      "edit": "Editar mensagem",
+      "delete": "Excluir mensagem",
+      "send": "Salvar mensagem",
+      "message": "Mensagem",
+      "audience": "Visível para",
+      "empty": "Ainda não há mensagens visíveis.",
+      "deleted": "Esta mensagem foi excluída.",
+      "restrictedAuthor": "Autor indisponível",
+      "older": "Mensagens anteriores",
+      "newer": "Mensagens mais recentes",
+      "loadError": "Não foi possível carregar a conversa. Atualize para verificar seu acesso.",
+      "deleteHelp": "Excluir esta mensagem? As respostas e a identificação do autor serão mantidas.",
+      "audiences": {
+        "requester": "Solicitante e equipes de TI",
+        "shared_it": "Equipes de TI compartilhadas",
+        "organization_private": "Somente minha organização"
+      },
+      "audienceHelp": {
+        "requester": "Visível para solicitantes autorizados e equipes de TI de ambas as organizações.",
+        "shared_it": "Visível para as equipes de TI autorizadas de ambas as organizações, sem acesso para o solicitante.",
+        "organization_private": "Visível somente para o pessoal autorizado da sua organização."
+      },
+      "unknownOutcome": "Não foi possível confirmar se a mensagem foi salva. Tente novamente para verificar a mesma solicitação."
     }
   }
 }

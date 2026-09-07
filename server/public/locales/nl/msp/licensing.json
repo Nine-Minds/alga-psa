@@ -499,6 +499,34 @@
         "msp": "MSP",
         "customer": "IT-afdeling van de klant"
       }
+    },
+    "conversation": {
+      "title": "Gesprek",
+      "new": "Nieuw bericht",
+      "reply": "Beantwoorden",
+      "edit": "Bericht bewerken",
+      "delete": "Bericht verwijderen",
+      "send": "Bericht opslaan",
+      "message": "Bericht",
+      "audience": "Zichtbaar voor",
+      "empty": "Er zijn nog geen zichtbare berichten.",
+      "deleted": "Dit bericht is verwijderd.",
+      "restrictedAuthor": "Auteur niet beschikbaar",
+      "older": "Oudere berichten",
+      "newer": "Nieuwere berichten",
+      "loadError": "Het gesprek kan niet worden geladen. Vernieuw om je toegang te controleren.",
+      "deleteHelp": "Dit bericht verwijderen? Reacties en auteursgegevens blijven behouden.",
+      "audiences": {
+        "requester": "Aanvrager en IT-teams",
+        "shared_it": "Gedeelde IT-teams",
+        "organization_private": "Alleen mijn organisatie"
+      },
+      "audienceHelp": {
+        "requester": "Zichtbaar voor bevoegde aanvragers en IT-medewerkers van beide organisaties.",
+        "shared_it": "Zichtbaar voor bevoegde IT-medewerkers van beide organisaties, zonder toegang voor de aanvrager.",
+        "organization_private": "Alleen zichtbaar voor bevoegde medewerkers van je organisatie."
+      },
+      "unknownOutcome": "We konden niet bevestigen of het bericht is opgeslagen. Probeer opnieuw om hetzelfde verzoek te controleren."
     }
   }
 }

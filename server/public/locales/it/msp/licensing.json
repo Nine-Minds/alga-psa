@@ -501,6 +501,34 @@
         "msp": "MSP",
         "customer": "IT del cliente"
       }
+    },
+    "conversation": {
+      "title": "Conversazione",
+      "new": "Nuovo messaggio",
+      "reply": "Rispondi",
+      "edit": "Modifica messaggio",
+      "delete": "Elimina messaggio",
+      "send": "Salva messaggio",
+      "message": "Messaggio",
+      "audience": "Visibile a",
+      "empty": "Nessun messaggio visibile al momento.",
+      "deleted": "Questo messaggio è stato eliminato.",
+      "restrictedAuthor": "Autore non disponibile",
+      "older": "Messaggi precedenti",
+      "newer": "Messaggi più recenti",
+      "loadError": "Impossibile caricare la conversazione. Aggiorna per verificare il tuo accesso.",
+      "deleteHelp": "Eliminare questo messaggio? Le risposte e l’attribuzione dell’autore saranno conservate.",
+      "audiences": {
+        "requester": "Richiedente e team IT",
+        "shared_it": "Team IT condivisi",
+        "organization_private": "Solo la mia organizzazione"
+      },
+      "audienceHelp": {
+        "requester": "Visibile ai richiedenti autorizzati e al personale IT di entrambe le organizzazioni.",
+        "shared_it": "Visibile al personale IT autorizzato di entrambe le organizzazioni, senza accesso per il richiedente.",
+        "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
+      },
+      "unknownOutcome": "Non è stato possibile confermare il salvataggio del messaggio. Riprova per verificare la stessa richiesta."
     }
   }
 }

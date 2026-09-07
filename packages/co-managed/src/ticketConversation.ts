@@ -1,4 +1,5 @@
 import type { Knex } from 'knex';
+import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
@@ -121,4 +122,25 @@ export async function getCoManagedTicketConversation(db: Knex, inputActor: CoMan
   return actor.tenant === inputResource.tenant
     ? withCoManagedCustomerTicket(db, actor, inputResource, 'read', context => readConversation(context, cursor))
     : withCoManagedSharedWork(db, actor, inputResource, 'read', context => readConversation(context, cursor));
+}
+
+/** Presentation hints only; every submission repeats command authorization.
+ * Take update authority before read authority to avoid share-lock upgrades. */
+export async function getCoManagedConversationWriteAudiences(db: Knex, inputActor: CoManagedSessionActor,
+  resource: CoManagedSharedResource): Promise<CommentAudience[]> {
+  const actor = snapshotCoManagedSessionActor(inputActor);
+  const foreign = actor.tenant !== resource.tenant;
+  const authorize = foreign ? withCoManagedSharedWork : withCoManagedCustomerTicket;
+  try {
+    return await authorize(db, actor, resource, 'update', context => authorize(context.trx, actor, resource, 'read', async readContext => {
+      const hidden = [...context.redactedFields, ...readContext.redactedFields];
+      const customerHidden = isCoManagedReadFieldHidden(hidden, [...historySources, 'comments', 'comment_threads']);
+      const privateHidden = isCoManagedReadFieldHidden(hidden, [...historySources, 'co_management_private_threads', 'co_management_private_comments', 'revision']);
+      await assertCoManagedSessionUnexpired(context.trx, actor);
+      return [...(customerHidden ? [] : ['requester', 'shared_it']), ...((foreign ? privateHidden : customerHidden) ? [] : ['organization_private'])] as CommentAudience[];
+    }));
+  } catch (error) {
+    if (error instanceof CoManagedSharedWorkError || error instanceof CoManagedLifecycleError) return [];
+    throw error;
+  }
 }

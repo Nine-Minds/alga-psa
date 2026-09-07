@@ -501,6 +501,34 @@
         "msp": "MSP",
         "customer": "TI del cliente"
       }
+    },
+    "conversation": {
+      "title": "Conversación",
+      "new": "Nuevo mensaje",
+      "reply": "Responder",
+      "edit": "Editar mensaje",
+      "delete": "Eliminar mensaje",
+      "send": "Guardar mensaje",
+      "message": "Mensaje",
+      "audience": "Visible para",
+      "empty": "Aún no hay mensajes visibles.",
+      "deleted": "Este mensaje fue eliminado.",
+      "restrictedAuthor": "Autor no disponible",
+      "older": "Mensajes anteriores",
+      "newer": "Mensajes más recientes",
+      "loadError": "No se puede cargar la conversación. Actualiza para comprobar tu acceso.",
+      "deleteHelp": "¿Eliminar este mensaje? Se conservarán las respuestas y la atribución del autor.",
+      "audiences": {
+        "requester": "Solicitante y equipos de TI",
+        "shared_it": "Equipos de TI compartidos",
+        "organization_private": "Solo mi organización"
+      },
+      "audienceHelp": {
+        "requester": "Visible para solicitantes autorizados y personal de TI de ambas organizaciones.",
+        "shared_it": "Visible para el personal de TI autorizado de ambas organizaciones, sin acceso para el solicitante.",
+        "organization_private": "Visible solo para el personal autorizado de tu organización."
+      },
+      "unknownOutcome": "No pudimos confirmar si se guardó el mensaje. Reintenta para comprobar la misma solicitud."
     }
   }
 }

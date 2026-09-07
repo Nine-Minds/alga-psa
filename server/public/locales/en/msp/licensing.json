@@ -588,6 +588,34 @@
         "msp": "MSP",
         "customer": "Customer IT"
       }
+    },
+    "conversation": {
+      "title": "Conversation",
+      "new": "New message",
+      "reply": "Reply",
+      "edit": "Edit message",
+      "delete": "Delete message",
+      "send": "Save message",
+      "message": "Message",
+      "audience": "Visible to",
+      "empty": "No messages are visible yet.",
+      "deleted": "This message was deleted.",
+      "restrictedAuthor": "Author unavailable",
+      "older": "Older messages",
+      "newer": "Newer messages",
+      "loadError": "Unable to load this conversation. Refresh to check your current access.",
+      "deleteHelp": "Delete this message? Replies and author attribution will remain.",
+      "audiences": {
+        "requester": "Requester and IT teams",
+        "shared_it": "Shared IT teams",
+        "organization_private": "My organization only"
+      },
+      "audienceHelp": {
+        "requester": "Visible to authorized requesters and IT staff in both organizations.",
+        "shared_it": "Visible to authorized IT staff in both organizations, without requester access.",
+        "organization_private": "Visible only to authorized staff in your organization."
+      },
+      "unknownOutcome": "We could not confirm whether the message was saved. Retry to check the same request."
     }
   }
 }

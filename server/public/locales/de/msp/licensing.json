@@ -499,6 +499,34 @@
         "msp": "MSP",
         "customer": "Kunden-IT"
       }
+    },
+    "conversation": {
+      "title": "Unterhaltung",
+      "new": "Neue Nachricht",
+      "reply": "Antworten",
+      "edit": "Nachricht bearbeiten",
+      "delete": "Nachricht löschen",
+      "send": "Nachricht speichern",
+      "message": "Nachricht",
+      "audience": "Sichtbar für",
+      "empty": "Noch keine sichtbaren Nachrichten.",
+      "deleted": "Diese Nachricht wurde gelöscht.",
+      "restrictedAuthor": "Autor nicht verfügbar",
+      "older": "Ältere Nachrichten",
+      "newer": "Neuere Nachrichten",
+      "loadError": "Die Unterhaltung konnte nicht geladen werden. Aktualisieren Sie, um Ihren Zugriff zu prüfen.",
+      "deleteHelp": "Diese Nachricht löschen? Antworten und Autorenangaben bleiben erhalten.",
+      "audiences": {
+        "requester": "Anfragende und IT-Teams",
+        "shared_it": "Gemeinsame IT-Teams",
+        "organization_private": "Nur meine Organisation"
+      },
+      "audienceHelp": {
+        "requester": "Sichtbar für berechtigte Anfragende und IT-Mitarbeitende beider Organisationen.",
+        "shared_it": "Sichtbar für berechtigte IT-Mitarbeitende beider Organisationen, ohne Zugriff für Anfragende.",
+        "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
+      },
+      "unknownOutcome": "Das Speichern der Nachricht konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage zur Prüfung."
     }
   }
 }
