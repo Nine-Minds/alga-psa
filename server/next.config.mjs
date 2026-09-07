@@ -546,11 +546,17 @@ const nextConfig = {
     // Filesystem cache: persists across builds (even after `rm -rf .next`)
     // so the second cold build reuses module compilation work. Stored under
     // node_modules/.cache/webpack so it survives `.next` clears.
+    // Keep Next's cache version and dev memory policy. Replacing this object
+    // discarded maxMemoryGenerations: 0 (Next manages its own memory cache)
+    // and the version metadata that invalidates incompatible cached builds.
+    const nextCache = typeof config.cache === 'object' && config.cache !== null ? config.cache : {};
     config.cache = {
+      ...nextCache,
       type: 'filesystem',
       cacheDirectory: path.join(__dirname, 'node_modules/.cache/webpack'),
       buildDependencies: {
-        config: [__filename],
+        ...nextCache.buildDependencies,
+        config: [...new Set([...(nextCache.buildDependencies?.config ?? []), __filename])],
       },
       // Snapshot all node_modules as immutable by mtime — avoids hash-stat on
       // every file (huge in this monorepo).

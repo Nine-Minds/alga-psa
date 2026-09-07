@@ -40,9 +40,18 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await choose('[role="combobox"][id^="transform-sort-direction-"]', 'Descending');
   await assertDates();
   await page.locator('[data-automation-id="invoice-designer-design-tab"]').click();
+  // Keep a primary charges table, then author a separate informational detail
+  // table so billed time does not replace the invoice's charge presentation.
+  await page.locator('#designer-palette-add-dynamic-table').click();
   await page.locator('#designer-palette-add-dynamic-table').click();
   await choose('#designer-table-source-binding', `${outputBinding} (Transforms output)`);
-  await page.locator('#designer-add-column-preset-entry-date').click();
+  const removeColumns = page.locator('button[id^="designer-remove-column-"]');
+  for (let remaining = await removeColumns.count(); remaining > 0; remaining--) {
+    await removeColumns.first().click();
+  }
+  for (const preset of ['entry-date', 'entry-ticket', 'entry-title', 'entry-hours', 'entry-rate', 'entry-amount']) {
+    await page.locator(`#designer-add-column-preset-${preset}`).click();
+  }
   await page.locator('#save-template-button').click();
   await expect(page).not.toHaveURL(/templateId=/);
 
@@ -55,11 +64,14 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     operations: [{ type: 'sort', keys: [{ path: 'date', direction: 'desc' }] }],
   });
   const tables = dynamicTables(saved.templateAst.layout);
-  expect(tables).toHaveLength(1);
-  expect(tables[0].repeat.sourceBinding.bindingId).toContain(outputBinding);
-  expect(tables[0].columns).toEqual(expect.arrayContaining([
-    expect.objectContaining({ value: expect.objectContaining({ type: 'path', path: 'date' }) }),
-  ]));
+  expect(tables).toHaveLength(2);
+  const detailTable = tables.find(table => table.repeat.sourceBinding.bindingId.includes(outputBinding));
+  expect(detailTable).toBeTruthy();
+  const primaryTable = tables.find(table => table.id !== detailTable.id);
+  expect(primaryTable.repeat.sourceBinding.bindingId).toContain('items');
+  expect(detailTable.columns.map((column: any) => column.value)).toEqual([
+    'date', 'ticketNumber', 'title', 'hours', 'rateDisplay', 'amount',
+  ].map(path => expect.objectContaining({ type: 'path', path })));
   const persistedAst = structuredClone(saved.templateAst);
   await testInfo.attach('saved-invoice-layout', { body: JSON.stringify({ templateId: saved.template_id, ast: persistedAst }, null, 2), contentType: 'application/json' });
 
@@ -77,8 +89,9 @@ test('an administrator authors a billed-time date sort and reopens its persisted
   await expect(page.locator('#invoice-designer-transforms-output-binding')).toHaveValue(outputBinding);
   await assertDates();
   await page.locator('[data-automation-id="invoice-designer-design-tab"]').click();
-  await page.locator(`[data-automation-id="designer-canvas-node-${tables[0].id}"]`).click();
+  await page.locator(`[data-automation-id="designer-canvas-node-${detailTable.id}"]`).click();
   await expect(page.locator('#designer-table-source-binding')).toContainText(outputBinding);
+  await expect(page.locator('input[id^="column-header-"]')).toHaveCount(6);
   expect((await database('invoice_templates').where({ tenant: tenant.tenantId, template_id: saved.template_id }).first()).templateAst)
     .toEqual(persistedAst);
 });
