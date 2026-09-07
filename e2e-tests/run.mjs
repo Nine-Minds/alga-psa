@@ -49,6 +49,10 @@ try {
   const after = testRevision(root);
   evidence.source = { before, after };
   evidence.workingTreeDirty = Boolean(before?.dirty || after.dirty);
+  if (evidence.workingTreeDirty) {
+    evidence.status = 'failed';
+    evidence.failures.push('Browser gate requires clean source before and after execution');
+  }
   if (before?.revision !== after.revision) {
     evidence.status = 'failed';
     evidence.failures.push('Repository revision changed during browser testing');

@@ -1530,3 +1530,10 @@
 - browserTestMetrics previously checked revision and raw execution but could project passed from an evidence manifest marked dirty or lacking before/after source provenance. New behavioral case reproduced actual passed vs expected failed.
 - Metrics now require explicit clean before/after revisions, empty change lists and workingTreeDirty:false. Missing/dirty/changed provenance records a failure without copying source file details or secret payloads to metrics. Existing versioned columns unchanged.
 - Browser metrics and Sheets projection tests: nine passed. Covers five source-evidence mutations in addition to missing execution/retries/edition/column behavior. Native verification remains pending; full F024/F025 not claimed complete.
+
+### 2026-09-07 — Browser command aligns with source-evidence readiness
+
+- Reprojected prior native CE/EE raw artifacts through updated metrics: retains 22/24 passed and one failed invoice fixture respectively, no source failures (both native checkouts clean).
+- Found companion gap: browser run.mjs recorded workingTreeDirty but still exited zero for otherwise passing reports. New command-level test uses a temporary Git checkout and simulated Playwright report producer to exercise clean, already-dirty and changed-during-execution states. Before fix dirty command incorrectly exited zero.
+- Browser gate now fails dirty before/after source. All ten browser runner/metrics/Sheets tests pass; test asserts raw passing case count remains one while dirty command is rejected. No customer/browser behavior replaced by the protocol fixture.
+- Native browser job 101707718632 remains live (credentials setup observed); preserve run pending completion.
