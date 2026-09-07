@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PNG } from 'pngjs';
+import { loadVisualBaseline } from '../../../test-utils/visualBaseline';
 
 import { tenantDb } from '@alga-psa/db';
 import { createTestDbConnection } from '../../../test-utils/dbConfig';
@@ -28,9 +29,8 @@ import { seedBillingCycle } from '../../../test-utils/billingProfileTestHelpers'
 // Chromium at a fixed A4-at-96dpi viewport and compared against checked-in
 // baseline PNGs pixel by pixel.
 //
-// First run (no baseline for a template) WRITES the baseline into
-// __baselines__/ and passes; subsequent runs compare with a ~1% differing-
-// pixel tolerance. See README.md in this directory for baseline updates and
+// Missing baselines fail. Explicit local UPDATE_VISUAL_BASELINES=1 updates
+// reviewed inputs; comparison uses a ~1% differing-pixel tolerance. See README.md in this directory for baseline updates and
 // the renderer-version brittleness warning. This suite is deliberately NOT in
 // tier1.manifest.json — it reviews template changes, it does not gate PRs.
 //
@@ -498,7 +498,6 @@ describeDb('visual goldens: standard invoice templates', () => {
       ]),
     );
 
-    await fs.mkdir(BASELINE_DIR, { recursive: true });
 
     // ---- rasterize + compare ----------------------------------------------
     const generatedBaselines: string[] = [];
@@ -534,10 +533,20 @@ describeDb('visual goldens: standard invoice templates', () => {
         );
 
         const baselinePath = path.join(BASELINE_DIR, `${code}.png`);
-        const baselineBuf = await fs.readFile(baselinePath).catch(() => null);
-        if (!baselineBuf) {
-          await fs.writeFile(baselinePath, actualPng);
-          generatedBaselines.push(code);
+        let baselineBuf: Buffer;
+        try {
+          const loaded = await loadVisualBaseline(baselinePath, actualPng, {
+            update: process.env.UPDATE_VISUAL_BASELINES === '1',
+            ci: Boolean(process.env.CI && process.env.CI !== 'false'),
+          });
+          if (loaded.updated) {
+            generatedBaselines.push(code);
+            continue;
+          }
+          baselineBuf = loaded.baseline;
+        } catch (error) {
+          const outputDir = await writeFailureArtifacts(code, actualPng);
+          failures.push(`${code}: ${error instanceof Error ? error.message : String(error)} (actual written to ${outputDir})`);
           continue;
         }
 

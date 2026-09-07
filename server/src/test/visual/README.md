@@ -32,11 +32,13 @@ cd server && TZ=UTC SECRET_FS_BASE_PATH=/nonexistent \
 
 ## Updating baselines
 
-Delete the affected PNG(s) in `__baselines__/` and rerun. A run that finds no
-baseline for a template writes one and passes, logging
-`generated baselines (commit them): ...` — review the new PNG, then commit
-it alongside the template change. There is no update flag; deletion is the
-explicit "yes, the layout is supposed to change" gesture.
+Missing baselines fail and write the actual render to `__output__/` for inspection.
+Comparison runs never create or replace reviewed baselines.
+
+To intentionally create or replace baselines, run the command above locally with
+`UPDATE_VISUAL_BASELINES=1`. Review the PNG changes, then commit them alongside the
+template change. Update mode replaces every rendered template baseline and is
+rejected in CI. Never use an update run as regression-pass evidence.
 
 ## Renderer-version brittleness
 
@@ -46,7 +48,7 @@ font library (the templates use the system-ui font stack), and the viewport
 emulation all leave fingerprints in the pixels. A puppeteer/Chromium bump, an
 OS upgrade, or running on a different platform than the one that produced
 the baselines can shift well over the 1% tolerance with zero template
-changes. When that happens, regenerate the baselines (delete + rerun) on the
+changes. When that happens, regenerate the baselines with the explicit local update flag on the
 new stack and eyeball the before/after — do not chase per-pixel deltas.
 
 ## Not a PR gate

@@ -1801,3 +1801,15 @@ Evidence includes collection hashes and the exact unmatched list in
 fixture migration, remaining server service tests and classification of source-only
 Temporal contracts. The visual invoice suite currently writes a missing baseline
 and passes, so it needs explicit update mode before becoming mandatory.
+
+### Fail closed on missing invoice visual baselines (2026-09-07)
+
+Replaced automatic baseline creation with a shared filesystem policy: missing
+baseline fails and the suite retains the actual render as diagnostics. Explicit
+local UPDATE_VISUAL_BASELINES=1 creates/replaces baselines; CI rejects update mode.
+Four unit cases exercise filesystem outcomes using disposable bytes/directories;
+all pass, covering absence, preservation, update and CI refusal. The invoice
+visual suite collects with RUN_VISUAL=1 and a required DB TCP probe. Did not run
+its destructive reset hook or compare actual rendered images, and no checked-in
+PNGs changed. README documents review and update mode. Visual suite remains an
+open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.json`.
