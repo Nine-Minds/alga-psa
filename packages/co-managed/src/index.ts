@@ -39,3 +39,5 @@ export * from './customerEmailDeliveries';
 export * from './requesterCommentEmail';
 export * from './requesterReplyTokens';
 export * from './requesterEmailDeliveries';
+
+export * from './customerReplyTokens';

@@ -198,3 +198,17 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: replyParser.ts and the actual co-managed requester rendering/parser round trip.
 - Gate: reproduced malformed canonical reply input, stable explicit marker contract; ACT / bounded parser correction.
 - Status: revised (2026-09-07). An attribute inside an opening tag trims from that tag's start. Requester notifications place their boundary before the quoted notification, so the answer excludes old mail in both text and HTML while token extraction remains intact. Native parser fixtures and delimiter regressions remain covered.
+
+
+## Customer technician email reply authority — pattern
+- What: requester and customer-technician reply tokens both retain delivery/address/source identity, but technicians need current local read and update permissions and must not widen an answer's audience after the original email was sent.
+- Where: customerReplyTokens.ts, requesterReplyTokens.ts and the customer-owned notification reader.
+- Gate: repeated opaque-token persistence is marked for observation; recipient kinds, lifecycle and reply policy differ. Reuse existing locked content, RBAC and lifecycle boundaries without introducing a generic principal bypass.
+- Status: added (2026-09-07). Customer-owned `cm2:` tokens bind the internal user, original sent address and exact source thread/audience. Admission intersects current read/update RBAC and bundle restrictions, current active internal identity, source publication and lifecycle. Savepoint rollback protects an enclosing inbox transaction even when it catches a late expiry rejection. The actual notification transport and incoming mail adapter remain to be connected before production issuance.
+
+
+## Savepoint after-commit ownership — friction
+- What: a raw Knex savepoint creates a distinct transaction object; hooks registered by reply writers on it are lost when only the outer owning transaction flushes. Flushing on savepoint release would publish work that can still roll back.
+- Where: db withSavepoint/afterCommit helpers and customerReplyTokens.ts.
+- Gate: reproduced through actual technician reply transactions; high lost/premature notification cost and stable existing hook ownership contract; ACT / bounded database-engine addition.
+- Status: revised (2026-09-07). Explicit withSavepoint requires an owning transaction, promotes successful child hooks to that parent without dispatch, and discards hooks on rollback. The ordinary withTransaction behavior is unchanged. Actual root and enclosing reply transactions prove hooks see committed database state only once, while child rejection and outer rollback produce no hooks. Existing after-commit unit regressions remain covered.

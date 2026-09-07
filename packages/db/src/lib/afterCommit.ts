@@ -53,6 +53,14 @@ function addHook(trx: object, entry: HookEntry): void {
   }
 }
 
+/** A released savepoint is not a commit. Transfer its hooks to the transaction
+ * that owns the eventual commit; omit parent to discard rolled-back work. */
+export function settleSavepointHooks(savepoint: object, parent?: object): void {
+  const hooks = afterCommitHooks.get(savepoint);
+  afterCommitHooks.delete(savepoint);
+  if (parent && hooks) for (const entry of hooks) addHook(parent, entry);
+}
+
 /**
  * Run and clear the hooks queued on `trx`, in registration order. Only the
  * transaction-owning frame may call this, and only after a successful

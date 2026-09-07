@@ -10,7 +10,7 @@ import { getKnexConfig } from './knexfile';
 import logger from '@alga-psa/core/logger';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { isReadOnlyError, retryOnReadOnly } from './readOnlyRetry';
-import { flushAfterCommitHooks } from './afterCommit';
+import { flushAfterCommitHooks, settleSavepointHooks } from './afterCommit';
 
 type PoolConfig = KnexType.PoolConfig & {
   afterCreate?: (connection: any, done: (err: Error | null, connection: any) => void) => void;
@@ -219,6 +219,21 @@ export async function withTenantTransactionRetryReadOnly<T>(
     await refreshTenantConnection();
     const knex = await getConnection(tenantId);
     return await ownTransaction(knex, tenantId, callback);
+  }
+}
+
+/** Explicit rollback boundary within an existing transaction. Successful hooks
+ * move to the parent; neither release nor rollback dispatches external work. */
+export async function withSavepoint<T>(parent: KnexType.Transaction, callback: (trx: KnexType.Transaction) => Promise<T>): Promise<T> {
+  if (!parent?.isTransaction) throw new Error('A savepoint requires an owning transaction');
+  let savepoint: KnexType.Transaction | undefined;
+  try {
+    const result = await parent.transaction(trx => { savepoint = trx; return callback(trx); });
+    if (savepoint) settleSavepointHooks(savepoint, parent);
+    return result;
+  } catch (error) {
+    if (savepoint) settleSavepointHooks(savepoint);
+    throw error;
   }
 }
 

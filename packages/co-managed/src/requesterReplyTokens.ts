@@ -16,6 +16,7 @@ function activeToken(trx: Knex.Transaction, tenant: string, token: string) {
 }
 const IDENTITY = ['tenant', 'delivery_key', 'recipient_kind', 'client_id', 'recipient_id', 'recipient_email', 'ticket_id', 'thread_id', 'comment_id'] as const;
 
+// LEVERAGE: pattern qualified-email-reply-token — requester and technician tokens bind immutable delivery/address/source identities under distinct authority.
 /** Issue within the delivery's owning transaction and send only after commit.
  * A provider acknowledgement loss reuses the same token for the same delivery
  * and address. Address changes get distinct tokens; old mail cannot authorize

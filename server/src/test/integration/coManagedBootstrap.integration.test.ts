@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -8966,4 +8966,251 @@ it('moves primary requester delivery out of the native subscriber without bypass
     await handle(event, db);
     expect(requester).toHaveBeenCalledTimes(1); expect(native).not.toHaveBeenCalled();
   } finally { native.mockRestore(); requester.mockRestore(); for (const spy of spies.reverse()) spy.mockRestore(); }
+}));
+
+async function withCustomerReplyTokenFixture(work: (fixture: Parameters<Parameters<typeof withCustomerEmailQueueFixture>[0]>[0] & {
+  issue: (deliveryKey?: string) => Promise<{ token: string; email: string } | null>;
+  reply: typeof import('../../../../packages/co-managed/src/customerReplyTokens').withCoManagedCustomerEmailReply;
+  senderAuth: import('../../../../shared/lib/email/senderAuthVerification').SenderAuthResults;
+}) => Promise<void>) {
+  await withCustomerEmailQueueFixture(async fixture => {
+    const { issueCoManagedCustomerReplyToken: issue, withCoManagedCustomerEmailReply: reply } = await import('../../../../packages/co-managed/src/customerReplyTokens');
+    const { verifySenderAuthentication } = await import('../../../../shared/lib/email/senderAuthVerification');
+    const senderAuth = verifySenderAuthentication('mx.example.test; spf=pass smtp.mailfrom=example.test', 'technician@example.test')!;
+    await fixture.customer.table('users').where('user_id', fixture.recipient.userId).update({ email: 'technician@example.test' });
+    await work({ ...fixture, reply, senderAuth, issue: (deliveryKey = 'customer-technician-reply-test') => issue(db, {
+      recipient: fixture.recipient, resource: fixture.localResource, commentId: fixture.request.commentId, deliveryKey,
+    }) });
+  });
+}
+
+it('issues stable customer technician tokens without granting an interactive identity and binds each sent address', async () => withCustomerReplyTokenFixture(async ({
+  customer, recipient, issue, resource, reply, senderAuth,
+}) => {
+  const [first, repeated] = await Promise.all([issue(), issue()]);
+  expect(first).toEqual(repeated); expect(first!.token).toMatch(/^cm2:[A-Za-z0-9_-]{43}$/);
+  expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(1);
+  expect(await customer.table('sessions').where('user_id', recipient.userId)).toHaveLength(0);
+  await customer.table('users').where('user_id', recipient.userId).update({ email: 'changed@example.test' });
+  const next = await issue(); expect(next!.token).not.toBe(first!.token); expect(next!.email).toBe('changed@example.test');
+  const write = vi.fn();
+  for (const senderEmail of ['technician@example.test', 'changed@example.test']) {
+    await expect(reply(db, { tenant: resource.tenant, token: first!.token, senderEmail, senderAuth }, write)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  expect(write).not.toHaveBeenCalled();
+  expect(await reply(db, { tenant: resource.tenant, token: next!.token, senderEmail: ' CHANGED@example.test ', senderAuth }, async context => context.actor.userId)).toBe(recipient.userId);
+}));
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('admits customer technician replies to the canonical %s thread using current local authority', async audience => withCustomerReplyTokenFixture(async ({
+  customer, sponsor, recipient, resource, localResource, request, issue, reply, senderAuth,
+}) => {
+  const parent = await customer.table('comments').where('comment_id', request.commentId).first();
+  await customer.table('comment_threads').where('thread_id', parent.thread_id).update({ collaboration_audience: audience, is_internal: audience !== 'requester' });
+  await customer.table('comments').where('comment_id', request.commentId).update({ is_internal: audience !== 'requester' });
+  const issued = await issue();
+  // Customer ownership does not depend on an MSP user grant or sponsor session.
+  await sponsor.table('co_management_staff_assignments').where('customer_tenant', resource.tenant).del();
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  const commentId = randomUUID();
+  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  await reply(db, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
+    expect(context).toMatchObject({ actor: { tenant: resource.tenant, userId: recipient.userId }, resource: localResource,
+      parentCommentId: request.commentId, threadId: parent.thread_id, audience });
+    await Comment.insert(context.trx, resource.tenant, { comment_id: commentId, ticket_id: resource.id, thread_id: context.threadId,
+      parent_comment_id: context.parentCommentId, note: 'Actual customer technician reply', markdown_content: 'Actual customer technician reply',
+      user_id: context.actor.userId, is_internal: audience !== 'requester', is_resolution: false, author_type: 'internal', publish_state: 'published' });
+  });
+  expect(await customer.table('comments').where('comment_id', commentId).first()).toMatchObject({ user_id: recipient.userId, contact_id: null,
+    actor_reference_id: null, thread_id: parent.thread_id, parent_comment_id: request.commentId, is_internal: audience !== 'requester' });
+  expect(await sponsor.table('comments').where('comment_id', commentId)).toHaveLength(0);
+}));
+
+it.each(['sender', 'authentication', 'inactive', 'portal', 'no_role', 'no_update', 'suspended', 'audience', 'deleted', 'unpublished', 'expired', 'revoked', 'foreign_tenant'] as const)(
+  'rejects customer technician reply after %s changes without calling the writer', async condition => withCustomerReplyTokenFixture(async ({
+    customer, principal, recipient, resource, request, issue, reply, senderAuth,
+  }) => {
+    const issued = await issue(), input = { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth };
+    if (condition === 'sender') input.senderEmail = 'other@example.test';
+    if (condition === 'authentication') input.senderAuth = { ...senderAuth, aligned: false };
+    if (condition === 'inactive') await customer.table('users').where('user_id', recipient.userId).update({ is_inactive: true });
+    if (condition === 'portal') await customer.table('users').where('user_id', recipient.userId).update({ user_type: 'client' });
+    if (condition === 'no_role') await customer.table('user_roles').where('user_id', recipient.userId).del();
+    if (condition === 'no_update') {
+      const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).first();
+      await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+    }
+    if (condition === 'suspended') await customer.table('tenants').update({ suspended_at: new Date() });
+    if (condition === 'audience') {
+      const parent = await customer.table('comments').where('comment_id', request.commentId).first();
+      await customer.table('comment_threads').where('thread_id', parent.thread_id).update({ collaboration_audience: 'requester', is_internal: false });
+      await customer.table('comments').where('comment_id', parent.comment_id).update({ is_internal: false });
+    }
+    if (condition === 'deleted') await customer.table('comments').where('comment_id', request.commentId).update({ deleted_at: new Date() });
+    if (condition === 'unpublished') await customer.table('comments').where('comment_id', request.commentId).update({ publish_state: 'scheduled' });
+    if (condition === 'expired' || condition === 'revoked') await customer.table('co_management_customer_reply_tokens').where('token', issued!.token)
+      .update({ [condition === 'expired' ? 'expires_at' : 'revoked_at']: new Date(Date.now() - 1000) });
+    if (condition === 'foreign_tenant') input.tenant = principal.tenant;
+    const write = vi.fn();
+    await expect(reply(db, input, write)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(write).not.toHaveBeenCalled();
+  }));
+
+it('rolls back late customer technician reply rejection to a savepoint even when its enclosing inbox transaction catches the error', async () => withCustomerReplyTokenFixture(async ({
+  customer, resource, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), original = await customer.table('tickets').where('ticket_id', resource.id).first('title');
+  await db.transaction(async outer => {
+    await expect(reply(outer, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
+      const owner = tenantDb(context.trx, resource.tenant);
+      await owner.table('tickets').where('ticket_id', resource.id).update({ title: 'Must roll back before quarantine' });
+      await owner.table('co_management_customer_reply_tokens').where('token', issued!.token).update({ expires_at: new Date(Date.now() - 1000) });
+    })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await tenantDb(outer, resource.tenant).table('tickets').where('ticket_id', resource.id).first('title')).toEqual(original);
+  });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual(original);
+  expect((await customer.table('co_management_customer_reply_tokens').first()).expires_at).toBeNull();
+}));
+
+it('holds customer technician token, source and identity locks through reply writes and rolls back writer failure', async () => withCustomerReplyTokenFixture(async ({
+  customer, recipient, resource, request, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), parent = await customer.table('comments').where('comment_id', request.commentId).first();
+  const original = await customer.table('tickets').where('ticket_id', resource.id).first('title');
+  await expect(reply(db, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
+    for (const [table, where] of [
+      ['users', { user_id: recipient.userId }], ['tickets', { ticket_id: resource.id }], ['comment_threads', { thread_id: parent.thread_id }],
+      ['comments', { comment_id: request.commentId }], ['co_management_customer_reply_tokens', { token: issued!.token }],
+    ] as const) await expect(db.transaction(async trx => {
+      await tenantDb(trx, resource.tenant).table(table).where(where).forUpdate().noWait().first();
+    })).rejects.toMatchObject({ code: '55P03' });
+    await tenantDb(context.trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ title: 'Uncommitted reply mutation' });
+    throw new Error('Transient writer failure');
+  })).rejects.toThrow('Transient writer failure');
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual(original);
+}));
+
+it('keeps customer technician token issuance transactional, refuses identity reuse and preserves revoked token history', async () => withCustomerReplyTokenFixture(async ({
+  customer, recipient, localResource, request, issue, addCustomer,
+}) => {
+  const tokens = await import('../../../../packages/co-managed/src/customerReplyTokens');
+  const input = { recipient, resource: localResource, commentId: request.commentId, deliveryKey: 'rolled-back-tech-token' };
+  await expect(db.transaction(async trx => { await tokens.issueCoManagedCustomerReplyToken(trx, input); throw new Error('Abort token'); })).rejects.toThrow('Abort token');
+  expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(0);
+  const issued = await issue();
+  const other = await addCustomer({ note: 'Different technician reply source', audience: 'shared_it', internal: true, foreign: true });
+  await expect(tokens.issueCoManagedCustomerReplyToken(db, { ...input, commentId: other.id, deliveryKey: 'customer-technician-reply-test' })).rejects.toThrow('identity conflict');
+  await customer.table('co_management_customer_reply_tokens').where('token', issued!.token).update({ revoked_at: new Date() });
+  expect(await issue()).toBeNull();
+  expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(1);
+  const migration = require('../../../migrations/20260907080000_create_co_management_customer_reply_tokens.cjs');
+  await migration.up(db); await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+}));
+
+it.each(['update_scope', 'update_redaction', 'read_redaction'] as const)('enforces current %s bundle policy on customer technician reply tokens', async condition => withCustomerReplyTokenFixture(async ({
+  customer, customerPrincipal, recipient, resource, request, issue, reply, senderAuth, readCustomer,
+}) => {
+  const issued = await issue(), ticket = await customer.table('tickets').where('ticket_id', resource.id).first('client_id');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Technician reply policy', actorUserId: customerPrincipal.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId,
+    resourceType: 'ticket', action, templateKey: 'selected_clients', config: {
+      selectedClientIds: [condition === 'update_scope' && action === 'update' ? randomUUID() : ticket.client_id],
+      redactedFields: (condition === 'update_redaction' && action === 'update') || (condition === 'read_redaction' && action === 'read') ? ['comments.note'] : [],
+    } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: recipient.userId });
+  if (condition !== 'read_redaction') expect(await readCustomer(request.commentId)).not.toBeNull();
+  const writer = vi.fn();
+  await expect(reply(db, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, writer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(writer).not.toHaveBeenCalled();
+}));
+
+it('blocks customer technician reply writes after grace or departure and restores owner authority after independent PSA upgrade', async () => withCustomerReplyTokenFixture(async ({
+  customer, recipient, resource, operation, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), input = { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, writer = vi.fn();
+  await expireCoManagedEntitlement(operation.tenant);
+  await expect(reply(db, input, writer)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await expect(reply(db, input, writer)).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY', lifecycle: { state: 'terminated', canWrite: false } });
+  expect(writer).not.toHaveBeenCalled();
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await reply(db, input, async context => context.actor)).toEqual({ tenant: resource.tenant, userId: recipient.userId });
+  expect(await customer.table('co_management_customer_reply_tokens')).toHaveLength(1);
+}));
+
+it('rechecks customer technician token expiry after a canonical thread lock wait', async () => withCustomerReplyTokenFixture(async ({
+  customer, resource, request, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), parent = await customer.table('comments').where('comment_id', request.commentId).first('thread_id');
+  await customer.table('co_management_customer_reply_tokens').update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('comment_threads').where('thread_id', parent.thread_id).forUpdate().first();
+  let onQuery!: (query: { sql: string; bindings?: unknown[] }) => void;
+  const waiting = new Promise<void>(resolve => { onQuery = query => {
+    if (query.sql.includes('"comment_threads"') && query.sql.includes('for update') && query.bindings?.includes(parent.thread_id)) resolve();
+  }; db.on('query', onQuery); });
+  const writer = vi.fn();
+  const attempt = reply(db, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, writer).then(() => null, error => error);
+  try {
+    await Promise.race([waiting, attempt.then(error => { throw new Error(`Reply finished before thread wait: ${error?.code}`); })]);
+    await db.raw('SELECT pg_sleep(1.1)'); await blocker.commit();
+    expect(await attempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); expect(writer).not.toHaveBeenCalled();
+  } finally { db.removeListener('query', onQuery); if (!blocker.isCompleted()) await blocker.rollback(); }
+}));
+
+it('rolls back customer technician writes when token expiry occurs while the writer awaits work', async () => withCustomerReplyTokenFixture(async ({
+  customer, resource, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), original = await customer.table('tickets').where('ticket_id', resource.id).first('title');
+  await customer.table('co_management_customer_reply_tokens').update({ expires_at: db.raw("clock_timestamp() + interval '1 second'") });
+  await expect(reply(db, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
+    await tenantDb(context.trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ title: 'Expired writer work' });
+    await context.trx.raw('SELECT pg_sleep(1.1)');
+  })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first('title')).toEqual(original);
+}));
+
+it('rejects malformed and requester tokens at the customer technician boundary', async () => withCustomerReplyTokenFixture(async ({
+  resource, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), writer = vi.fn();
+  for (const token of [randomUUID(), 'cm2:invalid', issued!.token.replace('cm2:', 'CM2:'), issued!.token.replace('cm2:', 'cm1:')]) {
+    await expect(reply(db, { tenant: resource.tenant, token, senderEmail: issued!.email, senderAuth }, writer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  }
+  expect(writer).not.toHaveBeenCalled();
+}));
+
+it.each(['root', 'outer'] as const)('defers customer technician reply effects until its %s transaction commits', async mode => withCustomerReplyTokenFixture(async ({
+  customer, resource, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), { withTransaction, registerAfterCommitWithConnection } = await import('@alga-psa/db');
+  const hook = vi.fn(async (connection: Knex) => {
+    expect(connection).toBe(db);
+    expect((await tenantDb(connection, resource.tenant).table('tickets').where('ticket_id', resource.id).first()).title).toBe('Committed reply hook source');
+  });
+  const execute = (connection: Knex) => reply(connection, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
+    await tenantDb(context.trx, resource.tenant).table('tickets').where('ticket_id', resource.id).update({ title: 'Committed reply hook source' });
+    registerAfterCommitWithConnection(context.trx, hook, 'customer technician reply test');
+    expect(hook).not.toHaveBeenCalled();
+  });
+  if (mode === 'root') await execute(db);
+  else await withTransaction(db, async outer => { await execute(outer); expect(hook).not.toHaveBeenCalled(); });
+  expect(hook).toHaveBeenCalledTimes(1);
+}));
+
+it.each(['savepoint', 'outer'] as const)('discards customer technician reply hooks after %s rollback', async mode => withCustomerReplyTokenFixture(async ({
+  resource, issue, reply, senderAuth,
+}) => {
+  const issued = await issue(), { withTransaction, registerAfterCommit } = await import('@alga-psa/db'), hook = vi.fn();
+  const execute = (connection: Knex) => reply(connection, { tenant: resource.tenant, token: issued!.token, senderEmail: issued!.email, senderAuth }, async context => {
+    registerAfterCommit(context.trx, hook, 'must never dispatch rolled-back reply');
+    if (mode === 'savepoint') await tenantDb(context.trx, resource.tenant).table('co_management_customer_reply_tokens').where('token', issued!.token).update({ expires_at: new Date(Date.now() - 1000) });
+  });
+  if (mode === 'savepoint') await withTransaction(db, async outer => {
+    await expect(execute(outer)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  });
+  else await expect(withTransaction(db, async outer => { await execute(outer); throw new Error('Abort owning inbox'); })).rejects.toThrow('Abort owning inbox');
+  expect(hook).not.toHaveBeenCalled();
 }));
