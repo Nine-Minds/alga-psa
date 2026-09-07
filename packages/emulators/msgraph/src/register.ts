@@ -77,6 +77,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       from: z.string().optional(),
       to: z.string().optional(),
       receivedDateTime: z.string().optional(),
+      authenticationResults: z.string().regex(/^[^\r\n]*$/).optional(),
     }),
     run: async (input) => {
       const message = core.addMessage(input);

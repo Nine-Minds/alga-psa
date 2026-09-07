@@ -159,11 +159,30 @@ node e2e-tests/harness/create-calendar-callback-tls.mjs "$E2E_CALLBACK_TLS_DIR"
 
 The emulator trusts that certificate through `NODE_EXTRA_CA_CERTS`. The private
 key is mounted only into the fixed callback proxy. Its internal
-`https://calendar-callback:3443/api/calendar/webhooks/microsoft` endpoint forwards
-POSTs to the real application's calendar webhook; other paths and methods are
-rejected. The application retains its HTTPS requirement. CI verifies both proxy
+`https://calendar-callback:3443` endpoint forwards POSTs on
+`/api/calendar/webhooks/microsoft` and `/api/email/webhooks/microsoft` to the real
+application. Other paths and methods are rejected. The application retains its
+HTTPS requirement. CI verifies both proxy
 health and certificate trust from algasim before starting application journeys.
 Remove the temporary TLS directory after the stack is stopped.
+
+The override sets `APPLICATION_URL` to this trusted callback endpoint for email
+setup and background renewal. Browser authorization keeps the browser-facing
+`NEXT_PUBLIC_BASE_URL`; the two origins can differ. Calendar uses its explicit
+`CALENDAR_MICROSOFT_WEBHOOK_BASE_URL` setting.
+
+`microsoft-mailbox.spec.ts` configures the Microsoft app and mailbox through the
+UI, registers a real webhook, chooses outbound Graph sending, and checks ticket
+creation, an agent reply, expired-token recovery, and callback deduplication.
+It requires the built email-service and isolated Redis as well as msgraph.
+`fixtures/microsoft-profile.ts` shares app setup with the calendar journey.
+The emulator currently models one authorized mailbox per reset. Its
+`send-mails` view records accepted Graph requests; actual mail delivery and
+Exchange Send As permissions remain outside the emulator's scope.
+The mailbox fixture explicitly seeds aligned SPF/DKIM authentication results;
+messages without those results remain unverified and cannot establish contact
+authorship. Only Inbox is modeled, with a stable opaque folder ID and message
+parent-folder metadata. Unknown folder lookups return a Graph 404.
 
 The `algasim.test` name resolves through a Docker alias for server-side token exchange.
 QBO/Xero browser authorization uses localhost; token/API calls use the algasim

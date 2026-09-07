@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { test, expect } from '../fixtures/emulators';
 import { signIn } from '../fixtures/auth';
+import { createMicrosoftProfile } from '../fixtures/microsoft-profile';
 import { createProductionBrowserActors } from '../../server/test-utils/productionBrowserFixtures';
 
 test.use({ emulatorProviders: ['msgraph'] });
@@ -31,22 +32,7 @@ if (process.env.E2E_EDITION !== 'enterprise') {
     try {
       await signIn(page, { email: tenant.admin.email, password: credentials.password });
 
-      await page.goto('/msp/settings?tab=integrations&category=providers');
-      await page.locator('#provider-credentials-microsoft-tab').click();
-      await page.locator('#microsoft-advanced-app-toggle').click();
-      await page.locator('#microsoft-settings-add-profile').click();
-      const appDialog = page.getByRole('dialog');
-      await appDialog.locator('#microsoft-profile-display-name').fill(profileName);
-      await appDialog.locator('#microsoft-profile-client-id').fill(clientId);
-      await appDialog.locator('#microsoft-profile-client-secret').fill(clientSecret);
-      await appDialog.locator('#microsoft-profile-tenant-id').fill('common');
-      for (const capability of ['msp_sso', 'email', 'teams']) {
-        const checkbox = appDialog.locator(`#microsoft-profile-capability-${capability}`);
-        if (await checkbox.count()) await checkbox.uncheck();
-      }
-      await appDialog.locator('#microsoft-profile-capability-calendar').check();
-      await appDialog.locator('#microsoft-profile-save').click();
-      await expect(appDialog).toBeHidden();
+      await createMicrosoftProfile(page, { name: profileName, clientId, clientSecret, capability: 'calendar' });
       await page.locator('#microsoft-binding-select-calendar').click();
       await page.getByRole('option', { name: profileName, exact: true }).click();
       const app = await database('microsoft_profiles').where({ ...scope, display_name: profileName }).first();

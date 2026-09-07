@@ -83,6 +83,18 @@ test('rejects unrelated routes and methods before they reach the application', a
   assert.equal((await request(callbackPath, { method: 'GET' })).status, 405);
   assert.equal(received.length, before);
 });
+test('forwards mailbox validation and notification delivery over the same trusted endpoint', async () => {
+  const path = '/api/email/webhooks/microsoft';
+  assert.equal((await request(`${path}?validationToken=mailbox%20challenge`)).body, 'mailbox challenge');
+  const body = JSON.stringify({ value: [{ subscriptionId: 'mailbox-sub', changeType: 'created', resourceData: { id: 'message-1' } }] });
+  assert.equal((await request(path, { body })).status, 202);
+  assert.equal(received.at(-1).url, path);
+  assert.equal(received.at(-1).body, body);
+  const before = received.length;
+  assert.equal((await request(`${path}/extra`)).status, 404);
+  assert.equal((await request(path, { method: 'GET' })).status, 405);
+  assert.equal(received.length, before);
+});
 test('returns a failure when the application destination is unavailable', async () => {
   await new Promise(resolve => application.close(resolve));
   assert.equal((await request()).status, 502);

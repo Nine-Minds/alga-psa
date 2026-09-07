@@ -110,7 +110,8 @@ describe('msgraph emulator', { shuffle: false }, () => {
 
     const redirectUri = 'http://localhost/callback';
     const authorize = new URL(`${base}/common/oauth2/v2.0/authorize`);
-    authorize.search = new URLSearchParams({ client_id: 'premise-app', redirect_uri: redirectUri, state: 'st' }).toString();
+    const scope = 'https://graph.microsoft.com/Mail.Read https://graph.microsoft.com/Mail.Send offline_access';
+    authorize.search = new URLSearchParams({ client_id: 'premise-app', redirect_uri: redirectUri, state: 'st', scope }).toString();
     const authResponse = await fetch(authorize, { redirect: 'manual' });
     expect(authResponse.status).toBe(302);
     const location = new URL(authResponse.headers.get('location')!);
@@ -123,6 +124,8 @@ describe('msgraph emulator', { shuffle: false }, () => {
     );
     expect(tokenResponse.status).toBe(200);
     const tokens = await tokenResponse.json();
+    const delegatedScopes = (token: string) => JSON.parse(Buffer.from(token.split('.')[1], 'base64url').toString()).scp;
+    expect(delegatedScopes(tokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     expect(tokens.refresh_token).toBeTruthy();
 
     const wrongClient = await fetch(
@@ -137,6 +140,7 @@ describe('msgraph emulator', { shuffle: false }, () => {
     );
     expect(refreshed.status).toBe(200);
     const refreshedTokens = await refreshed.json();
+    expect(delegatedScopes(refreshedTokens.access_token)).toBe('Mail.Read Mail.Send offline_access');
     accessToken = refreshedTokens.access_token;
     refreshToken = refreshedTokens.refresh_token;
   });

@@ -1,11 +1,13 @@
 import https from 'node:https';
 import http from 'node:http';
 
-// The test proxy exposes only the calendar callback at a fixed app destination.
+// Graph calendar and mailbox callbacks share a trusted test HTTPS endpoint.
+// Only these exact paths can reach the fixed application destination.
+const callbackPaths = new Set(['/api/calendar/webhooks/microsoft', '/api/email/webhooks/microsoft']);
 export function createCalendarCallbackServer({ key, cert, targetHost = 'server', targetPort = 3000 }) {
   return https.createServer({ key, cert }, (request, response) => {
     const url = new URL(request.url, 'https://calendar-callback');
-    if (url.pathname !== '/api/calendar/webhooks/microsoft') {
+    if (!callbackPaths.has(url.pathname)) {
       response.writeHead(404).end();
       return;
     }
@@ -22,7 +24,7 @@ export function createCalendarCallbackServer({ key, cert, targetHost = 'server',
       result.pipe(response);
       result.on('error', () => response.destroy());
     });
-    upstream.on('timeout', () => upstream.destroy(new Error('Calendar callback timed out')));
+    upstream.on('timeout', () => upstream.destroy(new Error('Microsoft callback timed out')));
     upstream.on('error', () => {
       if (!response.headersSent) response.writeHead(502).end();
       else response.destroy();

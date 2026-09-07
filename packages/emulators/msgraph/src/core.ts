@@ -10,6 +10,8 @@ export class GraphApiError extends Error {
 
 export interface GraphMessage {
   id: string;
+  parentFolderId: string;
+  internetMessageHeaders: Array<{ name: string; value: string }>;
   receivedDateTime: string;
   subject: string;
   bodyPreview: string;
@@ -336,6 +338,7 @@ export interface SeedMessageInput {
   from?: string;
   to?: string;
   receivedDateTime?: string;
+  authenticationResults?: string;
 }
 
 export interface SeedOrganizationInput {
@@ -398,7 +401,7 @@ export class MsGraphCore implements EmulatorCore {
     nonce?: string;
     scope?: string;
   }>();
-  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean }>();
+  private readonly refreshTokens = new Map<string, { clientId: string; revoked: boolean; scope: string }>();
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
@@ -529,7 +532,7 @@ export class MsGraphCore implements EmulatorCore {
       if (!refresh || refresh.revoked || refresh.clientId !== input.client_id) {
         throw new GraphApiError(400, { error: 'invalid_grant' });
       }
-      return this.issueTokens(String(input.client_id), String(input.refresh_token));
+      return this.issueTokens(String(input.client_id), String(input.refresh_token), { scope: refresh.scope });
     }
     if (input.grant_type === 'client_credentials') {
       // App-only flow used by the Teams bot connector
@@ -558,6 +561,12 @@ export class MsGraphCore implements EmulatorCore {
     claims?: { nonce?: string; scope?: string; appOnly?: boolean }
   ) {
     const tenantId = EMULATED_TENANT_ID;
+    // OAuth requests accept resource-qualified Graph scopes; Graph access
+    // tokens expose permission names in scp, which the application validates.
+    const scope = (claims?.scope || 'Mail.Read Mail.Read.Shared offline_access')
+      .split(/\s+/).filter(Boolean)
+      .map(value => value.replace(/^https:\/\/graph\.microsoft\.com\//i, ''))
+      .join(' ');
     // App-only tokens carry the consented application permissions in `roles`
     // and no `scp`; delegated tokens are the other way round. Setup probes
     // read `roles` straight off the token, exactly as Entra issues it.
@@ -566,7 +575,7 @@ export class MsGraphCore implements EmulatorCore {
       iss: `https://login.microsoftonline.com/${tenantId}/v2.0`,
       ...(claims?.appOnly
         ? { roles: this.clients.get(clientId)?.appRoles ?? [] }
-        : { scp: claims?.scope || 'Mail.Read Mail.Read.Shared offline_access' }),
+        : { scp: scope }),
       aud: '00000003-0000-0000-c000-000000000000',
       exp: Math.floor((this.nowMs() + this.accessTokenTtlSeconds * 1000) / 1000),
     });
@@ -576,7 +585,7 @@ export class MsGraphCore implements EmulatorCore {
       clientId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
-    this.refreshTokens.set(refreshToken, { clientId, revoked: false });
+    this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
     if (existingRefreshToken && existingRefreshToken !== refreshToken) {
       this.refreshTokens.delete(existingRefreshToken);
     }
@@ -758,10 +767,23 @@ export class MsGraphCore implements EmulatorCore {
 
   // --- Mail ---
 
+  getMailFolder(id: string): { id: string; displayName: string } {
+    // Only Inbox is modeled. Its opaque ID is also accepted by the folder
+    // routes; unknown folders must never silently read Inbox messages.
+    if (id.toLowerCase() !== 'inbox' && id !== 'emulated-inbox-folder') {
+      throw new GraphApiError(404, { error: { code: 'ErrorItemNotFound', message: 'Mailbox folder not found' } });
+    }
+    return { id: 'emulated-inbox-folder', displayName: 'Inbox' };
+  }
+
   addMessage(input: SeedMessageInput): GraphMessage {
     const id = input.id ?? this.newId('message');
     const message: GraphMessage = {
       id,
+      parentFolderId: this.getMailFolder('inbox').id,
+      internetMessageHeaders: input.authenticationResults
+        ? [{ name: 'Authentication-Results', value: input.authenticationResults }]
+        : [],
       receivedDateTime: input.receivedDateTime ?? this.env.clock.now().toISOString(),
       subject: input.subject ?? 'Emulated support email',
       bodyPreview: input.body ?? 'Hello from the Graph emulator',
@@ -796,6 +818,7 @@ export class MsGraphCore implements EmulatorCore {
       `From: ${message.from.emailAddress.address}`,
       `To: ${message.toRecipients.map((r) => r.emailAddress.address).join(', ')}`,
       `Subject: ${message.subject}`,
+      ...message.internetMessageHeaders.map(header => `${header.name}: ${header.value}`),
       'MIME-Version: 1.0',
       'Content-Type: text/plain; charset=utf-8',
       '',

@@ -175,8 +175,9 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.status(202).end();
   };
 
-  graph.post('/me/sendMail', (req, res) => captureSendMail(req, res, null));
-  graph.post('/users/:mailbox/sendMail', (req, res) =>
+  const mimeBody = express.text({ type: 'text/plain', limit: '4mb' });
+  graph.post('/me/sendMail', mimeBody, (req, res) => captureSendMail(req, res, null));
+  graph.post('/users/:mailbox/sendMail', mimeBody, (req, res) =>
     captureSendMail(req, res, decodePath(String(req.params.mailbox)))
   );
 
@@ -464,10 +465,15 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
   const mailboxRoots = ['/me', '/users/:userId'];
   for (const root of mailboxRoots) {
     graph.get(`${root}/mailFolders`, (_req, res) => {
-      res.json({ value: [{ id: 'inbox', displayName: 'Inbox' }] });
+      res.json({ value: [core.getMailFolder('inbox')] });
+    });
+
+    graph.get(`${root}/mailFolders/:folderId`, (req, res) => {
+      res.json(core.getMailFolder(String(req.params.folderId)));
     });
 
     graph.get(`${root}/mailFolders/:folderId/messages`, (req, res) => {
+      core.getMailFolder(String(req.params.folderId));
       const filter = String(req.query.$filter ?? '');
       const match = filter.match(/receivedDateTime ge (.+)$/);
       const since = match ? new Date(match[1]).getTime() : 0;
