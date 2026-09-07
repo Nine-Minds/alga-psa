@@ -34,6 +34,7 @@ export default defineConfig({
       'src/workflows/__tests__/marketing-fanout-workflow.test.ts',
       'src/workflows/__tests__/ninjaone-token-refresh-workflow.test.ts',
       'src/db/__tests__/product-bootstrap-resolver.test.ts',
+      'src/db/__tests__/permission-catalog-packaging.test.ts',
       'src/schedules/__tests__/**/*.test.ts',
       'src/scripts/__tests__/upgrade-tenant-product.test.ts',
     ],

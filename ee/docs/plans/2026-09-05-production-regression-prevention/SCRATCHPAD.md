@@ -1686,3 +1686,23 @@ claimed covered. Assigned suite to temporal-database and independent discovery.
 All 25 DB cases across four files passed. Removing the MSP/client role predicates
 made the missing-MSP-role case fail with incorrect successful account creation;
 source restored. Evidence: `evidence/user-activity-database.json`.
+
+### Packaged permission catalog and duplicate tenant test cleanup (2026-09-07)
+
+Assigned permission-catalog-packaging.test.ts to readiness and its independent
+selector. Strengthened its copied-runtime exercise to compile real role grants:
+Technician gets only the product-scoped MSP ticket grant, portal User gets none,
+and MSP Admin retains its all-MSP marker. Existing Dockerfile guards remain;
+no new source-string guards added. All 219 tests across 31 readiness files pass.
+
+Removed tenant-activities-simple.test.ts, which tested another copied tenant
+implementation. Its meaningful create/setup cases are superseded by real activity
+DB tests landed at 56ce1cc085. Its alleged validation test merely accepted invalid
+email in the copied helper; it was not a production validation test. The obsolete
+role/status setup expectations belong to onboarding seeds, covered separately in
+product upgrade DB tests. Mapping: `evidence/temporal-catalog-inventory.json`.
+
+The initial remaining-Temporal selector query was narrower than the whole CI
+inventory: workflowInvocationPersistence.integration.test.ts already executes in
+scripts/run-citus-runtime-tests.mjs and must not be counted as an uncovered test.
+API CI was still running at the last authoritative inspection; no push yet.

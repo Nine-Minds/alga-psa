@@ -57,6 +57,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || /^ee\/temporal-workflows\/src\/schedules\/__tests__\/.*\.test\.ts$/.test(file)
       || file === 'ee/temporal-workflows/src/db/__tests__/tenant-operations.email-settings.test.ts'
       || file === 'ee/temporal-workflows/src/db/__tests__/product-bootstrap-resolver.test.ts'
+      || file === 'ee/temporal-workflows/src/db/__tests__/permission-catalog-packaging.test.ts'
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(portal-domain-activities(?:\.git)?|portal-domain-nextauth-url)\.test\.ts$/.test(file)
       || /^ee\/temporal-workflows\/src\/activities\/__tests__\/(workflow-runtime-v2-activities|sla-activities|marketing-activities|tenant-suspension-activities|tenant-email-ingestion-activities|product-upgrade-activities|comment-recovery-forwarding|email-activities-simple|email-activities-standalone|gmail-adapter-secret-log-hygiene|microsoft-email-filesystem-secret-provider)\.test\.ts$/.test(file);
   }
