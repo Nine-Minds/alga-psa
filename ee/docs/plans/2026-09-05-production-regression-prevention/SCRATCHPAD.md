@@ -1977,3 +1977,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Assigned existing temporal-worker-shared-tenant-secrets Helm behavioral suite to readiness config and independent discovery. CI installs Helm v3.17.3. Suite uses HELM_BIN or PATH and no longer silently skips when /snap/bin/helm is absent; missing tooling fails execution.
 - Local real Helm renders passed all six cases (496ms total); deliberate HELM_BIN=/nonexistent/helm produced six failures, zero skips. Logs: /tmp/alga-temporal-helm-assignment.log, /tmp/alga-temporal-helm-missing.log. Initial direct invocation hit the shared Docker setup; corrected to the readiness lane's TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1, requiring no service startup. Workflow actionlint and diff checks pass.
 - Removes one prior runner assignment gap locally; native CI and remaining Temporal/browser orphans remain unverified. External push still awaits approval.
+
+### 2026-09-07 — complete Temporal readiness validation
+
+- Full readiness runner passed all 33 files / 235 assertions on clean f0ce18967d, with complete discovery/execution reconciliation and zero skips. Evidence: evidence/temporal-readiness-local-f0ce.json; /tmp/alga-temporal-readiness-f0ce-permitted.log. Duration 10.73 seconds.
+- Initial sandbox attempt had two failures from tsx IPC listen EPERM, with 233 passing. Approved rerun of unchanged code passed; no weakening of those synthetic filesystem-provider tests. This verifies the Helm assignment alongside all current readiness cases, not outstanding connection/E2E orphans or native CI.
