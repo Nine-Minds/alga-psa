@@ -1359,3 +1359,10 @@
 - Actual production collection: CE 23 cases/14 files; EE 25 cases/14 files. Both JSON artifacts successfully read by the adapter. Full adapter/discovery behavioral set: 21 passed, zero skipped, 4.07 seconds on Node 25.
 - Standalone browser-collection job now uploads both native JSON collections before image builds. No execution outcomes are inferred from collection.
 - Additional local actual file collections found 287 integration files, 20 API files and six fast Temporal readiness files. After these plus mobile, 149 prior unmatched files remain (including 14 production browser files now readable by the adapter). Remaining concentration: legacy browser suites and Temporal tests outside fast readiness. These collections mix local and older native evidence; global CI assignment/enforcement remains incomplete.
+
+### 2026-09-07 — SLA and marketing activity tests enter fast readiness
+
+- Native env backup guard and mobile unit job now pass at published 2f75678de2. Mobile artifact verification remains separate from the successful job status.
+- Investigated two Temporal files outside readiness: marketing had nine passing cases; SLA could not import businessHoursCalculator/workflow-streams because Vitest lacked source aliases already in tsconfig. This is harness configuration evidence, not proof of a deployed package defect.
+- Repaired SLA mocks for current withTenantTransactionRetryReadOnly/tenantDb and Redis event publishing; fixed self-reference during mock-chain initialization. Preserved nine real calendar/deadline cases and strengthened notification/audit assertions. Added both files to readiness config and its independent candidate classifier.
+- Expanded readiness: eight files, 96 tests passed, zero skips, 3.01 seconds with TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1 and root Vitest 4.1.10. Evidence: evidence/temporal-sla-marketing-readiness.json. Native assignment verification remains pending; other Temporal gaps remain.
