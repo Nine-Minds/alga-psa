@@ -50,7 +50,8 @@
     "./lib/ticketCloseRules/index.js": "./dist/lib/ticketCloseRules/index.js",
     "./lib/tickets/clientPortalVisibility": "./dist/lib/tickets/clientPortalVisibility.js",
     "./lib/tickets/clientPortalVisibility.server": "./dist/lib/tickets/clientPortalVisibility.server.js",
-    "./*": "./dist/*"
+    "./*": "./dist/*",
+    "./lib/email/senderAuthVerification": "./dist/lib/email/senderAuthVerification.js"
   },
   "scripts": {
     "build": "tsup",

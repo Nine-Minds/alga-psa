@@ -32,6 +32,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_management_conversation_attachments: { scope: 'tenant' },
   co_management_email_deliveries: { scope: 'tenant' },
   co_management_customer_email_deliveries: { scope: 'tenant' },
+  co_management_requester_reply_tokens: { scope: 'tenant' },
   co_management_notification_deliveries: { scope: 'tenant' },
   co_management_in_app_receipts: { scope: 'tenant' },
   co_management_private_comments: { scope: 'tenant' },
