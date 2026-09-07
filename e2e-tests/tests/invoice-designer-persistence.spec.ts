@@ -140,6 +140,9 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     const readSnapshots = () => database('invoice_time_entries')
       .where({ tenant: tenant.tenantId, invoice_id: invoiceId }).orderBy('invoice_time_entry_id');
     const snapshots = await readSnapshots();
+    const readCharges = () => database('invoice_charges')
+      .where({ tenant: tenant.tenantId, invoice_id: invoiceId }).orderBy('item_id');
+    const charges = await readCharges();
     expect(snapshots).toHaveLength(4);
     await page.goto(`/msp/billing?tab=invoicing&subtab=drafts&invoiceId=${invoiceId}`);
     const text = await readInvoiceDownload(page, testInfo, invoice.invoice_number);
@@ -157,26 +160,65 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     expect(await readSnapshots()).toEqual(snapshots);
     const client = await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId }).first();
     try {
-      for (const locale of ['fr', 'zz-unavailable']) {
-        await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
-          .update({ properties: { ...client.properties, defaultLocale: locale } });
-        await page.reload();
-        const localized = (await readInvoiceDownload(page, testInfo, invoice.invoice_number, `${invoice.invoice_number}-${locale}`))
-          .replace(/\s/g, '');
-        const french = locale === 'fr';
-        expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
-        expect(localized).toContain(french ? '375,00' : '$375.00');
-        expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
-          minimumFractionDigits: 2, maximumFractionDigits: 2,
-        }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
-        expect(localized).toContain('Publicticket0');
-        expect(localized).toContain('Publicticket1');
-        expect(localized).not.toContain('PRIVATE');
-        expect(await readSnapshots()).toEqual(snapshots);
+      // Historical fixtures deliberately alter only this generated invoice's
+      // snapshots. They test rendering old data, not how new invoices are captured.
+      for (const history of ['current', 'v1', 'partial', 'none'] as const) {
+        for (const [index, snapshot] of snapshots.entries()) {
+          const workItemSnapshot = history === 'none' || (history === 'partial' && index === 0)
+            ? null : history === 'v1' ? { ...snapshot.work_item_snapshot, version: 1 } : snapshot.work_item_snapshot;
+          await database('invoice_time_entries')
+            .where({ tenant: tenant.tenantId, invoice_time_entry_id: snapshot.invoice_time_entry_id })
+            .update({ work_item_snapshot: workItemSnapshot });
+        }
+        const expectedSnapshots = await readSnapshots();
+        const locales = history === 'current' ? ['fr', 'zz-unavailable'] : ['en', 'fr', 'zz-unavailable'];
+        for (const locale of locales) {
+          await test.step(`${history} snapshots / ${locale} PDF`, async () => {
+            await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
+              .update({ properties: { ...client.properties, defaultLocale: locale } });
+            await page.reload();
+            const pdfText = await readInvoiceDownload(page, testInfo, invoice.invoice_number,
+              `${invoice.invoice_number}-${history}-${locale}`);
+            const localized = pdfText.replace(/\s/g, '');
+            const french = locale === 'fr';
+            if (history === 'current') expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
+            if (history === 'v1') expect(localized).toContain(french ? 'Tarifindisponible' : 'Rateunavailable');
+            expect(localized).toContain(french ? '375,00' : '$375.00');
+            expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
+              minimumFractionDigits: 2, maximumFractionDigits: 2,
+            }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
+            if (history === 'none') {
+              expect(localized).not.toContain('Publicticket');
+            } else {
+              expect(localized).toContain('Publicticket0');
+              expect(localized).toContain('Publicticket1');
+            }
+            if (history === 'partial' || history === 'none') {
+              const note = history === 'partial'
+                ? french ? 'Seules les écritures de temps facturé disponibles figurent dans ce détail.'
+                  : 'Only available billed-time entries are included in this detail.'
+                : french ? 'Le détail des écritures de temps facturé est indisponible pour cette facture.'
+                  : 'Billed-time entry detail is unavailable for this invoice.';
+              expect(localized).toContain(note.replace(/\s/g, ''));
+            }
+            // Each available snapshot appears in both the flat and nested table.
+            // Missing historical detail must not be reconstructed from live work.
+            expect(pdfText.match(french ? /\d+\/08\/2026/g : /8\/\d+\/2026/g) ?? [])
+              .toHaveLength(history === 'none' ? 0 : history === 'partial' ? 6 : 8);
+            expect(localized).not.toContain('PRIVATE');
+            expect(await readSnapshots()).toEqual(expectedSnapshots);
+            expect(await readCharges()).toEqual(charges);
+          });
+        }
       }
     } finally {
       await database('clients').where({ tenant: tenant.tenantId, client_id: ids.clientId })
         .update({ properties: client.properties });
+      for (const snapshot of snapshots) {
+        await database('invoice_time_entries')
+          .where({ tenant: tenant.tenantId, invoice_time_entry_id: snapshot.invoice_time_entry_id })
+          .update({ work_item_snapshot: snapshot.work_item_snapshot });
+      }
     }
   } finally {
     await database('api_keys').where({ tenant: tenant.tenantId, api_key_id: key.api_key_id }).delete();

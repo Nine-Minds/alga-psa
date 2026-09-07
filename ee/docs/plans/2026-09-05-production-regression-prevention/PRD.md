@@ -205,7 +205,7 @@ Apply this order within each work package:
 
 1. Run the smallest relevant behavioral unit/component suite directly on macOS; use watch mode when iterating on the same behavior.
 2. Run affected integration suites as host Node processes against migrated, isolated databases and reusable emulator services. Rebuild a service only when its changed behavior requires it; batch such validation at the final checkpoint.
-3. Run the affected Playwright journey against the host development server with `npm run test:local -- tests/<journey>.spec.ts` from `e2e-tests`. Verify persisted outcomes and failure recovery using the real application clients and emulator endpoints.
+3. Run the affected Playwright journey against the host development server with `npm run test:local -- tests/<journey>.spec.ts` from `e2e-tests`. For repeated browser acceptance runs, use a production build compiled directly on the host and reuse it across test-only edits; rebuild when application code or build-time configuration changes. Follow `e2e-tests/README.md` for the separate host production output and record the application revision. Verify persisted outcomes and failure recovery using the real application clients and emulator endpoints. Neither host mode replaces final container validation.
 4. At final validation, run the required production builds, CE/EE installation, worker/service packaging, upgrade and Citus checks. Prefer native CI for this checkpoint; host development results do not close these acceptance items.
 
 The current Mac is ARM64 and both inspected Colima profiles are configured as aarch64. Architecture conversion is unnecessary. Record build time separately from test time so infrastructure startup does not obscure the cost of the tests themselves.
