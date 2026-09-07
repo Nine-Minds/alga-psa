@@ -37,6 +37,7 @@ export default defineConfig({
       'src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts',
       'src/db/__tests__/product-bootstrap-resolver.test.ts',
       'src/db/__tests__/permission-catalog-packaging.test.ts',
+      'src/db/__tests__/product-upgrade-role-grants.contract.test.ts',
       'src/schedules/__tests__/**/*.test.ts',
       'src/scripts/__tests__/upgrade-tenant-product.test.ts',
     ],

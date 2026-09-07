@@ -1993,3 +1993,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Complete Temporal engine runner passed eight files / 36 cases in 12.63 seconds, using owned ephemeral Temporal servers. Complete Temporal database runner passed five files / 26 cases in 10.80 seconds on the task-owned single-node Citus database workflow_citus_82cc. Both reconciled clean bf719bcbb1 with zero skips.
 - Evidence: evidence/temporal-engine-database-local-bf719.json. Logs: /tmp/alga-temporal-engine-bf719.log and /tmp/alga-temporal-database-bf719.log. These establish complete current local lane execution, not native CI, a previous-supported-release upgrade, or remaining unassigned suites. Push authorization is still pending.
+
+### 2026-09-07 — assign runtime role-grant catalog checks
+
+- Assigned existing product-upgrade-role-grants.contract.test.ts to the Temporal readiness config and independent discovery. It loads the real CommonJS grant/catalog modules and checks default role exports, resolvable permission keys and retired permission absence; no source-string tests were introduced.
+- All three existing cases pass through the configured Vitest runner (192ms), /tmp/alga-role-grants-assignment.log. No broader native or role-upgrade DB claim; this closes only its local runner assignment gap. Publication approval remains pending.

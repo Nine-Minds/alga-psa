@@ -48,6 +48,7 @@ export function isAdditionalWorkspaceTest(file, lane) {
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|tenant-creation-appliance|sla-ticket-workflow|managed-email-domain-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {
+    if (file === 'ee/temporal-workflows/src/db/__tests__/product-upgrade-role-grants.contract.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/temporal-worker-shared-tenant-secrets.helm.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/__tests__/worker-queue-ownership.test.ts') return true;
     if (file === 'ee/temporal-workflows/src/workflows/__tests__/tenant-deletion-workflow.behavior.test.ts') return true;
