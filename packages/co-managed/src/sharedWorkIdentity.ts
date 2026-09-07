@@ -60,7 +60,7 @@ function matchesCoManagedScopeConstraints(constraints: ScopeConstraint[], record
 /** The same locked home authority applies to customer-local handoffs and MSP
  * shared commands; only their qualified record projection differs. */
 export async function authorizeCoManagedWorkRecord(trx: Knex.Transaction, actor: CoManagedHomeActor,
-  subject: AuthorizationSubject, resourceType: 'ticket' | 'project', action: 'read' | 'update', record: AuthorizationRecord) {
+  subject: AuthorizationSubject, resourceType: 'ticket' | 'project', action: 'read' | 'update' | 'create', record: AuthorizationRecord) {
   const kernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: input => resolveBundleNarrowingRulesForEvaluation(trx, input, { lock: true }) }),

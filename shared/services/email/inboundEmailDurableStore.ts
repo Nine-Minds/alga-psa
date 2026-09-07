@@ -1091,7 +1091,7 @@ export async function claimArtifact(db: DurableDb, params: {
 
 /** Retain paused attachments and their failure history without spending an
  * attempt. Only the exact current lease may release claimed work. */
-export async function deferArtifactForCoManagedLifecycle(db: DurableDb, params: {
+export async function deferInboundArtifact(db: DurableDb, params: {
   tenant: string;
   inboxId: string;
   artifactKey: string;
@@ -1111,6 +1111,9 @@ export async function deferArtifactForCoManagedLifecycle(db: DurableDb, params: 
   }
   return await query.update(patch) > 0;
 }
+
+/** Existing lifecycle callers share the same fenced, attempt-preserving pause. */
+export const deferArtifactForCoManagedLifecycle = deferInboundArtifact;
 
 /** Dead-letter an over-cap due retryable artifact row into `terminal_failed`. */
 export async function deadletterArtifact(db: DurableDb, row: InboundArtifactRecord): Promise<boolean> {

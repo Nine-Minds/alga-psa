@@ -106,6 +106,7 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment content is required'),
   parent_comment_id: z.string().uuid('Parent comment ID must be a valid UUID').optional(),
   is_internal: z.boolean().optional(),
+  collaboration_audience: z.enum(['requester', 'shared_it', 'organization_private']).optional(),
   is_resolution: z.boolean().optional(),
   author_type: z.enum(['internal', 'contact', 'system']).optional(),
   author_id: z.string().uuid('Author ID must be a valid UUID').optional(),
@@ -235,6 +236,7 @@ export interface CreateCommentInput {
   content: string;
   parent_comment_id?: string;
   is_internal?: boolean;
+  collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
   is_resolution?: boolean;
   author_type?: 'internal' | 'contact' | 'system';
   author_id?: string;
@@ -1219,6 +1221,8 @@ export class TicketModel {
     }
 
     const validatedData = validation.data;
+    if (validatedData.collaboration_audience && validatedData.is_internal !== undefined &&
+        validatedData.is_internal !== (validatedData.collaboration_audience !== 'requester')) throw new Error('Comment audience and visibility disagree');
     const db = tenantDb(trx, tenant);
 
     // Verify ticket exists and belongs to tenant
@@ -1247,7 +1251,7 @@ export class TicketModel {
     const commentId = uuidv4();
     const parentCommentId = validatedData.parent_comment_id || null;
     let threadId = uuidv4();
-    let commentIsInternal = validatedData.is_internal || false;
+    let commentIsInternal = validatedData.collaboration_audience ? validatedData.collaboration_audience !== 'requester' : validatedData.is_internal || false;
     const now = new Date();
 
     // Map legacy/alias author types to current enum: internal | client | unknown
@@ -1326,6 +1330,7 @@ export class TicketModel {
         project_task_id: null,
         root_comment_id: commentId,
         is_internal: commentIsInternal,
+        ...(validatedData.collaboration_audience ? { collaboration_audience: validatedData.collaboration_audience } : {}),
         reply_count: 0,
         last_activity_at: now,
         created_at: now,
@@ -1333,7 +1338,8 @@ export class TicketModel {
       });
     }
 
-    await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
+    const currentAudience = await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
+    if (validatedData.collaboration_audience && currentAudience !== validatedData.collaboration_audience) throw new Error('Reply audience changed');
     await db.table('comments').insert(baseCommentData);
 
     if (parentCommentId) {

@@ -18,7 +18,7 @@
  * mere inbox-row existence check.
  */
 
-import type { RequesterReplyAdmission } from './requesterReplyAdmission';
+import type { EmailReplyAdmission } from './qualifiedReplyAdmission';
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withAdminTransaction } from '@alga-psa/db';
@@ -60,7 +60,7 @@ export interface ProcessInboundInboxParams {
   tenantId: string;
   inboxId: string;
   owner: string;
-  requesterReplyAdmission?: RequesterReplyAdmission;
+  qualifiedReplyAdmission?: EmailReplyAdmission;
   leaseTtlMs: number;
   /** In shadow mode no core entities are created; used for source-stage coverage validation. */
   mode?: 'shadow' | 'enforce';
@@ -256,7 +256,7 @@ export async function processInboundInbox(
         trx,
         inbox: locked,
         emailData: parsed.emailData,
-        requesterReplyAdmission: params.requesterReplyAdmission,
+        qualifiedReplyAdmission: params.qualifiedReplyAdmission,
       });
       return { terminalReplay: false as const, ...result };
     });
@@ -322,7 +322,7 @@ async function runCommitPhase(params: {
   tenantId: string;
   inboxId: string;
   owner: string;
-  requesterReplyAdmission?: RequesterReplyAdmission;
+  qualifiedReplyAdmission?: EmailReplyAdmission;
   mode?: 'shadow' | 'enforce';
   trx: Knex.Transaction;
   inbox: InboundEmailInboxRecord;
@@ -360,7 +360,7 @@ async function runCommitPhase(params: {
         mode: 'enforce',
         trx,
         inboxId: params.inboxId,
-        requesterReplyAdmission: params.requesterReplyAdmission,
+        qualifiedReplyAdmission: params.qualifiedReplyAdmission,
         eventPublishers: { ticket: ticketPublisher, comment: commentPublisher },
       },
     }

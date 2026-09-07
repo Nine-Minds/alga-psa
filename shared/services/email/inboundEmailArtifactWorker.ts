@@ -17,6 +17,7 @@ import { CoManagedLifecycleError, getCoManagedOperationalState } from '@alga-psa
 import {
   claimArtifact,
   deferArtifactForCoManagedLifecycle,
+  deferInboundArtifact,
   getArtifact,
   getDurableLeaseTtlMs,
   getDurableMaxAttempts,
@@ -31,6 +32,7 @@ import {
 } from './inboundEmailSourceStager';
 import { processInboundEmailArtifactsBestEffort } from './processInboundEmailArtifacts';
 import { ORIGINAL_EMAIL_ATTACHMENT_ID } from './inboundEmailArtifactHelpers';
+import { qualifiedReplyTokenFromBody } from './qualifiedReplyAdmission';
 
 const TERMINAL_ARTIFACT_STATUSES = new Set(['succeeded', 'skipped', 'terminal_failed']);
 
@@ -157,6 +159,16 @@ export async function processInboundArtifactJob(
     const failure = await markArtifactRetryable(db, artifact, { owner, token, version }, message);
     if (failure.terminal) return { disposition: 'ack', outcome: 'terminal_failed', reason: 'max_attempts_exhausted' };
     return { disposition: 'retry', error: message };
+  }
+
+  // Use the digest-verified original MIME, not editable comment metadata, to
+  // select the protected artifact path. Its conversation adapter must preserve
+  // current thread authority; native folder defaults cannot decide visibility.
+  if (/^cm2:/i.test(qualifiedReplyTokenFromBody(parsed.emailData.body) ?? '')) {
+    const until = new Date(Date.now() + 60_000);
+    await deferInboundArtifact(db, { tenant: job.tenantId, inboxId, artifactKey, until,
+      claim: { owner, token, version, refundAttempt: claim.claimed } });
+    return { disposition: 'defer', untilIso: until.toISOString(), reason: 'co_managed_artifact_admission_pending' };
   }
 
   let processError: string | null = null;

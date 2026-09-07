@@ -1468,6 +1468,7 @@ export async function createCommentFromEmail(
     ticket_id: string;
     content: string;
     parent_comment_id?: string;
+    collaboration_audience?: 'requester' | 'shared_it' | 'organization_private';
     format?: string;
     source?: string;
     author_type?: string;
@@ -1540,7 +1541,8 @@ export async function createCommentFromEmail(
         ticket_id: commentData.ticket_id,
         content,
         parent_comment_id: commentData.parent_comment_id,
-        is_internal: false,
+        is_internal: commentData.collaboration_audience ? commentData.collaboration_audience !== 'requester' : false,
+        collaboration_audience: commentData.collaboration_audience,
         is_resolution: false,
         author_type: ticketModelAuthorType,
         author_id: commentData.author_id,
@@ -1561,7 +1563,7 @@ export async function createCommentFromEmail(
         .first();
       const responseStateEnabled = (tenantSettingsRow?.ticket_display_settings as any)?.responseStateTrackingEnabled ?? true;
 
-      if (responseStateEnabled) {
+      if (responseStateEnabled && (!commentData.collaboration_audience || commentData.collaboration_audience === 'requester')) {
         if (normalizedAuthorType === 'client') {
           await db.table('tickets')
             .where({ ticket_id: commentData.ticket_id })

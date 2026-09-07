@@ -8650,7 +8650,7 @@ async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters
     try {
       await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
         run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(),
-          leaseTtlMs: 30_000, mode: 'enforce', requesterReplyAdmission: admitCoManagedRequesterReply }) });
+          leaseTtlMs: 30_000, mode: 'enforce', qualifiedReplyAdmission: admitCoManagedRequesterReply }) });
     } finally { nativeTokenLookup.mockRestore(); nativeThreadLookup.mockRestore(); intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
   });
 }
@@ -8835,7 +8835,7 @@ it('defers and rolls back requester email when a separately compiled admission a
   const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
   const before = await customer.table('comments').where('ticket_id', resource.id);
   const result = await processInboundInbox({ tenantId: resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000, mode: 'enforce',
-    requesterReplyAdmission: async (trx, input, write) => {
+    qualifiedReplyAdmission: async (trx, input, write) => {
       await admitCoManagedRequesterReply(trx, input, write);
       // This intentionally has another constructor, as the worker's compiled
       // package and source-compiled core do at runtime. Its contract is identical.
@@ -8976,7 +8976,7 @@ async function withCustomerReplyTokenFixture(work: (fixture: Parameters<Paramete
   await withCustomerEmailQueueFixture(async fixture => {
     const { issueCoManagedCustomerReplyToken: issue, withCoManagedCustomerEmailReply: reply } = await import('../../../../packages/co-managed/src/customerReplyTokens');
     const { verifySenderAuthentication } = await import('../../../../shared/lib/email/senderAuthVerification');
-    const senderAuth = verifySenderAuthentication('mx.example.test; spf=pass smtp.mailfrom=example.test', 'technician@example.test')!;
+    const senderAuth = verifySenderAuthentication('mx.example.test; dmarc=pass header.from=example.test', 'technician@example.test')!;
     await fixture.customer.table('users').where('user_id', fixture.recipient.userId).update({ email: 'technician@example.test' });
     await work({ ...fixture, reply, senderAuth, issue: (deliveryKey = 'customer-technician-reply-test') => issue(db, {
       recipient: fixture.recipient, resource: fixture.localResource, commentId: fixture.request.commentId, deliveryKey,
@@ -9213,4 +9213,264 @@ it.each(['savepoint', 'outer'] as const)('discards customer technician reply hoo
   });
   else await expect(withTransaction(db, async outer => { await execute(outer); throw new Error('Abort owning inbox'); })).rejects.toThrow('Abort owning inbox');
   expect(hook).not.toHaveBeenCalled();
+}));
+
+async function withTechnicianInboundFixture(work: (fixture: Parameters<Parameters<typeof withCustomerReplyTokenFixture>[0]>[0] & {
+  inbox: any; emailData: any; run: () => Promise<import('../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
+  nativeTokenLookup: ReturnType<typeof vi.spyOn>; nativeThreadLookup: ReturnType<typeof vi.spyOn>;
+}) => Promise<void>, audience: 'requester' | 'shared_it' | 'organization_private' = 'shared_it') {
+  await withCustomerReplyTokenFixture(async fixture => {
+    const source = await fixture.customer.table('comments').where('comment_id', fixture.request.commentId).first('thread_id');
+    await fixture.customer.table('comment_threads').where('thread_id', source.thread_id).update({ collaboration_audience: audience, is_internal: audience !== 'requester' });
+    await fixture.customer.table('comments').where('comment_id', fixture.request.commentId).update({ is_internal: audience !== 'requester' });
+    const issued = await fixture.issue(), inbox = await stagedCoManagedInbox(fixture.resource.tenant);
+    const emailData = { id: inbox.provider_message_id, provider: 'google', providerId: inbox.provider_id, tenant: fixture.resource.tenant,
+      receivedAt: new Date().toISOString(), from: { email: issued!.email, name: 'Customer technician' }, to: [{ email: 'helpdesk@example.test' }],
+      subject: 'Private diagnostic subject', body: { text: `Technician diagnostic reply.\n\n[ALGA-REPLY-TOKEN ${issued!.token}]` },
+      attachments: [], sourceSha256: inbox.source_sha256, headers: { 'authentication-results': 'mx.example.test; dmarc=pass header.from=example.test' } };
+    const actual = await vi.importActual<typeof import('../../../../shared/services/email/processInboundEmailInApp')>('../../../../shared/services/email/processInboundEmailInApp');
+    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const nativeTokenLookup = vi.spyOn(workflow, 'findTicketByReplyToken'), nativeThreadLookup = vi.spyOn(workflow, 'findTicketByEmailThread');
+    intake.process.mockReset(); intake.process.mockImplementation(actual.processInboundEmailInApp);
+    intake.read.mockReset(); intake.read.mockResolvedValue(Buffer.from('Technician MIME source'));
+    intake.parse.mockReset(); intake.parse.mockImplementation(async () => ({ emailData }));
+    const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+    const { admitCoManagedEmailReply } = await import('../../../../packages/co-managed/src/inboundEmailReply');
+    try {
+      await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
+        run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(), leaseTtlMs: 30_000,
+          mode: 'enforce', qualifiedReplyAdmission: admitCoManagedEmailReply }) });
+    } finally { nativeTokenLookup.mockRestore(); nativeThreadLookup.mockRestore(); intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
+  });
+}
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('processes actual technician email in its canonical %s audience with durable effects and qualified authorship', async audience => withTechnicianInboundFixture(async ({
+  customer, recipient, resource, request, inbox, emailData, nativeTokenLookup, nativeThreadLookup, run,
+}) => {
+  const source = await customer.table('comments').where('comment_id', request.commentId).first();
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  await customer.table('comments').where('comment_id', request.commentId).update({ metadata: { email: { messageId: emailData.id } } });
+  (emailData as any).cc = [{ email: 'not-authorized@example.test' }];
+  const original = await customer.table('tickets').where('ticket_id', resource.id).first('attributes');
+  const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+  const comment = await customer.table('comments').where('comment_id', (result as any).commentId).first();
+  expect(comment).toMatchObject({ ticket_id: resource.id, thread_id: source.thread_id, parent_comment_id: request.commentId,
+    user_id: recipient.userId, contact_id: null, actor_reference_id: null, author_type: 'internal', is_internal: audience !== 'requester', publish_state: 'published',
+    metadata: { qualifiedReply: { kind: 'customer_technician', sourceTicketId: resource.id, sourceParentCommentId: request.commentId } } });
+  expect(comment.note).toContain('Technician diagnostic reply.'); expect(comment.note).not.toContain('ALGA-REPLY-TOKEN');
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ attributes: original.attributes,
+    response_state: audience === 'requester' ? 'awaiting_client' : 'awaiting_internal' });
+  const outbox = await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id);
+  expect(outbox.find(row => row.event_type === 'TICKET_COMMENT_ADDED')?.payload).toMatchObject({ userId: recipient.userId, comment: { isInternal: audience !== 'requester' } });
+  expect(outbox.map(row => row.event_type)).toEqual(expect.arrayContaining(['TICKET_COMMENT_ADDED', 'INBOUND_EMAIL_REPLY_RECEIVED']));
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(1);
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', reason: 'terminal_replay' });
+  expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(outbox.length);
+  expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+}, audience));
+
+it.each(['sender', 'spf_only', 'missing_auth', 'no_update', 'inactive', 'disclosed', 'deleted', 'malformed', 'case_variant', 'revoked', 'expired', 'unknown_token'] as const)(
+  'quarantines actual technician email after %s rejection with no native fallback or side effects', async condition => withTechnicianInboundFixture(async ({
+    customer, recipient, resource, request, inbox, emailData, nativeTokenLookup, nativeThreadLookup, run,
+  }) => {
+    if (condition === 'sender') emailData.from.email = 'other@example.test';
+    if (condition === 'spf_only') emailData.headers['authentication-results'] = 'mx.example.test; spf=pass smtp.mailfrom=example.test';
+    if (condition === 'missing_auth') emailData.headers = {};
+    if (condition === 'no_update') {
+      const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update' }).first();
+      await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+    }
+    if (condition === 'inactive') await customer.table('users').where('user_id', recipient.userId).update({ is_inactive: true });
+    if (condition === 'disclosed') {
+      const source = await customer.table('comments').where('comment_id', request.commentId).first('thread_id');
+      await customer.table('comment_threads').where('thread_id', source.thread_id).update({ collaboration_audience: 'requester', is_internal: false });
+      await customer.table('comments').where('comment_id', request.commentId).update({ is_internal: false });
+    }
+    if (condition === 'deleted') await customer.table('comments').where('comment_id', request.commentId).update({ deleted_at: new Date() });
+    if (condition === 'malformed') emailData.body.text = 'Reply\n[ALGA-REPLY-TOKEN cm2:bad?token]';
+    if (condition === 'case_variant') emailData.body.text = emailData.body.text.replace('cm2:', 'CM2:');
+    if (condition === 'unknown_token') emailData.body.text = `Reply\n[ALGA-REPLY-TOKEN cm2:${'z'.repeat(43)}]`;
+    if (condition === 'revoked' || condition === 'expired') await customer.table('co_management_customer_reply_tokens').update({ [condition === 'expired' ? 'expires_at' : 'revoked_at']: new Date(Date.now() - 1000) });
+    const before = await customer.table('comments').where('ticket_id', resource.id);
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ source_object_key: inbox.source_object_key, ticket_id: null, comment_id: null });
+    expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+  }));
+
+it('rolls actual technician comment and outbox writes back before quarantining a late token rejection', async () => withTechnicianInboundFixture(async ({
+  customer, resource, inbox, run,
+}) => {
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
+  const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementation(async (...args: any[]) => {
+    const result = await (real as any)(...args);
+    await tenantDb(args[3].existingConnection, resource.tenant).table('co_management_customer_reply_tokens').update({ expires_at: new Date(Date.now() - 1000) });
+    return result;
+  });
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  try {
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+    expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  } finally { writer.mockRestore(); }
+}));
+
+it('retains technician email artifacts outside native portal-visible processing without spending retry attempts', async () => withTechnicianInboundFixture(async ({
+  customer, resource, inbox, emailData, run,
+}) => {
+  emailData.attachments = [{ id: 'diagnostics', name: 'diagnostics.txt', contentType: 'text/plain', size: 10 }];
+  expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  // Editable comment metadata cannot redirect immutable source mail into the native artifact path.
+  await customer.table('comments').where('ticket_id', resource.id).update({ metadata: {} });
+  const artifacts = await customer.table('inbound_email_artifacts').where('inbox_id', inbox.inbox_id);
+  expect(artifacts).toHaveLength(2);
+  const uploads = artifactStorage.upload.mock.calls.length;
+  for (const item of artifacts) {
+    expect(await runCoManagedArtifact(resource.tenant, inbox.inbox_id, item.artifact_key)).toMatchObject({ disposition: 'defer', reason: 'co_managed_artifact_admission_pending' });
+    expect(await customer.table('inbound_email_artifacts').where({ inbox_id: inbox.inbox_id, artifact_key: item.artifact_key }).first()).toMatchObject({ status: 'pending', attempt_count: 0, completed_at: null });
+  }
+  expect(artifactStorage.upload.mock.calls).toHaveLength(uploads);
+  expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ source_object_key: inbox.source_object_key });
+}));
+
+it.each(['requester', 'shared_it', 'organization_private'] as const)('preserves %s audience and qualified identity when a technician reply passes the closed-ticket cutoff', async audience => withTechnicianInboundFixture(async ({
+  customer, recipient, customerPrincipal, resource, operation, inbox, emailData, run,
+}) => {
+  await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: new Date(Date.now() - 7200000), title: 'Original public ticket title' });
+  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
+  const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+  const defaults = { client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id, entered_by: customerPrincipal.userId };
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const provider = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
+  const effective = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
+  const before = await customer.table('tickets');
+  try {
+    const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'created' });
+    const ticket = await customer.table('tickets').where('ticket_id', (result as any).ticketId).first();
+    expect(ticket).toMatchObject({ client_id: operation.customer_client_id, board_id: operation.customer_board_id, entered_by: recipient.userId });
+    expect(ticket.ticket_id).not.toBe(resource.id);
+    const comment = await customer.table('comments').where('comment_id', (result as any).commentId).first();
+    expect(comment).toMatchObject({ ticket_id: ticket.ticket_id, user_id: recipient.userId, contact_id: null, author_type: 'internal', is_internal: audience !== 'requester' });
+    expect(comment.note).toContain('Technician diagnostic reply.');
+    expect(await customer.table('comment_threads').where('thread_id', comment.thread_id).first()).toMatchObject({ collaboration_audience: audience, is_internal: audience !== 'requester' });
+    if (audience !== 'requester') {
+      expect(ticket.title).toBe('Original public ticket title'); expect(ticket.attributes?.description).toBeUndefined();
+      expect(JSON.stringify(ticket)).not.toContain('Technician diagnostic reply.');
+      expect(JSON.stringify(ticket)).not.toContain('Private diagnostic subject');
+      const ticketEvents = await customer.table('inbound_email_outbox').where({ inbox_id: inbox.inbox_id, event_type: 'TICKET_CREATED' });
+      expect(JSON.stringify(ticketEvents)).not.toContain('Technician diagnostic reply.');
+      expect(JSON.stringify(ticketEvents)).not.toContain('Private diagnostic subject');
+    }
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(2);
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'created', reason: 'terminal_replay' });
+    expect(await customer.table('tickets')).toHaveLength(before.length + 1);
+  } finally { provider.mockRestore(); effective.mockRestore(); }
+}, audience));
+
+it.each(['create_permission', 'foreign_client', 'destination_scope'] as const)('quarantines technician cutoff replies that fail %s admission without creating a ticket', async condition => withTechnicianInboundFixture(async ({
+  customer, customerPrincipal, recipient, resource, operation, inbox, run,
+}) => {
+  await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: new Date(Date.now() - 7200000) });
+  const status = await customer.table('statuses').where({ board_id: operation.customer_board_id, item_type: 'ticket', is_closed: false }).first();
+  const priority = await customer.table('priorities').where('item_type', 'ticket').first();
+  const defaults = { client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id, priority_id: priority.priority_id, entered_by: customerPrincipal.userId };
+  if (condition === 'create_permission') {
+    const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'create' }).first();
+    await customer.table('role_permissions').where('permission_id', permission.permission_id).del();
+  }
+  if (condition === 'destination_scope') {
+    const board = await customer.table('boards').where('board_id', operation.customer_board_id).first(); defaults.board_id = randomUUID();
+    await customer.table('boards').insert({ ...board, board_id: defaults.board_id, board_name: 'Outside technician scope', is_default: false });
+    const bundles = await import('@alga-psa/authorization');
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Technician source board', actorUserId: customerPrincipal.userId });
+    for (const action of ['read', 'update', 'create']) await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId,
+      resourceType: 'ticket', action, templateKey: 'selected_boards', config: { selectedBoardIds: [operation.customer_board_id] } });
+    await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+    await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'user', targetId: recipient.userId });
+  }
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const provider = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
+  const effective = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
+  const rules = await import('../../../../shared/services/email/inboundEmailRules'), evaluate = vi.spyOn(rules, 'evaluateInboundEmailRules');
+  if (condition === 'foreign_client') evaluate.mockResolvedValue({ outcome: { kind: 'assign_client', clientId: randomUUID(), ruleId: randomUUID(), ruleName: 'Wrong client', matchSource: 'rule' }, trace: [] } as any);
+  const before = await customer.table('tickets');
+  try {
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:unauthorized_technician_reply' });
+    expect(await customer.table('tickets')).toHaveLength(before.length);
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  } finally { provider.mockRestore(); effective.mockRestore(); evaluate.mockRestore(); }
+}));
+
+it.each(['reopen', 'automated', 'rate_limited'] as const)('applies technician %s policy without changing a private comment into a requester response', async scenario => withTechnicianInboundFixture(async ({
+  customer, resource, operation, emailData, run,
+}) => {
+  await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+  await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: new Date(Date.now() - 60000), response_state: 'awaiting_internal' });
+  if (scenario === 'automated') emailData.headers['auto-submitted'] = 'auto-replied';
+  const limiter = await import('../../../../shared/services/email/inboundReopenRateLimiter');
+  const rateLimit = vi.spyOn(limiter, 'checkInboundReopenRateLimit').mockResolvedValue({ allowed: scenario !== 'rate_limited', count: scenario === 'rate_limited' ? 4 : 1, limit: 3, windowSeconds: 3600 });
+  try {
+    const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+    expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ is_closed: scenario !== 'reopen', response_state: 'awaiting_internal' });
+    expect(await customer.table('comments').where('comment_id', (result as any).commentId).first()).toMatchObject({ is_internal: true });
+    if (scenario === 'automated') expect(rateLimit).not.toHaveBeenCalled();
+  } finally { rateLimit.mockRestore(); }
+}, 'organization_private'));
+
+it('retries a transient technician reply writer failure and commits only one eventual reply', async () => withTechnicianInboundFixture(async ({
+  customer, resource, inbox, run,
+}) => {
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions'), real = workflow.createCommentFromEmail;
+  const writer = vi.spyOn(workflow, 'createCommentFromEmail').mockImplementationOnce(async (...args: any[]) => {
+    await (real as any)(...args); throw new Error('Temporary technician writer failure');
+  });
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  try {
+    expect(await run()).toMatchObject({ disposition: 'retry' });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
+    expect(await customer.table('inbound_email_outbox').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    writer.mockRestore(); await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).update({ next_attempt_at: new Date(0) });
+    expect(await run()).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: resource.id });
+    expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length + 1);
+  } finally { writer.mockRestore(); }
+}));
+
+it.each(['attribute', 'comment'] as const)('processes a technician HTML-only reply using its %s token marker', async kind => withTechnicianInboundFixture(async ({
+  customer, emailData, run,
+}) => {
+  const token = (await customer.table('co_management_customer_reply_tokens').first()).token;
+  emailData.body = { html: `<p>HTML technician answer</p>${kind === 'attribute' ? `<div data-alga-reply-token="${token}"></div>` : `<!--alga:reply-token:${token}-->`}` };
+  const result = await run(); expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied' });
+  expect((await customer.table('comments').where('comment_id', (result as any).commentId).first()).note).toContain('HTML technician answer');
+}));
+
+it('retains technician mail for retry if a durable worker has no qualified admission adapter', async () => withTechnicianInboundFixture(async ({
+  customer, resource, inbox, nativeTokenLookup, nativeThreadLookup,
+}) => {
+  expect(await runCoManagedInbox(resource.tenant, inbox.inbox_id)).toMatchObject({ disposition: 'retry' });
+  expect(await customer.table('inbound_email_inbox').where('inbox_id', inbox.inbox_id).first()).toMatchObject({ source_object_key: inbox.source_object_key, status: 'retryable_failed' });
+  expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+}));
+
+it('rejects conflicting explicit comment audience and visibility or a different parent audience before persisting mail content', async () => withCustomerReplyTokenFixture(async ({
+  customer, recipient, resource, request,
+}) => {
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const before = await customer.table('comments').where('ticket_id', resource.id);
+  for (const audience of ['requester', 'shared_it', 'organization_private'] as const) {
+    await expect(db.transaction(trx => TicketModel.createComment({ ticket_id: resource.id, content: 'Conflicting audience',
+      author_type: 'internal', author_id: recipient.userId, collaboration_audience: audience, is_internal: audience === 'requester' }, resource.tenant, trx)))
+      .rejects.toThrow('Comment audience and visibility disagree');
+  }
+  await expect(db.transaction(trx => TicketModel.createComment({ ticket_id: resource.id, content: 'Wrong parent audience', parent_comment_id: request.commentId,
+    author_type: 'internal', author_id: recipient.userId, collaboration_audience: 'requester', is_internal: false }, resource.tenant, trx)))
+    .rejects.toThrow('Reply audience changed');
+  expect(await customer.table('comments').where('ticket_id', resource.id)).toHaveLength(before.length);
 }));

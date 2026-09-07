@@ -1,5 +1,5 @@
 import { htmlToVisibleText } from '../../lib/email/replyParser';
-import { isRequesterReplyToken, requesterReplyTokenFromBody, type RequesterReplyAdmission, type AdmittedRequesterReply } from './requesterReplyAdmission';
+import { isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -87,7 +87,7 @@ export interface ProcessInboundEmailInAppOptions {
     mode: 'shadow' | 'enforce';
     trx: any;
     inboxId: string;
-    requesterReplyAdmission?: RequesterReplyAdmission;
+    qualifiedReplyAdmission?: EmailReplyAdmission;
     eventPublishers?: {
       ticket?: IEventPublisher;
       comment?: IEventPublisher;
@@ -187,7 +187,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'quarantined';
-      reason: 'unauthorized_requester_reply';
+      reason: 'unauthorized_requester_reply' | 'unauthorized_technician_reply';
       matchedBy: 'reply_token';
     };
 
@@ -1056,14 +1056,14 @@ export async function processInboundEmailInApp(
    * transaction plus injected adapters; otherwise the original (ticketData,
    * tenant[, userId]) call shape is preserved exactly.
    */
-  const helperExtraArgs = (kind: 'ticket' | 'comment'): any[] =>
-    durableExecution ? [undefined, helperExecutionOptions(kind)] : [];
+  const helperExtraArgs = (kind: 'ticket' | 'comment', actorUserId?: string): any[] =>
+    durableExecution ? [actorUserId, helperExecutionOptions(kind)] : actorUserId ? [actorUserId] : [];
 
   const skipInlineArtifacts = Boolean(durableExecution);
 
   // Fast-path: if we've already created a ticket for this email, never create a second one.
-  const reservedRequesterToken = requesterReplyTokenFromBody(emailData.body);
-  const existingTicket = reservedRequesterToken ? null : await findExistingEmailTicket({
+  const reservedQualifiedToken = qualifiedReplyTokenFromBody(emailData.body);
+  const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
     tenantId,
     providerId,
     messageId: emailData.id,
@@ -1175,7 +1175,7 @@ export async function processInboundEmailInApp(
     });
   }
 
-  const conversationToken = reservedRequesterToken ?? extractConversationToken(parsedEmail);
+  const conversationToken = reservedQualifiedToken ?? extractConversationToken(parsedEmail);
   const diagnostics = options.collectDiagnostics
     ? buildDiagnostics({
         emailData,
@@ -1317,11 +1317,11 @@ export async function processInboundEmailInApp(
     ticketId: string;
     matchedBy: 'reply_token' | 'thread_headers';
     parentCommentId?: string | null;
-    requester?: AdmittedRequesterReply;
+    qualifiedReply?: AdmittedEmailReply;
   }): Promise<ProcessInboundEmailInAppResult | null> => {
     // Qualified replies use the fenced inbox/effect identity. Legacy message-ID
     // lookup can point at a different comment/thread and cannot replace it.
-    const existingCommentId = params.requester ? null : await findExistingEmailComment({
+    const existingCommentId = params.qualifiedReply ? null : await findExistingEmailComment({
       tenantId,
       ticketId: params.ticketId,
       messageId: emailData.id,
@@ -1348,10 +1348,11 @@ export async function processInboundEmailInApp(
       text: parsedText,
     });
     const serializedBlocks = JSON.stringify(blocks);
-    const matchedSenderContact = params.requester ? {
-      contact_id: params.requester.contactId, client_id: params.requester.clientId,
-      email: params.requester.senderEmail, matched_email: params.requester.senderEmail,
-      user_type: 'client', user_id: undefined,
+    const matchedSenderContact = params.qualifiedReply ? {
+      contact_id: params.qualifiedReply.contactId, client_id: params.qualifiedReply.clientId,
+      email: params.qualifiedReply.senderEmail, matched_email: params.qualifiedReply.senderEmail,
+      user_type: params.qualifiedReply.kind === 'requester' ? 'client' : 'internal',
+      user_id: params.qualifiedReply.kind === 'customer_technician' ? params.qualifiedReply.userId : undefined,
     } : await resolveSenderContact({ ticketId: params.ticketId });
     const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
     const matchedSenderContactId = matchedSenderContact?.contact_id || undefined;
@@ -1365,7 +1366,7 @@ export async function processInboundEmailInApp(
         existingConnection: durableExecution?.trx,
       });
     } catch (error) {
-      if (params.requester) throw error;
+      if (params.qualifiedReply) throw error;
       console.warn('processInboundEmailInApp: failed to load inbound reply reopen policy (continuing)', {
         tenantId,
         providerId,
@@ -1565,7 +1566,7 @@ export async function processInboundEmailInApp(
       }
     }
 
-    const watchListRecipients = params.requester ? [] : params.matchedBy === 'thread_headers'
+    const watchListRecipients = params.qualifiedReply ? [] : params.matchedBy === 'thread_headers'
       ? buildInboundWatchListRecipients({
           to: emailData.to,
           cc: emailData.cc,
@@ -1583,10 +1584,12 @@ export async function processInboundEmailInApp(
         content: serializedBlocks,
         parent_comment_id: params.parentCommentId ?? undefined,
         source: 'email',
+        collaboration_audience: params.qualifiedReply?.audience,
         author_type: matchedSenderIsInternalUser ? 'internal' : 'contact',
         author_id: matchedSenderContact?.user_id,
         contact_id: matchedSenderIsInternalUser ? undefined : matchedSenderContactId,
         metadata: {
+          ...(params.qualifiedReply ? { qualifiedReply: { kind: params.qualifiedReply.kind, sourceTicketId: params.qualifiedReply.ticketId, sourceParentCommentId: params.qualifiedReply.parentCommentId } } : {}),
           email: buildCommentEmailMetadata({
             matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
             primaryContactEmail: matchedSenderContact?.email ?? null,
@@ -1616,7 +1619,7 @@ export async function processInboundEmailInApp(
         },
       },
       tenantId,
-      ...helperExtraArgs('comment')
+      ...helperExtraArgs('comment', params.qualifiedReply?.kind === 'customer_technician' ? params.qualifiedReply.userId : undefined)
     );
 
     if (skipInlineArtifacts) {
@@ -1669,7 +1672,7 @@ export async function processInboundEmailInApp(
     }, diagnostics);
   };
 
-  const handleNewTicket = async (requester?: AdmittedRequesterReply): Promise<ProcessInboundEmailInAppResult> => {
+  const handleNewTicket = async (qualifiedReply?: AdmittedEmailReply): Promise<ProcessInboundEmailInAppResult> => {
   // New ticket path.
   // Inbound email rules run only here — replies that threaded above never reach
   // this point — and before defaults resolution so skip rules work even for
@@ -1725,9 +1728,10 @@ export async function processInboundEmailInApp(
     return withDiagnostics({ outcome: 'skipped', reason: 'missing_defaults' }, diagnostics);
   }
 
-  const matchedSenderContact = requester ? {
-    contact_id: requester.contactId, client_id: requester.clientId, email: requester.senderEmail,
-    matched_email: requester.senderEmail, user_type: 'client', user_id: undefined,
+  const matchedSenderContact = qualifiedReply ? {
+    contact_id: qualifiedReply.contactId, client_id: qualifiedReply.clientId, email: qualifiedReply.senderEmail,
+    matched_email: qualifiedReply.senderEmail, user_type: qualifiedReply.kind === 'requester' ? 'client' : 'internal',
+    user_id: qualifiedReply.kind === 'customer_technician' ? qualifiedReply.userId : undefined,
   } : await resolveSenderContact({
     defaultClientId: ruleAssignedClientId ?? providerDefaults?.client_id ?? null,
   });
@@ -1756,7 +1760,7 @@ export async function processInboundEmailInApp(
       matchedSenderClientId === ruleAssignedClientId
   );
   let ruleAssignedContactId: string | null = null;
-  if (ruleAssignedClientId && !requester) {
+  if (ruleAssignedClientId && !qualifiedReply) {
     ruleAssignedContactId = senderContactInRuleClient
       ? matchedSenderContactId ?? null
       : await findValidClientPrimaryContactId(ruleAssignedClientId, tenantId);
@@ -1824,10 +1828,10 @@ export async function processInboundEmailInApp(
     ? ruleAssignedContactId ?? undefined
     : matchedSenderContactId;
 
-  if (requester) {
-    await requester.assertDestination({ clientId: ruleAssignedClientId ?? requester.clientId, boardId: defaults.board_id });
-    targetClientId = requester.clientId;
-    targetContactId = requester.contactId;
+  if (qualifiedReply) {
+    await qualifiedReply.assertDestination({ clientId: ruleAssignedClientId ?? qualifiedReply.clientId, boardId: defaults.board_id });
+    targetClientId = qualifiedReply.clientId;
+    targetContactId = qualifiedReply.contactId;
   }
 
   // Domain fallback: if no exact contact match, use explicitly configured inbound-domain client mapping.
@@ -1839,7 +1843,7 @@ export async function processInboundEmailInApp(
   // Only treat the email as authored by a contact when we have an exact sender
   // email match that is consistent with the ticket's client.
   const matchedSenderIsInternalUser = matchedSenderContact?.user_type === 'internal';
-  const senderContactUsableAsAuthor = !ruleAssignedClientId || senderContactInRuleClient;
+  const senderContactUsableAsAuthor = Boolean(qualifiedReply) || !ruleAssignedClientId || senderContactInRuleClient;
   const commentAuthorContactId =
     matchedSenderIsInternalUser || !senderContactUsableAsAuthor ? undefined : matchedSenderContactId;
   const commentAuthorUserId = senderContactUsableAsAuthor
@@ -1872,7 +1876,7 @@ export async function processInboundEmailInApp(
   }
 
   // New-ticket idempotency: ticket could have been created in another parallel process.
-  const existingTicketAfterDefaults = requester ? null : await findExistingEmailTicket({
+  const existingTicketAfterDefaults = qualifiedReply ? null : await findExistingEmailTicket({
     tenantId,
     providerId,
     messageId: emailData.id,
@@ -1897,7 +1901,7 @@ export async function processInboundEmailInApp(
     text: parsedText,
   });
   const serializedBlocks = JSON.stringify(blocks);
-  const seededWatchList = requester ? [] : mergeTicketWatchListRecipients(
+  const seededWatchList = qualifiedReply ? [] : mergeTicketWatchListRecipients(
     inboundWatchListRecipients,
     buildUnmatchedSenderWatchListRecipients(commentAuthorContactId ?? null)
   );
@@ -1905,8 +1909,8 @@ export async function processInboundEmailInApp(
 
   const ticketResult = await createTicketFromEmail(
     {
-      title: emailData.subject || '(no subject)',
-      description: serializedBlocks,
+      title: qualifiedReply?.kind === 'customer_technician' && qualifiedReply.audience !== 'requester' ? qualifiedReply.followupTitle! : emailData.subject || '(no subject)',
+      description: qualifiedReply?.kind === 'customer_technician' && qualifiedReply.audience !== 'requester' ? '' : serializedBlocks,
       client_id: targetClientId,
       contact_id: targetContactId,
       source: 'email',
@@ -1917,7 +1921,7 @@ export async function processInboundEmailInApp(
       subcategory_id: defaults.subcategory_id,
       // Avoid cross-client location_id mismatch when we infer a different client than the defaults.
       location_id: targetClientId === defaults.client_id ? defaults.location_id : null,
-      entered_by: defaults.entered_by,
+      entered_by: qualifiedReply?.kind === 'customer_technician' ? qualifiedReply.userId : defaults.entered_by,
       email_metadata: {
         messageId: normalizeStoredMessageId(emailData.id),
         sourceSha256: emailData.sourceSha256,
@@ -1935,13 +1939,14 @@ export async function processInboundEmailInApp(
       attributes: seededAttributes ?? undefined,
     },
     tenantId,
-    ...helperExtraArgs('ticket')
+    ...helperExtraArgs('ticket', qualifiedReply?.kind === 'customer_technician' ? qualifiedReply.userId : undefined)
   );
 
   const commentId = await createCommentFromEmail(
     {
       ticket_id: ticketResult.ticket_id,
       content: serializedBlocks,
+      collaboration_audience: qualifiedReply?.audience,
       source: 'email',
       // First comment on a brand-new ticket: the TICKET_CREATED email already notifies
       // the tech with the same body, so keep this comment in-app only to avoid a duplicate.
@@ -1952,6 +1957,7 @@ export async function processInboundEmailInApp(
       author_id: commentAuthorUserId ?? undefined,
       contact_id: commentAuthorContactId ?? undefined,
       metadata: {
+        ...(qualifiedReply ? { qualifiedReply: { kind: qualifiedReply.kind, sourceTicketId: qualifiedReply.ticketId, sourceParentCommentId: qualifiedReply.parentCommentId } } : {}),
         email: buildCommentEmailMetadata({
           matchedSenderEmail: matchedSenderContact?.matched_email ?? senderEmail ?? null,
           primaryContactEmail: matchedSenderContact?.email ?? null,
@@ -1967,7 +1973,7 @@ export async function processInboundEmailInApp(
       },
     },
     tenantId,
-    ...helperExtraArgs('comment')
+    ...helperExtraArgs('comment', qualifiedReply?.kind === 'customer_technician' ? qualifiedReply.userId : undefined)
   );
 
   if (!skipInlineArtifacts) {
@@ -2005,19 +2011,19 @@ export async function processInboundEmailInApp(
   };
 
   const token = conversationToken;
-  if (isRequesterReplyToken(token)) {
-    if (!durableExecution?.requesterReplyAdmission) throw new Error('Requester reply requires durable inbox admission');
-    const admitted = await durableExecution.requesterReplyAdmission(durableExecution.trx, {
+  if (isQualifiedReplyToken(token)) {
+    if (!durableExecution?.qualifiedReplyAdmission) throw new Error('Qualified reply requires durable inbox admission');
+    const admitted = await durableExecution.qualifiedReplyAdmission(durableExecution.trx, {
       tenant: tenantId, token, senderEmail: senderEmail ?? '', senderAuth: senderAuthResults,
-    }, async requester => {
+    }, async qualifiedReply => {
       if (diagnostics) {
         diagnostics.threading.tokenLookupMatched = true;
         diagnostics.threading.tokenLookupMissReason = null;
         diagnostics.threading.matchedBy = 'reply_token';
-        diagnostics.threading.matchedTicketId = requester.ticketId;
+        diagnostics.threading.matchedTicketId = qualifiedReply.ticketId;
       }
-      const reply = await handleThreadedReply({ ticketId: requester.ticketId, parentCommentId: requester.parentCommentId, matchedBy: 'reply_token', requester });
-      return reply ?? handleNewTicket(requester);
+      const reply = await handleThreadedReply({ ticketId: qualifiedReply.ticketId, parentCommentId: qualifiedReply.parentCommentId, matchedBy: 'reply_token', qualifiedReply });
+      return reply ?? handleNewTicket(qualifiedReply);
     });
     if (admitted.admitted) return admitted.result;
     if (diagnostics) {
@@ -2025,7 +2031,7 @@ export async function processInboundEmailInApp(
       diagnostics.threading.matchedTicketId = null;
       diagnostics.threading.matchedCommentId = null;
     }
-    return withDiagnostics({ outcome: 'quarantined', reason: 'unauthorized_requester_reply', matchedBy: 'reply_token' }, diagnostics);
+    return withDiagnostics({ outcome: 'quarantined', reason: (/^cm1:/i.test(token) ? 'unauthorized_requester_reply' : 'unauthorized_technician_reply'), matchedBy: 'reply_token' }, diagnostics);
   }
   if (token) {
     try {

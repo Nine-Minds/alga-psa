@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { randomBytes } from 'node:crypto';
 import { tenantDb, withTransaction, withSavepoint } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
-import { allowsContactSenderAttribution, type SenderAuthResults } from '@alga-psa/shared/lib/email/senderAuthVerification';
+import { allowsInternalSenderAttribution, type SenderAuthResults } from '@alga-psa/shared/lib/email/senderAuthVerification';
 import type { AuthorizationRecord } from '@alga-psa/authorization';
 import type { CoManagedNotificationRecipient } from './sharedWork';
 import { withCoManagedCustomerCommentNotification, type CoManagedCustomerTicketResource } from './customerCommentNotification';
@@ -62,7 +62,7 @@ export async function withCoManagedCustomerEmailReply<T>(db: Knex, input: {
   tenant: string; token: string; senderEmail: string; senderAuth: SenderAuthResults | null;
 }, reply: (context: CoManagedCustomerReplyContext) => Promise<T>): Promise<T> {
   if (!input || !isCoManagedUuid(input.tenant) || typeof input.token !== 'string' || !TOKEN.test(input.token) ||
-      !input.senderAuth?.aligned || !allowsContactSenderAttribution(input.senderAuth)) throw new CoManagedSharedWorkError();
+      !input.senderAuth?.aligned || !allowsInternalSenderAttribution(input.senderAuth)) throw new CoManagedSharedWorkError();
   const tenant = input.tenant, token = input.token, senderEmail = normalize(input.senderEmail);
   if (!senderEmail) throw new CoManagedSharedWorkError();
   return withTransaction(db, outer => withSavepoint(outer, async trx => {

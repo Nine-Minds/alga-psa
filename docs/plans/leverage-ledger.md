@@ -212,3 +212,16 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - Where: db withSavepoint/afterCommit helpers and customerReplyTokens.ts.
 - Gate: reproduced through actual technician reply transactions; high lost/premature notification cost and stable existing hook ownership contract; ACT / bounded database-engine addition.
 - Status: revised (2026-09-07). Explicit withSavepoint requires an owning transaction, promotes successful child hooks to that parent without dispatch, and discards hooks on rollback. The ordinary withTransaction behavior is unchanged. Actual root and enclosing reply transactions prove hooks see committed database state only once, while child rejection and outer rollback produce no hooks. Existing after-commit unit regressions remain covered.
+
+
+## Qualified mail identity and audience — friction
+- What: the requester-only inbox callback could not represent a customer technician, and native mail helpers always created public roots/changed requester response state. Closed-ticket cutoff copied the incoming subject/body into public ticket context.
+- Where: qualifiedReplyAdmission.ts, inboundEmailReply.ts, durable worker compositions, processInboundEmailInApp.ts, emailWorkflowActions.ts and TicketModel.createComment.
+- Gate: two real principal kinds and three supported audiences, high identity/disclosure cost; ACT / bounded extension of the existing mail engine rather than a parallel ticket writer.
+- Status: revised (2026-09-07). The typed callback distinguishes requester and customer technician identities. The same canonical writer retains their thread audience, qualified actor in events, reopen policy and durable effects. Technician cutoff checks create/read/update permissions on its fixed client/destination, uses the actual technician as creator, preserves the original audience and keeps IT-only reply subjects/bodies out of public ticket context. Explicit audience/visibility or parent-audience conflicts reject before content persists. Customer technicians use the existing stronger internal sender-authentication policy (DMARC alignment or both aligned SPF and DKIM).
+
+## Technician inbound artifact authority — friction
+- What: the native artifact worker forces portal-visible attachment processing and cannot inherit the recipient-specific conversation audience. Editable comment metadata cannot safely choose its path.
+- Where: inboundEmailArtifactWorker.ts and the future conversation artifact adapter.
+- Gate: concrete private email replies now reach the canonical inbox writer; current native folder defaults are the wrong authority boundary. Full conversation attachment materialization remains required.
+- Status: pending adapter (2026-09-07). Digest-verified original MIME identifies reserved technician tokens before any native upload. Its artifact manifest/source stays pending with fenced, attempt-preserving deferral until the conversation attachment adapter is connected. No production outgoing technician token issuance has been enabled. The generic pause helper is shared with lifecycle callers without changing their lease/failure preservation. This retention boundary is interim protection, not completed attachment handling.

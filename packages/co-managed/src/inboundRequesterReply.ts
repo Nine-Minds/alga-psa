@@ -13,6 +13,7 @@ export const admitCoManagedRequesterReply: RequesterReplyAdmission = async (trx,
     // Rejection can happen after a writer await (expiry/destination admission).
     // Roll back those writes to a savepoint before the inbox records quarantine.
     const result = await trx.transaction(savepoint => withCoManagedRequesterEmailReply(savepoint, input, async context => write({
+      kind: 'requester', audience: 'requester',
       ticketId: context.resource.id, parentCommentId: context.parentCommentId, clientId: context.recipient.clientId,
       contactId: context.recipient.kind === 'requester_contact' ? context.recipient.contactId : undefined,
       senderEmail: context.senderEmail,

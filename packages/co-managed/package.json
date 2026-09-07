@@ -21,6 +21,10 @@
     "./inboundRequesterReply": {
       "types": "./src/inboundRequesterReply.ts",
       "import": "./dist/inboundRequesterReply.js"
+    },
+    "./inboundEmailReply": {
+      "types": "./src/inboundEmailReply.ts",
+      "import": "./dist/inboundEmailReply.js"
     }
   },
   "scripts": {
