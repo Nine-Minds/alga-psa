@@ -538,3 +538,37 @@ jobs:
           path: test-results/workspace-db/
           if-no-files-found: error
           retention-days: 14
+
+  workspace-db-complete:
+    name: Workspace database execution complete
+    needs: [check-changes, workspace-db-tests]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_SELECTOR_RESULT: ${{ needs.check-changes.result }}
+      DB_JOB_RESULT: ${{ needs.workspace-db-tests.result }}
+      TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download database execution evidence
+        if: always() && needs.workspace-db-tests.result != 'skipped'
+        uses: actions/download-artifact@v4
+        with:
+          name: workspace-db-evidence
+          path: test-results/workspace-db-input
+      - name: Independently verify database coverage and execution
+        if: always()
+        run: node scripts/verify-workspace-db-execution.mjs
+      - name: Upload database aggregate verdict
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-db-aggregate
+          path: test-results/workspace-db-gate/
+          if-no-files-found: error

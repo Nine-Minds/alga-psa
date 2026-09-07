@@ -2196,3 +2196,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Ran scripts/run-workspace-db-tests.mjs without filters at clean 7922859ee79f7f5006e053a27be5c4494bc9e43c against fresh task-owned pgvector PostgreSQL and Redis containers. Used normal collection, bootstrap, migrations/seeding, execution and reconciliation; no focused bootstrap bypass.
 - All 60 files and 454 assertions pass, zero failures/skips/TODOs/pending, in 375.21 seconds of Vitest execution. Discovery passes; source before/after is identical and clean. Evidence: evidence/workspace-db-local-7922859.json with raw artifact hashes. Both disposable containers removed after terminal exit zero.
 - Read-only PR refresh still reports published d8cf156c731bdfb9414ee6435152a676e0bcecf4 with 59 successful, two failed, two cancelled and one skipped checks. This local Node 25 validation does not replace native Node 22 CI. No broad plan flags changed.
+
+### 2026-09-07 — independently reconcile the workspace database lane
+
+- Added always-running Workspace database execution complete job and verifier. It independently derives the DB inventory and change selection from the consuming checkout, verifies raw collected/executed assertions and source metadata, and checks selector/producer job outcomes. Only independently proven docs/identical changes can be not applicable; schedules require execution.
+- Focused gate/adapter tests pass eight cases, including missing/new files, bad prerequisites, malformed/missing reports and unjustified skips. Verifier also accepts the actual prior 454-test clean database report against its matching historical revision; actionlint passes. Evidence: evidence/workspace-db-independent-gate.json.
+- Function-level real-artifact verification does not establish current clean CLI or native-job execution. Required-check configuration and global readiness remain open. No broad plan flags changed.
