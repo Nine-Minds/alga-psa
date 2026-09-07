@@ -2207,3 +2207,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Added a clean temporary-Git-checkout CLI test. It checks actual process exit and persisted aggregate results for matching artifacts, malformed report after prior success, dirty source, candidate mismatch, real docs-only diff, selector failure and newly tracked DB files.
 - Both gate tests pass (701.75 ms total). This complements prior actual-454-test-report verification: CLI payloads are synthetic and must not be reported as DB execution. Evidence: evidence/workspace-db-cli-lifecycle.json. Native workflow and protections remain unverified.
+
+### 2026-09-07 — refresh inventory after browser migrations and full database run
+
+- Recollected current production browser and server unit files using their real runners. Updated partial inventory with those collections, the completed 60-file workspace DB run and latest 496-test tooling events.
+- Audit remains failed with 86 unmatched files, including 74 legacy Playwright files. Recent portal/locale migrations and tax DB coverage are accounted for. Some unmatched entries are assigned tests missing from older collections (new database gate Node test, Temporal tenant creation, newer integration cases); this is not a current orphan count.
+- Evidence: evidence/inventory-after-db-browser.json includes remaining identities and artifact hashes. Global inventory remains incomplete and requires further current collections plus legacy suite migration/assignment. No broad flags changed.
