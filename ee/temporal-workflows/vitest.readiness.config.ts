@@ -10,6 +10,9 @@ export default defineConfig({
     include: [
       'src/config/__tests__/**/*.test.ts',
       'src/workflows/__tests__/generic-job-workflow.temporal.test.ts',
+      'src/workflows/__tests__/workflow-runtime-v2-interpreter.test.ts',
+      'src/workflows/__tests__/workflow-runtime-v2-run-workflow.test.ts',
+      'src/workflows/__tests__/workflow-runtime-v2-simulator-contract.test.ts',
       'src/activities/__tests__/workflow-runtime-v2-activities.test.ts',
     ],
     coverage: { provider: 'v8', enabled: false },
