@@ -1366,3 +1366,9 @@
 - Investigated two Temporal files outside readiness: marketing had nine passing cases; SLA could not import businessHoursCalculator/workflow-streams because Vitest lacked source aliases already in tsconfig. This is harness configuration evidence, not proof of a deployed package defect.
 - Repaired SLA mocks for current withTenantTransactionRetryReadOnly/tenantDb and Redis event publishing; fixed self-reference during mock-chain initialization. Preserved nine real calendar/deadline cases and strengthened notification/audit assertions. Added both files to readiness config and its independent candidate classifier.
 - Expanded readiness: eight files, 96 tests passed, zero skips, 3.01 seconds with TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1 and root Vitest 4.1.10. Evidence: evidence/temporal-sla-marketing-readiness.json. Native assignment verification remains pending; other Temporal gaps remain.
+
+### 2026-09-07 — Schedule suites and native mobile reconciliation
+
+- Downloaded mobile-execution from run 34104450446 and independently recomputed execution reconciliation from its raw collection, assertion collection and results: 134 files, 901 passes, zero skips/missing, no failures. Native artifact reporting works.
+- Three schedule suites failed because vi.fn arrow implementations cannot construct Client in Vitest 4. Replaced only those constructor implementations with functions; all ten schedule/tenant-suspension cases then passed without assertion removal.
+- Added schedule suites and tenant-suspension activities to fast readiness and its candidate classifier. Full expanded suite: 12 files, 106 passes, 4.09 seconds; native verification pending. Evidence: evidence/temporal-schedules-and-mobile-native.json.

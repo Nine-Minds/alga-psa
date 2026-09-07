@@ -16,6 +16,8 @@ export default defineConfig({
       'src/activities/__tests__/workflow-runtime-v2-activities.test.ts',
       'src/activities/__tests__/sla-activities.test.ts',
       'src/activities/__tests__/marketing-activities.test.ts',
+      'src/activities/__tests__/tenant-suspension-activities.test.ts',
+      'src/schedules/__tests__/**/*.test.ts',
     ],
     coverage: { provider: 'v8', enabled: false },
     fileParallelism: false,
