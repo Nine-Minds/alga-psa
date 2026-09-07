@@ -24,21 +24,16 @@ export class TaxService {
       throw new Error('Tenant context is required for tax rate validation');
     }
 
-    // Check for overlapping date ranges in the same region
+    // Half-open intervals overlap when each starts before the other's end.
+    // A missing end is unbounded, so it must not become the proposed start.
     const query = tenantDb(knex, tenant).table('tax_rates')
       .where({
         region_code: regionCode
       })
       .andWhere(function() {
-        this.where(function() {
-          this.whereNull('end_date')
-            .andWhere('start_date', '<', endDate || startDate);
-        }).orWhere(function() {
-          this.whereNotNull('end_date')
-            .andWhere('start_date', '<', endDate || startDate)
-            .andWhere('end_date', '>', startDate);
-        });
+        this.whereNull('end_date').orWhere('end_date', '>', startDate);
       });
+    if (endDate) query.andWhere('start_date', '<', endDate);
 
     // Only add the excludeTaxRateId condition if it's provided
     if (excludeTaxRateId) {

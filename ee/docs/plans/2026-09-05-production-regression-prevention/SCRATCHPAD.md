@@ -2172,3 +2172,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Complete canonical tooling runner at clean 2ebbadc18a51554f8124f6351964ceec51d688de passed 496 tests across all 49 required files, with zero failures/skips/TODOs/cancellations. Required emulator builds ran first. Discovery passed; before/after source remained identical and clean.
 - Runtime was 137.01 seconds. Evidence: evidence/node-tooling-local-2ebbadc.json, including artifact hashes. This confirms the recent shared shard validation against the full tooling lane, including the actual runner regressions. It is local evidence only; no native PR run was published or claimed.
+
+### 2026-09-07 — reject open-ended tax-rate overlaps
+
+- Real PostgreSQL validation exposed three failures: proposed unbounded ranges incorrectly accepted existing future or equal-start rates because the missing end date was replaced with the start. Tax-rate create/update actions call this validator.
+- Corrected the half-open interval predicate. An absent end is unbounded, existing end must be absent or later than the proposed start, and an existing start upper bound applies only when the proposed end exists. Adjacent ranges remain valid.
+- All 27 PostgreSQL cases pass after the fix, including edit exclusion and tenant/region isolation. The tax unit file also passes while retaining its three unrelated TODOs. Evidence: evidence/tax-open-ended-overlap.json. No broad plan flags changed; native CI remains unverified.

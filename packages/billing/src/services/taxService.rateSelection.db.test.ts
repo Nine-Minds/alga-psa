@@ -57,6 +57,34 @@ beforeEach(async () => {
 afterEach(async () => { await context.db?.rollback(); context.db = undefined; });
 
 describe('TaxService PostgreSQL rate selection', () => {
+  it('excludes the edited rate while preserving tenant and region boundaries in overlap validation', async () => {
+    // OTHER and foreign-tenant rates overlap, but cannot block this edit.
+    await context.db!('tax_rates').where({ tenant: context.tenant, region_code: region })
+      .whereNot('tax_rate_id', defaultRateId).delete();
+    await expect(new TaxService().validateTaxRateDateRange(region, '2026-01-01', null, defaultRateId))
+      .resolves.toBeUndefined();
+    await expect(new TaxService().validateTaxRateDateRange(region, '2026-01-01', null))
+      .rejects.toThrow('overlaps with existing rate');
+  });
+  it.each([
+    ['2026-01-01', null, '2026-07-01', null, true],
+    ['2026-07-01', null, '2026-07-01', null, true],
+    ['2026-01-01', null, '2026-07-01', '2026-08-01', true],
+    ['2026-07-01', null, '2026-01-01', '2026-07-01', false],
+    ['2026-01-01', '2026-07-01', '2026-07-01', null, false],
+    ['2026-01-01', '2026-08-01', '2026-07-01', null, true],
+    ['2026-07-01', '2026-08-01', '2026-01-01', null, true],
+  ] as const)('validates proposed [%s, %s) against existing [%s, %s)', async (start, end, existingStart, existingEnd, overlaps) => {
+    const validationRegion = 'VALIDATE';
+    await context.db!('tax_regions').insert({ tenant: context.tenant, region_code: validationRegion, region_name: 'Validation fixture' });
+    await context.db!('tax_rates').insert({
+      tenant: context.tenant, tax_rate_id: randomUUID(), region_code: validationRegion,
+      tax_percentage: 5, start_date: existingStart, end_date: existingEnd,
+    });
+    const validation = new TaxService().validateTaxRateDateRange(validationRegion, start, end);
+    if (overlaps) await expect(validation).rejects.toThrow('overlaps with existing rate');
+    else await expect(validation).resolves.toBeUndefined();
+  });
   it('uses the default billing profile when another profile has a conflicting reverse-charge setting', async () => {
     const service = new TaxService();
     await service.calculateTax(clientId, 10000, '2026-06-01', region);
