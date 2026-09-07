@@ -142,10 +142,10 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await db.destroy();
+  await db?.destroy();
 });
 
-describe('workflow runtime v2 trigger validation + launch E2E tests', () => {
+describe('workflow runtime v2 trigger validation and Temporal launch integration', () => {
   it('Validation: schemaRef mismatch requires trigger mapping (publish blocked).', async () => {
     const workflowId = await createDraftWorkflow({
       steps: [stateSetStep('state-1', 'READY')],
@@ -192,13 +192,12 @@ describe('workflow runtime v2 trigger validation + launch E2E tests', () => {
     expect(((publish as any)?.errors ?? []).some((e: any) => e.code === 'TRIGGER_MAPPING_MISSING_REQUIRED_FIELDS')).toBe(true);
   });
 
-  it('Validation: time.wait until mode rejects malformed config at publish time and accepts a valid until expression.', async () => {
-    const invalidWorkflowId = await createDraftWorkflow({
+  it('Validation: time.wait until mode rejects malformed drafts and publishes a valid until expression.', async () => {
+    await expect(createDraftWorkflow({
       steps: [timeWaitStep('wait-1', { mode: 'until' })]
-    });
-    const invalidPublish = await publishWorkflow(invalidWorkflowId, 1);
-    expect((invalidPublish as any)?.ok).toBe(false);
-    expect(((invalidPublish as any)?.errors ?? []).some((err: any) => err.code === 'INVALID_CONFIG')).toBe(true);
+    })).rejects.toThrow('until mode requires an until expression');
+    const drafts = await db('workflow_definitions').where({ tenant: tenantId });
+    expect(drafts).toEqual([]);
 
     const workflowId = await createDraftWorkflow({
       steps: [timeWaitStep('wait-1', { mode: 'until', untilExpr: { $expr: '"2099-01-01T00:00:00.000Z"' } }), stateSetStep('state-1', 'DONE')]
