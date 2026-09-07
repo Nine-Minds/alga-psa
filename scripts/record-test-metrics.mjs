@@ -287,7 +287,7 @@ async function sheetsApi(token, sheetId, pathAndQuery, method = 'GET', body) {
 }
 
 async function ensureHeaderRow(token, sheetId, tab, header) {
-  const range = encodeURIComponent(`${tab}!A1:A1`);
+  const range = encodeURIComponent(`${tab}!1:1`);
   let head = await sheetsApi(token, sheetId, `/values/${range}`);
   if (!head.ok && head.status === 400) {
     // Tab doesn't exist yet — create it, then fall through to write the header.
@@ -298,12 +298,27 @@ async function ensureHeaderRow(token, sheetId, tab, header) {
     head = { ok: true, json: {} };
   }
   if (!head.ok) throw new Error(`could not read sheet: ${head.status} ${JSON.stringify(head.json)}`);
-  if (!head.json.values?.length) {
+  const existing = head.json.values?.[0] ?? [];
+  for (let index = 0; index < Math.min(existing.length, header.length); index++) {
+    if (existing[index] !== header[index]) {
+      throw new Error(`Sheet header mismatch in "${tab}" at column ${index + 1}; refusing to append metrics`);
+    }
+  }
+  if (existing.length < header.length) {
+    // Extend a verified legacy prefix without overwriting existing headings or
+    // user-added columns. Historical rows keep their original column meanings.
+    let number = existing.length + 1;
+    let column = '';
+    while (number > 0) {
+      number--;
+      column = String.fromCharCode(65 + number % 26) + column;
+      number = Math.floor(number / 26);
+    }
     const write = await sheetsApi(
       token, sheetId,
-      `/values/${encodeURIComponent(`${tab}!A1`)}?valueInputOption=RAW`,
+      `/values/${encodeURIComponent(`${tab}!${column}1`)}?valueInputOption=RAW`,
       'PUT',
-      { values: [header] },
+      { values: [header.slice(existing.length)] },
     );
     if (!write.ok) throw new Error(`could not write header: ${JSON.stringify(write.json)}`);
   }

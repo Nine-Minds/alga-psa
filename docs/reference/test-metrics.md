@@ -32,6 +32,10 @@ below.
 ## Column schema
 
 Rows land on the `metrics` tab. The script writes the header row on first use.
+For an older schema, it verifies every existing heading and appends only the
+missing suffix. A reordered or renamed managed heading stops the write instead
+of putting values under the wrong columns. User-added trailing columns are
+preserved when all managed headings match.
 
 | Column | Meaning |
 |---|---|

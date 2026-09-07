@@ -1050,3 +1050,7 @@
 - Removed the metrics recorder early success exit for absent results/coverage. Explicit missing or malformed result files now produce a partial row with blank counts and percentage, even if coverage exists. Coverage-only callers without TEST_METRICS_RESULTS preserve their prior blank execution status.
 - Added subprocess behavioral tests of the actual buildRow invocation in an isolated empty directory. Before: four passed/two failed. Final: seven passed/zero skipped in 143 ms. Existing legacy headers remain unchanged. Evidence appended to metrics-suite-lifecycle.json.
 - This requires the metrics step to execute; cancelled-before-recorder reconciliation and versioned readiness schema remain open. F024/F025 remain incomplete.
+
+### Append-only metrics header migration — 2026-09-07
+- Existing Sheet header check read only A1, preventing older tabs from gaining appended managed headings and permitting values under reordered columns. Updated it to validate the complete managed prefix and write only missing suffix cells; matching user-added trailing columns remain intact.
+- Before behavior: two intended failures/one pass. Final: five schema boundary cases and seven lifecycle cases pass (12 total, zero skips), covering legacy prefix, mismatched order, custom suffix, empty tab and AA expansion. No live Sheet writes performed. Evidence: metrics-header-migration.json. F024/F025 remain incomplete.
