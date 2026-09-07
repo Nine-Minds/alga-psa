@@ -47,7 +47,10 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
   const hint = !sourceOnly && input.entry_id ? await owner.table('time_entries').where('entry_id', input.entry_id).first() : null;
   if (!sourceOnly && input.entry_id && !hint) throw new CoManagedSharedWorkError();
   const subjectUserId = hint?.user_id || input.user_id || actor.userId;
-  if (!isCoManagedUuid(subjectUserId) || !await owner.table('users').where({ user_id: subjectUserId, user_type: 'internal', is_inactive: false }).forShare().first('user_id')) throw new CoManagedSharedWorkError();
+  if (!isCoManagedUuid(subjectUserId)) throw new CoManagedSharedWorkError();
+  const subjectUser = owner.table('users').where({ user_id: subjectUserId, user_type: 'internal' });
+  if (!reading) subjectUser.where('is_inactive', false);
+  if (!await subjectUser.forShare().first('user_id')) throw new CoManagedSharedWorkError();
 
   if (subjectUserId !== actor.userId) {
     if (!await hasCoManagedLocalPermission(trx, actor, 'time_sheet', 'approve', true)) throw new CoManagedSharedWorkError();

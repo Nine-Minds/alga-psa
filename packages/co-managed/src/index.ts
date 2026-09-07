@@ -63,3 +63,5 @@ export * from './nativeTimeEntryAccess';
 export * from './localAuthentication';
 
 export * from './nativeTimeTracking';
+
+export * from './nativeTimeRead';

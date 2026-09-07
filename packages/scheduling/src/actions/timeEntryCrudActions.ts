@@ -52,7 +52,7 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, readCoManagedNativeTimeEntry, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { timeEntrySchema } from '../schemas/timeSheet.schemas';
 
@@ -1279,6 +1279,12 @@ export const getTimeEntryById = withAuth(async (
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
   try {
+    const current = await readCoManagedNativeTimeEntry(db, tenant, entryId, async () => {
+      const session = await getSession();
+      if (getApiKeyUserOverride() || !session?.session_id || session.user?.tenant !== tenant || session.user?.id !== user.user_id || session.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
+      return { kind: 'session', tenant, userId: user.user_id, sessionId: session.session_id };
+    });
+    if (current.handled) return current.entry;
   // Check permission for time entry reading
   if (!await hasPermission(user, 'time_entry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');

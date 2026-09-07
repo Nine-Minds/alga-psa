@@ -12769,3 +12769,95 @@ it('native timer cancellation controller forwards the verified credential and ex
     expect((await customer.table('native_time_tracking_sessions').first()).session_id).toBe(next.session_id);
   } finally { product.mockRestore(); limit.mockRestore(); findUser.mockRestore(); validate.mockRestore(); }
 }));
+
+it('native time detail reads return actual operational duration through browser and API without billing enrichment', async () => withOperationalTimeApiFixture(async ({ create, actions, service, context }: any) => {
+  const saved = await create();
+  const browser = await actions.getTimeEntryById(saved.entry_id);
+  expect(browser).toMatchObject({ entry_id: saved.entry_id, duration_hours: 1.5, elapsed_minutes: 90, billable_duration: 0, workItem: { name: 'Verify rollout' } });
+  expect(typeof browser.start_time).toBe('string'); expect(browser.work_date).toBe('2026-09-07');
+  for (const entry of [await service.getById(saved.entry_id, context), await service.getWithDetails(saved.entry_id, context)]) {
+    expect(entry).toMatchObject({ duration_hours: 1.5, billable_duration: 0, work_item: { title: 'Verify rollout' } });
+    expect(entry.billing_info).toBeUndefined(); expect(entry.service).toBeUndefined();
+  }
+}));
+
+it('native time detail reads enforce current key scope independently from the browser session and mask stored notes', async () => withOperationalTimeApiFixture(async ({ create, actions, service, context, customer, resource, operation, user, apiKeyId }: any) => {
+  const saved = await create(), bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Read time scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['time_entries.notes'] } });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['task_name', 'project_name', 'description'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  const api = await service.getWithDetails(saved.entry_id, context);
+  expect(api).toMatchObject({ notes: '', work_item_title: '' });
+  expect(JSON.stringify(api)).not.toMatch(/Private API effort|Verify rollout|Joint rollout|Private detailed work/);
+  expect(await actions.getTimeEntryById(saved.entry_id)).toMatchObject({ notes: 'Private API effort', workItem: { name: 'Verify rollout' } });
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+  await expect(service.getWithDetails(saved.entry_id, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('native time detail reads retain history after lapse, approval and upgrade while rejecting invalid browser identity', async () => withOperationalTimeApiFixture(async ({ create, actions, service, context, customer, principal, session }: any) => {
+  const saved = await create();
+  await customer.table('time_sheets').where('id', saved.time_sheet_id).update({ approval_status: 'APPROVED' });
+  await customer.table('time_entries').where('entry_id', saved.entry_id).update({ approval_status: 'APPROVED' });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await actions.getTimeEntryById(saved.entry_id)).toMatchObject({ approval_status: 'APPROVED', duration_hours: 1.5 });
+  expect(await service.getWithDetails(saved.entry_id, context)).toMatchObject({ approval_status: 'APPROVED', duration_hours: 1.5 });
+  await customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  await customer.table('tenants').update({ product_code: 'psa' });
+  expect(await service.getWithDetails(saved.entry_id, context)).toMatchObject({ billing_mode: 'operational', duration_hours: 1.5 });
+  session.mockResolvedValue(null);
+  await expect(actions.getTimeEntryById(saved.entry_id)).rejects.toThrow();
+}));
+
+it('native time detail reads deny a current source outside local bundle scope and do not expose masked interval identity', async () => withOperationalTimeApiFixture(async ({ create, service, context, customer, resource, user, apiKeyId, operation }: any) => {
+  const saved = await create(), bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Denied time interval', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['start_time'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(service.getById(saved.entry_id, context)).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('authorization_bundle_assignments').where('bundle_id', bundleId).del();
+  const denied = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Denied time project', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, ...denied, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [randomUUID()] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, ...denied, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId: denied.bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(service.getWithDetails(saved.entry_id, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('native time detail reads recheck credential expiry after waiting for the actual work lock', async () => withOperationalTimeApiFixture(async ({ create, customer, context, resource, apiKeyId }: any) => {
+  const saved = await create(), domain = await import('../../../../packages/co-managed/src/nativeTimeRead');
+  const blocker = await db.transaction();
+  await tenantDb(blocker, resource.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
+  let pid: number | undefined;
+  const reading = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return domain.readCoManagedNativeTimeEntry(trx, context.tenant, saved.entry_id, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId }));
+  });
+  const rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await db.raw('SELECT pg_sleep(1.6)');
+  } finally { await blocker.rollback(); }
+  await rejected;
+}));
+
+it('native time detail reads mask financial metadata without altering stored operational effort', async () => withOperationalTimeApiFixture(async ({ create, service, context, customer, resource, user, apiKeyId, operation }: any) => {
+  const saved = await create(), bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Hidden time billing', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['billing', 'time_sheet_id'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  expect(await service.getWithDetails(saved.entry_id, context)).toMatchObject({ duration_hours: 1.5, billable_duration: null, is_billable: null, time_sheet_id: null });
+  expect(await customer.table('time_entries').where('entry_id', saved.entry_id).first()).toMatchObject({ billable_duration: 0, time_sheet_id: saved.time_sheet_id });
+}));
+
+it('native time detail reads preserve permitted manager access to a deactivated technician history', async () => withOperationalTimeApiFixture(async ({ create, service, context, customer, user }: any) => {
+  const saved = await create(), formerId = randomUUID(), sheet = await customer.table('time_sheets').where('id', saved.time_sheet_id).first();
+  await customer.table('users').insert({ ...user, user_id: formerId, email: 'former-tech@example.test', username: 'former-tech', is_inactive: true, reports_to: user.user_id });
+  const formerSheet = randomUUID();
+  await customer.table('time_sheets').insert({ ...sheet, id: formerSheet, user_id: formerId });
+  await customer.table('time_entries').where('entry_id', saved.entry_id).update({ user_id: formerId, time_sheet_id: formerSheet });
+  expect(await service.getWithDetails(saved.entry_id, context)).toMatchObject({ user_id: formerId, notes: 'Private API effort', duration_hours: 1.5 });
+}));

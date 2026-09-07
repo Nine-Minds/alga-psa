@@ -28,7 +28,7 @@ import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
-  NativeTimeTrackingError, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  NativeTimeTrackingError, readCoManagedNativeTimeEntry, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 
@@ -291,7 +291,20 @@ export class TimeEntryService extends BaseService<any> {
     };
   }
 
+  private async readCurrentTimeEntry(id: string, context: ServiceContext) {
+    const { knex } = await this.getKnex();
+    return this.withTimeErrors(async () => {
+      const current = await readCoManagedNativeTimeEntry(knex, context.tenant, id, async () => this.timeActor(context));
+      if (!current.handled || !current.entry) return current;
+      const { workItem, ...entry } = current.entry;
+      return { handled: true as const, entry: { ...entry, work_item_title: workItem.name,
+        work_item: { id: entry.work_item_id, type: entry.work_item_type, title: workItem.name } } };
+    });
+  }
+
   async getById(id: string, context: ServiceContext): Promise<any | null> {
+    const current = await this.readCurrentTimeEntry(id, context);
+    if (current.handled) return current.entry;
     const { knex } = await this.getKnex();
     const scopedDb = tenantDb(knex, context.tenant);
     const query = this.buildTenantScopedQuery(knex, context);
@@ -313,6 +326,8 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   async getWithDetails(id: string, context: ServiceContext): Promise<any | null> {
+    const current = await this.readCurrentTimeEntry(id, context);
+    if (current.handled) return current.entry;
     const timeEntry = await this.getById(id, context);
     if (!timeEntry) return null;
 
@@ -675,19 +690,19 @@ export class TimeEntryService extends BaseService<any> {
   }
 
   // Time tracking sessions
-  private timerActor(context: ServiceContext) {
+  private timeActor(context: ServiceContext) {
     if (!context.apiKeyId || context.user?.user_id !== context.userId || context.user?.tenant !== context.tenant || context.user?.user_type !== 'internal') throw new CoManagedSharedWorkError();
     return { kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId };
   }
 
   async startTimeTracking(data: StartTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => startNativeTimeTracking(knex, this.timerActor(context), data));
+    return this.withTimeErrors(() => startNativeTimeTracking(knex, this.timeActor(context), data));
   }
 
   async stopTimeTracking(sessionId: string, data: StopTimeTrackingData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timerActor(context), sessionId, data, async completion => {
+    return this.withTimeErrors(() => stopNativeTimeTracking(knex, this.timeActor(context), sessionId, data, async completion => {
       const { trx, actor, clock, endTime, billingMode, serviceId, notes, billable } = completion;
       const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
       const startTime = new Date(clock.start_time), workDate = clock.work_date instanceof Date ? clock.work_date.toISOString().slice(0, 10) : clock.work_date;
@@ -708,14 +723,14 @@ export class TimeEntryService extends BaseService<any> {
 
   async cancelTimeTracking(sessionId: string, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
-    return this.withTimeErrors(() => cancelNativeTimeTracking(knex, this.timerActor(context), sessionId));
+    return this.withTimeErrors(() => cancelNativeTimeTracking(knex, this.timeActor(context), sessionId));
   }
 
   async getActiveSession(userId: string, context: ServiceContext): Promise<any | null> {
     const { knex } = await this.getKnex();
     return this.withTimeErrors(() => {
       if (userId !== context.userId) throw new CoManagedSharedWorkError();
-      return getNativeActiveTimeTracking(knex, this.timerActor(context));
+      return getNativeActiveTimeTracking(knex, this.timeActor(context));
     });
   }
 

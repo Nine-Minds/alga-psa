@@ -414,3 +414,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** REST `startTimeTracking`/`stopTimeTracking`, initial `time_entries` schema.
 - **Gate:** The existing representation cannot satisfy its own persistence contract. ACT / staged-migration in the co-managed time plan.
 - **Status:** implemented for REST start/read/stop. Separate tenant clocks transition atomically into the existing completed-time engine; immutable request receipts prevent duplicate effort on retries. Current source/credential policy, original billing mode and timezone remain retained through completion. Named-clock cancellation now remains possible after lost source access or entitlement, without exposing work data or creating effort; retries cannot abandon a newer clock. Completed entries keep their non-null end invariant.
+
+
+## native-time-detail-projection — pattern
+- **What:** Browser and API time detail readers independently join work-item/billing data and can bypass current customer source or field policy; billable minutes also erase operational elapsed duration.
+- **Where:** Native `getTimeEntryById`, API `getById` and `getWithDetails`.
+- **Gate:** Two independent adapters share a high-cost authority/projection shape already established by timers and native saves. ACT / bounded-now within the approved time workstream.
+- **Status:** extracted a retained customer-owned detail reader, reusing source/credential admission and projecting native/API DTOs from current records. Collection, export, approval and deletion adapters remain separate pending work.
