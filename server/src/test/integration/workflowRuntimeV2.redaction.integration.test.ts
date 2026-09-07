@@ -9,16 +9,13 @@ import {
   createWorkflowDefinitionAction,
   publishWorkflowDefinitionAction,
   startWorkflowRunAction,
-  submitWorkflowEventAction,
   listWorkflowRunStepsAction
 } from '@alga-psa/workflows/actions';
-import WorkflowRunSnapshotModelV2 from '@alga-psa/workflows/persistence/workflowRunSnapshotModelV2';
 import {
   ensureWorkflowRuntimeV2TestRegistrations,
   buildWorkflowDefinition,
   actionCallStep,
-  stateSetStep,
-  eventWaitStep
+  stateSetStep
 } from '../helpers/workflowRuntimeV2TestHelpers';
 
 vi.mock('server/src/lib/db', () => ({
@@ -77,34 +74,12 @@ afterAll(async () => {
   await db.destroy();
 });
 
-// Skipped since the June 2026 Temporal cutover: startWorkflowRunAction now only
-// inserts the run row and signals Temporal (workflowRuntimeV2.ts startRun,
-// engine: 'temporal'); the synchronous in-process interpreter that wrote the
-// redacted envelope snapshots, action-invocation logs, and retention pruning
-// these tests assert on was deleted (ea2641d317, 6c08dd4305). Nothing
-// server-side writes workflow_run_snapshots/workflow_action_invocations
-// anymore — those are produced by the Temporal interpreter and its activities
-// (ee/temporal-workflows). Run-studio reads now redact secret references, but
-// seeding rows here would still bypass the storage-time behavior under test.
-// Invocation input storage is covered separately; output and snapshot redaction
-// coverage needs a port to ee/temporal-workflows — tracked as a follow-up, not
-// a lean edit (same adjudication as workflowRuntimeV2.email).
+// The remaining cases still invoke the retired synchronous interpreter through
+// startWorkflowRunAction, which now launches Temporal. Invocation output storage
+// and run-studio action reads need a port that preserves runtime behavior.
+// Snapshot redaction, bounds and retention now execute against the real Temporal
+// completion activity in workflowRuntimeV2.snapshotStorage.integration.test.ts.
 describe.skip('workflow runtime v2 redaction + snapshot integration tests', () => {
-  it('Envelope snapshots stored with redacted secretRef fields. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
-    await publishWorkflow(workflowId, 1);
-
-    const run = await startWorkflowRunAction({
-      workflowId,
-      workflowVersion: 1,
-      payload: { secretRef: 'super-secret', nested: { secretRef: 'nested' } }
-    });
-
-    const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
-    const payload = (snapshots[snapshots.length - 1].envelope_json as any).payload;
-    expect(payload.secretRef).toBe('[REDACTED]');
-    expect(payload.nested.secretRef).toBe('[REDACTED]');
-  });
 
   it('Action invocation logs store redacted input/output JSON. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({
@@ -118,43 +93,7 @@ describe.skip('workflow runtime v2 redaction + snapshot integration tests', () =
     expect(invocation?.output_json?.value?.secretRef).toBe('[REDACTED]');
   });
 
-  it('Snapshot size truncation preserves JSON validity. Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [stateSetStep('state-1', 'READY')]
-    });
-    await publishWorkflow(workflowId, 1);
 
-    const big = 'x'.repeat(300 * 1024);
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: { big } });
-    const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
-    const envelope = snapshots[snapshots.length - 1].envelope_json as any;
-    expect(envelope.truncated).toBe(true);
-    expect(() => JSON.stringify(envelope)).not.toThrow();
-  });
-
-  it('Snapshot retention prunes snapshots older than the configured retention window (defaults to 30 days). Mocks: non-target dependencies.', async () => {
-    const workflowId = await createDraftWorkflow({
-      steps: [
-        stateSetStep('state-1', 'FIRST'),
-        eventWaitStep('wait-1', { eventName: 'PING', correlationKeyExpr: { $expr: '"key"' } }),
-        stateSetStep('state-2', 'SECOND')
-      ]
-    });
-    await publishWorkflow(workflowId, 1);
-
-    const run = await startWorkflowRunAction({ workflowId, workflowVersion: 1, payload: {} });
-    const snapshots = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
-    const oldSnapshot = snapshots[0];
-
-    const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
-    await db('workflow_run_snapshots').where({ snapshot_id: oldSnapshot.snapshot_id }).update({ created_at: oldDate });
-
-    await submitWorkflowEventAction({ eventName: 'PING', correlationKey: 'key', payload: {} });
-
-    const updated = await WorkflowRunSnapshotModelV2.listByRun(db, run.runId);
-    const ids = updated.map((snap) => snap.snapshot_id);
-    expect(ids).not.toContain(oldSnapshot.snapshot_id);
-  });
 
   it('Run steps response includes snapshot references without exposing raw secrets. Mocks: non-target dependencies.', async () => {
     const workflowId = await createDraftWorkflow({ steps: [stateSetStep('state-1', 'READY')] });
