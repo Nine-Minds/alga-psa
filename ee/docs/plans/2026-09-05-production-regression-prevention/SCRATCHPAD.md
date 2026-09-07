@@ -1932,3 +1932,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Server unit CI now captures checkout revision and changes before collection, preserves that artifact, and rejects a dirty start. Its execution verifier requires clean matching before/after source records and emits the same source/selection fields needed by candidate aggregation.
 - Eight focused unit-evidence/candidate-gate tests pass, including a real temporary Git checkout that records a clean revision and rejects/preserves an untracked change. Missing/stale/dirty before records fail verification. Native CI execution remains pending publication; the old active integration job still reports in_progress.
+
+### 2026-09-07 — load aggregate runner artifacts across checkout roots
+
+- Added raw artifact reader for Vitest, Playwright and Node reports, with explicit producer root, file mapping and externally supplied CI outcome. Candidate verifier normalizes report identities against that producer checkout before comparing independently selected repository candidates; unsuccessful producer verification remains a failure even if assertions appear green.
+- Seven focused tests pass. Real downloaded d8cf community API artifacts reconcile 335 passing assertions, then correctly fail current inventory because locale and utilities suites were assigned after that native run. This is a deliberate mixed-revision compatibility/omission probe, not candidate readiness evidence.
+- Native browser manifests lacked selection metadata. The full browser runner already forbids filtered arguments; it now records explicit full/unfiltered selection on execution evidence. Old browser artifacts remain insufficient for the new aggregate's selection requirement. CI artifact downloading, shard composition and the stable check remain unfinished; F007 stays false.

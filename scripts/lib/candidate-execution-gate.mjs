@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { reconcileExecution } from './test-execution-evidence.mjs';
 import { reconcileNodeExecution } from './node-test-execution.mjs';
 import { reconcilePlaywrightExecution, playwrightTests } from './playwright-execution-evidence.mjs';
@@ -24,6 +25,7 @@ export function evaluateCandidateExecution({ root, revision, requirements, bundl
     const bundle = selected[0];
     let verified;
     if (bundle) {
+      if (bundle.producerStatus !== undefined && bundle.producerStatus !== 'passed') problems.push(`Producer verification: ${bundle.producerStatus}`);
       if (bundle.outcome !== 'success') problems.push(`Required job: ${bundle.outcome ?? 'missing'}`);
       for (const phase of ['before', 'after']) {
         const source = bundle.source?.[phase];
@@ -33,14 +35,16 @@ export function evaluateCandidateExecution({ root, revision, requirements, bundl
       }
       if (!Array.isArray(bundle.filters) || bundle.filters.length) problems.push('Missing selection or filtered execution');
       try {
+        const executionRoot = bundle.sourceRoot ?? root;
+        if (typeof executionRoot !== 'string' || !path.isAbsolute(executionRoot)) throw new Error('Invalid producer checkout root');
         if (format === 'vitest') {
           if (!Array.isArray(bundle.collectedTests) || !bundle.collectedTests.length) problems.push('Missing assertion collection');
-          verified = reconcileExecution({ ...bundle, root, revision, suite: id, exitCode: bundle.outcome === 'success' ? 0 : 1 });
+          verified = reconcileExecution({ ...bundle, root: executionRoot, revision, suite: id, exitCode: bundle.outcome === 'success' ? 0 : 1 });
         } else if (format === 'playwright') {
-          verified = reconcilePlaywrightExecution({ ...bundle, root, revision, exitCode: bundle.outcome === 'success' ? 0 : 1 });
-          verified.expectedFiles = [...new Set(playwrightTests(bundle.collected, root).map(test => test.file))];
+          verified = reconcilePlaywrightExecution({ ...bundle, root: executionRoot, revision, exitCode: bundle.outcome === 'success' ? 0 : 1 });
+          verified.expectedFiles = [...new Set(playwrightTests(bundle.collected, executionRoot).map(test => test.file))];
         } else if (format === 'node-events') {
-          verified = reconcileNodeExecution({ root, revision, suite: id, files: candidates, events: bundle.events,
+          verified = reconcileNodeExecution({ root: executionRoot, revision, suite: id, files: candidates, events: bundle.events,
             exitCode: bundle.outcome === 'success' ? 0 : 1 });
         } else {
           problems.push(`Unsupported execution format: ${format}`);

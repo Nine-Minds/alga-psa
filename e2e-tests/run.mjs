@@ -42,6 +42,7 @@ try {
   try { report = JSON.parse(readFileSync(files.results, 'utf8')); } catch { report = null; }
   evidence = reconcilePlaywrightExecution({ collected, report, root, revision: before.revision, exitCode: result.status });
   evidence.configuration = collected.config.metadata;
+  evidence.selection = { mode: 'full', filters: [] };
 } catch (error) {
   evidence = { schemaVersion: 1, suite: 'production-browser', revision: before?.revision, status: 'failed', failures: [error.message] };
 }
