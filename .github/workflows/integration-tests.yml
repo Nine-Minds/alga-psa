@@ -67,6 +67,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      comment-smtp:
+        image: greenmail/standalone:2.1.8
+        env:
+          GREENMAIL_OPTS: '-Dgreenmail.setup.test.all -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled'
+        ports:
+          - 33025:3025
+          - 38080:8080
       # Event-bus integration paths need real Redis streams; the suite-wide
       # `redis` stub alias is skipped via REAL_REDIS below.
       redis:
@@ -80,6 +87,9 @@ jobs:
           --health-retries 5
 
     env:
+      COMMENT_SMTP_ISOLATED: 'true'
+      COMMENT_SMTP_PORT: '33025'
+      COMMENT_SMTP_API_PORT: '38080'
       DB_HOST: localhost
       DB_PORT: '5432'
       DB_USER_ADMIN: postgres
