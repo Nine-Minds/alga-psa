@@ -1879,3 +1879,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Removed seven 404 early-success returns across legacy OAuth/webhook suites and the validation-token branch that accepted 404 as successful coverage. Required endpoints now fail assertions when unavailable; the OAuth request helper no longer synthesizes a mock 404 for connection refusal.
 - Existing suites collected 13 cases after the edit (/tmp/alga-legacy-email-collection.json). This is collection only: service fixtures/CI assignment and stale OAuth/refresh expectations remain unresolved; do not count this as runtime passing evidence or close inventory requirements. No source-string regression tests were added.
+
+### 2026-09-07 — fix persistent email fixture option loss
+
+- PersistentE2ETestContext helper passed options to initialize even though E2ETestContext consumes options in its constructor. This discarded autoStartServices=false and caller overrides. Construct with optimizedOptions and use inherited no-argument initialize; remove the ineffective override.
+- Two behavioral boundary tests invoke the actual helper with a substituted parent lifecycle (no Docker/DB side effects), checking defaults, overrides and initialization/health order. Both failed before the fix and pass after (/tmp/alga-persistent-context-before.log, /tmp/alga-persistent-context-fixed.log). Located under server unit testing so the full unit lane collects them.
+- Legacy fixture still hardcodes database/server/Redis/mail ports and changes only test-process provider endpoints. This fix alone does not make legacy email suites isolated CI coverage; keep their assignment gap open.
