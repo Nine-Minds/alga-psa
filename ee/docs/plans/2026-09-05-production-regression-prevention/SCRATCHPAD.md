@@ -1315,3 +1315,10 @@
 - Native run 34102126219, job 101678729376 completed successfully for PR head e55139a737; tested merge checkout df2c988ca0742d4d19d7048353dc4416703c4063 remained clean and unchanged.
 - Downloaded artifact 10011134709 confirms both mandatory files and all eight collected/executed identities match, with eight passes and no incomplete cases. Durable evidence: evidence/citus-native-runtime.json.
 - F022 remains incomplete: previous-release upgrade and production topology parity are still unverified. Production browser image jobs remain live; local env guard repair is awaiting publication without cancelling those builds.
+
+### 2026-09-07 — Repository-wide discovery entry point
+
+- Added scripts/verify-test-inventory.mjs. From the audited repository root, run `node scripts/verify-test-inventory.mjs <collection-manifest.json> [output.json]`. Manifest schemaVersion 1 contains collections with runner/status/files plus owner/runtime/mandatory metadata, and optional owned, expiring exclusions. Files must come from actual runner collection.
+- The command reconciles the entire Git test-file inventory without prefiltering known suite directories, so a move outside all known lanes cannot vanish. It emits an explicit failed JSON report and nonzero exit for malformed input, orphaned tests, empty collections, missing ownership/runtime metadata, and expired exclusions.
+- Extended the existing real Vitest fixture through the CLI, including additions, moves, repair, empty selection, metadata/schema rejection, and valid/expired exclusions. `node --test scripts/tests/test-discovery.test.mjs scripts/tests/test-discovery.vitest.test.mjs`: seven passed, zero skipped, 2.93 seconds. Actual repaired fixture executes both test identities.
+- F004 remains incomplete: runner artifact aggregation and resolution of repository-wide unmatched files still need implementation. Discovery alone does not prove execution, and this command is not yet a required global CI gate.
