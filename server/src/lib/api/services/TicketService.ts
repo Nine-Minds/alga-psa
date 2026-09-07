@@ -1,3 +1,4 @@
+import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 /**
  * Ticket Service
  * Business logic for ticket-related operations
@@ -2164,6 +2165,7 @@ export class TicketService extends BaseService<ITicket> {
         metadata: data.metadata,
       };
 
+      await assertCommentThreadAudience(trx, context.tenant, apiThreadId, { ticketId, isInternal: apiIsInternal, parentCommentId: apiParentCommentId });
       const [comment] = await tenantScopedTable(trx, 'comments', context.tenant).insert(commentData).returning('*');
 
       if (apiIsReply) {
@@ -2257,6 +2259,10 @@ export class TicketService extends BaseService<ITicket> {
 
       if (comment.is_system_generated) {
         throw new ValidationError('System-generated comments cannot be edited');
+      }
+
+      if (comment.actor_reference_id) {
+        throw new ValidationError('Qualified comment authors require a collaboration command');
       }
 
       let operatorRepair = false;

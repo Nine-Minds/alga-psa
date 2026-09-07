@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { TicketModel } from '../ticketModel';
+// Audience locking is exercised against PostgreSQL; this harness isolates author mapping.
+vi.mock('../../lib/commentAudience', () => ({ assertCommentThreadAudience: vi.fn().mockResolvedValue('requester') }));
 
 // The model queries through the tenantDb facade now; these fakes dispatch by
 // table name, so mock the facade as a passthrough — tenant scoping is the
@@ -73,6 +75,7 @@ function createTrxHarness(options?: {
     throw new Error(`Unexpected table in TicketModel.createComment unit test: ${table}`);
   });
 
+  trx.isTransaction = true;
   trx.raw = vi.fn((sql: string) => sql);
 
   return {

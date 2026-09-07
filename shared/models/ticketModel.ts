@@ -6,6 +6,7 @@
 
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { assertCommentThreadAudience } from '../lib/commentAudience';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import type { IEventPublisher } from '@alga-psa/types';
@@ -1204,6 +1205,8 @@ export class TicketModel {
     analyticsTracker?: IAnalyticsTracker,
     userId?: string
   ): Promise<CreateCommentOutput> {
+    if (!trx?.isTransaction) throw new Error('Comment creation requires the owning transaction');
+
     // Validate required tenant
     if (!tenant) {
       throw new Error('Tenant is required');
@@ -1330,6 +1333,7 @@ export class TicketModel {
       });
     }
 
+    await assertCommentThreadAudience(trx, tenant, threadId, { ticketId: validatedData.ticket_id, isInternal: commentIsInternal, parentCommentId });
     await db.table('comments').insert(baseCommentData);
 
     if (parentCommentId) {

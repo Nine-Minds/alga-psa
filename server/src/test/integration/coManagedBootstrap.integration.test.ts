@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -4346,4 +4346,83 @@ it('rechecks revoked queue scope and session expiry after waiting for lifecycle 
     await secondBlocker.raw('SELECT pg_sleep(1.1)'); await secondBlocker.commit();
     expect(await secondAttempt).toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   } finally { db.removeListener('query', onQuery); if (!secondBlocker.isCompleted()) await secondBlocker.rollback(); }
+}));
+
+it('retains legacy private notes and requires a disclosure command to change co-managed thread visibility', async () => withTicketQueueFixture(async ({ customer, resource, customerPrincipal }) => {
+  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const { resolveCommentAudience, assertCommentThreadAudience } = await import('../../../../shared/lib/commentAudience');
+  const id = await Comment.insert(db, resource.tenant, { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal', note: 'Private customer note', is_internal: true });
+  const comment = await customer.table('comments').where('comment_id', id).first();
+  const thread = await customer.table('comment_threads').where('thread_id', comment.thread_id).first();
+  expect(thread.collaboration_audience).toBeNull(); expect(resolveCommentAudience(thread)).toBe('organization_private');
+  await Comment.update(db, resource.tenant, id, { note: 'Revised private note', actor_reference_id: null, actor_display_name: null, actor_organization_name: null } as any);
+  await expect(Comment.update(db, resource.tenant, id, { note: 'Not disclosed', is_internal: false })).rejects.toMatchObject({ name: 'CommentAudienceError' });
+  expect(await customer.table('comments').where('comment_id', id).first()).toMatchObject({ note: 'Revised private note', is_internal: true });
+  await customer.table('comment_threads').where('thread_id', thread.thread_id).update({ collaboration_audience: 'shared_it' });
+  await expect(customer.table('comment_threads').where('thread_id', thread.thread_id).update({ is_internal: false })).rejects.toMatchObject({ code: '23514' });
+  const replyId = await Comment.insert(db, resource.tenant, { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal', note: 'IT reply', parent_comment_id: id });
+  expect(await customer.table('comments').where('comment_id', replyId).first()).toMatchObject({ is_internal: true, thread_id: thread.thread_id });
+  await expect(Comment.update(db, resource.tenant, replyId, { is_internal: false })).rejects.toMatchObject({ name: 'CommentAudienceError' });
+  await expect(db.transaction(trx => assertCommentThreadAudience(trx, resource.tenant, thread.thread_id, { ticketId: randomUUID() }))).rejects.toMatchObject({ name: 'CommentAudienceError' });
+  await Comment.delete(db, resource.tenant, replyId);
+  expect(await customer.table('comment_threads').where('thread_id', thread.thread_id).first()).toMatchObject({ reply_count: 0 });
+}));
+
+it('makes native comment model writes atomic and denies them after the co-managed grace period', async () => withTicketQueueFixture(async ({ customer, resource, customerPrincipal, principal }) => {
+  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const input = { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal' as const, note: 'Original', is_internal: true };
+  const id = await Comment.insert(db, resource.tenant, input);
+  const threads = await customer.table('comment_threads').count('* as count').first();
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  await expect(TicketModel.createComment({ ticket_id: resource.id, content: 'No transaction', author_type: 'internal', author_id: customerPrincipal.userId }, resource.tenant, db as any)).rejects.toThrow('owning transaction');
+  await expect(db.transaction(async trx => { await Comment.insert(trx, resource.tenant, { ...input, note: 'Rolled back' }); throw new Error('Rollback comment'); })).rejects.toThrow('Rollback comment');
+  expect(await customer.table('comment_threads').count('* as count').first()).toEqual(threads);
+  await expireCoManagedEntitlement(principal.tenant);
+  for (const operation of [() => Comment.insert(db, resource.tenant, input), () => Comment.update(db, resource.tenant, id, { note: 'Denied' }), () => Comment.delete(db, resource.tenant, id)]) {
+    await expect(operation()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+  }
+  expect(await Comment.get(db, resource.tenant, id)).toMatchObject({ note: 'Original' });
+}));
+
+it('retains qualified comment snapshots and denies native repairs or forged foreign authorship', async () => withSharedTicketMutationFixture(async ({ customer, resource, customerPrincipal, principal, mutate }) => {
+  await mutate({ title: 'Create a verified actor reference' });
+  const reference = await customer.table('collaboration_actor_references').first();
+  const { default: Comment } = await import('../../../../packages/tickets/src/models/comment');
+  const input = { ticket_id: resource.id, user_id: customerPrincipal.userId, author_type: 'internal' as const, note: 'Shared contribution', is_internal: true };
+  const id = await Comment.insert(db, resource.tenant, input);
+  const attribution = { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name };
+  await expect(customer.table('comments').where('comment_id', id).update(attribution)).rejects.toMatchObject({ code: '23514' });
+  await customer.table('comments').where('comment_id', id).update({ ...attribution, user_id: null });
+  for (const operation of [() => Comment.update(db, resource.tenant, id, { note: 'Repair foreign note' }), () => Comment.delete(db, resource.tenant, id),
+    () => Comment.insert(db, resource.tenant, { ...input, ...attribution } as any)]) await expect(operation()).rejects.toThrow('collaboration command');
+  const { TicketService } = await import('../../lib/api/services/TicketService');
+  const service = new TicketService(); const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db });
+  try { await expect(service.updateComment(resource.id, id, { comment_text: 'Operator repair' }, { tenant: resource.tenant, userId: customerPrincipal.userId, user: await customer.table('users').where('user_id', customerPrincipal.userId).first() } as any)).rejects.toThrow('collaboration command'); }
+  finally { connection.mockRestore(); }
+  await customer.table('collaboration_actor_references').where('actor_reference_id', reference.actor_reference_id).update({ display_name: 'Renamed source' });
+  expect(await customer.table('comments').where('comment_id', id).first()).toMatchObject(attribution);
+  const other = await ticketHandoffFixture();
+  const otherId = await Comment.insert(db, other.resource.tenant, { ticket_id: other.resource.id, user_id: other.customerPrincipal.userId, author_type: 'internal', note: 'Other tenant', is_internal: true });
+  await expect(other.customer.table('comments').where('comment_id', otherId).update({ ...attribution, user_id: null })).rejects.toMatchObject({ code: '23503' });
+}));
+
+it('stores MSP-private threads under MSP ownership with qualified soft resources and same-thread parent constraints', async () => withTicketQueueFixture(async ({ principal, resource, customer, sponsor }) => {
+  const threadId = randomUUID(), commentId = randomUUID();
+  const thread = { tenant: principal.tenant, thread_id: threadId, customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
+    resource_type: 'ticket', resource_id: resource.id, root_comment_id: commentId };
+  await sponsor.table('co_management_private_threads').insert(thread);
+  const comment = { tenant: principal.tenant, comment_id: commentId, thread_id: threadId, actor_user_id: principal.userId,
+    actor_display_name: 'MSP technician', actor_organization_name: 'MSP', note: 'MSP-only diagnosis', markdown_content: 'MSP-only diagnosis' };
+  await sponsor.table('co_management_private_comments').insert(comment);
+  expect(await customer.table('co_management_private_threads')).toHaveLength(0);
+  expect(await customer.table('co_management_private_comments')).toHaveLength(0);
+  await expect(sponsor.table('co_management_private_threads').insert({ ...thread, thread_id: randomUUID(), customer_tenant: principal.tenant })).rejects.toMatchObject({ code: '23514' });
+  const otherThreadId = randomUUID();
+  await sponsor.table('co_management_private_threads').insert({ ...thread, thread_id: otherThreadId, root_comment_id: randomUUID() });
+  await expect(sponsor.table('co_management_private_comments').insert({ ...comment, comment_id: randomUUID(), thread_id: otherThreadId, parent_comment_id: commentId })).rejects.toMatchObject({ code: '23503' });
+  await sponsor.table('co_management_private_comments').insert({ ...comment, comment_id: randomUUID(), parent_comment_id: commentId });
+  const migration = require('../../../migrations/20260906160000_create_co_management_content_audiences.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+  expect(await sponsor.table('co_management_private_comments')).toHaveLength(2);
 }));
