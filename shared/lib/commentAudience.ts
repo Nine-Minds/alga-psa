@@ -36,3 +36,16 @@ export async function assertCommentThreadAudience(trx: Knex | Knex.Transaction, 
   }
   return audience;
 }
+
+/** SQL facet of audience inheritance. Require both thread and root/reply flags
+ * to agree before returning cross-organization visibility; inconsistent legacy
+ * rows are private. Aliases are supplied by the query adapter, never a request. */
+export function commentAudienceSql(db: Knex | Knex.Transaction, threadAlias: string, rootAlias: string, commentAlias = rootAlias): Knex.Raw {
+  return db.raw(`CASE
+    WHEN ??.is_internal IS FALSE AND ??.is_internal IS FALSE AND ??.is_internal IS FALSE
+      AND (??.collaboration_audience IS NULL OR ??.collaboration_audience = 'requester') THEN 'requester'
+    WHEN ??.is_internal IS TRUE AND ??.is_internal IS TRUE AND ??.is_internal IS TRUE
+      AND ??.collaboration_audience = 'shared_it' THEN 'shared_it'
+    ELSE 'organization_private' END`,
+  [threadAlias, rootAlias, commentAlias, threadAlias, threadAlias, threadAlias, rootAlias, commentAlias, threadAlias]);
+}

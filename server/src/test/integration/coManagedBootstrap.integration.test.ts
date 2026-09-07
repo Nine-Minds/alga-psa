@@ -4426,3 +4426,147 @@ it('stores MSP-private threads under MSP ownership with qualified soft resources
   await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
   expect(await sponsor.table('co_management_private_comments')).toHaveLength(2);
 }));
+
+async function withConversationFixture(work: (fixture: Awaited<ReturnType<typeof ticketHandoffFixture>> & {
+  addCustomer: (options: { id?: string; internal?: boolean; audience?: 'requester' | 'shared_it' | 'organization_private'; state?: string; note: string; time?: string; parent?: { id: string; threadId: string }; deleted?: boolean; foreign?: boolean }) => Promise<{ id: string; threadId: string }>;
+  addPrivate: (options: { id?: string; note: string; time?: string; sourceId?: string }) => Promise<{ id: string; threadId: string }>;
+  read: typeof import('../../../../packages/co-managed/src/ticketConversation').getCoManagedTicketConversation;
+}) => Promise<void>) {
+  await withSharedTicketMutationFixture(async fixture => {
+    const { customer, sponsor, resource, principal, customerPrincipal } = fixture;
+    await fixture.mutate({ title: 'Conversation fixture' });
+    const reference = await customer.table('collaboration_actor_references').first();
+    const addCustomer = async (options: { id?: string; internal?: boolean; audience?: string; state?: string; note: string; time?: string; parent?: { id: string; threadId: string }; deleted?: boolean; foreign?: boolean }) => {
+      const id = options.id ?? randomUUID(), threadId = options.parent?.threadId ?? randomUUID();
+      const time = options.time ?? '2026-01-01T00:00:00.123456Z';
+      if (!options.parent) await customer.table('comment_threads').insert({ tenant: resource.tenant, thread_id: threadId, ticket_id: resource.id,
+        root_comment_id: id, is_internal: options.internal ?? false, collaboration_audience: options.audience ?? null, created_at: time, last_activity_at: time });
+      await customer.table('comments').insert({ tenant: resource.tenant, comment_id: id, thread_id: threadId, ticket_id: resource.id,
+        parent_comment_id: options.parent?.id ?? null, user_id: options.foreign ? null : customerPrincipal.userId, author_type: 'internal',
+        is_internal: options.internal ?? false, is_resolution: false, note: options.note, markdown_content: options.note, publish_state: options.state ?? 'published',
+        created_at: time, updated_at: time, deleted_at: options.deleted ? time : null, metadata: { email: { authorization: 'never return metadata' } },
+        ...(options.foreign ? { actor_reference_id: reference.actor_reference_id, actor_display_name: reference.display_name, actor_organization_name: reference.organization_name } : {}) });
+      return { id, threadId };
+    };
+    const addPrivate = async (options: { id?: string; note: string; time?: string; sourceId?: string }) => {
+      const id = options.id ?? randomUUID(), threadId = randomUUID(), time = options.time ?? '2026-01-01T00:00:00.123456Z';
+      await sponsor.table('co_management_private_threads').insert({ tenant: principal.tenant, thread_id: threadId, customer_tenant: resource.tenant,
+        relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: options.sourceId ?? resource.id, root_comment_id: id, created_at: time, last_activity_at: time });
+      await sponsor.table('co_management_private_comments').insert({ tenant: principal.tenant, thread_id: threadId, comment_id: id, actor_user_id: principal.userId,
+        actor_display_name: 'MSP private author', actor_organization_name: 'MSP', note: options.note, markdown_content: options.note, created_at: time, updated_at: time });
+      return { id, threadId };
+    };
+    const { getCoManagedTicketConversation: read } = await import('../../../../packages/co-managed/src/ticketConversation');
+    await work({ ...fixture, addCustomer, addPrivate, read });
+  });
+}
+
+it('combines only published customer and home-private conversation content under the three audience rules', async () => withConversationFixture(async ({
+  principal, customerPrincipal, resource, addCustomer, addPrivate, read,
+}) => {
+  await addCustomer({ note: 'Public customer comment' });
+  await addCustomer({ note: 'Legacy customer private', internal: true });
+  await addCustomer({ note: 'Shared IT contribution', internal: true, audience: 'shared_it', foreign: true });
+  await addPrivate({ note: 'MSP private diagnosis' });
+  await addPrivate({ note: 'Other ticket private', sourceId: randomUUID() });
+  await addCustomer({ note: 'Scheduled comment', state: 'scheduled' });
+  await addCustomer({ note: 'Canceled comment', state: 'canceled' });
+  const pendingRoot = await addCustomer({ note: 'Scheduled root', state: 'scheduled' });
+  await addCustomer({ note: 'Premature reply', parent: pendingRoot });
+  const msp = await read(db, principal, resource);
+  expect(msp.items.map(item => item.note).sort()).toEqual(['Public customer comment', 'Shared IT contribution', 'MSP private diagnosis'].sort());
+  expect(msp.items.find(item => item.note === 'MSP private diagnosis')).toMatchObject({ storeTenant: principal.tenant, audience: 'organization_private' });
+  expect(msp.items.find(item => item.note === 'Shared IT contribution')).toMatchObject({ storeTenant: resource.tenant, audience: 'shared_it',
+    author: { tenant: principal.tenant, id: principal.userId, displayName: 'Morgan Provider', organizationName: 'MSP' } });
+  expect(JSON.stringify(msp)).not.toContain('never return metadata');
+  const customer = await read(db, customerPrincipal, resource);
+  expect(customer.items.map(item => item.note).sort()).toEqual(['Public customer comment', 'Shared IT contribution', 'Legacy customer private'].sort());
+  expect(customer.items.every(item => item.storeTenant === resource.tenant)).toBe(true);
+}));
+
+it('paginates one conversation across both stores without losing microsecond timestamps or colliding IDs', async () => withConversationFixture(async ({
+  principal, resource, addCustomer, addPrivate, read,
+}) => {
+  const expected: string[] = [];
+  for (let index = 1; index <= 29; index++) {
+    const comment = await addCustomer({ note: `Public ${index}`, time: `2026-01-01T00:00:00.${String(123000 + index)}Z` });
+    expected.push(`${resource.tenant}:${comment.id}`);
+    if (index % 5 === 0) {
+      await addPrivate({ id: comment.id, note: `Private ${index}`, time: `2026-01-01T00:00:00.${String(123000 + index)}Z` });
+      expected.push(`${principal.tenant}:${comment.id}`);
+    }
+  }
+  const first = await read(db, principal, resource);
+  expect(first.items).toHaveLength(25); expect(first.nextBefore?.createdAt).toMatch(/\.123\d{3}Z$/);
+  const second = await read(db, principal, resource, first.nextBefore!);
+  expect(second.items).toHaveLength(9); expect(second.nextBefore).toBeNull();
+  const actual = [...first.items, ...second.items].map(item => `${item.storeTenant}:${item.commentId}`);
+  expect(new Set(actual).size).toBe(34); expect(actual.sort()).toEqual(expected.sort());
+  await expect(read(db, principal, resource, { ...first.nextBefore!, createdAt: 'not a timestamp' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('uses the stricter root/reply audience, hides private parent IDs and removes deleted bodies from conversation output', async () => withConversationFixture(async ({
+  principal, customerPrincipal, resource, addCustomer, read,
+}) => {
+  const root = await addCustomer({ note: 'Public root' });
+  const privateReply = await addCustomer({ note: 'Legacy inconsistent private reply', internal: true, parent: root });
+  const publicReply = await addCustomer({ note: 'Public reply', parent: privateReply });
+  const deleted = await addCustomer({ note: 'Deleted secret residue', deleted: true });
+  const badRoot = await addCustomer({ note: 'Shared root', internal: true, audience: 'shared_it' });
+  await addCustomer({ note: 'Mismatched legacy reply', internal: false, parent: badRoot });
+  const msp = await read(db, principal, resource);
+  expect(msp.items.map(item => item.note)).not.toContain('Legacy inconsistent private reply');
+  expect(msp.items.map(item => item.note)).not.toContain('Mismatched legacy reply');
+  expect(msp.items.find(item => item.commentId === publicReply.id)?.parentCommentId).toBeNull();
+  expect(msp.items.find(item => item.commentId === deleted.id)).toMatchObject({ note: null, markdown: null, deleted: true });
+  expect(JSON.stringify(msp)).not.toContain('Deleted secret residue');
+  const customer = await read(db, customerPrincipal, resource);
+  expect(customer.items.find(item => item.commentId === privateReply.id)).toMatchObject({ audience: 'organization_private' });
+}));
+
+it('retains saved conversation attribution without resolving an MSP user in the customer directory', async () => withConversationFixture(async ({
+  principal, customerPrincipal, customer, sponsor, resource, addCustomer, read,
+}) => {
+  const foreign = await addCustomer({ note: 'Qualified author', foreign: true, internal: true, audience: 'shared_it' });
+  await customer.table('users').insert({ tenant: resource.tenant, user_id: principal.userId, username: `collision-${randomUUID()}`, email: `collision-${randomUUID()}@example.test`,
+    first_name: 'Different', last_name: 'Customer User', hashed_password: 'not-a-login', user_type: 'internal' });
+  await customer.table('collaboration_actor_references').update({ display_name: 'New source name', organization_name: 'New source organization' });
+  expect((await read(db, customerPrincipal, resource)).items.find(item => item.commentId === foreign.id)?.author)
+    .toMatchObject({ tenant: principal.tenant, id: principal.userId, displayName: 'Morgan Provider', organizationName: 'MSP' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+  expect((await read(db, customerPrincipal, resource)).items.find(item => item.commentId === foreign.id)?.author?.displayName).toBe('Morgan Provider');
+  await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('rechecks conversation grants on every page and retains reads during license lapse without exposing home-private notes after revocation', async () => withConversationFixture(async ({
+  principal, customerPrincipal, resource, addCustomer, addPrivate, read,
+}) => {
+  await addCustomer({ note: 'Public work' }); await addPrivate({ note: 'Private work' });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect((await read(db, principal, resource)).items).toHaveLength(2);
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Revoke live access' });
+  await expect(read(db, principal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await read(db, customerPrincipal, resource)).items.map(item => item.note)).toEqual(['Public work']);
+}));
+
+it('applies conversation body and author redactions before returning content or pagination cursors', async () => withConversationFixture(async ({
+  principal, sponsor, resource, operation, addCustomer, addPrivate, read,
+}) => {
+  await addCustomer({ note: 'Visible body', foreign: true }); await addPrivate({ note: 'Private body' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Conversation restrictions', actorUserId: principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: ['actor'] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const result = await read(db, principal, resource);
+  expect(result.items).toHaveLength(2); expect(result.items.every(item => !('author' in item))).toBe(true);
+  for (const field of ['comments.note', 'created_at', 'conversation', 'co_management_private_comments']) {
+    await sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' })
+      .update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
+    const redacted = await read(db, principal, resource);
+    expect(redacted.items.map(item => item.note)).toEqual(field === 'comments.note' ? ['Private body'] : field === 'co_management_private_comments' ? ['Visible body'] : []);
+    expect(redacted.nextBefore).toBeNull();
+  }
+}));

@@ -19,7 +19,8 @@
     "@alga-psa/db": "*",
     "@alga-psa/licensing": "*",
     "knex": "^3.1.0",
-    "@alga-psa/authorization": "*"
+    "@alga-psa/authorization": "*",
+    "@alga-psa/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.4.0",
