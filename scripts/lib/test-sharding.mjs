@@ -13,6 +13,23 @@ export function partitionTestFiles(files, index, total) {
 
 export function reconcileTestShards({ shards, suite, revision, mode, total, jobResult = 'success' }) {
   const failures = [];
+  // Uploaded JSON is not guaranteed to have the producer's types. Reject its
+  // shape before iterating so callers still receive a serializable verdict.
+  const fileList = value => Array.isArray(value)
+    && value.every(file => typeof file === 'string' && file.trim().length > 0);
+  if (!Array.isArray(shards)) failures.push('Missing or invalid shard evidence list');
+  else for (const [position, shard] of shards.entries()) {
+    if (!shard || typeof shard !== 'object' || Array.isArray(shard)) {
+      failures.push(`Shard entry ${position + 1} is not an evidence object`);
+      continue;
+    }
+    if (!fileList(shard.selection?.allFiles)) failures.push(`Shard entry ${position + 1} has invalid required file inventory`);
+    for (const key of ['expectedFiles', 'executedFiles']) {
+      if (!fileList(shard[key])) failures.push(`Shard entry ${position + 1} has invalid ${key}`);
+    }
+  }
+  if (failures.length) return { schemaVersion: 1, suite, revision, mode, shardCount: total, jobResult,
+    status: 'failed', expectedFiles: [], executedFiles: [], counts: null, failures };
   const seen = new Set();
   const executed = new Set();
   const expectedFiles = shards[0]?.selection?.allFiles || [];

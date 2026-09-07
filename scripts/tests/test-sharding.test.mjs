@@ -15,6 +15,30 @@ function shards() {
 }
 const reconcile = entries => reconcileTestShards({ shards: entries, suite: 'infrastructure', revision: 'abc', mode: 'full', total: 3 });
 
+test('malformed uploaded inventories return failed evidence with unknown counts instead of throwing', () => {
+  for (const invalid of [null, {}, 'a.test.ts']) {
+    const result = reconcile(invalid);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.counts, null);
+    assert.ok(result.failures.length);
+  }
+  for (const mutate of [
+    entries => { entries[0] = null; },
+    entries => { entries[0].selection.allFiles = 'a.test.ts'; },
+    entries => { entries[0].selection.allFiles = ['a.test.ts', null]; },
+    entries => { entries[0].expectedFiles = {}; },
+    entries => { entries[0].executedFiles = {}; },
+    entries => { entries[0].executedFiles = ['a.test.ts', 12]; },
+    entries => { delete entries[0].selection; },
+  ]) {
+    const entries = shards(); mutate(entries);
+    const result = reconcile(entries);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.counts, null);
+    assert.ok(result.failures.length);
+  }
+});
+
 test('partitions cover every file once and do not depend on collection order', () => {
   const partitions = [1, 2, 3].map(index => partitionTestFiles(files, index, 3));
   assert.deepEqual(partitions.flat().sort(), files);

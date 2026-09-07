@@ -38,6 +38,22 @@ test('complete independent inventory, raw reports and successful jobs pass toget
   assert.equal(result.suites.reduce((sum, suite) => sum + suite.counts.passed, 0), 10);
 });
 
+test('malformed shard metadata fails its suite while preserving independent suite diagnostics', () => {
+  for (const field of ['allFiles', 'expectedFiles', 'executedFiles']) {
+    const input = fixture();
+    const manifest = input.bundles[0].evidence;
+    if (field === 'allFiles') manifest.selection.allFiles = {};
+    else manifest[field] = {};
+    const result = evaluateWorkspaceGate(input);
+    assert.equal(result.status, 'failed');
+    assert.equal(result.suites.length, 8);
+    assert.equal(result.suites[0].status, 'failed');
+    assert.ok(result.suites[0].failures.length);
+    if (field === 'allFiles') assert.equal(result.suites[0].counts, null);
+    assert.equal(result.suites.filter(suite => suite.status === 'passed').length, 7);
+  }
+});
+
 test('missing, failed, cancelled and skipped prerequisites cannot be hidden by passing artifacts', () => {
   for (const job of Object.keys(fixture().jobResults)) {
     for (const state of ['failure', 'cancelled', 'skipped', undefined]) {
