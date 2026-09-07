@@ -1971,3 +1971,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 
 - Found the combined integration evidence omitted expectedTests, which the existing metrics reader requires before presenting complete execution. Aggregate now carries expected/executed assertion identities from independently reverified raw reports.
 - Actual three-shard Vitest fixture now feeds aggregate artifacts through testCounts: valid execution reports complete / five passing / 100%; extra shard evidence downgrades to partial with blank pass percentage. Fixture passes in 5.74 seconds. This validates local report projection only, with no Sheets writes or external publication.
+
+### 2026-09-07 — assign Temporal deployment rendering tests
+
+- Assigned existing temporal-worker-shared-tenant-secrets Helm behavioral suite to readiness config and independent discovery. CI installs Helm v3.17.3. Suite uses HELM_BIN or PATH and no longer silently skips when /snap/bin/helm is absent; missing tooling fails execution.
+- Local real Helm renders passed all six cases (496ms total); deliberate HELM_BIN=/nonexistent/helm produced six failures, zero skips. Logs: /tmp/alga-temporal-helm-assignment.log, /tmp/alga-temporal-helm-missing.log. Initial direct invocation hit the shared Docker setup; corrected to the readiness lane's TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1, requiring no service startup. Workflow actionlint and diff checks pass.
+- Removes one prior runner assignment gap locally; native CI and remaining Temporal/browser orphans remain unverified. External push still awaits approval.

@@ -76,6 +76,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Helm for deployment rendering tests
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.17.3
+
       - name: Temporal readiness fast gate
         run: npm run guard:temporal-readiness:fast
 
