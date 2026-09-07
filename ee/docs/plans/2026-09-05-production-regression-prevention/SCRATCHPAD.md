@@ -1408,3 +1408,9 @@
 - Product-upgrade workflow requires a real Temporal test server. Sandbox run failed to download the ephemeral binary; approved network-enabled run passed all four actual workflow cases. No external application state used: activities are stubbed and server is ephemeral.
 - Added vitest.engine.config.ts, temporal-engine runner/discovery assignment, and a separate Temporal engine execution complete CI job with required raw artifacts. Exact local CI entry point passed four collected/executed cases in 1.85 seconds. Evidence: evidence/temporal-engine-upgrade.json.
 - Native execution and branch protection remain pending. This does not substitute for previous-release schema upgrade tests.
+
+### 2026-09-07 — SLA and appliance workflows enter engine lane
+
+- Existing appliance tenant creation (two cases) and SLA workflow (ten cases) passed on actual ephemeral Temporal servers. Covers supplied tenant identity/password and hosted-step selection; SLA signal transitions, pause/resume, cancel and missed-close recovery. Activities remain stubbed; no real customer state modified.
+- Added both files to temporal-engine config and independent candidate classification. Exact CI runner passes three files / 16 tests, zero skips, reconciled collection/execution, 5.47 seconds. Evidence: evidence/temporal-engine-appliance-sla.json.
+- Native browser jobs 101692993747 (CE) and 101692993738 (EE) are now running in run 34104450316, confirming the previous prerequisite wiring no longer stops startup. Do not publish while their current runtime evidence is still being gathered.
