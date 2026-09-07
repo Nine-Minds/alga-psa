@@ -1072,3 +1072,8 @@
 ### Microsoft calendar outbound browser expansion — 2026-09-07
 - Extended the existing isolated Microsoft OAuth journey with UI create/delete, persisted mapping and schedule checks, vendor state readback, reload checks and successful POST/DELETE request evidence. No server-action interception or auth bypass added.
 - Focused TypeScript check passed. Collection passed using the e2e-tests-local Playwright binary (the root binary initially produced a duplicate Playwright instance error). The expanded browser journey has NOT executed; native candidate 2de93 predates it. Evidence: calendar-outbound-browser-expansion.json. F034 stays incomplete.
+
+### Credit expiration native bootstrap timeout — 2026-09-07
+- Native infrastructure shard 2 job 101620543726 failed: 146 passed, four credit-expiration cases skipped because beforeAll exceeded 60000ms. Direct job logs are available through gh api actions/jobs/<id>/logs even while sibling full integration continues (gh run view refused until overall completion). Log showed the full migration/dev-seed bootstrap reaching final seeds at the deadline.
+- Increased only the full database startup hook to 120000ms; per-test limits and all assertions unchanged. Local real-DB run session 22771 passed all four cases, zero skipped, 18.02 seconds, using isolated credit_expiration_effects_82cc. Evidence: credit-expiration-startup-budget.json. Native rerun still required.
+- Browser builds are all successful; live production browser jobs: community 101624201400, enterprise 101624201410, run 34082555492. Full integration 101620543698 remains live; hold pushes.
