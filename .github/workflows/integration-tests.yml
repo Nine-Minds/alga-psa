@@ -46,12 +46,16 @@ jobs:
         run: node scripts/select-integration-tests.mjs
 
   integration-tests:
-    name: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && 'Full integration suite' || 'Tier-1 integration subset' }}
+    name: Integration shard ${{ matrix.shard }}
     needs: check-changes
     # `needs` is skipped entirely on schedule; `always()` lets the nightly run proceed.
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJSON((github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '[1,2,3,4]' || '[1]') }}
 
     services:
       postgres:
@@ -87,6 +91,8 @@ jobs:
           --health-retries 5
 
     env:
+      INTEGRATION_SHARD_INDEX: ${{ matrix.shard }}
+      INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
       COMMENT_SMTP_ISOLATED: 'true'
       COMMENT_SMTP_PORT: '33025'
       COMMENT_SMTP_API_PORT: '38080'
@@ -179,7 +185,7 @@ jobs:
         working-directory: ./server
         run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
-          TEST_PROGRESS_PATH: ./test-progress-integration.jsonl
+          TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
 
@@ -191,7 +197,7 @@ jobs:
         # against actual collection even when the entire directory is selected.
         run: npm run test:integration:tier1 -- --reporter=default --reporter=json --reporter=../scripts/lib/vitest-progress-reporter.mjs --outputFile.json=./test-results-integration.json
         env:
-          TEST_PROGRESS_PATH: ./test-progress-integration.jsonl
+          TEST_PROGRESS_PATH: ../test-results/integration/progress.jsonl
           NODE_OPTIONS: '--max-old-space-size=8192'
           TIER1_BASE_SHA: ''
 
@@ -199,39 +205,49 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: server-integration-execution
-          path: |
-            server/test-progress-integration.jsonl
-            server/test-results-integration.json
-            test-results/integration/
+          name: server-integration-shard-${{ matrix.shard }}
+          path: test-results/integration/
           retention-days: 30
 
-      # Append this run's numbers to the shared metrics sheet
-      # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
-      # Tier-1 rows are recorded on push to main only — PR runs would be noisy
-      # and fork PRs don't get secrets anyway.
-      # Recording is gated on the suite step's *outcome* rather than always():
-      # a run the job timeout cancelled reports whatever fraction of the suite
-      # had finished, which lands in the sheet as a vacuous green.
-      - name: Record Tier-1 metrics to Google Sheet
-        if: always() && github.event_name == 'push' && (steps.tier1.outcome == 'success' || steps.tier1.outcome == 'failure')
+  integration-execution-complete:
+    name: Integration execution complete
+    needs: [check-changes, integration-tests]
+    if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
+      INTEGRATION_FULL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') }}
+      INTEGRATION_JOB_RESULT: ${{ needs.integration-tests.result }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Download every integration shard
+        uses: actions/download-artifact@v4
+        with:
+          pattern: server-integration-shard-*
+          path: test-results/integration-shards
+      - name: Require complete combined integration execution
+        if: always()
+        run: node scripts/verify-integration-shards.mjs
+      - name: Preserve combined integration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-execution-gate
+          path: test-results/integration-aggregate/
+          if-no-files-found: error
+          retention-days: 30
+      - name: Record combined integration metrics
+        if: always() && (env.INTEGRATION_FULL == 'true' || github.event_name == 'push')
         continue-on-error: true
         run: node scripts/record-test-metrics.mjs
         env:
-          TEST_METRICS_SUITE: integration-tier1
-          TEST_METRICS_RESULTS: server/test-results-integration.json
-          TEST_METRICS_EXECUTION: test-results/integration/evidence.json
-          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
-          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
-
-      - name: Record full-suite metrics to Google Sheet
-        if: always() && (steps.full.outcome == 'success' || steps.full.outcome == 'failure')
-        continue-on-error: true
-        run: node scripts/record-test-metrics.mjs
-        env:
-          TEST_METRICS_SUITE: integration-full
-          TEST_METRICS_RESULTS: server/test-results-integration.json
-          TEST_METRICS_EXECUTION: test-results/integration/evidence.json
+          TEST_METRICS_SUITE: ${{ env.INTEGRATION_FULL == 'true' && 'integration-full' || 'integration-tier1' }}
+          TEST_METRICS_RESULTS: test-results/integration-aggregate/results.json
+          TEST_METRICS_EXECUTION: test-results/integration-aggregate/aggregate.json
           GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
           TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 

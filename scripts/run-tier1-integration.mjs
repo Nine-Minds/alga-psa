@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 import { reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileDiscovery, repositoryTestFiles } from './lib/test-discovery.mjs';
+import { partitionTestFiles } from './lib/test-sharding.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -72,7 +73,7 @@ const extraArgs = process.argv.slice(2);
 const output = path.join(repoRoot, 'test-results/integration');
 mkdirSync(output, { recursive: true });
 const save = (name, value) => writeFileSync(path.join(output, `${name}.json`), JSON.stringify(value, null, 2) + '\n');
-for (const name of ['collected', 'collected-tests', 'discovery', 'evidence']) save(name, null);
+for (const name of ['collected', 'collected-tests', 'discovery', 'evidence', 'results']) save(name, null);
 // Preserve the existing metrics/report destination supplied by CI or developers.
 const reportArg = extraArgs.findLast(arg => /^--outputFile(?:\.json)?=/.test(arg));
 const reportPath = path.resolve(serverDir, reportArg ? reportArg.slice(reportArg.indexOf('=') + 1) : 'test-results-integration.json');
@@ -126,34 +127,48 @@ console.log(`tier1 gate: ${mode}`);
 
 const before = testRevision(repoRoot);
 let evidence;
+let allFiles = [];
+const index = Number(process.env.INTEGRATION_SHARD_INDEX || '1');
+const total = Number(process.env.INTEGRATION_SHARD_TOTAL || '1');
 try {
-  const collected = collectIntegrationFiles(selection).map(file => ({ file: path.join(serverDir, file) }));
-  save('collected', collected);
+  const complete = collectIntegrationFiles(selection).map(file => ({ file: path.join(serverDir, file) }));
+  allFiles = complete.map(entry => path.relative(repoRoot, entry.file).split(path.sep).join('/')).sort();
   const candidates = repositoryTestFiles(repoRoot).filter(file =>
     coveredByManifest(path.relative(serverDir, path.join(repoRoot, file)).split(path.sep).join('/'), selection));
-  const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: collected }] });
+  const discovery = reconcileDiscovery({ root: repoRoot, candidates, collections: [{ runner: 'integration', status: 'passed', files: complete }] });
   save('discovery', discovery);
   if (discovery.status !== 'passed') throw new Error(discovery.failures.join('\n'));
+  const assigned = partitionTestFiles(allFiles, index, total);
+  const filters = assigned.map(file => path.join(repoRoot, file));
+  const collected = collectIntegrationFiles(filters).map(file => ({ file: path.join(serverDir, file) }));
+  const actual = collected.map(entry => path.relative(repoRoot, entry.file).split(path.sep).join('/')).sort();
+  if (JSON.stringify(actual) !== JSON.stringify(assigned)) throw new Error('Integration filters did not collect the exact assigned shard');
+  save('collected', collected);
   const testPath = path.join(output, 'collected-tests.json');
   const collection = spawnSync(process.execPath,
-    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', ...selection, `--json=${testPath}`],
+    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'list', ...filters, `--json=${testPath}`],
     { cwd: serverDir, stdio: 'inherit' });
   if (collection.status !== 0) throw new Error('Integration test collection failed');
   const collectedTests = JSON.parse(readFileSync(testPath, 'utf8'));
   const args = extraArgs.filter(arg => !/^--outputFile(?:\.json)?=/.test(arg) && arg !== '--reporter=json');
   if (!args.some(arg => arg.startsWith('--reporter'))) args.push('--reporter=default');
   const result = spawnSync(process.execPath,
-    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...selection, '--coverage.enabled=false', ...args,
+    [path.join(serverDir, 'node_modules/vitest/vitest.mjs'), 'run', ...filters, '--coverage.enabled=false', ...args,
       '--reporter=json', `--outputFile.json=${reportPath}`],
     { cwd: serverDir, stdio: 'inherit' });
   const report = JSON.parse(readFileSync(reportPath, 'utf8'));
+  save('results', report);
   evidence = reconcileExecution({ collected, collectedTests, report, root: repoRoot,
     suite: 'integration', revision: before.revision, exitCode: result.status });
 } catch (error) {
   evidence = { schemaVersion: 1, suite: 'integration', revision: before.revision, status: 'failed', failures: [error.message] };
 }
 const after = testRevision(repoRoot);
-evidence.selection = { mode, paths: selection, manifest: paths };
+evidence.selection = { mode: 'selected', reason: mode, paths: selection, manifest: paths, allFiles, filters: [], shard: { index, total } };
+if (before.dirty || after.dirty) {
+  evidence.status = 'failed';
+  evidence.failures.push('Integration checkout must remain clean');
+}
 evidence.source = { before, after };
 evidence.workingTreeDirty = Boolean(before.dirty || after.dirty);
 if (before.revision !== after.revision) {
