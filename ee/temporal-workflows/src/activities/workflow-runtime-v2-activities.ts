@@ -623,12 +623,14 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
   const expressionContext = buildWorkflowRuntimeV2ExpressionContext(input.scopes);
   const secretResolver = buildWorkflowRuntimeV2SecretResolver(knex, input.tenantId);
 
+  const inputRedactionPaths: string[] = [];
   const resolvedInput = await resolveInputMapping(
     (config.inputMapping ?? {}) as InputMapping,
     {
       expressionContext,
       secretResolver,
       workflowRunId: input.runId,
+      redactionPaths: inputRedactionPaths,
     }
   ) ?? {};
 
@@ -643,6 +645,7 @@ export async function executeWorkflowRuntimeV2ActionStep(input: {
     actionId: config.actionId,
     version: config.version,
     args: resolvedInput,
+    inputRedactionPaths,
     expressionContext,
     // Preserve the authored action config for handlers that read action-specific
     // configuration outside inputMapping, such as transform.compose_text outputs.
@@ -833,6 +836,7 @@ async function executeActionInvocation(input: {
   actionId: string;
   version: number;
   args: unknown;
+  inputRedactionPaths?: string[];
   expressionContext: Record<string, unknown>;
   stepConfig?: unknown;
   idempotencyKey?: string;
@@ -879,7 +883,7 @@ async function executeActionInvocation(input: {
     idempotency_key: idempotencyKey,
     status: 'STARTED',
     attempt: 1,
-    input_json: parsedInput as Record<string, unknown>,
+    input_json: applyRedactions(parsedInput, input.inputRedactionPaths) as Record<string, unknown>,
     started_at: new Date().toISOString(),
   });
   if (!invocation) {

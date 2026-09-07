@@ -186,6 +186,25 @@ describe('workflow-runtime-v2 activities', () => {
     expect(mocks.findInvocationByIdempotency).toHaveBeenLastCalledWith(expect.anything(), step.config.actionId, 1, `tenant-1:${key}`, 'tenant-1');
   });
 
+  it('redacts resolved nested secrets in stored input while delivering their values to the handler', async () => {
+    const { resolveInputMapping } = await import('@alga-psa/shared/workflow/runtime/utils/mappingResolver');
+    mocks.resolveInputMapping.mockImplementation((mapping, options) => resolveInputMapping(mapping, {
+      ...options, secretResolver: { resolve: async () => 'synthetic-provider-secret' },
+    }));
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+    await executeWorkflowRuntimeV2ActionStep({
+      runId: 'secret-run', stepPath: 'root.steps[0]', stepId: 'step', tenantId: 'tenant-1',
+      step: { type: 'action.call', config: { actionId: 'secret-test', version: 1,
+        inputMapping: { credentials: [{ token: { $secret: 'MAILBOX_TOKEN' }, label: 'Mailbox' }] } } },
+      scopes: { payload: {}, workflow: {}, lexical: [], meta: {}, error: null,
+        system: { runId: 'secret-run', workflowId: 'workflow', workflowVersion: 1, tenantId: 'tenant-1', definitionHash: null, runtimeSemanticsVersion: null } },
+    });
+    expect(mocks.actionHandler).toHaveBeenCalledWith({ credentials: [{ token: 'synthetic-provider-secret', label: 'Mailbox' }] }, expect.anything());
+    expect(mocks.createInvocation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
+      input_json: { credentials: [{ token: '[REDACTED]', label: 'Mailbox' }] },
+    }));
+  });
+
   it.each([true, false])('executes a failed retry only when the atomic claim succeeds: %s', async (claimed) => {
     mocks.findInvocationByIdempotency.mockResolvedValue({ invocation_id: 'failed-invocation', status: 'FAILED', error_json: { message: 'Previous failure' } });
     mocks.claimFailed.mockResolvedValue(claimed ? { invocation_id: 'failed-invocation', attempt: 2 } : null);

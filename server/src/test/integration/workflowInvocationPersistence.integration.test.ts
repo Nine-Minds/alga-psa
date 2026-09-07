@@ -170,3 +170,23 @@ it('creates one real ticket and initial comment across activity replay', async (
     expect(await Invocation.listByRun(db, run.run_id, tenant)).toHaveLength(1);
   } finally { registeredAction.current = null; }
 });
+
+it('redacts secret references in persisted action inputs without changing handler arguments', async () => {
+  const tenant = randomUUID();
+  const workflow = await WorkflowDefinition.create(db, tenant, { name: 'Input redaction', payload_schema_ref: 'payload.EmailWorkflowPayload.v1', draft_definition: {} as any, draft_version: 1 });
+  const run = await WorkflowRun.create(db, { workflow_id: workflow.workflow_id, workflow_version: 1, tenant, status: 'RUNNING' });
+  actionHandler.mockReset().mockResolvedValue({ accepted: true });
+  const { executeWorkflowRuntimeV2ActionStep } = await import('../../../../ee/temporal-workflows/src/activities/workflow-runtime-v2-activities');
+  const args = { connection: { secretRef: 'synthetic-private-reference', label: 'Mailbox' }, values: [{ secretRef: 'nested-private-reference' }] };
+  await executeWorkflowRuntimeV2ActionStep({
+    runId: run.run_id, stepId: randomUUID(), stepPath: 'root.steps[0]', tenantId: tenant,
+    step: { type: 'action.call', config: { actionId: 'input-redaction-regression', version: 1, inputMapping: { connection: { $expr: 'payload.arguments.connection' }, values: { $expr: 'payload.arguments.values' } } } },
+    scopes: { payload: { arguments: args }, workflow: {}, lexical: [], meta: {}, error: null,
+      system: { runId: run.run_id, workflowId: workflow.workflow_id, workflowVersion: 1, tenantId: tenant, definitionHash: null, runtimeSemanticsVersion: null } },
+  });
+  expect(actionHandler).toHaveBeenCalledWith(args, expect.anything());
+  const rows = await Invocation.listByRun(db, run.run_id, tenant);
+  expect(rows).toHaveLength(1);
+  expect(rows[0].input_json).toEqual({ connection: { secretRef: '[REDACTED]', label: 'Mailbox' }, values: [{ secretRef: '[REDACTED]' }] });
+  expect(args.connection.secretRef).toBe('synthetic-private-reference');
+});
