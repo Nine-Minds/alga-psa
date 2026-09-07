@@ -214,16 +214,25 @@ jobs:
     needs: [check-changes, integration-tests]
     if: always() && (github.event_name == 'schedule' || needs.check-changes.outputs.should_run == 'true')
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       INTEGRATION_SHARD_TOTAL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') && '4' || '1' }}
       INTEGRATION_FULL: ${{ (github.event_name == 'schedule' || github.event.inputs.suite == 'full' || needs.check-changes.outputs.full == 'true') }}
       INTEGRATION_JOB_RESULT: ${{ needs.integration-tests.result }}
+      REAL_REDIS: '1'
+      TIER1_BASE_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Install tooling for independent affected collection
+        if: env.INTEGRATION_FULL != 'true'
+        run: |
+          npm install -g npm@11
+          npm ci
       - name: Download every integration shard
         uses: actions/download-artifact@v4
         with:

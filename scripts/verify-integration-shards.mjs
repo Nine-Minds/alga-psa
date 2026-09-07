@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { compareExecutionEvidence, reconcileExecution } from './lib/test-execution-evidence.mjs';
 import { reconcileTestShards } from './lib/test-sharding.mjs';
 import { repositoryTestFiles } from './lib/test-discovery.mjs';
 import { testRevision } from './lib/test-revision.mjs';
+import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const output = path.join(root, 'test-results/integration-aggregate');
@@ -45,7 +48,37 @@ try {
   const candidates = repositoryTestFiles(root).filter(file => file.startsWith('server/src/test/integration/') || file.startsWith('ee/temporal-workflows/src/__tests__/integration/'));
   const manifest = JSON.parse(readFileSync(path.join(root, 'server/src/test/integration/tier1.manifest.json'), 'utf8'));
   const floor = manifest.paths.map(file => path.relative(root, path.resolve(root, 'server', file)).split(path.sep).join('/'));
-  const required = process.env.INTEGRATION_FULL === 'true' ? candidates : candidates.filter(file => floor.some(entry => file === entry || file.startsWith(`${entry}/`)));
+  let required = candidates;
+  if (process.env.INTEGRATION_FULL !== 'true') {
+    const base = process.env.TIER1_BASE_SHA?.trim();
+    const decision = selectIntegration(readChangedFiles({ cwd: root, base, head: source.revision }));
+    if (!decision.full) {
+      required = candidates.filter(file => floor.some(entry => file === entry || file.startsWith(`${entry}/`)));
+      if (decision.shouldRun) {
+        const temporary = mkdtempSync(path.join(tmpdir(), 'alga-gate-affected-'));
+        try {
+          const collectedPath = path.join(temporary, 'files.json');
+          const collection = spawnSync(process.execPath, [path.join(root, 'server/node_modules/vitest/vitest.mjs'),
+            'list', '--filesOnly', '--changed', base, 'src/test/integration',
+            '../ee/temporal-workflows/src/__tests__/integration', `--json=${collectedPath}`],
+          { cwd: path.join(root, 'server'), encoding: 'utf8', timeout: 120_000 });
+          if (collection.status !== 0) throw new Error(collection.stderr || 'Affected collection failed');
+          const collected = JSON.parse(readFileSync(collectedPath, 'utf8'));
+          if (!Array.isArray(collected)) throw new Error('Missing affected collection');
+          for (const entry of collected) {
+            if (typeof entry.file !== 'string') throw new Error('Missing affected file identity');
+            const file = path.relative(root, path.resolve(root, 'server', entry.file)).split(path.sep).join('/');
+            if (!candidates.includes(file)) throw new Error(`Unknown affected integration file: ${file}`);
+            required.push(file);
+          }
+        } catch (error) {
+          // Match the runner's safe widening when its import graph is unavailable.
+          console.warn(`Independent affected collection unavailable; requiring all integration files: ${error.message}`);
+          required = candidates;
+        } finally { rmSync(temporary, { recursive: true, force: true }); }
+      }
+    }
+  }
   for (const file of required) if (!result.executedFiles.includes(file)) failures.push(`Missing mandatory integration file: ${file}`);
   for (const file of result.executedFiles) if (!candidates.includes(file)) failures.push(`Unexpected integration file: ${file}`);
   if (!required.length) failures.push('Mandatory integration inventory is empty');
