@@ -52,14 +52,14 @@ function receipt(row: any): CoManagedPrivateCommentReceipt {
 }
 
 /** MSP-private notes stay entirely in the verified home store, including retry
- * receipts. Shared ticket authority is still required; retained archives have a
+ * receipts. Shared resource authority is still required; retained archives have a
  * separate read boundary after live trust ends. No ticket event or customer-side
  * updated timestamp is emitted for organization-private activity. */
-export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: CoManagedSessionActor,
+async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoManagedSessionActor,
   inputResource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand): Promise<CoManagedPrivateCommentReceipt> {
   const actor = snapshotCoManagedSessionActor(inputActor), request = snapshotCommand(input);
-  if (!inputResource || inputResource.kind !== 'ticket' || ![inputResource.tenant, inputResource.relationshipId, inputResource.id].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
-  const resource: CoManagedSharedResource = { kind: 'ticket', tenant: inputResource.tenant.toLowerCase(), relationshipId: inputResource.relationshipId.toLowerCase(), id: inputResource.id.toLowerCase() };
+  if (!inputResource || !['ticket', 'project_task'].includes(inputResource.kind) || ![inputResource.tenant, inputResource.relationshipId, inputResource.id].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
+  const resource: CoManagedSharedResource = { kind: inputResource.kind, tenant: inputResource.tenant.toLowerCase(), relationshipId: inputResource.relationshipId.toLowerCase(), id: inputResource.id.toLowerCase() };
   const target = request.kind === 'create' ? request.parent : request.comment;
   if (resource.tenant === actor.tenant || (target && target.storeTenant !== actor.tenant)) throw new CoManagedSharedWorkError();
   // LEVERAGE: pattern co-managed-command-receipt — ticket edits and private notes
@@ -79,7 +79,7 @@ export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: 
         let threadId = request.operationId;
         if (target) {
           const thread = await home.table('co_management_private_threads').where({ thread_id: target.threadId, customer_tenant: resource.tenant,
-            relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id }).forUpdate().first();
+            relationship_id: resource.relationshipId, resource_type: resource.kind, resource_id: resource.id }).forUpdate().first();
           if (!thread || thread.disclosure_operation_id) throw new CoManagedSharedWorkError();
           threadId = thread.thread_id;
           const root = await home.table('co_management_private_comments').where({ thread_id: threadId, comment_id: thread.root_comment_id }).forShare().first('deleted_at');
@@ -95,7 +95,7 @@ export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: 
           await assertWrite();
           commentId = request.operationId; revision = 1;
           if (!target) await home.table('co_management_private_threads').insert({ tenant: actor.tenant, thread_id: threadId, customer_tenant: resource.tenant,
-            relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id, root_comment_id: commentId });
+            relationship_id: resource.relationshipId, resource_type: resource.kind, resource_id: resource.id, root_comment_id: commentId });
           await home.table('co_management_private_comments').insert({ tenant: actor.tenant, comment_id: commentId, thread_id: threadId,
             parent_comment_id: target?.commentId ?? null, actor_user_id: actor.userId,
             actor_display_name: [user.first_name?.trim(), user.last_name?.trim()].filter(Boolean).join(' ') || user.email || actor.userId,
@@ -113,7 +113,7 @@ export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: 
         await home.table('co_management_private_threads').where('thread_id', threadId).update({ last_activity_at: trx.raw('clock_timestamp()') });
         await assertWrite();
         const [saved] = await home.table('co_management_private_command_receipts').insert({ tenant: actor.tenant, operation_id: request.operationId,
-          customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id,
+          customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: resource.kind, resource_id: resource.id,
           actor_user_id: actor.userId, command_type: request.kind, request_hash: hash, thread_id: threadId, comment_id: commentId, revision,
           applied_at: trx.raw('clock_timestamp()') }).returning('*');
         return receipt(saved);
@@ -123,4 +123,15 @@ export async function mutateCoManagedPrivateTicketComment(db: Knex, inputActor: 
       .includes((error as { constraint?: string }).constraint ?? '')) throw new CoManagedPrivateCommentError('PRIVATE_COMMENT_OPERATION_CONFLICT');
     throw error;
   }
+}
+
+/** Resource-specific entry points prevent existing ticket adapters from
+ * accepting tasks merely because their underlying private store is shared. */
+export async function mutateCoManagedPrivateTicketComment(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand) {
+  if (resource?.kind !== 'ticket') throw new CoManagedSharedWorkError();
+  return mutateCoManagedPrivateResourceComment(db, actor, resource, input);
+}
+export async function mutateCoManagedPrivateTaskComment(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource, input: CoManagedPrivateCommentCommand) {
+  if (resource?.kind !== 'project_task') throw new CoManagedSharedWorkError();
+  return mutateCoManagedPrivateResourceComment(db, actor, resource, input);
 }

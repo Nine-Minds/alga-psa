@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -10907,4 +10907,237 @@ it('keeps two customers with identical task identities distinct in one MSP queue
   await customer.table('co_management_project_scopes').del();
   expect((await queue(db, principal, { view: 'oversight' })).items.map((item: any) => item.tenant)).toEqual([second.actor.tenant]);
   expect((await queue(db, secondPrincipal, { view: 'working' })).items.map((item: any) => item.tenant)).toEqual([second.actor.tenant]);
+}));
+
+async function withTaskConversationFixture(work: (fixture: any) => Promise<void>) {
+  await withSharedProjectTaskFixture(async fixture => {
+    const conversation = await import('../../../../packages/co-managed/src/projectTaskConversation');
+    const write = (actor: any, command: any, resource = fixture.resource) => conversation.mutateCoManagedProjectTaskComment(db, actor, resource, command);
+    const read = (actor: any, before?: any, resource = fixture.resource) => conversation.getCoManagedProjectTaskConversation(db, actor, resource, before);
+    const ref = (receipt: any) => ({ storeTenant: receipt.storeTenant, threadId: receipt.threadId, commentId: receipt.commentId });
+    const add = (actor: any, audience: string, text: string, operationId = randomUUID()) => write(actor, { kind: 'create', operationId, audience, text });
+    await work({ ...fixture, conversation, write, read, ref, add });
+  });
+}
+
+it('task conversations preserve canonical ownership, separate private stores, and durable foreign authorship', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, customerPrincipal, resource, add, read }: any) => {
+  const beforeUsers = await customer.table('users');
+  await add(customerPrincipal, 'organization_private', 'Customer private diagnosis');
+  const shared = await add(principal, 'shared_it', 'Joint diagnosis');
+  await add(customerPrincipal, 'requester', 'Customer update');
+  const privateNote = await add(principal, 'organization_private', 'MSP private diagnosis');
+  const msp = await read(principal), local = await read(customerPrincipal);
+  expect(msp.items.map((item: any) => item.markdown).sort()).toEqual(['Customer update', 'Joint diagnosis', 'MSP private diagnosis']);
+  expect(local.items.map((item: any) => item.markdown).sort()).toEqual(['Customer private diagnosis', 'Customer update', 'Joint diagnosis']);
+  const item = msp.items.find((item: any) => item.commentId === shared.commentId);
+  expect(item).toMatchObject({ storeTenant: resource.tenant, author: { tenant: principal.tenant, id: principal.userId, referenceId: expect.any(String) } });
+  const row = await customer.table('project_task_comments').where('task_comment_id', shared.commentId).first();
+  expect(row).toMatchObject({ user_id: null, actor_reference_id: item.author.referenceId, task_id: resource.id });
+  await customer.table('collaboration_actor_references').where('actor_reference_id', item.author.referenceId).update({ display_name: 'Changed name', organization_name: 'Changed organization' });
+  await sponsor.table('users').where('user_id', principal.userId).update({ first_name: 'Changed', last_name: 'Identity' });
+  expect((await read(customerPrincipal)).items.find((entry: any) => entry.commentId === shared.commentId).author).toEqual(item.author);
+  expect(await customer.table('users')).toEqual(beforeUsers);
+  expect(await sponsor.table('project_task_comments')).toHaveLength(0);
+  expect(await customer.table('co_management_command_receipts').where('operation_id', privateNote.operationId)).toHaveLength(0);
+  expect(await sponsor.table('co_management_private_command_receipts').where('operation_id', privateNote.operationId).first()).toMatchObject({ resource_type: 'project_task', resource_id: resource.id });
+}));
+
+it.each([false, true])('task conversations treat legacy is_internal=%s notes as private', async internal => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, add, read }: any) => {
+  const root = await add(customerPrincipal, 'organization_private', 'Historical internal note');
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: null, is_internal: internal });
+  expect((await read(principal)).items).toEqual([]);
+  expect((await read(customerPrincipal)).items).toMatchObject([{ markdown: 'Historical internal note', audience: 'organization_private' }]);
+}));
+
+it('task conversations inherit reply audiences and reject implicit roots, changed audiences, and wrong task references', async () => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, resource, add, write, read, ref }: any) => {
+  const root = await add(customerPrincipal, 'shared_it', 'Joint root');
+  const reply = await write(principal, { kind: 'create', operationId: randomUUID(), parent: ref(root), expectedAudience: 'shared_it', text: 'MSP reply' });
+  expect((await read(customerPrincipal)).items.find((item: any) => item.commentId === reply.commentId)).toMatchObject({ threadId: root.threadId, parentCommentId: root.commentId, audience: 'shared_it' });
+  for (const command of [
+    { kind: 'create', operationId: randomUUID(), text: 'Missing audience' },
+    { kind: 'create', operationId: randomUUID(), parent: ref(root), audience: 'requester', text: 'Changed audience' },
+    { kind: 'create', operationId: randomUUID(), parent: ref(root), expectedAudience: 'requester', text: 'Stale audience' },
+    { kind: 'create', operationId: randomUUID(), parent: { ...ref(root), storeTenant: randomUUID() }, text: 'Wrong owner' },
+  ]) await expect(write(principal, command)).rejects.toThrow();
+  const source = await customer.table('project_tasks').where('task_id', resource.id).first(), otherId = randomUUID();
+  await customer.table('project_tasks').insert({ ...source, task_id: otherId, wbs_code: '1.1.2' });
+  await expect(write(principal, { kind: 'create', operationId: randomUUID(), parent: ref(root), text: 'Other task' }, { ...resource, id: otherId })).rejects.toThrow();
+  expect(await customer.table('project_task_comments')).toHaveLength(2);
+  expect(await customer.table('comment_threads').where('thread_id', root.threadId).first()).toMatchObject({ reply_count: 1 });
+}));
+
+it('task conversations make retries stable, serialize revisions, and never let either organization edit the other author', async () => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, write, read, ref }: any) => {
+  const command = { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Original' };
+  const created = await write(principal, command);
+  expect(await write(principal, command)).toEqual(created);
+  await expect(write(principal, { ...command, text: 'Different command' })).rejects.toMatchObject({ code: 'TASK_COMMENT_OPERATION_CONFLICT' });
+  for (const kind of ['edit', 'delete']) await expect(write(customerPrincipal, { kind, operationId: randomUUID(), comment: ref(created), expectedRevision: 1, ...(kind === 'edit' ? { text: 'Claim authorship' } : {}) })).rejects.toThrow();
+  const requests = ['First edit', 'Competing edit'].map(text => ({ kind: 'edit', operationId: randomUUID(), comment: ref(created), expectedRevision: 1, text }));
+  const results = await Promise.allSettled(requests.map(request => write(principal, request)));
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TASK_COMMENT_CONFLICT' } });
+  const index = results.findIndex(result => result.status === 'fulfilled');
+  expect(await write(principal, requests[index])).toEqual((results[index] as PromiseFulfilledResult<any>).value);
+  const deleted = await write(principal, { kind: 'delete', operationId: randomUUID(), comment: ref(created), expectedRevision: 2 });
+  expect(deleted.revision).toBe(3);
+  expect((await read(customerPrincipal)).items).toMatchObject([{ deleted: true, note: null, markdown: null, revision: 3 }]);
+  expect(await customer.table('project_task_comments')).toHaveLength(1);
+  await expect(write(principal, { kind: 'create', operationId: randomUUID(), parent: ref(created), text: 'Reply to deleted root' })).rejects.toThrow();
+}));
+
+it('task conversations preserve existing replies after root deletion and reject new replies through a surviving child', async () => withTaskConversationFixture(async ({ principal, customerPrincipal, add, write, read, ref }: any) => {
+  const root = await add(principal, 'shared_it', 'Root');
+  const reply = await write(customerPrincipal, { kind: 'create', operationId: randomUUID(), parent: ref(root), text: 'Surviving reply' });
+  await write(principal, { kind: 'delete', operationId: randomUUID(), comment: ref(root), expectedRevision: 1 });
+  await expect(write(customerPrincipal, { kind: 'create', operationId: randomUUID(), parent: ref(reply), text: 'New reply' })).rejects.toThrow();
+  expect((await read(principal)).items.find((item: any) => item.commentId === reply.commentId)).toMatchObject({ markdown: 'Surviving reply', deleted: false });
+}));
+
+it('task conversations preserve MSP private retry and own-author rules without accepting ticket commands for tasks', async () => withTaskConversationFixture(async ({ sponsor, principal, customerPrincipal, resource, add, write, read, ref }: any) => {
+  const root = await add(principal, 'organization_private', 'Private root');
+  const request = { kind: 'create', operationId: randomUUID(), parent: ref(root), expectedAudience: 'organization_private', text: 'Private reply' };
+  const reply = await write(principal, request);
+  expect(await write(principal, request)).toEqual(reply);
+  await expect(write(principal, { ...request, expectedAudience: 'shared_it' })).rejects.toThrow();
+  await expect(write(customerPrincipal, { kind: 'edit', operationId: randomUUID(), comment: ref(root), expectedRevision: 1, text: 'Customer edit' })).rejects.toThrow();
+  await write(principal, { kind: 'edit', operationId: randomUUID(), comment: ref(root), expectedRevision: 1, text: 'Private edited' });
+  await write(principal, { kind: 'delete', operationId: randomUUID(), comment: ref(root), expectedRevision: 2 });
+  await expect(write(principal, { kind: 'create', operationId: randomUUID(), parent: ref(reply), text: 'Deleted private root' })).rejects.toThrow();
+  expect((await read(customerPrincipal)).items).toEqual([]);
+  expect((await read(principal)).items).toHaveLength(2);
+  const ticket = await import('../../../../packages/co-managed/src/privateTicketConversation');
+  await expect(ticket.mutateCoManagedPrivateTicketComment(db, principal, resource, { kind: 'create', operationId: randomUUID(), text: 'Wrong kind' })).rejects.toThrow();
+  expect(await sponsor.table('co_management_private_comments')).toHaveLength(2);
+}));
+
+it.each(['revoked_project', 'viewer_staff', 'read_only_grant', 'inactive_actor', 'expired_session', 'lapsed_license'])(
+  'task conversations recheck %s authority for writes and successful retries', async reason => withTaskConversationFixture(async ({ customer, sponsor, principal, operation, resource, conversation, write, read }: any) => {
+    const request = { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Before authority changed' };
+    await write(principal, request);
+    if (reason === 'revoked_project') await customer.table('co_management_project_scopes').del();
+    if (reason === 'viewer_staff') await sponsor.table('co_management_staff_assignments').update({ relationship_role: 'viewer' });
+    if (reason === 'read_only_grant') await customer.table('co_management_project_scopes').update({ can_collaborate: false });
+    if (reason === 'inactive_actor') await sponsor.table('users').where('user_id', principal.userId).update({ is_inactive: true });
+    if (reason === 'expired_session') await sponsor.table('sessions').where('session_id', principal.sessionId).update({ expires_at: new Date(0) });
+    if (reason === 'lapsed_license') await expireCoManagedEntitlement(operation.tenant);
+    await expect(write(principal, request)).rejects.toThrow();
+    await expect(write(principal, { ...request, operationId: randomUUID() })).rejects.toThrow();
+    await expect(write(principal, { ...request, operationId: randomUUID(), audience: 'organization_private' })).rejects.toThrow();
+    expect(await conversation.getCoManagedProjectTaskWriteAudiences(db, principal, resource)).toEqual([]);
+    if (['viewer_staff', 'read_only_grant', 'lapsed_license'].includes(reason)) expect((await read(principal)).items).toHaveLength(1);
+    else await expect(read(principal)).rejects.toThrow();
+    expect(await customer.table('project_task_comments')).toHaveLength(1);
+    expect(await sponsor.table('co_management_private_comments')).toHaveLength(0);
+  }));
+
+it.each(['customer', 'sponsor'])('task conversations honor %s body masks and retain independent private-store boundaries', async side => withTaskConversationFixture(async ({ customer, sponsor, principal, customerPrincipal, operation, resource, conversation, add, write, read, ref }: any) => {
+  const root = await add(principal, 'shared_it', 'Hidden shared content');
+  await add(principal, 'organization_private', 'Separate MSP content');
+  const actor = side === 'customer' ? customerPrincipal : principal;
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: actor.tenant, name: 'Task conversation policy', actorUserId: actor.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: actor.tenant, bundleId, revisionId, resourceType: 'project', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [side === 'customer' ? operation.customer_client_id : operation.request.clientId], redactedFields: ['project_task_comments'] } });
+  await bundles.publishBundleRevision(db, { tenant: actor.tenant, bundleId, revisionId, actorUserId: actor.userId });
+  await bundles.createBundleAssignment(db, { tenant: actor.tenant, bundleId, targetType: 'user', targetId: actor.userId });
+  const page = await read(actor);
+  expect(JSON.stringify(page)).not.toContain('Hidden shared content');
+  expect(page.items.map((item: any) => item.markdown)).toEqual(side === 'sponsor' ? ['Separate MSP content'] : []);
+  await expect(write(actor, { kind: 'create', operationId: randomUUID(), parent: ref(root), text: 'Blind reply' })).rejects.toThrow();
+  expect(await conversation.getCoManagedProjectTaskWriteAudiences(db, actor, resource)).toEqual(side === 'sponsor' ? ['organization_private'] : []);
+}));
+
+it('task conversations roll back content, foreign attribution, and thread metadata when their receipt fails', async () => withTaskConversationFixture(async ({ customer, principal, resource, add }: any) => {
+  const constraint = `task_comment_receipt_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw("ALTER TABLE co_management_command_receipts ADD CONSTRAINT ?? CHECK (tenant <> ?::uuid OR command_type <> 'task_comment_create')", [constraint, resource.tenant]).toQuery());
+  try { await expect(add(principal, 'shared_it', 'Must roll back')).rejects.toMatchObject({ constraint }); }
+  finally { await db.raw('ALTER TABLE co_management_command_receipts DROP CONSTRAINT ??', [constraint]); }
+  expect(await customer.table('project_task_comments')).toHaveLength(0);
+  expect(await customer.table('comment_threads').where('project_task_id', resource.id)).toHaveLength(0);
+  expect(await customer.table('collaboration_actor_references')).toHaveLength(0);
+}));
+
+it('task conversations page both stores with microsecond cursors and duplicate IDs in a non-UTC connection', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, resource, add, conversation }: any) => {
+  const expected: string[] = [];
+  for (let index = 1; index <= 28; index++) {
+    const id = randomUUID(), at = `2026-01-01T00:00:00.${String(123000 + index)}Z`;
+    await add(principal, 'shared_it', `Shared ${index}`, id);
+    await customer.table('project_task_comments').where('task_comment_id', id).update({ created_at: db.raw('?::timestamptz', [at]) });
+    expected.push(`${resource.tenant}:${id}`);
+    if (index % 5 === 0) {
+      await add(principal, 'organization_private', `Private ${index}`, id);
+      await sponsor.table('co_management_private_comments').where('comment_id', id).update({ created_at: db.raw('?::timestamptz', [at]) });
+      expected.push(`${principal.tenant}:${id}`);
+    }
+  }
+  await withTransaction(db, async trx => {
+    await trx.raw("SET LOCAL TIME ZONE 'America/New_York'");
+    const first = await conversation.getCoManagedProjectTaskConversation(trx, principal, resource);
+    expect(first.items).toHaveLength(25); expect(first.nextBefore!.createdAt).toMatch(/\.123\d{3}Z$/);
+    const second = await conversation.getCoManagedProjectTaskConversation(trx, principal, resource, first.nextBefore!);
+    expect(second.nextBefore).toBeNull();
+    const found = [...first.items, ...second.items].map((item: any) => `${item.storeTenant}:${item.commentId}`);
+    expect(found.sort()).toEqual(expected.sort()); expect(new Set(found).size).toBe(33);
+  });
+}));
+
+it('task conversations reject inconsistent stored audiences and retain timestamp instants on non-UTC writes', async () => withTaskConversationFixture(async ({ customer, principal, resource, conversation }: any) => {
+  const receipt = await withTransaction(db, async trx => {
+    await trx.raw("SET LOCAL TIME ZONE 'America/New_York'");
+    const result = await conversation.mutateCoManagedProjectTaskComment(trx, principal, resource, { kind: 'create', operationId: randomUUID(), audience: 'shared_it', text: 'Timezone independent' });
+    const page = await conversation.getCoManagedProjectTaskConversation(trx, principal, resource);
+    expect(Math.abs(Date.parse(page.items[0].createdAt) - Date.now())).toBeLessThan(10_000);
+    return result;
+  });
+  for (const audience of ['shared_it', 'requester']) await expect(customer.table('comment_threads').where('thread_id', receipt.threadId)
+    .update({ collaboration_audience: audience, is_internal: audience === 'requester' })).rejects.toMatchObject({ constraint: 'comment_threads_collaboration_audience_check' });
+  const columns = await db('project_task_comments').columnInfo();
+  expect(columns.created_at.type).toBe('timestamp with time zone');
+  expect(columns.updated_at.type).toBe('timestamp with time zone');
+}));
+
+it('task conversations migration is repeatable and refuses to erase retained attribution', async () => withTaskConversationFixture(async ({ customer, principal, customerPrincipal, add }: any) => {
+  const migration = require('../../../migrations/20260907163000_add_project_task_collaboration_comments.cjs');
+  await migration.up(db);
+  const saved = await add(principal, 'shared_it', 'Retained foreign contribution');
+  for (const [patch, constraint] of [
+    [{ user_id: customerPrincipal.userId }, 'project_task_comment_actor_shape'],
+    [{ actor_display_name: null }, 'project_task_comment_actor_shape'],
+    [{ author_type: 'contact' }, 'project_task_comment_actor_shape'],
+    [{ actor_reference_id: randomUUID() }, 'project_task_comment_actor_reference_fk'],
+    [{ collaboration_revision: 0 }, 'project_task_comment_revision_positive'],
+  ] as const) await expect(customer.table('project_task_comments').where('task_comment_id', saved.commentId).update(patch)).rejects.toMatchObject({ constraint });
+  await expect(migration.down(db)).rejects.toThrow('Cannot remove retained project task collaboration attribution or revisions');
+  expect(await customer.table('project_task_comments').where('task_comment_id', saved.commentId).first()).toMatchObject({ user_id: null, collaboration_revision: 1, actor_display_name: expect.any(String) });
+}));
+
+it.each(['author', 'revision', 'conversation'])('task conversations apply %s masks to derived fields in both stores', async field => withTaskConversationFixture(async ({ principal, resource, operation, conversation, add, read }: any) => {
+  await add(principal, 'shared_it', 'Shared masked note'); await add(principal, 'organization_private', 'Private masked note');
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: principal.tenant, name: 'Derived conversation policy', actorUserId: principal.userId });
+  for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: principal.tenant, bundleId, revisionId, resourceType: 'project', action, templateKey: 'selected_clients',
+    config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
+  const page = await read(principal);
+  if (field === 'conversation') expect(page).toMatchObject({ items: [], nextBefore: null });
+  else { expect(page.items).toHaveLength(2); for (const item of page.items) {
+    if (field === 'author') expect(item.author).toBeUndefined(); else expect(item.revision).toBeNull();
+  } }
+  expect(await conversation.getCoManagedProjectTaskWriteAudiences(db, principal, resource)).toEqual(field === 'author' ? ['requester', 'shared_it', 'organization_private'] : []);
+}));
+
+it('task conversations roll back a write when its browser session expires after the body is stored', async () => withTaskConversationFixture(async ({ customer, sponsor, principal, resource, add }: any) => {
+  const name = `expire_task_comment_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw(`CREATE FUNCTION ??() RETURNS trigger AS $$ BEGIN IF NEW.tenant = ?::uuid THEN
+    UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = ?::uuid AND session_id = ?::uuid;
+    END IF; RETURN NEW; END; $$ LANGUAGE plpgsql`, [name, resource.tenant, principal.tenant, principal.sessionId]).toQuery());
+  await db.raw('CREATE TRIGGER ?? AFTER INSERT ON project_task_comments FOR EACH ROW EXECUTE FUNCTION ??()', [name, name]);
+  try { await expect(add(principal, 'shared_it', 'Expired during transaction')).rejects.toThrow(); }
+  finally { await db.raw('DROP TRIGGER ?? ON project_task_comments', [name]); await db.raw('DROP FUNCTION ??()', [name]); }
+  expect(await customer.table('project_task_comments')).toHaveLength(0);
+  expect(await customer.table('comment_threads').where('project_task_id', resource.id)).toHaveLength(0);
+  expect(await customer.table('collaboration_actor_references')).toHaveLength(0);
+  expect(await customer.table('co_management_command_receipts').where('resource_id', resource.id)).toHaveLength(0);
+  expect((await sponsor.table('sessions').where('session_id', principal.sessionId).first()).expires_at.getTime()).toBeGreaterThan(Date.now());
 }));

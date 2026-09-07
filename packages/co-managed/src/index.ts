@@ -50,3 +50,4 @@ export { listCoManagedProjectTaskHistory, type CoManagedTaskHistoryEntry } from 
 export { recordCoManagedProjectTaskAudit } from './projectTaskAudit';
 export * from './projectTaskAssignments';
 export * from './projectTaskQueue';
+export * from './projectTaskConversation';

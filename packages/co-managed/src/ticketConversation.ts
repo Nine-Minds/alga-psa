@@ -115,6 +115,7 @@ async function readConversation(context: CoManagedSharedWorkContext, cursor?: Co
 /** Published ticket conversation only. Caller adapters supply a verified home
  * session; every page repeats resource authority. Attachments require a separate
  * parent-audience download command, and metadata/email headers are never spread. */
+// LEVERAGE: pattern qualified-conversation-page — ticket and task readers combine canonical and home-private stores with exact composite cursors.
 export async function getCoManagedTicketConversation(db: Knex, inputActor: CoManagedSessionActor,
   inputResource: CoManagedSharedResource, before?: CoManagedConversationCursor): Promise<CoManagedTicketConversation> {
   const actor = snapshotCoManagedSessionActor(inputActor), cursor = snapshotCursor(before);

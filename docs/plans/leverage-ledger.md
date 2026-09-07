@@ -306,3 +306,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Ticket queue and project task queue.
 - **Gate:** Two real resource families, high authorization cost, stable compiler contract. ACT / bounded-now.
 - **Status:** extracted. A shared queue policy adapter accepts the resource family and available owner/board projections. Ticket behavior is preserved; task projections use native project ownership or a verified MSP assignment reference. Resource/lifecycle discovery remains separate because customer-home task queues and MSP ticket queues have different entry contracts.
+
+## qualified-private-resource-comment — pattern
+- **What:** MSP-private ticket and task notes require identical home-store receipts, authorship, revisions, content validation, and retained shared-resource authority.
+- **Where:** `packages/co-managed/src/privateTicketConversation.ts`.
+- **Gate:** Two supported resource families already share the private schema; stable command contract and high isolation cost. ACT / bounded-now.
+- **Status:** extracted. One internal resource writer uses the qualified resource kind. Explicit ticket/task entry points preserve input rejection and Promise behavior for existing adapters. No customer-store receipt or copied task is introduced.
+
+## qualified-conversation-page — pattern
+- **What:** Ticket and task readers combine canonical and MSP-private content using exact timestamp/store/comment cursors and field-mask projections.
+- **Where:** `ticketConversation.ts` and `projectTaskConversation.ts`.
+- **Gate:** Two callers; shared pagination is stable, but native audience, publication, attachment, and event contracts still differ. WATCH / reconsider when the task consumer boundary settles.
+- **Status:** watching. Keep explicit resource readers while task integration is established. Task legacy flags cannot inherit ticket-public defaults. Timestamp handling is verified on non-UTC PostgreSQL connections.
