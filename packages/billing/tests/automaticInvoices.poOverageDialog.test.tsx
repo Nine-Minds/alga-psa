@@ -117,32 +117,7 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  // The component drives parent-row selection through onClick (for shift-range
-  // support) and calls event.preventDefault(). On a native jsdom checkbox that
-  // cancels the click activation and reverts `.checked`, so we hand the
-  // component a no-op preventDefault instead.
-  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
-    <input
-      type="checkbox"
-      data-indeterminate={_indeterminate ? 'true' : 'false'}
-      {...props}
-      onClick={
-        onClick
-          ? (event: any) => {
-            onClick({
-              shiftKey: event.shiftKey,
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-              stopPropagation: () => event.stopPropagation(),
-              preventDefault: () => {},
-            });
-          }
-          : undefined
-      }
-    />
-  ),
-}));
+
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));

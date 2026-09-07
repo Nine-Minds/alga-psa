@@ -2816,9 +2816,9 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
                           parentGroupRangeSelect.handleSelect(group.parentSummary.parentSelectionKey, {
                             shiftKey: event.shiftKey,
                             selected: !isParentSelected,
-                            preventDefault: () => event.preventDefault(),
                           });
-                          event.preventDefault();
+                          // Keep native checkbox activation: cancelling the click
+                          // restores the old checked state after React updates it.
                         }}
                         onChange={() => { /* controlled via onClick for shift-range support */ }}
                       />

@@ -149,32 +149,7 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: ({ containerClassName: _containerClassName, ...props }: any) => <input {...props} />,
 }));
-vi.mock('@alga-psa/ui/components/Checkbox', () => ({
-  // The component drives parent-row selection through onClick (for shift-range
-  // support) and calls event.preventDefault(). On a native jsdom checkbox that
-  // cancels the click activation and reverts `.checked`, so we hand the
-  // component a no-op preventDefault instead.
-  Checkbox: ({ indeterminate: _indeterminate, onClick, ...props }: any) => (
-    <input
-      type="checkbox"
-      data-indeterminate={_indeterminate ? 'true' : 'false'}
-      {...props}
-      onClick={
-        onClick
-          ? (event: any) => {
-            onClick({
-              shiftKey: event.shiftKey,
-              metaKey: event.metaKey,
-              ctrlKey: event.ctrlKey,
-              stopPropagation: () => event.stopPropagation(),
-              preventDefault: () => {},
-            });
-          }
-          : undefined
-      }
-    />
-  ),
-}));
+
 vi.mock('@alga-psa/ui/components/DateRangePicker', () => ({
   DateRangePicker: () => <div data-testid="date-range-picker" />,
 }));
@@ -465,6 +440,29 @@ describe('AutomaticInvoices grouped parent rows', () => {
     expect(screen.getByText('Generate Invoices (2)')).toBeInTheDocument();
   });
 
+  it('keeps native checkbox state aligned when selecting and deselecting a parent range', async () => {
+    const template = JSON.stringify(mockDueWorkResponse.invoiceCandidates[0]);
+    for (const index of [2, 3]) {
+      mockDueWorkResponse.invoiceCandidates.push(JSON.parse(template
+        .replaceAll('client-1', `client-${index}`)
+        .replaceAll('exec-', `exec-client-${index}-`)
+        .replaceAll('contract-1', `contract-${index}`)));
+    }
+    render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
+    const parents = await waitFor(() => {
+      const inputs = Array.from(document.querySelectorAll<HTMLInputElement>('input[id^="select-parent-group:"]'));
+      expect(inputs).toHaveLength(3);
+      return inputs;
+    });
+    fireEvent.click(parents[0]);
+    fireEvent.click(parents[2], { shiftKey: true });
+    expect(parents.every(input => input.checked)).toBe(true);
+    expect(screen.getByText('Generate Invoices (6)')).toBeInTheDocument();
+    fireEvent.click(parents[0], { shiftKey: true });
+    expect(parents.every(input => !input.checked)).toBe(true);
+    expect(screen.queryByText('Generate Invoices (6)')).not.toBeInTheDocument();
+  });
+
   it('non-combinable parent stays disabled while child rows remain selectable (T010)', async () => {
     mockDueWorkResponse.invoiceCandidates[0].members[1].currencyCode = 'EUR';
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
@@ -498,7 +496,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       'select-parent-group:client-1:2026-03-01:2026-04-01',
     ) as HTMLInputElement;
     expect(parentCheckbox.checked).toBe(false);
-    expect(parentCheckbox.dataset.indeterminate).toBe('true');
+    expect(parentCheckbox.indeterminate).toBe(true);
   });
 
   it('select all selects combinable groups by parent row (T012)', async () => {
