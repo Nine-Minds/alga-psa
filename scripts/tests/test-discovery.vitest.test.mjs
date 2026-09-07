@@ -28,14 +28,15 @@ test('actual Vitest collection detects additions/moves, and repaired collection 
   };
   const inspect = (files, patch = {}) => {
     const manifest = { schemaVersion: 1, collections: [{ runner: 'fixture-vitest', status: 'passed',
-      owner: 'fixture-maintainer', runtime: 'node', mandatory: true, files }], ...patch };
+      owner: 'fixture-maintainer', runtime: 'node', mandatory: true,
+      collectionFile: 'collected.json', sourceRoot: root }], ...patch };
     write('collection-manifest.json', JSON.stringify(manifest));
     const invocation = spawnSync(process.execPath, [inventoryCli, 'collection-manifest.json', 'inventory.json'], { cwd: root, encoding: 'utf8' });
     assert.equal(invocation.error, undefined);
     const result = JSON.parse(readFileSync(path.join(root, 'inventory.json'), 'utf8'));
     assert.equal(invocation.status, result.status === 'passed' ? 0 : 1);
     if (!Object.keys(patch).length) {
-      const direct = reconcileDiscovery({ root, candidates: repositoryTestFiles(root), collections: manifest.collections });
+      const direct = reconcileDiscovery({ root, candidates: repositoryTestFiles(root), collections: [{ ...manifest.collections[0], files }] });
       assert.equal(result.status, direct.status);
       assert.deepEqual(result.unmatched, direct.unmatched);
     }
@@ -51,6 +52,9 @@ test('actual Vitest collection detects additions/moves, and repaired collection 
   const before = testRevision(root);
   assert.equal(before.dirty, false);
   assert.equal(inspect(collect()).status, 'passed');
+  const inline = { runner: 'inline-claims', status: 'passed', owner: 'fixture-maintainer',
+    runtime: 'node', mandatory: true, files: collect() };
+  assert.equal(inspect(inline.files, { collections: [inline] }).status, 'failed');
   assert.equal(inspect(collect(), { schemaVersion: 99 }).status, 'failed');
   assert.equal(inspect(collect(), { collections: [{ runner: 'unowned', status: 'passed', files: collect() }] }).status, 'failed');
 

@@ -15,7 +15,12 @@ try {
   const manifest = JSON.parse(readFileSync(path.resolve(root, manifestPath), 'utf8'));
   if (manifest.schemaVersion !== 1) throw new Error('Unsupported collection manifest schema');
   if (!Array.isArray(manifest.collections)) throw new Error('Missing runner collections');
-  const collections = manifest.collections.map(collection => readRunnerCollection(collection, path.dirname(path.resolve(root, manifestPath))));
+  const collections = manifest.collections.map(collection => {
+    if (typeof collection.collectionFile !== 'string' || !collection.collectionFile.trim()) {
+      throw new Error(`Runner requires a collection artifact: ${collection.runner}`);
+    }
+    return readRunnerCollection(collection, path.dirname(path.resolve(root, manifestPath)));
+  });
   const failures = [];
   for (const collection of collections) {
     if (typeof collection.owner !== 'string' || !collection.owner.trim()

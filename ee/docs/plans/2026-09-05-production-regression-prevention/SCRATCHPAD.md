@@ -1573,3 +1573,10 @@
 - Expanded the existing enterprise calendar OAuth/browser round-trip into three isolated cases: persistent HTTP 503 outage, 403 ErrorAccessDenied and 429 TooManyRequests during PATCH. Each retains real login/OAuth, UI creation/deletion, callback ingestion, local edit and visible provider error, disarm/retry with expired stored token, stable local/remote mapping, callback update and deletion.
 - Added explicit successful PATCH request evidence after recovery and fault classification to the identity attachment. The 429 case checks failure/recovery semantics, not Retry-After timing (operation-fault does not expose response headers); Teams/SSO remain separate unresolved coverage.
 - Enterprise Playwright collection finds all three cases. Full browser execution is pending publication; F034/F036 remain false. Current published browser run still has both API stages live, so queued changes are preserved locally.
+
+### 2026-09-07 — Repository inventory requires runner artifacts
+
+- Found verify-test-inventory accepted inline files when collectionFile was absent, permitting a manifest to claim collection without loading any runner artifact. Added a CLI regression to the actual Vitest collection test; before fix it incorrectly returned passed.
+- CLI now requires a nonblank collectionFile on every runner descriptor. Existing reader still rejects simultaneous inline/artifact data, missing files and invalid source roots. The reusable reconcileDiscovery evaluator remains available for already-loaded runtime collections.
+- All 21 discovery, actual Vitest/Node execution and Playwright evidence tests pass after repair. F004 remains incomplete until all repository candidates are assigned and the full registry runs in native CI.
+- Browser step budget is 25 minutes versus approximately eight minutes for the last enterprise execution; no speculative timeout increase. Current browser run 34109001526 remains active, so queued commits are not yet published.
