@@ -1,3 +1,4 @@
+import { recoverCoManagedNotificationDeliveries } from '@alga-psa/notifications/lib/coManagedDeliveryRuntime';
 import { persistCoManagedCommentNotifications } from '../../co-managed/persistCommentNotifications';
 import { registerNotificationCreatedEffects } from '@alga-psa/notifications/actions/internal-notification-actions/notificationCreatedEffects';
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
@@ -3140,7 +3141,9 @@ async function dispatchInternalNotificationHandlers(
       // when the customer has no local assignee/contact notification recipient.
       // Failures propagate to the ledger/event bus; receipt replay is idempotent.
       await persistCoManagedCommentNotifications(opts.db ?? await getConnection(validatedEvent.payload.tenantId),
-        validatedEvent, registerNotificationCreatedEffects);
+        validatedEvent, (trx, notification) => registerNotificationCreatedEffects(trx, notification, {
+          delivery: current => recoverCoManagedNotificationDeliveries(current.tenant, 3, current.internal_notification_id),
+        }));
       await handleTicketCommentAdded(validatedEvent as TicketCommentAddedEvent, opts);
       break;
     case 'TICKET_COMMENT_UPDATED':

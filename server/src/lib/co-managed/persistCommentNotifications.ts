@@ -1,3 +1,4 @@
+import { enqueueCoManagedNotificationDeliveries } from '@alga-psa/notifications/lib/coManagedDeliveryQueue';
 import type { Knex } from 'knex';
 import type { InternalNotification } from '@alga-psa/notifications';
 import { tenantDb } from '@alga-psa/db';
@@ -34,6 +35,9 @@ export async function persistCoManagedCommentNotifications(db: Knex, inputEvent:
     await home.table('co_management_in_app_receipts').where('delivery_key', deliveryKey).update({
       outcome: notification ? 'created' : 'disabled', notification_id: notification?.internal_notification_id ?? null,
     });
-    if (notification) onCreated?.(context.trx, notification);
+    if (notification) {
+      await enqueueCoManagedNotificationDeliveries(context.trx, notification);
+      onCreated?.(context.trx, notification);
+    }
   });
 }

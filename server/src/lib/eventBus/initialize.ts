@@ -1,3 +1,4 @@
+import { registerCoManagedPushTransport } from '@alga-psa/notifications/lib/coManagedDeliveryRuntime';
 import { registerAllSubscribers } from './subscribers';
 import logger from '@alga-psa/core/logger';
 import { getEventBus } from './index';
@@ -8,9 +9,11 @@ export async function initializeEventBus(): Promise<void> {
   try {
     logger.info('Initializing event bus and subscribers');
 
+    registerCoManagedPushTransport(triggerPushForNotification);
+
     // Register push notification hook for internal notifications
     registerInternalNotificationHook((notification) => {
-      return triggerPushForNotification(notification).catch((err) =>
+      return triggerPushForNotification(notification).then(() => undefined).catch((err) =>
         logger.error('[Push] Failed to send push notification', { err, template: notification.template_name }),
       );
     });

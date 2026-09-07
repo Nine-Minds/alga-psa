@@ -1,3 +1,4 @@
+import type { NotificationDeliveryResult } from '@alga-psa/notifications/lib/notificationTransportTypes';
 import logger from '@alga-psa/core/logger';
 import { getActivePushTokensForUser } from './pushTokenService';
 import { buildTicketPushMessage, sendPushNotifications } from './expoPushService';
@@ -19,6 +20,7 @@ const TICKET_PUSH_TEMPLATES = new Set([
 ]);
 
 interface InternalNotification {
+  internal_notification_id?: string;
   tenant: string;
   user_id: string;
   template_name: string;
@@ -45,8 +47,8 @@ function extractTicketIdFromLink(link: string | null | undefined): string | unde
  */
 export async function triggerPushForNotification(
   notification: InternalNotification,
-): Promise<void> {
-  if (!TICKET_PUSH_TEMPLATES.has(notification.template_name)) return;
+): Promise<NotificationDeliveryResult> {
+  if (!TICKET_PUSH_TEMPLATES.has(notification.template_name)) return { status: 'skipped', reason: 'unsupported_template' };
 
   const ticketId = extractTicketIdFromLink(notification.link);
 
@@ -55,7 +57,7 @@ export async function triggerPushForNotification(
     notification.user_id,
   );
 
-  if (tokens.length === 0) return;
+  if (tokens.length === 0) return { status: 'skipped', reason: 'no_active_devices' };
 
   const messages = tokens.map((t) =>
     buildTicketPushMessage({
@@ -63,12 +65,13 @@ export async function triggerPushForNotification(
       title: notification.title,
       body: notification.message,
       ticketId: ticketId ?? '',
+      notificationId: notification.internal_notification_id,
       tenant: notification.tenant,
       priority: notification.priority ?? 'normal',
     }),
   );
 
-  await sendPushNotifications(messages, notification.tenant);
+  const result = await sendPushNotifications(messages, notification.tenant);
 
   logger.info('[PushDispatcher] Sent push notifications', {
     template: notification.template_name,
@@ -76,4 +79,5 @@ export async function triggerPushForNotification(
     tenant: notification.tenant,
     deviceCount: tokens.length,
   });
+  return result;
 }

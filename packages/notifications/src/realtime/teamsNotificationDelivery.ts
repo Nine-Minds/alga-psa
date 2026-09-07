@@ -58,7 +58,8 @@ async function loadTeamsDeliverySeamModule(): Promise<TeamsDeliverySeamModule> {
   return deliverySeamModulePromise;
 }
 
-export async function deliverTeamsNotification(
+/** Transport-only edition seam; the caller holds current notification authority. */
+export async function deliverAuthorizedTeamsNotification(
   notification: InternalNotification
 ): Promise<TeamsNotificationDeliveryResult> {
   if (!isEnterprise) {
@@ -70,6 +71,10 @@ export async function deliverTeamsNotification(
     return { status: 'skipped', reason: 'delivery_unavailable' };
   }
 
-  const deliver = seam.deliverTeamsNotificationImpl;
-  return await deliverCurrentNotification(notification, deliver) ?? { status: 'skipped', reason: 'notification_no_longer_visible' };
+  return seam.deliverTeamsNotificationImpl(notification);
+}
+
+export async function deliverTeamsNotification(notification: InternalNotification): Promise<TeamsNotificationDeliveryResult> {
+  if (!isEnterprise) return { status: 'skipped', reason: 'ce_unavailable' };
+  return await deliverCurrentNotification(notification, deliverAuthorizedTeamsNotification) ?? { status: 'skipped', reason: 'notification_no_longer_visible' };
 }

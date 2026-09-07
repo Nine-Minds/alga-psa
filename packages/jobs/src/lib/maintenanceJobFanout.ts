@@ -1,3 +1,4 @@
+import { coManagedNotificationRecoveryHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB } from './handlers/coManagedNotificationRecoveryHandler';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
 import type { TenantDb } from '@alga-psa/db';
@@ -56,6 +57,10 @@ const tenantsWithActiveTeams: TenantSelector = (db) => db
   .whereNotNull('selected_profile_id')
   .distinct('tenant');
 
+const tenantsWithPendingCoManagedNotifications: TenantSelector = (db) => db
+  .unscoped<{ tenant: string }>('co_management_notification_deliveries', 'maintenance fanout selects MSPs with pending notification channel deliveries')
+  .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+
 const tenantsWithInboundEmail: TenantSelector = (db) => db
   .unscoped<{ tenant: string }>('email_providers', 'maintenance fanout narrows inbound-email recovery to tenants with an active provider')
   .where('is_active', true)
@@ -97,6 +102,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
+  [CO_MANAGED_NOTIFICATION_RECOVERY_JOB]: { scope: 'tenant', run: tenantId => coManagedNotificationRecoveryHandler({ tenantId }), tenants: tenantsWithPendingCoManagedNotifications, concurrency: 3 },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },
   'provider-disconnect-retry': { scope: 'tenant', run: (tenantId) => providerDisconnectRetryHandler({ tenantId }) },
 };

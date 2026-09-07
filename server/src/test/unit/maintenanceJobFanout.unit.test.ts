@@ -50,6 +50,7 @@ vi.mock('@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler', () => ({ cleanupA
 vi.mock('@alga-psa/jobs/handlers/cleanupTemporaryFormsJob', () => ({ cleanupTemporaryFormsJob: (...a: unknown[]) => systemHandlerMock('cleanup-temporary-workflow-forms', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliveriesJob: (...a: unknown[]) => systemHandlerMock('cleanup-webhook-deliveries', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETING_SWEEP_JOB: 'sweep-teams-online-meetings', teamsMeetingSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-teams-online-meetings', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler', () => ({ CO_MANAGED_NOTIFICATION_RECOVERY_JOB: 'co-managed-notification-recovery', coManagedNotificationRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-notification-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallArtifactHandler', () => ({ TELEPHONY_CALL_ARTIFACT_SWEEP_JOB: 'sweep-telephony-call-artifacts', telephonyCallArtifactSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-telephony-call-artifacts', ...a) }));
@@ -145,6 +146,7 @@ describe('runMaintenanceJob', () => {
   });
 
   it.each([
+    ['co-managed-notification-recovery', 'co_management_notification_deliveries'],
     ['renew-teams-meeting-artifact-subscriptions', 'teams_integrations'],
     ['renew-telephony-call-subscriptions', 'telephony_providers'],
     ['sweep-telephony-call-artifacts', 'telephony_call_records'],

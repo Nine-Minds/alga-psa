@@ -1,3 +1,4 @@
+import type { NotificationDeliveryResult } from '@alga-psa/notifications/lib/notificationTransportTypes';
 import Expo, { type ExpoPushMessage, type ExpoPushTicket } from 'expo-server-sdk';
 import logger from '@alga-psa/core/logger';
 import { deactivateInvalidTokens } from './pushTokenService';
@@ -9,6 +10,7 @@ export interface TicketPushParams {
   title: string;
   body: string;
   ticketId: string;
+  notificationId?: string;
   tenant: string;
   /**
    * Configured in-app notification priority (high|normal|low), carried to the
@@ -26,6 +28,7 @@ export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessag
     body: params.body,
     data: {
       ticketId: params.ticketId,
+      ...(params.notificationId ? { notificationId: params.notificationId } : {}),
       url: `alga://ticket/${params.ticketId}`,
       // Payload metadata so the mobile app can render/sort by priority.
       priority: params.priority ?? 'normal',
@@ -38,16 +41,18 @@ export function buildTicketPushMessage(params: TicketPushParams): ExpoPushMessag
 export async function sendPushNotifications(
   messages: ExpoPushMessage[],
   tenant: string,
-): Promise<void> {
+): Promise<NotificationDeliveryResult> {
   const valid = messages.filter((m) => Expo.isExpoPushToken(m.to as string));
-  if (valid.length === 0) return;
+  if (valid.length === 0) return { status: 'skipped', reason: 'no_valid_devices' };
 
   const chunks = expo.chunkPushNotifications(valid);
   const invalidTokens: string[] = [];
+  let accepted = 0, retryableFailure = false, permanentFailure = false;
 
   for (const chunk of chunks) {
     try {
       const tickets: ExpoPushTicket[] = await expo.sendPushNotificationsAsync(chunk);
+      if (tickets.length !== chunk.length) retryableFailure = true;
 
       for (let i = 0; i < tickets.length; i++) {
         const ticket = tickets[i];
@@ -59,10 +64,15 @@ export async function sendPushNotifications(
           });
           if (ticket.details?.error === 'DeviceNotRegistered') {
             invalidTokens.push(chunk[i].to as string);
+          } else if (ticket.details?.error === 'MessageTooBig') {
+            permanentFailure = true;
+          } else {
+            retryableFailure = true;
           }
-        }
+        } else { accepted++; }
       }
     } catch (err) {
+      retryableFailure = true;
       logger.error('[ExpoPush] Failed to send chunk', { err });
     }
   }
@@ -72,4 +82,7 @@ export async function sendPushNotifications(
       logger.error('[ExpoPush] Failed to deactivate invalid tokens', { err }),
     );
   }
+  if (retryableFailure) return { status: 'failed', errorCode: 'push_provider_failed', retryable: true };
+  if (permanentFailure) return { status: 'failed', errorCode: 'push_message_too_big', retryable: false };
+  return accepted ? { status: 'delivered' } : { status: 'skipped', reason: 'no_valid_devices' };
 }

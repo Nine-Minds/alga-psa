@@ -2,8 +2,10 @@ import type { Knex } from 'knex';
 import { getConnection, tenantDb, withTransaction } from '@alga-psa/db';
 import { withCoManagedStoredCommentNotification } from '@alga-psa/co-managed';
 import type { InternalNotification } from '../types/internalNotification';
-import { getNotificationTemplate, renderTemplate } from '../actions/internal-notification-actions/createNotificationCore';
+import { getNotificationTemplate, renderTemplate, checkInternalNotificationEnabled } from '../actions/internal-notification-actions/createNotificationCore';
 import { coManagedCommentPresentation } from './coManagedCommentPresentation';
+
+export type NotificationDeliveryLocator = Pick<InternalNotification, 'tenant' | 'user_id' | 'internal_notification_id' | 'metadata'>;
 
 function hasSharedMarker(metadata: unknown): boolean {
   return Boolean(metadata && typeof metadata === 'object' && Object.prototype.hasOwnProperty.call(metadata, 'coManaged'));
@@ -11,7 +13,7 @@ function hasSharedMarker(metadata: unknown): boolean {
 
 /** Queue payloads identify work; they do not authorize cached content. All
  * channel adapters must await their delivery inside this callback. */
-export async function withNotificationDelivery<T>(db: Knex, queued: InternalNotification,
+export async function withNotificationDelivery<T>(db: Knex, queued: NotificationDeliveryLocator,
   deliver: (notification: InternalNotification) => Promise<T>): Promise<T | null> {
   const identity = { tenant: queued.tenant, userId: queued.user_id, id: queued.internal_notification_id };
   const queuedShared = hasSharedMarker(queued.metadata);
@@ -27,7 +29,7 @@ export async function withNotificationDelivery<T>(db: Knex, queued: InternalNoti
       return withCoManagedStoredCommentNotification(trx, { kind: 'notification_recipient', tenant: identity.tenant, userId: identity.userId }, identity.id,
         async (context, current) => {
           const template = await getNotificationTemplate(context.trx, identity.tenant, current.templateName, current.languageCode);
-          if (!template) return null;
+          if (!template || !await checkInternalNotificationEnabled(context.trx, identity.tenant, identity.userId, template.subtype_id)) return null;
           const presentation = coManagedCommentPresentation(current.message, current.eventId, current.deliveryKey);
           // The verifier already holds the notification lock. Reload current
           // non-content fields too (read state, category, priority, timestamps).

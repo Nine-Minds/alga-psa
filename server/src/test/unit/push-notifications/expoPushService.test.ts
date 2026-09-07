@@ -139,3 +139,27 @@ describe('expoPushService', () => {
     });
   });
 });
+
+it.each([
+  [[{ status: 'ok', id: 'accepted' }], { status: 'delivered' }],
+  [[{ status: 'error', details: { error: 'DeviceNotRegistered' } }], { status: 'skipped', reason: 'no_valid_devices' }],
+  [[{ status: 'error', details: { error: 'MessageTooBig' } }], { status: 'failed', errorCode: 'push_message_too_big', retryable: false }],
+  [[{ status: 'error', details: { error: 'MessageRateExceeded' } }], { status: 'failed', errorCode: 'push_provider_failed', retryable: true }],
+  [[], { status: 'failed', errorCode: 'push_provider_failed', retryable: true }],
+])('reports provider outcome %j to durable delivery', async (tickets, expected) => {
+  mockSendPushNotificationsAsync.mockResolvedValue(tickets);
+  mockDeactivateInvalidTokens.mockResolvedValue(undefined);
+  expect(await sendPushNotifications([{ to: 'ExponentPushToken[durable]', title: 'Test', body: 'Current body' }], 'tenant-1')).toEqual(expected);
+});
+
+it('reports an uncertain provider request as retryable instead of acknowledging the channel', async () => {
+  mockSendPushNotificationsAsync.mockRejectedValue(new Error('Connection lost'));
+  expect(await sendPushNotifications([{ to: 'ExponentPushToken[durable]', title: 'Test', body: 'Current body' }], 'tenant-1'))
+    .toEqual({ status: 'failed', errorCode: 'push_provider_failed', retryable: true });
+});
+
+it('carries the stable notification identity on retries independently of the ticket identity', () => {
+  const message = buildTicketPushMessage({ expoPushToken: 'ExponentPushToken[durable]', title: 'Reply', body: 'Current body',
+    tenant: 'home-tenant', ticketId: 'ticket-id', notificationId: 'stable-notification-id' });
+  expect(message.data).toMatchObject({ notificationId: 'stable-notification-id', ticketId: 'ticket-id' });
+});

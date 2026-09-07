@@ -12,10 +12,11 @@ import { runPostCreationHooks } from './notificationHooks';
  * These immediate effects remain best effort: durable transport recovery must
  * separately cover a crash between the storage commit and this callback. */
 export function registerNotificationCreatedEffects(trx: Knex.Transaction, notification: InternalNotification,
-  options: { postCreationHooks?: boolean } = {}): void {
+  options: { postCreationHooks?: boolean; delivery?: (notification: InternalNotification) => Promise<unknown> } = {}): void {
   const createdAt: unknown = notification.created_at;
   const sentAt = typeof createdAt === 'string' ? createdAt : createdAt instanceof Date ? createdAt.toISOString() : new Date().toISOString();
   const runHooks = options.postCreationHooks !== false;
+  const delivery = options.delivery;
   registerAfterCommit(trx, () => {
     void publishWorkflowEvent({
       eventType: 'NOTIFICATION_SENT',
@@ -27,6 +28,12 @@ export function registerNotificationCreatedEffects(trx: Knex.Transaction, notifi
     }).catch(error => logger.warn('[NotificationCreatedEffects] Workflow notification event failed', {
       notificationId: notification.internal_notification_id, error: error instanceof Error ? error.message : String(error),
     }));
+    if (delivery) {
+      void delivery(notification).catch(error => logger.warn('[NotificationCreatedEffects] Durable delivery attempt failed', {
+        notificationId: notification.internal_notification_id, error: error instanceof Error ? error.message : String(error),
+      }));
+      return;
+    }
     void broadcastNotification(notification).catch(error => logger.warn('[NotificationCreatedEffects] Notification broadcast failed', {
       notificationId: notification.internal_notification_id, error: error instanceof Error ? error.message : String(error),
     }));

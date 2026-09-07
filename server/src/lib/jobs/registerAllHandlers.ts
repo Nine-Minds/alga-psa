@@ -1,3 +1,4 @@
+import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
 import { Job } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
@@ -729,6 +730,12 @@ export async function registerAllJobHandlers(
   // ============================================================================
   // INBOUND EMAIL RECOVERY (per-tenant durable sweep/backfill/mirror)
   // ============================================================================
+
+  JobHandlerRegistry.register<CoManagedNotificationRecoveryJobData & BaseJobData>({
+    name: CO_MANAGED_NOTIFICATION_RECOVERY_JOB,
+    handler: async (_jobId, data) => { await coManagedNotificationRecoveryJobHandler({ data } as any); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
 
   JobHandlerRegistry.register<InboundEmailRecoveryJobData & BaseJobData>(
     {

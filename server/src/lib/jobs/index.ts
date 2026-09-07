@@ -1,3 +1,4 @@
+import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
 import { Job } from 'pg-boss';
 import { JobScheduler, JobFilter, IJobScheduler, DummyJobScheduler } from './jobScheduler';
 import { registerJobSchedulerAccessor } from '@alga-psa/jobs/scheduler';
@@ -256,6 +257,8 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     jobScheduler.registerJobHandler<EmailWebhookMaintenanceJobData>('email-webhook-maintenance', async (job: Job<EmailWebhookMaintenanceJobData>) => {
       await emailWebhookMaintenanceHandler(job);
     });
+
+    jobScheduler.registerJobHandler<CoManagedNotificationRecoveryJobData>(CO_MANAGED_NOTIFICATION_RECOVERY_JOB, async job => { await coManagedNotificationRecoveryJobHandler(job); });
 
     // Register inbound email recovery handler (per-tenant durable sweep/backfill/mirror)
     jobScheduler.registerJobHandler<InboundEmailRecoveryJobData>(INBOUND_EMAIL_RECOVERY_JOB, async (job: Job<InboundEmailRecoveryJobData>) => {
@@ -950,6 +953,21 @@ export const scheduleInboundEmailRecoveryJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<InboundEmailRecoveryJobData>(
     INBOUND_EMAIL_RECOVERY_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleCoManagedNotificationRecoveryJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/1 * * * *' // Every minute
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<CoManagedNotificationRecoveryJobData>(
+    CO_MANAGED_NOTIFICATION_RECOVERY_JOB,
     cronExpression,
     { tenantId }
   );

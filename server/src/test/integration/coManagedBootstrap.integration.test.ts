@@ -85,7 +85,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -5789,24 +5789,31 @@ it('guards the actual Redis broadcaster and asynchronous post-creation hooks wit
 
 async function withCoManagedNotificationSubscriberFixture(work: (fixture: Parameters<Parameters<typeof withInAppCommentFixture>[0]>[0] & {
   handle: (event: any) => Promise<void>;
-  broadcast: ReturnType<typeof vi.spyOn>; hooks: ReturnType<typeof vi.spyOn>;
+  broadcast: ReturnType<typeof vi.spyOn>; hooks: ReturnType<typeof vi.fn>;
   observed: { notification: any; committed: boolean }[];
 }) => Promise<void>) {
   await withInAppCommentFixture(async fixture => {
     const dbModule = await import('@alga-psa/db');
     const broadcaster = await import('@alga-psa/notifications/realtime/internalNotificationBroadcaster');
-    const hookModule = await import('@alga-psa/notifications/actions/internal-notification-actions/notificationHooks');
+    const runtime = await import('@alga-psa/notifications/lib/coManagedDeliveryRuntime');
+    const teams = await import('@alga-psa/notifications/realtime/teamsNotificationDelivery');
     const observed: { notification: any; committed: boolean }[] = [];
-    const broadcast = vi.spyOn(broadcaster, 'broadcastNotification').mockImplementation(async notification => {
+    const broadcast = vi.spyOn(broadcaster, 'publishAuthorizedInAppNotification').mockImplementation(async notification => {
       const row = await tenantDb(db, notification.tenant).table('internal_notifications').where('internal_notification_id', notification.internal_notification_id).first();
       observed.push({ notification, committed: Boolean(row) });
+      return { status: 'delivered' as const };
     });
-    const hooks = vi.spyOn(hookModule, 'runPostCreationHooks').mockResolvedValue(undefined);
+    const hooks = vi.fn(async () => ({ status: 'delivered' as const }));
+    const unregisterPush = runtime.registerCoManagedPushTransport(hooks);
+    const teamsDelivery = vi.spyOn(teams, 'deliverAuthorizedTeamsNotification').mockResolvedValue({ status: 'skipped', reason: 'test_transport' });
     const connection = vi.spyOn(dbModule, 'getConnection').mockResolvedValue(db);
     try {
       const { internalNotificationSubscriberTestHarness } = await import('../../lib/eventBus/subscribers/internalNotificationSubscriber');
       await work({ ...fixture, handle: internalNotificationSubscriberTestHarness.handleInternalNotificationEvent, broadcast, hooks, observed });
-    } finally { connection.mockRestore(); hooks.mockRestore(); broadcast.mockRestore(); }
+    } finally {
+      try { await vi.waitFor(async () => expect(await fixture.sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(0), { timeout: 10000 }); }
+      finally { connection.mockRestore(); unregisterPush(); teamsDelivery.mockRestore(); broadcast.mockRestore(); }
+    }
   });
 }
 
@@ -5820,12 +5827,12 @@ it('connects normal comment events to MSP in-app receipts and emits creation eff
   await vi.waitFor(() => expect(observed).toHaveLength(2));
   expect(observed.every(item => item.committed)).toBe(true);
   expect(observed.map(item => item.notification.internal_notification_id).sort()).toEqual(rows.map(row => row.internal_notification_id).sort());
-  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+  expect(broadcast).toHaveBeenCalledTimes(2); await vi.waitFor(() => expect(hooks).toHaveBeenCalledTimes(2));
   // No local assignment/contact is needed for the independent MSP fanout.
   expect(await customer.table('internal_notifications')).toEqual([]);
   await handle(event);
   expect(await sponsor.table('internal_notifications').orderBy('user_id')).toEqual(rows);
-  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+  expect(broadcast).toHaveBeenCalledTimes(2); await vi.waitFor(() => expect(hooks).toHaveBeenCalledTimes(2));
   await handle({ ...event, id: randomUUID(), payload: { ...event.payload, suppressInternalNotifications: true } });
   expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
 }));
@@ -5855,7 +5862,7 @@ it('rolls back MSP notification receipts and effects with a failed inbound outbo
     expect.objectContaining({ consumer: 'internal-notification', status: 'delivered' }),
   ]);
   await withInboundMode('off', () => handle(event));
-  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+  expect(broadcast).toHaveBeenCalledTimes(2); await vi.waitFor(() => expect(hooks).toHaveBeenCalledTimes(2));
 }));
 
 it('propagates failed ordinary-event MSP fanout for retry without duplicating recipients already committed', async () => withCoManagedNotificationSubscriberFixture(async ({
@@ -5876,4 +5883,145 @@ it('propagates failed ordinary-event MSP fanout for retry without duplicating re
   await handle(event);
   expect(await sponsor.table('internal_notifications')).toHaveLength(2); expect(await sponsor.table('co_management_in_app_receipts')).toHaveLength(2);
   await vi.waitFor(() => expect(observed).toHaveLength(2)); expect(broadcast).toHaveBeenCalledTimes(2);
+}));
+
+it('atomically queues all notification channels and recovers missed immediate effects with independent retry state', async () => withInAppCommentFixture(async ({
+  principal, sponsor, customer, persist, event,
+}) => {
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  await expect(db.transaction(async trx => { await persist(trx, event); throw new Error('Abort queue creation'); })).rejects.toThrow('Abort queue creation');
+  expect(await sponsor.table('co_management_notification_deliveries')).toEqual([]);
+  await persist(db, event); // Simulates commit followed by process loss before any after-commit delivery.
+  const jobs = await sponsor.table('co_management_notification_deliveries');
+  expect(jobs).toHaveLength(6);
+  expect(jobs.every(row => row.status === 'pending' && row.attempt_count === 0)).toBe(true);
+  expect(Object.keys(jobs[0])).not.toContain('message'); expect(Object.keys(jobs[0])).not.toContain('metadata');
+  const first = vi.fn(async (channel: any) => channel === 'teams' ? { status: 'failed' as const, errorCode: 'provider_busy', retryable: true }
+    : channel === 'push' ? { status: 'skipped' as const, reason: 'no_active_devices' } : { status: 'delivered' as const });
+  expect(await process(db, principal.tenant, first)).toEqual({ examined: 6, processed: 6 });
+  expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(2);
+  await sponsor.table('co_management_notification_deliveries').where('status', 'pending').update({ next_attempt_at: db.raw("clock_timestamp() + interval '1 hour'") });
+  expect(await process(db, principal.tenant, first)).toEqual({ examined: 0, processed: 0 });
+  await customer.table('comments').where('comment_id', event.payload.comment.id).update({ note: 'Fresh body for retry' });
+  await sponsor.table('co_management_notification_deliveries').where('status', 'pending').update({ next_attempt_at: new Date(0) });
+  const retry = vi.fn(async (_channel: any, notification: any) => {
+    expect(notification.message).toContain('Fresh body for retry'); return { status: 'delivered' as const };
+  });
+  expect(await process(db, principal.tenant, retry)).toEqual({ examined: 2, processed: 2 });
+  expect(retry.mock.calls.every(([channel]) => channel === 'teams')).toBe(true);
+  const completed = await sponsor.table('co_management_notification_deliveries');
+  expect(completed.every(row => row.completed_at && row.next_attempt_at === null)).toBe(true);
+  expect(completed.filter(row => row.channel === 'teams').every(row => row.attempt_count === 2)).toBe(true);
+  await persist(db, event);
+  expect(await sponsor.table('co_management_notification_deliveries').orderBy('notification_id').orderBy('channel'))
+    .toEqual(completed.sort((a, b) => a.notification_id.localeCompare(b.notification_id) || a.channel.localeCompare(b.channel)));
+}));
+
+it('does not duplicate a channel when immediate delivery and recovery workers overlap', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, persist, event,
+}) => {
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  await persist(db, event);
+  const accepted: string[] = [];
+  const perform = async (channel: any, notification: any) => {
+    accepted.push(`${notification.internal_notification_id}:${channel}`);
+    await expect(db.transaction(async trx => {
+      await tenantDb(trx, resource.tenant).table('tickets').where('ticket_id', resource.id).forUpdate().noWait().first();
+    })).rejects.toMatchObject({ code: '55P03' });
+    return { status: 'delivered' as const };
+  };
+  await Promise.all([process(db, principal.tenant, perform), process(db, principal.tenant, perform)]);
+  expect(accepted).toHaveLength(6); expect(new Set(accepted).size).toBe(6);
+  expect((await sponsor.table('co_management_notification_deliveries')).every(row => row.status === 'delivered' && row.attempt_count === 1)).toBe(true);
+}));
+
+it('suppresses queued channels on revoked access and never treats a damaged shared queue entry as native content', async () => withInAppCommentFixture(async ({
+  principal, resource, sponsor, customer, persist, event,
+}) => {
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  await persist(db, event);
+  const principalRow = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  await sponsor.table('co_management_in_app_receipts').where('notification_id', principalRow.internal_notification_id).del();
+  await sponsor.table('internal_notifications').where('internal_notification_id', principalRow.internal_notification_id).update({ metadata: null });
+  const perform = vi.fn(async () => ({ status: 'delivered' as const }));
+  await process(db, principal.tenant, perform, { notificationId: principalRow.internal_notification_id });
+  expect(perform).not.toHaveBeenCalled();
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date() });
+  await process(db, principal.tenant, perform);
+  expect(perform).not.toHaveBeenCalled();
+  expect((await sponsor.table('co_management_notification_deliveries')).every(row => row.status === 'skipped' && row.last_error_code === 'notification_not_visible')).toBe(true);
+}));
+
+it('recovers an uncertain external acceptance with the same notification identity without resending successful channels', async () => withInAppCommentFixture(async ({
+  principal, sponsor, persist, event,
+}) => {
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  await persist(db, event);
+  const functionName = `fail_notification_ack_${randomUUID().replaceAll('-', '')}`;
+  await db.raw("CREATE FUNCTION ??() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Injected crash before acknowledgement'; END; $$", [functionName]);
+  await db.raw("CREATE TRIGGER ?? BEFORE UPDATE ON co_management_notification_deliveries FOR EACH ROW WHEN (NEW.channel = 'in_app' AND NEW.status = 'delivered') EXECUTE FUNCTION ??()", [functionName, functionName]);
+  const accepted: string[] = [];
+  const perform = async (channel: any, notification: any) => { accepted.push(`${notification.internal_notification_id}:${channel}`); return { status: 'delivered' as const }; };
+  try {
+    await process(db, principal.tenant, perform);
+    expect(accepted).toHaveLength(6);
+    expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(2);
+  } finally {
+    await db.raw('DROP TRIGGER ?? ON co_management_notification_deliveries', [functionName]);
+    await db.raw('DROP FUNCTION ??()', [functionName]);
+  }
+  await sponsor.table('co_management_notification_deliveries').where('status', 'pending').update({ next_attempt_at: new Date(0) });
+  await process(db, principal.tenant, perform);
+  expect(accepted).toHaveLength(8); expect(new Set(accepted).size).toBe(6);
+  expect(accepted.slice(6).every(key => key.endsWith(':in_app') && accepted.slice(0, 6).includes(key))).toBe(true);
+  expect((await sponsor.table('co_management_notification_deliveries')).every(row => row.status === 'delivered')).toBe(true);
+}));
+
+it('caps retryable attempts, isolates terminal channel failures and backfills legacy receipts idempotently', async () => withInAppCommentFixture(async ({
+  principal, sponsor, persist, event,
+}) => {
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  await persist(db, event);
+  await sponsor.table('co_management_notification_deliveries').del();
+  const migration = require('../../../migrations/20260906190000_create_co_management_notification_deliveries.cjs');
+  await migration.up(db); await migration.up(db);
+  expect(await sponsor.table('co_management_notification_deliveries')).toHaveLength(6);
+  await sponsor.table('co_management_notification_deliveries').where('channel', 'teams').update({ attempt_count: 9 });
+  await process(db, principal.tenant, async channel => channel === 'in_app' ? { status: 'delivered' }
+    : { status: 'failed', retryable: channel === 'teams', errorCode: 'provider_failure' });
+  expect((await sponsor.table('co_management_notification_deliveries').where('channel', 'teams')).every(row => row.status === 'failed' && row.attempt_count === 10)).toBe(true);
+  expect((await sponsor.table('co_management_notification_deliveries').where('channel', 'push')).every(row => row.status === 'failed' && row.attempt_count === 1)).toBe(true);
+  expect(await process(db, principal.tenant, async () => { throw new Error('Must not resend terminal channels'); })).toEqual({ examined: 0, processed: 0 });
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained');
+  const row = await sponsor.table('co_management_notification_deliveries').first();
+  await expect(sponsor.table('co_management_notification_deliveries').insert({ ...row, notification_id: randomUUID(), status: 'pending', completed_at: null, next_attempt_at: null })).rejects.toMatchObject({ code: '23514' });
+}));
+
+it('recovers committed channels through the scheduled server job handler without requiring the original event', async () => withCoManagedNotificationSubscriberFixture(async ({
+  principal, sponsor, persist, event, broadcast, hooks, observed,
+}) => {
+  await persist(db, event);
+  expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
+  const { coManagedNotificationRecoveryJobHandler } = await import('../../lib/jobs/handlers/coManagedNotificationRecoveryHandler');
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ examined: 6, processed: 6 });
+  expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
+  expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ examined: 0, processed: 0 });
+}));
+
+it('honors preferences changed after queue creation without hiding the already authorized inbox history', async () => withInAppCommentFixture(async ({
+  principal, sponsor, persist, event, subtypeId, categoryId,
+}) => {
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  const { readCoManagedStoredCommentNotification } = await import('@alga-psa/co-managed');
+  await persist(db, event);
+  await sponsor.table('user_internal_notification_preferences').insert({ tenant: principal.tenant, user_id: principal.userId,
+    subtype_id: subtypeId, category_id: categoryId, is_enabled: false });
+  const perform = vi.fn(async (_channel: any, _notification: any) => ({ status: 'delivered' as const }));
+  await process(db, principal.tenant, perform);
+  expect(perform).toHaveBeenCalledTimes(3);
+  expect(perform.mock.calls.every(([, notification]) => notification.user_id !== principal.userId)).toBe(true);
+  const notification = await sponsor.table('internal_notifications').where('user_id', principal.userId).first();
+  expect(await readCoManagedStoredCommentNotification(db, principal, notification.internal_notification_id)).not.toBeNull();
+  expect((await sponsor.table('co_management_notification_deliveries').where('recipient_user_id', principal.userId)).every(row => row.status === 'skipped')).toBe(true);
 }));
