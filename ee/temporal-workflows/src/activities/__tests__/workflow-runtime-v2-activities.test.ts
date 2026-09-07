@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
@@ -138,6 +140,47 @@ describe('workflow-runtime-v2 activities', () => {
       },
       usedCountAfter: 1,
     });
+  });
+
+  it.each([
+    ['comment-existing-ticket', 'message-1:ticket-1', { ticketId: 'ticket-1', author_type: 'contact', source: 'email' }],
+    ['create-ticket-with-comment', 'provider-1:message-1', { targetClientId: 'client-1', ticketDefaults: { board_id: 'board-1' } }],
+    ['attachments-new-ticket', 'message-1:new-ticket:attachments', { ticketId: 'new-ticket', emailId: 'message-1', providerId: 'provider-1', tenant: 'tenant-1', attachments: [] }],
+  ] as const)('resolves shipped email %s inputs and replays its tenant-scoped idempotency key', async (stepId, key, expectedArgs) => {
+    const resolvers = await import('@alga-psa/shared/workflow/runtime/utils/mappingResolver');
+    mocks.resolveInputMapping.mockImplementation(resolvers.resolveInputMapping);
+    mocks.resolveExpressionsWithSecrets.mockImplementation(resolvers.resolveExpressionsWithSecrets);
+    const definition = JSON.parse(readFileSync(path.resolve(__dirname,
+      '../../../../../shared/workflow/runtime/workflows/email-processing-workflow.v2.json'), 'utf8'));
+    const findStep = (value: any): any => {
+      if (!value || typeof value !== 'object') return undefined;
+      if (value.id === stepId) return value;
+      for (const child of Object.values(value)) {
+        const found = findStep(child);
+        if (found) return found;
+      }
+    };
+    const step = findStep(definition);
+    expect(step).toBeDefined();
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+    const scopes: any = {
+      payload: { tenantId: 'tenant-1', providerId: 'provider-1', emailData: { id: 'message-1', attachments: [], from: { email: 'sender@example.com' } } },
+      workflow: { parsedEmail: { sanitizedText: 'Please help' }, existingTicketResolution: { ticket: { ticketId: 'ticket-1' } },
+        ticketContext: { targetClientId: 'client-1', targetContactId: null, targetAuthorUserId: null, targetLocationId: null, ticketDefaults: { board_id: 'board-1' } }, createdTicket: { ticket_id: 'new-ticket' } },
+      lexical: [], meta: {}, error: null,
+      system: { runId: 'run-email', workflowId: definition.id, workflowVersion: definition.version, tenantId: 'tenant-1' },
+    };
+    const input = { runId: 'run-email', stepPath: 'root.steps[0]', stepId, tenantId: 'tenant-1', step, scopes };
+    mocks.actionHandler.mockResolvedValue({ result: 'persisted-result' });
+    await executeWorkflowRuntimeV2ActionStep(input);
+    expect(mocks.actionHandler).toHaveBeenCalledWith(expect.objectContaining(expectedArgs), expect.objectContaining({ idempotencyKey: `tenant-1:${key}`, tenantId: 'tenant-1' }));
+    expect(mocks.createInvocation).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ idempotency_key: `tenant-1:${key}` }));
+    mocks.findInvocationByIdempotency.mockResolvedValue({ status: 'SUCCEEDED', output_json: { result: 'persisted-result' } });
+    const replay = await executeWorkflowRuntimeV2ActionStep({ ...input, runId: 'retry-run' });
+    expect(replay.output).toEqual({ result: 'persisted-result' });
+    expect(mocks.actionHandler).toHaveBeenCalledOnce();
+    expect(mocks.createInvocation).toHaveBeenCalledOnce();
+    expect(mocks.findInvocationByIdempotency).toHaveBeenLastCalledWith(expect.anything(), step.config.actionId, 1, `tenant-1:${key}`, 'tenant-1');
   });
 
   it('preserves raw action config as stepConfig for transform.compose_text outputs', async () => {

@@ -1147,3 +1147,8 @@
 - Added six cases executing the shipped inbound-email JSON through the current Temporal workflow loop and real registered node handlers: existing reply, missing defaults, new ticket/acknowledgement, optional attachment failure, optional acknowledgement failure, and required-action failure/manual-resolution path.
 - Actual readiness runner passed six files/66 tests, zero failures/skips. External action outputs, persistence projections and Temporal transport remain mocked; this establishes branch and node behavior only. Evidence: temporal-email-definition-routing.json.
 - The 29 legacy email tests and total 47 skipped integration requirements remain open. Input mapping/idempotency, real persisted action effects, live Temporal execution and explicit requirement mapping must be completed before claiming the port finished or removing skips.
+
+### Email action mapping and replay port — 2026-09-07
+- Added parameterized tests using shipped comment/create-ticket/attachment configs, the real mapping/expression resolver and current Temporal action activity. Assertions cover resolved business arguments, tenant-prefixed explicit keys and replay returning stored output without invoking handlers or creating another invocation.
+- Readiness lane: six files, 69 passed, zero failures/skips. Initial create-ticket fixture omitted nullable target fields and failed expression serialization; corrected to explicit nulls matching registerEmailWorkflowActions output. No production behavior changed.
+- Invocation persistence and action handlers remain mocks; real DB effects, concurrent duplicate behavior and live worker execution are still required. The legacy skip count is unchanged. Evidence: temporal-email-action-mapping.json.
