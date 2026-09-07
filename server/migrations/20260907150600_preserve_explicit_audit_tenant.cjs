@@ -15,7 +15,7 @@ exports.up = async function(knex) {
     $$ LANGUAGE plpgsql`);
 };
 exports.down = async function(knex) {
-  if (await knex('audit_logs').where('operation', 'co_managed_project_task_update').first('audit_id'))
+  if (await knex('audit_logs').whereIn('operation', ['co_managed_project_task_update', 'co_managed_project_task_assignment']).first('audit_id'))
     throw new Error('Cannot restore implicit audit ownership while shared project history is retained');
   await knex.raw(`CREATE OR REPLACE FUNCTION set_tenant_from_current_setting()
     RETURNS TRIGGER AS $$

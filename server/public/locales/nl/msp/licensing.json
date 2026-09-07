@@ -572,6 +572,17 @@
       "transferHelp": "Delen verplaatst dit gesprek en de bijlagen naar de werkruimte van de klant. Het oorspronkelijke privégesprek van de MSP blijft bewaard als alleen-lezen geschiedenis."
     },
     "projects": {
+      "assignment": {
+        "title": "MSP-toewijzing",
+        "unassigned": "Niet toegewezen aan de MSP",
+        "kind": "Toewijzen aan",
+        "user": "Technicus",
+        "team": "Team",
+        "assignee": "Verantwoordelijke",
+        "more": "Meer verantwoordelijken",
+        "assign": "Toewijzen",
+        "clear": "MSP-toewijzing verwijderen"
+      },
       "history": {
         "title": "Wijzigingsgeschiedenis",
         "empty": "Geen wijzigingen aan gezamenlijk beheerde taken om te tonen.",

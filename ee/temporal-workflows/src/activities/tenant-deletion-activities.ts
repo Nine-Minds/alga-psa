@@ -398,6 +398,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'co_management_private_threads',
   'co_management_thread_transfers',
   'co_management_command_receipts',
+  'co_managed_project_task_references',
   // Document-related leaf tables (must come before documents)
   'document_share_access_log', 'document_share_links',
   // KB import staging rows: a leaf (article_id / job_id are soft refs, no FK), so

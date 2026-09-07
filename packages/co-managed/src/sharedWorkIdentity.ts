@@ -36,6 +36,12 @@ export async function lockCoManagedSessionIdentity(trx: Knex.Transaction, actor:
 }
 /** Background recipients have their own active home identity, never an author's session. */
 export async function lockCoManagedRecipientIdentity(trx: Knex.Transaction, actor: CoManagedHomeActor): Promise<AuthorizationSubject> {
+  return lockCoManagedActiveHomeIdentity(trx, actor);
+}
+/** Active home identity for non-session policy evaluation (recipients and
+ * proposed assignees). Callers must separately retain resource authority. */
+export async function lockCoManagedActiveHomeIdentity(trx: Knex.Transaction, actor: CoManagedHomeActor): Promise<AuthorizationSubject> {
+  if (!actor || ![actor.tenant, actor.userId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   return lockCoManagedHomeIdentity(trx, actor);
 }
 export async function assertCoManagedSessionUnexpired(trx: Knex.Transaction, actor: CoManagedSessionActor): Promise<void> {

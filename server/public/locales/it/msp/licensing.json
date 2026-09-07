@@ -574,6 +574,17 @@
       "transferHelp": "La condivisione trasferisce questa discussione e i suoi allegati nello spazio di lavoro del cliente. La discussione privata originale dell’MSP viene conservata come storico di sola lettura."
     },
     "projects": {
+      "assignment": {
+        "title": "Assegnazione al MSP",
+        "unassigned": "Non assegnato al MSP",
+        "kind": "Assegna a",
+        "user": "Tecnico",
+        "team": "Team",
+        "assignee": "Responsabile",
+        "more": "Altri responsabili",
+        "assign": "Assegna",
+        "clear": "Rimuovi assegnazione al MSP"
+      },
       "history": {
         "title": "Cronologia delle modifiche",
         "empty": "Nessuna modifica alle attività cogestite da mostrare.",

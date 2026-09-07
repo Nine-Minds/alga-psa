@@ -576,6 +576,17 @@
       "transferHelp": "Udostępnienie przenosi ten wątek i jego załączniki do obszaru roboczego klienta. Oryginalny prywatny wątek MSP pozostaje historią tylko do odczytu."
     },
     "projects": {
+      "assignment": {
+        "title": "Przypisanie do MSP",
+        "unassigned": "Nieprzypisane do MSP",
+        "kind": "Przypisz do",
+        "user": "Technik",
+        "team": "Zespół",
+        "assignee": "Osoba przypisana",
+        "more": "Więcej osób",
+        "assign": "Przypisz",
+        "clear": "Usuń przypisanie do MSP"
+      },
       "history": {
         "title": "Historia zmian",
         "empty": "Brak zmian współzarządzanych zadań do wyświetlenia.",

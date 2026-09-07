@@ -126,6 +126,9 @@ async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrinc
       const grant = await owner.table('co_management_project_scopes').where({ relationship_id: resource.relationshipId, project_id: projectId }).forShare().first();
       if (!grant) deny();
       canCollaborate = grant.can_collaborate;
+      if (resource.kind === 'project_task') workReference = await home.table('co_managed_project_task_references').where({
+        customer_tenant: resource.tenant, relationship_id: resource.relationshipId, task_id: resource.id,
+        client_id: relationship.sponsor_client_id, active: true }).forShare().first('assigned_to', 'assigned_team_id');
     }
     if (action === 'update' && !canCollaborate) deny();
 

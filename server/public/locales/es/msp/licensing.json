@@ -574,6 +574,17 @@
       "transferHelp": "Al compartir, este hilo y sus adjuntos se transfieren al espacio de trabajo del cliente. El hilo privado original del MSP se conserva como historial de solo lectura."
     },
     "projects": {
+      "assignment": {
+        "title": "Asignación al MSP",
+        "unassigned": "Sin asignar al MSP",
+        "kind": "Asignar a",
+        "user": "Técnico",
+        "team": "Equipo",
+        "assignee": "Responsable",
+        "more": "Más responsables",
+        "assign": "Asignar",
+        "clear": "Quitar asignación al MSP"
+      },
       "history": {
         "title": "Historial de cambios",
         "empty": "No hay cambios de tareas cogestionadas para mostrar.",

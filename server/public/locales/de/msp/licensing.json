@@ -572,6 +572,17 @@
       "transferHelp": "Beim Teilen werden dieser Verlauf und seine Anhänge in den Kundenarbeitsbereich übertragen. Der ursprüngliche MSP-private Verlauf bleibt als schreibgeschützter Verlauf erhalten."
     },
     "projects": {
+      "assignment": {
+        "title": "MSP-Zuweisung",
+        "unassigned": "Nicht dem MSP zugewiesen",
+        "kind": "Zuweisen an",
+        "user": "Techniker",
+        "team": "Team",
+        "assignee": "Zuständiger",
+        "more": "Weitere Zuständige",
+        "assign": "Zuweisen",
+        "clear": "MSP-Zuweisung entfernen"
+      },
       "history": {
         "title": "Änderungsverlauf",
         "empty": "Keine Änderungen an gemeinsam verwalteten Aufgaben vorhanden.",

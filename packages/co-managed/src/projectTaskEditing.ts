@@ -182,7 +182,7 @@ export interface CoManagedTaskHistoryEntry {
   id: string;
   occurredAt?: string;
   author?: { displayName: string; organizationName?: string };
-  changes: Array<{ field: CoManagedTaskEditField; value: string | null; statusName?: string }>;
+  changes: Array<{ field: CoManagedTaskEditField | 'msp_assignment'; value: string | null; statusName?: string }>;
 }
 
 /** Working-field history is shared with the canonical task. Legacy audit rows
@@ -196,7 +196,7 @@ export async function listCoManagedProjectTaskHistory(db: Knex, inputActor: CoMa
     if (masked(['history', 'audit_logs', 'changed_data'])) return { items: [] as CoManagedTaskHistoryEntry[], nextBeforeId: null };
     const owner = tenantDb(context.trx, resource.tenant);
     const history = () => owner.table('audit_logs as history').where({ 'history.table_name': 'project_tasks', 'history.record_id': resource.id,
-      'history.operation': 'co_managed_project_task_update' }).whereRaw("history.details->>'relationship_id' = ?", [resource.relationshipId]);
+      }).whereIn('history.operation', ['co_managed_project_task_update', 'co_managed_project_task_assignment']).whereRaw("history.details->>'relationship_id' = ?", [resource.relationshipId]);
     if (beforeId && !await history().where('history.audit_id', beforeId).first('history.audit_id')) throw new CoManagedSharedWorkError();
     let scanned = beforeId;
     const items: CoManagedTaskHistoryEntry[] = [];
@@ -219,6 +219,9 @@ export async function listCoManagedProjectTaskHistory(db: Knex, inputActor: CoMa
             !masked(['details.task_status_name'])) change.statusName = row.details.task_status_name;
           changes.push(change);
         }
+        if (!masked(['mspAssignment', 'msp_assignment', 'users', 'teams', 'tenants', 'assignee_name', 'organization_name', 'assigned_to', 'assigned_team_id', 'assignee', 'project_tasks.assigned_to', 'project_tasks.assigned_team_id', 'co_managed_project_task_references']) &&
+          Object.hasOwn(row.changed_data ?? {}, 'msp_assignment') && (row.changed_data.msp_assignment === null || typeof row.changed_data.msp_assignment === 'string'))
+          changes.push({ field: 'msp_assignment', value: row.changed_data.msp_assignment });
         if (!changes.length) continue;
         const entry: CoManagedTaskHistoryEntry = { id: row.audit_id, changes };
         if (!masked(['timestamp', 'occurredAt', 'history.occurredAt'])) entry.occurredAt = normalize(row.timestamp)!;

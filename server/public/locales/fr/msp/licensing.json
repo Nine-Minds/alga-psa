@@ -574,6 +574,17 @@
       "transferHelp": "Le partage transfère ce fil et ses pièces jointes dans l’espace de travail du client. Le fil privé d’origine du MSP est conservé en lecture seule."
     },
     "projects": {
+      "assignment": {
+        "title": "Affectation au MSP",
+        "unassigned": "Non affecté au MSP",
+        "kind": "Affecter à",
+        "user": "Technicien",
+        "team": "Équipe",
+        "assignee": "Responsable",
+        "more": "Plus de responsables",
+        "assign": "Affecter",
+        "clear": "Retirer l’affectation au MSP"
+      },
       "history": {
         "title": "Historique des modifications",
         "empty": "Aucune modification de tâche cogérée à afficher.",

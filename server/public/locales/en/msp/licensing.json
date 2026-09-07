@@ -661,6 +661,17 @@
       "transferHelp": "Sharing transfers this thread and its attachments into the customer workspace. The original MSP-private thread is retained as read-only history."
     },
     "projects": {
+      "assignment": {
+        "title": "MSP assignment",
+        "unassigned": "Not assigned to the MSP",
+        "kind": "Assign to",
+        "user": "Technician",
+        "team": "Team",
+        "assignee": "Assignee",
+        "more": "More assignees",
+        "assign": "Assign",
+        "clear": "Remove MSP assignment"
+      },
       "history": {
         "title": "Change history",
         "empty": "No co-managed task changes to show.",

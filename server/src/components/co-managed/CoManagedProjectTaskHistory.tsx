@@ -20,7 +20,7 @@ function TaskHistory({ resource, onUnavailable }: { resource: CoManagedSharedRes
       .catch(() => { if (active) onUnavailable(); });
     return () => { active = false; };
   }, [resource, beforeId, refresh, onUnavailable]);
-  const labels = { task_name: 'coManaged.projects.name', due_date: 'coManaged.editor.fields.due_date', project_status_mapping_id: 'coManaged.editor.fields.status_id' };
+  const labels = { msp_assignment: 'coManaged.projects.assignment.title', task_name: 'coManaged.projects.name', due_date: 'coManaged.editor.fields.due_date', project_status_mapping_id: 'coManaged.editor.fields.status_id' };
   return <section aria-labelledby="co-project-task-history-title" className="space-y-3 border-t border-[rgb(var(--color-border-200))] pt-5">
     <div className="flex items-center justify-between gap-4"><h2 id="co-project-task-history-title" className="text-lg font-semibold">{t('coManaged.projects.history.title')}</h2>
       <Button id="co-project-task-history-reload" variant="ghost" onClick={() => { setPage(null); setCursors([undefined]); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button></div>

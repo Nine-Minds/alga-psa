@@ -5,11 +5,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedProjectTaskEditor from '../../../components/co-managed/CoManagedProjectTaskEditor';
 import CoManagedProjectTasks from '../../../components/co-managed/CoManagedProjectTasks';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), statuses: vi.fn(), save: vi.fn(), list: vi.fn(), history: vi.fn() }));
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), statuses: vi.fn(), save: vi.fn(), list: vi.fn(), history: vi.fn(), assignment: vi.fn(), assignees: vi.fn(), assign: vi.fn() }));
 vi.mock('@alga-psa/ui/hooks', () => ({ useFeatureFlag: mocks.flag }));
 vi.mock('../../../lib/actions/coManagedAcceptanceActions', () => ({}));
 vi.mock('../../../lib/actions/coManagedProjectTaskActions', () => ({ getSharedProjectTaskEditorAction: mocks.load, getSharedProjectTaskStatusesAction: mocks.statuses,
-  editSharedProjectTaskAction: mocks.save, listSharedProjectTasksAction: mocks.list, listSharedProjectTaskHistoryAction: mocks.history }));
+  editSharedProjectTaskAction: mocks.save, listSharedProjectTasksAction: mocks.list, listSharedProjectTaskHistoryAction: mocks.history, getSharedProjectTaskAssignmentAction: mocks.assignment, listSharedProjectTaskAssigneesAction: mocks.assignees, assignSharedProjectTaskAction: mocks.assign }));
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }) }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) =>
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}><option value="">Choose</option>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }));
@@ -23,12 +23,14 @@ beforeEach(() => {
   vi.resetAllMocks(); mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(initial());
   mocks.statuses.mockResolvedValue({ options: [], nextAfterId: null }); mocks.save.mockResolvedValue({ ok: true, receipt: { operationId: 'saved' } });
   mocks.history.mockResolvedValue({ items: [], nextBeforeId: null });
+  mocks.assignment.mockResolvedValue({ resource, revision: 0, canEdit: false, canAssign: false, mspAssignment: null });
+  mocks.assignees.mockResolvedValue({ options: [], nextAfterId: null }); mocks.assign.mockResolvedValue({ ok: true });
   mocks.list.mockResolvedValue({ items: [initial()], nextAfterId: null });
 });
 afterEach(cleanup);
 it.each([{ enabled: false }, { enabled: true, loading: true }, { enabled: true, error: new Error('unavailable') }])('does not load shared project UI with an unavailable release flag: %j', flag => {
   mocks.flag.mockReturnValue(flag); mount(); render(<CoManagedFeatureBoundary><CoManagedProjectTasks resource={{ ...resource, kind: 'project' }} /></CoManagedFeatureBoundary>);
-  expect(mocks.load).not.toHaveBeenCalled(); expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.history).not.toHaveBeenCalled(); expect(screen.queryByRole('button')).toBeNull();
+  expect(mocks.load).not.toHaveBeenCalled(); expect(mocks.list).not.toHaveBeenCalled(); expect(mocks.history).not.toHaveBeenCalled(); expect(mocks.assignment).not.toHaveBeenCalled(); expect(mocks.assignees).not.toHaveBeenCalled(); expect(screen.queryByRole('button')).toBeNull();
 });
 it('edits only changed task fields with a baseline and qualified identity', async () => {
   mount(); await screen.findByDisplayValue('Verify rollout'); expect(save()).toBeDisabled(); expect(screen.getByText('Customer A · Rollout · Delivery')).toBeInTheDocument();
@@ -87,4 +89,29 @@ it('ignores a delayed history denial from the previous customer', async () => {
   view.rerender(<CoManagedFeatureBoundary><CoManagedProjectTaskEditor resource={second} /></CoManagedFeatureBoundary>);
   await screen.findByDisplayValue('Customer B task'); await act(async () => deny(new Error('revoked previous customer')));
   expect(screen.getByDisplayValue('Customer B task')).toBeInTheDocument(); expect(screen.queryByRole('alert')).toBeNull();
+});
+
+it('assigns qualified MSP work and refreshes history without discarding an unsaved task edit', async () => {
+  mocks.assignment.mockResolvedValue({ resource, revision: 3, canEdit: true, canAssign: true, mspAssignment: null });
+  mocks.assignees.mockResolvedValue({ options: [{ tenant: 'msp', kind: 'user', id: 'tech-a', name: 'Eligible technician', organizationName: 'MSP' }], nextAfterId: null });
+  mount(); await screen.findByDisplayValue('Verify rollout'); fireEvent.change(name(), { target: { value: 'Still drafting' } });
+  await waitFor(() => expect(document.getElementById('co-task-assignment-person')).toBeEnabled());
+  fireEvent.change(document.getElementById('co-task-assignment-person')!, { target: { value: 'tech-a' } }); fireEvent.click(document.getElementById('co-task-assignment-save')!);
+  await waitFor(() => expect(mocks.assign).toHaveBeenCalledTimes(1));
+  expect(mocks.assign).toHaveBeenCalledWith(resource, { operationId: expect.any(String), expectedRevision: 3, assignee: { tenant: 'msp', kind: 'user', id: 'tech-a' } });
+  await waitFor(() => expect(mocks.history).toHaveBeenCalledTimes(2)); expect(name()).toHaveValue('Still drafting');
+});
+it('freezes and retries the exact assignment after an uncertain result', async () => {
+  mocks.assignment.mockResolvedValue({ resource, revision: 1, canEdit: true, canAssign: false, mspAssignment: { tenant: 'msp', kind: 'user', id: 'tech-a', name: 'Technician', organizationName: 'MSP' } });
+  mocks.assign.mockResolvedValueOnce({ ok: false, code: 'unknownOutcome' }); mount(); await screen.findByText('MSP · Technician');
+  fireEvent.click(document.getElementById('co-task-assignment-clear')!); await screen.findByRole('alert');
+  const original = structuredClone(mocks.assign.mock.calls[0]); expect(document.getElementById('co-task-assignment-clear')).toBeDisabled();
+  fireEvent.click(document.getElementById('co-task-assignment-retry')!); await waitFor(() => expect(mocks.assign).toHaveBeenCalledTimes(2));
+  expect(mocks.assign.mock.calls[1]).toEqual(original); expect(original[1].assignee).toBeNull();
+});
+it('requires an assignment reload after a concurrent change', async () => {
+  mocks.assignment.mockResolvedValue({ resource, revision: 1, canEdit: true, canAssign: false, mspAssignment: { tenant: 'msp', kind: 'team', id: 'team-a', name: 'Team', organizationName: 'MSP' } });
+  mocks.assign.mockResolvedValue({ ok: false, code: 'conflict' }); mount(); await screen.findByText('MSP · Team');
+  fireEvent.click(document.getElementById('co-task-assignment-clear')!); await screen.findByRole('alert'); expect(document.getElementById('co-task-assignment-clear')).toBeDisabled();
+  fireEvent.click(document.getElementById('co-task-assignment-reload')!); await waitFor(() => expect(document.getElementById('co-task-assignment-clear')).toBeEnabled());
 });

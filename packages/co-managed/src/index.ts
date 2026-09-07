@@ -46,3 +46,6 @@ export type { CoManagedTaskEditField, CoManagedTaskEditPatch, CoManagedTaskEditR
 export { listCoManagedProjectTasks } from './projectTaskEditing';
 
 export { listCoManagedProjectTaskHistory, type CoManagedTaskHistoryEntry } from './projectTaskEditing';
+
+export { recordCoManagedProjectTaskAudit } from './projectTaskAudit';
+export * from './projectTaskAssignments';

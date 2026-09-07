@@ -288,3 +288,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Audit trigger migration and the canonical project-task edit adapter.
 - **Gate:** A real PostgreSQL failure proved that explicit owner-qualified writes could not survive the storage engine. ACT / bounded-now.
 - **Status:** revised. The trigger preserves explicit ownership and uses connection context only when ownership is absent. Tests cover both forms, foreign connection context, replay and guarded rollback. The migration uses ordinary CREATE OR REPLACE FUNCTION; modern Citus documents function DDL propagation in its [changelog](https://github.com/citusdata/citus/blob/main/CHANGELOG.md). Actual Citus execution remains an explicit validation gap.
+
+## qualified-task-audit — pattern
+- **What:** Task field edits and assignment changes need the same owner-qualified, immutable actor attribution in one writer transaction.
+- **Where:** Native task edit adapter and task assignment command.
+- **Gate:** Two concrete writers, high attribution/isolation cost, stable storage contract. ACT / bounded-now.
+- **Status:** extracted. A task audit writer validates the admitted task context, resolves the actual foreign actor reference, and records protected actor/relationship identity after caller-supplied details. Both writers retain their existing command authority and atomic receipts.
+
+## active-home-policy-subject — friction
+- **What:** Assignment candidate checks needed active home identity without borrowing a session or pretending to deliver a notification.
+- **Where:** Shared identity engine and project task assignee admission.
+- **Gate:** Recipients and assignment candidates use the same active user/role/team locks with different resource authority. ACT / in-pass.
+- **Status:** revised. The identity engine exposes its non-session subject contract explicitly; notification admission retains its prior adapter. Assignment commands evaluate candidate policy against the proposed qualified assignment while separately retaining the editor's actual resource authority.
