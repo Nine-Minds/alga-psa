@@ -1543,3 +1543,9 @@
 - Extracted the existing workspace evaluator into reusable evaluateExecutionGate while preserving workspace requirements and its complete test suite. New Temporal adapter fixes two required suites/jobs in code.
 - Added verify-temporal-execution.mjs and always-evaluated (non-scheduled) Temporal execution gate job. Downloads named readiness/engine artifacts, independently recomputes raw execution and inventory for the checked-out candidate, rejects missing/dirty/stale/filtered reports and unsuccessful prerequisites, and uploads aggregate evidence even on failure.
 - Ten gate tests pass: eight existing workspace tests plus two Temporal tests covering passing bundles and seven failure mutations. Native verification pending. This is the Temporal aggregate only; F007 global aggregate remains incomplete.
+
+### 2026-09-07 — Temporal aggregate CLI artifact contract verified
+
+- Added command-level coverage in a temporary clean Git checkout with tracked Temporal candidates and independently generated raw collection/results. Valid readiness/engine artifact names produce passed aggregate; wrong GITHUB_SHA, malformed needs JSON, corrupt results and missing results exit one and persist failed aggregate evidence.
+- All three Temporal gate tests pass, including evaluator mutation coverage. This verifies actual CLI file loading and output persistence beyond the evaluator seam; no external network or app writes.
+- Native browser CE/EE remain active on published head; queued changes await their terminal results.
