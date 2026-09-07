@@ -28,7 +28,7 @@ import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
-  NativeTimeTrackingError, NativeTimeDeletionError, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  NativeTimeTrackingError, NativeTimeDeletionError, NativeTimeReviewError, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 
@@ -107,6 +107,10 @@ export class TimeEntryService extends BaseService<any> {
 
   private async withTimeErrors<T>(work: () => Promise<T>): Promise<T> {
     try { return await work(); } catch (error) {
+      if (error instanceof NativeTimeReviewError) {
+        if (error.code === 'TIME_REVIEW_NOT_FOUND') throw new NotFoundError(error.message);
+        throw new ConflictError(error.message);
+      }
       if (error instanceof NativeTimeDeletionError) {
         if (error.code === 'TIME_DELETE_NOT_FOUND') throw new NotFoundError(error.message);
         throw new ConflictError(error.message);
@@ -870,6 +874,12 @@ export class TimeEntryService extends BaseService<any> {
     }
   }
 
+  private async reviewCurrentTimeEntry(entryId: string, approvalStatus: 'APPROVED' | 'CHANGES_REQUESTED', comment: string | undefined, context: ServiceContext) {
+    const { knex } = await this.getKnex();
+    return this.withTimeErrors(() => reviewCoManagedNativeTimeEntry(knex, context.tenant, { entryId, approvalStatus, comment },
+      async () => this.timeActor(context), event => publishEvent(event)));
+  }
+
   // Approval operations
   async approveTimeEntries(data: ApproveTimeEntriesData, context: ServiceContext): Promise<any> {
     const { knex } = await this.getKnex();
@@ -877,6 +887,9 @@ export class TimeEntryService extends BaseService<any> {
     
     for (const entryId of data.entry_ids) {
       try {
+        if (await this.reviewCurrentTimeEntry(entryId, 'APPROVED', undefined, context)) {
+          results.push({ success: true, entry_id: entryId }); continue;
+        }
         // First check if the entry exists
         const entry = await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
@@ -934,6 +947,9 @@ export class TimeEntryService extends BaseService<any> {
     
     for (const entryId of data.entry_ids) {
       try {
+        if (await this.reviewCurrentTimeEntry(entryId, 'CHANGES_REQUESTED', [data.change_reason, data.detailed_feedback].filter(Boolean).join('\n\n'), context)) {
+          results.push({ success: true, entry_id: entryId }); continue;
+        }
         await this.buildTenantScopedQuery(knex, context)
           .where('entry_id', entryId)
           .where('approval_status', 'SUBMITTED')

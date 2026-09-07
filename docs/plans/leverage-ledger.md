@@ -441,3 +441,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `reverseDeletedTimeEntryBilling`, shared `allocateTimeEntry` / `reverseTimeEntryAllocations` / `reconcileClientAllocations`.
 - **Gate:** Financial snapshot correctness across concurrent entry and reconciliation commands. ACT / staged-migration within the remaining billing integration; changing only deletion cannot establish the shared invariant.
 - **Status:** implemented for entry/ledger serialization. Allocation reloads and retains the actual row; reversal shares one client-scoped engine; reconciliation locks candidate entries before client balances and rereads after waits. Five focused source-mode PostgreSQL checks passed (concurrent reversal, stale allocation input/retry, deletion/reconciliation in both orders, invoicing during a lock wait). Broad billing/Citus validation and the wider source-parent/invoice lock audit are deferred; this does not claim global application deadlock freedom.
+
+## native-time-review-authority — pattern
+- **What:** Native status updates and REST approval/change requests independently mutate approval state and publish private feedback without retaining work scope.
+- **Where:** `updateTimeEntryApprovalStatus`, REST `approveTimeEntries` / `requestChanges`, `nativeTimeReview`.
+- **Gate:** Shared authorization, financial-state and feedback-transaction invariants across two adapters. ACT / bounded-now in the approved time workstream.
+- **Status:** Shared per-entry review command implemented with actual credential, delegation, source/entry/sheet policy, mutation guards, transition checks, billing evidence rejection and after-commit identity-only events. Six focused source checks passed. Whole-sheet commands, bulk sheet operations, optional approval-note storage and broader mutation/lock verification remain pending.

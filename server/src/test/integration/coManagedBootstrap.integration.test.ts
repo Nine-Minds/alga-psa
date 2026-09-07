@@ -13234,3 +13234,77 @@ it('native time API collections reject the whole result when a key expires durin
   } finally { await blocker.rollback(); }
   await rejected;
 }));
+
+it.each(['browser', 'api'])('native time review retains %s feedback and sheet state without publishing private text', async channel => withNativeTimeSheetReadFixture(async ({ entry, service, context, actions, customer, publish }: any) => {
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'SUBMITTED' });
+  const events = await import('@alga-psa/event-bus/publishers'), emitted = channel === 'api' ? publish : vi.mocked(events.publishEvent);
+  emitted.mockClear();
+  if (channel === 'browser') await actions.updateTimeEntryApprovalStatus({ entryId: entry.entry_id, approvalStatus: 'CHANGES_REQUESTED', changeRequestComment: 'Private review feedback' });
+  else expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Private review feedback', detailed_feedback: 'Additional private context' }, context)).toMatchObject([{ success: true }]);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED', billing_mode: 'operational', billable_duration: 0 });
+  expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'CHANGES_REQUESTED', approved_by: null });
+  const requests = await customer.table('time_entry_change_requests');
+  expect(requests).toHaveLength(1); expect(requests[0]).toMatchObject({ time_entry_id: entry.entry_id, created_by: context.userId });
+  expect(requests[0].comment).toContain('Private review feedback');
+  if (channel === 'api') expect(requests[0].comment).toContain('Additional private context');
+  expect(emitted).toHaveBeenCalledTimes(1); expect(JSON.stringify(emitted.mock.calls)).not.toMatch(/Private review|Additional private|Private API/);
+}));
+
+it('native time review checks actual approval mutations including not-self and managed subject rules', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, user, resource, apiKeyId, publish }: any) => {
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Time review management', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'approve', templateKey: 'own_or_managed', constraintKey: 'not_self_approver' });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  await expect(service.approveTimeEntries({ entry_ids: [entry.entry_id] }, context)).rejects.toMatchObject({ statusCode: 400 });
+  const formerId = randomUUID(), sheet = await customer.table('time_sheets').where('id', entry.time_sheet_id).first(), formerSheet = randomUUID();
+  await customer.table('users').insert({ ...user, user_id: formerId, email: 'review-former@example.test', username: 'review-former', is_inactive: true, reports_to: user.user_id });
+  await customer.table('time_sheets').insert({ ...sheet, id: formerSheet, user_id: formerId, approval_status: 'SUBMITTED' });
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ user_id: formerId, time_sheet_id: formerSheet });
+  // Force actual manager discovery instead of tenant-wide delegation.
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'time_sheet', action: 'read_all' }).select('permission_id')).del();
+  publish.mockClear();
+  expect(await service.approveTimeEntries({ entry_ids: [entry.entry_id, randomUUID()] }, context)).toMatchObject({ approved_count: 1, results: [{ success: true }, { success: false }] });
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+  expect(publish).toHaveBeenCalledWith(expect.objectContaining({ eventType: 'TIME_ENTRY_APPROVED', payload: expect.objectContaining({ userId: formerId, approvedBy: user.user_id }) }));
+}));
+
+it('native time review respects API-key scope and masked review fields before reporting state', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, user, resource, operation, apiKeyId }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Time review hidden feedback', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'approve', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['change_requests'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: apiKeyId });
+  expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Hidden feedback' }, context)).toMatchObject([{ success: false, error: 'Permission denied: Cannot access this time entry' }]);
+  expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Hidden feedback' }, { ...context, apiKeyId: randomUUID() })).toMatchObject([{ success: false }]);
+  expect(await customer.table('time_entry_change_requests')).toHaveLength(0);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'DRAFT' });
+}));
+
+it('native time review rolls approval feedback and events back on final credential expiry', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, apiKeyId, publish }: any) => {
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  await customer.table('time_sheets').where('id', entry.time_sheet_id).update({ approval_status: 'SUBMITTED' });
+  publish.mockClear();
+  await db.raw(`CREATE FUNCTION expire_time_review_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_time_review_key AFTER UPDATE ON time_entries FOR EACH ROW EXECUTE FUNCTION expire_time_review_key()');
+  try {
+    expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Private rollback feedback' }, context)).toMatchObject([{ success: false }]);
+    expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+    expect(await customer.table('time_sheets').where('id', entry.time_sheet_id).first()).toMatchObject({ approval_status: 'SUBMITTED' });
+    expect(await customer.table('time_entry_change_requests')).toHaveLength(0); expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_time_review_key ON time_entries'); await db.raw('DROP FUNCTION expire_time_review_key()'); }
+}));
+
+it('native time review rejects draft approval and lapsed writes and serializes repeated approvals', async () => withNativeTimeSheetReadFixture(async ({ entry, service, context, customer, publish, principal }: any) => {
+  await expect(service.approveTimeEntries({ entry_ids: [entry.entry_id] }, context)).rejects.toMatchObject({ statusCode: 400 });
+  expect(await service.requestChanges({ entry_ids: [randomUUID()], change_reason: 'Missing' }, context)).toMatchObject([{ success: false }]);
+  await customer.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  publish.mockClear();
+  await Promise.all([1, 2].map(() => service.approveTimeEntries({ entry_ids: [entry.entry_id] }, context)));
+  expect(publish).toHaveBeenCalledTimes(1);
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await service.requestChanges({ entry_ids: [entry.entry_id], change_reason: 'Reopen after expiry' }, context)).toMatchObject([{ success: false }]);
+  expect(await customer.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED' });
+}));

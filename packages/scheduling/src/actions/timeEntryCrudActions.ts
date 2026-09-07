@@ -52,7 +52,7 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
@@ -1044,6 +1044,9 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
       updateTimeEntryApprovalStatusParamsSchema,
       params,
     );
+    if (await reviewCoManagedNativeTimeEntry(db, tenant, { entryId: validatedParams.entryId, approvalStatus: validatedParams.approvalStatus,
+      comment: validatedParams.changeRequestComment }, () => resolveNativeTimeBrowserActor(user, tenant),
+      event => publishTimeEntrySearchEvent(event.eventType, event.payload))) return;
 
     const existingEntry = await tenantScopedDb.table('time_entries')
       .where({

@@ -72,13 +72,15 @@ export async function authorizeCoManagedWorkRecord(trx: Knex.Transaction, actor:
 
 /** Current local RBAC and bundle policy for a concrete tenant-owned record. */
 export async function authorizeCoManagedLocalRecord(trx: Knex.Transaction, actor: CoManagedHomeActor,
-  subject: AuthorizationSubject, resourceType: string, action: string, record: AuthorizationRecord) {
+  subject: AuthorizationSubject, resourceType: string, action: string, record: AuthorizationRecord, mutationKind?: 'approve') {
   const kernel = createAuthorizationKernel({
     builtinProvider: new BuiltinAuthorizationKernelProvider(),
     bundleProvider: new BundleAuthorizationKernelProvider({ resolveRules: input => resolveBundleNarrowingRulesForEvaluation(trx, input, { lock: true }) }),
     rbacEvaluator: () => hasCoManagedLocalPermission(trx, actor, resourceType, action, true),
   });
-  const decision = await kernel.authorizeResource({ knex: trx, subject, resource: { type: resourceType, action, id: record.id }, record });
+  const input = { knex: trx, subject, resource: { type: resourceType, action, id: record.id }, record };
+  const decision = await kernel.authorizeResource(input);
   if (!decision.allowed || !matchesCoManagedScopeConstraints(decision.scope.constraints, record)) throw new CoManagedSharedWorkError();
+  if (mutationKind && !(await kernel.authorizeMutation({ ...input, mutation: { kind: mutationKind, record } })).allowed) throw new CoManagedSharedWorkError();
   return decision;
 }
