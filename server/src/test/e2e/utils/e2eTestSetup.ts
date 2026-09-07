@@ -71,6 +71,8 @@ export async function setupE2ETestEnvironment(options: {
 
         // Clean up test data in reverse order of creation
         await tenantTable('comments').delete();
+        await tenantTable('ticket_audit_logs').delete();
+        await tenantTable('ticket_resources').delete();
 
         // Delete tickets after dependent comments
         await tenantTable('tickets').delete();
@@ -223,7 +225,7 @@ export async function withE2ETestEnvironment<T>(
  * Create a test user with specific permissions
  * @param db Knex database instance
  * @param tenant Tenant ID
- * @param permissions Array of permission strings
+ * @param permissions Exact resource:action grants; an empty array creates a user with no role
  * @returns User ID
  */
 export async function createTestUserWithPermissions(
@@ -231,26 +233,45 @@ export async function createTestUserWithPermissions(
   tenant: string,
   permissions: string[]
 ): Promise<string> {
-  // This is a placeholder - implement based on your permission system
-  // For now, just create a basic user
-  const userId = require('uuid').v4();
-  const now = new Date();
-
-  await tenantDb(db, tenant).table('users').insert({
-    user_id: userId,
-    tenant,
-    username: `test.user.${userId}`,
-    first_name: 'Test',
-    last_name: 'User',
-    email: `test.user.${userId}@example.com`,
-    hashed_password: 'hashed_password_here',
-    created_at: now,
-    user_type: 'internal'
+  const grants = [...new Set(permissions)].map((permission) => {
+    const parts = permission.split(':');
+    if (parts.length !== 2 || parts.some((part) => !part.trim())) {
+      throw new Error(`Expected resource:action permission, received ${permission}`);
+    }
+    return { resource: parts[0], action: parts[1] };
   });
 
-  // TODO: Add permission assignment logic here
-  
-  return userId;
+  return db.transaction(async (trx) => {
+    const table = (name: string) => tenantDb(trx, tenant).table(name);
+    const userId = uuidv4();
+    await table('users').insert({
+      user_id: userId,
+      tenant,
+      username: `test.user.${userId}`,
+      first_name: 'Test',
+      last_name: 'User',
+      email: `test.user.${userId}@example.test`,
+      hashed_password: 'api-only-test-user',
+      created_at: new Date(),
+      user_type: 'internal',
+    });
+
+    if (grants.length) {
+      const roleId = uuidv4();
+      await table('roles').insert({
+        role_id: roleId, tenant, role_name: `Test permissions ${roleId}`,
+        description: 'Explicit permissions for API behavior tests',
+        created_at: new Date(), updated_at: new Date(),
+      });
+      for (const grant of grants) {
+        const permission = await table('permissions').where(grant).first<{ permission_id: string }>();
+        if (!permission) throw new Error(`Unknown test permission ${grant.resource}:${grant.action}`);
+        await table('role_permissions').insert({ tenant, role_id: roleId, permission_id: permission.permission_id });
+      }
+      await table('user_roles').insert({ tenant, role_id: roleId, user_id: userId });
+    }
+    return userId;
+  });
 }
 
 /**

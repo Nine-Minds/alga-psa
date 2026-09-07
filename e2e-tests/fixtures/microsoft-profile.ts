@@ -6,11 +6,14 @@ export async function createMicrosoftProfile(page: Page, input: {
 }) {
   await page.goto('/msp/settings?tab=integrations&category=providers');
   await page.locator('#provider-credentials-microsoft-tab').click();
-  await expect(page.locator('#microsoft-advanced-app-toggle')).toBeVisible();
-  if (!(await page.locator('#microsoft-settings-add-profile').isVisible())) {
-    await page.locator('#microsoft-advanced-app-toggle').click();
+  const addProfile = page.locator('#microsoft-settings-add-profile');
+  const advancedToggle = page.locator('#microsoft-advanced-app-toggle');
+  // Community shows manual apps directly; enterprise puts them in a disclosure.
+  await expect(advancedToggle.or(addProfile).first()).toBeVisible();
+  if (!(await addProfile.isVisible())) {
+    await advancedToggle.click();
   }
-  await page.locator('#microsoft-settings-add-profile').click();
+  await addProfile.click();
   const dialog = page.getByRole('dialog');
   await dialog.locator('#microsoft-profile-display-name').fill(input.name);
   await dialog.locator('#microsoft-profile-client-id').fill(input.clientId);

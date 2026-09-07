@@ -119,7 +119,11 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
     await expect(portalPage.getByText(acknowledgment, { exact: true })).toBeVisible();
     const ticketWhere = { tenant: tenant.tenantId, ticket_id: ticket.ticket_id };
     const beforeTicket = await database('tickets').where(ticketWhere).first();
-    const beforeComments = await database('comments').where(ticketWhere).orderBy('comment_id');
+    const readCommentSnapshot = async () => (await database('comments').where(ticketWhere).orderBy('comment_id'))
+      .map(({ scheduled_publish_dispatched_at, scheduled_response_dispatched_at, ...comment }) => comment);
+    // Workers may acknowledge previously queued events while the denied request
+    // runs. Compare every other field, including content, authorship and visibility.
+    const beforeComments = await readCommentSnapshot();
     expect(beforeComments.filter(note => note.note?.includes(acknowledgment)))
       .toEqual([expect.objectContaining({ user_id: tenant.portal.userId, is_internal: false })]);
 
@@ -153,7 +157,7 @@ test('portal ticket survives assignment, replies, resolution and reopening witho
         expect(result.status()).toBe(200); // Expected action errors are serialized in RSC.
         expect(await result.text()).toContain('client-portal:errors.tickets.notFoundOrDenied');
         expect(await database('tickets').where(ticketWhere).first()).toEqual(beforeTicket);
-        expect(await database('comments').where(ticketWhere).orderBy('comment_id')).toEqual(beforeComments);
+        expect(await readCommentSnapshot()).toEqual(beforeComments);
         expect(await database('comments').where({ tenant: actor.tenantId, user_id: actor.userId })).toEqual([]);
       } finally { await unrelated.close(); }
     }

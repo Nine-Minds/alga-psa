@@ -121,7 +121,6 @@ export async function createTestService(
         id: uuidv4(),
         tenant: tenantId,
         name: 'Default Service Type',
-        billing_method: 'fixed' as const,
         is_active: true,
         order_number: 1
       };

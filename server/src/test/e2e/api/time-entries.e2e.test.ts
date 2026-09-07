@@ -221,7 +221,10 @@ describe('Time Entries API E2E Tests', () => {
           is_billable: true
         });
 
-        assertError(response, 400);
+        assertError(response, 409, 'CONFLICT');
+        const persisted = await tenantTable('time_entries').where({ work_item_id: ticket.ticket_id, user_id: env.userId });
+        expect(persisted).toHaveLength(1);
+        expect(persisted[0].notes).toBe('First entry');
       });
     });
 
@@ -374,7 +377,9 @@ describe('Time Entries API E2E Tests', () => {
           notes: 'Try to update approved'
         });
         
-        assertError(response, 400);
+        assertError(response, 409, 'CONFLICT');
+        const persisted = await tenantTable('time_entries').where({ entry_id: entry.entry_id }).first();
+        expect(persisted).toMatchObject({ approval_status: 'APPROVED', notes: entry.notes });
       });
     });
 
@@ -425,7 +430,9 @@ describe('Time Entries API E2E Tests', () => {
         });
 
         const response = await env.apiClient.delete(`${API_BASE}/${entry.entry_id}`);
-        assertError(response, 400);
+        assertError(response, 409, 'CONFLICT');
+        const persisted = await tenantTable('time_entries').where({ entry_id: entry.entry_id }).first();
+        expect(persisted).toMatchObject({ approval_status: 'APPROVED', notes: entry.notes });
       });
     });
   });
@@ -1029,7 +1036,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.get(API_BASE);
       
@@ -1068,7 +1074,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.post(API_BASE, {
         notes: 'Test'
@@ -1123,7 +1128,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.put(`${API_BASE}/${entry.entry_id}`, {
         notes: 'Updated'
@@ -1178,7 +1182,6 @@ describe('Time Entries API E2E Tests', () => {
       const restrictedClient = new ApiTestClient({
         baseUrl: env.apiClient['config'].baseUrl,
         apiKey: plaintextKey, // Use plaintext key for requests
-        tenantId: env.tenant
       });
       const response = await restrictedClient.delete(`${API_BASE}/${entry.entry_id}`);
       
