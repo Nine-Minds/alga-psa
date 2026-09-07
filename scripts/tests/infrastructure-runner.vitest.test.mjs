@@ -93,6 +93,21 @@ test('actual infrastructure runner partitions, executes and rejects missing or s
   write(`${reducedDirectory}/evidence.json`, JSON.stringify(reducedEvidence));
   assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 0);
 
+  for (const malformed of [
+    { ...reducedEvidence, selection: { ...reducedEvidence.selection, allFiles: 'not-an-array' } },
+    { ...reducedEvidence, expectedFiles: {} },
+    { ...reducedEvidence, executedFiles: {} },
+  ]) {
+    // Start with a real passing artifact, then require it to be replaced.
+    write(`${reducedDirectory}/evidence.json`, JSON.stringify(reducedEvidence));
+    assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 0);
+    write(`${reducedDirectory}/evidence.json`, JSON.stringify(malformed));
+    assert.equal(run('verify-infrastructure-shards.mjs', 1, 'tier1', 1).status, 1);
+    assert.equal(read('test-results/infrastructure/aggregate.json').status, 'failed');
+    assert.equal(read('test-results/infrastructure/results.json').success, false);
+    assert.equal(read('test-results/infrastructure/results.json').executionCompleteness, 'incomplete');
+  }
+
   for (const mutation of [
     { ...reducedEvidence, workingTreeDirty: true },
     { ...reducedEvidence, source: { ...reducedEvidence.source, before: { ...reducedEvidence.source.before, dirty: true } } },

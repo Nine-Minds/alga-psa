@@ -84,7 +84,15 @@ try {
     } catch (error) { failures.push(`Cannot read shard ${directory.name}: ${error.message}`); }
   }
 } catch (error) { failures.push(`Cannot read required infrastructure evidence: ${error.message}`); }
-const aggregate = reconcileTestShards({ shards, suite: 'infrastructure', revision, mode, total, jobResult });
+let aggregate;
+try {
+  aggregate = reconcileTestShards({ shards, suite: 'infrastructure', revision, mode, total, jobResult });
+} catch (error) {
+  requiredCoverageVerified = false;
+  aggregate = { schemaVersion: 1, suite: 'infrastructure', revision, mode, shardCount: total, jobResult,
+    status: 'failed', expectedFiles: [], executedFiles: [], counts: null,
+    failures: [`Cannot reconcile malformed infrastructure evidence: ${error.message}`] };
+}
 if (JSON.stringify(aggregate.expectedFiles) !== JSON.stringify(requiredFiles)) {
   failures.push('Shard inventory differs from independently required infrastructure coverage');
   requiredCoverageVerified = false;
