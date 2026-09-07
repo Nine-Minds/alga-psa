@@ -782,6 +782,21 @@ jobs:
         run: xvfb-run --auto-servernum npm test
         shell: bash
 
+      # Publish completed browser evidence before the independent API lane.
+      - name: Upload Playwright diagnostics
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        uses: actions/upload-artifact@v4
+        with:
+          name: fresh-install-playwright-${{ matrix.edition }}
+          path: |
+            e2e-tests/playwright-report/
+            e2e-tests/test-results/
+            e2e-tests/harness-results/
+            e2e-tests/execution-evidence/
+            ${{ runner.temp }}/algasim-catalog.json
+            ${{ runner.temp }}/algasim-image-id.txt
+          retention-days: 7
+
       - name: Install API test dependencies
         id: api_dependencies
         if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}
@@ -905,20 +920,6 @@ jobs:
         with:
           name: container-logs-${{ matrix.edition }}
           path: logs/
-          retention-days: 7
-
-      - name: Upload Playwright diagnostics
-        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
-        uses: actions/upload-artifact@v4
-        with:
-          name: fresh-install-playwright-${{ matrix.edition }}
-          path: |
-            e2e-tests/playwright-report/
-            e2e-tests/test-results/
-            e2e-tests/harness-results/
-            e2e-tests/execution-evidence/
-            ${{ runner.temp }}/algasim-catalog.json
-            ${{ runner.temp }}/algasim-image-id.txt
           retention-days: 7
 
       - name: Cleanup Docker Compose

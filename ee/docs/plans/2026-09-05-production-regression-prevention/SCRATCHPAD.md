@@ -1086,3 +1086,8 @@
 - Added versioned metrics.json to the existing browser runner diagnostics, derived from raw collection/report and lane evidence. Preserves file/project/title identity, required/missing status, first attempt, retries, attempt statuses, edition and lane outcome. Omits raw errors/attachments; immutable artifactManifest remains explicitly null.
 - Ten projection/reconciliation tests passed, including a subprocess of the actual browser runner that cannot start and must still emit incomplete metrics. Historical native df9b enterprise report replay correctly reports 24 collected/executed, 22 first-attempt passes and two flaky journeys with failed first attempts. This is not a new browser execution claim. Evidence: browser-metrics-projection.json.
 - Existing Playwright diagnostic upload covers execution-evidence/. Live Sheets publication, artifact identity and other R5 requirements remain open; F024/F025 stay false.
+
+### Publish browser diagnostics before API tests — 2026-09-07
+- Both candidate 2de93 browser stages failed, but jobs 101624201400/101624201410 remain live in API execution. Direct log retrieval returns HTTP 404 until those jobs finish, and the workflow previously uploaded Playwright evidence only after API execution.
+- Moved the existing Playwright diagnostic upload directly after browser execution, preserving its condition, name, paths and retention. This makes completed browser traces/reports available while the independent API lane runs; no duplicate artifact or weakened test gate introduced.
+- Reviewed the reordered diff and actionlint passed. This YAML-only timing change has no synthetic source-string test. It does not make current-candidate diagnostics available retroactively; native after-change validation remains pending.
