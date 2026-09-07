@@ -50,7 +50,8 @@ export type SurveyResponseActionError = ActionMessageError;
 export type SurveyInvitationView = {
   invitationId: string;
   templateId: string;
-  ticketId: string;
+  ticketId?: string;
+  projectId?: string;
   clientId: string | null;
   contactId: string | null;
   tokenExpiresAt: Date;
@@ -176,6 +177,7 @@ export async function getSurveyInvitationForToken(token: string): Promise<Survey
     invitationId: invitation.invitationId,
     templateId: invitation.templateId,
     ticketId: invitation.ticketId,
+    projectId: invitation.projectId,
     clientId: invitation.clientId,
     contactId: invitation.contactId,
     tokenExpiresAt: invitation.tokenExpiresAt,
@@ -317,7 +319,7 @@ async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): P
 
   try {
     const respondedAt = toDate(response.submitted_at).toISOString();
-    const recipientId = invitation.contactId ?? response.contact_id ?? invitation.ticketId;
+    const recipientId = invitation.contactId ?? response.contact_id ?? invitation.ticketId ?? invitation.projectId ?? invitation.invitationId;
 
     await publishWorkflowEvent({
       eventType: 'SURVEY_RESPONSE_RECEIVED',

@@ -2343,3 +2343,9 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Invitation/token/response audit found all four lifecycle builders/schemas only represent ticket subjects. Added optional projectId to sent/reminder/response/expired events, preserving existing ticket and subjectless events. Builders and runtime schemas reject ambiguous ticket-plus-project payloads.
 - Behavioral builder-to-runtime-schema tests initially failed eight of 12 cases; all 12 pass after change. Evidence: evidence/project-survey-event-contracts.json. Registry accepts ZodTypeAny; schema refinement remains compatible with that contract.
 - Next wire project subject through invitation service, token resolution and response submission, then analytics/UI and real DB/email journey. No skipped project test removed or broad flags changed.
+
+### 2026-09-07 — project token identity and expiry lifecycle
+
+- Token lookup selects project_id and exposes projectId separately; ticketId is optional for project subjects. Ticket mappings remain unchanged. Expiry publication uses projectId and a nonempty project/invitation fallback when no contact exists. Public invitation view carries projectId.
+- Parameterized valid/expired token tests exercise both subjects and assert actual returned identity and published payload. Token plus lifecycle tests pass 18 cases. Evidence: evidence/project-survey-token-identity.json.
+- This does not yet enable project response submission: persistence must carry project_id, legacy submitted/negative event contracts and notification consumers need project support, and subject queries/analytics/UI remain to update. Real database token and response tests remain required before unskipping the project journey. No broad flags changed.
