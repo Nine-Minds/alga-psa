@@ -2167,3 +2167,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Removed the client-tax-settings mock from the PostgreSQL rate-selection suite. Existing rate cases now also exercise actual default-profile provisioning, settings hydration and threshold queries; only tenant/auth context is replaced with the transaction fixture.
 - Added persisted reverse-charge toggle/readback before regional rate lookup, including reversal back to the missing-rate error. A second case creates conflicting sibling-profile settings, then swaps both values to prove default-profile selection governs the calculation.
 - All 19 DB cases pass (1.23 seconds) against the task-owned migrated database with per-case rollback. Evidence: evidence/tax-settings-postgres.json. The three broad tax TODOs remain because these cases do not define unsupported tax caps or subscription-period/international policy. No broad plan flags changed; native CI remains unverified.
+
+### 2026-09-07 — full tooling verification after shared shard changes
+
+- Complete canonical tooling runner at clean 2ebbadc18a51554f8124f6351964ceec51d688de passed 496 tests across all 49 required files, with zero failures/skips/TODOs/cancellations. Required emulator builds ran first. Discovery passed; before/after source remained identical and clean.
+- Runtime was 137.01 seconds. Evidence: evidence/node-tooling-local-2ebbadc.json, including artifact hashes. This confirms the recent shared shard validation against the full tooling lane, including the actual runner regressions. It is local evidence only; no native PR run was published or claimed.
