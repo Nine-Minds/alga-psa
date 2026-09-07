@@ -528,7 +528,19 @@
         "shared_it": "Visible para el personal de TI autorizado de ambas organizaciones, sin acceso para el solicitante.",
         "organization_private": "Visible solo para el personal autorizado de tu organización."
       },
-      "unknownOutcome": "No pudimos confirmar si se guardó el mensaje. Reintenta para comprobar la misma solicitud."
+      "unknownOutcome": "No pudimos confirmar si se guardó el mensaje. Reintenta para comprobar la misma solicitud.",
+      "files": {
+        "choose": "Adjuntar archivos",
+        "help": "Hasta {{count}} archivos de {{size}} MiB cada uno. Los archivos se comparten con los destinatarios de este mensaje.",
+        "remove": "Quitar",
+        "removeNamed": "Quitar {{name}}",
+        "invalid": "Quite los archivos que superen el límite de tamaño o cantidad antes de enviar.",
+        "preparing": "Preparando archivos…",
+        "uploading": "Se han subido {{completed}} de {{total}} archivos…",
+        "publishing": "Publicando el mensaje y los archivos…",
+        "notReady": "Algunos archivos no están listos. Reintente para terminar la carga y enviar el mismo mensaje.",
+        "preparationFailed": "No se pudieron leer los archivos seleccionados. Selecciónelos de nuevo o quítelos antes de reintentar."
+      }
     },
     "attachments": {
       "title": "Archivos adjuntos",

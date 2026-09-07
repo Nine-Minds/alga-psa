@@ -526,7 +526,19 @@
         "shared_it": "11111",
         "organization_private": "11111"
       },
-      "unknownOutcome": "11111"
+      "unknownOutcome": "11111",
+      "files": {
+        "choose": "11111",
+        "help": "11111 {{count}} {{size}}",
+        "remove": "11111",
+        "removeNamed": "11111 {{name}}",
+        "invalid": "11111",
+        "preparing": "11111",
+        "uploading": "11111 {{completed}} {{total}}",
+        "publishing": "11111",
+        "notReady": "11111",
+        "preparationFailed": "11111"
+      }
     },
     "attachments": {
       "title": "11111",

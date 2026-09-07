@@ -4,9 +4,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedTicketConversation from '../../../components/co-managed/CoManagedTicketConversation';
 import { CoManagedFeatureBoundary } from '../../../components/co-managed/CoManagedFeatureBoundary';
-const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: vi.fn(), load: vi.fn(), create: vi.fn(), mutate: vi.fn(), private: vi.fn(), prepare: vi.fn(), submitDraft: vi.fn(),
   session: { user: { tenant: 'msp', id: 'technician' } } }));
 vi.mock('../../../components/co-managed/CoManagedCommentAttachments', () => ({ default: () => null }));
+vi.mock('../../../components/co-managed/conversationDraftSubmission', () => ({ prepareConversationDraft: mocks.prepare, submitConversationDraft: mocks.submitDraft }));
 vi.mock('next/dynamic', () => ({ default: () => ({ id, label, document, editable, onChange }: any) => label
   ? <label>{label}<textarea id={id} disabled={!editable} value={document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} /></label>
@@ -21,13 +22,13 @@ vi.mock('../../../lib/actions/coManagedPrivateTicketCommentActions', () => ({ sa
 vi.mock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister', () => ({ useAutomationIdAndRegister: ({ id }: any) => ({ automationIdProps: { id }, updateMetadata: () => {}, updateActions: () => {} }) }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ id, label, value, disabled, options, onValueChange }: any) =>
   <label>{label}<select id={id} value={value} disabled={disabled} onChange={event => onValueChange(event.target.value)}>{options.map((option: any) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label> }));
-vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useFormatters: () => ({ formatDate: (date: Date) => date.toISOString() }), useOptionalI18n: () => null }));
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({ useTranslation: () => ({ t: (key: string) => key }), useFormatters: () => ({ formatDate: (date: Date) => date.toISOString(), formatNumber: (value: number) => String(value) }), useOptionalI18n: () => null }));
 const resource = { tenant: 'customer', relationshipId: 'relationship', kind: 'ticket' as const, id: 'ticket' };
 const note = (text: string) => JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text, styles: {} }] }]);
 const item = () => ({ storeTenant: 'customer', commentId: 'comment', threadId: 'thread', parentCommentId: null, audience: 'shared_it',
   createdAt: '2026-01-01T00:00:00.123456Z', updatedAt: '2026-01-01T00:00:00.654321Z', deleted: false, revision: null, note: note('Shared content'), markdown: 'Shared content',
   author: { tenant: 'msp', kind: 'user', id: 'technician', displayName: 'Morgan', organizationName: 'Provider IT', referenceId: 'reference' } });
-const data = () => ({ resource, actor: { tenant: 'msp', userId: 'technician' }, writeAudiences: ['requester', 'shared_it', 'organization_private'], items: [item()], nextBefore: null });
+const data = () => ({ resource, actor: { tenant: 'msp', userId: 'technician' }, writeAudiences: ['requester', 'shared_it', 'organization_private'], draftAttachments: { audiences: ['requester', 'shared_it', 'organization_private'], maxBytes: 100, maxFiles: 2 }, items: [item()], nextBefore: null });
 const mount = () => render(<CoManagedFeatureBoundary><CoManagedTicketConversation resource={resource} /></CoManagedFeatureBoundary>);
 const button = (name: string) => screen.getByRole('button', { name: `coManaged.conversation.${name}` });
 const message = () => screen.getByLabelText('coManaged.conversation.message');
@@ -35,6 +36,8 @@ const deferred = () => { let resolve!: (value: any) => void; const promise = new
 beforeEach(() => {
   vi.resetAllMocks(); mocks.session = { user: { tenant: 'msp', id: 'technician' } };
   mocks.flag.mockReturnValue({ enabled: true, loading: false, error: null }); mocks.load.mockResolvedValue(data());
+  mocks.prepare.mockImplementation(async input => ({ resource: input.resource, request: { operationId: input.operationId }, files: input.files }));
+  mocks.submitDraft.mockResolvedValue({ ok: true, receipt: {} });
   for (const action of [mocks.create, mocks.mutate, mocks.private]) action.mockResolvedValue({ ok: true, receipt: {} });
 });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
@@ -54,7 +57,7 @@ it('inherits reply audience and sends the exact original version for an own-auth
   mount(); await screen.findByText('Shared content'); fireEvent.click(button('reply'));
   expect(screen.queryByRole('combobox')).toBeNull(); fireEvent.change(message(), { target: { value: 'Inherited reply' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
-  expect(mocks.create).toHaveBeenCalledWith(resource, { operationId: expect.any(String), document: expect.any(Array), parent: { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' } });
+  expect(mocks.create).toHaveBeenCalledWith(resource, { operationId: expect.any(String), document: expect.any(Array), parent: { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' }, expectedAudience: 'shared_it' });
   await waitFor(() => expect(button('edit')).toBeInTheDocument()); fireEvent.click(button('edit')); fireEvent.change(message(), { target: { value: 'Edited' } }); fireEvent.click(button('send'));
   await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce()); expect(mocks.mutate.mock.calls[0][1]).toMatchObject({ kind: 'edit', document: expect.any(Array), expectedUpdatedAt: item().updatedAt });
 });
@@ -135,4 +138,70 @@ it('retains formatted own-author blocks when editing and does not offer destruct
   view.unmount(); mocks.load.mockResolvedValue({ ...data(), items: [{ ...item(), note: JSON.stringify([{ type: 'image', props: { url: '/api/files/foreign' } }]) }] });
   mount(); await screen.findByText('Morgan'); expect(screen.queryByRole('button', { name: 'coManaged.conversation.edit' })).toBeNull();
   expect(document.querySelector('img')).toBeNull();
+});
+
+const chooseFiles = (...files: File[]) => fireEvent.change(screen.getByLabelText('coManaged.conversation.files.choose'), { target: { files } });
+it('keeps selected files local until save and freezes the same prepared message for interrupted retries', async () => {
+  mocks.submitDraft.mockRejectedValueOnce(new Error('Lost upload acknowledgement'));
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('reply'));
+  fireEvent.change(message(), { target: { value: 'Reply with files' } });
+  const file = new File(['evidence'], 'evidence.txt'); chooseFiles(file);
+  expect(screen.getByText('evidence.txt')).toBeInTheDocument(); expect(mocks.prepare).not.toHaveBeenCalled();
+  fireEvent.click(button('send')); await screen.findByText('coManaged.conversation.unknownOutcome');
+  expect(mocks.prepare.mock.calls[0][0]).toMatchObject({ resource, actorTenant: 'msp', audience: 'shared_it', files: [file], parent: { storeTenant: 'customer', threadId: 'thread', commentId: 'comment' } });
+  expect(screen.getByLabelText('coManaged.conversation.files.choose')).toBeDisabled(); expect(message()).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' }));
+  await waitFor(() => expect(mocks.submitDraft).toHaveBeenCalledTimes(2));
+  expect(mocks.prepare).toHaveBeenCalledOnce(); expect(mocks.submitDraft.mock.calls[1][0]).toBe(mocks.submitDraft.mock.calls[0][0]);
+  expect(mocks.create).not.toHaveBeenCalled(); expect(mocks.private).not.toHaveBeenCalled();
+});
+it('allows correcting unreadable files before dispatch and prevents oversized or excessive selections', async () => {
+  mocks.prepare.mockRejectedValueOnce(new Error('File no longer readable'));
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('new')); fireEvent.change(message(), { target: { value: 'Message' } });
+  chooseFiles(new File(['x'.repeat(101)], 'large.txt')); expect(button('send')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.conversation.files.removeNamed' }));
+  chooseFiles(new File(['a'], 'a'), new File(['b'], 'b'), new File(['c'], 'c')); expect(button('send')).toBeDisabled();
+  fireEvent.click(screen.getAllByRole('button', { name: 'coManaged.conversation.files.removeNamed' })[2]); fireEvent.click(button('send'));
+  await screen.findByText('coManaged.conversation.files.preparationFailed');
+  expect(mocks.submitDraft).not.toHaveBeenCalled(); expect(message()).not.toBeDisabled();
+  expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).not.toBeDisabled();
+  fireEvent.click(button('send')); await waitFor(() => expect(mocks.submitDraft).toHaveBeenCalledOnce());
+});
+it('retries an incomplete publication without changing its prepared draft and permits cancellation', async () => {
+  mocks.submitDraft.mockResolvedValueOnce({ ok: false, code: 'notReady' });
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('new')); fireEvent.change(message(), { target: { value: 'Message' } });
+  chooseFiles(new File(['a'], 'a')); fireEvent.click(button('send')); await screen.findByText('coManaged.conversation.files.notReady');
+  expect(message()).toBeDisabled(); expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).not.toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.retry' })); await waitFor(() => expect(mocks.submitDraft).toHaveBeenCalledTimes(2));
+  expect(mocks.prepare).toHaveBeenCalledOnce();
+});
+it.each(['preparing', 'uploading'])('clears selected filenames and stops further work after attachment policy loss while %s', async phase => {
+  vi.useFakeTimers(); const pending = deferred();
+  if (phase === 'preparing') mocks.prepare.mockReturnValue(pending.promise);
+  else mocks.submitDraft.mockReturnValue(pending.promise);
+  await act(async () => { mount(); }); fireEvent.click(button('new')); fireEvent.change(message(), { target: { value: 'Message' } });
+  chooseFiles(new File(['secret'], 'secret.txt')); await act(async () => { fireEvent.click(button('send')); });
+  mocks.load.mockResolvedValue({ ...data(), draftAttachments: { audiences: [], maxBytes: 100, maxFiles: 2 } });
+  await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+  expect(screen.queryByText('secret.txt')).toBeNull(); expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
+  if (phase === 'uploading') expect(mocks.submitDraft.mock.calls[0][1]()).toBe(false);
+  await act(async () => { pending.resolve(phase === 'preparing' ? {} : { ok: false, code: 'unknownOutcome' }); });
+  if (phase === 'preparing') expect(mocks.submitDraft).not.toHaveBeenCalled();
+  expect(screen.queryByText('coManaged.conversation.unknownOutcome')).toBeNull();
+});
+it('hides file controls on edits and leaves canceled selections entirely local', async () => {
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('edit'));
+  expect(screen.queryByLabelText('coManaged.conversation.files.choose')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })); await waitFor(() => expect(button('new')).toBeInTheDocument());
+  fireEvent.click(button('new')); chooseFiles(new File(['local'], 'local.txt'));
+  fireEvent.click(screen.getByRole('button', { name: 'coManaged.ticket.cancel' }));
+  expect(mocks.prepare).not.toHaveBeenCalled(); expect(mocks.submitDraft).not.toHaveBeenCalled(); expect(screen.queryByText('local.txt')).toBeNull();
+});
+it.each(['forbidden', 'readOnly'])('clears an attachment draft immediately when a command reports %s', async code => {
+  mocks.submitDraft.mockResolvedValueOnce({ ok: false, code });
+  mount(); await screen.findByText('Shared content'); fireEvent.click(button('new')); fireEvent.change(message(), { target: { value: 'Message' } });
+  chooseFiles(new File(['secret'], 'secret.txt')); fireEvent.click(button('send'));
+  await waitFor(() => expect(screen.queryByText('secret.txt')).toBeNull());
+  expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
 });

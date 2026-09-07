@@ -528,7 +528,19 @@
         "shared_it": "Visibile al personale IT autorizzato di entrambe le organizzazioni, senza accesso per il richiedente.",
         "organization_private": "Visibile solo al personale autorizzato della tua organizzazione."
       },
-      "unknownOutcome": "Non è stato possibile confermare il salvataggio del messaggio. Riprova per verificare la stessa richiesta."
+      "unknownOutcome": "Non è stato possibile confermare il salvataggio del messaggio. Riprova per verificare la stessa richiesta.",
+      "files": {
+        "choose": "Allega file",
+        "help": "Fino a {{count}} file da {{size}} MiB ciascuno. I file sono condivisi con i destinatari di questo messaggio.",
+        "remove": "Rimuovi",
+        "removeNamed": "Rimuovi {{name}}",
+        "invalid": "Rimuovi i file che superano il limite di dimensione o quantità prima di inviare.",
+        "preparing": "Preparazione dei file…",
+        "uploading": "Caricati {{completed}} di {{total}} file…",
+        "publishing": "Pubblicazione del messaggio e dei file…",
+        "notReady": "Alcuni file non sono pronti. Riprova per completare il caricamento e inviare lo stesso messaggio.",
+        "preparationFailed": "Impossibile leggere i file selezionati. Selezionali di nuovo o rimuovili prima di riprovare."
+      }
     },
     "attachments": {
       "title": "Allegati",

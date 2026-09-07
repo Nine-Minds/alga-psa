@@ -530,7 +530,19 @@
         "shared_it": "Widoczne dla uprawnionych pracowników IT obu organizacji, bez dostępu dla zgłaszającego.",
         "organization_private": "Widoczne tylko dla uprawnionych pracowników Twojej organizacji."
       },
-      "unknownOutcome": "Nie udało się potwierdzić zapisania wiadomości. Ponów próbę, aby sprawdzić to samo żądanie."
+      "unknownOutcome": "Nie udało się potwierdzić zapisania wiadomości. Ponów próbę, aby sprawdzić to samo żądanie.",
+      "files": {
+        "choose": "Dołącz pliki",
+        "help": "Maksymalnie {{count}} plików, każdy do {{size}} MiB. Pliki są udostępniane odbiorcom tej wiadomości.",
+        "remove": "Usuń",
+        "removeNamed": "Usuń {{name}}",
+        "invalid": "Przed wysłaniem usuń pliki przekraczające limit rozmiaru lub liczby plików.",
+        "preparing": "Przygotowywanie plików…",
+        "uploading": "Przesłano {{completed}} z {{total}} plików…",
+        "publishing": "Publikowanie wiadomości i plików…",
+        "notReady": "Niektóre pliki nie są gotowe. Spróbuj ponownie, aby dokończyć przesyłanie i wysłać tę samą wiadomość.",
+        "preparationFailed": "Nie można odczytać wybranych plików. Wybierz je ponownie lub usuń przed ponowną próbą."
+      }
     },
     "attachments": {
       "title": "Załączniki",

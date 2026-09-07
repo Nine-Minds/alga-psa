@@ -615,7 +615,19 @@
         "shared_it": "Visible to authorized IT staff in both organizations, without requester access.",
         "organization_private": "Visible only to authorized staff in your organization."
       },
-      "unknownOutcome": "We could not confirm whether the message was saved. Retry to check the same request."
+      "unknownOutcome": "We could not confirm whether the message was saved. Retry to check the same request.",
+      "files": {
+        "choose": "Attach files",
+        "help": "Up to {{count}} files, {{size}} MiB each. Files are shared with this message’s audience.",
+        "remove": "Remove",
+        "removeNamed": "Remove {{name}}",
+        "invalid": "Remove files that exceed the size limit or file count before sending.",
+        "preparing": "Preparing files…",
+        "uploading": "Uploaded {{completed}} of {{total}} files…",
+        "publishing": "Publishing message and files…",
+        "notReady": "Some files are not ready. Retry to finish uploading and send the same message.",
+        "preparationFailed": "Could not read the selected files. Select them again or remove them before retrying."
+      }
     },
     "attachments": {
       "title": "Attachments",

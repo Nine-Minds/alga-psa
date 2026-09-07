@@ -6,6 +6,8 @@ import type { CoManagedSharedResource, CoManagedConversationCursor, CoManagedCon
 import { Button } from '@alga-psa/ui/components/Button';
 import dynamic from 'next/dynamic';
 import { snapshotConversationDocument, type CoManagedRichTextDocument } from '@alga-psa/co-managed/conversationRichText';
+import { Input } from '@alga-psa/ui/components/Input';
+import { prepareConversationDraft, submitConversationDraft, type PreparedConversationDraft, type ConversationDraftProgress } from './conversationDraftSubmission';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketConversationScreenAction } from '@/lib/actions/coManagedTicketConversationActions';
@@ -20,51 +22,74 @@ const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr:
 type Screen = Awaited<ReturnType<typeof getCoManagedTicketConversationScreenAction>>;
 type Audience = Screen['writeAudiences'][number];
 type Draft = { kind: 'new' } | { kind: 'reply' | 'edit' | 'delete'; item: CoManagedConversationItem };
-type Submission = { store: 'private'; request: CoManagedPrivateCommentCommand } | { store: 'create'; request: CoManagedCommentCreateRequest } | { store: 'mutate'; request: CoManagedCommentMutationRequest };
+type Submission = { store: 'draft'; prepared: PreparedConversationDraft } | { store: 'private'; request: CoManagedPrivateCommentCommand } | { store: 'create'; request: CoManagedCommentCreateRequest } | { store: 'mutate'; request: CoManagedCommentMutationRequest };
 const reference = (item: CoManagedConversationItem) => ({ storeTenant: item.storeTenant, threadId: item.threadId, commentId: item.commentId });
 
-function Composer({ resource, actor, audiences, draft, onSaved, onCancel }: {
-  resource: CoManagedSharedResource; actor: Screen['actor']; audiences: Audience[]; draft: Draft; onSaved: () => void; onCancel: () => void;
+function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved, onCancel }: {
+  resource: CoManagedSharedResource; actor: Screen['actor']; audiences: Audience[]; draftAttachments: Screen['draftAttachments']; draft: Draft; onSaved: () => void; onCancel: () => void;
 }) {
-  const { t } = useTranslation('msp/licensing');
+  const { t } = useTranslation('msp/licensing'), { formatNumber } = useFormatters();
   const [audience, setAudience] = useState<Audience>(draft.kind === 'new' ? (audiences.includes('shared_it') ? 'shared_it' : audiences[0]) : draft.item.audience);
   const [document, setDocument] = useState<CoManagedRichTextDocument>(draft.kind === 'edit' ? conversationDocument(draft.item.note) ?? [] : []);
   const validDocument = useMemo(() => {
     try { return snapshotConversationDocument(document); } catch { return null; }
   }, [document]);
   const [busy, setBusy] = useState(false), [error, setError] = useState<string | null>(null);
+  const [files, setFiles] = useState<Array<{ key: string; file: File }>>([]);
+  const [progress, setProgress] = useState<ConversationDraftProgress | null>(null);
   const submission = useRef<Submission | null>(null), inFlight = useRef(false), mounted = useRef(false);
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
   const permitted = audiences.includes(audience);
-  const uncertain = error === 'unknownOutcome';
-  const rejected = error && !['unknownOutcome', 'invalid'].includes(error);
-  const frozen = busy || uncertain || Boolean(rejected) || !permitted;
+  const canAttach = (draft.kind === 'new' || draft.kind === 'reply') && draftAttachments.audiences.includes(audience);
+  const filesInvalid = files.length > draftAttachments.maxFiles || files.some(({ file }) => file.size > draftAttachments.maxBytes);
+  const uncertain = error === 'unknownOutcome', retryable = uncertain || error === 'notReady';
+  const rejected = error && !['unknownOutcome', 'notReady', 'invalid', 'preparationFailed'].includes(error);
+  const frozen = busy || retryable || Boolean(rejected) || !permitted;
+  const allowed = useRef(false);
+  allowed.current = permitted && (!files.length || canAttach);
+  const current = () => mounted.current && allowed.current;
+  useEffect(() => {
+    // Drop the whole message when attachment permission disappears, including during upload.
+    // Never turn an interrupted attachment submission into a second, text-only message.
+    if (files.length && !canAttach) onCancel();
+  }, [canAttach, files.length, onCancel]);
   async function submit() {
-    if (inFlight.current || rejected || !permitted || (draft.kind !== 'delete' && !validDocument)) return;
-    if (!submission.current) {
-      const operationId = crypto.randomUUID();
-      const privateStore = draft.kind === 'new' ? actor.tenant !== resource.tenant && audience === 'organization_private' : draft.item.storeTenant !== resource.tenant;
-      if (draft.kind === 'new' || draft.kind === 'reply') {
-        const parent = draft.kind === 'reply' ? reference(draft.item) : undefined;
-        submission.current = privateStore ? { store: 'private', request: { kind: 'create', operationId, document: validDocument!, ...(parent ? { parent } : {}) } }
-          : { store: 'create', request: { operationId, document: validDocument!, ...(parent ? { parent } : { audience }) } };
-      } else {
-        const change = draft.kind === 'edit' ? { kind: 'edit' as const, document: validDocument! } : { kind: 'delete' as const };
-        submission.current = privateStore ? { store: 'private', request: { ...change, operationId, comment: reference(draft.item), expectedRevision: draft.item.revision! } }
-          : { store: 'mutate', request: { ...change, operationId, comment: reference(draft.item), expectedUpdatedAt: draft.item.updatedAt } };
-      }
-    }
+    if (inFlight.current || rejected || !allowed.current || filesInvalid || (draft.kind !== 'delete' && !validDocument)) return;
     inFlight.current = true; setBusy(true); setError(null);
-    const saved = submission.current;
+    let dispatched = false;
     try {
-      const result = saved.store === 'private' ? await saveCoManagedPrivateTicketCommentAction(resource, saved.request)
+      if (!submission.current) {
+        const operationId = crypto.randomUUID();
+        const privateStore = draft.kind === 'new' ? actor.tenant !== resource.tenant && audience === 'organization_private' : draft.item.storeTenant !== resource.tenant;
+        if (draft.kind === 'new' || draft.kind === 'reply') {
+          const parent = draft.kind === 'reply' ? reference(draft.item) : undefined;
+          if (files.length) {
+            setProgress({ phase: 'preparing', completed: 0, total: files.length });
+            const prepared = await prepareConversationDraft({ resource, actorTenant: actor.tenant, operationId, document: validDocument!, audience, parent, files: files.map(item => item.file) });
+            if (!current()) return;
+            submission.current = { store: 'draft', prepared };
+          } else {
+            submission.current = privateStore ? { store: 'private', request: { kind: 'create', operationId, document: validDocument!, ...(parent ? { parent } : {}) } }
+              : { store: 'create', request: { operationId, document: validDocument!, ...(parent ? { parent, expectedAudience: audience } : { audience }) } };
+          }
+        } else {
+          const change = draft.kind === 'edit' ? { kind: 'edit' as const, document: validDocument! } : { kind: 'delete' as const };
+          submission.current = privateStore ? { store: 'private', request: { ...change, operationId, comment: reference(draft.item), expectedRevision: draft.item.revision! } }
+            : { store: 'mutate', request: { ...change, operationId, comment: reference(draft.item), expectedUpdatedAt: draft.item.updatedAt } };
+        }
+      }
+      if (!current()) return;
+      const saved = submission.current; dispatched = true;
+      const result = saved.store === 'draft' ? await submitConversationDraft(saved.prepared, current, value => { if (current()) setProgress(value); })
+        : saved.store === 'private' ? await saveCoManagedPrivateTicketCommentAction(resource, saved.request)
         : saved.store === 'create' ? await createCoManagedTicketCommentAction(resource, saved.request)
         : await mutateCoManagedTicketCommentAction(resource, saved.request);
-      if (!mounted.current) return;
+      if (!current()) return;
       if (result.ok) onSaved();
-      else { setError(result.code); if (result.code === 'invalid') submission.current = null; }
-    } catch { if (mounted.current) setError('unknownOutcome'); }
-    finally { inFlight.current = false; if (mounted.current) setBusy(false); }
+      else if (saved.store === 'draft' && ['forbidden', 'readOnly'].includes(result.code)) onCancel();
+      else if (result.code !== 'aborted') { setError(result.code); if (result.code === 'invalid') submission.current = null; }
+    } catch { if (current()) setError(dispatched ? 'unknownOutcome' : 'preparationFailed'); }
+    finally { inFlight.current = false; if (mounted.current) { setBusy(false); setProgress(null); } }
   }
   return <form className="space-y-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4" onSubmit={event => { event.preventDefault(); void submit(); }}>
     <h3 className="font-semibold">{t(`coManaged.conversation.${draft.kind}`)}</h3>
@@ -74,11 +99,30 @@ function Composer({ resource, actor, audiences, draft, onSaved, onCancel }: {
     <p className="text-sm text-muted-foreground">{t(`coManaged.conversation.audienceHelp.${audience}`)}</p>
     {draft.kind === 'delete' ? <p>{t('coManaged.conversation.deleteHelp')}</p> : <Document id="co-conversation-text" label={t('coManaged.conversation.message')} document={document}
       editable={!frozen} onChange={setDocument} />}
+    {canAttach && <div className="space-y-2">
+      <Input id="co-conversation-files" type="file" multiple preserveCursor={false} label={t('coManaged.conversation.files.choose')} disabled={frozen}
+        aria-describedby="co-conversation-files-help" onChange={event => {
+          if (frozen) return;
+          const selected = Array.from(event.target.files ?? []).map(file => ({ key: crypto.randomUUID(), file }));
+          setFiles(previous => [...previous, ...selected]); event.target.value = ''; setError(null); submission.current = null;
+        }} />
+      <p id="co-conversation-files-help" className="text-xs text-muted-foreground">{t('coManaged.conversation.files.help', {
+        count: draftAttachments.maxFiles, size: formatNumber(draftAttachments.maxBytes / 1048576, { maximumFractionDigits: 2 }) })}</p>
+      {files.length > 0 && <ul className="space-y-1">{files.map(({ key, file }, index) => <li key={key} className="flex items-center justify-between gap-2 text-sm">
+        <span className="break-all">{file.name}</span>
+        <Button id={`co-conversation-file-${index}-remove`} type="button" size="sm" variant="ghost" disabled={frozen}
+          aria-label={t('coManaged.conversation.files.removeNamed', { name: file.name })} onClick={() => {
+            setFiles(previous => previous.filter(item => item.key !== key)); setError(null); submission.current = null;
+          }}>{t('coManaged.conversation.files.remove')}</Button>
+      </li>)}</ul>}
+      {filesInvalid && <p role="alert" className="text-destructive">{t('coManaged.conversation.files.invalid')}</p>}
+    </div>}
+    {progress && <p role="status">{t(`coManaged.conversation.files.${progress.phase}`, { completed: progress.completed, total: progress.total })}</p>}
     {!permitted && <p role="status">{t('coManaged.ticket.readOnly')}</p>}
-    {error && <p role="alert" className="text-destructive">{t(error === 'unknownOutcome' ? 'coManaged.conversation.unknownOutcome' : `coManaged.editor.errors.${error}`)}</p>}
+    {error && <p role="alert" className="text-destructive">{t(error === 'unknownOutcome' ? 'coManaged.conversation.unknownOutcome' : ['notReady', 'preparationFailed'].includes(error) ? `coManaged.conversation.files.${error}` : `coManaged.editor.errors.${error}`)}</p>}
     <div className="flex flex-wrap gap-2">
-      <Button id="co-conversation-submit" type="submit" disabled={busy || Boolean(rejected) || !permitted || (draft.kind !== 'delete' && !validDocument)}>
-        {t(busy ? 'coManaged.ticket.saving' : uncertain ? 'coManaged.ticket.retry' : `coManaged.conversation.${draft.kind === 'delete' ? 'delete' : 'send'}`)}</Button>
+      <Button id="co-conversation-submit" type="submit" disabled={busy || Boolean(rejected) || !allowed.current || filesInvalid || (draft.kind !== 'delete' && !validDocument)}>
+        {t(busy ? 'coManaged.ticket.saving' : retryable ? 'coManaged.ticket.retry' : `coManaged.conversation.${draft.kind === 'delete' ? 'delete' : 'send'}`)}</Button>
       <Button id="co-conversation-cancel" type="button" variant="outline" disabled={busy || uncertain} onClick={onCancel}>{t('coManaged.ticket.cancel')}</Button>
     </div>
   </form>;
@@ -127,7 +171,7 @@ function Conversation({ resource, homeTenant, userId }: { resource: CoManagedSha
     {!state && busy && <p role="status">{t('coManaged.ticket.loading')}</p>}
     {state && <>
       {state.writeAudiences.length > 0 && !draft && <Button id="co-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
-      {draft && <Composer key={revision} draft={draft} resource={target.current} actor={state.actor} audiences={state.writeAudiences}
+      {draft && <Composer key={revision} draft={draft} resource={target.current} actor={state.actor} audiences={state.writeAudiences} draftAttachments={state.draftAttachments ?? { audiences: [], maxBytes: 0, maxFiles: 0 }}
         onSaved={() => { setDraft(null); cursors.current = [undefined]; void refresh(); }} onCancel={() => { setDraft(null); void refresh(); }} />}
       {!state.items.length && <p className="text-sm text-muted-foreground">{t('coManaged.conversation.empty')}</p>}
       <ol className="space-y-3">{state.items.map(item => {

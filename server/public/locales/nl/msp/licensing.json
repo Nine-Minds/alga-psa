@@ -526,7 +526,19 @@
         "shared_it": "Zichtbaar voor bevoegde IT-medewerkers van beide organisaties, zonder toegang voor de aanvrager.",
         "organization_private": "Alleen zichtbaar voor bevoegde medewerkers van je organisatie."
       },
-      "unknownOutcome": "We konden niet bevestigen of het bericht is opgeslagen. Probeer opnieuw om hetzelfde verzoek te controleren."
+      "unknownOutcome": "We konden niet bevestigen of het bericht is opgeslagen. Probeer opnieuw om hetzelfde verzoek te controleren.",
+      "files": {
+        "choose": "Bestanden bijvoegen",
+        "help": "Maximaal {{count}} bestanden van elk {{size}} MiB. Bestanden worden gedeeld met de doelgroep van dit bericht.",
+        "remove": "Verwijderen",
+        "removeNamed": "{{name}} verwijderen",
+        "invalid": "Verwijder bestanden die de limiet voor grootte of aantal overschrijden voordat u verzendt.",
+        "preparing": "Bestanden voorbereiden…",
+        "uploading": "{{completed}} van {{total}} bestanden geüpload…",
+        "publishing": "Bericht en bestanden publiceren…",
+        "notReady": "Sommige bestanden zijn nog niet klaar. Probeer opnieuw om de upload te voltooien en hetzelfde bericht te verzenden.",
+        "preparationFailed": "De geselecteerde bestanden konden niet worden gelezen. Selecteer ze opnieuw of verwijder ze voordat u het opnieuw probeert."
+      }
     },
     "attachments": {
       "title": "Bijlagen",

@@ -12,7 +12,7 @@ import { encodeConversationContent, snapshotConversationContent, type CoManagedC
 
 export interface CoManagedCommentReference { storeTenant: string; threadId: string; commentId: string }
 export type CoManagedCommentCreateRequest = { operationId: string } & CoManagedConversationContent & (
-  { audience: CommentAudience; parent?: never } | { parent: CoManagedCommentReference; audience?: never });
+  { audience: CommentAudience; parent?: never; expectedAudience?: never } | { parent: CoManagedCommentReference; audience?: never; expectedAudience?: CommentAudience });
 export interface CoManagedCommentCreateReceipt extends CoManagedCommentReference { operationId: string; appliedAt: string }
 export interface CoManagedCommentCreateContext extends CoManagedSharedWorkContext {
   actorReferenceId?: string; audience: CommentAudience; canUpdateResponseState: boolean; assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
@@ -31,7 +31,7 @@ export class CoManagedCommentCreateError extends Error {
 function snapshotRequest(input: CoManagedCommentCreateRequest): CoManagedCommentCreateRequest {
   const invalid = (): never => { throw new CoManagedCommentCreateError('INVALID_COMMENT_CREATE'); };
   if (!input || !isCoManagedUuid(input.operationId) ||
-      Object.keys(input).some(key => !['operationId', 'text', 'document', 'audience', 'parent'].includes(key))) invalid();
+      Object.keys(input).some(key => !['operationId', 'text', 'document', 'audience', 'parent', 'expectedAudience'].includes(key))) invalid();
   let content: CoManagedConversationContent;
   try { content = snapshotConversationContent(input); } catch { return invalid(); }
   const base = { operationId: input.operationId.toLowerCase(), ...content };
@@ -39,9 +39,11 @@ function snapshotRequest(input: CoManagedCommentCreateRequest): CoManagedComment
     const parent = input.parent;
     if (input.audience !== undefined || !parent || ![parent.storeTenant, parent.threadId, parent.commentId].every(isCoManagedUuid) ||
         Object.keys(parent).some(key => !['storeTenant', 'threadId', 'commentId'].includes(key))) invalid();
-    return { ...base, parent: { storeTenant: parent.storeTenant.toLowerCase(), threadId: parent.threadId.toLowerCase(), commentId: parent.commentId.toLowerCase() } };
+    if (input.expectedAudience !== undefined && !['requester', 'shared_it', 'organization_private'].includes(input.expectedAudience)) invalid();
+    return { ...base, parent: { storeTenant: parent.storeTenant.toLowerCase(), threadId: parent.threadId.toLowerCase(), commentId: parent.commentId.toLowerCase() },
+      ...(input.expectedAudience !== undefined ? { expectedAudience: input.expectedAudience } : {}) };
   }
-  if (!['requester', 'shared_it', 'organization_private'].includes(input.audience as string)) invalid();
+  if (input.expectedAudience !== undefined || !['requester', 'shared_it', 'organization_private'].includes(input.audience as string)) invalid();
   return { ...base, audience: input.audience! };
 }
 function assertContentVisible(context: CoManagedSharedWorkContext) {
@@ -94,7 +96,7 @@ export async function createCoManagedTicketComment(db: Knex, inputActor: CoManag
           .forShare('parent', 'root').select({ audience: commentAudienceSql(trx, 't', 'root', 'parent') }).first();
         if (!parent || parent.audience !== audience || (foreign && audience === 'organization_private')) throw new CoManagedSharedWorkError();
       }
-      if (!audience) throw new CoManagedSharedWorkError();
+      if (!audience || (request.expectedAudience !== undefined && request.expectedAudience !== audience)) throw new CoManagedSharedWorkError();
       const actorReferenceId = foreign ? await ensureCoManagedActorReference(context) : undefined;
       await assertWriteAuthority(trx);
       await apply({ ...context, actorReferenceId, audience, assertWriteAuthority,

@@ -6263,6 +6263,12 @@ it('derives conversation write audiences from actual content policy and preserve
   await bundles.publishBundleRevision(db, { tenant: principal.tenant, bundleId, revisionId, actorUserId: principal.userId });
   await bundles.createBundleAssignment(db, { tenant: principal.tenant, bundleId, targetType: 'user', targetId: principal.userId });
   expect(await permissions(db, principal, resource)).toEqual(['organization_private']);
+  const { getCoManagedConversationContributionHints: hints } = await import('../../../../packages/co-managed/src/ticketConversation');
+  expect(await hints(db, principal, resource)).toEqual({ writeAudiences: ['organization_private'], attachmentAudiences: ['organization_private'] });
+  for (const field of ['co_management_conversation_drafts', 'co_management_conversation_attachments', 'file_name']) {
+    await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: [field] } });
+    expect(await hints(db, principal, resource)).toEqual({ writeAudiences: ['requester', 'shared_it', 'organization_private'], attachmentAudiences: [] });
+  }
   await sponsor.table('authorization_bundle_rules').where('bundle_id', bundleId).update({ config: { selectedClientIds: [operation.request.clientId], redactedFields: ['conversation'] } });
   expect(await permissions(db, principal, resource)).toEqual([]);
   expect((await read(db, principal, resource)).items.map(row => row.note)).toContain('Readable history');
@@ -6638,4 +6644,27 @@ it('rejects changed draft audiences before publication and refuses damaged publi
   const receipt = await drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer);
   await customer.table('co_management_conversation_drafts').where('operation_id', draft.operationId).update({ receipt: { ...receipt, storeTenant: principal.tenant } });
   await expect(drafts.publishCoManagedConversationDraft(db, principal, resource, draftRef(draft), publishCustomer)).rejects.toMatchObject({ code: 'CONVERSATION_DRAFT_CONFLICT' });
+}));
+
+it('rejects stale displayed reply audiences before draft reservation or text creation and retains exact constrained retries', async () => withConversationDraftFixture(async ({
+  principal, customerPrincipal, resource, customer, create, drafts, file,
+}) => {
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'shared_it', text: 'Original audience' });
+  const parent = attachmentComment(root), operationId = randomUUID(), expectedAudience = 'shared_it' as const;
+  const request = { operationId, parent, expectedAudience, content: { text: 'Private IT reply' }, files: [file('Evidence').descriptor] };
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'requester', is_internal: false });
+  await customer.table('comments').where('comment_id', root.commentId).update({ is_internal: false });
+  await expect(drafts.beginCoManagedConversationDraft(db, principal, resource, request)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(create(principal, { operationId, parent, expectedAudience, text: 'Private IT reply' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('co_management_conversation_drafts').where('operation_id', operationId).first()).toBeUndefined();
+  expect(await customer.table('comments').where('comment_id', operationId).first()).toBeUndefined();
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ collaboration_audience: 'shared_it', is_internal: true });
+  await customer.table('comments').where('comment_id', root.commentId).update({ is_internal: true });
+  const begun = await drafts.beginCoManagedConversationDraft(db, principal, resource, request);
+  expect(await drafts.beginCoManagedConversationDraft(db, principal, resource, request)).toEqual(begun);
+  const textRequest = { operationId: randomUUID(), parent, expectedAudience, text: 'Current IT reply' };
+  const receipt = await create(principal, textRequest); expect(await create(principal, textRequest)).toEqual(receipt);
+  await expect(create(principal, { ...textRequest, expectedAudience: 'requester' })).rejects.toBeDefined();
+  await expect(drafts.beginCoManagedConversationDraft(db, principal, resource, { ...request, expectedAudience: 'bad' } as any)).rejects.toMatchObject({ code: 'INVALID_CONVERSATION_DRAFT' });
+  await expect(create(principal, { ...textRequest, expectedAudience: 'bad' } as any)).rejects.toMatchObject({ code: 'INVALID_COMMENT_CREATE' });
 }));

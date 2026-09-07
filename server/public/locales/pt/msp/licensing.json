@@ -528,7 +528,19 @@
         "shared_it": "Visível para as equipes de TI autorizadas de ambas as organizações, sem acesso para o solicitante.",
         "organization_private": "Visível somente para o pessoal autorizado da sua organização."
       },
-      "unknownOutcome": "Não foi possível confirmar se a mensagem foi salva. Tente novamente para verificar a mesma solicitação."
+      "unknownOutcome": "Não foi possível confirmar se a mensagem foi salva. Tente novamente para verificar a mesma solicitação.",
+      "files": {
+        "choose": "Anexar arquivos",
+        "help": "Até {{count}} arquivos de {{size}} MiB cada. Os arquivos são compartilhados com os destinatários desta mensagem.",
+        "remove": "Remover",
+        "removeNamed": "Remover {{name}}",
+        "invalid": "Remova os arquivos que excedem o limite de tamanho ou quantidade antes de enviar.",
+        "preparing": "Preparando arquivos…",
+        "uploading": "{{completed}} de {{total}} arquivos enviados…",
+        "publishing": "Publicando mensagem e arquivos…",
+        "notReady": "Alguns arquivos não estão prontos. Tente novamente para concluir o envio e publicar a mesma mensagem.",
+        "preparationFailed": "Não foi possível ler os arquivos selecionados. Selecione-os novamente ou remova-os antes de tentar de novo."
+      }
     },
     "attachments": {
       "title": "Anexos",

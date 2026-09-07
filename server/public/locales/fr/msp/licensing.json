@@ -528,7 +528,19 @@
         "shared_it": "Visible par les équipes informatiques autorisées des deux organisations, sans accès pour le demandeur.",
         "organization_private": "Visible uniquement par le personnel autorisé de votre organisation."
       },
-      "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement du message. Réessayez pour vérifier la même demande."
+      "unknownOutcome": "Nous n’avons pas pu confirmer l’enregistrement du message. Réessayez pour vérifier la même demande.",
+      "files": {
+        "choose": "Joindre des fichiers",
+        "help": "Jusqu’à {{count}} fichiers de {{size}} Mio chacun. Les fichiers sont partagés avec les destinataires de ce message.",
+        "remove": "Retirer",
+        "removeNamed": "Retirer {{name}}",
+        "invalid": "Retirez les fichiers qui dépassent la limite de taille ou de nombre avant l’envoi.",
+        "preparing": "Préparation des fichiers…",
+        "uploading": "{{completed}} fichiers sur {{total}} téléversés…",
+        "publishing": "Publication du message et des fichiers…",
+        "notReady": "Certains fichiers ne sont pas prêts. Réessayez pour terminer le téléversement et envoyer le même message.",
+        "preparationFailed": "Impossible de lire les fichiers sélectionnés. Sélectionnez-les à nouveau ou retirez-les avant de réessayer."
+      }
     },
     "attachments": {
       "title": "Pièces jointes",

@@ -16,7 +16,7 @@ import { transferCoManagedAttachment, type CoManagedAttachmentContext } from './
 const TABLE = 'co_management_conversation_drafts', FILES = 'co_management_conversation_attachments';
 export interface CoManagedDraftFile { attachmentId: string; fileName: string; mimeType: string; size: number; contentHash: string }
 export type CoManagedConversationDraftRequest = { operationId: string; content: CoManagedConversationContent; files: CoManagedDraftFile[] } &
-  ({ audience: CommentAudience; parent?: never } | { parent: CoManagedCommentReference; audience?: never });
+  ({ audience: CommentAudience; parent?: never; expectedAudience?: never } | { parent: CoManagedCommentReference; audience?: never; expectedAudience?: CommentAudience });
 export interface CoManagedConversationDraftReference { storeTenant: string; operationId: string }
 export interface CoManagedConversationDraftProgress extends CoManagedConversationDraftReference { status: 'draft' | 'published'; uploadedAttachmentIds: string[] }
 export type CoManagedConversationDraftReceipt = CoManagedCommentCreateReceipt | CoManagedPrivateCommentReceipt;
@@ -34,7 +34,7 @@ function targetSnapshot(input: CoManagedSharedResource): CoManagedSharedResource
   return { kind: 'ticket', tenant: input.tenant.toLowerCase(), relationshipId: input.relationshipId.toLowerCase(), id: input.id.toLowerCase() };
 }
 function snapshotRequest(input: CoManagedConversationDraftRequest): CoManagedConversationDraftRequest {
-  if (!input || !isCoManagedUuid(input.operationId) || Object.keys(input).some(key => !['operationId', 'content', 'files', 'parent', 'audience'].includes(key)) ||
+  if (!input || !isCoManagedUuid(input.operationId) || Object.keys(input).some(key => !['operationId', 'content', 'files', 'parent', 'audience', 'expectedAudience'].includes(key)) ||
       !input.content || Object.keys(input.content).some(key => !['text', 'document'].includes(key)) || !Array.isArray(input.files) || !input.files.length || input.files.length > 20) invalid();
   let content: CoManagedConversationContent; try { content = snapshotConversationContent(input.content); } catch { return invalid(); }
   const ids = new Set<string>();
@@ -52,9 +52,11 @@ function snapshotRequest(input: CoManagedConversationDraftRequest): CoManagedCon
     const parent = input.parent;
     if (input.audience !== undefined || !parent || Object.keys(parent).some(key => !['storeTenant', 'threadId', 'commentId'].includes(key)) ||
         ![parent.storeTenant, parent.threadId, parent.commentId].every(isCoManagedUuid)) invalid();
-    return { ...base, parent: { storeTenant: parent.storeTenant.toLowerCase(), threadId: parent.threadId.toLowerCase(), commentId: parent.commentId.toLowerCase() } };
+    if (input.expectedAudience !== undefined && !['requester', 'shared_it', 'organization_private'].includes(input.expectedAudience)) invalid();
+    return { ...base, parent: { storeTenant: parent.storeTenant.toLowerCase(), threadId: parent.threadId.toLowerCase(), commentId: parent.commentId.toLowerCase() },
+      ...(input.expectedAudience !== undefined ? { expectedAudience: input.expectedAudience } : {}) };
   }
-  if (!['requester', 'shared_it', 'organization_private'].includes(input.audience as string)) invalid();
+  if (input.expectedAudience !== undefined || !['requester', 'shared_it', 'organization_private'].includes(input.audience as string)) invalid();
   return { ...base, audience: input.audience! };
 }
 function draftReference(input: CoManagedConversationDraftReference): CoManagedConversationDraftReference {
@@ -100,6 +102,7 @@ async function destination(context: CoManagedSharedWorkContext, request: CoManag
       audience = parent.audience;
     }
   }
+  if (request.expectedAudience !== undefined && request.expectedAudience !== audience) deny();
   if (!audience || (privateStore && audience !== 'organization_private') || (!privateStore && actor.tenant !== resource.tenant && audience === 'organization_private')) deny();
   return { ...context, audience, draftOperationId: request.operationId,
     comment: { storeTenant: store, threadId: request.parent?.threadId ?? request.operationId, commentId: request.operationId } };
@@ -189,7 +192,7 @@ export async function publishCoManagedConversationDraft(db: Knex, inputActor: Co
     const common = { operationId: row.operation_id, ...request.content };
     const receipt = reference.storeTenant !== resource.tenant
       ? await mutateCoManagedPrivateTicketComment(context.trx, actor, resource, { ...common, kind: 'create', ...(request.parent ? { parent: request.parent } : {}) })
-      : await publishCustomer(context.trx, actor, resource, { ...common, ...(request.parent ? { parent: request.parent } : { audience: request.audience! }) });
+      : await publishCustomer(context.trx, actor, resource, { ...common, ...(request.parent ? { parent: request.parent, ...(request.expectedAudience !== undefined ? { expectedAudience: request.expectedAudience } : {}) } : { audience: request.audience! }) });
     checkedReceipt(receipt, context);
     await owner.table(TABLE).where('operation_id', row.operation_id).update({ status: 'published', receipt: JSON.stringify(receipt), published_at: context.trx.raw('clock_timestamp()') });
     return receipt;

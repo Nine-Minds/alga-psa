@@ -526,7 +526,19 @@
         "shared_it": "Sichtbar für berechtigte IT-Mitarbeitende beider Organisationen, ohne Zugriff für Anfragende.",
         "organization_private": "Nur für berechtigte Mitarbeitende Ihrer Organisation sichtbar."
       },
-      "unknownOutcome": "Das Speichern der Nachricht konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage zur Prüfung."
+      "unknownOutcome": "Das Speichern der Nachricht konnte nicht bestätigt werden. Wiederholen Sie dieselbe Anfrage zur Prüfung.",
+      "files": {
+        "choose": "Dateien anhängen",
+        "help": "Bis zu {{count}} Dateien mit jeweils {{size}} MiB. Dateien sind für den Empfängerkreis dieser Nachricht sichtbar.",
+        "remove": "Entfernen",
+        "removeNamed": "{{name}} entfernen",
+        "invalid": "Entfernen Sie vor dem Senden Dateien, die die Größen- oder Anzahlbegrenzung überschreiten.",
+        "preparing": "Dateien werden vorbereitet…",
+        "uploading": "{{completed}} von {{total}} Dateien hochgeladen…",
+        "publishing": "Nachricht und Dateien werden veröffentlicht…",
+        "notReady": "Einige Dateien sind noch nicht bereit. Versuchen Sie es erneut, um den Upload abzuschließen und dieselbe Nachricht zu senden.",
+        "preparationFailed": "Die ausgewählten Dateien konnten nicht gelesen werden. Wählen Sie sie erneut aus oder entfernen Sie sie vor dem nächsten Versuch."
+      }
     },
     "attachments": {
       "title": "Anhänge",

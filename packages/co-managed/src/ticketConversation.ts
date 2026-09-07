@@ -1,6 +1,6 @@
 import type { Knex } from 'knex';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
-import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources } from './conversationPolicy';
+import { coManagedConversationBodySources as historySources, coManagedConversationAuthorSources as authorSources, coManagedConversationAttachmentSources } from './conversationPolicy';
 import { tenantDb } from '@alga-psa/db';
 import { commentAudienceSql, type CommentAudience } from '@alga-psa/shared/lib/commentAudience';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
@@ -126,8 +126,8 @@ export async function getCoManagedTicketConversation(db: Knex, inputActor: CoMan
 
 /** Presentation hints only; every submission repeats command authorization.
  * Take update authority before read authority to avoid share-lock upgrades. */
-export async function getCoManagedConversationWriteAudiences(db: Knex, inputActor: CoManagedSessionActor,
-  resource: CoManagedSharedResource): Promise<CommentAudience[]> {
+export async function getCoManagedConversationContributionHints(db: Knex, inputActor: CoManagedSessionActor,
+  resource: CoManagedSharedResource): Promise<{ writeAudiences: CommentAudience[]; attachmentAudiences: CommentAudience[] }> {
   const actor = snapshotCoManagedSessionActor(inputActor);
   const foreign = actor.tenant !== resource.tenant;
   const authorize = foreign ? withCoManagedSharedWork : withCoManagedCustomerTicket;
@@ -137,10 +137,15 @@ export async function getCoManagedConversationWriteAudiences(db: Knex, inputActo
       const customerHidden = isCoManagedReadFieldHidden(hidden, [...historySources, 'comments', 'comment_threads']);
       const privateHidden = isCoManagedReadFieldHidden(hidden, [...historySources, 'co_management_private_threads', 'co_management_private_comments', 'revision']);
       await assertCoManagedSessionUnexpired(context.trx, actor);
-      return [...(customerHidden ? [] : ['requester', 'shared_it']), ...((foreign ? privateHidden : customerHidden) ? [] : ['organization_private'])] as CommentAudience[];
+      const writeAudiences = [...(customerHidden ? [] : ['requester', 'shared_it']), ...((foreign ? privateHidden : customerHidden) ? [] : ['organization_private'])] as CommentAudience[];
+      return { writeAudiences, attachmentAudiences: isCoManagedReadFieldHidden(hidden, [...coManagedConversationAttachmentSources, 'co_management_conversation_drafts']) ? [] : writeAudiences };
     }));
   } catch (error) {
-    if (error instanceof CoManagedSharedWorkError || error instanceof CoManagedLifecycleError) return [];
+    if (error instanceof CoManagedSharedWorkError || error instanceof CoManagedLifecycleError) return { writeAudiences: [], attachmentAudiences: [] };
     throw error;
   }
+}
+
+export async function getCoManagedConversationWriteAudiences(db: Knex, actor: CoManagedSessionActor, resource: CoManagedSharedResource): Promise<CommentAudience[]> {
+  return (await getCoManagedConversationContributionHints(db, actor, resource)).writeAudiences;
 }
