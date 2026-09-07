@@ -24,4 +24,16 @@ describe('API E2E application database configuration', () => {
       expect(() => applicationTestDatabaseConfig({ ...isolated, E2E_DB_PORT: port })).toThrow();
     }
   });
+
+  it('requires a valid ownership identity and loopback host for the default install database', () => {
+    const env = { ...isolated, E2E_DB_NAME: 'server', E2E_DATABASE_ID: '44c2c502-b83b-4dc7-8ec6-f1dc6a139fad' };
+    expect(applicationTestDatabaseConfig(env)).toMatchObject({ connection: { database: 'server' } });
+    expect(() => applicationTestDatabaseConfig({ ...env, E2E_DB_HOST: 'db.example.com' })).toThrow();
+    for (const E2E_DATABASE_ID of ['', 'arbitrary', '44c2c502-b83b-4dc7-8ec6-f1dc6a139fad trailing']) {
+      expect(() => applicationTestDatabaseConfig({ ...env, E2E_DATABASE_ID })).toThrow();
+    }
+    for (const E2E_DB_NAME of ['production', 'prod', 'sebastian_prod', 'postgres', 'template0', 'template1']) {
+      expect(() => applicationTestDatabaseConfig({ ...env, E2E_DB_NAME })).toThrow();
+    }
+  });
 });

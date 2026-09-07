@@ -39,7 +39,7 @@ export async function setupE2ETestEnvironment(options: {
   if (!['http:', 'https:'].includes(target.protocol) || target.username || target.password) {
     throw new Error('API E2E tests require an HTTP application URL without embedded credentials');
   }
-  const db = connectApplicationTestDatabase();
+  const db = await connectApplicationTestDatabase();
 
   try {
     await ensureApiServerRunning(baseUrl);
