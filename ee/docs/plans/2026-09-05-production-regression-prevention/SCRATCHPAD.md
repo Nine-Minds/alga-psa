@@ -2202,3 +2202,8 @@ open mandatory-runner assignment. Evidence: `evidence/visual-baseline-policy.jso
 - Added always-running Workspace database execution complete job and verifier. It independently derives the DB inventory and change selection from the consuming checkout, verifies raw collected/executed assertions and source metadata, and checks selector/producer job outcomes. Only independently proven docs/identical changes can be not applicable; schedules require execution.
 - Focused gate/adapter tests pass eight cases, including missing/new files, bad prerequisites, malformed/missing reports and unjustified skips. Verifier also accepts the actual prior 454-test clean database report against its matching historical revision; actionlint passes. Evidence: evidence/workspace-db-independent-gate.json.
 - Function-level real-artifact verification does not establish current clean CLI or native-job execution. Required-check configuration and global readiness remain open. No broad plan flags changed.
+
+### 2026-09-07 — verify database gate CLI and artifact lifecycle
+
+- Added a clean temporary-Git-checkout CLI test. It checks actual process exit and persisted aggregate results for matching artifacts, malformed report after prior success, dirty source, candidate mismatch, real docs-only diff, selector failure and newly tracked DB files.
+- Both gate tests pass (701.75 ms total). This complements prior actual-454-test-report verification: CLI payloads are synthetic and must not be reported as DB execution. Evidence: evidence/workspace-db-cli-lifecycle.json. Native workflow and protections remain unverified.
