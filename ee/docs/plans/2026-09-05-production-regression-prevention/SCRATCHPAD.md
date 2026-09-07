@@ -1618,3 +1618,9 @@
 - Wire regression reproduced authorization code accepted for different client (200 instead of400). Codes now require original client and exact redirect; refresh tokens retain and require client identity. Invalid attempts leave valid grants usable. Token route resolves HTTP Basic credentials and rejects conflicting header/body client IDs.
 - Existing expiry fixture had refreshed without a client; now supplies client identity exposed in control token diagnostics. Full9wiretests pass and package typecheck passes. Basic secret values remain unverified; application registration, PKCE and organisation consent still outstanding. No F037 completion claim.
 - Official standard-flow reference and before/after details: evidence/xero-oauth-client-binding.json. Native verification remains pending; preserve active browser run.
+
+### 2026-09-07 — Xero S256 verifier enforcement
+
+- Wire regression initially accepted invalid challenge method (302 vs400). Authorization now validates supplied S256 challenge; exchange requires43–128character verifier with matching SHA256 base64url before consuming code. Wrong/missing verifiers preserve the grant, and a successful exchange consumes it.
+- All10Xero wire tests and package typecheck pass. Application registry/secret validation remain outstanding, so absence of PKCE cannot yet be checked against registered application type. F037 remains incomplete. Evidence: evidence/xero-pkce-verification.json.
+- Published browser run34113539423 now executes jobs101721277526(EE) and101721277537(CE); preserve active run before publishing follow-ups.

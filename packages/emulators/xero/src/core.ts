@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { EmulatorCore, HostEnv } from '@alga-psa/emulator-host';
 
 /** Xero-shaped error the wire shell serializes. */
@@ -51,7 +52,7 @@ const DEFAULT_SCOPE = 'offline_access accounting.settings.read accounting.invoic
 export class XeroEmulatorCore implements EmulatorCore {
   accessTokenTtlSeconds = 1800;
   authorizeRequests: XeroAuthorizeRequest[] = [];
-  private codes = new Map<string, { clientId: string; redirectUri: string; scope: string }>();
+  private codes = new Map<string, { clientId: string; redirectUri: string; scope: string; codeChallenge?: string }>();
   private accessTokens = new Map<string, { expiresAt: number; scope: string }>();
   private refreshTokens = new Map<string, { clientId: string; scope: string }>();
   private organisations: XeroOrganisation[] = [];
@@ -94,6 +95,11 @@ export class XeroEmulatorCore implements EmulatorCore {
     if (!query.client_id || !redirectUri) {
       throw new XeroWireError(400, { error: 'invalid_request', Detail: 'client_id and redirect_uri are required' });
     }
+    const codeChallenge = query.code_challenge;
+    if ((codeChallenge !== undefined || query.code_challenge_method !== undefined)
+      && (query.code_challenge_method !== 'S256' || !/^[A-Za-z0-9_-]{43}$/.test(codeChallenge ?? ''))) {
+      throw new XeroWireError(400, { error: 'invalid_request' });
+    }
     const code = this.newId('code');
     const scope = query.scope ?? '';
     this.authorizeRequests.push({
@@ -104,7 +110,7 @@ export class XeroEmulatorCore implements EmulatorCore {
       code,
       query,
     });
-    this.codes.set(code, { clientId: query.client_id, redirectUri, scope });
+    this.codes.set(code, { clientId: query.client_id, redirectUri, scope, codeChallenge });
     return { redirectUri, code, state: query.state ?? '' };
   }
 
@@ -113,6 +119,13 @@ export class XeroEmulatorCore implements EmulatorCore {
       const record = this.codes.get(String(params.code));
       if (!record || record.clientId !== params.client_id || record.redirectUri !== params.redirect_uri) {
         throw new XeroWireError(400, { error: 'invalid_grant' });
+      }
+      if (record.codeChallenge) {
+        const verifier = params.code_verifier ?? '';
+        if (!/^[A-Za-z0-9._~-]{43,128}$/.test(verifier)
+          || createHash('sha256').update(verifier).digest('base64url') !== record.codeChallenge) {
+          throw new XeroWireError(400, { error: 'invalid_grant' });
+        }
       }
       this.codes.delete(String(params.code));
       return this.issueTokens(record.scope || DEFAULT_SCOPE, record.clientId);

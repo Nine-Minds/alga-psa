@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createHash } from 'node:crypto';
 import { EmulatorHost } from '@alga-psa/emulator-host';
 import xeroEmulator from '../src/index';
 
@@ -140,6 +141,34 @@ describe('xero emulator', { shuffle: false }, () => {
     expect(rotated.status).toBe(200);
     expect((await rotated.json()).refresh_token).not.toBe(token.refresh_token);
     expect((await exchange(request)).status).toBe(400);
+  });
+
+  it('requires the S256 verifier before exchanging a PKCE authorization code', async () => {
+    const verifier = 'synthetic-verifier-'.repeat(4);
+    const challenge = createHash('sha256').update(verifier).digest('base64url');
+    const redirectUri = 'http://localhost/pkce-callback';
+    const query = { response_type: 'code', client_id: 'pkce-app', redirect_uri: redirectUri,
+      code_challenge: challenge, code_challenge_method: 'S256' };
+    const authorize = async (params: Record<string, string>) => fetch(`${base}/identity/connect/authorize?${new URLSearchParams(params)}`, { redirect: 'manual' });
+    for (const patch of [{ code_challenge_method: 'plain' }, { code_challenge: '' }, { code_challenge: 'invalid' }]) {
+      expect((await authorize({ ...query, ...patch })).status).toBe(400);
+    }
+    const granted = await authorize(query);
+    expect(granted.status).toBe(302);
+    const code = new URL(granted.headers.get('location')!).searchParams.get('code')!;
+    const exchange = (code_verifier: string) => fetch(`${base}/connect/token`, {
+      method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', client_id: 'pkce-app', redirect_uri: redirectUri, code, code_verifier }),
+    });
+    for (const wrong of ['', 'different-verifier-'.repeat(4), 'short']) {
+      const denied = await exchange(wrong);
+      expect(denied.status).toBe(400);
+      expect(await denied.json()).toEqual({ error: 'invalid_grant' });
+    }
+    const valid = await exchange(verifier);
+    expect(valid.status).toBe(200);
+    expect((await valid.json()).access_token).toEqual(expect.any(String));
+    expect((await exchange(verifier)).status).toBe(400);
   });
 
   it('lists connected organisations, including seeded additional ones', async () => {
