@@ -40,7 +40,8 @@ export function isApplianceNodeTest(file) {
 // Nx test targets. Keep runtime requirements explicit during reconciliation.
 export function isAdditionalWorkspaceTest(file, lane) {
   if (lane === 'temporal-engine') {
-    return file === 'ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts'
+    return file === 'ee/temporal-workflows/src/workflows/__tests__/sla-ticket-workflow.integration.test.ts'
+      || file === 'ee/temporal-workflows/src/workflows/portal-domains/__tests__/registration.workflow.integration.test.ts'
       || /^ee\/temporal-workflows\/src\/workflows\/__tests__\/(tenant-product-upgrade-workflow|tenant-creation-appliance|sla-ticket-workflow|managed-email-domain-workflow)\.test\.ts$/.test(file);
   }
   if (lane === 'temporal-readiness') {

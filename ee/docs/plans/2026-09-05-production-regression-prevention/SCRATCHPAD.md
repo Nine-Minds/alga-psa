@@ -1420,3 +1420,17 @@
 - Managed-email workflow: six cases pass (verification success/failure/deadline, reuse, delete trigger and in-flight delete). Portal-registration workflow: three cases pass against the ephemeral engine. Added both to required engine selection and independent inventory. Exact runner passes five files / 25 tests, zero skips, 8.51 seconds. Evidence: evidence/temporal-engine-domains.json.
 - Separate sla-ticket-workflow.integration.test.ts failed four cases during bundling because workflowsPath pointed to src without an entry module. Local uncommitted repair points its three worker constructions to ../sla-ticket-workflow.ts.
 - Rerun session 58160 remains live, log /tmp/alga-temporal-sla-transitions-after-82cc.log. It reached the lifecycle workflow and appears to wait on responseNotification without enabling virtual time skipping. Investigate after terminal confirmation; do not restart while live. Suspect its Date.now-based deadline mock also needs the workflow-supplied clock after time skips. This suite is not included in the passing engine count.
+
+### 2026-09-07 — SLA integration timing repairs remain under test
+
+- Session 58160 ended: one pass, three failures (missing expected 100% notification, lifecycle timeout without virtual-time advancement, restart query before deadline initialization).
+- Local uncommitted changes preserve all cases: direct SLA workflow bundle, deadline mock based on workflow currentTime plus pause, explicit virtual sleeps, polling for initialized/phase state, include supported 100% breach notification. First rerun session 36368 ended two passes/two failures: lifecycle reached resolution breach before completion signal, restart timed out.
+- Adjusted lifecycle resolution target to ten minutes and advance three minutes to its warning; explicitly advance eleven virtual minutes after restart. Current session 25564 remains live, log /tmp/alga-temporal-sla-clock-final-82cc.log; reached restarted worker but no final outcome yet. Do not restart before terminal confirmation. Next investigation if still timing out: sticky task routing/cache around worker shutdown, while preserving actual cold-worker replay coverage.
+- This suite is still excluded from claimed passing engine count and has not been added to mandatory engine selection. Changes remain uncommitted pending meaningful verification.
+
+### 2026-09-07 — SLA cold replay repaired and required
+
+- Session 25564 ended three passes / one restart timeout. The following cold-replay attempt is terminal: four cases passed in 2.58 seconds. Disabling workflow caching on both restart-test workers resolved that test-environment stall; this does not establish a production SDK defect.
+- Retained all four behavioral cases, corrected workflow entry paths and virtual-clock fixtures, and strengthened restart verification to require exactly [50, 75, 90, 100] notifications after a fresh worker resumes the same workflow.
+- Added SLA integration to engine config and independent candidate discovery. Exact runner session 71496 exited zero: six files / 29 tests, no skips or missing cases, 10.41 seconds. Evidence: evidence/temporal-engine-sla-replay.json.
+- PR 3343 checks still show browser CE/EE, server unit coverage and full integration pending. Known Nx billing failure has a local committed fix; native verification and publication of the current batch remain pending. Full plan is not complete.
