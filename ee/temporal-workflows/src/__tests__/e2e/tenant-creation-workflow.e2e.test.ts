@@ -19,74 +19,6 @@ interface TestDatabase {
   getStatusesForTenant: (tenantId: string) => Promise<any[]>;
 }
 
-// Mock database for testing when real database is not available
-function createMockTestDatabase(): TestDatabase {
-  return {
-    async cleanup() {
-      // Mock cleanup - no-op
-    },
-    
-    async getTenant(tenantId: string) {
-      // Mock tenant data
-      return {
-        tenant: tenantId,
-        client_name: 'Mock Tenant',
-        email: 'mock@example.com',
-        created_at: new Date(),
-      };
-    },
-    
-    async getUserById(userId: string, tenantId: string) {
-      // Mock user data
-      return {
-        user_id: userId,
-        tenant: tenantId,
-        first_name: 'Mock',
-        last_name: 'User',
-        email: 'mock@example.com',
-        user_type: 'internal',
-      };
-    },
-    
-    async getUserRoles(userId: string, tenantId: string) {
-      // Mock role data
-      return [{
-        role_id: 'mock-role-id',
-        role_name: 'Admin',
-        tenant: tenantId,
-        user_id: userId,
-      }];
-    },
-    
-    async getClientsForTenant(tenantId: string) {
-      // Mock client data
-      return [{
-        client_id: 'mock-client-id',
-        tenant: tenantId,
-        client_name: 'Mock Client',
-        account_manager_id: 'mock-user-id',
-      }];
-    },
-    
-    async getRolesForTenant(tenantId: string) {
-      // Mock roles
-      return [
-        { role_id: '1', tenant: tenantId, role_name: 'Admin' },
-        { role_id: '2', tenant: tenantId, role_name: 'User' },
-        { role_id: '3', tenant: tenantId, role_name: 'Client' },
-      ];
-    },
-    
-    async getStatusesForTenant(tenantId: string) {
-      // Mock statuses
-      return [
-        { id: '1', tenant: tenantId, name: 'Open' },
-        { id: '2', tenant: tenantId, name: 'Closed' },
-      ];
-    }
-  };
-}
-
 async function setupTestDatabase(): Promise<TestDatabase> {
   const knex = require('knex');
   
@@ -140,8 +72,6 @@ async function setupTestDatabase(): Promise<TestDatabase> {
         for (const tenantId of createdTenants) {
           await tenantDb(db, tenantId).table('tenants').del();
         }
-      } catch (error) {
-        console.error('Cleanup error:', error);
       } finally {
         await db.destroy();
       }
@@ -284,20 +214,15 @@ describe('Tenant Creation Workflow E2E Tests', () => {
       expect(result.temporaryPassword).toHaveLength(12);
       expect(result.createdAt).toBeDefined();
 
-      // Basic database verification - simplified for now
-      try {
-        const tenant = await testDb.getTenant(result.tenantId);
-        expect(tenant).toBeDefined();
-        expect(tenant.client_name).toBe(input.clientName ?? input.tenantName);
-        
-        const user = await testDb.getUserById(result.adminUserId, result.tenantId);
-        expect(user).toBeDefined();
-        expect(user.first_name).toBe(input.adminUser.firstName);
-        expect(user.email).toBe(input.adminUser.email);
-      } catch (dbError) {
-        console.warn('Database verification skipped due to:', dbError);
-        // Continue test even if DB verification fails
-      }
+      // Persisted state is mandatory: failed reads or assertions fail the test.
+      const tenant = await testDb.getTenant(result.tenantId);
+      expect(tenant).toBeDefined();
+      expect(tenant.client_name).toBe(input.clientName ?? input.tenantName);
+
+      const user = await testDb.getUserById(result.adminUserId, result.tenantId);
+      expect(user).toBeDefined();
+      expect(user.first_name).toBe(input.adminUser.firstName);
+      expect(user.email).toBe(input.adminUser.email);
 
       // No need to shutdown worker in individual tests
     });
