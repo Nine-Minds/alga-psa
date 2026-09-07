@@ -38,8 +38,22 @@ file/project/title identity, first attempt, retry count, attempt statuses,
 edition and lane outcome. Missing execution stays incomplete; retry-only passes
 stay failed. It omits raw error and attachment payloads. `artifactManifest` is
 currently null until immutable release-component identity is wired; this browser
-lane result does not establish release readiness. The artifact is not yet
-published into a live Sheet readiness tab.
+lane result does not establish release readiness.
+
+`scripts/record-browser-metrics.mjs` consumes this artifact through
+`TEST_METRICS_BROWSER`. The browser workflow invokes it after diagnostics and
+before API execution. With the existing Google metrics credentials it appends
+to `browser_readiness`; without them it still writes a job summary. Live tab
+creation and readback must be verified on the next candidate.
+
+The tab uses schema version 2. `row_kind=run` carries collected/executed totals
+once; `row_kind=journey` carries file/project/title identity, required/observed
+flags, outcome, first attempt and retry count. Both carry edition, full tested
+SHA, lane status and run URL. Missing, stale or wrong-edition evidence produces
+an incomplete run row with unknown counts blank. Filter by `row_kind` before
+aggregating. A PR's tested SHA may be GitHub's merge commit, rather than its
+branch head; mismatches are rejected. Artifact identity remains blank until
+release manifests are wired. `--dry-run` prints rows without accessing Google.
 
 Rows land on the `metrics` tab. The script writes the header row on first use.
 For an older schema, it verifies every existing heading and appends only the

@@ -797,6 +797,16 @@ jobs:
             ${{ runner.temp }}/algasim-image-id.txt
           retention-days: 7
 
+      - name: Record browser journey readiness
+        if: always() && steps.wait_for_setup.outputs.status == 'success' && !env.ACT
+        continue-on-error: true
+        run: node scripts/record-browser-metrics.mjs
+        env:
+          TEST_METRICS_BROWSER: e2e-tests/execution-evidence/metrics.json
+          E2E_EDITION: ${{ matrix.edition }}
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
       - name: Install API test dependencies
         id: api_dependencies
         if: ${{ !cancelled() && steps.wait_for_setup.outputs.status == 'success' }}

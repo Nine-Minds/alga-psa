@@ -1091,3 +1091,13 @@
 - Both candidate 2de93 browser stages failed, but jobs 101624201400/101624201410 remain live in API execution. Direct log retrieval returns HTTP 404 until those jobs finish, and the workflow previously uploaded Playwright evidence only after API execution.
 - Moved the existing Playwright diagnostic upload directly after browser execution, preserving its condition, name, paths and retention. This makes completed browser traces/reports available while the independent API lane runs; no duplicate artifact or weakened test gate introduced.
 - Reviewed the reordered diff and actionlint passed. This YAML-only timing change has no synthetic source-string test. It does not make current-candidate diagnostics available retroactively; native after-change validation remains pending.
+
+### Browser readiness Sheet recorder — 2026-09-07
+- Added a dedicated browser_readiness recorder and CI invocation after browser diagnostics, before API execution. Run totals occur only on run rows; journey rows preserve identity/first attempt/retries. Missing/stale/wrong-edition evidence yields incomplete with unknown counts blank. Existing Sheet tables stay unchanged.
+- Eight local row/projection tests passed; workflow actionlint passed. Historical df9b artifact dry-run yielded one failed run row and 24 journey rows with two flaky outcomes. Initial dry-run rejected an incorrectly supplied branch-head SHA; verified correct tested merge SHA 48a6b45a38b427b854d70889443c3598370238e8. No live Google write performed. Evidence: browser-sheet-recorder.json.
+- Native publishing/live readback, cancellation reconciliation, run-attempt deduplication, artifact identities and global readiness remain outstanding; F024/F025 remain false.
+
+### Native candidate 2de93 enterprise results — 2026-09-07
+- Job 101624201410 is terminal failure. API ownership attestation passed; API execution: 332 passed, 2 failed across 19 files. Accounting export append scenario receives ACCOUNTING_EXPORT_EMPTY_BATCH (409 versus expected 201) at accountingExports.e2e.test.ts:261. Extension installation receives 401 versus expected 202 at extensions.e2e.test.ts:118. These require diagnosis, not relaxed assertions.
+- Browser execution has three failed invoice journeys: invoice-generation, time-approval-invoice, usage-invoice-preview. Logs show checkbox.check reports the selection did not change; time approval retry also has a failed value assertion. Root cause remains unproven. Completed job log retained at /tmp/alga-browser-ee-2de93-final.log.
+- Full integration job 101620543698 revalidated in_progress. Pushes remain held to preserve its execution. Browser Sheet recorder focused verification rerun: 8 passed, zero skipped/failed.
