@@ -346,7 +346,12 @@ describe('xero emulator', { shuffle: false }, () => {
     });
     expect(badItem.status).toBe(400);
     const badBody = (await badItem.json()) as any;
-    expect(JSON.stringify(badBody)).toContain("Item code '200' is not valid");
+    // Independent accounting Error schema and examples from Xero's OpenAPI:
+    // https://github.com/XeroAPI/Xero-OpenAPI/blob/master/xero_accounting.yaml
+    expect(badBody).toMatchObject({
+      ErrorNumber: 10, Type: 'ValidationException', Message: expect.any(String),
+      Elements: [{ ValidationErrors: expect.arrayContaining([{ Message: "Item code '200' is not valid" }]) }],
+    });
 
     // Archived account code is rejected too.
     const archivedAccount = await fetch(api('/Invoices'), {
@@ -355,6 +360,15 @@ describe('xero emulator', { shuffle: false }, () => {
       body: JSON.stringify(invoiceFor({ AccountCode: '299' })),
     });
     expect(archivedAccount.status).toBe(400);
+    expect(await archivedAccount.json()).toMatchObject({ ErrorNumber: 10, Type: 'ValidationException',
+      Message: expect.any(String), Elements: [{ ValidationErrors: expect.any(Array) }] });
+
+    const invalidContact = await fetch(api('/Contacts'), {
+      method: 'POST', headers: authed(), body: JSON.stringify({ Contacts: [{ Name: '' }] }),
+    });
+    expect(invalidContact.status).toBe(400);
+    expect(await invalidContact.json()).toMatchObject({ ErrorNumber: 10, Type: 'ValidationException',
+      Message: expect.any(String), Elements: [{ ValidationErrors: [{ Message: 'Contact Name is required' }] }] });
 
     // Account-code-only line (no ItemCode property) is valid.
     const accountOnly = await fetch(api('/Invoices'), {

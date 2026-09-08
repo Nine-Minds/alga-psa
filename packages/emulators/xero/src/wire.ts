@@ -117,6 +117,17 @@ export function wire(router: Router, core: XeroEmulatorCore, _env: HostEnv): voi
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof XeroWireError) {
+      if (err.status === 400 && err.body.Type === 'ValidationException') {
+        res.status(400).json({
+          ErrorNumber: 10,
+          Type: 'ValidationException',
+          Message: 'A validation exception occurred',
+          Elements: Array.isArray(err.body.Elements) ? err.body.Elements : [{
+            ValidationErrors: [{ Message: String(err.body.Detail ?? err.message) }],
+          }],
+        });
+        return;
+      }
       res.status(err.status).json(err.body);
       return;
     }

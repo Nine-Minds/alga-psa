@@ -637,3 +637,14 @@ which demonstrates HTTP 400 with an `invalid_grant` OAuth error, and the
 [Intuit OAuth JavaScript client](https://github.com/intuit/oauth-jsclient/blob/master/README.md),
 reviewed 2026-09-08. Authorization-page behavior and live Intuit sandbox drift
 remain outside these token-error checks.
+
+### Xero accounting validation errors
+
+Invoice and contact validation failures use the accounting error structure
+from [Xero's published OpenAPI specification](https://github.com/XeroAPI/Xero-OpenAPI/blob/master/xero_accounting.yaml):
+`ErrorNumber`, `Type`, `Message`, and per-element `ValidationErrors`. The wire
+response does not substitute problem-detail fields for that accounting
+contract. Tests exercise invalid item codes, archived accounts and a missing
+contact name through HTTP. OAuth error objects keep their separate shape.
+This checks representative rejection payloads; it does not claim live sandbox
+verification, full batch-error semantics or complete Xero API coverage.
