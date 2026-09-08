@@ -146,6 +146,7 @@ describe('QuickAddInteraction scheduling lifecycle', () => {
     mocks.users.mockResolvedValue([]);
     mocks.addInteraction.mockResolvedValue({ interaction_id: 'interaction' });
     mocks.teams.getTeamsMeetingCapability.mockResolvedValue({ available: true });
+    mocks.teams.scheduleTeamsMeeting.mockResolvedValue({ success: true, data: { interaction_id: 'interaction' } });
   });
 
   it.each(['Cancel', 'Close dialog', 'parent'])('resets scheduling after %s and waits for fresh permissions', async (closeMethod) => {
@@ -218,5 +219,86 @@ describe('QuickAddInteraction scheduling lifecycle', () => {
     expect(summary).toHaveTextContent('your AlgaPSA calendar');
     expect(mocks.permissions).toHaveBeenCalledOnce();
     expect(mocks.users).toHaveBeenCalledOnce();
+  });
+
+  it('submits multiple calendar assignees through Teams from a ticket', async () => {
+    render(<QuickAddInteraction {...props} />);
+    await screen.findByRole('option', { name: 'Online Meeting' });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select Interaction Type' }), { target: { value: 'online' } });
+    const picker = await screen.findByRole('listbox', { name: 'Schedule for' });
+    fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Team follow-up' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Start Time' }), { target: { value: '2026-10-01T12:00:00.000Z' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'End Time' }), { target: { value: '2026-10-01T12:30:00.000Z' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Owner' }), { target: { value: 'colleague' } });
+    for (const option of Array.from((picker as HTMLSelectElement).options)) option.selected = true;
+    fireEvent.change(picker);
+    expect(screen.queryByRole('checkbox', { name: 'Add to schedule' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save Interaction' }));
+
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledOnce());
+    expect(mocks.teams.scheduleTeamsMeeting).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Team follow-up',
+      startDateTime: new Date('2026-10-01T12:00:00.000Z'),
+      endDateTime: new Date('2026-10-01T12:30:00.000Z'),
+      interactionUserId: 'colleague',
+      createScheduleEntry: true,
+      scheduleAssignedUserIds: ['creator', 'colleague'],
+    }));
+    expect(mocks.addInteraction).not.toHaveBeenCalled();
+  });
+
+  it.each(['call', 'online'])('books only self without schedule permission when the %s owner is a colleague', async (type) => {
+    mocks.permissions.mockResolvedValue([]);
+    render(<QuickAddInteraction {...props} />);
+    await screen.findByRole('option', { name: 'Call' });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select Interaction Type' }), { target: { value: type } });
+    fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Follow-up' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Start Time' }), { target: { value: '2026-10-01T12:00:00.000Z' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'End Time' }), { target: { value: '2026-10-01T12:30:00.000Z' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Owner' }), { target: { value: 'colleague' } });
+    if (type === 'online') {
+      await waitFor(() => expect(screen.queryByRole('checkbox', { name: 'Add to schedule' })).toBeNull());
+    } else {
+      const toggle = screen.getByRole('checkbox', { name: 'Add to schedule' }) as HTMLInputElement;
+      if (!toggle.checked) fireEvent.click(toggle);
+    }
+    expect(screen.queryByRole('listbox', { name: 'Schedule for' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Interaction' }));
+
+    await waitFor(() => expect(props.onClose).toHaveBeenCalledOnce());
+    if (type === 'online') {
+      expect(mocks.teams.scheduleTeamsMeeting).toHaveBeenCalledWith(expect.objectContaining({
+        interactionUserId: 'colleague', createScheduleEntry: true, scheduleAssignedUserIds: ['creator'],
+      }));
+      expect(mocks.addInteraction).not.toHaveBeenCalled();
+    } else {
+      expect(mocks.addInteraction).toHaveBeenCalledWith(
+        expect.objectContaining({ user_id: 'colleague', ticket_id: 'ticket' }),
+        { createScheduleEntry: true, scheduleAssignedUserIds: ['creator'] },
+      );
+      expect(mocks.teams.scheduleTeamsMeeting).not.toHaveBeenCalled();
+    }
+  });
+
+  it('keeps the selected assignee and draft open when Teams creation fails', async () => {
+    const error = 'Microsoft Teams meeting could not be created. Please try again or create it manually in Teams.';
+    mocks.teams.scheduleTeamsMeeting.mockResolvedValue({ success: false, error });
+    render(<QuickAddInteraction {...props} />);
+    await screen.findByRole('option', { name: 'Online Meeting' });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Select Interaction Type' }), { target: { value: 'online' } });
+    await screen.findByRole('listbox', { name: 'Schedule for' });
+    fireEvent.change(screen.getByPlaceholderText('Title'), { target: { value: 'Follow-up' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Start Time' }), { target: { value: '2026-10-01T12:00:00.000Z' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'End Time' }), { target: { value: '2026-10-01T12:30:00.000Z' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Owner' }), { target: { value: 'colleague' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Interaction' }));
+
+    expect(await screen.findByText(error)).toBeInTheDocument();
+    expect(screen.getByRole('listbox', { name: 'Schedule for' })).toHaveValue(['colleague']);
+    expect(screen.getByPlaceholderText('Title')).toHaveValue('Follow-up');
+    expect(props.onClose).not.toHaveBeenCalled();
+    expect(props.onInteractionAdded).not.toHaveBeenCalled();
+    expect(mocks.addInteraction).not.toHaveBeenCalled();
   });
 });
