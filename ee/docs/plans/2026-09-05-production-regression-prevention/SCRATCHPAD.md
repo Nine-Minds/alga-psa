@@ -2708,3 +2708,8 @@ Actual filename invocation exposed ERR_INPUT_TYPE_NOT_ALLOWED, missed by VM-only
 ### Current-source complete host tooling validation
 
 Revalidated PR3343 via GitHub: still OPEN at7b170294 with10failedchecks, not current local fixes. Full canonical host tooling run at527b1ac4f2539558213c36038bebcc7ba6d7314c terminatedsuccessfully:602/602tests,60required files,0fail/skip/todo/cancel,153.46s. Evidencehashes in evidence/host-tooling-527b1a.json. Argo validator separate7tests; application/browser/Temporal/Citus current-source evidence stillneeded. NoDocker. Publisher preview healthfailures stillignored and nonexistent api/version tolerated; this is a concrete remaining deploymentvalidation gap. Product taxTODOs and publicationapproval remainunresolved. Fullgoal notcomplete.
+
+
+### Preview health refusal and actual workflow lint
+
+Applied argo-preview-health.patch locally in infrastructure checkout. Health HTTP503, redirects, malformed JSON and non-ok status now block before manual approval; TLS verified, target blue/green validated, requestsbounded25s. Nine host behavioral checks pass including actual containercommand invocation. Removed ignored nonexistent api/version call. Current api/health staticliveness only; no businesssmokeclaim. Strict combined lint found and fixed identical duplicate determine-colors and illegal template-level imagePullSecrets (same secret already spec-level). Build/composite/migrate/deploy templates all pass offline strict lint together. No cluster/networkpreview/Docker/publish. F020/F023 remainfalse.
