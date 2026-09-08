@@ -2703,3 +2703,8 @@ Applied argo-source-readiness.patch to the local nm-kube-config app builder afte
 ### Argo process invocation regression
 
 Actual filename invocation exposed ERR_INPUT_TYPE_NOT_ALLOWED, missed by VM-only tests. Replaced direct Node filename command with sh stdin redirection, retaining explicit ES module parsing without version-specific default-module flags. Added real subprocess case using command extracted from YAML and extensionless script file: red before, green after. All7 behavioral cases and offline Argo lint pass on host Node25. No Docker, publication or cluster application. The container remains Node22; native execution remains unproven.
+
+
+### Current-source complete host tooling validation
+
+Revalidated PR3343 via GitHub: still OPEN at7b170294 with10failedchecks, not current local fixes. Full canonical host tooling run at527b1ac4f2539558213c36038bebcc7ba6d7314c terminatedsuccessfully:602/602tests,60required files,0fail/skip/todo/cancel,153.46s. Evidencehashes in evidence/host-tooling-527b1a.json. Argo validator separate7tests; application/browser/Temporal/Citus current-source evidence stillneeded. NoDocker. Publisher preview healthfailures stillignored and nonexistent api/version tolerated; this is a concrete remaining deploymentvalidation gap. Product taxTODOs and publicationapproval remainunresolved. Fullgoal notcomplete.
