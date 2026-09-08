@@ -79,4 +79,6 @@ export * from './nativeTimeSheetLifecycle';
 export * from './nativeTimePeriod';
 export * from './nativeTimePeriodSettings';
 
-export * from './inboundNamedConversationEmail';
+export { admitNamedConversationEmailReply } from './inboundNamedConversationEmail';
+export { listNamedReplyReviews, getNamedReplyReview, resolveNamedReplyReview,
+  type NamedReplyReviewDestination, type ResolveNamedReplyReviewRequest } from './inboundNamedConversationReview';

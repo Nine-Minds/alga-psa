@@ -2,7 +2,7 @@
 
 - Slug: `ticket-conversations`
 - Date: 2026-09-07
-- Status: Scope planned from the agreed design; container, draft, internal Post, navigator and reviewed vendor Send and initial qualified inbound reply implementation is recorded in the checklists and scratchpad. The full feature remains incomplete.
+- Status: Scope planned from the agreed design; container, draft, internal Post, navigator and reviewed vendor Send and initial qualified inbound reply/protected review implementation is recorded in the checklists and scratchpad. The full feature remains incomplete.
 - Selected UI: **Option C — persistent conversation navigator**.
 - Dependency: [Co-Managed IT](../2026-09-06-co-managed-it-plan.md), branch `feature/co-managed-it`.
 - Checklists: [features.json](features.json), [tests.json](tests.json). Working evidence: [SCRATCHPAD.md](SCRATCHPAD.md).
@@ -125,7 +125,7 @@ Only explicitly sent text/quotes and selected attachments leave the conversation
 
 Extend the existing email reply admission and token/header mechanisms to identify the qualified ticket, conversation, originating organization and mailbox. Provider message IDs, Message-ID, In-Reply-To/References and existing reply artifacts must resolve consistently within the provider/mailbox scope. Validate conflicting evidence and token/admission rules before writing content. A subject ticket number alone is not authority to place a side reply into Requester.
 
-A validly correlated vendor reply, including one from a newly introduced colleague, lands in that vendor conversation with its files and organization boundary intact. Email correspondence admission is not a login grant. Ambiguous, conflicting or untrusted replies use the existing unresolved/quarantine path (extend it if needed) for authorized review; never guess into the requester conversation. Authorized resolution selects the intended destination explicitly and reuses duplicate protection.
+A validly correlated vendor reply, including one from a newly introduced colleague, lands in that vendor conversation with its files and organization boundary intact. Email correspondence admission is not a login grant. Ambiguous, conflicting or untrusted replies use the existing unresolved/quarantine path (extend it if needed) for authorized review; never guess into the requester conversation. Authorized resolution selects the intended destination explicitly and reuses duplicate protection. The protected review surface lives under Email Settings → Held replies for administrators of the receiving mailbox organization (`ticket_settings:update`). Seeing one possible ticket destination or holding a foreign send delegation does not grant access to raw held mail. Reviewers choose from currently writable vendor conversations using that mailbox; resolution rechecks source integrity, sender authentication and destination authority and records one durable resolution against the original inbox.
 
 Deduplicate provider retries and attachment imports; one accepted delivery yields one published message and one set of notification effects. Preserve original/sanitized content and accepted envelope metadata through existing email infrastructure. Local and co-managed inbound paths both need named-conversation awareness; legacy requester routes remain compatible.
 

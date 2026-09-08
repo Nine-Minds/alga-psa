@@ -370,7 +370,7 @@
   {
     "id": "F047",
     "description": "Route ambiguous, contradictory or untrusted side replies to protected review without a subject-only requester fallback.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]

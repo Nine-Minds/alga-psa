@@ -320,6 +320,32 @@ interface CommitResult {
   error?: string;
 }
 
+/** An authorized reviewer may resume this specific terminal quarantine. Source
+ * loading and review happen before this transaction; the original inbox,
+ * effect uniqueness and artifact manifest remain the publication authority.
+ * The injected admission must authorize the explicit destination itself. */
+export async function resolveQuarantinedNamedReply(trx: Knex.Transaction, input: {
+  tenant: string; providerId: string; inboxId: string; sourceSha256: string; operationId: string;
+  emailData: Parameters<typeof processInboundEmailInApp>[0]['emailData']; admission: NamedConversationReplyAdmission;
+}): Promise<{ ticketId: string; commentId: string }> {
+  if (!trx.isTransaction) throw new Error('Reply resolution requires a transaction');
+  await assertCoManagedOperationalWrite(trx, input.tenant);
+  const home = tenantDb(trx, input.tenant);
+  const inbox = await home.table('inbound_email_inbox').where({ inbox_id: input.inboxId, provider_id: input.providerId }).forUpdate().first();
+  if (!inbox || inbox.status !== 'skipped' || inbox.outcome_reason !== 'quarantined:conversation_reply_requires_admission' ||
+    inbox.source_sha256 !== input.sourceSha256 || input.emailData.sourceSha256 !== input.sourceSha256 ||
+    input.emailData.tenant !== input.tenant || input.emailData.providerId !== input.providerId ||
+    (await getEffectsForInbox(trx, input.tenant, input.inboxId)).length) throw new Error('Reply review is no longer current');
+  const owner = `review:${input.operationId}`;
+  const [claimed] = await home.table('inbound_email_inbox').where('inbox_id', input.inboxId).update({ status: 'processing',
+    lease_owner: owner, lease_token: randomUUID(), lease_version: trx.raw('lease_version + 1'), lease_expires_at: trx.raw("clock_timestamp() + interval '60 seconds'"),
+    attempt_count: trx.raw('attempt_count + 1'), completed_at: null, outcome_kind: null, outcome_reason: null, updated_at: trx.fn.now() }).returning('*');
+  const result = await runCommitPhase({ tenantId: input.tenant, inboxId: input.inboxId, owner, trx, inbox: claimed,
+    emailData: input.emailData, namedConversationReplyAdmission: input.admission, mode: 'enforce' });
+  if (result.kind !== 'replied' || !result.ticketId || !result.commentId) throw new Error('This reply cannot be admitted to the selected conversation');
+  return { ticketId: result.ticketId, commentId: result.commentId };
+}
+
 type CoreCommitResult =
   | { terminalReplay: true; inbox: InboundEmailInboxRecord }
   | { terminalReplay: false; kind: CommitResult['kind']; ticketId?: string; commentId?: string; reason?: string; error?: string };

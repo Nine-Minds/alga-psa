@@ -106,7 +106,15 @@ async function destination(trx: Knex.Transaction, route: any, replyParent?: any)
   }
   return { conversation, source: replyParent ? { ...source, comment_id: replyParent.comment_id } : source, privateStore, store };
 }
-export const admitNamedConversationEmailReply: NamedConversationReplyAdmission = async (outer, input) => {
+export const admitNamedConversationEmailReply: NamedConversationReplyAdmission = (outer, input) => admitReply(outer, input);
+
+/** Trusted review composition supplies a route only after retaining mailbox
+ * administrator and destination authority. The writer still admits the source,
+ * sender authentication, current route/audience and publication atomically. */
+export const admitReviewedNamedConversationEmailReply = (outer: Knex.Transaction, input: Parameters<NamedConversationReplyAdmission>[1], route: any) =>
+  admitReply(outer, input, route);
+
+async function admitReply(outer: Knex.Transaction, input: Parameters<NamedConversationReplyAdmission>[1], reviewedRoute?: any): ReturnType<NamedConversationReplyAdmission> {
   if (!outer?.isTransaction || ![input.tenant, input.providerId, input.inboxId].every(conversationUuid)) throw new Error('Named replies require a qualified durable inbox transaction');
   const email = { ...input.email, from: { ...input.email.from }, to: input.email.to.map(value => ({ ...value })), cc: input.email.cc?.map(value => ({ ...value })),
     body: { ...input.email.body }, headers: { ...input.email.headers }, references: [...(input.email.references ?? [])] };
@@ -115,7 +123,7 @@ export const admitNamedConversationEmailReply: NamedConversationReplyAdmission =
   try {
     return await outer.transaction(async trx => {
       const home = tenantDb(trx, input.tenant);
-      const resolved = await routeFor(trx, input.tenant, input.providerId, email);
+      const resolved = reviewedRoute ? { route: reviewedRoute, matchedBy: 'manual_review' as const, replyParent: null } : await routeFor(trx, input.tenant, input.providerId, email);
       if (!resolved) {
         // Explicit cm1/cm2 tokens retain their existing guarded admission. A
         // subject or bare sender address never chooses a vendor destination.
@@ -127,6 +135,7 @@ export const admitNamedConversationEmailReply: NamedConversationReplyAdmission =
       const inbox = await home.table('inbound_email_inbox').where({ inbox_id: input.inboxId, provider_id: input.providerId, status: 'processing' }).forUpdate().first();
       if (!inbox?.source_object_key || !inbox.source_sha256 || inbox.source_sha256 !== email.sourceSha256 || email.tenant !== input.tenant || email.providerId !== input.providerId) return reject();
       const { route, matchedBy, replyParent } = resolved;
+      if (route.tenant !== input.tenant || route.mailbox_id !== input.providerId) return reject();
       const { conversation, source, privateStore, store } = await destination(trx, route, replyParent);
       const previous = await home.table(RECEIPTS).where({ provider_id: input.providerId, normalized_message_id: inbox.normalized_message_id }).forShare().first();
       if (previous) {
@@ -177,4 +186,4 @@ export const admitNamedConversationEmailReply: NamedConversationReplyAdmission =
     if (!(error instanceof ReplyRejected) && !(error instanceof TicketConversationError && error.code === 'CONVERSATION_FORBIDDEN')) throw error;
     return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: /tc1:/i.test(`${email.body.text ?? ''}${email.body.html ?? ''}`) ? 'reply_token' : 'thread_headers' };
   }
-};
+}

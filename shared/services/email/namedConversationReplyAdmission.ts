@@ -6,7 +6,7 @@ import type { SenderAuthResults } from '../../lib/email/senderAuthVerification';
 export type NamedConversationReplyAdmission = (trx: Knex.Transaction, input: {
   tenant: string; providerId: string; inboxId: string; email: EmailMessageDetails; senderAuth: SenderAuthResults | null;
 }) => Promise<
-  | { outcome: 'replied'; ticketId: string; commentId: string; matchedBy: 'reply_token' | 'thread_headers' }
+  | { outcome: 'replied'; ticketId: string; commentId: string; matchedBy: 'reply_token' | 'thread_headers' | 'manual_review' }
   | { outcome: 'quarantined'; reason: 'conversation_reply_requires_admission'; matchedBy: 'reply_token' | 'thread_headers' | 'correspondent' }
   | { outcome: 'skipped'; reason: 'self_notification' }
   | null // No named-conversation evidence; ordinary intake still owns it.

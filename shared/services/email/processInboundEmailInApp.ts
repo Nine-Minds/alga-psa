@@ -148,7 +148,7 @@ export interface ProcessInboundEmailInAppDiagnostics extends Record<string, unkn
   };
   outcome?: {
     kind: 'skipped' | 'deduped' | 'replied' | 'created' | 'quarantined';
-    matchedBy?: 'reply_token' | 'thread_headers' | 'correspondent';
+    matchedBy?: 'reply_token' | 'thread_headers' | 'correspondent' | 'manual_review';
     ticketId?: string;
     ticketNumber?: string;
     commentId?: string;
@@ -172,7 +172,7 @@ type ProcessInboundEmailInAppBaseResult =
     }
   | {
       outcome: 'replied';
-      matchedBy: 'reply_token' | 'thread_headers';
+      matchedBy: 'reply_token' | 'thread_headers' | 'manual_review';
       ticketId: string;
       commentId: string;
     }
