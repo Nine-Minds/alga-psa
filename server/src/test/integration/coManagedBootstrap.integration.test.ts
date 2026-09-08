@@ -14030,3 +14030,93 @@ it('customer period settings roll changes back when the retained key expires aft
     expect(await customer.table('time_period_settings').where('time_period_settings_id', created.settings_id).first()).toMatchObject({ is_active: true, frequency: 1 });
   } finally { await db.raw('DROP TRIGGER expire_period_settings_key ON time_period_settings'); await db.raw('DROP FUNCTION expire_period_settings_key()'); }
 }));
+
+async function withPeriodJobFixture(work: (fixture: any) => Promise<void>) {
+  return withTimeSheetApiFixture(async (fixture: any) => {
+    const { Temporal } = await import('@js-temporal/polyfill');
+    const today = Temporal.Now.plainDateISO('UTC'), boundary = today.add({ days: 2 });
+    const { customer, context } = fixture;
+    await customer.table('time_periods').update({ start_date: today.subtract({ days: 5 }).toString(), end_date: boundary.toString() });
+    const settings = await fixture.sheetService.createTimePeriodSettings({ frequency: 7, frequency_unit: 'day', effective_from: today.subtract({ days: 30 }).toString() }, context);
+    const identity = { tenant: context.tenant, jobId: randomUUID(), scheduledJobId: randomUUID() };
+    await customer.table('jobs').insert({ tenant: context.tenant, job_id: identity.jobId, type: 'createNextTimePeriods', status: 'processing', user_id: null,
+      metadata: JSON.stringify({ triggeredBy: 'scheduler', scheduledJobId: identity.scheduledJobId }) });
+    const { createNextTimePeriod } = await import('../../../../packages/scheduling/src/lib/timePeriodAutomation');
+    const run = (extra: any = {}) => createNextTimePeriod(db, { ...identity, ...extra }, 2);
+    await work({ ...fixture, identity, settings, today, boundary, run });
+  });
+}
+
+it('customer period jobs serialize duplicate execution and read the current stored settings', async () => withPeriodJobFixture(async ({ run, sheetService, context, settings, boundary, customer }: any) => {
+  await sheetService.updateTimePeriodSettings(settings.settings_id, { frequency: 9 }, context);
+  const results = await Promise.all([run(), run()]);
+  expect(results.map(result => result.result.createdCount).sort()).toEqual([0, 1]);
+  const [created] = await customer.table('time_periods').where('start_date', boundary.toString());
+  expect((await import('@alga-psa/db')).timePeriodCalendarDate(created.end_date)).toBe(boundary.add({ days: 9 }).toString());
+  expect(await customer.table('time_periods')).toHaveLength(2);
+}));
+
+it('customer period jobs reject forged queue identity completed jobs and human job records', async () => withPeriodJobFixture(async ({ run, identity, context, customer }: any) => {
+  await expect(run({ scheduledJobId: randomUUID() })).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  await customer.table('jobs').where('job_id', identity.jobId).update({ status: 'completed' });
+  await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  await customer.table('jobs').where('job_id', identity.jobId).update({ status: 'processing', user_id: context.userId });
+  await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  await customer.table('jobs').where('job_id', identity.jobId).update({ user_id: null, type: 'unrelatedJob' });
+  await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+  expect(await customer.table('time_periods')).toHaveLength(1);
+  const actions = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  expect('createNextTimePeriod' in actions).toBe(false);
+}));
+
+it('customer period jobs skip expired entitlement suspended tenants and inactive configuration', async () => withPeriodJobFixture(async ({ run, customer, principal, settings, sheetService, context }: any) => {
+  await sheetService.updateTimePeriodSettings(settings.settings_id, { is_active: false }, context);
+  expect(await run()).toMatchObject({ status: 'completed', result: { createdCount: 0, reason: 'No active time period settings' } });
+  await sheetService.updateTimePeriodSettings(settings.settings_id, { is_active: true }, context);
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  expect(await run()).toMatchObject({ status: 'skipped', reason: 'Workspace suspended' });
+  await customer.table('tenants').update({ suspended_at: null });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await run()).toMatchObject({ status: 'skipped', reason: 'Co-management read_only' });
+  expect(await customer.table('time_periods')).toHaveLength(1);
+}));
+
+it('customer period jobs roll back generated dates when their retained job changes before final admission', async () => withPeriodJobFixture(async ({ run, identity, customer }: any) => {
+  await db.raw(`CREATE FUNCTION fail_period_worker_job() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE jobs SET status = 'failed' WHERE tenant = NEW.tenant AND job_id = '${identity.jobId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER fail_period_worker_job AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION fail_period_worker_job()');
+  try {
+    await expect(run()).rejects.toMatchObject({ code: 'TIME_PERIOD_JOB_FORBIDDEN' });
+    expect(await customer.table('time_periods')).toHaveLength(1);
+    expect(await customer.table('jobs').where('job_id', identity.jobId).first()).toMatchObject({ status: 'processing' });
+  } finally { await db.raw('DROP TRIGGER fail_period_worker_job ON time_periods'); await db.raw('DROP FUNCTION fail_period_worker_job()'); }
+}));
+
+it('customer period jobs roll back generated dates if the sponsor becomes read-only during the run', async () => withPeriodJobFixture(async ({ run, principal, customer }: any) => {
+  await db.raw(`CREATE FUNCTION expire_period_worker_entitlement() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE co_managed_entitlements SET valid_until = clock_timestamp() - interval '31 days', lapse_started_at = clock_timestamp() - interval '31 days', read_only_after = clock_timestamp() - interval '1 day' WHERE tenant = '${principal.tenant}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_period_worker_entitlement AFTER INSERT ON time_periods FOR EACH ROW EXECUTE FUNCTION expire_period_worker_entitlement()');
+  try {
+    await expect(run()).rejects.toMatchObject({ code: 'CO_MANAGED_READ_ONLY' });
+    expect(await customer.table('time_periods')).toHaveLength(1);
+  } finally { await db.raw('DROP TRIGGER expire_period_worker_entitlement ON time_periods'); await db.raw('DROP FUNCTION expire_period_worker_entitlement()'); }
+}));
+
+it('customer period jobs and native generation share semi-monthly and seasonal annual boundaries', async () => {
+  const { Temporal } = await import('@js-temporal/polyfill');
+  const { TimePeriodSuggester } = await import('../../../../packages/scheduling/src/lib/timePeriodSuggester');
+  const { generateTimePeriods } = await import('../../../../packages/scheduling/src/actions/timePeriodsActions');
+  const base = { tenant: randomUUID(), time_period_settings_id: randomUUID(), frequency: 1, is_active: true, effective_from: '2026-01-01', created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z' };
+  for (const [settings, end, expected] of [
+    [[{ ...base, frequency_unit: 'month', start_day: 1, end_day: 16 }, { ...base, frequency_unit: 'month', start_day: 16, end_day: 0 }], '2027-03-01', [['2027-01-01', '2027-01-16'], ['2027-01-16', '2027-02-01'], ['2027-02-01', '2027-02-16'], ['2027-02-16', '2027-03-01']]],
+    [[{ ...base, frequency_unit: 'year', start_month: 1, start_day_of_month: 1, end_month: 7, end_day_of_month: 1 }, { ...base, frequency_unit: 'year', start_month: 7, start_day_of_month: 1, end_month: 12, end_day_of_month: 0 }], '2028-01-01', [['2027-01-01', '2027-07-01'], ['2027-07-01', '2028-01-01']]],
+  ] as any[]) {
+    const native = await generateTimePeriods(settings, '2027-01-01', end);
+    expect(native.map(row => [row.start_date, row.end_date]).sort()).toEqual(expected);
+    const periods: any[] = [];
+    for (let index = 0; index < expected.length; index++) {
+      const next = TimePeriodSuggester.suggestNewTimePeriod(settings, periods, Temporal.PlainDate.from('2027-01-01'));
+      expect(next.success).toBe(true); periods.push(next.data);
+    }
+    expect(periods.map(row => [row.start_date, row.end_date])).toEqual(expected);
+    expect(TimePeriodSuggester.suggestNewTimePeriod(settings.map((setting: any) => ({ ...setting, effective_to: end })), periods).success).toBe(false);
+  }
+});

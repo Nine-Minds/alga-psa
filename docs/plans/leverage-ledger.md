@@ -501,3 +501,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `nativeTimePeriodSettings`, `TimeSheetService`, both native settings action modules and settings-driven generation.
 - **Gate:** Stable settings invariants and existing calendar lock support shared domain normalization/read/manage admission without another storage engine. ACT / bounded-now.
 - **Status:** Current credentials, bundle scope, field masks and lifecycle guard shared settings operations; calendar locking serializes active-profile conflict checks with generation. Legacy inputs normalize once, canonical responses preserve IDs, compatible profiles coexist and inactive history remains readable. Five new focused scenarios and the affected generator pass in 9.46 seconds. Background authorization and broader generator parity remain pending.
+
+## native-time-period-worker-boundary — friction
+- **What:** The background generator was exported as a server action, accepted caller-supplied settings and diverged from browser calendar calculations.
+- **Where:** `timePeriodJob`, scheduling `timePeriodAutomation`/`timePeriodCadence`, `TimePeriodSuggester`, native generation and scheduler registration.
+- **Gate:** An actual persisted system job supplies bounded worker authority; the existing calendar engine serializes work and shared pure date math removes divergent period-end calculations. ACT / bounded-now.
+- **Status:** Worker admission retains processing job/queue identity and current product/lifecycle; active settings are loaded under the calendar lock and final authority changes roll dates back. Native generation and suggestions share exclusive ends and compatible profile boundaries. Six focused scenarios verified across initial and corrected assertion runs; broader calendar, worker integration and Citus/browser coverage remain deferred.

@@ -17,8 +17,7 @@ import { initializeJobRunner, stopJobRunner } from 'server/src/lib/jobs/initiali
 import { createClientContractLineCycles } from '@alga-psa/billing/lib/billing/createBillingCycles';
 import { getConnection } from 'server/src/lib/db/db';
 import { runWithTenant } from 'server/src/lib/db';
-import { createNextTimePeriod } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { TimePeriodSettings } from '@alga-psa/scheduling/models/timePeriodSettings';
+import { createNextTimePeriod } from '@alga-psa/scheduling/lib/timePeriodAutomation';
 import { StorageService } from '@alga-psa/storage/StorageService';
 import { initializeScheduler } from 'server/src/lib/jobs';
 import { validateEmailConfiguration, logEmailConfigWarnings } from './validation/emailConfigValidation';
@@ -626,24 +625,10 @@ async function initializeJobScheduler(storageService: StorageService) {
         });
 
         const tenantKnex = await getConnection(tenantId);
-        const settings = await TimePeriodSettings.getActiveSettings(tenantKnex, tenantId);
-
-        // Skip if no time period settings are configured for this tenant
-        if (!settings || settings.length === 0) {
-          logger.debug(`No time period settings configured for tenant ${tenantId}, skipping time period creation`);
-          await jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
-            tenantId,
-            pgBossJobId: job.id,
-            details: 'Skipped - no time period settings configured'
-          });
-          return;
-        }
-
-        const result = await createNextTimePeriod(settings);
-        const details =
-          result
-            ? `Created new time period ${result.start_date} to ${result.end_date}`
-            : 'No new time period needed';
+        const result = await createNextTimePeriod(tenantKnex, { tenant: tenantId, jobId: jobRecordId!, scheduledJobId: job.id });
+        const details = result.status === 'skipped' ? `Skipped - ${result.reason}` : result.result.period
+          ? `Created ${result.result.createdCount} time period(s), through ${result.result.period.end_date}`
+          : result.result.reason;
 
         await jobService.updateJobStatus(jobRecordId!, JobStatus.Completed, {
           tenantId,

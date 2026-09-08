@@ -75,3 +75,4 @@ export * from './nativeTimeSheetLifecycle';
 
 export * from './nativeTimePeriod';
 export * from './nativeTimePeriodSettings';
+export * from './timePeriodJob';

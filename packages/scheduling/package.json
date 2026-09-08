@@ -60,6 +60,10 @@
     "./lib/timeEntryDeletionBilling": {
       "types": "./src/lib/timeEntryDeletionBilling.ts",
       "import": "./src/lib/timeEntryDeletionBilling.ts"
+    },
+    "./lib/timePeriodAutomation": {
+      "types": "./src/lib/timePeriodAutomation.ts",
+      "import": "./src/lib/timePeriodAutomation.ts"
     }
   },
   "scripts": {
