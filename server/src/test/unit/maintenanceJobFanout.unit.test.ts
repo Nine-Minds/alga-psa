@@ -160,7 +160,8 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'comments'] : [table]);
+      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'comments']
+      : jobName === 'co-managed-sla-observation' ? [table, 'sla_organization_notification_events'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
@@ -230,4 +231,13 @@ it('includes owners whose only pending cleanup is a private thread transfer', as
   selectTenantsMock.mockImplementation(table => table === 'co_management_thread_transfers' ? [{ tenant: 'transfer-owner' }] : []);
   expect(await runMaintenanceJob('co-managed-upload-cleanup')).toMatchObject({ total: 1, succeeded: 1 });
   expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-upload-cleanup', { tenantId: 'transfer-owner' });
+});
+
+it('discovers SLA notification recovery even when every obligation has completed', async () => {
+  listTenantsMock.mockReturnValue([{ tenant: 'msp' }]);
+  selectTenantsMock.mockImplementation((table: string) => table === 'sla_organization_notification_events' ? [{ tenant: 'msp' }] : []);
+  tenantHandlerMock.mockClear(); selectorTablesSeen.length = 0;
+  const result = await runMaintenanceJob('co-managed-sla-observation');
+  expect(result.total).toBe(1);
+  expect(tenantHandlerMock).toHaveBeenCalledWith('co-managed-sla-observation', { tenantId: 'msp' });
 });

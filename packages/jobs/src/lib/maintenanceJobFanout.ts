@@ -121,8 +121,13 @@ const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
 // jobs run once. Edition gating lives in the schedule wiring, not here.
 const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   [CO_MANAGED_SLA_OBSERVATION_JOB]: { scope: 'tenant', run: tenantId => coManagedSlaObservationHandler({ tenantId }), concurrency: 3,
-    tenants: db => db.unscoped<{ tenant: string }>('sla_organization_obligations', 'SLA observation discovers policy owners with unfinished obligations')
-      .whereRaw("clock #>> '{resolution,completedAt}' IS NULL").distinct('tenant') },
+    tenants: async db => {
+      const active = await db.unscoped<{ tenant: string }>('sla_organization_obligations', 'SLA observation discovers policy owners with unfinished obligations')
+        .whereRaw("clock #>> '{resolution,completedAt}' IS NULL").distinct('tenant');
+      const pending = await db.unscoped<{ tenant: string }>('sla_organization_notification_events', 'SLA fanout also recovers crossings from already completed obligations')
+        .where('status', 'pending').distinct('tenant');
+      return [...new Map([...active, ...pending].map(row => [row.tenant, row])).values()];
+    } },
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },
   [PREPAID_BALANCE_ALERT_SCAN_JOB]: { scope: 'tenant', run: (tenantId) => prepaidBalanceAlertScanHandler({ tenantId }) },

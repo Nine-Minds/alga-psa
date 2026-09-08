@@ -103,3 +103,6 @@ export * from './nativeInteractionCommand';
 export { observeCoManagedTicketSla, observeDueCoManagedTicketSlas } from './ticketSla';
 
 export type { CoManagedSlaTargetDisplay, CoManagedSlaDisplay, CoManagedTicketSlaDisplay } from './ticketSlaRead';
+
+export { fanoutCoManagedSlaNotification, withCoManagedSlaNotification, type CoManagedSlaNotification, type CoManagedSlaNotificationChannel } from './slaNotification';
+export { withCoManagedStoredSlaNotification, type CoManagedStoredSlaNotification } from './storedSlaNotification';

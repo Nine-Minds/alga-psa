@@ -382,7 +382,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // === LEVEL 3: Mid-level entities ===
   'co_management_project_scopes', 'co_management_staff_assignments',
   'co_managed_sla_priority_mappings',
-  'sla_organization_notification_events', 'sla_organization_events', 'sla_organization_obligations',
+  'sla_organization_notification_recipients', 'sla_organization_notification_events', 'sla_organization_events', 'sla_organization_obligations',
   'co_management_ticket_handoffs', 'co_management_ticket_work', 'co_managed_ticket_references',
   'co_management_conversation_attachments',
   'co_management_event_consumers',

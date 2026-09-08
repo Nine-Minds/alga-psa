@@ -47,6 +47,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   sla_organization_obligations: { scope: 'tenant' },
   sla_organization_events: { scope: 'tenant' },
   sla_organization_notification_events: { scope: 'tenant' },
+  sla_organization_notification_recipients: { scope: 'tenant' },
   co_managed_entitlements: { scope: 'tenant' },
   co_managed_allocations: { scope: 'tenant' },
   co_managed_purchase_operations: { scope: 'tenant' },

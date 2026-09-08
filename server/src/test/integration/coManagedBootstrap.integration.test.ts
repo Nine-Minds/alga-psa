@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -16380,3 +16380,138 @@ it('MSP SLA threshold capture commits a late first reply and its breach together
   expect(await f.create(f.principal, request)).toEqual(reply);
   expect(await f.sponsor.table('sla_organization_notification_events')).toEqual(notices);
 }));
+
+async function mspSlaNoticeFixture() {
+  const f = await dueMspSlaFixture();
+  await addMspSlaThresholds(f, [100]);
+  await f.sponsor.table('sla_notification_thresholds').update({ notify_escalation_manager: true });
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: f.principal.userId });
+  await f.observeCoManagedTicketSla(db, f.identity);
+  const event = await f.sponsor.table('sla_organization_notification_events').first();
+  const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+  await db('internal_notification_templates').insert(['sla-breach', 'sla-warning'].map(name => ({ name, language_code: 'en',
+    title: '{{slaType}} {{ticketNumber}}', message: '{{ticketTitle}}: {{timeOverdue}}', subtype_id: subtype.internal_notification_subtype_id })))
+    .onConflict(['name', 'language_code']).ignore();
+  const { persistCoManagedSlaNotifications: persist } = await import('@alga-psa/notifications/lib/coManagedSlaNotifications');
+  const { withCoManagedSlaNotification: withNotice } = await import('../../../../packages/co-managed/src/slaNotification');
+  const { withNotificationDelivery: deliver } = await import('@alga-psa/notifications/lib/notificationDelivery');
+  const { processCoManagedNotificationDeliveries: process } = await import('@alga-psa/notifications/lib/coManagedDeliveryQueue');
+  return { ...f, event, persist, withNotice, deliver, process };
+}
+
+it('MSP SLA notices create one in-app receipt and durable channel tasks under concurrent retries', async () => {
+  const f = await mspSlaNoticeFixture();
+  await Promise.all([f.persist(db, f.identity.tenant), f.persist(db, f.identity.tenant)]);
+  const notices = await f.sponsor.table('internal_notifications');
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toMatchObject({ user_id: f.principal.userId, template_name: 'sla-breach', category: 'sla',
+    metadata: { coManaged: { version: 3, kind: 'sla', resource: f.resource, eventId: f.event.notification_event_id } } });
+  expect(notices[0].link).toBe(`/msp/co-management/tickets/${f.resource.tenant}/${f.resource.relationshipId}/${f.resource.id}`);
+  const receipts = await f.sponsor.table('sla_organization_notification_recipients').orderBy('channel');
+  expect(receipts.map(row => [row.channel, row.status])).toEqual([['email', 'pending'], ['in_app', 'created']]);
+  expect(await f.sponsor.table('co_management_notification_deliveries')).toHaveLength(3);
+  const deliveries = vi.fn(async (_channel, current) => { expect(current.metadata.coManaged.eventId).toBe(f.event.notification_event_id); return { status: 'delivered' as const }; });
+  await Promise.all([f.process(db, f.identity.tenant, deliveries), f.process(db, f.identity.tenant, deliveries)]);
+  expect(deliveries).toHaveBeenCalledTimes(3);
+  await f.persist(db, f.identity.tenant);
+  expect(await f.sponsor.table('internal_notifications')).toEqual(notices);
+});
+
+it.each(['assignee', 'board-manager', 'escalation-manager'] as const)('MSP SLA notices use the current MSP %s and stop after removal', async role => {
+  const f = await mspSlaNoticeFixture();
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: role === 'assignee' ? f.principal.userId : null });
+  if (role === 'board-manager') await f.sponsor.table('boards').where('board_id', f.operation.escalation_board_id).update({ manager_user_id: f.principal.userId });
+  if (role === 'escalation-manager') await f.sponsor.table('escalation_managers').insert({ tenant: f.identity.tenant, config_id: randomUUID(),
+    board_id: f.operation.escalation_board_id, escalation_level: 1, manager_user_id: f.principal.userId });
+  const recipient = { kind: 'notification_recipient' as const, tenant: f.principal.tenant, userId: f.principal.userId };
+  expect(await f.withNotice(db, recipient, f.event.notification_event_id, 'in_app', async (_context, message) => message.eventId)).toBe(f.event.notification_event_id);
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  await f.sponsor.table('co_managed_ticket_references').update({ assigned_to: null });
+  await f.sponsor.table('boards').update({ manager_user_id: null });
+  await f.sponsor.table('escalation_managers').del();
+  expect(await f.deliver(db, notice, async () => 'delivered')).toBeNull();
+  // The actual recipient can still read an old notice while retaining ticket access.
+  const { withCoManagedStoredSlaNotification } = await import('../../../../packages/co-managed/src/storedSlaNotification');
+  expect(await withCoManagedStoredSlaNotification(db, f.principal, notice.internal_notification_id, async (_context, current) => current.message.eventId)).toBe(f.event.notification_event_id);
+});
+
+it.each(['revoked', 'metadata', 'threshold-disabled', 'inactive'] as const)('MSP SLA delivery denies %s notices without cached fallback', async reason => {
+  const f = await mspSlaNoticeFixture();
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  if (reason === 'revoked') {
+    const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  }
+  if (reason === 'metadata') await f.sponsor.table('internal_notifications').update({ metadata: null, title: 'Cached private canary', message: 'Never deliver this' });
+  if (reason === 'threshold-disabled') await f.sponsor.table('sla_notification_thresholds').update({ notify_assignee: false });
+  if (reason === 'inactive') await f.sponsor.table('users').where('user_id', f.principal.userId).update({ is_inactive: true });
+  const send = vi.fn(async () => ({ status: 'delivered' as const }));
+  expect(await f.deliver(db, { ...notice, metadata: null }, send)).toBeNull();
+  await f.process(db, f.identity.tenant, send);
+  expect(send).not.toHaveBeenCalled();
+});
+
+it('MSP SLA inbox uses fresh redacted content, qualified counts and actual browser authority', async () => {
+  const f = await mspSlaNoticeFixture();
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Current authorized title' });
+  const auth = await import('@alga-psa/auth'), dbModule = await import('@alga-psa/db');
+  const user = await f.sponsor.table('users').where('user_id', f.principal.userId).first();
+  const spies = [vi.spyOn(auth, 'getApiKeyUserOverride').mockReturnValue(undefined), vi.spyOn(auth, 'getSession').mockResolvedValue({
+    session_id: f.principal.sessionId, user: { id: f.principal.userId, tenant: f.principal.tenant, user_type: 'internal' } } as any),
+    vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant })];
+  try {
+    const actions = await import('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions');
+    await auth.runWithApiKeyUser(user, () => runWithTenant(f.principal.tenant, async () => {
+      const page = await actions.getNotificationsAction({ limit: 5 } as any);
+      expect(page.total).toBe(1); expect(page.unread_count).toBe(1);
+      expect(page.notifications[0].message).toContain('Current authorized title');
+      const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+      await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+      expect((await actions.getNotificationsAction({ limit: 5 } as any)).total).toBe(0);
+      expect(await actions.getNotificationByIdAction(notice.internal_notification_id)).toBeNull();
+    }));
+  } finally { for (const spy of spies.reverse()) spy.mockRestore(); }
+});
+
+it.each(['title', 'sla', 'work'] as const)('MSP SLA notices apply %s redaction at delivery time', async field => {
+  const f = await mspSlaNoticeFixture();
+  await f.persist(db, f.identity.tenant);
+  const notice = await f.sponsor.table('internal_notifications').first();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'SLA notification restrictions', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Hidden title canary' });
+  const delivered = await f.deliver(db, notice, async current => current);
+  if (field === 'title') { expect(delivered).not.toBeNull(); expect(JSON.stringify(delivered)).not.toContain('Hidden title canary'); }
+  else expect(delivered).toBeNull();
+});
+
+it('MSP SLA notice storage and delivery tasks roll back with the caller, then recover once', async () => {
+  const f = await mspSlaNoticeFixture();
+  await expect(db.transaction(async trx => { await f.persist(trx, f.identity.tenant); throw new Error('Abort notification storage'); })).rejects.toThrow('Abort notification storage');
+  expect(await f.sponsor.table('internal_notifications')).toEqual([]);
+  expect(await f.sponsor.table('sla_organization_notification_recipients')).toEqual([]);
+  expect(await f.sponsor.table('co_management_notification_deliveries')).toEqual([]);
+  expect((await f.sponsor.table('sla_organization_notification_events').first()).status).toBe('pending');
+  await f.persist(db, f.identity.tenant);
+  expect(await f.sponsor.table('internal_notifications')).toHaveLength(1);
+  const migration = require('../../../migrations/20260908063356_create_organization_sla_notification_recipients.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('retained organization SLA notification recipients');
+});
+
+it('MSP SLA notices suppress obsolete warning delivery once the target is breached', async () => {
+  const f = await mspSlaNoticeFixture();
+  await addMspSlaThresholds(f, [50]);
+  await f.observeCoManagedTicketSla(db, f.identity);
+  expect(await f.sponsor.table('sla_organization_notification_events').where('notification_type', 'warning')).toHaveLength(1);
+  await f.persist(db, f.identity.tenant);
+  expect((await f.sponsor.table('internal_notifications')).map(row => row.template_name)).toEqual(['sla-breach']);
+});
