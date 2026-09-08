@@ -359,6 +359,10 @@
     "accountManagementRead": "Toestemming geweigerd: leesrechten voor accountbeheer vereist"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "De uitnodiging voor de beheerder is verlopen. Stuur dezelfde beheerder een nieuwe link.",
+      "resendInvitation": "Beheerdersuitnodiging opnieuw verzenden"
+    },
     "policy": {
       "title": "Toegang voor gezamenlijk beheer",
       "none": "Geen toegang ingesteld.",

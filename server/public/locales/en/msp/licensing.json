@@ -431,6 +431,8 @@
       "retryError": "Unable to retry this operation. Refresh to check its current status.",
       "workerUnavailable": "Seats are reserved, but the provisioning worker could not be reached. Retry this workspace when the worker is available.",
       "invitationSent": "Administrator invitation sent",
+      "invitationExpired": "Administrator invitation expired. Send a new link to the same administrator.",
+      "resendInvitation": "Resend administrator invitation",
       "invitationPending": "Administrator invitation awaiting delivery",
       "deliveryFailed": "Invitation delivery failed; retry to send it.",
       "states": {

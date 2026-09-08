@@ -361,6 +361,10 @@
     "accountManagementRead": "Permiso denegado: se requiere permiso de lectura de la gestión de cuentas"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "La invitación del administrador ha caducado. Envíe un nuevo enlace al mismo administrador.",
+      "resendInvitation": "Reenviar invitación del administrador"
+    },
     "policy": {
       "title": "Acceso cogestionado",
       "none": "No hay acceso configurado.",

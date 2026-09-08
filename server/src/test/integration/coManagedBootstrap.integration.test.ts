@@ -1,3 +1,4 @@
+import { registerCoManagedInvitationRecoveryTests } from './helpers/coManagedInvitationRecoveryCases';
 import { registerCoManagedTimeBillingProfileTests } from './helpers/coManagedTimeBillingProfileCases';
 import { registerCoManagedPortableWorkspaceExportTests } from './helpers/coManagedPortableWorkspaceExportCases';
 import { registerCoManagedPortableRemoteMeetingCases } from './coManagedPortableRemoteMeeting.cases';
@@ -20340,3 +20341,5 @@ registerCoManagedPortableRemoteMeetingCases(() => db, withMeetingCreationFixture
 registerCoManagedPortableWorkspaceExportTests(() => db, withPortableVaultExportFixture, artifactStorage, withTenantLicenseFixture, withHostedPsaUpgradeFixture);
 
 registerCoManagedTimeBillingProfileTests(() => db, withMspSharedTimeSaveFixture, withSharedProjectTaskFixture);
+
+registerCoManagedInvitationRecoveryTests(() => db, prepare, delivery.send);

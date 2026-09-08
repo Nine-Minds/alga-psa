@@ -359,6 +359,10 @@
     "accountManagementRead": "⟦Ƥḗřḿīşşīȯƞ ḓḗƞīḗḓ: ȧƈƈȯŭƞŧ_ḿȧƞȧɠḗḿḗƞŧ řḗȧḓ řḗʠŭīřḗḓ⟧"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "[Administrator invitation expired. Send a new link to the same administrator.]",
+      "resendInvitation": "[Resend administrator invitation]"
+    },
     "policy": {
       "title": "⟦Ƈȯ-ḿȧƞȧɠḗḓ ȧƈƈḗşş⟧",
       "none": "⟦Ƞȯ ȧƈƈḗşş ƈȯƞƒīɠŭřḗḓ.⟧",

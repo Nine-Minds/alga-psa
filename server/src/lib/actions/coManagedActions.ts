@@ -62,7 +62,7 @@ export const getCoManagedProvisioningStatus = withAuth(async (user, { tenant }, 
   if (owner?.product_code !== 'psa') throw new Error('Only PSA workspaces can sponsor co-managed IT.');
   const operations = await scoped.table('co_managed_provisioning_operations').orderBy('created_at', 'desc').orderBy('operation_id')
     .offset(page * 25).limit(26).select('operation_id', 'customer_tenant', 'relationship_id', 'state', 'step',
-      'request', 'error_code', 'invitation_sent_at', 'invitation_delivery_error');
+      'request', 'error_code', 'invitation_sent_at', 'invitation_delivery_error', 'administrator_invitation_id');
   const allocations = operations.length ? await scoped.table('co_managed_allocations')
     .whereIn('operation_id', operations.map(operation => operation.operation_id)).select('operation_id', 'seats', 'state') : [];
   // Each foreign read is rooted in an operation owned by this authenticated
@@ -71,15 +71,22 @@ export const getCoManagedProvisioningStatus = withAuth(async (user, { tenant }, 
     const relationship = await tenantDb(knex, operation.customer_tenant).table('co_management_relationships')
       .where({ relationship_id: operation.relationship_id, sponsor_tenant: tenant }).first('state');
     const allocation = allocations.find(row => row.operation_id === operation.operation_id);
+    const customer = tenantDb(knex, operation.customer_tenant);
+    const invitation = operation.state === 'pending_acceptance' && relationship?.state === 'pending_acceptance'
+      ? await customer.table('user_invitations').where({ invitation_id: operation.administrator_invitation_id, used_at: null })
+        .first('expires_at', 'email') : null;
+    const awaitingAdministrator = Boolean(invitation && !await customer.table('users').where({ user_type: 'internal', email: invitation.email }).first('user_id'));
+    const invitationExpired = awaitingAdministrator && new Date(invitation.expires_at).getTime() <= Date.now();
     return { operationId: operation.operation_id as string, workspaceName: operation.request.workspaceName as string,
       administratorEmail: operation.request.administrator.email as string, seats: Number(allocation?.seats ?? operation.request.seats),
       canChangeSeats: Boolean(allocation && allocation.state !== 'released' && operation.state === 'pending_acceptance' &&
         ['active', 'pending_acceptance'].includes(relationship?.state)),
       state: (relationship?.state === 'active' || relationship?.state === 'terminated' ? relationship.state : operation.state) as string,
       invitationSent: Boolean(operation.invitation_sent_at),
+      invitationExpired,
       deliveryFailed: Boolean(operation.invitation_delivery_error),
       canRetry: ['queued', 'provisioning', 'failed'].includes(operation.state) ||
-        (operation.state === 'pending_acceptance' && relationship?.state === 'pending_acceptance' && !operation.invitation_sent_at),
+        (awaitingAdministrator && (!operation.invitation_sent_at || invitationExpired)),
     };
   }));
   const canManage = await hasPermission(user, 'co_management', 'manage');

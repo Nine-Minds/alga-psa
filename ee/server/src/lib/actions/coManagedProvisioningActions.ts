@@ -3,7 +3,8 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
-import { prepareCoManagedProvisioning, CoManagedProvisioningError, type CoManagedProvisioningRequest } from '@alga-psa/co-managed';
+import { prepareCoManagedProvisioning, retryCoManagedInitialAdministratorInvitation, CoManagedProvisioningError, type CoManagedProvisioningRequest } from '@alga-psa/co-managed';
+import { coManagedBrowserActor } from 'server/src/lib/co-managed/browserActor';
 import { CoManagedReservationError } from '@alga-psa/licensing';
 import { startCoManagedProvisioningWorkflow } from '../co-managed/workflowClient';
 
@@ -39,6 +40,9 @@ export const retryCoManagedProvisioningAction = withAuth(async (user, { tenant }
   const operation = await sponsor.table('co_managed_provisioning_operations').where('operation_id', operationId).first();
   if (!operation || !['queued', 'provisioning', 'failed', 'pending_acceptance'].includes(operation.state)) {
     throw new Error('This provisioning operation cannot be retried.');
+  }
+  if (operation.state === 'pending_acceptance') {
+    await retryCoManagedInitialAdministratorInvitation(knex, await coManagedBrowserActor(user, tenant), operationId);
   }
   // Bootstrap rechecks current capacity under the reservation lock. Invitation
   // delivery can still retry a prepared workspace without granting new access.

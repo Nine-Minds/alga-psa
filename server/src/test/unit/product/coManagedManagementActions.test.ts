@@ -34,10 +34,29 @@ beforeEach(() => { vi.resetAllMocks(); mocks.reads.length = 0; mocks.user.user_t
   };
 });
 describe('sponsor co-management read boundaries', () => {
+  it('offers retry for an expired sent initial invitation without exposing its token', async () => {
+    const operation = mocks.rows['home:co_managed_provisioning_operations'][0];
+    operation.administrator_invitation_id = 'initial-invitation'; operation.invitation_sent_at = new Date(0);
+    mocks.rows['own-customer:co_management_relationships'][0].state = 'pending_acceptance';
+    mocks.rows['own-customer:user_invitations'] = [{ invitation_id: 'initial-invitation', email: 'admin@example.test', used_at: null, expires_at: new Date(0), token: 'secret-link' }];
+    const result = await getCoManagedProvisioningStatus();
+    expect(result.items[0]).toMatchObject({ invitationExpired: true, invitationSent: true, canRetry: true });
+    expect(JSON.stringify(result)).not.toContain('secret-link');
+    mocks.rows['own-customer:user_invitations'][0].expires_at = new Date(Date.now() + 60000);
+    expect((await getCoManagedProvisioningStatus()).items[0]).toMatchObject({ invitationExpired: false, canRetry: false });
+  });
+  it('does not offer an invitation reset for an administrator who already created an account', async () => {
+    const operation = mocks.rows['home:co_managed_provisioning_operations'][0];
+    operation.administrator_invitation_id = 'initial-invitation'; operation.invitation_sent_at = new Date(0);
+    mocks.rows['own-customer:co_management_relationships'][0].state = 'pending_acceptance';
+    mocks.rows['own-customer:user_invitations'] = [{ invitation_id: 'initial-invitation', email: 'admin@example.test', used_at: null, expires_at: new Date(0) }];
+    mocks.rows['own-customer:users'] = [{ user_id: 'existing-admin', user_type: 'internal', email: 'admin@example.test' }];
+    expect((await getCoManagedProvisioningStatus()).items[0]).toMatchObject({ invitationExpired: false, canRetry: false });
+  });
   it('returns only own progress and lifecycle state, excluding internal fields and sibling operations', async () => {
     const result = await getCoManagedProvisioningStatus();
     expect(result.items).toEqual([{ operationId: 'own-operation', workspaceName: 'Own customer', administratorEmail: 'admin@example.test',
-      seats: 1, canChangeSeats: false, state: 'active', invitationSent: false, deliveryFailed: false, canRetry: false }]);
+      seats: 1, canChangeSeats: false, state: 'active', invitationSent: false, invitationExpired: false, deliveryFailed: false, canRetry: false }]);
     expect(JSON.stringify(result)).not.toContain('never-return');
     expect(mocks.reads.some(key => key.startsWith('sibling:'))).toBe(false);
   });

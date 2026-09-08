@@ -361,6 +361,10 @@
     "accountManagementRead": "Autorisation refusée : autorisation de lecture sur la gestion des comptes requise"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "L’invitation de l’administrateur a expiré. Envoyez un nouveau lien au même administrateur.",
+      "resendInvitation": "Renvoyer l’invitation de l’administrateur"
+    },
     "policy": {
       "title": "Accès cogéré",
       "none": "Aucun accès configuré.",

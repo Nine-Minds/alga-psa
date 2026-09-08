@@ -1,6 +1,7 @@
 export { finalizeCoManagedArchive } from './archiveFinalization';
 export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRetention';
 export * from './provisioning';
+export * from './provisioningInvitation';
 export * from './acceptance';
 export * from './relationshipClosure';
 export * from './departure';

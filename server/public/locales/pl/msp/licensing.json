@@ -363,6 +363,10 @@
     "accountManagementRead": "Odmowa uprawnień: wymagane uprawnienie odczytu zarządzania kontami"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "Zaproszenie administratora wygasło. Wyślij nowy link do tego samego administratora.",
+      "resendInvitation": "Wyślij ponownie zaproszenie administratora"
+    },
     "policy": {
       "title": "Dostęp do współzarządzania",
       "none": "Nie skonfigurowano dostępu.",

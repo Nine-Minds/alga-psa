@@ -359,6 +359,10 @@
     "accountManagementRead": "Berechtigung verweigert: Leseberechtigung für die Kontoverwaltung erforderlich"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "Die Administratoreinladung ist abgelaufen. Senden Sie derselben Person einen neuen Link.",
+      "resendInvitation": "Administratoreinladung erneut senden"
+    },
     "policy": {
       "title": "Co-Managed-Zugriff",
       "none": "Kein Zugriff konfiguriert.",

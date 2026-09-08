@@ -30,6 +30,25 @@ async function fillForm() {
   fireEvent.change(screen.getByLabelText('coManaged.provisioning.destination'), { target: { value: 'board' } });
 }
 describe('co-managed provisioning UI', () => {
+  it('resends an expired administrator invitation through the existing operation even when pool growth is paused', async () => {
+    mocks.status.mockResolvedValue({ canManage: true, canCreate: false, hasMore: false, items: [
+      { operationId: 'existing-operation', workspaceName: 'Customer', administratorEmail: 'admin@example.test', seats: 1,
+        state: 'pending_acceptance', canRetry: true, invitationSent: true, invitationExpired: true },
+    ] });
+    panel(false);
+    expect(await screen.findByText('coManaged.provisioning.invitationExpired')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'coManaged.provisioning.resendInvitation' }));
+    await waitFor(() => expect(mocks.retry).toHaveBeenCalledWith('existing-operation'));
+    expect(mocks.provision).not.toHaveBeenCalled(); expect(mocks.resize).not.toHaveBeenCalled();
+  });
+  it('keeps expired-invitation recovery hidden from a relationship reader without management rights', async () => {
+    mocks.status.mockResolvedValue({ canManage: false, canCreate: false, hasMore: false, items: [
+      { operationId: 'operation', workspaceName: 'Customer', administratorEmail: 'admin@example.test', seats: 1,
+        state: 'pending_acceptance', canRetry: true, invitationSent: true, invitationExpired: true },
+    ] });
+    panel(); await screen.findByText('Customer');
+    expect(screen.queryByRole('button', { name: 'coManaged.provisioning.resendInvitation' })).toBeNull();
+  });
   it('does not fetch or mount provisioning controls with the release flag off', () => {
     mocks.flag.mockReturnValue({ enabled: false, loading: false, error: null }); panel();
     expect(mocks.status).not.toHaveBeenCalled(); expect(mocks.options).not.toHaveBeenCalled();

@@ -361,6 +361,10 @@
     "accountManagementRead": "Permissão negada: é necessária permissão de leitura do gerenciamento de contas"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "O convite do administrador expirou. Envie um novo link ao mesmo administrador.",
+      "resendInvitation": "Reenviar convite do administrador"
+    },
     "policy": {
       "title": "Acesso cogerido",
       "none": "Nenhum acesso configurado.",

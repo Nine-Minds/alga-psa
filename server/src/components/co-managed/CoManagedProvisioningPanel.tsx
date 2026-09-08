@@ -116,7 +116,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       <TableBody>{status.items.map(item => <TableRow key={item.operationId}>
         <TableCell>{item.workspaceName}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.seats}</TableCell>
         <TableCell>{t(`coManaged.provisioning.states.${item.state}`)}
-          {item.state === 'pending_acceptance' && <p className="text-muted-foreground">{t(item.invitationSent
+          {item.state === 'pending_acceptance' && <p className="text-muted-foreground">{t(item.invitationExpired ? 'coManaged.provisioning.invitationExpired' : item.invitationSent
             ? 'coManaged.provisioning.invitationSent' : item.deliveryFailed ? 'coManaged.provisioning.deliveryFailed' : 'coManaged.provisioning.invitationPending')}</p>}
         </TableCell>
         <TableCell><div className="flex gap-2">
@@ -124,7 +124,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
           {status.canManage && item.canChangeSeats && <Button id={`co-managed-resize-${item.operationId}`} variant="outline" disabled={busy}
             onClick={() => { setAllocation(item); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
           {status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}
-            onClick={() => void retry(item.operationId)}>{t('coManaged.provisioning.retry')}</Button>}
+            onClick={() => void retry(item.operationId)}>{t(item.invitationExpired ? 'coManaged.provisioning.resendInvitation' : 'coManaged.provisioning.retry')}</Button>}
         </div></TableCell>
       </TableRow>)}</TableBody>
     </Table></div>}

@@ -361,6 +361,10 @@
     "accountManagementRead": "Autorizzazione negata: è richiesta l'autorizzazione di lettura per la gestione degli account"
   },
   "coManaged": {
+    "provisioning": {
+      "invitationExpired": "L’invito dell’amministratore è scaduto. Invia un nuovo link allo stesso amministratore.",
+      "resendInvitation": "Invia di nuovo l’invito dell’amministratore"
+    },
     "policy": {
       "title": "Accesso cogestito",
       "none": "Nessun accesso configurato.",
