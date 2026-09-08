@@ -168,11 +168,18 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'co_management_workflow_ticket_emails', 'comments']
+      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'co_management_workflow_ticket_emails', 'co_management_ticket_routing_recipients', 'comments']
       : jobName === 'co-managed-sla-observation' ? [table, 'sla_organization_notification_events', 'sla_organization_notification_recipients'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });
     expect(result.total).toBe(1);
+  });
+
+  it.each(['customer', 'msp'])('discovers %s with only pending routing notices', async tenant => {
+    listTenantsMock.mockReturnValue([{ tenant }]);
+    selectTenantsMock.mockImplementation(table => table === 'co_management_ticket_routing_recipients' ? [{ tenant }] : []);
+    expect((await runMaintenanceJob('co-managed-notification-recovery')).total).toBe(1);
+    expect(tenantHandlerMock).toHaveBeenCalledExactlyOnceWith('co-managed-notification-recovery', { tenantId: tenant });
   });
 
   it('discovers customers whose only pending work is a scheduled comment', async () => {

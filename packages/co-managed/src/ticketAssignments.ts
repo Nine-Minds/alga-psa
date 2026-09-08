@@ -8,6 +8,7 @@ import { snapshotCoManagedSessionActor, CoManagedSharedWorkError, isCoManagedUui
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedAssigneeOption, type CoManagedAssignee, type CoManagedAssigneeOption } from './sharedWorkAssignees';
 import { recordCoManagedWorkAudit } from './sharedWorkAudit';
+import { retainCoManagedTicketRoutingNotification } from './ticketRoutingNotifications';
 
 export interface CoManagedTicketAssignee extends CoManagedAssignee {}
 export interface CoManagedTicketAssignmentRequest { operationId: string; expectedRevision: number; assignee: CoManagedTicketAssignee | null }
@@ -133,6 +134,7 @@ export async function assignCoManagedTicket(db: Knex, inputActor: CoManagedSessi
       changes: { msp_assignment: selected ? `${selected.organizationName} · ${selected.name}` : null }, details: { assignment_reference_id: referenceId, work_revision: revision, assignee: request.assignee } });
     const [receipt] = await owner.table('co_management_command_receipts').insert({ tenant: resource.tenant, operation_id: request.operationId, relationship_id: resource.relationshipId, resource_type: 'ticket', resource_id: resource.id,
       actor_tenant: actor.tenant, actor_user_id: actor.userId, command_type: 'ticket_assignment', request_hash: hash, applied_at: write.trx.raw('clock_timestamp()') }).returning('applied_at');
+    if (selected) await retainCoManagedTicketRoutingNotification(write, request.operationId, 'assigned', revision);
     await current(write, true);
     return { operationId: request.operationId, appliedAt: new Date(receipt.applied_at).toISOString() };
   })); } catch (error) {

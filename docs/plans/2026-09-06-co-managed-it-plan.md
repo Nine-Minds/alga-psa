@@ -957,3 +957,7 @@ Real invoice generation now covers approved shared effort alongside native MSP t
 ### Implementation checkpoint — scoped provisioning management (2026-09-08)
 
 Provisioning options and status intersect the MSP client, escalation-board and co-management policies before labels, ordering and pagination. Start, retry and seat changes retain the same home policy and tracked session through their commands. The UI clears a stale board when switching clients and uses per-workspace management rights. Eight focused PostgreSQL cases, 21 server/UI tests and 14 EE action tests passed; nine changed sources parsed. This closes the concrete T06 management-directory bypass; combined browser acceptance remains pending.
+
+### Implementation checkpoint — routing notifications (2026-09-08)
+
+Canonical handoff, handback and MSP assignment now persist routing notification obligations with the work mutation. Destination assignees/team members are candidates; unassigned handoffs use the destination board manager. Current local read rights, MSP trust/staff scope, redactions and notification preferences control every delivery. Inbox presentation and channel/email recovery reuse the existing notification machinery and minute-based maintenance; email retries keep a stable Message-ID. Ten new PostgreSQL cases, 22 combined routing/handoff/assignment cases, 36 focused Node tests, and final migration/rollback verification passed without external sends.

@@ -4,9 +4,12 @@ import type { Knex } from 'knex';
  * damaged. Older customer task notices have no durable source receipt, so they
  * must also enter verification (and be omitted), never native cached delivery. */
 export function coManagedNotificationPredicate(db: Knex) {
-  return db.raw(`(jsonb_exists(COALESCE(internal_notifications.metadata::jsonb, '{}'::jsonb), 'coManaged') OR EXISTS (
+  return db.raw(`(jsonb_exists(COALESCE(internal_notifications.metadata::jsonb, '{}'::jsonb), 'coManaged') OR
+    internal_notifications.template_name IN ('co-managed-ticket-escalated', 'co-managed-ticket-handed_back', 'co-managed-ticket-assigned') OR EXISTS (
     SELECT 1 FROM co_management_in_app_receipts cir WHERE cir.tenant = internal_notifications.tenant
       AND cir.notification_id = internal_notifications.internal_notification_id) OR EXISTS (
+    SELECT 1 FROM co_management_ticket_routing_recipients rnr WHERE rnr.tenant = internal_notifications.tenant
+      AND rnr.notification_id = internal_notifications.internal_notification_id) OR EXISTS (
     SELECT 1 FROM sla_organization_notification_recipients sir WHERE sir.tenant = internal_notifications.tenant
       AND sir.notification_id = internal_notifications.internal_notification_id) OR (
     (internal_notifications.template_name = 'task-comment-added' OR

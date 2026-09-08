@@ -1,3 +1,4 @@
+import { registerCoManagedTicketRoutingNotificationTests } from './helpers/coManagedTicketRoutingNotificationCases';
 import { registerCoManagedManagementPolicyTests } from './helpers/coManagedManagementPolicyCases';
 import { registerCoManagedInvoiceJourneyTests } from './helpers/coManagedInvoiceJourneyCases';
 import { registerCoManagedInvitationRecoveryTests } from './helpers/coManagedInvitationRecoveryCases';
@@ -109,6 +110,7 @@ beforeAll(async () => {
     const rows = await source(table).select('*');
     if (rows.length) await db.batchInsert(table, rows, 100);
   }
+  await require('../../../migrations/20260908225920_create_co_managed_ticket_routing_notifications.cjs').up(db);
 }, 120000);
 
 afterAll(async () => {
@@ -20349,3 +20351,5 @@ registerCoManagedInvitationRecoveryTests(() => db, prepare, delivery.send);
 registerCoManagedInvoiceJourneyTests(() => db, withMspSharedTimeSaveFixture);
 
 registerCoManagedManagementPolicyTests(() => db, prepare);
+
+registerCoManagedTicketRoutingNotificationTests(() => db, ticketHandoffFixture, withTicketAssignmentFixture);

@@ -4,17 +4,22 @@ import { readCoManagedStoredCommentNotification, withCoManagedStoredCommentNotif
   type CoManagedNotificationRecipient, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import { coManagedCommentPresentation } from './coManagedCommentPresentation';
 import { coManagedSlaPresentation } from './coManagedSlaPresentation';
+import { withCoManagedStoredRoutingNotification } from '@alga-psa/co-managed';
+import { coManagedRoutingPresentation } from './coManagedRoutingPresentation';
 
 interface StoredPresentation {
   templateName: string;
   languageCode: string;
-  presentation: ReturnType<typeof coManagedCommentPresentation> | ReturnType<typeof coManagedSlaPresentation>;
+  presentation: ReturnType<typeof coManagedCommentPresentation> | ReturnType<typeof coManagedSlaPresentation> | ReturnType<typeof coManagedRoutingPresentation>;
 }
 /** Inbox and channel delivery use the same source dispatcher. The owning
  * transaction retains authority through the caller's render/delivery callback. */
 export async function withCoManagedStoredPresentation<T>(trx: Knex.Transaction, actor: CoManagedSessionActor | CoManagedNotificationRecipient,
   notificationId: string, consume: (current: StoredPresentation) => Promise<T>, options: { notificationLock?: 'share' | 'update' } = {}): Promise<T | null> {
   if (!trx.isTransaction) throw new Error('Shared notification rendering requires the owning transaction');
+  const routing = await tenantDb(trx, actor.tenant).table('co_management_ticket_routing_recipients').where('notification_id', notificationId).first('event_id');
+  if (routing) return withCoManagedStoredRoutingNotification(trx, actor, notificationId, (message, templateName, languageCode) =>
+    consume({ templateName, languageCode, presentation: coManagedRoutingPresentation(message) }), options);
   const sla = await tenantDb(trx, actor.tenant).table('sla_organization_notification_recipients').where('notification_id', notificationId).first('notification_event_id');
   if (sla) return withCoManagedStoredSlaNotification(trx, actor, notificationId, (_context, current) => consume({
     templateName: current.templateName, languageCode: current.languageCode, presentation: coManagedSlaPresentation(current.message),

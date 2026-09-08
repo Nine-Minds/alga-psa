@@ -5,6 +5,9 @@ import { dispatchCoManagedConversationEvents, recoverCoManagedEventConsumers, pr
 import { sendCoManagedCommentEmail, sendCoManagedCustomerCommentEmail, sendCoManagedRequesterCommentEmail } from './coManagedCommentEmailTransport';
 import { publishCoManagedConversationEvent, replayCoManagedConversationConsumer } from './coManagedConversationEventPublication';
 import { recoverCoManagedNotificationDeliveries } from '@alga-psa/notifications/lib/coManagedDeliveryRuntime';
+import { persistCoManagedRoutingNotifications } from '@alga-psa/notifications/lib/coManagedRoutingNotifications';
+import { processCoManagedRoutingEmailDeliveries } from '@alga-psa/co-managed';
+import { sendCoManagedRoutingEmail } from './coManagedRoutingEmailTransport';
 export const CO_MANAGED_NOTIFICATION_RECOVERY_JOB = 'co-managed-notification-recovery';
 export async function coManagedNotificationRecoveryHandler(input: { tenantId: string; limit?: number }) {
   const db = await getConnection(input.tenantId);
@@ -20,7 +23,9 @@ export async function coManagedNotificationRecoveryHandler(input: { tenantId: st
   const customerEmails = await recover(() => processCoManagedCustomerEmailDeliveries(db, input.tenantId, sendCoManagedCustomerCommentEmail, { limit: input.limit }));
   const requesterEmails = await recover(() => processCoManagedRequesterEmailDeliveries(db, input.tenantId, sendCoManagedRequesterCommentEmail, { limit: input.limit }));
   const workflowEmails = await recover(() => processCoManagedWorkflowTicketEmails(db, input.tenantId, sendCoManagedWorkflowTicketEmail, input.limit));
+  const routingNotifications = await recover(() => persistCoManagedRoutingNotifications(db, input.tenantId, input.limit));
+  const routingEmails = await recover(() => processCoManagedRoutingEmailDeliveries(db, input.tenantId, sendCoManagedRoutingEmail, input.limit));
   const notifications = await recover(() => recoverCoManagedNotificationDeliveries(input.tenantId, input.limit));
   if (failures.length) throw new AggregateError(failures, 'Co-managed notification maintenance has unfinished work');
-  return { workflowEmails, schedules, events, consumers, emails, customerEmails, requesterEmails, notifications };
+  return { workflowEmails, schedules, events, consumers, emails, customerEmails, requesterEmails, routingNotifications, routingEmails, notifications };
 }
