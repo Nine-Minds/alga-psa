@@ -2834,3 +2834,15 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Complete browser session51253 exited0: all3 tests passed, no retries/skip. Invoice96250, ticket writes/reload/read+write isolation, Add Usage preservation. No test assertion/product auth changes for this rerun. Evidence host-upgrade-combined-passed.json; old failed evidence retained.
 - Fixture output /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-3laV01. DB now has consumed secondary invoice, primary added usage. Full rerun needs fresh fixture.
 - Next native CI integration/current-source build plus Citus and remaining plan items. Existing buildc5938 vs migration8bc3 evidence remains explicitly limited; F021/T016 not marked fully complete.
+
+### Upgrade execution verdict verifier
+
+- Inspected production-regression.yml and fresh-install workflow: parent currently consumes nine required artifacts; upgrade is not yet a member. Existing browser workflow builds images once for both editions and should supply the candidate image to an upgrade lane.
+- Added scripts/lib/supported-upgrade-evidence.mjs. Combines schema-and-retention evidence with independently parsed Playwright collection/execution, permanent three-file journey floor, approved baseline SHA, clean matching source before/after, matching database and app revision, first-attempt execution and report totals. Existing host evidence intentionally fails exact app-revision requirements; do not relabel it.
+- Twelve behavioral verifier tests cover valid full result and missing journey/schema/execution, wrong baseline/app/database, dirty source, stale browser, skipped/retry cases. Together with extractor/retention:18passed, no skips. No workflow or parent gate wiring yet; next implement the artifact-producing upgrade runner and attach it to existing candidate images and required readiness.
+
+### Upgrade browser artifact runner
+
+- Added e2e-tests/run-upgrade.mjs: clears stale output, requires clean source and matching schema/database/application revision, binds fixture path to schema output, collects full upgrade config, executes raw JSON report, invokes supported-upgrade verifier, records after-source check and fails on any mismatch. Writes schema/collected/results/evidence under ignored test-results/supported-upgrade.
+- Exercised dirty-checkout invocation: exited1 and emitted failed artifact before launching browsers. Syntax check and all18focused verifier/extractor/retention tests pass. Existing exploratory host app is deliberately not accepted as current-source proof.
+- Workflow work remains: add enterprise upgrade phase using existing build artifact, establish running-image identity, create schema fixture with source installation hash, switch one server to upgraded DB, upload raw artifact, and make parent readiness require independently verified result. No CI publication/execution claimed.
