@@ -229,6 +229,269 @@ describe('quoteAdapters', () => {
     expect(viewModel.product_total).toBe(12960);
   });
 
+  it('groups a discount targeting a recurring service with the monthly items it reduces', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'monthly-a',
+            quote_id: 'quote-1',
+            service_id: 'service-a',
+            description: 'Managed Support',
+            quantity: 1,
+            unit_price: 3000,
+            total_price: 3000,
+            tax_amount: 0,
+            net_amount: 3000,
+            display_order: 1,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: true,
+            billing_frequency: 'monthly',
+            service_item_kind: 'service',
+          },
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'monthly-b',
+            quote_id: 'quote-1',
+            service_id: 'service-b',
+            description: 'Backup Monitoring',
+            quantity: 1,
+            unit_price: 3000,
+            total_price: 3000,
+            tax_amount: 0,
+            net_amount: 3000,
+            display_order: 2,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: true,
+            billing_frequency: 'monthly',
+            service_item_kind: 'service',
+          },
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'onetime-setup',
+            quote_id: 'quote-1',
+            description: 'Onboarding',
+            quantity: 1,
+            unit_price: 20000,
+            total_price: 20000,
+            tax_amount: 0,
+            net_amount: 20000,
+            display_order: 3,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            service_item_kind: 'service',
+          },
+          {
+            // Fixed discount on a monthly item — persisted positive, presented negative.
+            tenant: 'tenant-1',
+            quote_item_id: 'discount-item',
+            quote_id: 'quote-1',
+            description: 'Discount',
+            quantity: 1,
+            unit_price: 500,
+            total_price: 500,
+            tax_amount: 0,
+            net_amount: 500,
+            display_order: 4,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            is_discount: true,
+            discount_type: 'fixed',
+            applies_to_item_id: 'monthly-a',
+          },
+          {
+            // Percentage discount scoped to a monthly service.
+            tenant: 'tenant-1',
+            quote_item_id: 'discount-service',
+            quote_id: 'quote-1',
+            description: 'Discount (16%)',
+            quantity: 1,
+            unit_price: 0,
+            total_price: 500,
+            tax_amount: 0,
+            net_amount: 500,
+            display_order: 5,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            is_discount: true,
+            discount_type: 'percentage',
+            discount_percentage: 16,
+            applies_to_service_id: 'service-b',
+          },
+        ],
+      })
+    );
+
+    expect(viewModel.recurring_items?.map((item) => item.quote_item_id)).toEqual([
+      'monthly-a',
+      'monthly-b',
+      'discount-item',
+      'discount-service',
+    ]);
+    expect(viewModel.onetime_items?.map((item) => item.quote_item_id)).toEqual(['onetime-setup']);
+
+    // $30 + $30 − $5 − $5 = $50 monthly; the one-time group is untouched.
+    expect(viewModel.recurring_subtotal).toBe(5000);
+    expect(viewModel.recurring_total).toBe(5000);
+    expect(viewModel.onetime_subtotal).toBe(20000);
+    expect(viewModel.onetime_total).toBe(20000);
+    expect(viewModel.service_subtotal).toBe(25000);
+
+    const discountLine = viewModel.line_items.find((item) => item.quote_item_id === 'discount-item');
+    expect(discountLine?.total_price).toBe(-500);
+    expect(discountLine?.unit_price).toBe(-500);
+    expect(discountLine?.net_amount).toBe(-500);
+  });
+
+  it('keeps a discount targeting a one-time item in the one-time group', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'monthly-a',
+            quote_id: 'quote-1',
+            description: 'Managed Support',
+            quantity: 1,
+            unit_price: 3000,
+            total_price: 3000,
+            tax_amount: 0,
+            net_amount: 3000,
+            display_order: 1,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: true,
+            billing_frequency: 'monthly',
+            service_item_kind: 'service',
+          },
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'onetime-hardware',
+            quote_id: 'quote-1',
+            description: 'Firewall Appliance',
+            quantity: 1,
+            unit_price: 25000,
+            total_price: 25000,
+            tax_amount: 0,
+            net_amount: 25000,
+            display_order: 2,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            service_item_kind: 'product',
+          },
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'discount-hardware',
+            quote_id: 'quote-1',
+            description: 'Discount',
+            quantity: 1,
+            unit_price: 2500,
+            total_price: 2500,
+            tax_amount: 0,
+            net_amount: 2500,
+            display_order: 3,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            is_discount: true,
+            discount_type: 'fixed',
+            applies_to_item_id: 'onetime-hardware',
+          },
+        ],
+      })
+    );
+
+    expect(viewModel.recurring_items?.map((item) => item.quote_item_id)).toEqual(['monthly-a']);
+    expect(viewModel.onetime_items?.map((item) => item.quote_item_id)).toEqual([
+      'onetime-hardware',
+      'discount-hardware',
+    ]);
+    expect(viewModel.recurring_subtotal).toBe(3000);
+    expect(viewModel.onetime_subtotal).toBe(22500);
+    expect(viewModel.product_subtotal).toBe(22500);
+  });
+
+  it('leaves quote-wide discounts in their own group and subtracts them there', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_items: [
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'monthly-a',
+            quote_id: 'quote-1',
+            description: 'Managed Support',
+            quantity: 1,
+            unit_price: 3000,
+            total_price: 3000,
+            tax_amount: 0,
+            net_amount: 3000,
+            display_order: 1,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: true,
+            billing_frequency: 'monthly',
+            service_item_kind: 'service',
+          },
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'onetime-setup',
+            quote_id: 'quote-1',
+            description: 'Onboarding',
+            quantity: 1,
+            unit_price: 20000,
+            total_price: 20000,
+            tax_amount: 0,
+            net_amount: 20000,
+            display_order: 2,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            service_item_kind: 'service',
+          },
+          {
+            tenant: 'tenant-1',
+            quote_item_id: 'discount-quote-wide',
+            quote_id: 'quote-1',
+            description: 'Multi-year Commitment Discount (10%)',
+            quantity: 1,
+            unit_price: 0,
+            total_price: 2300,
+            tax_amount: 0,
+            net_amount: 2300,
+            display_order: 3,
+            is_optional: false,
+            is_selected: true,
+            is_recurring: false,
+            is_discount: true,
+            discount_type: 'percentage',
+            discount_percentage: 10,
+          },
+        ],
+      })
+    );
+
+    expect(viewModel.recurring_items?.map((item) => item.quote_item_id)).toEqual(['monthly-a']);
+    expect(viewModel.onetime_items?.map((item) => item.quote_item_id)).toEqual([
+      'onetime-setup',
+      'discount-quote-wide',
+    ]);
+    expect(viewModel.recurring_subtotal).toBe(3000);
+    expect(viewModel.onetime_subtotal).toBe(17700);
+  });
+
   it('returns empty filtered collections and zero aggregates when no items match a grouping', async () => {
     const viewModel = await mapLoadedQuoteToViewModel(
       fakeKnex,

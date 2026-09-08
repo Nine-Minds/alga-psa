@@ -59,6 +59,53 @@ type ServicePriceLookupRow = {
   rate?: number | string | null;
 };
 
+type QuoteItemCadenceLookupRow = {
+  tenant?: string;
+  quote_id?: string;
+  quote_item_id?: string;
+  service_id?: string | null;
+  is_discount?: boolean;
+  display_order?: number;
+  is_recurring?: boolean | null;
+  billing_frequency?: string | null;
+};
+
+/**
+ * Cadence of the item(s) a discount applies to. Targeted discounts inherit it so
+ * they group with — and reduce — the same Monthly / One-time bucket as their
+ * target. Quote-wide discounts (no target) resolve to null.
+ */
+async function resolveDiscountTargetCadence(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  quoteId: string,
+  appliesToItemId?: string | null,
+  appliesToServiceId?: string | null
+): Promise<{ is_recurring: boolean; billing_frequency: string | null } | null> {
+  const query = quoteTable<QuoteItemCadenceLookupRow>(knexOrTrx, tenant, 'quote_items')
+    .where({ quote_id: quoteId, is_discount: false })
+    .select('is_recurring', 'billing_frequency');
+
+  if (appliesToItemId) {
+    query.where({ quote_item_id: appliesToItemId });
+  } else if (appliesToServiceId) {
+    query.where({ service_id: appliesToServiceId }).orderBy('display_order', 'asc');
+  } else {
+    return null;
+  }
+
+  const target = await query.first();
+
+  if (!target) {
+    return null;
+  }
+
+  return {
+    is_recurring: target.is_recurring === true,
+    billing_frequency: target.billing_frequency ?? null,
+  };
+}
+
 async function getNextDisplayOrder(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
@@ -157,6 +204,24 @@ const QuoteItem = {
       };
     }
 
+    if (resolvedItem.is_discount && item.is_recurring === undefined) {
+      const cadence = await resolveDiscountTargetCadence(
+        knexOrTrx,
+        tenant,
+        item.quote_id,
+        resolvedItem.applies_to_item_id,
+        resolvedItem.applies_to_service_id
+      );
+
+      if (cadence) {
+        resolvedItem = {
+          ...resolvedItem,
+          is_recurring: cadence.is_recurring,
+          billing_frequency: resolvedItem.billing_frequency ?? cadence.billing_frequency,
+        };
+      }
+    }
+
     const quantity = Number(resolvedItem.quantity ?? 1);
     const unitPrice = Number(resolvedItem.unit_price ?? 0);
     const totalPrice = quantity * unitPrice;
@@ -210,10 +275,32 @@ const QuoteItem = {
 
     const totalPrice = Number(quantity) * Number(unitPrice);
 
+    const isDiscount = (updateData.is_discount ?? existingItem.is_discount) === true;
+    const retargeted = updateData.applies_to_item_id !== undefined || updateData.applies_to_service_id !== undefined;
+    let inheritedCadence: Partial<IQuoteItem> = {};
+
+    if (isDiscount && retargeted && updateData.is_recurring === undefined) {
+      const cadence = await resolveDiscountTargetCadence(
+        knexOrTrx,
+        tenant,
+        existingItem.quote_id,
+        updateData.applies_to_item_id !== undefined ? updateData.applies_to_item_id : existingItem.applies_to_item_id,
+        updateData.applies_to_service_id !== undefined ? updateData.applies_to_service_id : existingItem.applies_to_service_id
+      );
+
+      if (cadence) {
+        inheritedCadence = {
+          is_recurring: cadence.is_recurring,
+          billing_frequency: updateData.billing_frequency ?? cadence.billing_frequency,
+        };
+      }
+    }
+
     const [updatedItem] = await quoteTable<IQuoteItem>(knexOrTrx, tenant, 'quote_items')
       .where({ quote_item_id: quoteItemId })
       .update({
         ...updateData,
+        ...inheritedCadence,
         quantity,
         unit_price: unitPrice,
         total_price: totalPrice,

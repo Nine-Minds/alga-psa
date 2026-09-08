@@ -345,6 +345,16 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       return;
     }
 
+    // Inherit the target's cadence so the discount groups with — and reduces —
+    // the same Monthly / One-time bucket as the item it discounts.
+    const discountTarget = discountTargetValue
+      ? discountTargetType === 'item'
+        ? items.find((item) => (item.quote_item_id ?? item.local_id) === discountTargetValue)
+        : discountTargetType === 'service'
+          ? items.find((item) => item.service_id === discountTargetValue)
+          : undefined
+      : undefined;
+
     const discountItem = createDraftDiscountQuoteItem({
       description: discountType === 'percentage' ? `Discount (${numericValue}%)` : 'Discount',
       discount_type: discountType,
@@ -352,6 +362,8 @@ const QuoteLineItemsEditor: React.FC<QuoteLineItemsEditorProps> = ({
       fixed_amount: discountType === 'fixed' ? Math.round(numericValue * 100) : 0,
       applies_to_item_id: discountTargetType === 'item' ? discountTargetValue || null : null,
       applies_to_service_id: discountTargetType === 'service' ? discountTargetValue || null : null,
+      is_recurring: discountTarget?.is_recurring ?? false,
+      billing_frequency: discountTarget?.billing_frequency ?? null,
     });
 
     onChange([...items, discountItem]);

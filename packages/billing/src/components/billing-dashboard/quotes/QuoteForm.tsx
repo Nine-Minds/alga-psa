@@ -37,7 +37,7 @@ import {
 } from '../locations/locationGrouping';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';
 import QuoteStatusBadge from './QuoteStatusBadge';
-import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
+import { calculateDraftQuoteTotals, calculateDraftRecurringMonthlySubtotal, createDraftQuoteItemFromQuoteItem, formatDraftQuoteMoney, type DraftQuoteItem } from './quoteLineItemDraft';
 
 interface QuoteFormProps {
   quoteId?: string | null;
@@ -351,18 +351,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   const draftTotals = useMemo(() => calculateDraftQuoteTotals(lineItems), [lineItems]);
 
   // Derived: recurring per-month subtotal across draft items (expressed in
-  // the quote's minor currency units). Used for the sidebar "$X recurring /
-  // month" hint. Only monthly-recurring items count; mixed frequencies don't
-  // reduce cleanly to a single per-month number without more math.
-  const recurringMonthlySubtotal = useMemo(() => {
-    return lineItems.reduce((sum, item) => {
-      if (!item.is_recurring || item.is_discount) return sum;
-      if (item.is_optional && item.is_selected === false) return sum;
-      const freq = (item.billing_frequency || '').toLowerCase();
-      if (freq && freq !== 'monthly') return sum;
-      return sum + Math.round(item.quantity * item.unit_price);
-    }, 0);
-  }, [lineItems]);
+  // the quote's minor currency units), net of discounts on monthly items so the
+  // sidebar "$X recurring / month" hint matches the rendered quote.
+  const recurringMonthlySubtotal = useMemo(
+    () => calculateDraftRecurringMonthlySubtotal(lineItems),
+    [lineItems],
+  );
 
   const selectedClient = useMemo(
     () => clients.find((c) => c.client_id === form.client_id) ?? null,

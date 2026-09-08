@@ -63,12 +63,20 @@ const buildAddress = (record: Record<string, unknown> | null | undefined): strin
   return parts.length > 0 ? parts.join(', ') : null;
 };
 
+// Discount rows are stored as positive amounts (see quoteCalculationService) but
+// read as deductions, so the view model presents them negative — the same
+// convention the designer sample scenarios use.
+const toDeduction = (value: number): number => (value === 0 ? 0 : -Math.abs(value));
+
 const mapQuoteItemToViewModel = (
   item: NonNullable<IQuote['quote_items']>[number],
   locationsById: Map<string, QuoteViewModelLocation>,
 ): QuoteViewModelLineItem => {
   const locationId = item.location_id ?? null;
   const resolvedLocation = locationId ? locationsById.get(locationId) ?? null : null;
+  const isDiscount = Boolean(item.is_discount);
+  const signed = (value: unknown): number =>
+    isDiscount ? toDeduction(toFiniteNumber(value)) : toFiniteNumber(value);
   return {
     quote_item_id: item.quote_item_id,
     service_id: item.service_id ?? null,
@@ -78,10 +86,10 @@ const mapQuoteItemToViewModel = (
     billing_method: item.billing_method ?? null,
     description: item.description,
     quantity: toFiniteNumber(item.quantity),
-    unit_price: toFiniteNumber(item.unit_price),
-    total_price: toFiniteNumber(item.total_price),
+    unit_price: signed(item.unit_price),
+    total_price: signed(item.total_price),
     tax_amount: toFiniteNumber(item.tax_amount),
-    net_amount: toFiniteNumber(item.net_amount),
+    net_amount: signed(item.net_amount),
     unit_of_measure: item.unit_of_measure ?? null,
     phase: item.phase ?? null,
     is_optional: Boolean(item.is_optional),
@@ -213,13 +221,62 @@ const buildPhaseViewModels = (items: QuoteViewModelLineItem[]): QuoteViewModelPh
   }));
 };
 
+type QuoteItemGrouping = Pick<QuoteViewModelLineItem, 'is_recurring' | 'service_item_kind'>;
+
+const ownGrouping = (item: QuoteViewModelLineItem): QuoteItemGrouping => ({
+  is_recurring: item.is_recurring === true,
+  service_item_kind: item.service_item_kind ?? null,
+});
+
+/**
+ * Discount rows carry their own cadence flags, which historically defaulted to
+ * one-time regardless of what they discount. Group each targeted discount with
+ * the item(s) it applies to so a discount on a monthly service lands in — and
+ * reduces — the Monthly group. Quote-wide discounts keep their own flags.
+ */
+const resolveGrouping = (
+  item: QuoteViewModelLineItem,
+  baseItems: QuoteViewModelLineItem[]
+): QuoteItemGrouping => {
+  if (item.is_discount !== true) {
+    return ownGrouping(item);
+  }
+
+  const targets = item.applies_to_item_id
+    ? baseItems.filter((base) => base.quote_item_id === item.applies_to_item_id)
+    : item.applies_to_service_id
+      ? baseItems.filter((base) => base.service_id === item.applies_to_service_id)
+      : [];
+
+  return targets.length > 0 ? ownGrouping(targets[0]) : ownGrouping(item);
+};
+
 const buildQuoteItemGroupSummary = (
   items: QuoteViewModelLineItem[],
-  predicate: (item: QuoteViewModelLineItem) => boolean
+  groupingByItemId: Map<string, QuoteItemGrouping>,
+  predicate: (grouping: QuoteItemGrouping) => boolean
 ): QuoteItemGroupSummary => {
-  const filteredItems = items.filter(predicate);
-  const subtotal = filteredItems.reduce((sum, item) => sum + toFiniteNumber(item.total_price), 0);
-  const tax = filteredItems.reduce((sum, item) => sum + toFiniteNumber(item.tax_amount), 0);
+  const filteredItems = items.filter((item) => {
+    const grouping = groupingByItemId.get(item.quote_item_id);
+    return grouping ? predicate(grouping) : false;
+  });
+
+  let subtotal = 0;
+  let tax = 0;
+
+  for (const item of filteredItems) {
+    const amount = toFiniteNumber(item.total_price);
+    const taxAmount = toFiniteNumber(item.tax_amount);
+
+    if (item.is_discount === true) {
+      subtotal -= Math.abs(amount);
+      tax -= Math.abs(taxAmount);
+      continue;
+    }
+
+    subtotal += amount;
+    tax += taxAmount;
+  }
 
   return {
     items: filteredItems,
@@ -388,10 +445,14 @@ export async function mapLoadedQuoteToViewModel(
   }
 
   const lineItems = rawItems.map((item) => mapQuoteItemToViewModel(item, locationsById));
-  const recurringSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring === true);
-  const onetimeSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.is_recurring !== true);
-  const serviceSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'service');
-  const productSummary = buildQuoteItemGroupSummary(lineItems, (item) => item.service_item_kind === 'product');
+  const baseItems = lineItems.filter((item) => item.is_discount !== true);
+  const groupingByItemId = new Map(
+    lineItems.map((item) => [item.quote_item_id, resolveGrouping(item, baseItems)] as const)
+  );
+  const recurringSummary = buildQuoteItemGroupSummary(lineItems, groupingByItemId, (g) => g.is_recurring === true);
+  const onetimeSummary = buildQuoteItemGroupSummary(lineItems, groupingByItemId, (g) => g.is_recurring !== true);
+  const serviceSummary = buildQuoteItemGroupSummary(lineItems, groupingByItemId, (g) => g.service_item_kind === 'service');
+  const productSummary = buildQuoteItemGroupSummary(lineItems, groupingByItemId, (g) => g.service_item_kind === 'product');
 
   return {
     quote_id: quote.quote_id,

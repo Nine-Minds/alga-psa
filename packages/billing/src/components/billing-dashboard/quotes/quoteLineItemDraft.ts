@@ -161,6 +161,9 @@ export function createDraftDiscountQuoteItem(input: {
   fixed_amount?: number;
   applies_to_item_id?: string | null;
   applies_to_service_id?: string | null;
+  /** Cadence of the discounted item, so the discount groups with what it reduces. */
+  is_recurring?: boolean;
+  billing_frequency?: string | null;
 }): DraftQuoteItem {
   return {
     local_id: buildLocalId(),
@@ -176,8 +179,8 @@ export function createDraftDiscountQuoteItem(input: {
     phase: null,
     is_optional: false,
     is_selected: true,
-    is_recurring: false,
-    billing_frequency: null,
+    is_recurring: input.is_recurring ?? false,
+    billing_frequency: input.billing_frequency ?? null,
     is_discount: true,
     discount_type: input.discount_type,
     discount_percentage: input.discount_type === 'percentage' ? (input.discount_percentage ?? 0) : null,
@@ -250,6 +253,53 @@ export function calculateDraftQuoteTotals(items: DraftQuoteItem[]): DraftQuoteTo
     tax,
     total_amount: subtotal - discountTotal + tax,
   };
+}
+
+/** Base items a discount reduces; empty for quote-wide discounts. */
+export function resolveDraftDiscountTargets(items: DraftQuoteItem[], discount: DraftQuoteItem): DraftQuoteItem[] {
+  const baseItems = items.filter((item) => !item.is_discount && included(item));
+
+  if (discount.applies_to_item_id) {
+    return baseItems.filter((item) => (item.quote_item_id ?? item.local_id) === discount.applies_to_item_id);
+  }
+
+  if (discount.applies_to_service_id) {
+    return baseItems.filter((item) => item.service_id === discount.applies_to_service_id);
+  }
+
+  return [];
+}
+
+function isMonthlyRecurring(item: DraftQuoteItem): boolean {
+  if (!item.is_recurring) return false;
+  const frequency = (item.billing_frequency || '').toLowerCase();
+  return !frequency || frequency === 'monthly';
+}
+
+/**
+ * Recurring per-month subtotal across draft items, net of the discounts that
+ * target monthly items. Mixed frequencies don't reduce cleanly to a per-month
+ * number, so only monthly-recurring items (and their discounts) count.
+ */
+export function calculateDraftRecurringMonthlySubtotal(items: DraftQuoteItem[]): number {
+  let subtotal = 0;
+
+  for (const item of items) {
+    if (!included(item)) continue;
+
+    if (item.is_discount) {
+      const targets = resolveDraftDiscountTargets(items, item);
+      if (targets.length === 0 || !targets.every(isMonthlyRecurring)) continue;
+      const baseAmount = targets.reduce((sum, target) => sum + (target.quantity * target.unit_price), 0);
+      subtotal -= computeDiscountAmount(item, baseAmount);
+      continue;
+    }
+
+    if (!isMonthlyRecurring(item)) continue;
+    subtotal += Math.round(item.quantity * item.unit_price);
+  }
+
+  return subtotal;
 }
 
 export function formatDraftQuoteMoney(minorUnits: number, currencyCode: string): string {
