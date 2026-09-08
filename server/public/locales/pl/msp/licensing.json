@@ -661,6 +661,27 @@
       "settings": "Zarządzaj zasadami SLA",
       "mappingFor": "Priorytet MSP dla {{name}}",
       "unmapped": "Nieprzypisany"
+    },
+    "slaDisplay": {
+      "title": "Poziomy usług",
+      "organization": "SLA organizacji {{organization}}",
+      "response": "Odpowiedź",
+      "resolution": "Rozwiązanie",
+      "completedAt": "Ukończono",
+      "dueAt": "Termin",
+      "status": {
+        "running": "W toku",
+        "paused": "Wstrzymano",
+        "breached": "Przekroczono",
+        "completed": "Ukończono",
+        "not_configured": "Brak celu",
+        "not_recorded": "Nie zarejestrowano odpowiedzi"
+      },
+      "state": {
+        "not_started": "Rozpoczyna się przy eskalacji",
+        "not_configured": "Nie skonfigurowano SLA",
+        "unavailable": "Czasy SLA są niedostępne"
+      }
     }
   }
 }

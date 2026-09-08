@@ -16216,3 +16216,68 @@ it('MSP SLA observation keyset scan reaches due work beyond a skipped historical
   expect(await f.observeDueCoManagedTicketSlas(db, f.identity.tenant, 1)).toEqual({ observed: 1, skipped: 1 });
   expect((await f.read()).clock.response.breached).toBe(true);
 });
+
+it('MSP SLA display presents separate customer and MSP outcomes without persisting a read or exposing policy configuration', async () => {
+  const f = await dueMspSlaFixture();
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const policy = await f.sponsor.table('sla_policies').first();
+  const customerPolicyId = randomUUID();
+  await f.customer.table('sla_policies').insert({ ...policy, tenant: f.resource.tenant, sla_policy_id: customerPolicyId, policy_name: 'Private customer policy' });
+  const completed = new Date(Date.now() - 60000), due = new Date(Date.now() + 3600000);
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ sla_policy_id: customerPolicyId,
+    sla_response_due_at: due, sla_response_at: completed, sla_response_met: true, sla_resolution_due_at: due });
+  const before = await f.read();
+  const events = await f.sponsor.table('sla_organization_events');
+  const result = await read(db, f.principal, f.resource);
+  expect(result.sla).toMatchObject({ customer: { state: 'tracking', response: { status: 'completed', completedAt: completed.toISOString() },
+    resolution: { status: 'running', dueAt: due.toISOString() } }, msp: { state: 'tracking', response: { status: 'breached' }, resolution: { status: 'running' } } });
+  for (const privateValue of ['Private customer policy', policy.policy_name, customerPolicyId, before.obligation_id, 'schedule', 'targetMinutes', 'pauseReasons']) {
+    expect(JSON.stringify(result.sla)).not.toContain(privateValue);
+  }
+  expect(await f.read()).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_events')).toEqual(events);
+  expect((await read(db, f.customerPrincipal, f.resource)).sla).toEqual(result.sla);
+});
+
+it('MSP SLA display distinguishes pre-escalation from unavailable historical timing and retains paused outcomes during lapse', async () => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  expect((await read(db, f.customerPrincipal, f.resource)).sla).toEqual({ customer: { state: 'not_configured' }, msp: { state: 'not_started' } });
+  const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
+  await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
+  await f.sponsor.table('co_managed_allocations').del();
+  expect((await read(db, f.principal, f.resource)).sla.msp).toMatchObject({ state: 'tracking', paused: true,
+    response: { status: 'paused', dueAt: null }, resolution: { status: 'paused', dueAt: null } });
+  await f.sponsor.table('sla_organization_obligations').del();
+  expect((await read(db, f.principal, f.resource)).sla.msp).toEqual({ state: 'unavailable' });
+});
+
+it.each(['sla', 'tickets.sla_response_at', 'work', 'fields.priority.name'] as const)
+('MSP SLA display obeys %s source redaction', async field => {
+  const f = await dueMspSlaFixture();
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'SLA restrictions', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.request.clientId], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const result = (await read(db, f.principal, f.resource)).sla;
+  if (field === 'work') { expect(result.msp).toBeUndefined(); expect(result.customer).toBeDefined(); }
+  else if (field === 'tickets.sla_response_at') { expect(result.customer).toBeUndefined(); expect(result.msp).toBeDefined(); }
+  else expect(result).toEqual({});
+});
+
+it('MSP SLA display rejects revoked foreign readers and shows the customer only the retained paused result', async () => {
+  const f = await ticketHandoffFixture();
+  const { getCoManagedTicketScreen: read } = await import('../../../../packages/co-managed/src/ticketCollaboration');
+  const { escalateCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Investigate' });
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(read(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect((await read(db, f.customerPrincipal, f.resource)).sla.msp).toMatchObject({ state: 'tracking', paused: true,
+    response: { status: 'paused', dueAt: null } });
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(before);
+});

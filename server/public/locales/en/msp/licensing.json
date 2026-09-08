@@ -746,6 +746,27 @@
       "settings": "Manage SLA policies",
       "mappingFor": "MSP priority for {{name}}",
       "unmapped": "Not mapped"
+    },
+    "slaDisplay": {
+      "title": "Service levels",
+      "organization": "{{organization}} SLA",
+      "response": "Response",
+      "resolution": "Resolution",
+      "completedAt": "Completed",
+      "dueAt": "Due",
+      "status": {
+        "running": "In progress",
+        "paused": "Paused",
+        "breached": "Breached",
+        "completed": "Completed",
+        "not_configured": "No target",
+        "not_recorded": "No response recorded"
+      },
+      "state": {
+        "not_started": "Starts at escalation",
+        "not_configured": "No SLA configured",
+        "unavailable": "SLA timing unavailable"
+      }
     }
   }
 }

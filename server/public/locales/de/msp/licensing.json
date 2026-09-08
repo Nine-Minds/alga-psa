@@ -657,6 +657,27 @@
       "settings": "SLA-Richtlinien verwalten",
       "mappingFor": "MSP-Priorität für {{name}}",
       "unmapped": "Nicht zugeordnet"
+    },
+    "slaDisplay": {
+      "title": "Servicelevel",
+      "organization": "SLA von {{organization}}",
+      "response": "Reaktion",
+      "resolution": "Lösung",
+      "completedAt": "Abgeschlossen",
+      "dueAt": "Fällig",
+      "status": {
+        "running": "In Bearbeitung",
+        "paused": "Pausiert",
+        "breached": "Überschritten",
+        "completed": "Abgeschlossen",
+        "not_configured": "Kein Ziel",
+        "not_recorded": "Keine Antwort erfasst"
+      },
+      "state": {
+        "not_started": "Beginnt bei Eskalation",
+        "not_configured": "Kein SLA konfiguriert",
+        "unavailable": "SLA-Zeitdaten nicht verfügbar"
+      }
     }
   }
 }

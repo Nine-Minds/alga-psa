@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/component
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getCoManagedTicketScreenAction, getSharedTicketHandoffHistoryAction, type CoManagedTicketScreenTarget } from '@/lib/actions/coManagedSharedWorkActions';
 import CoManagedTicketEditor from './CoManagedTicketEditor';
+import CoManagedTicketSla from './CoManagedTicketSla';
 import CoManagedTicketConversation from './CoManagedTicketConversation';
 import CoManagedTicketAssignment from './CoManagedTicketAssignment';
 import CoManagedHandoffComposer, { type HandoffAction } from './CoManagedHandoffComposer';
@@ -72,6 +73,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
         {(named(fields?.status) || named(fields?.priority)) && <p>{[named(fields?.status), named(fields?.priority)].filter(Boolean).join(' · ')}</p>}
       </div>}
       {(fields?.responsibility === 'customer' || fields?.responsibility === 'msp') && <p>{t('coManaged.ticket.responsibility', { organization: fields.responsibility === 'msp' ? screen.sponsorName : screen.customerName })}</p>}
+      {screen.sla && <CoManagedTicketSla sla={screen.sla} customerName={screen.customerName} sponsorName={screen.sponsorName} />}
       {!screen.canWrite && <p role="status" className="rounded-md border p-3">{t('coManaged.ticket.readOnly')}</p>}
       {action && typeof fields?.work_revision === 'number' ? <CoManagedHandoffComposer key={action} action={action} side={screen.side}
         resource={screen.summary.resource} revision={fields.work_revision} onSaved={reload} onCancel={() => setAction(null)} onReload={reload} />

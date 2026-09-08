@@ -158,3 +158,25 @@ it('explains missing SLA setup without reporting a successful or uncertain hando
   expect(mocks.load).toHaveBeenCalledTimes(1); expect(screen.getByLabelText('coManaged.ticket.note')).not.toBeDisabled();
   expect(screen.queryByText('coManaged.ticket.uncertain')).toBeNull();
 });
+
+it('shows organization-specific SLA outcomes with completion and due dates', async () => {
+  mocks.load.mockResolvedValue({ ...data(), sla: {
+    customer: { state: 'tracking', response: { status: 'completed', completedAt: '2026-09-08T10:00:00.000Z', dueAt: null },
+      resolution: { status: 'running', completedAt: null, dueAt: '2026-09-09T10:00:00.000Z' } },
+    msp: { state: 'tracking', paused: true, response: { status: 'breached', completedAt: null, dueAt: null },
+      resolution: { status: 'paused', completedAt: null, dueAt: null } },
+  } });
+  mount();
+  expect(await screen.findByText('coManaged.slaDisplay.organization: Customer A')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.slaDisplay.organization: MSP')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.slaDisplay.status.breached')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.slaDisplay.status.completed')).toBeInTheDocument();
+  expect(document.querySelector('time[datetime="2026-09-08T10:00:00.000Z"]')).toBeInTheDocument();
+  expect(document.querySelector('time[datetime="2026-09-09T10:00:00.000Z"]')).toBeInTheDocument();
+});
+
+it('omits redacted SLA sections and displays the pre-escalation state', async () => {
+  mocks.load.mockResolvedValue({ ...data(), sla: { msp: { state: 'not_started' } } });
+  mount(); await screen.findByText('coManaged.slaDisplay.state.not_started');
+  expect(screen.queryByText('coManaged.slaDisplay.organization: Customer A')).toBeNull();
+});

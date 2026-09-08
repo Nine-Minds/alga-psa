@@ -659,6 +659,27 @@
       "settings": "Gérer les politiques SLA",
       "mappingFor": "Priorité MSP pour {{name}}",
       "unmapped": "Non associée"
+    },
+    "slaDisplay": {
+      "title": "Niveaux de service",
+      "organization": "SLA de {{organization}}",
+      "response": "Réponse",
+      "resolution": "Résolution",
+      "completedAt": "Terminé",
+      "dueAt": "Échéance",
+      "status": {
+        "running": "En cours",
+        "paused": "En pause",
+        "breached": "Dépassé",
+        "completed": "Terminé",
+        "not_configured": "Aucun objectif",
+        "not_recorded": "Aucune réponse enregistrée"
+      },
+      "state": {
+        "not_started": "Commence à l’escalade",
+        "not_configured": "Aucun SLA configuré",
+        "unavailable": "Délais SLA indisponibles"
+      }
     }
   }
 }

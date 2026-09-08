@@ -657,6 +657,27 @@
       "settings": "SLA-beleid beheren",
       "mappingFor": "MSP-prioriteit voor {{name}}",
       "unmapped": "Niet gekoppeld"
+    },
+    "slaDisplay": {
+      "title": "Serviceniveaus",
+      "organization": "SLA van {{organization}}",
+      "response": "Reactie",
+      "resolution": "Oplossing",
+      "completedAt": "Voltooid",
+      "dueAt": "Deadline",
+      "status": {
+        "running": "In behandeling",
+        "paused": "Gepauzeerd",
+        "breached": "Overschreden",
+        "completed": "Voltooid",
+        "not_configured": "Geen doel",
+        "not_recorded": "Geen reactie vastgelegd"
+      },
+      "state": {
+        "not_started": "Begint bij escalatie",
+        "not_configured": "Geen SLA ingesteld",
+        "unavailable": "SLA-tijden niet beschikbaar"
+      }
     }
   }
 }

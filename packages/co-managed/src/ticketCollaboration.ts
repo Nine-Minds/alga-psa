@@ -1,3 +1,4 @@
+import { readCoManagedTicketSlaDisplay } from './ticketSlaRead';
 import type { Knex } from 'knex';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -39,6 +40,7 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
       if (!(isCoManagedLifecycleError(error)) && !(error instanceof CoManagedSharedWorkError)) throw error;
     }
     const summary = await getCoManagedSharedWorkSummary(trx, actor, inputResource);
+    const sla = await readTicket(trx, actor, summary.resource, readCoManagedTicketSlaDisplay);
     const resource = summary.resource, customer = tenantDb(trx, resource.tenant);
     const relationship = await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).first();
     const sponsor = tenantDb(trx, relationship.sponsor_tenant);
@@ -50,7 +52,7 @@ export async function getCoManagedTicketScreen(db: Knex, inputActor: CoManagedSe
     const workRevisionVisible = typeof summary.fields.work_revision === 'number';
     const canManage = side === 'customer' && await hasCoManagedLocalPermission(trx, actor, 'co_management', 'manage', true);
     await assertCoManagedSessionUnexpired(trx, actor);
-    return { summary, side, customerName, sponsorName, destinationName: ('board' in summary.fields ? destination?.board_name : undefined) as string | undefined, canWrite,
+    return { summary, sla, side, customerName, sponsorName, destinationName: ('board' in summary.fields ? destination?.board_name : undefined) as string | undefined, canWrite,
       canEscalate: side === 'customer' && canWrite && canUpdate && workRevisionVisible && summary.fields.responsibility === 'customer' && Boolean(destination),
       canHandBack: canWrite && canUpdate && workRevisionVisible && summary.fields.responsibility === 'msp',
       canRevoke: canManage && workRevisionVisible && summary.fields.explicit_grant_active === true };

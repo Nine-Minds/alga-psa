@@ -657,6 +657,27 @@
       "settings": "[Manage SLA policies]",
       "mappingFor": "[MSP priority for {{name}}]",
       "unmapped": "[Not mapped]"
+    },
+    "slaDisplay": {
+      "title": "〖Şḗřṽīƈḗ ŀḗṽḗŀş ······〗",
+      "organization": "〖{{organization}} ŞĿȦ ········〗",
+      "response": "〖Řḗşƥȯƞşḗ ····〗",
+      "resolution": "〖Řḗşȯŀŭŧīȯƞ ····〗",
+      "completedAt": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+      "dueAt": "〖Ḓŭḗ ··〗",
+      "status": {
+        "running": "〖Īƞ ƥřȯɠřḗşş ·····〗",
+        "paused": "〖Ƥȧŭşḗḓ ···〗",
+        "breached": "〖Ɓřḗȧƈħḗḓ ····〗",
+        "completed": "〖Ƈȯḿƥŀḗŧḗḓ ····〗",
+        "not_configured": "〖Ƞȯ ŧȧřɠḗŧ ····〗",
+        "not_recorded": "〖Ƞȯ řḗşƥȯƞşḗ řḗƈȯřḓḗḓ ········〗"
+      },
+      "state": {
+        "not_started": "〖Şŧȧřŧş ȧŧ ḗşƈȧŀȧŧīȯƞ ········〗",
+        "not_configured": "〖Ƞȯ ŞĿȦ ƈȯƞƒīɠŭřḗḓ ·······〗",
+        "unavailable": "〖ŞĿȦ ŧīḿīƞɠ ŭƞȧṽȧīŀȧƀŀḗ ·········〗"
+      }
     }
   }
 }
