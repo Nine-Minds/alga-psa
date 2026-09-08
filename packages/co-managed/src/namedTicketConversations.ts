@@ -223,6 +223,7 @@ export interface NamedConversationPostRequest {
   parent?: { threadId: string; commentId: string };
 }
 export interface NamedConversationPostContext extends ConversationAuthority {
+  canUpdateResponseState: boolean;
   conversation: NamedTicketConversation;
   actorReferenceId?: string;
   assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
@@ -284,7 +285,8 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
         await assertCoManagedSessionUnexpired(trx, context.actor);
         await assertCoManagedOperationalWrite(trx, context.ticket.tenant);
       };
-      await apply({ ...context, conversation, actorReferenceId, assertWriteAuthority }, {
+      await apply({ ...context, conversation, actorReferenceId, assertWriteAuthority,
+        canUpdateResponseState: !isCoManagedReadFieldHidden(context.hidden, ['response_state', 'tickets.response_state']) }, {
         comment_id: request.operationId, ticket_id: context.ticket.ticketId, thread_id: threadId,
         parent_comment_id: parent?.commentId ?? null, ...encodeConversationContent(content), is_internal: true,
         is_resolution: false, author_type: 'internal', user_id: actorReferenceId ? null : context.actor.userId, publish_state: 'published',

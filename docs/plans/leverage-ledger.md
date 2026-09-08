@@ -515,3 +515,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** Ticket composer storage adapter and the server's co-managed attachment/disclosure adapters.
 - **Gate:** Stable existing transport contract; real author-home staging and content-owner publication consumers. ACT / bounded-now within ticket conversation file delivery.
 - **Status:** revised for these host consumers. The ticket package owns the existing helper and multipart limit parser; server compatibility exports retain established callers. Durable inbound worker admission remains separately composed. No generic document/file rows are introduced.
+
+
+## ticket-conversation-comment-publication — pattern
+- **What:** The legacy co-managed comment writer and named/native comment writer duplicated qualified author, canonical insert, and event construction; named requester delivery needs the same response-state guard and lifecycle effects.
+- **Where:** `createTicketComment.ts`, `postNamedTicketConversation.ts`, `applyTicketConversationComment.ts`.
+- **Gate:** Two concrete writers with stable shared mutation/event contracts and high correctness cost. Their native versus qualified event retention remains explicit. ACT / bounded-now within the approved requester composer integration; do not generalize unrelated native comment actions or inbound policy.
+- **Status:** revised. Both adapters use the canonical ticket-package writer, preserving receipt/event identities and named-side exclusion from requester state/activity. Named reviewed email uses the existing contact-notification suppression contract; internal recipients retain their existing preference and authorization checks. The 921-case regression passed after extraction and 44 focused DB cases passed with the final classification. Requester email admission stays closed until its inbound correlation is ready.

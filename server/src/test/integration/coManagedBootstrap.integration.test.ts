@@ -15215,3 +15215,36 @@ it('portal named requester selection keeps reads and canonical replies in the se
   }
   expect(await customer.table('comments').count('* as count').first()).toEqual(before);
 }));
+
+
+it('named requester publication adapter preserves canonical response effects and delegates external delivery to reviewed Send', async () => withSharedTicketMutationFixture(async ({
+  customerPrincipal, resource, customer, publish, workflow,
+}) => {
+  // Exercise the production writer under actual current named-ticket authority.
+  // The email command remains closed to Requester until its inbound adapter is ready.
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const { assertCoManagedSessionUnexpired } = await import('../../../../packages/co-managed/src/sharedWorkIdentity');
+  const ticket = { tenant: resource.tenant, ticketId: resource.id, relationshipId: resource.relationshipId };
+  const requester = (await api.listNamedTicketConversations(db, customerPrincipal, ticket)).find(c => c.defaultSlot === 'requester')!;
+  const ref = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+  const write = (id: string, canUpdateResponseState: boolean) => api.withNamedTicketConversation(db, customerPrincipal, ticket, ref, 'update', context =>
+    applyNamedTicketConversationPost({ ...context, canUpdateResponseState,
+      assertWriteAuthority: async trx => { expect(trx).toBe(context.trx); await assertCoManagedSessionUnexpired(trx, customerPrincipal); } },
+    { comment_id: id, ticket_id: ticket.ticketId, thread_id: id, parent_comment_id: null, note: 'Reviewed requester response',
+      markdown_content: 'Reviewed requester response', is_internal: false, is_resolution: false, author_type: 'internal', user_id: customerPrincipal.userId, publish_state: 'published' }));
+  await customer.table('tickets').where('ticket_id', resource.id).update({ response_state: 'awaiting_internal' });
+  const deniedId = randomUUID();
+  await expect(write(deniedId, false)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await customer.table('comments').where('comment_id', deniedId).first()).toBeUndefined();
+  expect(publish).not.toHaveBeenCalled(); expect(workflow).not.toHaveBeenCalled();
+  const id = randomUUID(); await write(id, true);
+  expect(await customer.table('comment_threads').where('thread_id', id).first()).toMatchObject({ conversation_id: requester.conversationId });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toMatchObject({ response_state: 'awaiting_client' });
+  expect(await customer.table('ticket_audit_logs').where('entity_id', id).first()).toMatchObject({ event_type: 'TICKET_MESSAGE_ADDED' });
+  const commentEvent = publish.mock.calls.map(([event]: any[]) => event).find(event => event.eventType === 'TICKET_COMMENT_ADDED');
+  expect(commentEvent).toMatchObject({ payload: { suppressContactNotifications: true, comment: { audience: 'requester', isInternal: false } } });
+  expect(commentEvent.payload.suppressInternalNotifications).not.toBe(true);
+  expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_RESPONSE_STATE_CHANGED', 'TICKET_COMMENT_ADDED']);
+  expect(workflow.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_MESSAGE_ADDED']);
+}));

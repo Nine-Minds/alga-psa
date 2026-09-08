@@ -13,7 +13,7 @@ beforeEach(() => {
 });
 it('renders only the selected rich message and sends through the reviewed mailbox owner with explicit conversation headers', async () => {
   const mailbox = { tenant: 'mailbox-owner', id: 'mailbox-id', email: 'support@example.test', name: 'Support' };
-  const prepared = await namedConversationEmailTransport.prepare({ mailbox,
+  const prepared = await namedConversationEmailTransport.prepare({ mailbox, files: [],
     content: { document: [{ type: 'paragraph', content: [{ type: 'text', text: 'Selected diagnosis', styles: { bold: true } }] }] },
     envelope: { subject: 'Vendor case', to: [{ email: 'vendor@example.test' }], cc: [] },
     headers: { 'Message-ID': '<vendor-operation@example.test>', 'In-Reply-To': '<vendor-prior@example.test>' }, replyToken: `tc1:${'a'.repeat(43)}` });
