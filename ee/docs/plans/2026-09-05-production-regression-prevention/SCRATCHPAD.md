@@ -2713,3 +2713,8 @@ Revalidated PR3343 via GitHub: still OPEN at7b170294 with10failedchecks, not cur
 ### Preview health refusal and actual workflow lint
 
 Applied argo-preview-health.patch locally in infrastructure checkout. Health HTTP503, redirects, malformed JSON and non-ok status now block before manual approval; TLS verified, target blue/green validated, requestsbounded25s. Nine host behavioral checks pass including actual containercommand invocation. Removed ignored nonexistent api/version call. Current api/health staticliveness only; no businesssmokeclaim. Strict combined lint found and fixed identical duplicate determine-colors and illegal template-level imagePullSecrets (same secret already spec-level). Build/composite/migrate/deploy templates all pass offline strict lint together. No cluster/networkpreview/Docker/publish. F020/F023 remainfalse.
+
+
+### OAuth browser listener survives document replacement
+
+Verified existing hostapp53010 and ownedPostgreSQL tunnel55432 stillavailable. Browser env file assignments require set-a export; first default-configrun excluded. Explicit enterprise host runpasses4cases4.2s. Replaced page-context callback storage/listener with runnerstorage through exposedfunction and addInitScript before navigation; missing-code case forcesreload. Old implementation with identicalreload fails intended payloadassertion (undefined); new4casespass no retries/flaky/skips,includingpopupclosure/noauthenticatedsession. Evidence host-oauth-listener-navigation.json. Temporary replayfile removed. Hostappc5938cdad5 hasno provideremulatorenv; noGraph/Teamsclaim. NoDocker/nativeCI/publication.

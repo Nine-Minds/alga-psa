@@ -8,19 +8,23 @@ const cases = [
 ];
 for (const scenario of cases) {
   test(`Microsoft email callback rejects ${scenario.name} through the popup result`, async ({ page }) => {
-    await page.goto('/auth/msp/signin');
-    await page.evaluate(() => {
-      (window as any).__oauthResults = [];
+    const oauthResults: unknown[] = [];
+    await page.exposeFunction('__recordOAuthResult', (result: unknown) => oauthResults.push(result));
+    // Install before navigation so a document replacement cannot lose the
+    // listener. Keep results in the runner, outside the page execution context.
+    await page.addInitScript(() => {
       window.addEventListener('message', event => {
         if (event.origin === window.location.origin && event.data?.type === 'oauth-callback') {
-          (window as any).__oauthResults.push(event.data);
+          void (window as any).__recordOAuthResult(event.data);
         }
       });
     });
+    await page.goto('/auth/msp/signin');
+    if (scenario.name === 'missing code') await page.reload();
     const popupEvent = page.waitForEvent('popup');
-    await page.evaluate(url => window.open(url, 'oauth-rejection'), `/api/auth/microsoft/callback?${new URLSearchParams(scenario.query)}`);
+    await page.evaluate(url => { window.open(url, 'oauth-rejection'); }, `/api/auth/microsoft/callback?${new URLSearchParams(scenario.query)}`);
     const popup = await popupEvent;
-    await expect.poll(() => page.evaluate(() => (window as any).__oauthResults)).toEqual([
+    await expect.poll(() => oauthResults).toEqual([
       expect.objectContaining({ type: 'oauth-callback', provider: 'microsoft', success: false, error: scenario.error }),
     ]);
     await expect.poll(() => popup.isClosed()).toBe(true);
