@@ -420,6 +420,12 @@
     "dependsOn": [
       "F010",
       "F017"
+    ],
+    "evidence": [
+      "evidence/native-workflow-worker-readiness.json",
+      "evidence/shared-worker-secret-ownership.json",
+      "evidence/native-authored-workflow-execution.json",
+      "evidence/native-authored-workflow-ci-scenario.json"
     ]
   },
   {
@@ -498,6 +504,9 @@
       "F033",
       "F034",
       "F035"
+    ],
+    "evidence": [
+      "evidence/provider-recovery-readiness.json"
     ]
   },
   {

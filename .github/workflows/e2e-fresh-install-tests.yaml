@@ -669,6 +669,35 @@ jobs:
             probe server delete
           done
 
+      - name: Execute authored workflow through the candidate worker
+        id: authored_worker_execution
+        if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
+        timeout-minutes: 3
+        run: |
+          mkdir -p logs
+          docker-compose -p alga-e2e-test exec -T \
+            -e AUTHORED_WORKFLOW_CI_OWNED=true \
+            -e AUTHORED_WORKFLOW_EXPECTED_DB_HOST=postgres \
+            -e AUTHORED_WORKFLOW_EXPECTED_DB_NAME=server \
+            -e DB_HOST_ADMIN=postgres -e DB_PORT_ADMIN=5432 \
+            workflow-worker node /app/services/workflow-worker/scripts/check-authored-workflow.mjs > logs/authored-workflow-execution.log
+          # The helper prints its structured result after execution and scoped
+          # fixture cleanup. Earlier lines may contain runtime startup logging.
+          tail -n 1 logs/authored-workflow-execution.log > logs/authored-workflow-execution.json
+          jq -e '.status == "passed" and .fixtureCleanup == "passed" and .execution.temporalStatus == "COMPLETED" and .execution.runStatus == "SUCCEEDED"' logs/authored-workflow-execution.json
+
+      - name: Retain authored execution failure diagnostics
+        if: ${{ failure() && steps.authored_worker_execution.outcome == 'failure' }}
+        timeout-minutes: 1
+        run: |
+          mkdir -p logs/authored-workflow-diagnostics
+          container=$(docker-compose -p alga-e2e-test ps -q workflow-worker)
+          test -n "$container"
+          docker-compose -p alga-e2e-test exec -T workflow-worker node --input-type=module -e 'import { readdirSync } from "node:fs"; for (const name of readdirSync("/tmp")) if (/^authored-workflow-failure-[a-f0-9-]{36}\.json$/.test(name)) console.log(name);' > "$RUNNER_TEMP/authored-diagnostic-files"
+          while IFS= read -r name; do
+            docker cp "$container:/tmp/$name" "logs/authored-workflow-diagnostics/$name"
+          done < "$RUNNER_TEMP/authored-diagnostic-files"
+
       - name: Collect initial container logs
         if: steps.wait_for_setup.outputs.status == 'success' && steps.install_docker_compose.outcome == 'success'
         run: |
