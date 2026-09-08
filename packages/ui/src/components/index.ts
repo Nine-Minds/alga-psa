@@ -45,6 +45,8 @@ export { default as CountryPicker } from './CountryPicker';
 export * from './CreditExpirationBadge';
 export { default as CreditExpirationBadge } from './CreditExpirationBadge';
 export * from './CurrencyInput';
+export type { CurrencyPickerOption } from './CurrencyPicker';
+export { default as CurrencyPicker } from './CurrencyPicker';
 export type {
   SelectOption as CustomSelectOption,
   StyleProps as CustomSelectStyleProps,
