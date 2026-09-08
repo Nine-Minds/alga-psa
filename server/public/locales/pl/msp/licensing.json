@@ -686,6 +686,16 @@
     "time": {
       "log": "Zarejestruj czas",
       "unavailable": "Rejestracja czasu dla tego zadania jest niedostępna. Odśwież stronę, aby sprawdzić swoje aktualne uprawnienia."
+    },
+    "effort": {
+      "title": "Zarejestrowany czas",
+      "description": "Zakończone wpisy czasu dla prac, do których masz dostęp.",
+      "customerMinutes": "Klient",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Łącznie",
+      "unavailable": "Niedostępne",
+      "hours": "{{value}} godz.",
+      "error": "Nie udało się wczytać sum czasu."
     }
   }
 }

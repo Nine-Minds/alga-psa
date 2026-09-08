@@ -684,6 +684,16 @@
     "time": {
       "log": "Saisir du temps",
       "unavailable": "La saisie de temps est indisponible pour ce travail. Rechargez la page pour vérifier vos droits actuels."
+    },
+    "effort": {
+      "title": "Temps enregistré",
+      "description": "Temps terminé pour les travaux auxquels vous avez accès.",
+      "customerMinutes": "Client",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Total",
+      "unavailable": "Indisponible",
+      "hours": "{{value}} heures",
+      "error": "Impossible de charger les totaux de temps."
     }
   }
 }

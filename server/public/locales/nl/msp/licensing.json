@@ -682,6 +682,16 @@
     "time": {
       "log": "Tijd registreren",
       "unavailable": "Tijdregistratie is niet beschikbaar voor dit werk. Laad de pagina opnieuw om je huidige toegang te controleren."
+    },
+    "effort": {
+      "title": "Geregistreerde tijd",
+      "description": "Voltooide tijd voor werk waartoe u toegang heeft.",
+      "customerMinutes": "Klant",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Totaal",
+      "unavailable": "Niet beschikbaar",
+      "hours": "{{value}} uur",
+      "error": "De tijdtotalen konden niet worden geladen."
     }
   }
 }

@@ -17815,3 +17815,73 @@ it('shared time billing uses the MSP profile to resolve parallel contracts and e
   await expect(f.save({ contract_line_id: second.lineId })).rejects.toMatchObject({ code: 'TIME_CONTRACT_UNAVAILABLE' });
   expect(await f.save()).toMatchObject({ contract_line_id: first.lineId, contract_line_source: 'auto_unique_service' });
 }));
+
+it('shared effort totals count completed customer and MSP time without exposing private billing or approval details', async () => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const localId = await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  await f.customer.table('time_entries').where('entry_id', localId).update({ end_time: '2026-09-08T09:20:00Z', notes: 'Private customer timesheet note' });
+  const entry = await f.save({ billable_duration: 0 });
+  const expected = { resource: f.resource, customerMinutes: 20, mspMinutes: 60, combinedMinutes: 80 };
+  expect(await totals(db, f.principal, f.resource)).toEqual(expected);
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual(expected);
+  await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 0 });
+  expect(await totals(db, f.principal, f.resource)).toMatchObject({ customerMinutes: 20, mspMinutes: 90, combinedMinutes: 110 });
+  await f.actions.deleteTimeEntry(entry.entry_id);
+  expect(await totals(db, f.principal, f.resource)).toMatchObject({ customerMinutes: 20, mspMinutes: 0, combinedMinutes: 20 });
+}));
+
+it('shared effort totals retain customer-owned effort after revocation without reading ongoing MSP totals', async () => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId);
+  const entry = await f.save();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'End shared work' });
+  await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
+  await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await totals(db, f.customerPrincipal, f.resource)).toEqual({ resource: f.resource, customerMinutes: 60, mspMinutes: null, combinedMinutes: null });
+  await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  await expect(totals(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it.each([
+  [['time_entries.notes', 'time_entries.approval_status', 'billing'], { customerMinutes: 60, mspMinutes: 60, combinedMinutes: 120 }],
+  [['effort_totals.mspMinutes'], { customerMinutes: 60, mspMinutes: null, combinedMinutes: null }],
+  [['actual_hours'], { customerMinutes: null, mspMinutes: null, combinedMinutes: null }],
+])('shared effort totals respect source field restrictions %j', async (redactedFields, expected) => withMspSharedTimeSaveFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  await f.insertTime(f.resource.id, 'ticket', f.resource.tenant, f.customerPrincipal.userId); await f.save();
+  const bundles = await import('@alga-psa/authorization'), relation = await f.customer.table('co_management_relationships').first();
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Shared effort scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  expect(await totals(db, f.principal, f.resource)).toEqual({ resource: f.resource, ...expected });
+}));
+
+it('shared effort totals roll up actual project tasks without using cached hours or colliding ticket IDs', async () => withSharedProjectTaskFixture(async f => {
+  const { getCoManagedEffortTotals: totals } = await import('../../../../packages/co-managed/src/effortTotals');
+  const relation = await f.customer.table('co_management_relationships').first();
+  const referenceId = randomUUID();
+  await f.sponsor.table('co_managed_time_work_references').insert({ tenant: f.principal.tenant, reference_id: referenceId, customer_tenant: f.resource.tenant,
+    relationship_id: f.resource.relationshipId, source_kind: 'project_task', source_id: f.resource.id, client_id: relation.sponsor_client_id });
+  const insert = async (owner: any, tenant: string, userId: string, type: string, workId: string, minutes: number) => {
+    const entryId = randomUUID();
+    await owner.table('time_entries').insert({ tenant, entry_id: entryId, user_id: userId, work_item_type: type, work_item_id: workId,
+      co_managed_work_reference_id: type === 'co_managed' ? workId : null, start_time: '2026-09-08T09:00:00Z',
+      end_time: new Date(Date.parse('2026-09-08T09:00:00Z') + minutes * 60000), work_date: '2026-09-08', work_timezone: 'UTC', billable_duration: 0, approval_status: 'DRAFT' });
+    return entryId;
+  };
+  const local = await insert(f.customer, f.resource.tenant, f.customerPrincipal.userId, 'project_task', f.resource.id, 30);
+  await insert(f.sponsor, f.principal.tenant, f.principal.userId, 'co_managed', referenceId, 45);
+  // A polymorphic ID collision must not count as project task time.
+  await insert(f.customer, f.resource.tenant, f.customerPrincipal.userId, 'ticket', f.resource.id, 120);
+  const project = { ...f.resource, kind: 'project' as const, id: f.project.project_id };
+  for (const actor of [f.principal, f.customerPrincipal]) {
+    expect(await totals(db, actor, f.resource)).toEqual({ resource: f.resource, customerMinutes: 30, mspMinutes: 45, combinedMinutes: 75 });
+    expect(await totals(db, actor, project)).toEqual({ resource: project, customerMinutes: 30, mspMinutes: 45, combinedMinutes: 75 });
+  }
+  await f.customer.table('time_entries').where('entry_id', local).del();
+  expect(await totals(db, f.principal, project)).toMatchObject({ customerMinutes: 0, mspMinutes: 45, combinedMinutes: 45 });
+  expect((await f.customer.table('project_tasks').where('task_id', f.resource.id).first()).actual_hours).toBe('123');
+}));

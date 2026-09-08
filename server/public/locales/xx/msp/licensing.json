@@ -682,6 +682,16 @@
     "time": {
       "log": "11111",
       "unavailable": "11111"
+    },
+    "effort": {
+      "title": "11111",
+      "description": "11111",
+      "customerMinutes": "11111",
+      "mspMinutes": "11111",
+      "combinedMinutes": "11111",
+      "unavailable": "11111",
+      "hours": "11111 {{value}}",
+      "error": "11111"
     }
   }
 }

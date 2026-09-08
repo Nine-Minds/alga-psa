@@ -103,6 +103,7 @@ async function withCoManagedSharedPrincipal<T>(db: Knex, inputActor: SharedPrinc
       const ticket = await ticketQuery.first('board_id');
       if (!ticket) deny();
       const work = await owner.table('co_management_ticket_work').where({ relationship_id: resource.relationshipId, ticket_id: resource.id }).forShare().first();
+      // LEVERAGE: pattern shared-work-effective-grant — customer effort projections also check this ticket/board visibility.
       const explicitGrant = work && !work.grant_revoked_at;
       const boardGrant = relationship.visibility_mode === 'board_scope'
         ? await owner.table('co_management_board_scopes').where({ relationship_id: resource.relationshipId, board_id: ticket.board_id }).forShare().first()

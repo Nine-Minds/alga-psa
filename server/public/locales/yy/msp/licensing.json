@@ -682,6 +682,16 @@
     "time": {
       "log": "55555",
       "unavailable": "55555"
+    },
+    "effort": {
+      "title": "55555",
+      "description": "55555",
+      "customerMinutes": "55555",
+      "mspMinutes": "55555",
+      "combinedMinutes": "55555",
+      "unavailable": "55555",
+      "hours": "55555 {{value}}",
+      "error": "55555"
     }
   }
 }

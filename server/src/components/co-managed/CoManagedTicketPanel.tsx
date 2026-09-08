@@ -1,5 +1,6 @@
 'use client';
 
+import CoManagedEffort from './CoManagedEffort';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
@@ -25,6 +26,7 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
   const { t } = useTranslation('msp/licensing');
   const { formatDate } = useFormatters();
   const initialTarget = useRef(target);
+  const [effortRefresh, setEffortRefresh] = useState(0);
   const [screen, setScreen] = useState<Screen | null>(null);
   const [history, setHistory] = useState<History>({ items: [], nextBeforeRevision: null });
   const [historyBusy, setHistoryBusy] = useState(false);
@@ -84,7 +86,8 @@ function TicketPanel({ target, showSummary }: { target: CoManagedTicketScreenTar
           {screen.canRevoke && <Button id="co-ticket-revoke" variant="outline" onClick={() => setAction('revoke')}>{t('coManaged.ticket.revoke')}</Button>}
         </div>}
       {showSummary && screen.side === 'sponsor' && <CoManagedTicketEditor resource={screen.summary.resource} onSaved={reload} onReload={reload} />}
-      {screen.side === 'sponsor' && <CoManagedTimeEntry resource={screen.summary.resource} canWrite={screen.canWrite} />}
+      <CoManagedEffort target={{ kind: 'shared', resource: screen.summary.resource }} refreshKey={effortRefresh} />
+      {screen.side === 'sponsor' && <CoManagedTimeEntry resource={screen.summary.resource} canWrite={screen.canWrite} onSaved={() => setEffortRefresh(value => value + 1)} />}
       <CoManagedTicketAssignment resource={screen.summary.resource} onSaved={reload} onReload={reload} onUnavailable={unavailable} />
       <CoManagedTicketConversation resource={screen.summary.resource} />
       <section className="space-y-3" aria-labelledby="co-ticket-history-title">

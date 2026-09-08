@@ -684,6 +684,16 @@
     "time": {
       "log": "Registrar tiempo",
       "unavailable": "No se puede registrar tiempo en este trabajo. Recarga la página para comprobar tu acceso actual."
+    },
+    "effort": {
+      "title": "Tiempo registrado",
+      "description": "Tiempo completado en trabajos a los que tiene acceso.",
+      "customerMinutes": "Cliente",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Total",
+      "unavailable": "No disponible",
+      "hours": "{{value}} horas",
+      "error": "No se pudieron cargar los totales de tiempo."
     }
   }
 }

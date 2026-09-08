@@ -771,6 +771,16 @@
     "time": {
       "log": "Log time",
       "unavailable": "Time entry is unavailable for this work. Reload to check your current access."
+    },
+    "effort": {
+      "title": "Recorded effort",
+      "description": "Completed time for work you can access.",
+      "customerMinutes": "Customer",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Combined",
+      "unavailable": "Unavailable",
+      "hours": "{{value}} hours",
+      "error": "Effort totals could not be loaded."
     }
   }
 }

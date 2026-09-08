@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import CoManagedEffort from './CoManagedEffort';
 import { useEffect, useState } from 'react';
 import type { CoManagedSharedResource } from '@alga-psa/co-managed';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -24,6 +25,7 @@ function ProjectTasks({ resource }: { resource: CoManagedSharedResource }) {
     <div className="flex items-center justify-between gap-4"><h1 className="text-2xl font-semibold">{t('coManaged.projects.tasks')}</h1>
       <Button id="co-project-tasks-reload" variant="outline" onClick={() => { setPage(null); setRefresh(value => value + 1); }}>{t('coManaged.policy.reload')}</Button></div>
     {error ? <p role="alert" className="text-destructive">{t('coManaged.projects.loadError')}</p> : !page ? <p role="status">{t('coManaged.loading')}</p> : <>
+      <CoManagedEffort target={{ kind: 'shared', resource }} refreshKey={refresh} />
       {!page.items.length ? <p className="text-muted-foreground">{t('coManaged.projects.empty')}</p> : <ul className="divide-y rounded-lg border border-[rgb(var(--color-border-200))]">
         {page.items.map(item => <li key={`${item.resource.tenant}:${item.resource.id}`} className="flex flex-wrap items-center justify-between gap-3 p-4">
           <Link id={`co-project-task-open-${item.resource.id}`} className="font-medium text-primary hover:underline"

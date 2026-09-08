@@ -58,3 +58,11 @@ it('unmounts an open form when the release flag is disabled', async () => {
   const view = mount(); open(); await screen.findByRole('dialog'); mocks.flag.mockReturnValue({ enabled: false });
   view.rerender(<CoManagedTimeEntry resource={resource} canWrite />); expect(screen.queryByRole('dialog')).toBeNull();
 });
+it('refreshes effort only after an accepted save on the mounted work screen', async () => {
+  const onSaved = vi.fn(), view = render(<CoManagedTimeEntry resource={resource} canWrite onSaved={onSaved} />);
+  open(); await screen.findByRole('dialog'); const save = mocks.dialog.mock.lastCall![0].onSave;
+  mocks.save.mockRejectedValueOnce(new Error('Save failed'));
+  await expect(save({})).rejects.toThrow('Save failed'); expect(onSaved).not.toHaveBeenCalled();
+  await save({}); expect(onSaved).toHaveBeenCalledTimes(1);
+  view.unmount(); await save({}); expect(onSaved).toHaveBeenCalledTimes(1);
+});

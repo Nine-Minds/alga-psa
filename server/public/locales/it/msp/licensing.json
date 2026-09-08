@@ -684,6 +684,16 @@
     "time": {
       "log": "Registra tempo",
       "unavailable": "La registrazione del tempo non è disponibile per questa attività. Ricarica la pagina per verificare le tue autorizzazioni attuali."
+    },
+    "effort": {
+      "title": "Tempo registrato",
+      "description": "Tempo completato per le attività a cui puoi accedere.",
+      "customerMinutes": "Cliente",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Totale",
+      "unavailable": "Non disponibile",
+      "hours": "{{value}} ore",
+      "error": "Impossibile caricare i totali del tempo."
     }
   }
 }

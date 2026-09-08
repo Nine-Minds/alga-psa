@@ -1,3 +1,4 @@
+vi.mock('../../../components/co-managed/CoManagedEffort', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/CoManagedTimeEntry', () => ({ default: () => null }));
 vi.mock('../../../components/co-managed/CoManagedProjectTaskConversation', () => ({ default: () => null }));
 /** @vitest-environment jsdom */

@@ -682,6 +682,16 @@
     "time": {
       "log": "Zeit erfassen",
       "unavailable": "Für diese Arbeit ist keine Zeiterfassung verfügbar. Laden Sie die Seite neu, um Ihren aktuellen Zugriff zu prüfen."
+    },
+    "effort": {
+      "title": "Erfasster Aufwand",
+      "description": "Abgeschlossene Zeiteinträge für Arbeit, auf die Sie zugreifen können.",
+      "customerMinutes": "Kunde",
+      "mspMinutes": "MSP",
+      "combinedMinutes": "Gesamt",
+      "unavailable": "Nicht verfügbar",
+      "hours": "{{value}} Stunden",
+      "error": "Die Aufwandssummen konnten nicht geladen werden."
     }
   }
 }

@@ -1,3 +1,5 @@
+import CoManagedEffort from '@/components/co-managed/CoManagedEffort';
+import { getCurrentTenantProduct } from '@/lib/productAccess';
 import type { Metadata } from 'next';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import { getProject } from '@alga-psa/projects/actions/projectActions';
@@ -24,6 +26,7 @@ export default async function ProjectDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const product = await getCurrentTenantProduct();
 
   return (
     <AIChatContextBoundary
@@ -39,6 +42,7 @@ export default async function ProjectDetailsPage({
         },
       }}
     >
+      {product === 'co_managed' && <CoManagedEffort target={{ kind: 'local_project', projectId: id }} />}
       <MspProjectPageClient params={params} />
     </AIChatContextBoundary>
   );

@@ -3,6 +3,7 @@ export * from './acceptance';
 export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';
+export * from './effortTotals';
 export * from './ticketHandoffs';
 export { CoManagedSlaSetupError, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from './ticketSla';
 export * from './ticketCollaboration';

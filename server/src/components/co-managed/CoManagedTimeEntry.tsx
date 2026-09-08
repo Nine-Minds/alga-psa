@@ -10,15 +10,15 @@ import { saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
 import { registerSharedTimeWorkAction } from '@/lib/actions/coManagedTimeActions';
 import { CoManagedFeatureBoundary } from './CoManagedFeatureBoundary';
 
-type Props = { resource: CoManagedSharedResource; canWrite: boolean };
+type Props = { resource: CoManagedSharedResource; canWrite: boolean; onSaved?: () => void };
 type Prepared = NonNullable<Awaited<ReturnType<typeof prepareTimeEntryForWorkItem>>>;
 
 /** The form belongs to this qualified screen, so navigation, access loss and
  * flag changes unmount both its private notes and pending preparation. */
 export default function CoManagedTimeEntry(props: Props) {
-  return <CoManagedFeatureBoundary>{props.canWrite && <TimeEntry key={JSON.stringify(props.resource)} resource={props.resource} />}</CoManagedFeatureBoundary>;
+  return <CoManagedFeatureBoundary>{props.canWrite && <TimeEntry key={JSON.stringify(props.resource)} resource={props.resource} onSaved={props.onSaved} />}</CoManagedFeatureBoundary>;
 }
-function TimeEntry({ resource }: { resource: CoManagedSharedResource }) {
+function TimeEntry({ resource, onSaved }: Pick<Props, 'resource' | 'onSaved'>) {
   const { t } = useTranslation('msp/licensing');
   const target = useRef({ ...resource });
   const mounted = useRef(false), inFlight = useRef(false);
@@ -43,6 +43,7 @@ function TimeEntry({ resource }: { resource: CoManagedSharedResource }) {
       onSave={async entry => {
         const saved = await saveTimeEntry(entry);
         if (isActionMessageError(saved) || isActionPermissionError(saved)) throw new Error(getErrorMessage(saved));
+        if (mounted.current) onSaved?.();
       }} />}
   </div>;
 }

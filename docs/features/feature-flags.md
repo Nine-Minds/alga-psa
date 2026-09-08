@@ -24,6 +24,10 @@ user/team choices, assign/clear controls and uncertain-save retries.
 The MSP SLA priority mapping page (`/msp/co-management/sla`), its access-editor link,
 and handoff setup feedback use the same boundary. Mapping configuration and SLA
 handoff processing remain callable independently of the flag.
+Shared ticket/task Log time controls and their native time-entry dialogs use this
+boundary. Organization effort totals on ticket, task and customer/shared project
+screens also use it; disabled UI does not fetch totals. Registration, time writes
+and aggregate actions retain normal authorization independently of the flag.
 Export and assignment actions apply current ticket access independently of the flag.
 Ordinary PSA and AlgaDesk workspaces do not depend on this flag.
 
