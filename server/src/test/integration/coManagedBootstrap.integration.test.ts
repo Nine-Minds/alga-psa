@@ -16841,3 +16841,126 @@ it.each(['native', 'shared_it', 'organization_private'] as const)('displayed %s 
   await expect(acknowledge(db, f.principal, f.ticket, f.ref, [later])).rejects.toThrow();
   expect(await owner.table('ticket_conversation_preferences').where({ conversation_id: f.ref.conversationId, actor_user_id: f.principal.userId }).first()).toEqual(before);
 });
+
+async function namedShareFixture(native = false) {
+  const f = await namedConversationFixture();
+  const actor = native ? f.customerPrincipal : f.principal;
+  const ticket = native ? { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId } : f.ticket;
+  const source = await f.conversations.createNamedTicketConversation(db, actor, ticket,
+    { operationId: randomUUID(), name: 'Private source exchange', audience: 'organization_private', transport: 'internal' });
+  const sourceRef = { storeTenant: source.storeTenant, conversationId: source.conversationId };
+  const [destination] = await f.conversations.listNamedTicketConversations(db, actor, ticket);
+  const ref = { storeTenant: destination.storeTenant, conversationId: destination.conversationId };
+  await f.conversations.saveNamedConversationEditorDraft(db, actor, ticket, sourceRef,
+    { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: source.revision, content: { text: 'Selected diagnosis' } });
+  const { postNamedTicketConversation } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const message = await postNamedTicketConversation(db, actor, ticket, sourceRef,
+    { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: source.revision });
+  const share = (await import('../../../../packages/tickets/src/lib/prepareNamedConversationShare')).prepareNamedConversationShare;
+  const request = { operationId: randomUUID(), source: sourceRef, commentId: message.commentId, threadId: message.threadId,
+    expectedDraftRevision: 0, expectedConversationRevision: destination.revision, replaceExisting: false, quote: false };
+  const home = tenantDb(db, actor.tenant);
+  const draftRow = () => home.table('ticket_conversation_editor_drafts').where({ actor_user_id: actor.userId,
+    conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).first();
+  return { ...f, actor, ticket, sourceRef, ref, message, share, request, home, draftRow };
+}
+
+describe('selective conversation share preparation against migrated PostgreSQL', () => {
+  it.each([false, true])('prepares an author-private text snapshot without publication or metadata disclosure (native=%s)', async native => {
+    const f = await namedShareFixture(native), api = f.conversations;
+    const sourceTable = native ? 'comments' : 'co_management_private_comments';
+    const document = [{ type: 'paragraph', content: [{ type: 'text', text: 'Selected diagnosis', styles: { bold: true } },
+      { type: 'link', href: 'https://private.example.test/source', content: [{ type: 'text', text: ' readable label', styles: {} }] }] },
+      { type: 'image', props: { url: 'https://private.example.test/protected-file', name: 'Private file name' } },
+      { type: 'paragraph', content: [{ type: 'text', text: 'Next step', styles: {} }] }];
+    await f.home.table(sourceTable).where('comment_id', f.message.commentId).update({ note: JSON.stringify(document) });
+    const beforeTicket = await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first();
+    const events = await f.customer.table('co_management_event_outbox').count('* as count').first();
+    const [draft, duplicate] = await Promise.all([f.share(db, f.actor, f.ticket, f.ref, f.request), f.share(db, f.actor, f.ticket, f.ref, f.request)]);
+    expect(draft).toEqual(duplicate);
+    expect(draft).toMatchObject({ content: { text: 'Selected diagnosis readable label\nNext step' }, attachments: [], parent: null, email: null, revision: 1 });
+    expect(JSON.stringify(draft)).not.toMatch(/provenance|private\.example|Private file name|Private source exchange/);
+    expect(await f.draftRow()).toMatchObject({ tenant: f.actor.tenant, provenance: { kind: 'message_share', source: {
+      ...f.sourceRef, commentId: f.message.commentId, threadId: f.message.threadId, snapshot: expect.stringMatching(/^[a-f0-9]{64}$/),
+    }, attachments: [] } });
+    expect((await api.getNamedTicketConversationMessages(db, f.actor, f.ticket, f.ref)).items).toEqual([]);
+    expect(await f.customer.table('ticket_conversation_publications').where('conversation_id', f.ref.conversationId)).toEqual([]);
+    expect(await f.customer.table('co_management_event_outbox').count('* as count').first()).toEqual(events);
+    expect(await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).first()).toEqual(beforeTicket);
+    if (!native) {
+      expect(await api.getNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, f.ref)).toBeNull();
+      expect(await f.customer.table('ticket_conversation_editor_drafts').where('conversation_id', f.ref.conversationId)).toEqual([]);
+    }
+    const provenance = (await f.draftRow()).provenance;
+    await api.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(), expectedRevision: 1,
+      expectedConversationRevision: 1, content: { text: 'Human revision of the copy' } });
+    await f.home.table(sourceTable).where('comment_id', f.message.commentId).update({ note: 'Later source change' });
+    expect(await f.share(db, f.actor, f.ticket, f.ref, f.request)).toMatchObject({ content: { text: 'Human revision of the copy' }, revision: 2 });
+    expect((await f.draftRow()).provenance).toEqual(provenance);
+    await expect(f.share(db, f.actor, f.ticket, f.ref, { ...f.request, quote: true })).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    await api.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(), expectedRevision: 2,
+      expectedConversationRevision: 1, content: null });
+    expect((await f.draftRow()).provenance).toBeNull();
+    await expect(f.share(db, f.actor, f.ticket, f.ref, f.request)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+  });
+
+  it('requires explicit current-draft replacement and cannot overwrite a competing autosave', async () => {
+    const f = await namedShareFixture(), api = f.conversations;
+    await api.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: 1, content: { text: 'Work in progress' } });
+    const request = { ...f.request, expectedDraftRevision: 1, quote: true };
+    await expect(f.share(db, f.actor, f.ticket, f.ref, request)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect((await f.draftRow()).content).toEqual({ text: 'Work in progress' });
+    const outcomes = await Promise.allSettled([
+      f.share(db, f.actor, f.ticket, f.ref, { ...request, replaceExisting: true }),
+      api.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(), expectedRevision: 1,
+        expectedConversationRevision: 1, content: { text: 'Concurrent human edit' } }),
+    ]);
+    expect(outcomes.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+    expect(outcomes.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'CONVERSATION_CONFLICT' } });
+    const draft = await f.share(db, f.actor, f.ticket, f.ref, { ...request, operationId: randomUUID(), expectedDraftRevision: 2, replaceExisting: true });
+    expect(draft).toMatchObject({ content: { document: [{ type: 'quote', content: [{ type: 'text', text: 'Selected diagnosis' }] }] },
+      attachments: [], email: null, parent: null, revision: 3 });
+    expect((await f.draftRow()).provenance.quote).toBe(true);
+    const saved = await f.draftRow();
+    expect(() => api.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref, { operationId: randomUUID(), expectedRevision: 3,
+      expectedConversationRevision: 1, content: { text: 'Forged provenance' }, provenance: {} } as any)).toThrow();
+    expect(await f.draftRow()).toEqual(saved);
+  });
+
+  it('rejects inaccessible, sibling, deleted and wrong-ticket sources without creating a destination draft', async () => {
+    const f = await namedShareFixture();
+    await expect(f.share(db, f.customerPrincipal, f.ticket, f.ref, f.request)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    const sibling = await f.conversations.createNamedTicketConversation(db, f.actor, f.ticket,
+      { operationId: randomUUID(), name: 'Separate private exchange', audience: 'organization_private', transport: 'internal' });
+    await expect(f.share(db, f.actor, f.ticket, f.ref, { ...f.request,
+      source: { storeTenant: sibling.storeTenant, conversationId: sibling.conversationId } })).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    await expect(f.share(db, f.actor, { ...f.ticket, ticketId: randomUUID() }, f.ref, f.request)).rejects.toThrow();
+    await f.home.table('co_management_private_comments').where('comment_id', f.message.commentId).update({ deleted_at: db.fn.now() });
+    await expect(f.share(db, f.actor, f.ticket, f.ref, f.request)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    expect(await f.draftRow()).toBeUndefined();
+    await f.home.table('co_management_private_comments').where('comment_id', f.message.commentId).update({ deleted_at: null });
+    await f.customer.table('co_management_board_scopes').del();
+    await expect(f.share(db, f.actor, f.ticket, f.ref, f.request)).rejects.toThrow();
+    expect(await f.draftRow()).toBeUndefined();
+  });
+});
+
+it('selective conversation share preparation preserves readable replies below deleted roots but refuses scheduled sources', async () => {
+  const f = await namedShareFixture(true);
+  const model = (await import('../../../../packages/tickets/src/models/comment')).default;
+  const replyId = await db.transaction(trx => model.insert(trx, f.ticket.tenant, {
+    ticket_id: f.ticket.ticketId, parent_comment_id: f.message.commentId, user_id: f.actor.userId,
+    author_type: 'internal', is_internal: true, note: 'Surviving published reply',
+  }, { ticketId: f.ticket.ticketId, actorTenant: f.actor.tenant, actorUserId: f.actor.userId,
+    audience: 'organization_private', conversationId: f.sourceRef.conversationId, assertWriteAuthority: async () => {} }));
+  await f.home.table('comments').where('comment_id', f.message.commentId).update({ deleted_at: db.fn.now() });
+  const request = { ...f.request, commentId: replyId };
+  expect(await f.share(db, f.actor, f.ticket, f.ref, request)).toMatchObject({ content: { text: 'Surviving published reply' }, revision: 1 });
+  await f.conversations.saveNamedConversationEditorDraft(db, f.actor, f.ticket, f.ref,
+    { operationId: randomUUID(), expectedRevision: 1, expectedConversationRevision: 1, content: null });
+  await f.home.table('comments').where('comment_id', replyId).update({ publish_state: 'scheduled' });
+  await expect(f.share(db, f.actor, f.ticket, f.ref, { ...request, operationId: randomUUID(), expectedDraftRevision: 2 }))
+    .rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+  expect((await f.draftRow()).content).toBeNull();
+});

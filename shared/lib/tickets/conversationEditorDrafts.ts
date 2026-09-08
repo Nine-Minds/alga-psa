@@ -101,6 +101,9 @@ export async function saveConversationEditorDraft<Content>(scope: EditorDraftSto
   if (current.revision !== request.expectedRevision) throw new TicketConversationError('CONVERSATION_CONFLICT');
   const manifest = request.content === null ? [] : await selectConversationEditorFiles(scope, files ?? (current.attachment_manifest ?? []).map((f: ConversationEditorFile) => ({ attachmentId: f.attachmentId })));
   const [row] = await query().update({ attachment_manifest: JSON.stringify(manifest), content: request.content === null ? null : JSON.stringify(request.content),
+    // Source lineage is written only by trusted transformation commands. Human
+    // edits retain it; discarding/consuming a draft must not lend it to new text.
+    provenance: request.content === null ? null : current.provenance,
     publication_options: request.content === null ? null : request.publicationOptions === undefined ? current.publication_options : options ? JSON.stringify(options) : null,
     reply_thread_id: parent?.threadId ?? null, reply_comment_id: parent?.commentId ?? null,
       email_envelope: email ? JSON.stringify(email) : null,
