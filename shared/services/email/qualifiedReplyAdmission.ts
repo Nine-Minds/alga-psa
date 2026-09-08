@@ -17,6 +17,14 @@ export type EmailReplyAdmission = <T extends { outcome: string; ticketId?: strin
 export function isQualifiedReplyToken(token: unknown): token is string {
   return typeof token === 'string' && /^cm[12]:/i.test(token);
 }
+/** A named vendor exchange must never enter legacy requester matching, even
+ * when its body marker is malformed, quoted beside another token, or stripped
+ * while its conversation RFC reference survives. */
+export function hasNamedConversationReplyHint(input: { body?: { text?: string; html?: string }; inReplyTo?: string; references?: string[] }): boolean {
+  const marker = /(?:ALGA-REPLY-TOKEN[\s:]+|data-alga-reply-token\s*=\s*["']|alga:reply-token:)tc1:/i;
+  return [input.body?.text, input.body?.html].some(value => value && marker.test(value)) ||
+    [input.inReplyTo, ...(input.references ?? [])].some(value => value && /(?:^|[\s<])conversation-[0-9a-f-]+@/i.test(value));
+}
 /** Reserve malformed/case-variant markers before any native dedupe or matching. */
 export function qualifiedReplyTokenFromBody(body: { text?: string; html?: string } | undefined): string | undefined {
   for (const content of [body?.text, body?.html]) {

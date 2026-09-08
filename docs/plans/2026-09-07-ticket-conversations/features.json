@@ -132,7 +132,7 @@
     "description": "Render the persistent conversation navigator above contact details in the existing ticket grid left column.",
     "implemented": true,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -140,7 +140,7 @@
     "description": "Pin Requester first and display supporting conversation names with audience subtitles.",
     "implemented": true,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -148,7 +148,7 @@
     "description": "Show active selection, unread/attention, Open/Done and the current author draft indicator on accessible rows.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -156,7 +156,7 @@
     "description": "Keep a requester-only ticket compact without precreating empty vendor or AI conversations.",
     "implemented": true,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -164,7 +164,7 @@
     "description": "Open Requester for normal entry and honor authorized conversation/message deep links.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -172,7 +172,7 @@
     "description": "Preserve selected conversation through URL navigation and browser back/forward with opaque denied-link handling.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -180,7 +180,7 @@
     "description": "Provide a named conversation creation flow with explicit transport, permitted audience and validated email recipients.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -188,7 +188,7 @@
     "description": "Provide equivalent audience/navigation behavior in entry layout, embedded ticket drawers and narrow layouts.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -196,7 +196,7 @@
     "description": "Use existing theme, localization, focus/keyboard conventions and stable interaction IDs for new controls.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -204,7 +204,7 @@
     "description": "Render All activity with authorized conversation labels, resolution markers and replies routed to their original composer.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -212,7 +212,7 @@
     "description": "Show active audience and transport in the center panel and distinguish Send, Post and Ask AI.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -220,7 +220,7 @@
     "description": "Persist editable drafts per qualified author and destination, including text-only composition and selected files.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -228,7 +228,7 @@
     "description": "Restore a draft on conversation switching and reload while preventing another author from seeing it.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -236,7 +236,7 @@
     "description": "Separate editable autosave revision handling from immutable attachment/publication reservations.",
     "implemented": true,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -244,7 +244,7 @@
     "description": "Publish prepared content and attachments atomically through existing canonical comment operations.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -252,7 +252,7 @@
     "description": "Preview exact From, To/CC, body and selected files before external sending.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -260,7 +260,7 @@
     "description": "Reject stale audience/envelope/draft intent at publication and preserve the draft for refreshed review.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -268,7 +268,7 @@
     "description": "Keep failed or uncertain publications recoverable using a stable operation identity without duplicate messages or sends.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -276,7 +276,7 @@
     "description": "Preserve existing authorized comment edits, deletion, reactions, reply relationships and chronological-order preferences.",
     "implemented": false,
     "prdRefs": [
-      "5. UX \u2014 option C"
+      "5. UX — option C"
     ]
   },
   {
@@ -290,7 +290,7 @@
   {
     "id": "F037",
     "description": "Keep mailbox identity stable across assignment and responsibility changes.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -298,7 +298,7 @@
   {
     "id": "F038",
     "description": "Require explicit mailbox sending authority independently of Shared IT read/post permission.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -338,7 +338,7 @@
   {
     "id": "F043",
     "description": "Ensure email recipients gain no portal, ticket, follower or historical-message access merely by being added.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]
@@ -466,7 +466,7 @@
   {
     "id": "F059",
     "description": "Provide independent Open/Done conversation state without automatically changing ticket status.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "7. Conversation state and existing reopen policy"
     ]

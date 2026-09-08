@@ -94,7 +94,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -14508,5 +14508,109 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
     await expect(mail.withNamedConversationMailbox(db, principal, ticket, ref, revoked.revision, called)).rejects.toThrow();
     expect(called).toHaveBeenCalledOnce();
     expect(await customer.table('ticket_conversation_sender_grants')).toHaveLength(0);
+  });
+});
+
+async function namedEmailFixture(audience: 'shared_it' | 'organization_private' = 'shared_it') {
+  const fixture = await namedConversationFixture();
+  const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const mailboxId = randomUUID();
+  await fixture.sponsor.table('email_providers').insert({ tenant: fixture.principal.tenant, id: mailboxId, provider_type: 'imap',
+    provider_name: 'Vendor intake', mailbox: 'support@example.test', is_active: true, status: 'connected' });
+  const side = await fixture.conversations.createNamedTicketConversation(db, fixture.principal, fixture.ticket,
+    { operationId: randomUUID(), name: 'Carrier exchange', audience, transport: 'email' });
+  const ref = { storeTenant: side.storeTenant, conversationId: side.conversationId };
+  await mail.selectNamedConversationMailbox(db, fixture.principal, fixture.ticket, ref, 1, mailboxId);
+  const draft = { operationId: randomUUID(), expectedRevision: 0, expectedConversationRevision: 2,
+    content: { text: 'Only this selected message' }, email: { subject: 'Circuit diagnosis', to: ['Vendor <vendor@example.test>', 'VENDOR@example.test'], cc: ['colleague@example.test', 'support@example.test'] } };
+  await fixture.conversations.saveNamedConversationEditorDraft(db, fixture.principal, fixture.ticket, ref, draft);
+  const provider = { providerId: 'test-provider', providerType: 'smtp' };
+  const send = vi.fn(async () => ({ success: true, metadata: { deliveryStatus: 'delivered' } }));
+  const recheck = vi.fn(async (payload: any) => previewReviewedEmail(payload, provider, 'a'.repeat(64)));
+  const transport = { send, recheck, prepare: vi.fn(async ({ mailbox, content, envelope, headers, replyToken }: any) => {
+    const payload = { from: { email: mailbox.email }, replyTo: { email: mailbox.email }, ...envelope, headers,
+      text: `${content.text}\n[ALGA-REPLY-TOKEN ${replyToken}]`, html: `<p>${content.text}</p>` };
+    return { payload, review: await recheck(payload) };
+  }) };
+  const request = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 2 };
+  return { ...fixture, email, ref, mailboxId, transport, send, draft, request, publish: applyNamedTicketConversationPost };
+}
+
+describe('named ticket conversation reviewed email operations against migrated PostgreSQL', () => {
+  it.each(['shared_it', 'organization_private'] as const)('publishes and delivers a reviewed %s email once without consuming a later draft', async audience => {
+    const f = await namedEmailFixture(audience), { email, principal, ticket, ref, request, transport, publish, sponsor, customer } = f;
+    const before = await customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+    const prepared = await email.prepareNamedConversationEmail(db, principal, ticket, ref, request, transport);
+    expect(prepared).toMatchObject({ status: 'reviewed', review: { to: [{ email: 'vendor@example.test', name: 'Vendor' }], cc: [{ email: 'colleague@example.test' }] } });
+    expect(await email.prepareNamedConversationEmail(db, principal, ticket, ref, request, transport)).toEqual(prepared);
+    expect(transport.prepare).toHaveBeenCalledOnce(); expect(f.send).not.toHaveBeenCalled();
+    expect(await email.getLatestNamedConversationEmailSend(db, principal, ticket, ref)).toBeNull();
+    expect(await sponsor.table('ticket_conversation_email_routes')).toHaveLength(0);
+    expect(await customer.table('comments').where('ticket_id', ticket.ticketId)).toHaveLength(0);
+    await expect(email.getNamedConversationEmailOperation(db, f.customerPrincipal, ticket, ref, request.operationId)).rejects.toThrow();
+    const confirm = () => email.confirmNamedConversationEmail(db, principal, ticket, ref, request.operationId, prepared.review.messageHash, transport, publish);
+    expect(await confirm()).toMatchObject({ status: 'pending' });
+    expect(await email.getLatestNamedConversationEmailSend(db, principal, ticket, ref)).toEqual({ status: 'pending', operationId: request.operationId, errorCode: null, reviewHash: prepared.review.messageHash });
+    if (audience === 'shared_it') expect(await email.getLatestNamedConversationEmailSend(db, f.customerPrincipal, ticket, ref)).toBeNull();
+    else await expect(email.getLatestNamedConversationEmailSend(db, f.customerPrincipal, ticket, ref)).rejects.toThrow();
+    expect(await customer.table('tickets').where('ticket_id', ticket.ticketId).first()).toEqual(before);
+    const page = await f.conversations.getNamedTicketConversationMessages(db, principal, ticket, ref);
+    expect(page.items).toHaveLength(1); expect(page.items[0].commentId).toBe(request.operationId);
+    expect(page.items[0].email).toEqual({ from: prepared.review.from, replyTo: prepared.review.replyTo, to: prepared.review.to, cc: prepared.review.cc, subject: prepared.review.subject, delivery: 'pending' });
+    if (audience === 'shared_it') expect((await f.conversations.getNamedTicketConversationMessages(db, f.customerPrincipal, ticket, ref)).items[0].email).toEqual(page.items[0].email);
+    expect(await f.conversations.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: null, email: null, revision: 2 });
+    const owner = audience === 'shared_it' ? customer : sponsor;
+    expect(await owner.table('ticket_conversation_publications').where('operation_id', request.operationId).first()).toMatchObject({ mode: 'send', email_envelope: { to: prepared.review.to, cc: prepared.review.cc } });
+    expect(await sponsor.table('ticket_conversation_email_routes').first()).toMatchObject({ mailbox_id: f.mailboxId, ticket_tenant: ticket.tenant, conversation_store_tenant: ref.storeTenant });
+    await f.conversations.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { ...f.draft, operationId: randomUUID(), expectedRevision: 2, content: { text: 'A later draft' } });
+    await confirm();
+    await Promise.all([email.deliverNamedConversationEmail(db, principal, ticket, ref, request.operationId, transport),
+      email.deliverNamedConversationEmail(db, principal, ticket, ref, request.operationId, transport)]);
+    expect(await email.deliverNamedConversationEmail(db, principal, ticket, ref, request.operationId, transport)).toMatchObject({ status: 'delivered' });
+    expect(f.send).toHaveBeenCalledOnce();
+    expect(await f.conversations.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ content: { text: 'A later draft' }, revision: 3 });
+    const deliveredPage = await f.conversations.getNamedTicketConversationMessages(db, principal, ticket, ref);
+    expect(deliveredPage.items).toHaveLength(1); expect(deliveredPage.items[0].email?.delivery).toBe('delivered');
+  });
+
+  it('retains incomplete recipient drafts and rejects stale draft/sender review without publishing or routing', async () => {
+    const f = await namedEmailFixture(), { email, principal, ticket, ref, request, transport, publish } = f;
+    const prepared = await email.prepareNamedConversationEmail(db, principal, ticket, ref, request, transport);
+    await f.conversations.saveNamedConversationEditorDraft(db, principal, ticket, ref,
+      { ...f.draft, operationId: randomUUID(), expectedRevision: 1, email: { ...f.draft.email, to: ['unfinished@'] } });
+    await expect(email.confirmNamedConversationEmail(db, principal, ticket, ref, request.operationId, prepared.review.messageHash, transport, publish)).rejects.toThrow();
+    await expect(email.prepareNamedConversationEmail(db, principal, ticket, ref, { ...request, operationId: randomUUID(), expectedDraftRevision: 2 }, transport)).rejects.toThrow();
+    expect(await f.conversations.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ email: { to: ['unfinished@'] }, revision: 2 });
+    await f.conversations.saveNamedConversationEditorDraft(db, principal, ticket, ref, { ...f.draft, operationId: randomUUID(), expectedRevision: 2 });
+    const next = { ...request, operationId: randomUUID(), expectedDraftRevision: 3 };
+    const review = await email.prepareNamedConversationEmail(db, principal, ticket, ref, next, transport);
+    transport.recheck.mockResolvedValueOnce({ ...review.review, senderRevision: 'b'.repeat(64) });
+    await expect(email.confirmNamedConversationEmail(db, principal, ticket, ref, next.operationId, review.review.messageHash, transport, publish)).rejects.toThrow();
+    expect(await f.sponsor.table('ticket_conversation_email_routes')).toHaveLength(0);
+    expect(await f.customer.table('ticket_conversation_publications')).toHaveLength(0);
+    expect(await f.conversations.getNamedConversationEditorDraft(db, principal, ticket, ref)).toMatchObject({ revision: 3, content: f.draft.content });
+  });
+
+  it('never retries transport after an unknown result or a success followed by a database rollback', async () => {
+    for (const rollback of [false, true]) {
+      const f = await namedEmailFixture(), { email, principal, ticket, ref, request, transport, publish } = f;
+      const prepared = await email.prepareNamedConversationEmail(db, principal, ticket, ref, request, transport);
+      await email.confirmNamedConversationEmail(db, principal, ticket, ref, request.operationId, prepared.review.messageHash, transport, publish);
+      const constraint = `test_delivery_commit_${randomUUID().replaceAll('-', '')}`;
+      if (rollback) await db.raw(db.raw("ALTER TABLE ticket_conversation_email_operations ADD CONSTRAINT ?? CHECK (operation_id <> ?::uuid OR status <> 'delivered')", [constraint, request.operationId]).toQuery());
+      else f.send.mockRejectedValueOnce(new Error('Lost acknowledgement after DATA'));
+      try {
+        if (rollback) await expect(email.deliverNamedConversationEmail(db, principal, ticket, ref, request.operationId, transport)).rejects.toThrow();
+        else expect(await email.deliverNamedConversationEmail(db, principal, ticket, ref, request.operationId, transport)).toMatchObject({ status: 'unknown' });
+      } finally { if (rollback) await db.raw('ALTER TABLE ticket_conversation_email_operations DROP CONSTRAINT ??', [constraint]); }
+      await email.deliverNamedConversationEmail(db, principal, ticket, ref, request.operationId, transport);
+      expect(f.send).toHaveBeenCalledOnce();
+      await f.sponsor.table('ticket_conversation_email_operations').where('operation_id', request.operationId).update({ attempted_at: db.raw("clock_timestamp() - interval '10 minutes'") });
+      expect(await email.getNamedConversationEmailOperation(db, principal, ticket, ref, request.operationId)).toMatchObject({ status: 'unknown' });
+    }
   });
 });

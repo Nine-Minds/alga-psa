@@ -8,15 +8,18 @@
   "exports": {
     ".": {
       "types": "./src/index.ts",
-      "import": "./src/index.ts"
+      "import": "./src/index.ts",
+      "require": "./src/index.ts"
     },
     "./conversationRichText": {
       "types": "./src/conversationRichText.ts",
-      "import": "./src/conversationRichText.ts"
+      "import": "./src/conversationRichText.ts",
+      "require": "./src/conversationRichText.ts"
     },
     "./conversationContent": {
       "types": "./src/conversationContent.ts",
-      "import": "./src/conversationContent.ts"
+      "import": "./src/conversationContent.ts",
+      "require": "./src/conversationContent.ts"
     },
     "./inboundRequesterReply": {
       "types": "./src/inboundRequesterReply.ts",

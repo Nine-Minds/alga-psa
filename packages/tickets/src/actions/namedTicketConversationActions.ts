@@ -78,3 +78,27 @@ export const setNamedConversationSenderGrantAction = withAuth(async (user, { ten
   const { setNamedConversationSenderGrant } = await import('@alga-psa/co-managed');
   return setNamedConversationSenderGrant(knex, actor, ticket, conversation, request);
 });
+
+export const prepareNamedTicketEmailAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference,
+  request: import('@alga-psa/co-managed').NamedConversationEmailRequest) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { prepareNamedTicketEmail } = await import('../lib/namedConversationEmail');
+  return prepareNamedTicketEmail(knex, actor, ticket, conversation, request);
+});
+export const sendNamedTicketEmailAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference,
+  operationId: string, reviewHash: string) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { sendNamedTicketEmail } = await import('../lib/namedConversationEmail');
+  return sendNamedTicketEmail(knex, actor, ticket, conversation, operationId, reviewHash);
+});
+export const getNamedTicketEmailOperationAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference, operationId: string) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedConversationEmailOperation } = await import('@alga-psa/co-managed');
+  return getNamedConversationEmailOperation(knex, actor, ticket, conversation, operationId);
+});
+
+export const getLatestNamedTicketEmailSendAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getLatestNamedConversationEmailSend } = await import('@alga-psa/co-managed');
+  return getLatestNamedConversationEmailSend(knex, actor, ticket, conversation);
+});

@@ -1,5 +1,5 @@
 import { htmlToVisibleText } from '../../lib/email/replyParser';
-import { isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
+import { hasNamedConversationReplyHint, isQualifiedReplyToken, qualifiedReplyTokenFromBody, type EmailReplyAdmission, type AdmittedEmailReply } from './qualifiedReplyAdmission';
 import type { EmailMessageDetails } from '../../interfaces/inbound-email.interfaces';
 import type { IEventPublisher } from '@alga-psa/types';
 import type { InboundEmailExecutionOptions } from '../../workflow/actions/emailWorkflowActions';
@@ -189,6 +189,11 @@ type ProcessInboundEmailInAppBaseResult =
       outcome: 'quarantined';
       reason: 'unauthorized_requester_reply' | 'unauthorized_technician_reply';
       matchedBy: 'reply_token';
+    }
+  | {
+      outcome: 'quarantined';
+      reason: 'conversation_reply_requires_admission';
+      matchedBy: 'reply_token' | 'thread_headers';
     };
 
 export type ProcessInboundEmailInAppResult = ProcessInboundEmailInAppBaseResult & {
@@ -1063,6 +1068,12 @@ export async function processInboundEmailInApp(
 
   // Fast-path: if we've already created a ticket for this email, never create a second one.
   const reservedQualifiedToken = qualifiedReplyTokenFromBody(emailData.body);
+  // Named vendor admission is being connected separately from requester and
+  // technician token writers. Retain these messages in the owning inbox's
+  // protected review until that writer can preserve their conversation/store.
+  if (hasNamedConversationReplyHint(emailData)) {
+    return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: hasNamedConversationReplyHint({ body: emailData.body }) ? 'reply_token' : 'thread_headers' };
+  }
   const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
     tenantId,
     providerId,

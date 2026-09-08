@@ -1,24 +1,9 @@
 import { createHash } from 'node:crypto';
 import type { EmailAddress, EmailMessage } from '@alga-psa/types';
 
-/** A server-produced review is a consistency check, not mailbox authorization.
- * The conversation command must retain current sender and destination authority. */
-export interface ReviewedEmailIntent {
-  senderRevision: string;
-  messageHash: string;
-}
-export interface ReviewedEmailPreview extends ReviewedEmailIntent {
-  providerId: string;
-  providerType: string;
-  from: EmailAddress;
-  replyTo?: EmailAddress;
-  to: EmailAddress[];
-  cc: EmailAddress[];
-  subject: string;
-  html: string;
-  text: string;
-  files: Array<{ filename: string; contentType?: string; size: number }>;
-}
+import type { ReviewedEmailIntent, ReviewedEmailPreview } from '@alga-psa/shared/lib/email/reviewedEmail';
+export type { ReviewedEmailIntent, ReviewedEmailPreview } from '@alga-psa/shared/lib/email/reviewedEmail';
+
 const digest = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const invalid = () => { throw new Error('Invalid reviewed email'); };
 function address(value: EmailAddress) {

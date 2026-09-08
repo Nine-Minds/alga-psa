@@ -697,4 +697,19 @@ describe('processInboundEmailInApp threaded inbound routing', () => {
     );
   });
 
+  it('retains vendor conversation markers and RFC replies in protected review before requester matching', async () => {
+    const { processInboundEmailInApp } = await import('@alga-psa/shared/services/email/processInboundEmailInApp');
+    const variants: Partial<EmailMessageDetails>[] = [
+      { body: { text: 'Reply [ALGA-REPLY-TOKEN tc1:incomplete]' } },
+      { body: { text: '[ALGA-REPLY-TOKEN cm1:quoted] [ALGA-REPLY-TOKEN TC1:other]' } },
+      { body: { html: '<div data-alga-reply-token="tc1:quoted"></div>' } },
+      { inReplyTo: '<conversation-11111111-1111-4111-8111-111111111111@example.test>' },
+      { references: ['<conversation-11111111-1111-4111-8111-111111111111@example.test>'] },
+    ];
+    for (const variant of variants) expect(await processInboundEmailInApp({ tenantId: 'tenant-1', providerId: 'provider-1', emailData: buildEmailData(variant) }))
+      .toMatchObject({ outcome: 'quarantined', reason: 'conversation_reply_requires_admission' });
+    expect(findTicketByReplyTokenMock).not.toHaveBeenCalled(); expect(findTicketByEmailThreadMock).not.toHaveBeenCalled();
+    expect(createTicketFromEmailMock).not.toHaveBeenCalled(); expect(createCommentFromEmailMock).not.toHaveBeenCalled();
+  });
+
 });

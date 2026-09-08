@@ -1,18 +1,22 @@
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
-import { postNamedTicketConversationDraft, type NamedConversationPostRequest, type CoManagedSessionActor } from '@alga-psa/co-managed';
+import { postNamedTicketConversationDraft, type NamedConversationPostContext, type NamedConversationPostRequest, type CoManagedSessionActor } from '@alga-psa/co-managed';
 import type { ConversationTicketReference, TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { EventSchemas, buildWorkflowPayload, type WorkflowEventPublishContext } from '@alga-psa/event-schemas';
 import { collaborationActorReferenceSchema } from '@alga-psa/event-schemas/collaboration';
 import Comment from '../models/comment';
+import type { CoManagedCommentInsert } from '@alga-psa/co-managed';
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent, publishQualifiedNamedConversationEvent } from './nativeConversationEvents';
 import { buildTicketCommunicationWorkflowEvents } from './workflowTicketCommunicationEvents';
 
 export function postNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   reference: TicketConversationReference, request: NamedConversationPostRequest) {
-  return postNamedTicketConversationDraft(db, actor, ticket, reference, request, async (context, comment) => {
-    const { trx, conversation } = context, owner = tenantDb(trx, ticket.tenant);
+  return postNamedTicketConversationDraft(db, actor, ticket, reference, request, applyNamedTicketConversationPost);
+}
+
+export async function applyNamedTicketConversationPost(context: NamedConversationPostContext, comment: CoManagedCommentInsert) {
+    const { trx, conversation, ticket } = context, owner = tenantDb(trx, ticket.tenant);
     await Comment.insert(trx, ticket.tenant, comment, { ticketId: ticket.ticketId,
       actorTenant: context.actor.tenant, actorUserId: context.actor.userId, actorReferenceId: context.actorReferenceId,
       audience: conversation.audience, conversationId: conversation.conversationId, assertWriteAuthority: context.assertWriteAuthority });
@@ -44,5 +48,4 @@ export function postNamedTicketConversation(db: Knex, actor: CoManagedSessionAct
         payload: event.payload, workflowContext, idempotencyKey: `named-comment:${ticket.tenant}:${comment.comment_id}:${event.eventType}` }, id);
       else await publishNativeCommentWorkflowEvent(trx, source, { eventType: event.eventType, payload: event.payload, ctx: workflowContext });
     }
-  });
 }

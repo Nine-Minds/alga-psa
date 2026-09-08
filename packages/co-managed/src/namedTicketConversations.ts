@@ -1,3 +1,4 @@
+import { snapshotConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -145,6 +146,10 @@ export function getNamedTicketConversationMessages(db: Knex, actor: CoManagedSes
     const page = await readAuthorizedTicketConversationPage({ trx: context.trx, actor: context.actor,
       sessionId: context.actor.sessionId, resource: { tenant: context.ticket.tenant, id: context.ticket.ticketId,
         relationshipId: context.ticket.relationshipId }, redactedFields: context.hidden }, cursor, conversation);
+    if (conversation.transport === 'email') {
+      const { attachPublishedConversationEmails } = await import('./conversationEmailOperations');
+      await attachPublishedConversationEmails({ ...context, conversation }, page.items);
+    }
     return { conversation, ...page };
   });
 }
@@ -175,11 +180,12 @@ export function getNamedConversationEditorDraft(db: Knex, actor: CoManagedSessio
 export function saveNamedConversationEditorDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   input: TicketConversationReference, inputRequest: EditorDraftSaveRequest<CoManagedConversationContent>) {
   const reference = snapshotConversationReference(input);
-  if (!inputRequest || Object.keys(inputRequest).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent'].includes(k))) {
+  if (!inputRequest || Object.keys(inputRequest).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email'].includes(k))) {
     throw new TicketConversationError('CONVERSATION_INVALID');
   }
   const parent = snapshotConversationDraftParent(inputRequest.parent);
-  if (inputRequest.content === null && parent) throw new TicketConversationError('CONVERSATION_INVALID');
+  const email = snapshotConversationEmailDraft(inputRequest.email);
+  if (inputRequest.content === null && (parent || email)) throw new TicketConversationError('CONVERSATION_INVALID');
   let content: CoManagedConversationContent | null = null;
   if (inputRequest.content !== null) {
     const body = inputRequest.content;
@@ -192,9 +198,10 @@ export function saveNamedConversationEditorDraft(db: Knex, actor: CoManagedSessi
   }
   const request = { operationId: inputRequest.operationId, expectedRevision: inputRequest.expectedRevision,
     expectedConversationRevision: inputRequest.expectedConversationRevision, content,
-    ...(inputRequest.parent !== undefined ? { parent } : {}) };
+    ...(inputRequest.parent !== undefined ? { parent } : {}), ...(inputRequest.email !== undefined ? { email } : {}) };
   return withTicketAuthority(db, actor, ticket, 'update', async context => {
     const { conversation } = await authorizedConversation(context, reference);
+    if (email && conversation.transport !== 'email') throw new TicketConversationError('CONVERSATION_INVALID');
     if (parent) await assertConversationReplyParent(context, conversation, parent);
     return saveConversationEditorDraft(draftStore(context, reference, conversation.revision), request);
   });
@@ -214,9 +221,9 @@ export interface NamedConversationPostContext extends ConversationAuthority {
 }
 /** Explicit internal Post consumes exactly the reviewed author-private draft.
  * Email transport requires its separate envelope/send admission. */
-export function postNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   input: TicketConversationReference, inputRequest: NamedConversationPostRequest,
-  apply: (context: NamedConversationPostContext, comment: CoManagedCommentInsert) => Promise<void>) {
+  apply: (context: NamedConversationPostContext, comment: CoManagedCommentInsert) => Promise<void>, mode: 'post' | 'send') {
   const reference = snapshotConversationReference(input);
   if (!inputRequest || !conversationUuid(inputRequest.operationId) ||
       !Number.isSafeInteger(inputRequest.expectedConversationRevision) || inputRequest.expectedConversationRevision < 1 ||
@@ -231,14 +238,14 @@ export function postNamedTicketConversationDraft(db: Knex, actor: CoManagedSessi
     const { conversation } = await authorizedConversation(context, reference);
     const { trx } = context, store = tenantDb(trx, reference.storeTenant), home = tenantDb(trx, context.actor.tenant);
     const hash = createHash('sha256').update(JSON.stringify({ actor: { tenant: context.actor.tenant, userId: context.actor.userId },
-      ticket: context.ticket, reference, request, mode: 'post' })).digest('hex');
+      ticket: context.ticket, reference, request, mode })).digest('hex');
     const receipt = (row: any) => ({ ...reference, operationId: row.operation_id, threadId: row.thread_id, commentId: row.comment_id });
     const previous = await store.table('ticket_conversation_publications').where('operation_id', request.operationId).forShare().first();
     if (previous) {
       if (previous.request_hash !== hash) throw new TicketConversationError('CONVERSATION_CONFLICT');
       return receipt(previous);
     }
-    if (conversation.transport !== 'internal' || conversation.audience === 'requester') throw new TicketConversationError('CONVERSATION_INVALID');
+    if (conversation.transport !== (mode === 'post' ? 'internal' : 'email') || conversation.audience === 'requester') throw new TicketConversationError('CONVERSATION_INVALID');
     if (conversation.revision !== request.expectedConversationRevision) throw new TicketConversationError('CONVERSATION_CONFLICT');
     const draftScope = draftStore(context, reference, conversation.revision);
     const draft = await home.table('ticket_conversation_editor_drafts').where({ actor_user_id: context.actor.userId,
@@ -281,9 +288,27 @@ export function postNamedTicketConversationDraft(db: Knex, actor: CoManagedSessi
     const [saved] = await store.table('ticket_conversation_publications').insert({ tenant: reference.storeTenant,
       operation_id: request.operationId, conversation_id: reference.conversationId, ticket_tenant: context.ticket.tenant,
       ticket_id: context.ticket.ticketId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId,
-      request_hash: hash, mode: 'post', thread_id: threadId, comment_id: request.operationId }).returning('*');
+      request_hash: hash, mode, thread_id: threadId, comment_id: request.operationId }).returning('*');
     return receipt(saved);
   });
+}
+
+export function postNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  input: TicketConversationReference, request: NamedConversationPostRequest,
+  apply: (context: NamedConversationPostContext, comment: CoManagedCommentInsert) => Promise<void>) {
+  return publishNamedTicketConversationDraft(db, actor, ticket, input, request, apply, 'post');
+}
+/** Internal publication adapter for an explicitly reviewed vendor Send. The
+ * owning email operation retains review/envelope intent in the same transaction. */
+export async function sendNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  input: TicketConversationReference, request: NamedConversationPostRequest,
+  apply: (context: NamedConversationPostContext, comment: CoManagedCommentInsert) => Promise<void>) {
+  const stableActor = snapshotCoManagedSessionActor(actor), stableTicket = snapshotConversationTicket(ticket), stableRef = snapshotConversationReference(input);
+  const stableRequest = { ...request, ...(request.parent ? { parent: { ...request.parent } } : {}) };
+  const { withNamedConversationMailbox } = await import('./conversationMailboxes');
+  return withNamedConversationMailbox(db, stableActor, stableTicket, stableRef, stableRequest.expectedConversationRevision,
+    context => publishNamedTicketConversationDraft(context.trx, context.actor, context.ticket,
+      { storeTenant: context.conversation.storeTenant, conversationId: context.conversation.conversationId }, stableRequest, apply, 'send'));
 }
 
 

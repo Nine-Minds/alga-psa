@@ -3,9 +3,11 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(),
+const mocks = vi.hoisted(() => ({ load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  listNamedConversationMailboxesAction: mocks.mailboxes, selectNamedConversationMailboxAction: mocks.selectMailbox, getLatestNamedTicketEmailSendAction: mocks.latestSend,
+  prepareNamedTicketEmailAction: mocks.prepareEmail, sendNamedTicketEmailAction: mocks.sendEmail, getNamedTicketEmailOperationAction: mocks.emailStatus,
   getNamedTicketConversationScreenAction: mocks.load, getNamedTicketConversationMessagesAction: mocks.page,
   getNamedConversationEditorDraftAction: mocks.readDraft, saveNamedConversationEditorDraftAction: mocks.saveDraft,
   postNamedTicketConversationAction: mocks.post, createNamedTicketConversationAction: mocks.create, setNamedTicketConversationStatusAction: mocks.status,
@@ -37,6 +39,8 @@ beforeEach(() => {
   mocks.readDraft.mockResolvedValue(null);
   mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => ({ content: request.content, revision: request.expectedRevision + 1, conversationRevision: 1 }));
   mocks.post.mockResolvedValue({ commentId: 'posted' });
+  mocks.mailboxes.mockResolvedValue([{ id: 'mailbox', tenant: 'home', email: 'support@example.test', name: 'Support' }]);
+  mocks.latestSend.mockResolvedValue(null);
 });
 afterEach(cleanup);
 
@@ -143,4 +147,83 @@ it('retains the publication identity if the post succeeded but refreshing the dr
   await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
   expect(mocks.post.mock.calls[1]).toEqual(mocks.post.mock.calls[0]);
   await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''));
+});
+
+function emailFixture(selected = true) {
+  const emailSide = { ...side, transport: 'email', mailbox: selected ? { id: 'mailbox', tenant: 'home' } : null };
+  let draft: any = null;
+  mocks.load.mockResolvedValue({ conversations: [requester, emailSide], writeAudiences: ['organization_private'], actor: { tenant: 'home', userId: 'author' } });
+  mocks.page.mockResolvedValue({ conversation: emailSide, items: [], nextBefore: null });
+  mocks.readDraft.mockImplementation(async () => draft);
+  mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => draft = { ...request, revision: request.expectedRevision + 1 });
+  const preview = { senderRevision: 'sender', messageHash: 'review-hash', from: { email: 'resolved@example.test' }, replyTo: { email: 'support@example.test' },
+    to: [{ email: 'vendor@example.test' }], cc: [{ email: 'colleague@example.test' }], subject: 'Connection failure', html: '<p>Selected vendor question</p>', text: 'Selected vendor question', files: [] };
+  mocks.prepareEmail.mockImplementation(async (_ticket, _ref, request) => ({ operationId: request.operationId, status: 'reviewed', review: preview }));
+  mocks.sendEmail.mockImplementation(async (_ticket, _ref, operationId) => { draft = { content: null, email: null, revision: draft.revision + 1 }; return { operationId, status: 'delivered', errorCode: null }; });
+  return { emailSide, draft: () => draft };
+}
+async function writeEmail() {
+  fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Selected vendor question' } });
+  fireEvent.change(screen.getByLabelText('To'), { target: { value: 'vendor@example.test' } });
+  fireEvent.change(screen.getByLabelText('CC'), { target: { value: 'colleague@example.test' } });
+  fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Connection failure' } });
+}
+it('restores the email envelope and reviews the resolved sender without sending until confirmation', async () => {
+  const f = emailFixture(); const first = render(<Harness />); await writeEmail();
+  fireEvent.click(screen.getByRole('button', { name: /Requester/ }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledTimes(1));
+  expect(f.draft().email).toEqual({ to: ['vendor@example.test'], cc: ['colleague@example.test'], subject: 'Connection failure' });
+  first.unmount(); render(<Harness />);
+  expect(await screen.findByLabelText('Message')).toHaveValue('Selected vendor question');
+  expect(screen.getByLabelText('To')).toHaveValue('vendor@example.test');
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
+  await screen.findByText('resolved@example.test'); expect(mocks.sendEmail).not.toHaveBeenCalled();
+  expect(mocks.prepareEmail.mock.calls[0][2].expectedDraftRevision).toBe(f.draft().revision);
+  expect(screen.getByLabelText('Message')).toBeDisabled(); expect(screen.getByLabelText('To')).toBeDisabled();
+  expect(screen.getByTitle('Email body preview').getAttribute('sandbox')).toBe('');
+  fireEvent.click(screen.getByRole('button', { name: 'Back to draft' }));
+  expect(screen.getByLabelText('Message')).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByText('resolved@example.test');
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' })); await screen.findByText('Email sent.');
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''));
+  expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  expect(mocks.sendEmail.mock.calls[0].slice(2)).toEqual([mocks.prepareEmail.mock.calls[1][2].operationId, 'review-hash']);
+  expect(mocks.post).not.toHaveBeenCalled();
+});
+it('checks an uncertain Send with its original identity and restores its warning after remount', async () => {
+  emailFixture(); mocks.sendEmail.mockRejectedValueOnce(new Error('Lost confirmation response'));
+  const first = render(<Harness />); await writeEmail();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByText('resolved@example.test');
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await screen.findAllByText('Could not confirm the result. Check this send before editing or sending again.');
+  expect(screen.queryByRole('button', { name: 'Send email' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: /Requester/ })); expect(mocks.push).not.toHaveBeenCalled();
+  const operationId = mocks.sendEmail.mock.calls[0][2], outcome = { operationId, status: 'unknown', errorCode: 'delivery_unknown' };
+  mocks.emailStatus.mockResolvedValue(outcome); mocks.readDraft.mockResolvedValue({ content: null, email: null, revision: 10 });
+  mocks.latestSend.mockResolvedValue({ ...outcome, reviewHash: 'review-hash' });
+  fireEvent.click(screen.getByRole('button', { name: 'Check delivery' }));
+  await screen.findByText('Delivery could not be confirmed. Check the mailbox before sending this message again.');
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(mocks.emailStatus.mock.calls[0][2]).toBe(operationId); expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+  first.unmount(); render(<Harness />);
+  await screen.findByText('Delivery could not be confirmed. Check the mailbox before sending this message again.');
+  fireEvent.click(screen.getByRole('button', { name: 'Check delivery' }));
+  await waitFor(() => expect(mocks.emailStatus).toHaveBeenCalledTimes(2)); expect(mocks.sendEmail).toHaveBeenCalledTimes(1);
+});
+it('saves the email draft before selecting a mailbox and uses its new revision at review', async () => {
+  const f = emailFixture(false); render(<Harness />); await writeEmail();
+  await waitFor(() => expect(screen.getByLabelText('Sending mailbox')).toBeEnabled());
+  mocks.selectMailbox.mockImplementation(async () => {
+    expect(f.draft().email.to).toEqual(['vendor@example.test']);
+    const selected = { ...f.emailSide, mailbox: { id: 'mailbox', tenant: 'home' }, revision: 2 };
+    mocks.load.mockResolvedValue({ conversations: [requester, selected], writeAudiences: ['organization_private'], actor: { tenant: 'home', userId: 'author' } });
+    return selected;
+  });
+  fireEvent.change(screen.getByLabelText('Sending mailbox'), { target: { value: 'mailbox' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' })); await screen.findByText('resolved@example.test');
+  expect(mocks.selectMailbox.mock.calls[0].slice(2)).toEqual([1, 'mailbox']);
+  expect(mocks.prepareEmail.mock.calls[0][2].expectedConversationRevision).toBe(2); expect(mocks.sendEmail).not.toHaveBeenCalled();
 });

@@ -16,6 +16,9 @@ import { snapshotConversationDocument, type CoManagedRichTextDocument } from '@a
 import type { ConversationDraftParent, EditorDraftSaveRequest } from '@alga-psa/shared/lib/tickets/conversationEditorDrafts';
 import * as actions from '../../../actions/namedTicketConversationActions';
 import { conversationDocument, conversationText } from './conversationText';
+import type { ConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
+import { ConversationEmailControls } from './ConversationEmailControls';
+import { ConversationEmailEnvelope } from './ConversationEmailEnvelope';
 
 const Document = dynamic(() => import('./ConversationDocument'), { ssr: false });
 const reference = (c: NamedTicketConversation): TicketConversationReference => ({ storeTenant: c.storeTenant, conversationId: c.conversationId });
@@ -111,13 +114,14 @@ function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }:
   const { t } = useTranslation('features/tickets');
   const [name, setName] = useState(''), [audience, setAudience] = useState<'shared_it' | 'organization_private'>('organization_private');
   const [busy, setBusy] = useState(false), [error, setError] = useState(false);
-  const operation = useRef<{ operationId: string; name: string; audience: typeof audience; transport: 'internal' } | null>(null);
-  useEffect(() => { if (open) { setName(''); setAudience(audiences.includes('organization_private') ? 'organization_private' : 'shared_it'); setError(false); operation.current = null; } }, [open]);
+  const [transport, setTransport] = useState<'internal' | 'email'>('internal');
+  const operation = useRef<{ operationId: string; name: string; audience: typeof audience; transport: 'internal' | 'email' } | null>(null);
+  useEffect(() => { if (open) { setName(''); setTransport('internal'); setAudience(audiences.includes('organization_private') ? 'organization_private' : 'shared_it'); setError(false); operation.current = null; } }, [open]);
   const submit = async () => {
     if (busy || !name.trim() || !audiences.includes(audience)) return;
     setBusy(true); setError(false);
     try {
-      operation.current ??= { operationId: crypto.randomUUID(), name: name.trim(), audience, transport: 'internal' };
+      operation.current ??= { operationId: crypto.randomUUID(), name: name.trim(), audience, transport };
       await onCreated(await actions.createNamedTicketConversationAction(ticket, operation.current));
     } catch { setError(true); }
     finally { setBusy(false); }
@@ -126,11 +130,13 @@ function CreateConversation({ id, ticket, open, audiences, onClose, onCreated }:
     footer={<><Button id={`${id}-create-cancel`} variant="outline" disabled={busy} onClick={onClose}>{t('namedConversations.cancel', 'Cancel')}</Button>
       <Button id={`${id}-create-confirm`} disabled={busy || !name.trim()} onClick={() => void submit()}>{t('namedConversations.create', 'Create conversation')}</Button></>}>
     <DialogContent><div className="space-y-4">
+      <CustomSelect id={`${id}-transport`} label={t('namedConversations.kind', 'Conversation type')} value={transport} disabled={busy || Boolean(error)}
+        options={[{ value: 'internal', label: t('namedConversations.internalMessage', 'Internal message') }, { value: 'email', label: t('namedConversations.vendorEmail', 'Vendor email') }]} onValueChange={value => setTransport(value as typeof transport)} />
       <Input id={`${id}-name`} label={t('namedConversations.name', 'Name')} value={name} maxLength={160} disabled={busy || Boolean(error)} onChange={e => setName(e.target.value)} />
       <CustomSelect id={`${id}-audience`} label={t('namedConversations.audience', 'Visible to')} value={audience} disabled={busy || Boolean(error)}
         options={audiences.map(value => ({ value, label: t(`namedConversations.audiences.${value}`, audienceLabels[value]) }))}
         onValueChange={value => setAudience(value as typeof audience)} />
-      <p className="text-sm text-muted-foreground">{t('namedConversations.internalHelp', 'Internal messages stay with the selected IT audience. They are not emailed to the requester.')}</p>
+      <p className="text-sm text-muted-foreground">{transport === 'email' ? t('namedConversations.vendorHelp', 'Choose a sending mailbox and recipients in the conversation. Every email is reviewed before sending.') : t('namedConversations.internalHelp', 'Internal messages stay with the selected IT audience. They are not emailed to the requester.')}</p>
       {error && <p role="alert" className="text-sm text-destructive">{t('namedConversations.createFailed', 'Could not confirm creation. Retry to check the same request.')}</p>}
     </div></DialogContent>
   </Dialog>;
@@ -182,25 +188,32 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
         return <article key={`${item.storeTenant}:${item.commentId}`} data-comment-id={item.commentId} className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
           <div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground"><span className="font-medium text-[rgb(var(--color-text-700))]">{item.author?.displayName ?? t('namedConversations.author', 'Ticket participant')}</span>
             <time dateTime={item.createdAt}>{formatDate(item.createdAt, { dateStyle: 'medium', timeStyle: 'short' })}</time></div>
+          {!item.deleted && item.email && <ConversationEmailEnvelope email={item.email} />}
           {item.deleted ? <p className="text-sm italic text-muted-foreground">{t('namedConversations.deleted', 'Message deleted')}</p>
             : document ? <Document id={`${id}-message-${index}`} document={document} /> : <p className="whitespace-pre-wrap break-words text-sm">{conversationText(item.note, item.markdown)}</p>}
           {item.parentCommentId && <p className="mt-2 text-xs text-muted-foreground">{t('namedConversations.reply', 'Reply')}</p>}
-          {canWrite && conversation.transport === 'internal' && !item.deleted && <Button id={`${id}-message-${index}-reply`} variant="ghost" size="sm" disabled={!replyReady}
+          {canWrite && !item.deleted && <Button id={`${id}-message-${index}-reply`} variant="ghost" size="sm" disabled={!replyReady}
             onClick={() => void reply.current?.({ threadId: item.threadId, commentId: item.commentId })}>{t('namedConversations.reply', 'Reply')}</Button>}
         </article>;
       })}
-    </div>{canWrite && conversation.transport === 'internal' && <NamedConversationComposer id={id} ticket={ticket} conversation={conversation} flush={flush} onDirty={onDirty} reply={reply} onReplyReady={setReplyReady} replyItems={page.items}
-      onPosted={() => { setVersion(n => n + 1); onRefresh(); }} />}</>}
+    </div>{canWrite && <NamedConversationComposer id={id} ticket={ticket} conversation={conversation} flush={flush} onDirty={onDirty} reply={reply} onReplyReady={setReplyReady} replyItems={page.items}
+      onRefresh={onRefresh} onPosted={() => { setVersion(n => n + 1); onRefresh(); }} />}</>}
   </section>;
 }
 
-export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, reply, onReplyReady, replyItems = [] }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items'] }) {
+export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [] }: { id: string; ticket: ConversationTicketReference;
+  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items'] }) {
   const { t } = useTranslation('features/tickets');
   const [document, setDocument] = useState<CoManagedRichTextDocument>([]), [loaded, setLoaded] = useState(false), [epoch, setEpoch] = useState(0);
+  const isEmail = conversation.transport === 'email';
+  const [email, setEmail] = useState<ConversationEmailDraft>({ subject: '', to: [], cc: [] });
+  const [emailLocked, setEmailLocked] = useState(false);
+  const emailLock = useRef(false), invalidEmail = useRef(false);
+  const currentConversation = useRef(conversation); currentConversation.current = conversation;
+  const lockEmail = (locked: boolean) => { emailLock.current = locked; setEmailLocked(locked); };
   const [parent, setParent] = useState<ConversationDraftParent | null>(null);
   const [saving, setSaving] = useState(false), [posting, setPosting] = useState(false), [error, setError] = useState<string | null>(null);
-  const state = useRef({ revision: 0, content: null as CoManagedConversationContent | null, generation: 0, dirty: false, alive: true, conversationRevision: conversation.revision, invalid: false, parent: null as ConversationDraftParent | null });
+  const state = useRef({ revision: 0, content: null as CoManagedConversationContent | null, generation: 0, dirty: false, alive: true, conversationRevision: conversation.revision, invalid: false, parent: null as ConversationDraftParent | null, email: null as ConversationEmailDraft | null });
   const pending = useRef<{ request: EditorDraftSaveRequest<CoManagedConversationContent>; generation: number } | null>(null);
   const flight = useRef<Promise<boolean> | null>(null);
   const postRequest = useRef<Parameters<typeof actions.postNamedTicketConversationAction>[2] | null>(null);
@@ -210,11 +223,15 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     const draft = await actions.getNamedConversationEditorDraftAction(ticket, reference(conversation));
     if (!state.current.alive || generation !== readGeneration.current) return;
     const content = draft?.content ?? null;
-    state.current.revision = draft?.revision ?? 0; state.current.content = content; state.current.dirty = false;
+    state.current.revision = draft?.revision ?? 0; state.current.content = content;
+    state.current.dirty = Boolean(content && draft?.conversationRevision !== currentConversation.current.revision);
+    state.current.generation++;
     state.current.parent = draft?.parent ?? null; setParent(state.current.parent);
-    state.current.conversationRevision = conversation.revision;
+    state.current.email = draft?.email ?? null; setEmail(state.current.email ?? { subject: '', to: [], cc: [] });
+    state.current.conversationRevision = currentConversation.current.revision;
+    state.current.invalid = false; invalidEmail.current = false;
     setDocument(content?.document ?? (content?.text ? conversationDocument(content.text) ?? [] : []));
-    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.parent || (content && (content.document || content.text))));
+    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.email || state.current.parent || (content && (content.document || content.text))));
   }, [ticket, conversation.conversationId]);
   useEffect(() => {
     state.current.alive = true;
@@ -222,15 +239,16 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     return () => { state.current.alive = false; };
   }, [read]);
   const save = useCallback((): Promise<boolean> => {
-    if (state.current.invalid) return Promise.resolve(false);
+    if (state.current.invalid || invalidEmail.current) return Promise.resolve(false);
     if (flight.current) return flight.current;
     const task = async () => {
       await Promise.resolve(); // Install the flight before a clean draft can resolve synchronously.
       setSaving(true);
       try {
         while (state.current.alive && (state.current.dirty || pending.current)) {
+          if (!pending.current && (state.current.invalid || invalidEmail.current)) return false;
           pending.current ??= { generation: state.current.generation, request: { operationId: crypto.randomUUID(), expectedRevision: state.current.revision,
-            expectedConversationRevision: state.current.conversationRevision, content: state.current.content, parent: state.current.parent } };
+            expectedConversationRevision: state.current.conversationRevision, content: state.current.content, parent: state.current.parent, email: state.current.email } };
           const sent = pending.current;
           const saved = await actions.saveNamedConversationEditorDraftAction(ticket, reference(conversation), sent.request);
           if (!state.current.alive) return false;
@@ -245,11 +263,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     flight.current = task(); return flight.current;
   }, [ticket, conversation.conversationId]);
   const changeParent = useCallback(async (next: ConversationDraftParent | null) => {
-    if (!loaded || posting || postRequest.current || !await save()) return false;
+    if (!loaded || posting || emailLock.current || postRequest.current || !await save()) return false;
     state.current.parent = next; setParent(next);
     state.current.content ??= { text: '' };
     state.current.dirty = true; state.current.generation++;
-    onDirty(Boolean(next || state.current.content.document || state.current.content.text));
+    onDirty(Boolean(state.current.email || next || state.current.content.document || state.current.content.text));
     const saved = await save();
     if (saved && state.current.alive) {
       const editor = window.document.getElementById(`${id}-composer`);
@@ -260,21 +278,24 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   }, [loaded, posting, save, id, onDirty]);
   useEffect(() => {
     if (reply) reply.current = changeParent;
-    onReplyReady?.(loaded && !posting && !postRequest.current);
+    onReplyReady?.(loaded && !posting && !emailLocked && !postRequest.current);
     return () => { if (reply?.current === changeParent) reply.current = null; onReplyReady?.(false); };
-  }, [reply, changeParent, loaded, posting, error, onReplyReady]);
-  useEffect(() => { flush.current = save; return () => { if (flush.current === save) flush.current = async () => true; }; }, [flush, save]);
+  }, [reply, changeParent, loaded, posting, emailLocked, error, onReplyReady]);
+  useEffect(() => {
+    const flushDraft = () => emailLock.current ? Promise.resolve(false) : save();
+    flush.current = flushDraft; return () => { if (flush.current === flushDraft) flush.current = async () => true; };
+  }, [flush, save]);
   useEffect(() => {
     if (!loaded || state.current.conversationRevision === conversation.revision) return;
     state.current.conversationRevision = conversation.revision;
     if (state.current.content) { state.current.dirty = true; state.current.generation++; void save(); }
   }, [conversation.revision, loaded, save]);
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (state.current.dirty || pending.current || postRequest.current) { event.preventDefault(); event.returnValue = ''; } };
+    const warn = (event: BeforeUnloadEvent) => { if (state.current.dirty || pending.current || postRequest.current || emailLock.current) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn);
   }, []);
   const change = (value: CoManagedRichTextDocument) => {
-    if (posting || postRequest.current) return;
+    if (posting || emailLock.current || postRequest.current) return;
     setDocument(value);
     let content: CoManagedConversationContent;
     try {
@@ -283,7 +304,19 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
       state.current.invalid = false;
     } catch { state.current.invalid = true; state.current.dirty = true; setError('invalid'); onDirty(true); return; }
     state.current.content = content; state.current.dirty = true; state.current.generation++;
-    onDirty(Boolean(state.current.parent || content.document || content.text)); void save();
+    onDirty(Boolean(state.current.email || state.current.parent || content.document || content.text)); void save();
+  };
+  const changeEmail = (next: ConversationEmailDraft) => {
+    if (!loaded || emailLock.current) return;
+    setEmail(next);
+    invalidEmail.current = next.subject.length > 255 || [next.to, next.cc].some(values => values.length > 100 || values.some(value => value.length > 500 || /[\r\n\0]/.test(value)));
+    if (invalidEmail.current) { state.current.dirty = true; setError('invalid'); onDirty(true); return; }
+    state.current.email = next; state.current.content ??= { text: '' };
+    state.current.dirty = true; state.current.generation++; onDirty(true); void save();
+  };
+  const reviewDraft = async () => {
+    if (!loaded || !await save()) return null;
+    return { operationId: crypto.randomUUID(), expectedConversationRevision: state.current.conversationRevision, expectedDraftRevision: state.current.revision };
   };
   const submit = async () => {
     if (posting || !loaded || !await save()) return;
@@ -303,17 +336,25 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   let nonempty = false;
   try { snapshotConversationDocument(document); nonempty = true; } catch { /* An empty editor is a draft, not a message. */ }
   return <div className="space-y-3 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
-    <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{t('namedConversations.internalMessage', 'Internal message')}</h3>
+    <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
+    {isEmail && <div className="space-y-3">
+      <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={!loaded || emailLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
+      <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={!loaded || emailLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />
+      <p className="text-xs text-muted-foreground">{t('namedConversations.addressHelp', 'Separate email addresses with semicolons.')}</p>
+      <Input id={`${id}-email-subject`} label={t('namedConversations.subject', 'Subject')} value={email.subject} disabled={!loaded || emailLocked} maxLength={255} onChange={event => changeEmail({ ...email, subject: event.target.value })} />
+    </div>}
     {parent && <div className="flex items-center justify-between gap-2 rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2 text-sm">
       <div className="min-w-0"><p>{t('namedConversations.replying', 'Replying to a message in this conversation')}</p>
         {parentMessage && <p className="mt-1 truncate text-xs text-muted-foreground">{parentMessage.author?.displayName ? `${parentMessage.author.displayName}: ` : ''}{parentMessage.deleted ? t('namedConversations.deleted', 'Message deleted') : conversationText(parentMessage.note, parentMessage.markdown)}</p>}
       </div>
-      <Button id={`${id}-clear-reply`} variant="ghost" size="sm" disabled={posting || Boolean(postRequest.current)} onClick={() => void changeParent(null)}>{t('namedConversations.clearReply', 'New message instead')}</Button>
+      <Button id={`${id}-clear-reply`} variant="ghost" size="sm" disabled={posting || emailLocked || Boolean(postRequest.current)} onClick={() => void changeParent(null)}>{t('namedConversations.clearReply', 'New message instead')}</Button>
     </div>}
-    {loaded && <Document key={epoch} id={`${id}-composer`} document={document} editable={!posting && !postRequest.current} onChange={change} />}
+    {loaded && <Document key={epoch} id={`${id}-composer`} document={document} editable={!posting && !emailLocked && !postRequest.current} onChange={change} />}
     {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
-    <div className="flex items-center gap-2"><Button id={`${id}-post`} disabled={!loaded || !nonempty || posting} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>
+    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} ready={nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
+      saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); onPosted(); }} />}
+    <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={!loaded || !nonempty || posting} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}
       <span className="text-xs text-muted-foreground">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</span></div>
   </div>;

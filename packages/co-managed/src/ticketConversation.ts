@@ -7,6 +7,7 @@ import { withCoManagedSharedWork, type CoManagedSharedResource } from './sharedW
 import { withCoManagedCustomerTicket } from './customerWork';
 import { snapshotCoManagedSessionActor, isCoManagedUuid, assertCoManagedSessionUnexpired, CoManagedSharedWorkError, type CoManagedSessionActor } from './sharedWorkIdentity';
 import type { NamedTicketConversation } from '@alga-psa/shared/lib/tickets/namedConversations';
+import type { PublishedConversationEmail } from '@alga-psa/shared/lib/email/reviewedEmail';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
 export interface CoManagedConversationCursor { createdAt: string; storeTenant: string; commentId: string }
@@ -32,6 +33,7 @@ export interface CoManagedConversationItem {
   note: string | null;
   markdown: string | null;
   author?: CoManagedConversationAuthor;
+  email?: PublishedConversationEmail;
 }
 export interface CoManagedTicketConversation {
   resource: CoManagedSharedResource;
