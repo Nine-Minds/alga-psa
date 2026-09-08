@@ -2,6 +2,8 @@
 
 'use server'
 
+import { readCoManagedNativeInteractions } from '@alga-psa/co-managed';
+import { resolveInteractionBrowserActor } from '../lib/coManagedInteractionReader';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { revalidatePath } from 'next/cache'
@@ -145,6 +147,8 @@ export const getInteractionsForEntity = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { entity: { id: entityId, type: entityType } });
+    if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getForEntity(entityId, entityType, tenant);
     });
@@ -171,6 +175,8 @@ export const getRecentInteractions = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters });
+    if (admitted.handled) return admitted.interactions;
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return await InteractionModel.getRecentInteractions(filters, tenant);
     });
@@ -191,6 +197,8 @@ export const getInteractionsPage = withAuth(async (
     await assertMspPermission(user, 'interaction', 'read', 'Permission denied: Cannot read interactions');
 
     const { knex } = await createTenantKnex();
+    const admitted = await readCoManagedNativeInteractions(knex, tenant, () => resolveInteractionBrowserActor(user, tenant), { filters, paginated: true });
+    if (admitted.handled) return { interactions: admitted.interactions, total: admitted.total, page: admitted.page, pageSize: admitted.pageSize };
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return InteractionModel.getInteractionsPage(filters, tenant, trx);
     });

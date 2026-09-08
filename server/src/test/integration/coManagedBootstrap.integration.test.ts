@@ -15286,3 +15286,82 @@ it('customer meeting artifact API cannot use a sponsoring MSP key to select cust
   const response = await download(plaintext, { 'x-tenant-id': context.tenant });
   expect([403, 404]).toContain(response.status); expect(await response.text()).not.toContain('Private transcript');
 }));
+
+async function withInteractionMeetingReadFixture(work: (fixture: any) => Promise<void>) {
+  return withMeetingArtifactFixture(async (fixture: any) => {
+    const { customer, context, requestId, meetingId, domain, actor } = fixture;
+    const interactionId = randomUUID(), typeId = randomUUID();
+    const request = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+    await customer.table('interaction_types').insert({ tenant: context.tenant, type_id: typeId, type_name: 'Online Meeting', icon: 'video' });
+    await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: interactionId, type_id: typeId, user_id: context.userId, client_id: request.client_id,
+      title: 'Customer meeting follow-up', notes: 'Private interaction details', interaction_date: '2026-09-07T09:00:00Z' });
+    await customer.table('online_meetings').where('meeting_id', meetingId).update({ interaction_id: interactionId });
+    const actions = await import('../../../../packages/clients/src/actions/interactionActions');
+    const meetings = await import('../../../../packages/clients/src/actions/onlineMeetingActions');
+    const list = (options: any = {}) => domain.readCoManagedNativeInteractions(db, context.tenant, actor, options);
+    await work({ ...fixture, interactionId, typeId, clientId: request.client_id, actions, meetings, list });
+  });
+}
+
+it('customer interaction meeting reads use the same admitted projection in page recent entity and dedicated native actions', async () => withInteractionMeetingReadFixture(async ({ actions, meetings, interactionId, clientId, transcriptId, recordingId, documentId }: any) => {
+  const page = await actions.getInteractionsPage({ page: 1, pageSize: 10 });
+  expect(page).toMatchObject({ total: 1, page: 1, pageSize: 10, interactions: [{ interaction_id: interactionId, title: 'Customer meeting follow-up', type_name: 'online meeting' }] });
+  const meeting = page.interactions[0].online_meeting;
+  expect(meeting.artifacts.map((row: any) => row.artifact_id).sort()).toEqual([transcriptId, recordingId].sort());
+  expect(meeting.artifacts[0].download_url).toBe(`/api/online-meetings/artifacts/${meeting.artifacts[0].artifact_id}`);
+  expect(JSON.stringify(page)).not.toMatch(/untrusted.example.invalid|provider_artifact_id|provider_meeting_id|provider_event_id|organizer_upn|content_url|file_id/);
+  expect(JSON.stringify(page)).not.toContain(documentId);
+  expect((await actions.getRecentInteractions({}))[0].online_meeting).toEqual(meeting);
+  expect((await actions.getInteractionsForEntity(clientId, 'client'))[0].online_meeting).toEqual(meeting);
+  expect(await meetings.getOnlineMeetingForInteraction(interactionId)).toEqual(meeting);
+}));
+
+it('customer interaction meeting reads hide masked text from search totals and meeting enrichment', async () => withInteractionMeetingReadFixture(async ({ list, context, user, actions }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Interaction content scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action: 'read', templateKey: 'own', config: { redactedFields: ['notes'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await list({ filters: { search: 'Private interaction details' }, paginated: true })).toMatchObject({ total: 0, interactions: [] });
+  const visible = await list({ filters: { search: 'Customer meeting' }, paginated: true });
+  expect(visible.total).toBe(1); expect(visible.interactions[0]).not.toHaveProperty('notes'); expect(visible.interactions[0].online_meeting).toBeNull();
+  expect((await actions.getInteractionsPage({ search: 'Private interaction details' })).total).toBe(1);
+}));
+
+it('customer interaction meeting reads require both owners and the private calendar allocation', async () => withInteractionMeetingReadFixture(async ({ customer, ownId, actions, meetings, interactionId, consume, recordingId }: any) => {
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ is_private: true });
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  expect((await actions.getInteractionsPage({})).interactions[0]).toMatchObject({ interaction_id: interactionId, online_meeting: null });
+  expect(await meetings.getOnlineMeetingForInteraction(interactionId)).toBeNull();
+  await expect(consume(recordingId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction meeting reads omit inaccessible related labels and validate an empty entity parent', async () => withInteractionMeetingReadFixture(async ({ customer, clientId, list, actions }: any) => {
+  const client = await customer.table('clients').where('client_id', clientId).first();
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'client', action: 'read' }).select('permission_id')).del();
+  const result = await list(); expect(result.interactions[0]).not.toHaveProperty('client_name');
+  expect((await list({ filters: { search: client.client_name } })).total).toBe(0);
+  await expect(actions.getInteractionsForEntity(clientId, 'client')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer interaction meeting reads filter out other owners before paginating and counting', async () => withInteractionMeetingReadFixture(async ({ customer, context, user, list, typeId, clientId }: any) => {
+  const otherUserId = randomUUID(), otherId = randomUUID(), base = await customer.table('users').where('user_id', context.userId).first();
+  await customer.table('users').insert({ ...base, user_id: otherUserId, email: 'other-interaction@example.invalid', username: `other-interaction-${otherUserId}` });
+  await customer.table('interactions').insert({ tenant: context.tenant, interaction_id: otherId, type_id: typeId, user_id: otherUserId, client_id: clientId, title: 'Other owner secret', interaction_date: '2026-09-08T09:00:00Z' });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Own interactions', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'interaction', action: 'read', templateKey: 'own', config: {} });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  expect(await list({ filters: { page: 2, pageSize: 1 }, paginated: true })).toMatchObject({ total: 1, interactions: [], page: 2 });
+  expect(await list({ filters: { search: 'Other owner secret' }, paginated: true })).toMatchObject({ total: 0, interactions: [] });
+}));
+
+it('customer interaction meeting reads reject expired credentials after waiting for an actual source lock', async () => withInteractionMeetingReadFixture(async ({ customer, context, interactionId, list }: any) => {
+  const blocker = await db.transaction();
+  await tenantDb(blocker, context.tenant).table('interactions').where('interaction_id', interactionId).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1200) });
+  const reading = list(), rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try { await db.raw('SELECT pg_sleep(1.3)'); } finally { await blocker.rollback(); }
+  await rejected;
+}));

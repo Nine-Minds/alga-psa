@@ -1,3 +1,4 @@
+import type { IOnlineMeetingView, IOnlineMeetingArtifactView } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import type { AuthorizationSubject } from '@alga-psa/authorization';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -43,24 +44,56 @@ async function retainArtifactDocument(trx: Knex.Transaction, actor: CoManagedAut
   return document;
 }
 
-export async function nativeAppointmentMeetingArtifacts(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject, requestId: string) {
-  const owner = tenantDb(trx, actor.tenant), views = [];
-  const ids = await owner.table('online_meetings').where('appointment_request_id', requestId).orderBy('meeting_id').select('meeting_id');
-  for (const row of ids) {
+async function nativeMeetingArtifacts(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject,
+  retained: Awaited<ReturnType<typeof retainNativeOnlineMeeting>>): Promise<IOnlineMeetingArtifactView[]> {
+  const owner = tenantDb(trx, actor.tenant), views: IOnlineMeetingArtifactView[] = [];
+  const artifacts = await owner.table('online_meeting_artifacts').where('meeting_id', retained.meeting.meeting_id).orderBy('created_date_time', 'desc').orderBy('artifact_id').forShare();
+  for (const artifact of artifacts) {
+    if (!['recording', 'transcript'].includes(artifact.artifact_type)) continue;
     try {
-      const retained = await retainNativeOnlineMeeting(trx, actor, subject, row.meeting_id);
-      const artifacts = await owner.table('online_meeting_artifacts').where('meeting_id', row.meeting_id).orderBy('created_date_time', 'desc').orderBy('artifact_id').forShare();
-      for (const artifact of artifacts) {
-        if (!['recording', 'transcript'].includes(artifact.artifact_type)) continue;
-        try {
-          await retainArtifactDocument(trx, actor, subject, artifact, retained.clientId);
-          views.push({ artifact_id: artifact.artifact_id, artifact_type: artifact.artifact_type, document_id: null,
-            created_date_time: artifact.created_date_time, download_url: `/api/online-meetings/artifacts/${artifact.artifact_id}` });
-        } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
-      }
+      await retainArtifactDocument(trx, actor, subject, artifact, retained.clientId);
+      views.push({ artifact_id: artifact.artifact_id, artifact_type: artifact.artifact_type, document_id: null,
+        created_date_time: artifact.created_date_time, download_url: `/api/online-meetings/artifacts/${artifact.artifact_id}` });
     } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
   }
   return views;
+}
+
+export async function nativeAppointmentMeetingArtifacts(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject, requestId: string) {
+  const owner = tenantDb(trx, actor.tenant), views: IOnlineMeetingArtifactView[] = [];
+  const ids = await owner.table('online_meetings').where('appointment_request_id', requestId).orderBy('meeting_id').select('meeting_id');
+  for (const row of ids) {
+    try { views.push(...await nativeMeetingArtifacts(trx, actor, subject, await retainNativeOnlineMeeting(trx, actor, subject, row.meeting_id))); }
+    catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
+  }
+  return views;
+}
+
+export async function nativeInteractionMeetingView(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject, interactionId: string): Promise<IOnlineMeetingView | null> {
+  const source = await retainScheduleSource(trx, actor, subject, { work_item_type: 'interaction', work_item_id: interactionId });
+  if (source.fields.length) return null;
+  const hint = await tenantDb(trx, actor.tenant).table('online_meetings').where('interaction_id', interactionId).orderBy('created_at', 'desc').orderBy('meeting_id').first('meeting_id');
+  if (!hint) return null;
+  let retained: Awaited<ReturnType<typeof retainNativeOnlineMeeting>>;
+  try { retained = await retainNativeOnlineMeeting(trx, actor, subject, hint.meeting_id); }
+  catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; return null; }
+  if (retained.meeting.interaction_id !== interactionId) throw new CoManagedSharedWorkError();
+  const row = retained.meeting;
+  return { tenant: actor.tenant, meeting_id: row.meeting_id, provider: row.provider, subject: row.subject, join_url: row.join_url,
+    start_time: row.start_time, end_time: row.end_time, status: row.status, appointment_request_id: row.appointment_request_id,
+    interaction_id: row.interaction_id, schedule_entry_id: row.schedule_entry_id, created_at: row.created_at, updated_at: row.updated_at,
+    artifacts: await nativeMeetingArtifacts(trx, actor, subject, retained) };
+}
+
+export async function readCoManagedInteractionMeeting(db: Knex, tenant: string, interactionId: string, identify: () => Promise<CoManagedAuthenticatedActor>) {
+  return withTransaction(db, async trx => {
+    if (!await retainCoManagedTimeCalendar(trx, tenant)) return { handled: false as const };
+    const actor = snapshotCoManagedAuthenticatedActor(await identify()); if (actor.tenant !== tenant) throw new CoManagedSharedWorkError();
+    const credential = await lockCoManagedLocalAuthentication(trx, actor);
+    const meeting = await nativeInteractionMeetingView(trx, actor, credential.subject, interactionId);
+    await credential.assertCurrent();
+    return { handled: true as const, meeting };
+  });
 }
 
 export interface NativeMeetingArtifactContent {
