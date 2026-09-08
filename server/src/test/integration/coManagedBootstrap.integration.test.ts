@@ -16555,3 +16555,78 @@ it('named conversation email alerts recover an independent failed fanout through
     expect(await f.sponsor.table('co_management_email_deliveries').where('comment_id', accepted.commentId).first()).toMatchObject({ status: 'delivered', recipient_user_id: nextUser });
   } finally { send.mockRestore(); connection.mockRestore(); }
 });
+
+it.each(['msp', 'owner'] as const)('requester conversation followers join existing %s deliveries once and unfollow revokes pending delivery', async role => {
+  const f = await namedConversationFixture();
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { updateNamedConversationPreference } = await import('../../../../packages/co-managed/src/namedConversationAttention');
+  const actor = role === 'msp' ? f.principal : f.customerPrincipal, home = role === 'msp' ? f.sponsor : f.customer;
+  const requester = (await f.conversations.listNamedTicketConversations(db, actor, f.ticket)).find(row => row.defaultSlot === 'requester')!;
+  const ref = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+  await updateNamedConversationPreference(db, actor, f.ticket, ref, { following: true });
+  await f.customer.table('tickets').where('ticket_id', f.ticket.ticketId).update({ assigned_to: null, assigned_team_id: null });
+  await f.customer.table('ticket_resources').where('ticket_id', f.ticket.ticketId).del();
+  await f.sponsor.table('co_managed_ticket_references').where('ticket_id', f.ticket.ticketId).update({ assigned_to: null, assigned_team_id: null });
+  const result = await createSharedTicketComment(db, role === 'msp' ? f.customerPrincipal : f.principal, f.resource,
+    { operationId: randomUUID(), audience: 'requester', text: 'Requester exchange update' });
+  const request = { ownerTenant: f.ticket.tenant, ticketId: f.ticket.ticketId, commentId: result.commentId, eventId: randomUUID() };
+  const { enqueueCoManagedCommentEmailDeliveries, processCoManagedCommentEmailDeliveries } = await import('../../../../packages/co-managed/src/commentEmailDeliveries');
+  const { enqueueCoManagedCustomerEmailDeliveries, processCoManagedCustomerEmailDeliveries } = await import('../../../../packages/co-managed/src/customerEmailDeliveries');
+  const enqueue = role === 'msp' ? enqueueCoManagedCommentEmailDeliveries : enqueueCoManagedCustomerEmailDeliveries;
+  const process = role === 'msp' ? processCoManagedCommentEmailDeliveries : processCoManagedCustomerEmailDeliveries;
+  const table = role === 'msp' ? 'co_management_email_deliveries' : 'co_management_customer_email_deliveries';
+  await Promise.all([enqueue(db, request), enqueue(db, request)]);
+  expect(await home.table(table).where('comment_id', result.commentId)).toHaveLength(1);
+  const send = vi.fn(async (_delivery: any) => ({ status: 'failed' as const, retryable: true, errorCode: 'provider_unavailable' }));
+  await process(db, actor.tenant, send);
+  expect(send).toHaveBeenCalledOnce();
+  expect(send.mock.calls[0][0]).toMatchObject({ recipientUserId: actor.userId, message: { conversationTarget: ref } });
+  if (role === 'msp') {
+    const { persistCoManagedCommentNotifications } = await import('../../lib/co-managed/persistCommentNotifications');
+    const { withNotificationDelivery } = await import('../../../../packages/notifications/src/lib/notificationDelivery');
+    const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+    await db('internal_notification_templates').insert({ name: 'ticket-comment-added', language_code: 'en', title: 'Ticket {{ticketId}}',
+      message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).ignore();
+    const eventRow = await f.customer.table('co_management_event_outbox').where({ comment_id: result.commentId, event_type: 'TICKET_COMMENT_ADDED' }).first();
+    const event = { id: eventRow.event_id, timestamp: new Date().toISOString(), eventType: eventRow.event_type, payload: eventRow.publication.payload };
+    await persistCoManagedCommentNotifications(db, event); await persistCoManagedCommentNotifications(db, event);
+    const rows = await home.table('internal_notifications').where('user_id', actor.userId);
+    expect(rows).toHaveLength(1);
+    const delivered = await withNotificationDelivery(db, rows[0], async value => value);
+    expect(delivered?.link).toContain(`conversation=${ref.conversationId}`);
+    expect(delivered?.link).toContain(`message=${result.commentId}`);
+    await updateNamedConversationPreference(db, actor, f.ticket, ref, { following: false });
+    expect(await withNotificationDelivery(db, rows[0], async value => value)).toBeNull();
+  } else await updateNamedConversationPreference(db, actor, f.ticket, ref, { following: false });
+  await home.table(table).where('status', 'pending').update({ next_attempt_at: new Date(0) });
+  send.mockClear(); await process(db, actor.tenant, send);
+  expect(send).not.toHaveBeenCalled();
+  expect(await home.table(table).where('comment_id', result.commentId).first()).toMatchObject({ status: 'skipped' });
+});
+
+it('requester conversation follower candidates cannot bypass named audience or source association', async () => {
+  const f = await namedConversationFixture();
+  const { createSharedTicketComment } = await import('../../lib/co-managed/createTicketComment');
+  const { requesterConversationFollowers } = await import('../../../../packages/co-managed/src/requesterConversationFollowers');
+  const { updateNamedConversationPreference } = await import('../../../../packages/co-managed/src/namedConversationAttention');
+  const { withCoManagedTicketCommentNotification: read } = await import('../../../../packages/co-managed/src/ticketCommentNotification');
+  const selected = (await f.conversations.listNamedTicketConversations(db, f.principal, f.ticket))[0];
+  const ref = { storeTenant: selected.storeTenant, conversationId: selected.conversationId };
+  await updateNamedConversationPreference(db, f.principal, f.ticket, ref, { following: true });
+  const result = await createSharedTicketComment(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), audience: 'requester', text: 'Authorized source' });
+  const recipient = { kind: 'notification_recipient' as const, tenant: f.principal.tenant, userId: f.principal.userId };
+  expect(await requesterConversationFollowers(db, f.ticket.tenant, f.ticket.ticketId, result.commentId, f.principal.tenant)).toEqual([f.principal.userId]);
+  expect(await read(db, recipient, f.resource, result.commentId, async (_, message) => message)).toMatchObject({ conversationTarget: ref });
+  const reply = await createSharedTicketComment(db, f.customerPrincipal, f.resource, { operationId: randomUUID(),
+    parent: { storeTenant: f.ticket.tenant, threadId: result.threadId, commentId: result.commentId }, text: 'Retained reply' });
+  await f.customer.table('comments').where('comment_id', result.commentId).update({ deleted_at: new Date() });
+  // Existing notification readers retain published replies beneath a deleted
+  // root tombstone. Following must use the same source visibility semantics.
+  expect(await requesterConversationFollowers(db, f.ticket.tenant, f.ticket.ticketId, reply.commentId, f.principal.tenant)).toEqual([f.principal.userId]);
+  expect(await read(db, recipient, f.resource, reply.commentId, async (_, message) => message)).toMatchObject({ conversationTarget: ref });
+  const other = await f.conversations.createNamedTicketConversation(db, f.customerPrincipal, f.ticket,
+    { operationId: randomUUID(), name: 'Joint exchange', audience: 'shared_it', transport: 'internal' });
+  await f.customer.table('comment_threads').where('conversation_id', ref.conversationId).update({ conversation_id: other.conversationId });
+  expect(await requesterConversationFollowers(db, f.ticket.tenant, f.ticket.ticketId, reply.commentId, f.principal.tenant)).toEqual([]);
+  expect(await read(db, recipient, f.resource, reply.commentId, async (_, message) => message)).toBeNull();
+});

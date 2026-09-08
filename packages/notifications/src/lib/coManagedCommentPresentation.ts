@@ -1,3 +1,4 @@
+import { ticketConversationMessageLink } from '@alga-psa/shared/lib/tickets/conversationLinks';
 import type { CoManagedTicketCommentNotification, CoManagedTaskCommentNotification, NamedConversationNotification } from '@alga-psa/co-managed';
 // LEVERAGE: friction shared-rich-text-preview — this pure text reader belongs below the ticket feature.
 import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
@@ -26,7 +27,7 @@ export function coManagedCommentPresentation(message: CoManagedTicketCommentNoti
   }
   const ticket = message as CoManagedTicketCommentNotification;
   return {
-    link: `/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`,
+    link: ticketConversationMessageLink(`/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`, ticket.conversationTarget, message.commentId),
     data: { authorName, ticketId: ticket.ticketNumber ?? '—', commentPreview },
     metadata: { coManaged: { version: 1, resource: message.resource, commentId: message.commentId, threadId: message.threadId,
       audience: message.audience, deliveryKey, eventId: eventId.toLowerCase(), ...(message.author ? { author: message.author } : {}) } },
@@ -34,7 +35,6 @@ export function coManagedCommentPresentation(message: CoManagedTicketCommentNoti
 }
 
 export function namedConversationNotificationLink(message: NamedConversationNotification): string {
-  const query = new URLSearchParams({ conversation: message.conversation.conversationId, conversationStore: message.conversation.storeTenant, message: message.commentId });
   const path = message.ownerTicket ? `/msp/tickets/${message.resource.id}` : `/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`;
-  return `${path}?${query}`;
+  return ticketConversationMessageLink(path, message.conversation, message.commentId);
 }

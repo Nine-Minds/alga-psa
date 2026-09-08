@@ -14,11 +14,12 @@ import { getCurrentTenantProduct } from '@/lib/productAccess';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
-const getCachedTicket = cache((id: string) => getClientTicketDetails(id));
+const getCachedTicket = cache((id: string, conversationId?: string) => getClientTicketDetails(id, conversationId));
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
 interface TicketPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
   params: Promise<{
     ticketId: string;
   }>;
@@ -47,13 +48,19 @@ export async function generateMetadata({ params }: TicketPageProps): Promise<Met
   };
 }
 
-export default async function TicketPage({ params }: TicketPageProps) {
+export default async function TicketPage({ params, searchParams }: TicketPageProps) {
   const resolvedParams = await params;
   const { ticketId } = resolvedParams;
   const { t } = await getServerTranslation(undefined, 'features/tickets');
 
   try {
-    const ticketData = await getCachedTicket(ticketId);
+    const query = await searchParams ?? {};
+    if ((query.conversation !== undefined && typeof query.conversation !== 'string') ||
+        (query.conversationStore !== undefined && (typeof query.conversationStore !== 'string' || !query.conversation)))
+      throw new Error(t('namedConversations.unavailable', { defaultValue: 'This conversation is unavailable.' }));
+    const ticketData = await getCachedTicket(ticketId, query.conversation as string | undefined);
+    if (!isReturnedActionError(ticketData) && query.conversationStore && query.conversationStore !== ticketData.tenant)
+      throw new Error(t('namedConversations.unavailable', { defaultValue: 'This conversation is unavailable.' }));
     if (isReturnedActionError(ticketData)) {
       const message = getErrorMessage(ticketData);
       logger.warn('[ClientPortal] Ticket details returned action error', {
@@ -76,6 +83,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
     return (
       <div className="w-full">
         <TicketDetailsContainer
+          key={`${ticketId}:${ticketData.selectedConversationId ?? "default"}`}
           ticketId={ticketId}
           ticketData={ticketData}
           statuses={statuses}

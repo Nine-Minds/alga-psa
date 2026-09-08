@@ -1,3 +1,4 @@
+import { requesterConversationFollowers, isRequesterConversationFollower } from './requesterConversationFollowers';
 import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
 import { tenantDb, withTransaction } from '@alga-psa/db';
@@ -23,12 +24,13 @@ export async function enqueueCoManagedCustomerEmailDeliveries(db: Knex, input: C
   if (!ticket) return;
   const resources = await owner.table('ticket_resources').where('ticket_id', request.ticketId).select('additional_user_id');
   const team = ticket.assigned_team_id ? await owner.table('team_members').where('team_id', ticket.assigned_team_id).select('user_id') : [];
-  const ids = [...new Set([ticket.assigned_to, ...resources.map(row => row.additional_user_id), ...team.map(row => row.user_id)].filter(isCoManagedUuid))].sort();
+  const followers = await requesterConversationFollowers(db, request.ownerTenant, request.ticketId, request.commentId, request.ownerTenant);
+  const ids = [...new Set([...followers, ticket.assigned_to, ...resources.map(row => row.additional_user_id), ...team.map(row => row.user_id)].filter(isCoManagedUuid))].sort();
   for (const userId of ids) {
     try {
       await withCoManagedCustomerCommentNotification(db, { kind: 'notification_recipient', tenant: request.ownerTenant, userId },
         { tenant: request.ownerTenant, kind: 'ticket', id: request.ticketId }, request.commentId, async (context, message) => {
-          if (!await isCustomerNotificationAssignee(context) || !await commentEmailEnabled(context, message.commentId)) return;
+          if (!(await isCustomerNotificationAssignee(context) || await isRequesterConversationFollower(context, message)) || !await commentEmailEnabled(context, message.commentId)) return;
           const home = tenantDb(context.trx, context.actor.tenant);
           const deliveryKey = `co-managed-customer-comment:${request.ownerTenant}:${request.ticketId}:${request.commentId}:${request.eventId.toLowerCase()}:email:${userId}`;
           const values = { tenant: request.ownerTenant, delivery_key: deliveryKey, recipient_user_id: userId, event_id: request.eventId.toLowerCase(),
@@ -89,7 +91,7 @@ export async function processCoManagedCustomerEmailDeliveries(db: Knex, tenant: 
       to: NonNullable<Awaited<ReturnType<typeof coManagedInternalEmailRecipient>>>) => Promise<T>) {
     const resource = { tenant, kind: 'ticket' as const, id: candidate.ticket_id };
     const result = await withCoManagedCustomerCommentNotification(trx, { kind: 'notification_recipient', tenant, userId: candidate.recipient_user_id }, resource, candidate.comment_id, async (context, message) => {
-      const assigned = await isCustomerNotificationAssignee(context), to = await coManagedInternalEmailRecipient(context);
+      const assigned = await isCustomerNotificationAssignee(context) || await isRequesterConversationFollower(context, message), to = await coManagedInternalEmailRecipient(context);
       const row = await claim(trx, candidate);
       if (!row) return { kind: 'done' as const, processed: false };
       if (!assigned || !to || !await commentEmailEnabled(context, message.commentId) || message.threadId !== row.thread_id || message.audience !== row.audience) {

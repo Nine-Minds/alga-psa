@@ -1,3 +1,4 @@
+import { ticketConversationMessageLink } from '@alga-psa/shared/lib/tickets/conversationLinks';
 import { namedConversationNotificationLink } from '@alga-psa/notifications/lib/coManagedCommentPresentation';
 import { resolveCoManagedRequesterEmailRouting, resolveCoManagedTicketEmailMailbox } from './coManagedRequesterEmailRouting';
 import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult, CoManagedTaskCommentNotification, CoManagedTicketCommentNotification } from '@alga-psa/co-managed';
@@ -66,7 +67,8 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
   const base = new URL(process.env.NEXTAUTH_URL || 'http://localhost:3000');
   if (!['https:', 'http:'].includes(base.protocol)) throw new Error('Invalid email application URL');
   const { message } = delivery;
-  const url = new URL(path, base.origin).toString();
+  const target = 'conversationTarget' in message ? message.conversationTarget : undefined;
+  const url = new URL(ticketConversationMessageLink(path, target, message.commentId), base.origin).toString();
   const subject = copy[subjectKey];
   const title = ('conversation' in message ? [message.ticketNumber, message.conversation.name] : task ? [(message as CoManagedTaskCommentNotification).taskName, (message as CoManagedTaskCommentNotification).projectName]
     : [(message as CoManagedTicketCommentNotification).ticketNumber, (message as CoManagedTicketCommentNotification).ticketTitle]).filter(Boolean).join(' — ');

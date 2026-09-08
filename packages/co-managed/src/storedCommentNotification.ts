@@ -7,7 +7,7 @@ import { tenantDb } from '@alga-psa/db';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired, type CoManagedSessionActor } from './sharedWorkIdentity';
 import { withCoManagedTicketCommentNotification, withCoManagedTicketCommentNotificationRead, type CoManagedTicketCommentNotification } from './ticketCommentNotification';
 
-import { isCoManagedNotificationAssignee } from './ticketCommentRecipients';
+import { isCoManagedTicketCommentRecipient } from './ticketCommentRecipients';
 import type { CoManagedNotificationRecipient, CoManagedNotificationRecipientContext } from './sharedWork';
 
 export interface CoManagedStoredCommentNotification {
@@ -67,7 +67,7 @@ async function withStoredNotification<T>(db: Knex, actor: CoManagedSessionActor 
   const resource = { tenant: receipt.customer_tenant, relationshipId: receipt.relationship_id, kind: task ? 'project_task' as const : 'ticket' as const, id: task ? receipt.resource_id : receipt.ticket_id };
   try {
     const load = async (context: CoManagedNotificationRecipientContext, message: CoManagedTicketCommentNotification | CoManagedTaskCommentNotification): Promise<T | null> => {
-      if (actor.kind === 'notification_recipient' && !await (task ? isCoManagedTaskNotificationAssignee(context) : isCoManagedNotificationAssignee(context))) return null;
+      if (actor.kind === 'notification_recipient' && !await (task ? isCoManagedTaskNotificationAssignee(context) : isCoManagedTicketCommentRecipient(context, message as CoManagedTicketCommentNotification))) return null;
       const lockedHome = tenantDb(context.trx, actor.tenant);
       const current = await lockedHome.table('co_management_in_app_receipts').where({ delivery_key: receipt.delivery_key,
         notification_id: notificationId, recipient_user_id: actor.userId, outcome: 'created' }).forShare().first();

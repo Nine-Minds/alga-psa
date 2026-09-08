@@ -2,7 +2,7 @@ import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
-import { deliverCoManagedTicketCommentToAssignees, isCoManagedNotificationAssignee, type CoManagedTicketCommentDeliveryRequest } from './ticketCommentRecipients';
+import { deliverCoManagedTicketCommentToAssignees, isCoManagedTicketCommentRecipient, type CoManagedTicketCommentDeliveryRequest } from './ticketCommentRecipients';
 import { withCoManagedTicketCommentNotification, type CoManagedTicketCommentNotification } from './ticketCommentNotification';
 import { coManagedInternalEmailRecipient } from './commentEmailRecipient';
 import { withCoManagedTaskCommentNotification, type CoManagedTaskCommentNotification } from './taskCommentNotification';
@@ -112,7 +112,7 @@ export async function processCoManagedCommentEmailDeliveries(db: Knex, tenant: s
           }, ready)
           : await (task ? withCoManagedTaskCommentNotification : withCoManagedTicketCommentNotification)(trx,
             recipient, resource, candidate.comment_id, async (context, message) => ready(context, message,
-              await (task ? isCoManagedTaskNotificationAssignee(context) : isCoManagedNotificationAssignee(context))));
+              await (task ? isCoManagedTaskNotificationAssignee(context) : isCoManagedTicketCommentRecipient(context, message as CoManagedTicketCommentNotification))));
         if (delivered !== null) return delivered;
         const row = await due(trx, candidate.delivery_key).forUpdate().skipLocked().first();
         if (!row) return false;
