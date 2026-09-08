@@ -3161,3 +3161,9 @@ Validated real exporter-generated success/failure/interrupted/missing-report row
 ### 2026-09-08 — Citus invoice ownership fixture repair
 
 CI job 102062201936 passed invoice generation and reached the intentionally foreign-tenant link insert, which failed because Citus currency migrations install (tenant, invoice_id) foreign keys. Updated the permanent invoice immutability test to assert SQLSTATE 23503 and no persisted row on Citus; plain PostgreSQL retains the contaminated-row rendering defense test under its legacy single-column FK. All PDF/immutability assertions remain. Verified the exact constraint rejection and zero persisted rows in existing migrated upgrade_citus_layout_82cc_20260908 with a rolled-back SQL probe. Full candidate invoice suite still requires CI; no new Docker image builds.
+
+### 2026-09-08 — CI package and database isolation fixes
+
+- Surveys package runner lacked source alias resolution for PrintableDetailHeader. Added the UI source alias; package Vitest 4 suite passes 10 tests.
+- Graph adapter smoke first test included cold application-module transformation within its 5-second behavior budget. Moved module import to explicit 20-second beforeAll setup; individual behavior timeout unchanged. Native package suite passes 81 tests in 7 files.
+- Workspace DB CI passed 471 tests but failed 3 hour-block deletions: the prepaid-alerts migration round trip erased replenishment columns added by later migrations. Wrapped down/up in a rolled-back transaction and asserted the complete original column inventory is retained. Native migrated test_schema_restore_82cc: all 3 migration cases pass; all 4 downstream hour-block cases pass against the SAME database with no intervening bootstrap, under Vitest 3 (CI major) and 4. No image rebuilds.

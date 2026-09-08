@@ -10,6 +10,7 @@ import msgraphEmulator from '../src/index';
 let host: EmulatorHost;
 let graphBaseUrl: string;
 let controlUrl: string;
+let MicrosoftGraphAdapter: typeof import('../../../../shared/services/email/providers/MicrosoftGraphAdapter').MicrosoftGraphAdapter;
 
 async function controlPost(path: string, body: unknown): Promise<any> {
   const response = await fetch(`${controlUrl}${path}`, {
@@ -46,7 +47,6 @@ async function mintAccessToken(): Promise<string> {
 
 async function adapterFor(mailbox: string) {
   process.env.MICROSOFT_GRAPH_BASE_URL = graphBaseUrl;
-  const { MicrosoftGraphAdapter } = await import('../../../../shared/services/email/providers/MicrosoftGraphAdapter');
   const accessToken = await mintAccessToken();
   return new MicrosoftGraphAdapter({
     id: `provider-${mailbox}`,
@@ -73,7 +73,11 @@ beforeAll(async () => {
   const { controlPort, ports } = await host.start();
   graphBaseUrl = `http://127.0.0.1:${ports.msgraph}/v1.0`;
   controlUrl = `http://127.0.0.1:${controlPort}`;
-});
+  process.env.MICROSOFT_GRAPH_BASE_URL = graphBaseUrl;
+  // Cold transformation of the real application module is suite setup. Each
+  // HTTP behavior keeps the runner's normal five-second assertion budget.
+  ({ MicrosoftGraphAdapter } = await import('../../../../shared/services/email/providers/MicrosoftGraphAdapter'));
+}, 20_000);
 
 afterAll(async () => {
   delete process.env.MICROSOFT_GRAPH_BASE_URL;
