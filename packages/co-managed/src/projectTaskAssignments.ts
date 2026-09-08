@@ -5,8 +5,9 @@ import { assertCoManagedOperationalWrite, isCoManagedLifecycleError } from '@alg
 import { withCoManagedCustomerProject } from './customerWork';
 import { withCoManagedSharedWork, type CoManagedSharedResource, type CoManagedSharedWorkContext } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired,
-  lockCoManagedActiveHomeIdentity, authorizeCoManagedWorkRecord, type CoManagedSessionActor } from './sharedWorkIdentity';
+  type CoManagedSessionActor } from './sharedWorkIdentity';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
+import { coManagedAssigneeOption } from './sharedWorkAssignees';
 import { recordCoManagedProjectTaskAudit } from './projectTaskAudit';
 
 export interface CoManagedTaskAssignee { tenant: string; kind: 'user' | 'team'; id: string }
@@ -51,47 +52,8 @@ async function requireProjectSharing(context: CoManagedSharedWorkContext) {
     project_id: task.project_id, can_collaborate: true }).forShare().first('project_id')) denied();
   return task;
 }
-/** Candidate authorization uses the proposed assignment as the home-policy
- * record. It never grants a session or substitutes for the editor's authority. */
-async function eligiblePerson(context: CoManagedSharedWorkContext, relation: any, userId: string, teamId?: string) {
-  const candidate = { tenant: relation.sponsor_tenant as string, userId }, home = tenantDb(context.trx, candidate.tenant);
-  const subject = await lockCoManagedActiveHomeIdentity(context.trx, candidate);
-  if (teamId && !subject.teamIds?.includes(teamId)) denied();
-  const staff = await home.table('co_management_staff_assignments').where({ customer_tenant: context.resource.tenant,
-    relationship_id: context.resource.relationshipId, relationship_role: 'technician' })
-    .where(query => query.where({ principal_type: 'user', principal_id: userId }).orWhere(team => team.where('principal_type', 'team').whereIn('principal_id', subject.teamIds ?? []))).forShare();
-  if (!staff.length) denied();
-  const record = { id: `${context.resource.tenant}:project_task:${context.resource.id}`, clientId: relation.sponsor_client_id,
-    assignedUserIds: teamId ? [] : [userId], teamIds: teamId ? [teamId] : [] };
-  for (const action of ['read', 'update'] as const) {
-    const permission = await authorizeCoManagedWorkRecord(context.trx, candidate, subject, 'project', action, record);
-    if (hidden({ ...context, redactedFields: permission.redactedFields })) denied();
-  }
-}
-async function assigneeOption(context: CoManagedSharedWorkContext, relation: any, assignee: CoManagedTaskAssignee): Promise<CoManagedTaskAssigneeOption> {
-  if (assignee.tenant !== relation.sponsor_tenant) denied();
-  const home = tenantDb(context.trx, relation.sponsor_tenant);
-  const organization = await home.table('tenants').forShare().first('client_name', 'product_code', 'suspended_at');
-  if (organization?.product_code !== 'psa' || organization.suspended_at) denied();
-  let name: string;
-  if (assignee.kind === 'user') {
-    await eligiblePerson(context, relation, assignee.id);
-    const user = await home.table('users').where('user_id', assignee.id).first('first_name', 'last_name', 'email');
-    name = [user.first_name, user.last_name].filter(Boolean).join(' ') || user.email || assignee.id;
-  } else {
-    const team = await home.table('teams').where('team_id', assignee.id).forShare().first('team_name');
-    if (!team || !await home.table('co_management_staff_assignments').where({ customer_tenant: context.resource.tenant,
-      relationship_id: context.resource.relationshipId, principal_type: 'team', principal_id: assignee.id, relationship_role: 'technician' }).forShare().first()) denied();
-    const members = await home.table('team_members').where('team_id', assignee.id).orderBy('user_id').forShare().select('user_id');
-    let eligible = false;
-    for (const member of members) {
-      try { await eligiblePerson(context, relation, member.user_id, assignee.id); eligible = true; break; }
-      catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
-    }
-    if (!eligible) denied(); name = team.team_name;
-  }
-  return { ...assignee, name, organizationName: organization.client_name || assignee.tenant };
-}
+const assigneeOption = (context: CoManagedSharedWorkContext, relation: any, assignee: CoManagedTaskAssignee) =>
+  coManagedAssigneeOption(context, relation, assignee, { hidden: fields => hidden({ ...context, redactedFields: fields }) });
 async function assignmentState(context: CoManagedSharedWorkContext, canEdit: boolean) {
   if (hidden(context)) return { resource: context.resource, canEdit: false };
   const relation = await relationship(context), row = await referenceQuery(context, relation.sponsor_tenant).forShare().first();
@@ -117,6 +79,7 @@ export async function listCoManagedProjectTaskAssignees(db: Knex, inputActor: Co
     if (hidden(write) || hidden(read)) denied(); await requireProjectSharing(write);
     const relation = await relationship(write), home = tenantDb(write.trx, relation.sponsor_tenant), items: CoManagedTaskAssigneeOption[] = [];
     const key = kind === 'user' ? 'user_id' : 'team_id'; let scanned = afterId;
+    // LEVERAGE: pattern co-managed-assignee-pagination — source scans differ from eligible option pages; keep the candidate boundary shared.
     while (items.length < 26) {
       const query = home.table(kind === 'user' ? 'users' : 'teams').orderBy(key).limit(50);
       if (kind === 'user') query.where({ user_type: 'internal', is_inactive: false });

@@ -15612,3 +15612,86 @@ it('bulk handback rolls back an individual handoff if its retained session expir
     expect(await customer.table('co_management_ticket_handoffs').where({ ticket_id: resource.id, transition: 'handed_back' })).toHaveLength(0);
   } finally { await db.raw('DROP TRIGGER expire_bulk_handoff_session ON co_management_ticket_handoffs'); await db.raw('DROP FUNCTION expire_bulk_handoff_session()'); }
 }));
+
+async function withTicketAssignmentFixture(work: (fixture: any) => Promise<void>) {
+  return withTicketQueueFixture(async fixture => work({ ...fixture, assignments: await import('../../../../packages/co-managed/src/ticketAssignments'),
+    selected: { tenant: fixture.principal.tenant, kind: 'user', id: fixture.principal.userId } }));
+}
+
+it('shared ticket assignment keeps the customer ticket intact and records qualified MSP routing with exact retry', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, sponsor, selected }: any) => {
+  const before = await customer.table('tickets').where('ticket_id', resource.id).first();
+  expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'user')).options.map((option: any) => option.id)).toEqual([principal.userId]);
+  const request = { operationId: randomUUID(), expectedRevision: 1, assignee: selected };
+  const receipt = await assignments.assignCoManagedTicket(db, customerPrincipal, resource, request);
+  expect(await assignments.assignCoManagedTicket(db, customerPrincipal, resource, request)).toEqual(receipt);
+  expect(await assignments.getCoManagedTicketAssignment(db, principal, resource)).toMatchObject({ revision: 2, canEdit: true, canAssign: true, mspAssignment: selected });
+  expect(await customer.table('tickets').where('ticket_id', resource.id).first()).toEqual(before);
+  expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: principal.userId, assigned_team_id: null });
+  await assignments.assignCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 2, assignee: null });
+  expect(await assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ revision: 3, mspAssignment: null, hasAssignment: false });
+  const history = await customer.table('audit_logs').where({ record_id: resource.id, operation: 'co_managed_ticket_assignment' }).orderBy('timestamp');
+  expect(history).toHaveLength(2); expect(history[0].user_id).toBe(customerPrincipal.userId);
+  expect(history[1].user_id).toBeNull(); expect(history[1].details).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: principal.userId, relationship_id: resource.relationshipId });
+  expect(await customer.table('co_management_ticket_handoffs').where('ticket_id', resource.id)).toHaveLength(1);
+}));
+
+it('shared ticket assignment offers only staffed teams with an active eligible member', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, sponsor }: any) => {
+  const eligible = randomUUID(), empty = randomUUID();
+  for (const id of [eligible, empty]) {
+    await sponsor.table('teams').insert({ tenant: principal.tenant, team_id: id, team_name: id === eligible ? 'Service desk' : 'Empty private team', manager_id: principal.userId });
+    await sponsor.table('co_management_staff_assignments').insert({ tenant: principal.tenant, customer_tenant: resource.tenant, relationship_id: resource.relationshipId, principal_type: 'team', principal_id: id, relationship_role: 'technician' });
+  }
+  await sponsor.table('team_members').insert({ tenant: principal.tenant, team_id: eligible, user_id: principal.userId });
+  expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'team')).options.map((option: any) => option.id)).toEqual([eligible]);
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: { tenant: principal.tenant, kind: 'team', id: eligible } });
+  await sponsor.table('team_members').where('team_id', eligible).del();
+  expect(await assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource)).toMatchObject({ hasAssignment: true, mspAssignment: null, canEdit: true });
+  expect((await assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'team')).options).toEqual([]);
+}));
+
+it('shared ticket assignment serializes competing changes and rejects stale operation reuse', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, selected }: any) => {
+  const first = { operationId: randomUUID(), expectedRevision: 1, assignee: selected }, second = { ...first, operationId: randomUUID() };
+  const results = await Promise.allSettled([assignments.assignCoManagedTicket(db, principal, resource, first), assignments.assignCoManagedTicket(db, customerPrincipal, resource, second)]);
+  expect(results.filter(result => result.status === 'fulfilled')).toHaveLength(1);
+  expect(results.find(result => result.status === 'rejected')).toMatchObject({ reason: { code: 'TICKET_ASSIGNMENT_CONFLICT' } });
+  const [actor, request] = results[0].status === 'fulfilled' ? [principal, first] : [customerPrincipal, second];
+  await expect(assignments.assignCoManagedTicket(db, actor, resource, { ...request, assignee: null })).rejects.toMatchObject({ code: 'TICKET_ASSIGNMENT_OPERATION_CONFLICT' });
+}));
+
+it('shared ticket assignment hides read-masked assignment values and rejects expired editors', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, selected, operation }: any) => {
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: customerPrincipal.tenant, name: 'Assignment read restrictions', actorUserId: customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: customerPrincipal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [operation.customer_client_id], redactedFields: ['values.msp_assignment'] } });
+  await bundles.publishBundleRevision(db, { tenant: customerPrincipal.tenant, bundleId, revisionId, actorUserId: customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: customerPrincipal.tenant, bundleId, targetType: 'user', targetId: customerPrincipal.userId });
+  const state = await assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource);
+  expect(state).toMatchObject({ canEdit: false, canAssign: false }); expect(state).not.toHaveProperty('mspAssignment'); expect(state).not.toHaveProperty('revision');
+  await expect(assignments.listCoManagedTicketAssignees(db, customerPrincipal, resource, 'user')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 2, assignee: null })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await customer.table('sessions').where('session_id', customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  await expect(assignments.getCoManagedTicketAssignment(db, customerPrincipal, resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('shared ticket assignment rolls back routing revision attribution and receipt on expiry at commit', async () => withTicketAssignmentFixture(async ({ assignments, principal, resource, sponsor, customer, selected }: any) => {
+  await db.raw(`CREATE FUNCTION expire_ticket_assignment_session() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE sessions SET expires_at = to_timestamp(0) WHERE tenant = '${principal.tenant}'::uuid AND session_id = '${principal.sessionId}'::uuid; RETURN NEW; END $$`);
+  await db.raw("CREATE TRIGGER expire_ticket_assignment_session AFTER INSERT ON co_management_command_receipts FOR EACH ROW WHEN (NEW.command_type = 'ticket_assignment') EXECUTE FUNCTION expire_ticket_assignment_session()");
+  try {
+    await expect(assignments.assignCoManagedTicket(db, principal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await sponsor.table('co_managed_ticket_references').where('ticket_id', resource.id).first()).toMatchObject({ assigned_to: null });
+    expect(await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).toMatchObject({ revision: 1 });
+    expect(await customer.table('audit_logs').where('operation', 'co_managed_ticket_assignment')).toHaveLength(0);
+    expect(await customer.table('co_management_command_receipts').where('command_type', 'ticket_assignment')).toHaveLength(0);
+  } finally { await db.raw('DROP TRIGGER expire_ticket_assignment_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_ticket_assignment_session()'); }
+}));
+
+it('shared ticket assignment requires collaboration scope and honors a retained board grant after explicit revocation', async () => withTicketAssignmentFixture(async ({ assignments, principal, customerPrincipal, resource, customer, selected }: any) => {
+  await customer.table('co_management_ticket_work').where('ticket_id', resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  await expect(assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  const ticket = await customer.table('tickets').where('ticket_id', resource.id).first('board_id');
+  await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ visibility_mode: 'board_scope' });
+  await customer.table('co_management_board_scopes').insert({ tenant: resource.tenant, relationship_id: resource.relationshipId, board_id: ticket.board_id, can_collaborate: true });
+  await assignments.assignCoManagedTicket(db, customerPrincipal, resource, { operationId: randomUUID(), expectedRevision: 1, assignee: selected });
+  expect(await assignments.getCoManagedTicketAssignment(db, principal, resource)).toMatchObject({ revision: 2, mspAssignment: selected });
+  expect((await customer.table('co_management_ticket_work').where('ticket_id', resource.id).first()).grant_revoked_at).not.toBeNull();
+}));

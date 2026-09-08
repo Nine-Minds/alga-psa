@@ -589,3 +589,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - 2026-09-08: Consolidated ticket export shares the existing admitted relation with queue pagination, using an internal pagination choice rather than a second policy/query implementation or independently fetched pages. The browser action only serializes admitted values. Existing CSV serializer copies now both quote carriage returns. Focused validation: 5 PG, 12 UI/action and 25 CSV cases passed without builds; bulk routing and remaining original plan tasks stay open.
 
 - 2026-09-08: Bulk handback composes existing canonical handoff transactions and receipts. Each selected qualified ticket retains its own admission and failure result; no batch-level shadow lifecycle or replacement routing implementation. The queue exposes only the permitted work revision. Existing UI retry semantics freeze the complete uncertain batch. Six focused PG cases and sixteen distinct UI/action cases passed; field-alias refinement was checked separately. No builds.
+
+## shared-work-assignee-admission — pattern
+- What: Active MSP identity, technician participation, proposed-assignment policy and staffed-team eligibility repeat across ticket and project-task assignment.
+- Where: `sharedWorkAssignees.ts`, `projectTaskAssignments.ts`, `ticketAssignments.ts` in `packages/co-managed/src`.
+- Gate: Two concrete callers, high isolation risk, stable principal and membership rules, real reuse; ACT / bounded-now within assignment implementation. The helper accepts the domain's field restrictions and actual routing board, leaving storage/lifecycle outside it.
+- Status: Extracted and exercised through both actual domain callers. Qualified work audit writing is shared similarly; the existing task wrapper preserves its task-only contract. Pagination remains a marked candidate rather than another extraction. Nine focused PG and ten action tests passed without builds.

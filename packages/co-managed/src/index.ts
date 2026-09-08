@@ -12,6 +12,7 @@ export * from './ticketEditing';
 
 export * from './ticketQueue';
 export * from './ticketBulkHandback';
+export * from './ticketAssignments';
 
 export * from './ticketConversation';
 export * from './privateTicketConversation';
