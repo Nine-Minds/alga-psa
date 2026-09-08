@@ -7,7 +7,7 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 }));
 
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ScheduleCalendar from '../src/components/schedule/ScheduleCalendar';
@@ -97,8 +97,11 @@ vi.mock('@alga-psa/user-composition/hooks', () => {
 // The calendar grid itself is not under test: stand it in with one button per
 // event, wired to the real onSelectEvent, so clicking an event opens the real
 // EntryPopup through ScheduleCalendar's own handleSelectEvent.
+const calendarSurface = vi.hoisted(() => ({ props: null as any }));
 vi.mock('next/dynamic', () => ({
-  default: () => (props: any) => (
+  default: () => (props: any) => {
+    calendarSurface.props = props;
+    return (
     <div>
       {props.events.map((ev: any) => (
         <button
@@ -111,7 +114,7 @@ vi.mock('next/dynamic', () => ({
         </button>
       ))}
     </div>
-  ),
+  ); },
 }));
 
 vi.mock('react-big-calendar', () => ({
@@ -376,6 +379,26 @@ describe('ScheduleCalendar refreshes its events after a Teams meeting is created
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('supplies local all-day grid dates and persists exclusive UTC dates after resize and drop', async () => {
+    const entry = baseEntry({ entry_id: 'all-day-grid', scheduled_start: new Date('2026-10-25T00:00:00Z'),
+      scheduled_end: new Date('2026-10-26T00:00:00Z') });
+    serverEvents = [entry];
+    render(<ScheduleCalendar />);
+    await screen.findByTestId('calendar-event-all-day-grid');
+    const props = calendarSurface.props;
+    expect(props.startAccessor(entry)).toEqual(new Date(2026, 9, 25));
+    expect(props.endAccessor(entry)).toEqual(new Date(2026, 9, 26));
+    expect(props.allDayAccessor(entry)).toBe(true);
+    await act(async () => props.onEventResize({ event: entry, start: new Date(2026, 9, 25), end: new Date(2026, 9, 27) }));
+    expect(updateScheduleEntry.mock.calls[0][1]).toMatchObject({ scheduled_start: new Date('2026-10-25T00:00:00Z'),
+      scheduled_end: new Date('2026-10-27T00:00:00Z') });
+    updateScheduleEntry.mockClear();
+    await act(async () => props.onEventDrop({ event: entry, start: new Date(2026, 9, 26), end: new Date(2026, 9, 27), isAllDay: true }));
+    await waitFor(() => expect(updateScheduleEntry).toHaveBeenCalledTimes(1));
+    expect(updateScheduleEntry.mock.calls[0][1]).toMatchObject({ scheduled_start: new Date('2026-10-26T00:00:00Z'),
+      scheduled_end: new Date('2026-10-27T00:00:00Z') });
   });
 
   it('standalone entry: creating a meeting refetches events (not via save) so reopen binds the persisted entry', async () => {

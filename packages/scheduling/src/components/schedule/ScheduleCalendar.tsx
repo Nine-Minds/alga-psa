@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { calendarDisplayDates, calendarStoredDates, hasAllDayDates } from '../../lib/calendarDateDisplay';
 import dynamic from 'next/dynamic';
 import { momentLocalizer, NavigateAction, View, ToolbarProps } from 'react-big-calendar';
 import moment from 'moment';
@@ -654,8 +655,7 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
 
     const updatedEvent = {
       ...event,
-      scheduled_start: start,
-      scheduled_end: end,
+      ...calendarStoredDates({ scheduled_start: start, scheduled_end: end }, event),
       assigned_user_ids: event.assigned_user_ids,
       ...(event.entry_id.includes('_') ? { original_entry_id: event.original_entry_id } : {})
     };
@@ -694,7 +694,12 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
     const dropDateOnly = new Date(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate());
     const dayDifference = Math.round((dropDateOnly.getTime() - originalDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (isOriginallyMultiDay || isAllDay) {
+    if (hasAllDayDates(event)) {
+      // The grid supplies local calendar dates, while imported date-only
+      // events are stored at UTC midnight with an exclusive end.
+      finalStart = new Date(Date.UTC(dropDate.getFullYear(), dropDate.getMonth(), dropDate.getDate()));
+      finalEnd = new Date(finalStart.getTime() + originalDuration);
+    } else if (isOriginallyMultiDay || isAllDay) {
       // Multi-day event or event in all-day section: IGNORE drop times completely
       // Only use the day difference to shift the original times
       finalStart = new Date(
@@ -1298,8 +1303,8 @@ const ScheduleCalendar: React.FC<ScheduleCalendarProps> = ({ headerActionsSlot }
                   <DynamicBigCalendar
                     localizer={localizer}
                     events={events}
-                    startAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_start)}
-                    endAccessor={(event: object) => new Date((event as IScheduleEntry).scheduled_end)}
+                    startAccessor={(event: object) => calendarDisplayDates(event as IScheduleEntry).scheduled_start}
+                    endAccessor={(event: object) => calendarDisplayDates(event as IScheduleEntry).scheduled_end}
                     allDayAccessor={(event: object) => {
                       const scheduleEvent = event as IScheduleEntry;
                       const start = new Date(scheduleEvent.scheduled_start);
