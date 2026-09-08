@@ -2880,3 +2880,9 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Moved common inference algorithm to shared/workflow/services/workflowInferenceService.ts as factory with provider and credit-error dependencies; both edition wrappers explicitly supply their own dependencies. Shared runtime has no edition service imports (types only), so alias cannot redirect it into the wrapper.
 - Added behavioral EE provider selection test alongside existing schema-validation/retry tests. Old EE re-export gives Wrong edition provider (1failed4passed); fixed wrappers5passed. Test exercises actual EE service with provider response, not source strings.
 - Production bundle warning disappearance still needs verification. Existing current-source upgrade evidence predates this product change, so do not extend its revision claim.
+
+### Focused production bundler regression verified
+
+- Added scripts/tests/workflow-inference-bundle.test.mjs using Next's bundled webpack and the actual enterprise next.config callback. Only AI provider and notification side effects are stubbed; the entry resolves through production edition aliases and invokes the compiled inference service with a structured response.
+- Old EE re-export fails with the same missing inferWorkflowStructuredOutput export warning seen in the full app build. Restored fixed wiring passes without compilation errors or warnings and returns the expected validated object. Native execution completes in under one second; no Docker or full app rebuild required.
+- This proves the focused bundle boundary; the earlier full application build and upgrade evidence retain their original revision. Native current-source CI and publication remain pending.
