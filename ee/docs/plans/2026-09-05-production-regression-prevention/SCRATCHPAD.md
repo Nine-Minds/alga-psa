@@ -3029,3 +3029,10 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Restored source mode, raised heap12GiB with Node source maps disabled. Host app54309 (port53016), gate17667 terminal0:1passed~1.7min, no retries/skips, cleanbeforeafter, no memory-threshold restart in log. Sampled RSS6503456KiB near completion, not peak. Evidence/host-teams-memory-budget.json. No Docker build.
 - Read-only GitHub confirms PUBLIC repository and workflow ubuntu-latest. GitHub runner docs list16GB for this public runner: https://docs.github.com/en/actions/reference/runners/github-hosted-runners . Native Mac evidence does not establish Linux resource usage.
 - CI Teams entrypoint now uses supported --disable-source-maps and12GiB heap; final development phase stops email-service/hocuspocus after their production/provider tests to release memory while retaining logs.10entrypoint/evidence tests pass; actionlint passes. Full native GitHub CI remains required.
+
+### Teams bot adapter wire coverage
+
+- Added packages/emulators/msgraph/tests/teamsBotAdapters.test.ts with real HTTP, emulator-signed JWTs, actual Alga route authentication/JWKS discovery, and actual outbound connector. Minimal HTTP receiver replies only after the real guard verifies identity; no authentication/fetch mocks. Business-command dispatch is explicitly outside this test.
+- Positive case verifies sender/tenant identity, escaped conversation IDs, reply delivery, expired outbound token refresh without duplicate replies, and card update. Five rejection cases cover wrong audience, expired inbound token, untrusted reply destination, altered sender and altered tenant; every rejection emits no activity.
+- Full native Graph suite12756 terminal0:68passed/7files in1.22sec. Evidence/host-teams-bot-adapters.json. Existing msgraph workspace CI command discovers the new file. No Docker build.
+- F034 remains incomplete: product bot commands/account linkage and user SSO still lack demonstrated full application journeys; current-source GitHub CI remains required.
