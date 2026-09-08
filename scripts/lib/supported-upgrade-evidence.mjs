@@ -27,7 +27,7 @@ export function verifySupportedUpgrade({ revision, schema, collected, report, ex
   failures.push(...browser.failures);
   return { schemaVersion: 1, scope: 'supported-upgrade', revision, status: failures.length ? 'failed' : 'passed',
     failures, database, baselineRevision: supportedUpgradeBaseline, results: [
-      { id: 'upgrade-schema', status: failures.some(f => !browser.failures.includes(f)) ? 'failed' : 'passed', failures: failures.filter(f => !browser.failures.includes(f)) },
+      { id: 'upgrade-schema', counts: { passed: 1, failed: 0 }, status: failures.some(f => !browser.failures.includes(f)) ? 'failed' : 'passed', failures: failures.filter(f => !browser.failures.includes(f)) },
       { ...browser, id: 'upgrade-browser' },
     ] };
 }

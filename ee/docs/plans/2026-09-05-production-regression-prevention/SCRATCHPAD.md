@@ -2846,3 +2846,16 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Added e2e-tests/run-upgrade.mjs: clears stale output, requires clean source and matching schema/database/application revision, binds fixture path to schema output, collects full upgrade config, executes raw JSON report, invokes supported-upgrade verifier, records after-source check and fails on any mismatch. Writes schema/collected/results/evidence under ignored test-results/supported-upgrade.
 - Exercised dirty-checkout invocation: exited1 and emitted failed artifact before launching browsers. Syntax check and all18focused verifier/extractor/retention tests pass. Existing exploratory host app is deliberately not accepted as current-source proof.
 - Workflow work remains: add enterprise upgrade phase using existing build artifact, establish running-image identity, create schema fixture with source installation hash, switch one server to upgraded DB, upload raw artifact, and make parent readiness require independently verified result. No CI publication/execution claimed.
+
+### Enterprise CI upgrade execution phase wired locally
+
+- Fresh-install image build now sets immutable source-revision label. Enterprise production-browser job fetches full history for pinned baseline, prepares isolated upgrade_ci with captured synthetic installation hash, reuses candidate image, verifies label and started image ID, switches only server directly to postgres/upgrade_ci, waits for health, runs strict upgrade browser gate and uploads evidence/diagnostics.
+- scripts/prepare-supported-upgrade-ci.mjs keeps password hash in child environment only and exports evidence/fixture paths to GitHub environment. Schema runner supports output pointer and grants existing app_user ordinary public-table/sequence access in the new database (no role/password changes).
+- No Docker builds or GitHub run locally. actionlint passes, CLI syntax passes,18focused tests pass. Native execution still unverified; parent readiness still needs independent upgrade artifact verification/download requirement (current workflow outcome already fails if an executed upgrade step fails).
+
+### Parent readiness now requires raw-verified supported upgrade
+
+- Added tenth production readiness requirement supported-upgrade-execution (schema + browser). Parent downloads raw artifact, reruns supported-upgrade verification, checks clean browser source before/after and rejects missing/incomplete evidence despite successful workflow or recorded verdict. Docs-only not-applicable derives independently from parent selection.
+- Browser runner now records execution exit code/database/application revision in runner.json. Split upgrade raw artifact from diagnostic archive to retain stable top-level JSON paths.
+- Extended actual CLI fixture to supply raw upgrade reports and prove deleting an executed journey fails while recorded verdict remains green.29readiness/upgrade-verifier tests pass; actionlint both workflows pass. Source fixtures materialized to support realpath normalization on macOS.
+- Enterprise execution wiring and parent enforcement are local only. Need current-source run/native CI publication with explicit authorization; no claim that existing host build establishes new code execution.

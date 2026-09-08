@@ -47,6 +47,12 @@ async function main() {
     process.chdir(path.join(schemas[1].destination, 'server'));
     const [batch, applied] = await db.migrate.latest({ directory: schemas[1].directory, loadExtensions: ['.cjs'] });
     verifyUpgradeRetention(before, await captureUpgradeRecords(db, fixture), baselineLedger, await ledger());
+    if (process.env.DB_USER_SERVER) {
+      await db.raw('GRANT CONNECT ON DATABASE ?? TO ??', [database, process.env.DB_USER_SERVER]);
+      await db.raw('GRANT USAGE ON SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+      await db.raw('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+      await db.raw('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+    }
     report.migrations = { baseline: baselineLedger.length, upgrade: applied, batch };
     report.status = 'passed';
   } catch (error) {
@@ -57,6 +63,7 @@ async function main() {
     report.sourceAfter = testRevision(root);
     if (report.sourceAfter.revision !== source.revision) { report.status = 'failed'; process.exitCode = 1; }
     writeFileSync(path.join(output, 'evidence.json'), JSON.stringify(report, null, 2) + '\n');
+    if (process.env.UPGRADE_OUTPUT_POINTER) writeFileSync(process.env.UPGRADE_OUTPUT_POINTER, output + '\n');
     console.log(`Upgrade ${report.status}: ${path.join(output, 'evidence.json')}`);
   }
 }

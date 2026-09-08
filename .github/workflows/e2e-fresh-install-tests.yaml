@@ -173,6 +173,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: linux/amd64
           tags: ${{ matrix.image }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
           build-args: |
             NEXT_BUILD_MAX_OLD_SPACE_SIZE=12288
             NEXT_PUBLIC_FORCE_FEATURE_FLAGS=release-v1-6-feature:true
@@ -234,6 +236,8 @@ jobs:
       - name: Checkout repository
         if: needs.changes.outputs.run_tests == 'true'
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up test environment secrets and .env
         if: needs.changes.outputs.run_tests == 'true'
@@ -884,6 +888,76 @@ jobs:
           name: fresh-install-api-${{ matrix.edition }}
           path: test-results/api-e2e/
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Prepare populated v1.5.0 upgrade
+        id: upgrade_schema
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: placeholder-password
+          DB_USER_SERVER: app_user
+          UPGRADE_DATABASE_ISOLATED: 'true'
+          UPGRADE_DB_NAME: upgrade_ci
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+        run: node scripts/prepare-supported-upgrade-ci.mjs
+
+      - name: Switch candidate server to upgraded database
+        id: upgrade_server
+        if: ${{ !cancelled() && steps.upgrade_schema.outcome == 'success' }}
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          image=alga-e2e-test_server_ee_local:latest
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          expected_image=$(docker image inspect --format '{{.Id}}' "$image")
+          printf '%s\n' '{"services":{"server":{"environment":{"DB_HOST":"postgres","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_ci"}}}}' > "$RUNNER_TEMP/upgrade-compose.json"
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/upgrade-compose.json"
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          container=$(docker-compose -p alga-e2e-test ps -q server)
+          test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
+          echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
+          ready=false
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:3000/api/health >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Run supported-upgrade browser gate
+        if: ${{ !cancelled() && steps.upgrade_server.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: enterprise
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '5432'
+          E2E_DB_NAME: upgrade_ci
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: xvfb-run --auto-servernum node e2e-tests/run-upgrade.mjs
+
+      - name: Upload supported-upgrade evidence
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_schema.outcome != 'skipped' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-upgrade-execution
+          path: test-results/supported-upgrade/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload upgrade browser diagnostics
+        if: ${{ always() && matrix.edition == 'enterprise' && steps.upgrade_server.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-upgrade-diagnostics
+          path: e2e-tests/test-results/
           retention-days: 7
 
       - name: Collect all container logs on failure

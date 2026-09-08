@@ -139,6 +139,12 @@ jobs:
         with:
           name: citus-aggregate
           path: test-results/readiness-input/citus-aggregate
+      - name: Download supported-upgrade execution
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: supported-upgrade-execution
+          path: test-results/readiness-input/supported-upgrade-execution
       - name: Require every mandatory workflow and execution verdict
         if: always()
         run: node scripts/verify-production-readiness.mjs

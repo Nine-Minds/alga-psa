@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readinessRequirements, evaluateProductionReadiness } from './lib/production-readiness.mjs';
 import { readChangedFiles, selectIntegration } from './lib/integration-selection.mjs';
+import { verifySupportedUpgrade } from './lib/supported-upgrade-evidence.mjs';
 import { testRevision } from './lib/test-revision.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -17,6 +18,29 @@ try {
   const selection = selectIntegration(changed);
   for (const { artifact, revisionSuffix, conditionalWorkflow, job } of readinessRequirements) {
     if (conditionalWorkflow && !selection.shouldRun && jobs[job]?.result === 'skipped') continue;
+    if (artifact === 'supported-upgrade-execution') {
+      if (!selection.shouldRun) {
+        artifacts[artifact] = { schemaVersion: 1, revision: source.revision, scope: 'supported-upgrade',
+          status: 'not-applicable', reason: selection.reason, failures: [] };
+        continue;
+      }
+      try {
+        const directory = path.join(root, 'test-results/readiness-input', artifact);
+        const read = name => JSON.parse(readFileSync(path.join(directory, `${name}.json`), 'utf8'));
+        const runner = read('runner'), recorded = read('evidence');
+        const verified = verifySupportedUpgrade({ revision: source.revision, root, schema: read('schema'),
+          collected: read('collected'), report: read('results'), exitCode: runner.exitCode,
+          database: runner.database, applicationRevision: runner.applicationRevision });
+        if (recorded.status !== 'passed' || recorded.revision !== source.revision
+          || recorded.source?.before?.dirty !== false || recorded.source?.after?.dirty !== false
+          || recorded.source?.before?.revision !== source.revision || recorded.source?.after?.revision !== source.revision) {
+          verified.failures.push('Upgrade browser source/evidence is not a clean candidate execution');
+          verified.status = 'failed';
+        }
+        artifacts[artifact] = verified;
+      } catch (error) { unreadable.push(`${artifact}: ${error.message}`); }
+      continue;
+    }
     const name = artifact + (revisionSuffix ? `-${source.revision}` : '');
     try { artifacts[artifact] = JSON.parse(readFileSync(path.join(root, 'test-results/readiness-input', name, 'aggregate.json'), 'utf8')); }
     catch (error) { unreadable.push(`${artifact}: ${error.message}`); }

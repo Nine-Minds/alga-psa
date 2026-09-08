@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { supportedUpgradeBaseline, upgradeBrowserFiles } from '../lib/supported-upgrade-evidence.mjs';
 import { readinessRequirements, evaluateProductionReadiness } from '../lib/production-readiness.mjs';
 
 // Formats emitted by candidate-execution, workspace-execution, test-sharding
@@ -25,10 +26,10 @@ function fixture() {
 }
 const evaluate = input => evaluateProductionReadiness(JSON.parse(JSON.stringify(input)));
 
-test('all required serialized workflow verdicts pass and preserve nine separate requirements', () => {
+test('all required serialized workflow verdicts pass and preserve ten separate requirements', () => {
   const result = evaluate(fixture());
   assert.equal(result.status, 'passed', result.failures.join('\n'));
-  assert.equal(result.results.length, 9);
+  assert.equal(result.results.length, 10);
 });
 
 for (const outcome of ['failure', 'cancelled', 'skipped', undefined]) {
@@ -115,6 +116,7 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   cpSync(new URL('../lib', import.meta.url), path.join(root, 'scripts/lib'), { recursive: true });
   cpSync(new URL('../verify-production-readiness.mjs', import.meta.url), path.join(root, 'scripts/verify-production-readiness.mjs'));
   write('.gitignore', 'test-results/\n');
+  for (const file of upgradeBrowserFiles) write(file, '// Runtime report fixture identity\n');
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
   git(['init', '-q']); git(['add', '.']);
   git(['-c', 'user.name=Readiness fixture', '-c', 'user.email=readiness@example.test', 'commit', '--no-gpg-sign', '-qm', 'Fixture']);
@@ -127,6 +129,19 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     write(file, { ...input.artifacts[requirement.artifact], revision });
     filenames.push(file);
   }
+  const upgradeDirectory = 'test-results/readiness-input/supported-upgrade-execution';
+  const cleanSource = { revision, dirty: false };
+  const rawBrowser = { config: { rootDir: root, metadata: { sourceRevision: revision } }, errors: [],
+    stats: { expected: 3, unexpected: 0, skipped: 0, flaky: 0 },
+    suites: upgradeBrowserFiles.map(file => ({ specs: [{ file, title: file, tests: [{ projectId: 'ee', projectName: 'ee',
+      expectedStatus: 'passed', status: 'expected', results: [{ status: 'passed', retry: 0, errors: [] }] }] }] })) };
+  write(`${upgradeDirectory}/schema.json`, { schemaVersion: 1, phase: 'schema-and-retention', status: 'passed',
+    baseline: { commit: supportedUpgradeBaseline }, source: cleanSource, sourceAfter: cleanSource,
+    database: 'upgrade_ci', migrations: { baseline: 1028, upgrade: ['new.cjs'], batch: 2 } });
+  write(`${upgradeDirectory}/collected.json`, rawBrowser);
+  write(`${upgradeDirectory}/results.json`, rawBrowser);
+  write(`${upgradeDirectory}/runner.json`, { exitCode: 0, database: 'upgrade_ci', applicationRevision: revision });
+  write(`${upgradeDirectory}/evidence.json`, { status: 'passed', revision, source: { before: cleanSource, after: cleanSource } });
   const run = () => {
     const child = spawnSync(process.execPath, ['scripts/verify-production-readiness.mjs'], {
       cwd: root, encoding: 'utf8', timeout: 10000,
@@ -136,7 +151,13 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     assert.equal(child.status, output.status === 'passed' ? 0 : 1, child.stderr);
     return output;
   };
-  assert.equal(run().status, 'passed');
+  { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
+  // A green recorded verdict cannot conceal a missing raw upgrade journey.
+  const partial = structuredClone(rawBrowser); partial.suites.pop();
+  write(`${upgradeDirectory}/results.json`, partial);
+  assert.equal(run().status, 'failed');
+  write(`${upgradeDirectory}/results.json`, rawBrowser);
+  { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
   const original = readFileSync(path.join(root, filenames[0]), 'utf8');
   rmSync(path.join(root, filenames[0])); assert.equal(run().status, 'failed');
   write(filenames[0], '{truncated'); assert.equal(run().status, 'failed');

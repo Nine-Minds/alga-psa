@@ -9,7 +9,7 @@ import { testRevision } from '../scripts/lib/test-revision.mjs';
 const cwd = fileURLToPath(new URL('.', import.meta.url)), root = path.resolve(cwd, '..');
 const output = path.join(root, 'test-results/supported-upgrade');
 mkdirSync(output, { recursive: true });
-const files = Object.fromEntries(['schema', 'collected', 'results', 'evidence'].map(name => [name, path.join(output, `${name}.json`)]));
+const files = Object.fromEntries(['schema', 'collected', 'results', 'runner', 'evidence'].map(name => [name, path.join(output, `${name}.json`)]));
 for (const file of Object.values(files)) writeFileSync(file, 'null\n');
 const read = file => JSON.parse(readFileSync(file, 'utf8'));
 const save = (file, value) => writeFileSync(file, JSON.stringify(value, null, 2) + '\n');
@@ -37,6 +37,7 @@ try {
   const collection = run(['--list', '--reporter=json'], files.collected);
   if (collection.status !== 0) throw new Error(`Upgrade collection failed: ${collection.status}`);
   const result = run(['--reporter=list,json'], files.results);
+  save(files.runner, { exitCode: result.status, database: process.env.E2E_DB_NAME, applicationRevision: process.env.UPGRADE_APPLICATION_REVISION });
   verdict = verifySupportedUpgrade({ revision: before.revision, schema, collected: read(files.collected), report: read(files.results),
     exitCode: result.status, root, database: process.env.E2E_DB_NAME, applicationRevision: process.env.UPGRADE_APPLICATION_REVISION });
 } catch (error) {
