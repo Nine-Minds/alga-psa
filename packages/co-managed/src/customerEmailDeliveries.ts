@@ -1,3 +1,4 @@
+import { nativeRecipientEmailHash, nativeTicketEmailWatcherCandidates, isNativeTicketEmailWatcher, hasDeliveredNativeTicketEmail } from './nativeTicketEmailRecipients';
 import { requesterConversationFollowers, isRequesterConversationFollower } from './requesterConversationFollowers';
 import type { Knex } from 'knex';
 import { createHash } from 'node:crypto';
@@ -9,47 +10,71 @@ import { coManagedInternalEmailRecipient } from './commentEmailRecipient';
 import { issueCoManagedCustomerReplyToken } from './customerReplyTokens';
 
 const TABLE = 'co_management_customer_email_deliveries';
-const IDENTITY = ['tenant', 'delivery_key', 'recipient_user_id', 'event_id', 'ticket_id', 'comment_id', 'thread_id', 'audience'] as const;
+const IDENTITY = ['tenant', 'delivery_key', 'recipient_user_id', 'event_id', 'ticket_id', 'comment_id', 'thread_id', 'audience', 'native_delivery'] as const;
 export interface CoManagedCustomerEmailDelivery {
   tenant: string; recipientUserId: string; email: string; subtypeId?: number; messageId: string; replyToken: string; message: CoManagedCustomerCommentNotification;
 }
 /** Persist only qualified routing/source identities, never email addresses,
  * rendered content or provider credentials. Preferences are checked at send. */
 export interface CoManagedCustomerEmailRequest { ownerTenant: string; ticketId: string; commentId: string; eventId: string }
-export async function enqueueCoManagedCustomerEmailDeliveries(db: Knex, input: CoManagedCustomerEmailRequest) {
+export function enqueueCoManagedCustomerEmailDeliveries(db: Knex, input: CoManagedCustomerEmailRequest) {
+  return enqueueCustomerEmailDeliveries(db, input, false, []);
+}
+
+/** Native internal recipients share durable delivery with owner technicians.
+ * External contacts remain on their existing reviewed/native transport. */
+export function enqueueNativeTicketCommentEmails(db: Knex, input: CoManagedCustomerEmailRequest, excludedEmails: readonly string[] = []) {
+  if (!Array.isArray(excludedEmails) || excludedEmails.some(email => typeof email !== 'string')) throw new CoManagedSharedWorkError();
+  return enqueueCustomerEmailDeliveries(db, input, true, [...new Set(excludedEmails.map(nativeRecipientEmailHash))].sort());
+}
+
+async function enqueueCustomerEmailDeliveries(db: Knex, input: CoManagedCustomerEmailRequest, native: boolean, excludedEmailHashes: string[]) {
   if (!input || ![input.ownerTenant, input.ticketId, input.commentId, input.eventId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
   const request = { ...input };
   const owner = tenantDb(db, request.ownerTenant);
   const ticket = await owner.table('tickets').where('ticket_id', request.ticketId).first('assigned_to', 'assigned_team_id');
   if (!ticket) return;
   const resources = await owner.table('ticket_resources').where('ticket_id', request.ticketId).select('additional_user_id');
-  const team = ticket.assigned_team_id ? await owner.table('team_members').where('team_id', ticket.assigned_team_id).select('user_id') : [];
+  const team = !native && ticket.assigned_team_id ? await owner.table('team_members').where('team_id', ticket.assigned_team_id).select('user_id') : [];
   const followers = await requesterConversationFollowers(db, request.ownerTenant, request.ticketId, request.commentId, request.ownerTenant);
-  const ids = [...new Set([...followers, ticket.assigned_to, ...resources.map(row => row.additional_user_id), ...team.map(row => row.user_id)].filter(isCoManagedUuid))].sort();
+  const watchers = native ? await nativeTicketEmailWatcherCandidates(db, request.ownerTenant, request.ticketId) : [];
+  const ids = [...new Set([...watchers, ...followers, ticket.assigned_to, ...resources.map(row => row.additional_user_id), ...team.map(row => row.user_id)].filter(isCoManagedUuid))].sort();
   for (const userId of ids) {
     try {
       await withCoManagedCustomerCommentNotification(db, { kind: 'notification_recipient', tenant: request.ownerTenant, userId },
         { tenant: request.ownerTenant, kind: 'ticket', id: request.ticketId }, request.commentId, async (context, message) => {
-          if (!(await isCustomerNotificationAssignee(context) || await isRequesterConversationFollower(context, message)) || !await commentEmailEnabled(context, message.commentId)) return;
+          if (!await isCustomerEmailRecipient(context, message, native) || !await commentEmailEnabled(context, message.commentId)) return;
           const home = tenantDb(context.trx, context.actor.tenant);
           const deliveryKey = `co-managed-customer-comment:${request.ownerTenant}:${request.ticketId}:${request.commentId}:${request.eventId.toLowerCase()}:email:${userId}`;
           const values = { tenant: request.ownerTenant, delivery_key: deliveryKey, recipient_user_id: userId, event_id: request.eventId.toLowerCase(),
-            ticket_id: message.resource.id, comment_id: message.commentId, thread_id: message.threadId, audience: message.audience };
+            ticket_id: message.resource.id, comment_id: message.commentId, thread_id: message.threadId, audience: message.audience, native_delivery: native, excluded_email_hashes: excludedEmailHashes };
           await home.table(TABLE).insert(values).onConflict(['tenant', 'delivery_key']).ignore();
-          const row = await home.table(TABLE).where('delivery_key', deliveryKey).forShare().first();
-          if (!row || IDENTITY.some(key => row[key] !== values[key])) throw new Error('Customer email identity conflict');
+          const row = await home.table(TABLE).where('delivery_key', deliveryKey).forUpdate().first();
+          if (!row || !sameIdentity(row, values)) throw new Error('Customer email identity conflict');
+          // Replayed native events may have sent another external recipient.
+          // Exclusions only grow; they never rewrite the source or add access.
+          if (native) {
+            const excluded = [...new Set<string>([...row.excluded_email_hashes, ...excludedEmailHashes])].sort();
+            if (excluded.length !== row.excluded_email_hashes.length)
+              await home.table(TABLE).where('delivery_key', deliveryKey).update({ excluded_email_hashes: excluded });
+          }
         });
     } catch (error) { if (!(error instanceof CoManagedSharedWorkError)) throw error; }
   }
 }
 
-async function isCustomerNotificationAssignee(context: CoManagedCustomerNotificationContext): Promise<boolean> {
+async function isCustomerNotificationAssignee(context: CoManagedCustomerNotificationContext, native = false): Promise<boolean> {
   const owner = tenantDb(context.trx, context.resource.tenant);
   const ticket = await owner.table('tickets').where('ticket_id', context.resource.id).forShare().first('assigned_to', 'assigned_team_id');
   if (!ticket) return false;
   if (ticket.assigned_to === context.actor.userId) return true;
   if (await owner.table('ticket_resources').where({ ticket_id: context.resource.id, additional_user_id: context.actor.userId }).forShare().first()) return true;
-  return Boolean(ticket.assigned_team_id && await owner.table('team_members').where({ team_id: ticket.assigned_team_id, user_id: context.actor.userId }).forShare().first());
+  return Boolean(!native && ticket.assigned_team_id && await owner.table('team_members').where({ team_id: ticket.assigned_team_id, user_id: context.actor.userId }).forShare().first());
+}
+
+async function isCustomerEmailRecipient(context: CoManagedCustomerNotificationContext, message: CoManagedCustomerCommentNotification, native: boolean) {
+  return await isCustomerNotificationAssignee(context, native) || await isRequesterConversationFollower(context, message) ||
+    (native && await isNativeTicketEmailWatcher(context, message));
 }
 
 async function commentEmailEnabled(context: CoManagedCustomerNotificationContext, commentId: string): Promise<boolean> {
@@ -91,10 +116,10 @@ export async function processCoManagedCustomerEmailDeliveries(db: Knex, tenant: 
       to: NonNullable<Awaited<ReturnType<typeof coManagedInternalEmailRecipient>>>) => Promise<T>) {
     const resource = { tenant, kind: 'ticket' as const, id: candidate.ticket_id };
     const result = await withCoManagedCustomerCommentNotification(trx, { kind: 'notification_recipient', tenant, userId: candidate.recipient_user_id }, resource, candidate.comment_id, async (context, message) => {
-      const assigned = await isCustomerNotificationAssignee(context) || await isRequesterConversationFollower(context, message), to = await coManagedInternalEmailRecipient(context);
+      const assigned = await isCustomerEmailRecipient(context, message, candidate.native_delivery), to = await coManagedInternalEmailRecipient(context);
       const row = await claim(trx, candidate);
       if (!row) return { kind: 'done' as const, processed: false };
-      if (!assigned || !to || !await commentEmailEnabled(context, message.commentId) || message.threadId !== row.thread_id || message.audience !== row.audience) {
+      if (!assigned || !to || row.excluded_email_hashes.includes(nativeRecipientEmailHash(to.email)) || !await commentEmailEnabled(context, message.commentId) || message.threadId !== row.thread_id || message.audience !== row.audience) {
         await finish(trx, row, { status: 'skipped' }); return { kind: 'done' as const, processed: true };
       }
       return ready(context, message, row, to);
@@ -124,6 +149,9 @@ export async function processCoManagedCustomerEmailDeliveries(db: Knex, tenant: 
         const stillActive = token && await tenantDb(trx, tenant).table('co_management_customer_reply_tokens').where('token', token.token)
           .whereNull('revoked_at').where(query => query.whereNull('expires_at').orWhere('expires_at', '>', trx.raw('clock_timestamp()'))).first('token');
         if (!stillActive) { await finish(trx, row, { status: 'skipped' }); return { kind: 'done' as const, processed: true }; }
+        if (row.native_delivery && await hasDeliveredNativeTicketEmail(context, row, to.email)) {
+          await finish(trx, row, { status: 'skipped' }); return { kind: 'done' as const, processed: true };
+        }
         const messageId = `<co-managed-customer-${createHash('sha256').update(row.delivery_key).digest('hex')}@notifications.alga.invalid>`;
         let outcome: CoManagedEmailDeliveryResult;
         try { outcome = await send({ tenant, recipientUserId: context.actor.userId, ...to, messageId, replyToken: token.token, message }); }

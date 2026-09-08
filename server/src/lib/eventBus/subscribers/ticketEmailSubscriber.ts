@@ -1,3 +1,5 @@
+import { enqueueNativeTicketCommentEmails, processCoManagedCustomerEmailDeliveries } from '@alga-psa/co-managed';
+import { sendCoManagedCustomerCommentEmail } from '@alga-psa/jobs/handlers/coManagedCommentEmailTransport';
 import { handleCoManagedRequesterCommentEmailEvent, deliverCoManagedRequesterCommentEmailEvent } from './coManagedRequesterCommentEmailSubscriber';
 import { handleCoManagedCustomerCommentEmailEvent, deliverCoManagedCustomerCommentEmailEvent } from './coManagedCustomerCommentEmailSubscriber';
 import { resolveTicketCommentNotificationPayload } from '../../notifications/ticketCommentNotificationContext';
@@ -23,7 +25,7 @@ import { getSecret } from '../../utils/getSecret';
 import { createTenantKnex } from '../../db';
 import { formatBlockNoteContent } from '@alga-psa/formatting/blocknoteUtils';
 import { getEmailEventChannel } from '@alga-psa/notifications';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb, registerAfterCommitWithConnection } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getPortalDomain } from 'server/src/models/PortalDomainModel';
 import { buildTenantPortalSlug } from '@shared/utils/tenantSlug';
@@ -2589,9 +2591,6 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     const descriptionText = descriptionFormatting.text.trim();
     const description = descriptionText || 'No description provided.';
 
-    // Get all additional resources
-    const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
-
     const commentFormatting = formatBlockNoteContent(payload.comment?.content);
     const inlineCommentImageRewrite = await rewriteTicketCommentImagesToCid({
       db,
@@ -2836,26 +2835,23 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
         activeWatcherEmails,
         async (watcherEmail) => {
           const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
-          if (!shouldSendTicketCommentNotification(
-            suppression,
-            isInternalWatcher ? 'internal' : 'contact',
-          )) {
+          if (isInternalWatcher) return; // Current internal recipients use the durable owner queue below.
+          if (!shouldSendTicketCommentNotification(suppression, 'contact')) {
             logger.debug('[TicketEmailSubscriber] Skipped ticket comment watcher email due to suppression', {
               eventId: event.id,
               ticketId: payload.ticketId,
               tenantId,
-              watcherType: isInternalWatcher ? 'internal' : 'external',
+              watcherType: 'external',
             });
             return;
           }
-          const watcherUrl = isInternalWatcher ? internalUrl : portalUrl;
           await sendIfUnique({
             tenantId,
             ...emailEntityContext,
             to: watcherEmail,
             subject: `New Comment on Ticket: ${ticket.title}`,
             template: 'ticket-comment-added',
-            context: buildContext(watcherUrl),
+            context: buildContext(portalUrl),
             replyContext: {
               ticketId: ticket.ticket_id || payload.ticketId,
               commentId: payload.comment?.id,
@@ -2870,62 +2866,13 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
       );
     }
 
-    // Send to assigned user if different from primary email AND not the comment author
-    // The person who made the comment should not receive a notification about their own comment
-    const isAssignedUserTheCommentAuthor = Boolean(
-      commentAuthorUserId &&
-      ticket.assigned_to === commentAuthorUserId
-    );
-    if (
-      assignedEmail &&
-      assignedEmail !== primaryEmail &&
-      !isAssignedUserTheCommentAuthor &&
-      shouldSendTicketCommentNotification(suppression, 'internal')
-    ) {
-      await sendIfUnique({
-        tenantId,
-        ...emailEntityContext,
-        to: assignedEmail,
-        subject: `New Comment on Ticket: ${ticket.title}`,
-        template: 'ticket-comment-added',
-        context: buildContext(internalUrl),
-        replyContext: {
-          ticketId: ticket.ticket_id || payload.ticketId,
-          commentId: payload.comment?.id,
-          threadId: ticket.email_metadata?.threadId
-        },
-        attachments: inlineCommentImageAttachments,
-        from: fromAddress as any
-      }, 'Ticket Comment Added', ticket.assigned_to);
-    }
-
-    // Send to all additional resources, excluding the comment author
-    const resourcesToNotify = shouldSendTicketCommentNotification(suppression, 'internal')
-      ? additionalResources
-      : [];
-    for (const resource of resourcesToNotify) {
-      // Skip if this resource is the comment author - they shouldn't be notified about their own comment
-      const isResourceTheCommentAuthor = Boolean(
-        commentAuthorUserId &&
-        resource.user_id === commentAuthorUserId
-      );
-      if (!isResourceTheCommentAuthor) {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: resource.email ?? '',
-          subject: `New Comment on Ticket: ${ticket.title}`,
-          template: 'ticket-comment-added',
-          context: buildContext(internalUrl),
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            commentId: payload.comment?.id,
-            threadId: ticket.email_metadata?.threadId
-          },
-          attachments: inlineCommentImageAttachments,
-          from: fromAddress as any
-        }, 'Ticket Comment Added', resource.user_id);
-      }
+    if (shouldSendTicketCommentNotification(suppression, 'internal') && payload.comment?.id) {
+      await enqueueNativeTicketCommentEmails(db, { ownerTenant: tenantId, ticketId: payload.ticketId,
+        commentId: payload.comment.id, eventId: event.id }, [...sentEmails]);
+      // The queue owns provider retries. A provider failure does not replay
+      // external contact delivery when the next maintenance worker resumes it.
+      if (db.isTransaction) registerAfterCommitWithConnection(db as Knex.Transaction, root => processCoManagedCustomerEmailDeliveries(root, tenantId, sendCoManagedCustomerCommentEmail).then(() => {}), 'native ticket internal email delivery');
+      else await processCoManagedCustomerEmailDeliveries(db, tenantId, sendCoManagedCustomerCommentEmail);
     }
 
   } catch (error) {

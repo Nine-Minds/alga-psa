@@ -105,3 +105,5 @@ export { withNamedConversationNotification, namedConversationNotificationCandida
 
 export { recoverNamedConversationAttention } from './namedConversationNotificationFanout';
 export { recoverNamedConversationEmailNotifications } from './commentEmailDeliveries';
+
+export { enqueueNativeTicketCommentEmails } from './customerEmailDeliveries';
