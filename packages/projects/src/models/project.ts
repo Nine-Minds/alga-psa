@@ -1,3 +1,4 @@
+import { retainCoManagedConversationBeforeSourceChange } from '@alga-psa/co-managed';
 /**
  * @alga-psa/projects - Project Model
  *
@@ -486,6 +487,7 @@ const ProjectModel = {
 
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
       try {
+        if (phaseData.project_id !== undefined) await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'project_phase', phaseId);
         const [updatedPhase] = await tenantScopedTable<IProjectPhase>(trx, 'project_phases', tenant)
           .where('phase_id', phaseId)
           .update({
@@ -952,6 +954,13 @@ const ProjectModel = {
 
     return withCoManagedOperationalTransaction(knexOrTrx, tenant, async (trx) => {
       try {
+        // Capture every affected source before changing any phase membership.
+        for (const phase of updates.phases) {
+          if (phase.phase_id && phase.project_id !== undefined) await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'project_phase', phase.phase_id);
+        }
+        for (const task of updates.tasks) {
+          if (task.task_id && task.phase_id !== undefined) await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'project_task', task.task_id);
+        }
         for (const phase of updates.phases) {
           if (!phase.phase_id) {
             throw new Error('Phase ID is required for update');

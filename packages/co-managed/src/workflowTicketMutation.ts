@@ -1,3 +1,4 @@
+import { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRetention';
 import { auditCloseRulesBypassIfGated } from '@alga-psa/shared/lib/ticketCloseRules';
 import { TICKET_ACTIVITY_ACTOR, TICKET_ACTIVITY_SOURCE } from '@alga-psa/shared/lib/ticketActivity';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing/lifecycle';
@@ -15,6 +16,7 @@ export const withCoManagedWorkflowTicketMutation: WorkflowTicketMutationAdapter 
   if (!await hasCoManagedConversationOwnership(trx, input.tenant)) return write({});
   const { owner, before, actor, authorize, activeRun } = await retainCoManagedWorkflowTicketAuthority(trx, input);
   const previousStatus = await owner.table('statuses').where('status_id', before.status_id).forShare().first('is_closed');
+  if (input.fields.includes('board_id')) await retainCoManagedConversationBeforeSourceChange(trx, input.tenant, 'ticket', input.ticketId);
   const result = await write({ deferRequesterCloseEmail: email => enqueueCoManagedWorkflowTicketEmail(trx, input, email) });
   const after = await owner.table('tickets').where('ticket_id', input.ticketId).first();
   if (!after) throw new CoManagedSharedWorkError();

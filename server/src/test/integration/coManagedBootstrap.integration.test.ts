@@ -18553,3 +18553,45 @@ it('audience reduction rolls back captured history when the confirmed disclosure
   expect(await f.customer.table('co_management_command_receipts').where('operation_id', request.operationId)).toHaveLength(0);
   expect(await f.customer.table('comment_threads').where('thread_id', root.threadId).first()).toMatchObject({ collaboration_audience: 'shared_it' });
 }));
+
+it('source move retention captures board-shared history in the native ticket writer before losing its grant', async () => withConversationFixture(async f => {
+  const policy = await import('../../../../packages/co-managed/src/policy');
+  const original = await policy.getCoManagedCollaborationPolicy(db, f.actor, f.target);
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await policy.replaceCoManagedCustomerScope(db, f.actor, f.target, original.revision,
+    { ...original, visibilityMode: 'board_scope', boards: [{ id: ticket.board_id, canCollaborate: true }] });
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date(), can_collaborate: false });
+  await f.addCustomer({ note: 'Before native board move' });
+  await f.addCustomer({ note: 'Private board move secret', internal: true, audience: 'organization_private' });
+  const boardId = randomUUID(), statusId = randomUUID();
+  await f.customer.table('boards').insert({ tenant: f.resource.tenant, board_id: boardId, board_name: 'Customer-only desk', is_default: false });
+  await f.customer.table('statuses').insert({ tenant: f.resource.tenant, status_id: statusId, name: 'Open', status_type: 'ticket', board_id: boardId,
+    order_number: 1, is_closed: false, is_default: true });
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const { updateTicketInTransaction } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+  await db.transaction(trx => updateTicketInTransaction(trx, user, f.resource.tenant, f.resource.id, { board_id: boardId, status_id: statusId }));
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'TICKET_COMMENT_ARCHIVED');
+  expect(saved).toHaveLength(1); expect(saved[0].payload.markdown).toBe('Before native board move');
+  await expect(f.read(db, f.principal, f.resource)).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ board_id: boardId });
+}));
+
+it.each(['task', 'phase'] as const)('source move retention preserves project history during a native %s move and rolls back on failure', async kind => withTaskConversationFixture(async f => {
+  const { ProjectModel } = await import('@alga-psa/projects/models');
+  const root = await f.add(f.customerPrincipal, 'shared_it', 'Shared history before project move');
+  await f.add(f.principal, 'organization_private', 'Actual private MSP participation');
+  await f.add(f.customerPrincipal, 'organization_private', 'Private project history');
+  const project = await ProjectModel.create(db, f.actor.tenant, { project_name: 'Customer-only project', project_number: 'PRIVATE-2', client_id: f.operation.customer_client_id,
+    status: f.project.status, wbs_code: '2' } as any);
+  const phase = await ProjectModel.addPhase(db, f.actor.tenant, { project_id: project.project_id, phase_name: 'Private delivery', wbs_code: '2.1', status: 'planning', order_number: 1 } as any);
+  const move = (trx: Knex.Transaction) => kind === 'phase'
+    ? ProjectModel.updatePhase(trx, f.actor.tenant, f.phase.phase_id, { project_id: project.project_id })
+    : ProjectModel.updateStructure(trx, f.actor.tenant, f.project.project_id, { phases: [], tasks: [{ task_id: f.resource.id, phase_id: phase.phase_id }] });
+  await expect(db.transaction(async trx => { await move(trx); throw new Error('Roll back move'); })).rejects.toThrow('Roll back move');
+  expect(await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED')).toHaveLength(0);
+  expect((await f.read(f.principal)).items.some((row: any) => row.commentId === root.commentId)).toBe(true);
+  await db.transaction(move);
+  const saved = await f.sponsor.table('co_managed_participation_evidence').where('event_type', 'PROJECT_TASK_COMMENT_ARCHIVED');
+  expect(saved).toHaveLength(1); expect(saved[0].payload.markdown).toBe('Shared history before project move');
+  await expect(f.read(f.principal)).rejects.toThrow();
+}));

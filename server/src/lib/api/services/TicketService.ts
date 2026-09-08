@@ -1,4 +1,4 @@
-import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
+import { retainCoManagedConversationBeforeSourceChange, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { retainNativeConversationEvent } from '@alga-psa/tickets/lib/nativeConversationEvents';
 import { assertCommentThreadAudience } from '@alga-psa/shared/lib/commentAudience';
 /**
@@ -1694,6 +1694,8 @@ export class TicketService extends BaseService<ITicket> {
           (cleanedData as { assigned_to?: string | null }).assigned_to
         )
         : null;
+
+      if (isBoardChange) await retainCoManagedConversationBeforeSourceChange(trx, context.tenant, 'ticket', id);
 
       // Update ticket
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)

@@ -5,7 +5,7 @@ import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '..
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
-import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
+import { retainCoManagedConversationBeforeSourceChange, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
 
@@ -2681,6 +2681,10 @@ export async function updateTicketInTransaction(
     // Retained locks prevent revocation; the wall-clock deadline still advances.
     if (collaboration) await collaboration.assertWriteAuthority(trx);
     await assertCoManagedOperationalWrite(trx, tenant);
+
+    if (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) {
+      await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'ticket', id);
+    }
 
     let updatedTicket;
     

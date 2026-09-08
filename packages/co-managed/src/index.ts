@@ -1,3 +1,4 @@
+export { retainCoManagedConversationBeforeSourceChange } from './sourceChangeRetention';
 export * from './provisioning';
 export * from './acceptance';
 export * from './relationshipClosure';

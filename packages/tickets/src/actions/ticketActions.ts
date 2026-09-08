@@ -3,7 +3,7 @@
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '../lib/nativeConversationEvents';
 
 import { assertCoManagedOperationalWrite, withCoManagedOperationalTransaction } from '@alga-psa/licensing';
-import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
+import { retainCoManagedConversationBeforeSourceChange, recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 
 import type {
   ITicket,
@@ -882,6 +882,10 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
           updateData.assigned_to
         )
         : null;
+
+      if (updateData.board_id !== undefined && updateData.board_id !== currentTicket.board_id) {
+        await retainCoManagedConversationBeforeSourceChange(trx, tenant, 'ticket', id);
+      }
 
       const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
         .where({ ticket_id: id })
