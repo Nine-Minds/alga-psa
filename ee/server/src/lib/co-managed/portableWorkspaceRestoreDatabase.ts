@@ -6,6 +6,8 @@ import { CO_MANAGED_PORTABLE_RESTORE_GLOBALS, CO_MANAGED_PORTABLE_RESTORE_SECTIO
   type prepareCoManagedPortableWorkspaceRecords, type CoManagedPortableDestinationCatalogMappings } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords';
 import type { prepareCoManagedPortableWorkspaceVault } from './portableWorkspaceRestoreVault';
 import { coManagedPortableNativeFilePath } from '../../../../../packages/co-managed/src/portableNativeFilePath';
+import { CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES } from '../../../../../packages/co-managed/src/portableWorkflowCatalog';
+import { preparePortableWorkflowAuditHistory } from '../../../../../packages/co-managed/src/portableWorkflowHistory';
 
 type Row = Record<string, any>;
 type Prepared = ReturnType<typeof prepareCoManagedPortableWorkspaceRecords>;
@@ -21,6 +23,7 @@ const CATALOGS = {
   standard_service_types: { id: 'id', fields: ['name'] },
 } as const;
 const EXTRAS: Record<string, readonly string[]> = {
+  audit_logs: ['tenant', 'audit_id', 'user_id', 'operation', 'table_name', 'record_id', 'changed_data', 'details', 'timestamp'],
   external_files: ['tenant', 'file_id', 'file_name', 'original_name', 'mime_type', 'file_size', 'storage_path', 'uploaded_by_id', 'created_at', 'updated_at', 'is_deleted', 'deleted_at', 'deleted_by_id', 'metadata'],
   credentials: ['tenant', 'credential_id', 'client_id', 'name', 'username', 'url', 'description', 'is_restricted', 'created_by', 'created_at', 'updated_at', 'password_ciphertext', 'otp_secret_ciphertext', 'encryption_scheme'],
   credential_access_grants: ['tenant', 'grant_id', 'credential_id', 'subject_type', 'subject_id', 'created_by', 'created_at'],
@@ -105,6 +108,7 @@ export async function insertCoManagedPortableWorkspaceDatabase(trx: Knex.Transac
   }
   if (!same(request.vault.tenant, tenant)) fail('vault destination mismatch');
   records.external_files = request.externalFiles as Row[];
+  records.audit_logs = preparePortableWorkflowAuditHistory(prepared);
   for (const table of ['credentials', 'credential_access_grants', 'credential_associations'] as const) records[table] = request.vault[table];
   for (const [table, allowed] of Object.entries(EXTRAS)) {
     if (!Array.isArray(records[table]) || records[table].length > 100_000) fail('invalid adapter rows');
@@ -135,7 +139,8 @@ export async function insertCoManagedPortableWorkspaceDatabase(trx: Knex.Transac
         if (!current || signature(current, spec.fields) !== signature(row, spec.fields)) fail('destination catalog changed');
       }
     }
-    const tables = [...Object.keys(COLUMNS).filter(table => !GLOBALS.has(table) && table !== 'handoff_history'), ...Object.keys(EXTRAS)];
+    const tables = [...Object.keys(COLUMNS).filter(table => !GLOBALS.has(table) && table !== 'handoff_history' &&
+      !(CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES as readonly string[]).includes(table)), ...Object.keys(EXTRAS)];
     const metadata = await schema(retained, tables), byTable = new Map<string, Map<string, Column>>();
     for (const column of metadata.columns) {
       if (!byTable.has(column.table_name)) byTable.set(column.table_name, new Map());

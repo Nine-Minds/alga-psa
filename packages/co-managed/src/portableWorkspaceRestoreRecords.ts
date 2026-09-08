@@ -121,6 +121,8 @@ const IDENTITIES: Record<string, readonly string[]> = {
   workflow_form_definitions: ["form_id"],
   workflow_form_schemas: ["schema_id"],
   workflow_task_definitions: ["task_definition_id"],
+  workflow_tasks: ["task_id"],
+  workflow_task_history: ["history_id"],
   interactions: ["interaction_id"],
   interaction_types: ["type_id"],
   system_interaction_types: ["type_id"],

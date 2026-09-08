@@ -8,7 +8,7 @@ import { hasCoManagedLocalPermission } from './localPermission';
 import { validatePortableRecordSection } from './portableRecordValidation';
 import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUuid,
   snapshotCoManagedSessionActor, type CoManagedSessionActor } from './sharedWorkIdentity';
-import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS as COLUMNS, type CoManagedPortableWorkflowRecords,
+import { CO_MANAGED_PORTABLE_WORKFLOW_COLUMNS as COLUMNS, CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES, type CoManagedPortableWorkflowRecords,
   type CoManagedPortableWorkflowTable } from './portableWorkflowCatalog';
 
 export const CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES = [
@@ -17,6 +17,8 @@ export const CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES = [
   ['workflow_definition_versions', 'published_by', 'users', 'user_id'],
   ['workflow_form_schemas', 'form_id', 'workflow_form_definitions', 'form_id'],
   ['workflow_task_definitions', 'created_by', 'users', 'user_id'],
+  ['workflow_tasks', 'tenant_task_definition_id', 'workflow_task_definitions', 'task_definition_id'],
+  ['workflow_task_history', 'task_id', 'workflow_tasks', 'task_id'],
 ] as const;
 
 export const CO_MANAGED_PORTABLE_WORKFLOW_VALUE_TYPES = {
@@ -24,9 +26,14 @@ export const CO_MANAGED_PORTABLE_WORKFLOW_VALUE_TYPES = {
 } as const;
 
 export function validateCoManagedPortableWorkflowRecords(input: unknown): asserts input is CoManagedPortableWorkflowRecords {
-  validatePortableRecordSection(input, { columns: COLUMNS, references: CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES,
+  // Earlier v1 packages have configuration only. Accept that exact earlier
+  // roster, but never a partial history section or unknown additional table.
+  const legacy = Boolean(input && typeof input === 'object' && CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES.every(table => !Object.hasOwn(input, table)));
+  const columns = legacy ? Object.fromEntries(Object.entries(COLUMNS).filter(([table]) => !(CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES as readonly string[]).includes(table))) : COLUMNS;
+  validatePortableRecordSection(input, { columns, references: CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES.filter(([table]) => Object.hasOwn(columns, table)),
     valueTypes: CO_MANAGED_PORTABLE_WORKFLOW_VALUE_TYPES });
   const records = input as CoManagedPortableWorkflowRecords;
+  if ((records.workflow_tasks?.length ?? 0) + (records.workflow_task_history?.length ?? 0) > 100_000) throw new Error('Portable task history limit exceeded');
   const versions = new Set<string>(), forms = new Set(records.workflow_form_definitions.map(row => row.form_id));
   for (const row of records.workflow_definition_versions) {
     if (!Number.isSafeInteger(row.version) || Number(row.version) < 1) throw new Error('Invalid portable workflow version');
@@ -41,6 +48,26 @@ export function validateCoManagedPortableWorkflowRecords(input: unknown): assert
     if (!['tenant', 'system'].includes(String(row.form_type))) throw new Error('Invalid portable workflow task form type');
     if (row.form_id !== null && (typeof row.form_id !== 'string' || !row.form_id || (row.form_type === 'tenant' && !forms.has(row.form_id)))) throw new Error('Portable workflow task form is missing');
   }
+  for (const row of records.workflow_tasks ?? []) {
+    if (!((row.task_definition_type === 'tenant' && isCoManagedUuid(row.tenant_task_definition_id) && row.system_task_definition_task_type === null) ||
+      (row.task_definition_type === 'system' && row.tenant_task_definition_id === null && typeof row.system_task_definition_task_type === 'string' && row.system_task_definition_task_type))) throw new Error('Invalid portable task definition');
+    for (const field of ['created_by', 'completed_by']) if (row[field] !== null && !isCoManagedUuid(row[field])) throw new Error('Invalid portable historical task actor');
+    for (const field of ['created_by_name', 'completed_by_name']) if (row[field] !== null && typeof row[field] !== 'string') throw new Error('Invalid portable historical task attribution');
+  }
+  for (const row of records.workflow_task_history ?? []) {
+    if ((row.user_id !== null && !isCoManagedUuid(row.user_id)) || (row.user_name !== null && typeof row.user_name !== 'string')) throw new Error('Invalid portable historical task actor');
+    if (JSON.stringify(row.details) !== JSON.stringify(portableTaskHistoryDetails(row.action, row.details))) throw new Error('Invalid portable task history details');
+  }
+}
+
+/** Completion forms are user-authored business content. Other opaque task
+ * details may contain execution/provider context and are not portable data. */
+export function portableTaskHistoryDetails(action: unknown, value: unknown): unknown {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const details = value as Record<string, unknown>;
+  if (action === 'complete' && Object.hasOwn(details, 'formData')) return { formData: details.formData };
+  if (action === 'dismiss' && typeof details.dismissed === 'boolean') return { dismissed: details.dismissed };
+  return null;
 }
 
 /** Secret names are dependencies, never invitations to resolve a provider. The
@@ -59,7 +86,7 @@ function secretNames(values: unknown[]): string[] {
   return [...found].sort();
 }
 
-/** Internal authored-configuration component, with no runtime histories,
+/** Internal authored-configuration and task business-history component, with no
  * execution leases, tenant secret values or integration credentials collected. */
 export async function exportCoManagedPortableWorkflows(db: Knex, inputActor: CoManagedSessionActor, packageId: string,
   snapshot?: CoManagedPortableSnapshot) {
@@ -78,9 +105,21 @@ export async function retainCoManagedPortableWorkflows(trx: Knex.Transaction, in
     // The existing native workflow bundle export requires workflow.admin.
     for (const action of ['admin', 'read']) if (!await hasCoManagedLocalPermission(current, verified, 'workflow', action, true)) throw new CoManagedSharedWorkError();
     const own = tenantDb(current, verified.tenant), records = {} as CoManagedPortableWorkflowRecords;
-    for (const table of Object.keys(COLUMNS) as CoManagedPortableWorkflowTable[]) {
+    for (const table of Object.keys(COLUMNS).filter(table => !(CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES as readonly string[]).includes(table)) as CoManagedPortableWorkflowTable[]) {
       records[table] = await own.table(table).select(...COLUMNS[table]).orderBy(COLUMNS[table][0]).limit(100_001).forShare();
     }
+    const tasks = own.table('workflow_tasks as task');
+    own.tenantJoin(tasks, 'users as creator', 'task.created_by', 'creator.user_id', { type: 'left' });
+    own.tenantJoin(tasks, 'users as completer', 'task.completed_by', 'completer.user_id', { type: 'left' });
+    records.workflow_tasks = await tasks.select(...COLUMNS.workflow_tasks.filter(column => !column.endsWith('_name')).map(column => `task.${column}`),
+      { created_by_name: current.raw("nullif(trim(concat_ws(' ', creator.first_name, creator.last_name)), '')"),
+        completed_by_name: current.raw("nullif(trim(concat_ws(' ', completer.first_name, completer.last_name)), '')") })
+      .orderBy('task.task_id').limit(100_001).forShare('task');
+    const history = own.table('workflow_task_history as history');
+    own.tenantJoin(history, 'users as actor', 'history.user_id', 'actor.user_id', { type: 'left' });
+    records.workflow_task_history = (await history.select(...COLUMNS.workflow_task_history.filter(column => column !== 'user_name').map(column => `history.${column}`),
+      { user_name: current.raw("nullif(trim(concat_ws(' ', actor.first_name, actor.last_name)), '')") }).orderBy('history.history_id').limit(100_001).forShare('history'))
+      .map(row => ({ ...row, details: portableTaskHistoryDetails(row.action, row.details) }));
     for (const table of ['workflow_definitions', 'workflow_form_definitions', 'workflow_task_definitions'] as const) {
       for (const row of records[table]) {
         const decision = await authorizeCoManagedLocalRecord(current, verified, subject, 'workflow', 'read', {
@@ -88,6 +127,12 @@ export async function retainCoManagedPortableWorkflows(trx: Knex.Transaction, in
         });
         if (decision.redactedFields.length) throw new CoManagedSharedWorkError();
       }
+    }
+    for (const row of records.workflow_tasks) {
+      const decision = await authorizeCoManagedLocalRecord(current, verified, subject, 'workflow', 'read', {
+        id: String(row.task_id), ownerUserId: isCoManagedUuid(row.created_by) ? row.created_by : null,
+      });
+      if (decision.redactedFields.length) throw new CoManagedSharedWorkError();
     }
     validateCoManagedPortableWorkflowRecords(records);
     const versions = new Map<unknown, Record<string, unknown>[]>();
@@ -108,7 +153,8 @@ export async function retainCoManagedPortableWorkflows(trx: Knex.Transaction, in
         { table: 'workflow_form_definitions', column: 'created_by', when: 'uuid', parent: 'users', parentColumn: 'user_id', otherwise: 'historical_label' }],
       dependencies, systemForms: [...new Set(records.workflow_task_definitions.filter(row => row.form_type === 'system' && row.form_id).map(row => row.form_id))].sort(),
       restorePolicy: { sponsorship: 'none', workflowStatus: 'draft', workflowsPaused: true, publishedVersions: 'historical_only', forms: 'draft',
-        validation: 'rerun', secretReferences: 'reauthorize', connections: 'reauthorize', executionState: 'none', embeddedIdentityRemapping: 'review_before_activation', authoredContent: 'encrypted_package_required' } }));
+        validation: 'rerun', secretReferences: 'reauthorize', connections: 'reauthorize', executionState: 'none', taskBusinessHistory: 'native_audit_history',
+        historicalTaskActors: 'source_qualified', embeddedIdentityRemapping: 'review_before_activation', authoredContent: 'encrypted_package_required' } }));
     return { ...payload, sha256: createHash('sha256').update(JSON.stringify(payload)).digest('hex') };
   });
 }

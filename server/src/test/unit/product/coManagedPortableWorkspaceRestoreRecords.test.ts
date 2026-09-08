@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { CO_MANAGED_PORTABLE_RESTORE_SECTIONS, CO_MANAGED_PORTABLE_RESTORE_GLOBALS,
   prepareCoManagedPortableWorkspaceRecords } from '../../../../../packages/co-managed/src/portableWorkspaceRestoreRecords';
 import type { PortableRecords } from '../../../../../packages/co-managed/src/portableRecordValidation';
+import { preparePortableWorkflowAuditHistory } from '../../../../../packages/co-managed/src/portableWorkflowHistory';
 const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 const sourceTenant = id(1), destinationTenant = id(2), foreignTenant = id(3);
 function fixture() {
@@ -53,7 +54,7 @@ function fixture() {
 function prepare(f = fixture()) { let n = 1000; const { add: _add, ...request } = f; return prepareCoManagedPortableWorkspaceRecords(request, { allocateUuid: () => id(n++) }); }
 it('maps all seven section schemas and their explicit scalar, composite, conditional and nested dependencies', () => {
   const r = prepare(); const rows = r.records;
-  expect(Object.keys(rows)).toHaveLength(113);
+  expect(Object.keys(rows)).toHaveLength(115);
   expect(rows.team_members[0]).toMatchObject({ team_id: rows.teams[0].team_id, user_id: rows.users[0].user_id });
   expect(rows.workstation_assets[0].asset_id).toBe(rows.assets[0].asset_id);
   expect(rows.asset_associations[0].entity_id).toBe(rows.users[0].user_id);
@@ -67,6 +68,30 @@ it('maps all seven section schemas and their explicit scalar, composite, conditi
   expect(rows.interactions[0].type_id).toBe(rows.interaction_types[0].type_id);
   expect(rows.workflow_form_definitions[0].created_by).toBe(rows.users[0].user_id);
   expect(rows.availability_settings[0].config_json).toMatchObject({ approver_user_ids: [rows.users[0].user_id], approver_team_ids: [rows.teams[0].team_id], default_approver_id: rows.users[0].user_id });
+});
+it('restores task responses and attributed history as inert audit records without execution or claim state', () => {
+  const f = fixture();
+  f.add('workflow_tasks', { task_id: id(72), tenant_task_definition_id: id(71), task_definition_type: 'tenant', title: 'Customer review',
+    status: 'completed', created_at: '2026-09-01T10:00:00.000Z', updated_at: '2026-09-02T10:00:00.000Z',
+    created_by: id(10), created_by_name: 'Customer Author', completed_by: id(999), completed_by_name: 'Former technician', response_data: { accepted: true, comment: 'Preserved response' } });
+  f.add('workflow_task_history', { history_id: id(73), task_id: id(72), action: 'complete', from_status: 'pending', to_status: 'completed',
+    user_id: id(999), user_name: 'Former technician', timestamp: '2026-09-02T10:00:00.000Z', details: { formData: { accepted: true } } });
+  const r = prepare(f), rows = preparePortableWorkflowAuditHistory(r);
+  expect(rows).toHaveLength(2);
+  expect(r.records.workflow_tasks[0].tenant_task_definition_id).toBe(r.records.workflow_task_definitions[0].task_definition_id);
+  expect(rows[0]).toMatchObject({ tenant: destinationTenant, record_id: r.records.workflow_tasks[0].task_id, user_id: null,
+    details: { source_tenant: sourceTenant, source_task_id: id(72), actor_identity: 'source_tenant', execution_state: 'not_restored',
+      portable_workflow_task: { completed_by: id(999), completed_by_name: 'Former technician', response_data: { accepted: true, comment: 'Preserved response' } } } });
+  expect(rows[1]).toMatchObject({ record_id: rows[0].record_id, user_id: null,
+    details: { portable_workflow_task_activity: { task_id: rows[0].record_id, user_id: id(999), details: { formData: { accepted: true } } } } });
+  expect(JSON.stringify(rows)).not.toMatch(/execution_id|context_data|claimed_by|event_id/);
+  expect(r.records.workflow_definitions[0].is_paused).toBe(true);
+});
+it('accepts exact earlier workflow packages without inventing task history or weakening the new table shape', () => {
+  const f = fixture(); delete f.sections.workflows.workflow_tasks; delete f.sections.workflows.workflow_task_history;
+  expect(prepare(f).records.workflow_tasks).toEqual([]);
+  f.sections.workflows.workflow_tasks = [];
+  expect(() => prepare(f)).toThrow('Incomplete portable record tables');
 });
 it('restores records inactive or paused without rewriting authored literals, template provenance or foreign actor identity', () => {
   const f = fixture(), original = structuredClone(f.sections), r = prepare(f), rows = r.records;

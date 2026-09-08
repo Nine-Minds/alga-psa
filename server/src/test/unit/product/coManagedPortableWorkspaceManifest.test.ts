@@ -66,7 +66,7 @@ function fixture() {
 
 it('assembles every record table and a real empty passphrase vault with stable JSON roundtrip', () => {
   const f = fixture(), manifest = build(f.request());
-  expect(Object.values(manifest.sections).flatMap(section => Object.keys(section.records))).toHaveLength(113);
+  expect(Object.values(manifest.sections).flatMap(section => Object.keys(section.records))).toHaveLength(115);
   expect(validate(JSON.parse(JSON.stringify(manifest)), context, [])).toEqual(manifest);
   expect(manifest.blobs).toEqual([]);
 });

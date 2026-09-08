@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { expect, it, vi } from 'vitest';
 import type { Knex } from 'knex';
+import { seedPortableWorkflowTaskHistory } from './coManagedPortableWorkflowCases';
 
 /** The enclosing suite supplies real tracked users, relationship, credential
  * rows/provider and its schema-clone connection. File bytes are streamed through
@@ -135,6 +136,7 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
   }));
 
   it('portable workspace restore inserts actual files records and usable vault into a new suspended tenant atomically', async () => workspace(async f => {
+    const business = await seedPortableWorkflowTaskHistory(f);
     const { escalateCoManagedTicket, handBackCoManagedTicket } = await import('../../../../../packages/co-managed/src/ticketHandoffs');
     await escalateCoManagedTicket(getDb(), f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Retain this historical escalation' });
     await handBackCoManagedTicket(getDb(), f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Retain this historical MSP handback' });
@@ -168,8 +170,9 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
       const catalog = await getDb().transaction(trx => resolveCoManagedPortableDestinationCatalogs(trx, sections as any, f.actor.tenant));
       const destinationTenant = randomUUID();
       const records = prepareCoManagedPortableWorkspaceRecords({ sourceTenant: f.actor.tenant, destinationTenant, sections: sections as any, destinationCatalogMappings: catalog });
+      const administratorUserId = String(records.domains.find(domain => domain.table === 'users' && domain.column === 'user_id')!.mappings.find(pair => pair.source === f.actor.userId)!.destination);
       const files = prepareCoManagedPortableWorkspaceFiles({ manifest: opened.manifest, files: opened.files, preparedRecords: records,
-        importedByUserId: String(records.records.users[0].user_id) });
+        importedByUserId: administratorUserId });
       const vault = await prepareCoManagedPortableWorkspaceVault({ manifest: opened.manifest, restoreRecords: records, passphrase: f.passphrase }, { reservedUuids: files.allocatedIds });
       lease = await stageCoManagedPortableWorkspaceFiles(files, {
         getCapabilities: () => ({ supportsStreaming: true, maxFileSize: 1024 ** 3 }),
@@ -178,7 +181,7 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
         delete: async (path: string) => { objects.delete(path); },
       } as any);
       const input = { preparedRecords: files, externalFiles: lease.externalFiles, vault, archive: { packageId: handle.packageId, sha256: handle.sha256,
-        sourceAdministratorUserId: f.actor.userId, administratorUserId: String(records.records.users[0].user_id) } };
+        sourceAdministratorUserId: f.actor.userId, administratorUserId } };
       await expect(getDb().transaction(async trx => {
         await insertCoManagedPortableWorkspaceDatabase(trx, input); throw new Error('Caller rollback');
       })).rejects.toThrow('Caller rollback');
@@ -200,6 +203,16 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
       expect((await own.table('users')).every((user: any) => user.is_inactive && user.hashed_password === '!portable-restore-disabled')).toBe(true);
       expect(await own.table('co_management_relationships')).toEqual([]); expect(await own.table('sessions')).toEqual([]);
       expect(await own.table('co_management_ticket_handoffs')).toEqual([]);
+      expect(await own.table('workflow_tasks')).toEqual([]); expect(await own.table('workflow_task_history')).toEqual([]);
+      const businessHistory = await own.table('audit_logs').where('table_name', 'workflow_tasks');
+      expect(businessHistory).toHaveLength(3);
+      expect(businessHistory.find((row: any) => row.details.source_task_id === business.taskId && row.operation === 'portable_workflow_task_restored')?.details)
+        .toMatchObject({ source_tenant: f.actor.tenant, actor_identity: 'source_tenant', execution_state: 'not_restored',
+          portable_workflow_task: { response_data: business.response, completed_by: business.formerUserId, completed_by_name: 'Former Technician' } });
+      const responseHistory = businessHistory.find((row: any) => row.operation === 'portable_workflow_task_activity_restored');
+      expect(responseHistory.details.portable_workflow_task_activity.details).toEqual({ formData: business.response });
+      expect(responseHistory.user_id).toBe(records.domains.find(domain => domain.table === 'users' && domain.column === 'user_id')?.mappings.find(pair => pair.source === f.actor.userId)?.destination);
+      expect(JSON.stringify(businessHistory)).not.toMatch(/execution_id|context_data|claimed_by|provider-secret-never-export/);
       const history = await own.table('ticket_audit_logs').where('event_type', 'TICKET_HANDOFF_RESTORED');
       expect(history).toHaveLength(2); expect(history.map((row: any) => row.details.portable_handoff.note)).toContain('Retain this historical MSP handback');
       const restoredThread = await own.table('comment_threads').first(), restoredComment = await own.table('comments').first();

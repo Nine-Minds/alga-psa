@@ -6,6 +6,7 @@ import { validateCoManagedPortableOperationalRecords, CO_MANAGED_PORTABLE_OPERAT
 import { validateCoManagedPortableWorkflowRecords, CO_MANAGED_PORTABLE_WORKFLOW_REFERENCES, CO_MANAGED_PORTABLE_WORKFLOW_VALUE_TYPES } from './portableWorkflowExport';
 import { validateCoManagedPortableEngagementRecords, CO_MANAGED_PORTABLE_ENGAGEMENT_REFERENCES } from './portableEngagementExport';
 import { isCoManagedUuid } from './sharedWorkIdentity';
+import { CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES } from './portableWorkflowCatalog';
 import { validatePortableRecordReferences, type PortableRecords, type PortableRecordReference } from './portableRecordValidation';
 
 const validators = {
@@ -64,6 +65,8 @@ export function validateCoManagedPortableWorkspaceRecords(input: unknown, option
       if (Object.hasOwn(records, table)) throw new Error('Duplicate portable workspace table');
       records[table] = rows;
     }
+    // Exact legacy workflow projections predate task business history.
+    if (section === 'workflows') for (const table of CO_MANAGED_PORTABLE_WORKFLOW_HISTORY_TABLES) if (!Object.hasOwn(records, table)) records[table] = [];
   }
   const references: readonly PortableRecordReference[] = [...CO_MANAGED_PORTABLE_CORE_REFERENCES, ...CO_MANAGED_PORTABLE_WORK_REFERENCES,
     ...CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES, ...CO_MANAGED_PORTABLE_ASSET_REFERENCES, ...CO_MANAGED_PORTABLE_OPERATIONAL_REFERENCES,
