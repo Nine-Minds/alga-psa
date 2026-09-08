@@ -132,3 +132,4 @@ export * from './upgradePurchase';
 
 export * from './portableRestoreUploads';
 export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
+export * from './managementPolicy';

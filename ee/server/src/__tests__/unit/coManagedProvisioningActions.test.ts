@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CoManagedProvisioningError } from '@alga-psa/co-managed';
 import { provisionCoManagedWorkspaceAction, retryCoManagedProvisioningAction } from '../../lib/actions/coManagedProvisioningActions';
-const mocks = vi.hoisted(() => ({ permission: vi.fn(), prepare: vi.fn(), schedule: vi.fn(), invitation: vi.fn(), browser: vi.fn(),
+const mocks = vi.hoisted(() => ({ permission: vi.fn(), prepare: vi.fn(), schedule: vi.fn(), invitation: vi.fn(), browser: vi.fn(), admission: vi.fn(),
   user: { tenant: 'home-sponsor', user_id: 'home-admin', user_type: 'internal' }, db: {}, rows: {} as Record<string, any[]> }));
 vi.mock('@alga-psa/auth', () => ({ withAuth: (handler: any) => (...args: any[]) => handler(mocks.user, { tenant: mocks.user.tenant }, ...args) }));
 vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: mocks.permission }));
@@ -13,18 +13,25 @@ vi.mock('@alga-psa/db', () => ({ createTenantKnex: async () => ({ knex: mocks.db
     return query;
   },
 }) }));
-vi.mock('@alga-psa/co-managed', () => ({ prepareCoManagedProvisioning: mocks.prepare, retryCoManagedInitialAdministratorInvitation: mocks.invitation, CoManagedProvisioningError: class extends Error {} }));
+vi.mock('@alga-psa/co-managed', () => ({ prepareCoManagedProvisioningForActor: mocks.prepare, withCoManagedManagementOperation: mocks.admission, retryCoManagedInitialAdministratorInvitation: mocks.invitation, CoManagedProvisioningError: class extends Error {} }));
 vi.mock('server/src/lib/co-managed/browserActor', () => ({ coManagedBrowserActor: mocks.browser }));
 vi.mock('../../lib/co-managed/workflowClient', () => ({ startCoManagedProvisioningWorkflow: mocks.schedule }));
 beforeEach(() => { vi.resetAllMocks(); mocks.user.user_type = 'internal'; mocks.permission.mockResolvedValue(true);
   mocks.prepare.mockResolvedValue({ operation_id: 'operation', state: 'queued' }); mocks.schedule.mockResolvedValue({ enqueued: true });
   mocks.browser.mockResolvedValue({ kind: 'session', tenant: 'home-sponsor', userId: 'home-admin', sessionId: 'tracked-session' });
-  mocks.rows = { 'home-sponsor:tenants': [{ product_code: 'psa' }] }; });
+  mocks.rows = { 'home-sponsor:tenants': [{ product_code: 'psa' }] };
+  mocks.admission.mockImplementation(async (_db, actor, id, callback) => {
+    const operation = (mocks.rows[`${actor.tenant}:co_managed_provisioning_operations`] || []).find(row => row.operation_id === id);
+    if (!operation) throw new Error('This operation cannot be retried');
+    return callback(mocks.db, operation);
+  });
+});
 describe('sponsor provisioning authentication adapter', () => {
   it('overrides forged sponsor and actor fields before reserving, and schedules only the persisted operation', async () => {
     const input: any = { sponsorTenant: 'other-sponsor', requestedBy: 'forged-user', operationId: 'requested-operation' };
     expect(await provisionCoManagedWorkspaceAction(input)).toEqual({ operationId: 'operation', enqueued: true });
-    expect(mocks.prepare).toHaveBeenCalledWith(mocks.db, { sponsorTenant: 'home-sponsor', requestedBy: 'home-admin', operationId: 'requested-operation' });
+    expect(mocks.prepare).toHaveBeenCalledWith(mocks.db, await mocks.browser.mock.results[0].value, { operationId: 'requested-operation',
+      clientId: undefined, workspaceName: undefined, administrator: undefined, escalationBoardId: undefined, seats: undefined, visibilityMode: undefined });
     expect(mocks.schedule).toHaveBeenCalledWith({ sponsorTenant: 'home-sponsor', operationId: 'operation' });
   });
   it.each(['co_management', 'client', 'ticket'])('requires %s permission before provisioning', async resource => {
@@ -37,6 +44,12 @@ describe('sponsor provisioning authentication adapter', () => {
     await expect(provisionCoManagedWorkspaceAction({} as any)).rejects.toThrow('Permission denied');
     await expect(retryCoManagedProvisioningAction('operation')).rejects.toThrow('Permission denied');
     expect(mocks.schedule).not.toHaveBeenCalled();
+  });
+  it('does not schedule creation or ordinary retry when the tracked session is unavailable', async () => {
+    mocks.browser.mockRejectedValue(new Error('Session changed'));
+    await expect(provisionCoManagedWorkspaceAction({} as any)).rejects.toThrow('Session changed');
+    await expect(retryCoManagedProvisioningAction('a0000000-0000-4000-8000-000000000001')).rejects.toThrow('Session changed');
+    expect(mocks.prepare).not.toHaveBeenCalled(); expect(mocks.admission).not.toHaveBeenCalled(); expect(mocks.schedule).not.toHaveBeenCalled();
   });
   it('retains the operation identity when the workflow service is unavailable', async () => {
     mocks.schedule.mockResolvedValue({ enqueued: false });

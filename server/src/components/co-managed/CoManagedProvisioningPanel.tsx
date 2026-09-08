@@ -114,15 +114,15 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
       <TableHeader><TableRow>{['workspace', 'administrator', 'seats', 'status', 'actions'].map(key =>
         <TableHead key={key}>{t(`coManaged.provisioning.${key}`)}</TableHead>)}</TableRow></TableHeader>
       <TableBody>{status.items.map(item => <TableRow key={item.operationId}>
-        <TableCell>{item.workspaceName}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.seats}</TableCell>
+        <TableCell>{item.workspaceName ?? t('coManaged.provisioning.workspace')}</TableCell><TableCell>{item.administratorEmail}</TableCell><TableCell>{item.seats}</TableCell>
         <TableCell>{t(`coManaged.provisioning.states.${item.state}`)}
           {item.state === 'pending_acceptance' && <p className="text-muted-foreground">{t(item.invitationExpired ? 'coManaged.provisioning.invitationExpired' : item.invitationSent
             ? 'coManaged.provisioning.invitationSent' : item.deliveryFailed ? 'coManaged.provisioning.deliveryFailed' : 'coManaged.provisioning.invitationPending')}</p>}
         </TableCell>
         <TableCell><div className="flex gap-2">
-          {status.canManage && item.state === 'active' && <Button id={`co-managed-policy-${item.operationId}`} variant="outline" asChild><Link href={`/msp/co-management?operationId=${encodeURIComponent(item.operationId)}`}>{t('coManaged.policy.manage')}</Link></Button>}
+          {(item.canManage ?? status.canManage) && item.state === 'active' && <Button id={`co-managed-policy-${item.operationId}`} variant="outline" asChild><Link href={`/msp/co-management?operationId=${encodeURIComponent(item.operationId)}`}>{t('coManaged.policy.manage')}</Link></Button>}
           {status.canManage && item.canChangeSeats && <Button id={`co-managed-resize-${item.operationId}`} variant="outline" disabled={busy}
-            onClick={() => { setAllocation(item); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
+            onClick={() => { setAllocation({ operationId: item.operationId, seats: item.seats, workspaceName: item.workspaceName ?? t('coManaged.provisioning.workspace') }); setAllocatedSeats(item.seats); setError(null); }}>{t('coManaged.provisioning.resize')}</Button>}
           {status.canManage && item.canRetry && <Button id={`co-managed-retry-${item.operationId}`} variant="outline" disabled={busy}
             onClick={() => void retry(item.operationId)}>{t(item.invitationExpired ? 'coManaged.provisioning.resendInvitation' : 'coManaged.provisioning.retry')}</Button>}
         </div></TableCell>
@@ -141,7 +141,7 @@ export default function CoManagedProvisioningPanel({ available, canGrow, initial
             <Input id="co-managed-client-search" value={search} maxLength={200} onChange={event => setSearch(event.target.value)} /></div>
           <CustomSelect id="co-managed-client" label={t('coManaged.provisioning.client')} required value={form.clientId}
             disabled={busy || Boolean(submitted)} options={(options?.clients || []).map(client => ({ value: client.id, label: client.name }))}
-            onValueChange={clientId => setForm(current => ({ ...current, clientId,
+            onValueChange={clientId => setForm(current => ({ ...current, clientId, escalationBoardId: '',
               workspaceName: current.workspaceName || options?.clients.find(client => client.id === clientId)?.name || '' }))} />
           <div className="space-y-2"><Label htmlFor="co-managed-workspace-name">{t('coManaged.provisioning.workspace')}</Label>
             <Input id="co-managed-workspace-name" required maxLength={200} value={form.workspaceName}

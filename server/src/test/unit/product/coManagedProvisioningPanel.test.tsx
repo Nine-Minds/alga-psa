@@ -117,3 +117,14 @@ it.each([true, false])('exposes the active workspace access editor only to an MS
   expect(links).toHaveLength(canManage ? 1 : 0);
   if (canManage) expect(links[0]).toHaveAttribute('href', '/msp/co-management?operationId=active-operation');
 });
+
+it('hides per-workspace management controls when home policy allows reading but denies managing that client', async () => {
+  mocks.status.mockResolvedValue({ canManage: true, canCreate: true, hasMore: false, items: [
+    { operationId: 'restricted-operation', workspaceName: null, administratorEmail: null, seats: 1, state: 'active',
+      canManage: false, canRetry: false, canChangeSeats: false },
+  ] });
+  panel(); await screen.findByRole('cell', { name: 'coManaged.provisioning.workspace' });
+  expect(screen.queryByRole('link', { name: 'coManaged.policy.manage' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'coManaged.provisioning.resize' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'coManaged.provisioning.retry' })).toBeNull();
+});

@@ -1,3 +1,4 @@
+import { registerCoManagedManagementPolicyTests } from './helpers/coManagedManagementPolicyCases';
 import { registerCoManagedInvoiceJourneyTests } from './helpers/coManagedInvoiceJourneyCases';
 import { registerCoManagedInvitationRecoveryTests } from './helpers/coManagedInvitationRecoveryCases';
 import { registerCoManagedTimeBillingProfileTests } from './helpers/coManagedTimeBillingProfileCases';
@@ -20346,3 +20347,5 @@ registerCoManagedTimeBillingProfileTests(() => db, withMspSharedTimeSaveFixture,
 registerCoManagedInvitationRecoveryTests(() => db, prepare, delivery.send);
 
 registerCoManagedInvoiceJourneyTests(() => db, withMspSharedTimeSaveFixture);
+
+registerCoManagedManagementPolicyTests(() => db, prepare);
