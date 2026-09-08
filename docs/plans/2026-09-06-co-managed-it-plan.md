@@ -1,5 +1,15 @@
 # Co-managed IT implementation plan
 
+## Current implementation and review status — 2026-09-08
+
+The repository implementation and final coherence fixes are committed. The final source review found no remaining demonstrated implementation gap in the agreed scope. Milestone details follow below. The final requirement review is captured in [T01–T07](co-managed-audit-t01-t07.md), [T08–T15](co-managed-audit-t08-t15.md), and [T16–T22](co-managed-audit-t16-t22.md). These current audits supersede historical checkpoint paragraphs that describe work subsequently completed.
+
+The user's later instructions authorize implementation and milestone commits, and prioritize focused Node/dev validation while deferring most broader testing. Validation reported here uses fast Node/UI checks and isolated, migrated PostgreSQL journeys. Full build/typecheck, fresh-install and Citus migration chains, full browser/light/dark/locale journeys, live SMTP/Stripe/Temporal/PG Boss execution, and source-unavailable restore through native screens are **not claimed complete**. Production price configuration and the external self-host signed-capacity issuer remain the deployment dependencies specified below.
+
+Known deferred test-fixture repair: nine cases in `invoiceGeneration.selectorInputGenerate.test.ts` and `invoiceGeneration.zeroDollarFinalization.test.ts` currently fail because their mocked Knex object lacks `transaction`. The actual migrated-PostgreSQL catalog/contract invoice journeys and customer-deletion/native invoice-rendering journey pass. The complete native billing suite has not passed and must be revisited during the broader validation pass.
+
+The exact release flag remains UI-only; production source inspection finds it only in the shared client boundary and sidebar evaluator. Feature deployment does not add backend flag checks.
+
 ## Product outcome
 
 A Pro MSP can purchase customer-technician licenses, create a separate customer IT workspace, and deliver a joined-up service desk from its existing Alga workspace. Customer technicians manage their own operation without access to other customers or the MSP's private commercial data. Tickets and projects remain customer-owned records that both organizations can work on. Escalation changes responsibility without creating another ticket.
@@ -985,3 +995,9 @@ Requester-facing task comments now use the existing durable requester-mail queue
 ### Implementation checkpoint — explicit task thread disclosure (2026-09-08)
 
 Task threads now reuse the existing disclosure preview, confirmation, operation receipts and private-file transfer protocol. Customer-owned audience changes preserve canonical task/comment identity and advance revisions. Explicit MSP-private disclosure copies the complete thread, author attribution, tombstones and verified posted files into customer ownership; interrupted transfers retry the same qualified objects and abandoned transfers use existing cleanup. Only metadata invalidations are emitted for historical audience changes. Validation: seven task PostgreSQL journeys, five existing ticket disclosure regressions, and 51 UI/action tests passed, including actual authorized download of transferred task bytes, integrity/path rejection, private-history retention and session expiry after transport.
+
+### Final coherence checkpoint — archive access and review handoff (2026-09-08)
+
+Commit `febea98256` fixes task archive downloads with strict qualified parent parameters and applies current authorization before archive work/history pagination. Hidden private or time evidence cannot produce empty pages or a false next-page signal. Six focused PostgreSQL cases and nine archive UI cases passed. Native customer KB/document/vault ownership remains separate from relationship grants; permitted conversation files are retained through the archive, while native customer libraries belong in the customer portable export.
+
+The final composition review checked provisioning workflow/activity exports, requester event consumption and recovery, task disclosure metadata invalidation, and the portal/delegated UI release boundaries. No additional composition defect was found. The current T01–T22 audits record closed implementation findings and distinguish the explicitly deferred broad validation and external deployment dependencies listed at the top of this plan.
