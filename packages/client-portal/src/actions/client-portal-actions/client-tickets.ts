@@ -456,6 +456,7 @@ export const getClientTicketDetails = withAuth(async (user, { tenant }, ticketId
         'comments.created_at', 'comments.updated_at', 'comments.deleted_at',
         'comments.publish_state', 'comments.published_at',
       ]).select({
+        conversation_id: trx.raw('?::uuid', [selectedConversation.selectedConversationId]),
         // Retain tombstones and visible replies without exposing retained bodies
         // or identifiers of unpublished/private intermediate parents.
         note: trx.raw('CASE WHEN comments.deleted_at IS NULL THEN comments.note ELSE NULL END'),

@@ -3,19 +3,22 @@ import { tenantDb, withTransaction } from '@alga-psa/db';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { applyVisibilityBoardFilter } from '@alga-psa/tickets/lib';
+import { readPortalTicketConversations } from '@alga-psa/tickets/lib/portalTicketConversations';
 import { CoManagedSharedWorkError, isCoManagedUuid, snapshotCoManagedSessionActor, assertCoManagedSessionUnexpired,
   listPublishedCoManagedAttachments, readPublishedCoManagedAttachment, type CoManagedSessionActor, type CoManagedAttachmentReadContext } from '@alga-psa/co-managed';
 
-export interface PortalAttachmentTarget { ticketId: string; threadId: string; commentId: string }
+export interface PortalAttachmentTarget { ticketId: string; threadId: string; commentId: string; conversationId?: string }
 const deny = (): never => { throw new CoManagedSharedWorkError(); };
 /** Requesters use their own customer identity and portal visibility, not the MSP
  * relationship grant. Retained customer files remain readable after departure. */
 async function withPortalComment<T>(db: Knex, inputActor: CoManagedSessionActor, input: PortalAttachmentTarget,
   work: (context: CoManagedAttachmentReadContext) => Promise<T>): Promise<T> {
   const actor = snapshotCoManagedSessionActor(inputActor);
-  if (!input || Object.keys(input).some(key => !['ticketId', 'threadId', 'commentId'].includes(key)) ||
-      ![input.ticketId, input.threadId, input.commentId].every(isCoManagedUuid)) deny();
+  if (!input || Object.keys(input).some(key => !['ticketId', 'threadId', 'commentId', 'conversationId'].includes(key)) ||
+      ![input.ticketId, input.threadId, input.commentId].every(isCoManagedUuid) ||
+      (input.conversationId !== undefined && !isCoManagedUuid(input.conversationId))) deny();
   const ticketId = input.ticketId.toLowerCase(), threadId = input.threadId.toLowerCase(), commentId = input.commentId.toLowerCase();
+  const conversationId = input.conversationId?.toLowerCase();
   return withTransaction(db, async trx => {
     const owner = tenantDb(trx, actor.tenant);
     const user = await owner.table('users').where({ user_id: actor.userId, user_type: 'client', is_inactive: false }).forShare().first('contact_id');
@@ -32,9 +35,15 @@ async function withPortalComment<T>(db: Knex, inputActor: CoManagedSessionActor,
     const visibility = await getClientContactVisibilityContext(trx, actor.tenant, user.contact_id, { lock: true });
     if (!await owner.table('tickets as t').where({ 't.ticket_id': ticketId, 't.client_id': visibility.clientId })
       .modify(query => applyVisibilityBoardFilter(query, visibility.visibleBoardIds)).forShare().first('t.ticket_id')) deny();
+    const selected = await readPortalTicketConversations(trx, actor.tenant, ticketId, conversationId);
+    const isDefault = selected.requesterConversations.some(row => row.isDefault && row.conversationId === selected.selectedConversationId);
     const query = owner.table('comments as c').where({ 'c.ticket_id': ticketId, 'c.thread_id': threadId, 'c.comment_id': commentId });
     owner.tenantJoin(query, 'comment_threads as t', 'c.thread_id', 't.thread_id', { on: join => join.andOn('t.ticket_id', '=', 'c.ticket_id') });
     owner.tenantJoin(query, 'comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.ticket_id', '=', 'c.ticket_id').andOn('root.thread_id', '=', 't.thread_id') });
+    query.where(scope => {
+      scope.where('t.conversation_id', selected.selectedConversationId);
+      if (isDefault) scope.orWhereNull('t.conversation_id');
+    });
     if (!await query.where({ 'c.publish_state': 'published', 'root.publish_state': 'published' }).whereNull('c.deleted_at')
       .whereRaw('? = ?', [commentAudienceSql(trx, 't', 'root', 'c'), 'requester']).forShare('c', 't', 'root').first('c.comment_id')) deny();
     await assertCoManagedSessionUnexpired(trx, actor);

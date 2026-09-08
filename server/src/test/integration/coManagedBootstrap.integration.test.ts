@@ -15196,6 +15196,8 @@ it('portal named requester selection keeps reads and canonical replies in the se
   const selected = await portalRead(resource.id, other.conversationId);
   expect(selected.selectedConversationId).toBe(other.conversationId);
   expect(selected.conversations.map((c: any) => c.note)).toEqual(['Only in delivery arrangements']);
+  expect(selected.conversations.every((c: any) => c.conversation_id === other.conversationId)).toBe(true);
+  expect(original.conversations.every((c: any) => c.conversation_id === original.selectedConversationId)).toBe(true);
   expect(JSON.stringify(selected)).not.toContain('Hidden');
   const role = await customer.table('user_roles').where('user_id', requester.user_id).first();
   const permission = await customer.table('permissions').where({ resource: 'ticket', action: 'update', msp: false, client: true }).first();
@@ -15641,4 +15643,33 @@ it.each(['contact', 'native', 'location', 'inactive', 'board_scope', 'inactive_l
     await getNamedConversationEmailDefaults(db, f.customerPrincipal, ticket, ref);
     expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref))?.email).toEqual(custom);
   }
+}));
+
+it('portal named requester files bind the selected container and reject sibling or private-container references before storage', async () => withPortalAttachmentFixture(async ({
+  customerPrincipal, requester, portal, resource, customer, create, attachments, upload, download,
+}) => {
+  const { createStoredTicketConversation, ensureDefaultTicketConversation } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+  const scope = (trx: Knex.Transaction) => ({ trx, storeTenant: resource.tenant, ticket: { tenant: resource.tenant, ticketId: resource.id } });
+  const original = await db.transaction(trx => ensureDefaultTicketConversation(scope(trx), 'requester'));
+  const additional = await db.transaction(trx => createStoredTicketConversation(scope(trx), customerPrincipal,
+    { operationId: randomUUID(), name: 'Delivery exchange', audience: 'requester', transport: 'email' }));
+  const root = await create(customerPrincipal, { operationId: randomUUID(), audience: 'requester', text: 'Delivery evidence' });
+  const saved = await attachments.uploadCoManagedConversationAttachment(db, customerPrincipal, resource,
+    { attachmentId: randomUUID(), comment: attachmentComment(root), fileName: 'Delivery.txt', mimeType: 'text/plain', content: Buffer.from('Reviewed evidence') }, upload);
+  // Establish an additional Requester history; creation and publication have their own domain coverage.
+  await customer.table('comment_threads').where('thread_id', root.threadId).update({ conversation_id: additional.conversationId });
+  const target = { ...portalAttachmentTarget(resource, root), conversationId: additional.conversationId };
+  expect(await portal.listPortalConversationAttachments(db, requester, target)).toEqual([saved]);
+  expect(Buffer.from((await portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download)).content).toString()).toBe('Reviewed evidence');
+  download.mockClear();
+  for (const wrong of [portalAttachmentTarget(resource, root), { ...target, conversationId: original.conversationId }, { ...target, conversationId: randomUUID() }, { ...target, conversationId: '' }]) {
+    await expect(portal.listPortalConversationAttachments(db, requester, wrong)).rejects.toThrow();
+    await expect(portal.downloadPortalConversationAttachment(db, requester, wrong, saved.attachmentId, download)).rejects.toThrow();
+  }
+  expect(download).not.toHaveBeenCalled();
+  // Container authority is independent of a stale public flag on its existing root.
+  await customer.table('ticket_conversations').where('conversation_id', additional.conversationId).update({ audience: 'organization_private' });
+  await expect(portal.listPortalConversationAttachments(db, requester, target)).rejects.toThrow();
+  await expect(portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download)).rejects.toThrow();
+  expect(download).not.toHaveBeenCalled();
 }));
