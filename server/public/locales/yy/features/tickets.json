@@ -1909,6 +1909,22 @@
       "checklist_incomplete": "22222",
       "open_children": "22222",
       "required_fields": "22222"
-    }
+    },
+    "scheduledReplies": "222222222 2222222",
+    "refresh": "2222222",
+    "scheduleLoading": "2222222 222222222 2222222…",
+    "scheduleLoadFailed": "22222 222 2222 222222222 2222222. 2222222 22 22222 2222222 222222.",
+    "scheduleChangeFailed": "22222 222 2222222 222 222222. 2222222 22 22222 222 2222222 22222222 222222 222222 22222.",
+    "awaitingPublication": "22222222 22222222222",
+    "cancelScheduledReply": "222222 222222222 22222",
+    "loadMore": "2222 2222",
+    "back": "2222",
+    "confirmScheduleCancel": "2222222 222222222222",
+    "saveSchedule": "2222 22222222",
+    "cancelScheduleDescription": "2222 22222 2222 222 22 222222222 22 2222222.",
+    "scheduleEmail": "22222222 22222",
+    "scheduleReview": "2222222 222 22222 22:",
+    "scheduleKeepsStatus": "222222222 2222222 2222 222 2222222 222222 222222.",
+    "scheduleInvalid": "222222 2 222222 22222222222 2222 222222 222222222 2222 22222."
   }
 }

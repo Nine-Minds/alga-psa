@@ -1909,6 +1909,22 @@
       "checklist_incomplete": "Complete required checklist items.",
       "open_children": "Close the open bundled tickets.",
       "required_fields": "Fill in the required ticket fields."
-    }
+    },
+    "scheduledReplies": "Scheduled replies",
+    "refresh": "Refresh",
+    "scheduleLoading": "Loading scheduled replies…",
+    "scheduleLoadFailed": "Could not load scheduled replies. Refresh to check current access.",
+    "scheduleChangeFailed": "Could not confirm the change. Refresh to check the current schedule before trying again.",
+    "awaitingPublication": "Awaiting publication",
+    "cancelScheduledReply": "Cancel scheduled reply",
+    "loadMore": "Load more",
+    "back": "Back",
+    "confirmScheduleCancel": "Confirm cancellation",
+    "saveSchedule": "Save schedule",
+    "cancelScheduleDescription": "This reply will not be published or emailed.",
+    "scheduleEmail": "Schedule email",
+    "scheduleReview": "Publish and email at:",
+    "scheduleKeepsStatus": "Scheduled replies keep the current ticket status.",
+    "scheduleInvalid": "Choose a future publication time before reviewing this email."
   }
 }

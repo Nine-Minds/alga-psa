@@ -1,5 +1,6 @@
 'use client';
 
+import { formatConversationSchedule } from './ConversationSchedulePicker';
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -133,8 +134,9 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
     <Dialog isOpen={Boolean(review)} onClose={cancel} title={t('namedConversations.reviewEmail', 'Review email')}
       footer={<><Button id={`${id}-review-edit`} variant="outline" disabled={busy || confirmed.current} onClick={cancel}>{t('namedConversations.editDraft', 'Back to draft')}</Button>
         {confirmed.current ? <Button id={`${id}-review-check`} disabled={busy} onClick={() => void check()}>{t('namedConversations.checkDelivery', 'Check delivery')}</Button>
-          : <Button id={`${id}-confirm-send`} disabled={busy} onClick={() => void confirm()}>{t('namedConversations.send', 'Send email')}</Button>}</>}>
+          : <Button id={`${id}-confirm-send`} disabled={busy} onClick={() => void confirm()}>{review?.publicationOptions?.schedule ? t('namedConversations.scheduleEmail', 'Schedule email') : t('namedConversations.send', 'Send email')}</Button>}</>}>
       <DialogContent>{review && <div className="space-y-3">
+        {review.publicationOptions?.schedule && <div className="text-sm font-medium"><p>{t('namedConversations.scheduleReview', 'Publish and email at:')} {formatConversationSchedule(review.publicationOptions.schedule)}</p><p className="font-normal text-muted-foreground">{t('namedConversations.scheduleKeepsStatus', 'Scheduled replies keep the current ticket status.')}</p></div>}
         {review.publicationOptions?.isResolution && <p className="text-sm font-medium">{t('namedConversations.resolutionReview', 'This message will be marked as a resolution.')}</p>}
         {review.publicationOptions?.close && <div className="text-sm"><p>{t('namedConversations.closeReview', 'The ticket will close when this send is accepted.')} {closeStatuses.find(status => status.value === review.publicationOptions?.close?.statusId)?.label}</p>
           {review.publicationOptions.close.overrideReason !== undefined && <p>{t('namedConversations.overrideClose', 'Override unmet close rules')}: {review.publicationOptions.close.overrideReason}</p>}</div>}

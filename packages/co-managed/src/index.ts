@@ -93,6 +93,6 @@ export { deliverNativeNamedConversationEmail, recoverNativeNamedConversationEmai
 export { authorizeNamedConversationMailbox } from './conversationMailboxes';
 export { assertNamedConversationDeliveryFiles } from './namedConversationPublicationFiles';
 
-export { admitNamedScheduledCommentCommand, retainNamedScheduledCommentCancellation } from './namedScheduledCommentCommands';
+export { listNamedScheduledComments, type NamedScheduleCursor, admitNamedScheduledCommentCommand, retainNamedScheduledCommentCancellation } from './namedScheduledCommentCommands';
 
 export { isCoManagedReadFieldHidden } from './sharedWorkRedaction';

@@ -15981,7 +15981,7 @@ it.each(['recovery', 'inactive', 'roles', 'masked', 'mailbox', 'deleted', 'uncon
   }
 }));
 
-it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbox', 'reschedule', 'cancel', 'tamper', 'event_retry', 'queue_failure', 'response_same', 'response_change'] as const)(
+it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbox', 'reschedule', 'cancel', 'tamper', 'event_retry', 'queue_failure', 'response_same', 'response_change', 'list_masked'] as const)(
   'reviewed requester schedule acceptance %s withholds publication and canonical effects', async scenario => withNamedRequesterInboundFixture(async f => {
   const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
   const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
@@ -16033,6 +16033,29 @@ it.each(['schedule', 'resolution', 'past', 'close', 'shared', 'revoked', 'mailbo
   expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, f.ref))?.content).toBeNull();
   expect(await recoverNativeNamedConversationEmails(db, ticket.tenant, f.transport)).toEqual({ processed: 0, deferred: 0 });
   expect(f.transport.send).not.toHaveBeenCalled(); expect(events.publishEvent).not.toHaveBeenCalled(); expect(events.publishWorkflowEvent).not.toHaveBeenCalled();
+  const { listNamedScheduledComments } = await import('../../../../packages/co-managed/src/namedScheduledCommentCommands');
+  const listed = await listNamedScheduledComments(db, f.customerPrincipal, ticket, f.ref);
+  expect(listed.next).toBeNull(); expect(listed.items).toHaveLength(1);
+  expect(listed.items[0]).toEqual({ commentId: request.operationId,
+    note: JSON.stringify([{ type: 'paragraph', content: [{ type: 'text', text: 'A reply for later.', styles: {} }] }]), markdown: 'A reply for later\\.',
+    isResolution: scenario === 'resolution', ...publicationOptions.schedule,
+    email: { subject: 'Later reply', to: [{ email: 'later@example.test' }], cc: [] }, files: [] });
+  expect(await listNamedScheduledComments(db, f.customerPrincipal, ticket, f.ref, { at: listed.items[0].at, commentId: request.operationId }))
+    .toEqual({ items: [], next: null });
+  const other = await api.createNamedTicketConversation(db, f.customerPrincipal, ticket, { operationId: randomUUID(), name: 'Separate requester exchange', audience: 'requester', transport: 'email' });
+  expect(await listNamedScheduledComments(db, f.customerPrincipal, ticket, { storeTenant: other.storeTenant, conversationId: other.conversationId })).toEqual({ items: [], next: null });
+  if (scenario === 'list_masked') {
+    const bundles = await import('@alga-psa/authorization');
+    const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: ticket.tenant, name: 'Scheduled reader scope', actorUserId: f.customerPrincipal.userId });
+    for (const action of ['read', 'update'] as const) await bundles.upsertBundleRule(db, { tenant: ticket.tenant, bundleId, revisionId,
+      resourceType: 'ticket', action, templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: ['email_envelope'] } });
+    await bundles.publishBundleRevision(db, { tenant: ticket.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+    await bundles.createBundleAssignment(db, { tenant: ticket.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+    expect((await listNamedScheduledComments(db, f.customerPrincipal, ticket, f.ref)).items).toEqual([{ ...listed.items[0], email: null }]);
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    await expect(listNamedScheduledComments(db, f.customerPrincipal, ticket, f.ref)).rejects.toThrow();
+    return;
+  }
   const outgoing = await import('../../../../packages/tickets/src/lib/namedConversationEmail');
   const original = { ...outgoing.namedConversationEmailTransport };
   Object.assign(outgoing.namedConversationEmailTransport, f.transport);

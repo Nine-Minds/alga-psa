@@ -1,12 +1,13 @@
 /** @vitest-environment jsdom */
 import React from 'react';
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  listNamedScheduledCommentsAction: mocks.schedules,
   getNamedTicketConversationPublicationCapabilitiesAction: mocks.capabilities,
   getNamedTicketConversationActivityAction: mocks.activity, getNamedTicketConversationReplyTargetAction: mocks.replyTarget,
   getNamedConversationUploadOptionsAction: mocks.uploadOptions, uploadNamedConversationEditorFileAction: mocks.uploadFile,
@@ -17,6 +18,8 @@ vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActi
   getNamedConversationEditorDraftAction: mocks.readDraft, saveNamedConversationEditorDraftAction: mocks.saveDraft,
   postNamedTicketConversationAction: mocks.post, createNamedTicketConversationAction: mocks.create, setNamedTicketConversationStatusAction: mocks.status,
 }));
+vi.mock('../../../../../packages/tickets/src/actions/comment-actions/commentActions', () => ({ rescheduleScheduledComment: mocks.reschedule, cancelScheduledComment: mocks.cancelSchedule }));
+vi.mock('@alga-psa/ui/components/DateTimePicker', () => ({ DateTimePicker: ({ id, label, value, onChange, disabled }: any) => <label>{label}<input id={id} type="datetime-local" disabled={disabled} value={value ? new Date(value.getTime() - value.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''} onChange={event => onChange(event.target.value ? new Date(event.target.value) : undefined)} /></label> }));
 vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({ useFeatureFlag: () => ({ enabled: mocks.flag }) }));
 vi.mock('../../../components/co-managed/CoManagedTicketConversation', () => ({ default: (props: any) => {
   mocks.requesterProps(props);
@@ -49,6 +52,7 @@ beforeEach(() => {
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
   mocks.capabilities.mockResolvedValue({ resolution: false });
+  mocks.schedules.mockResolvedValue({ items: [], next: null });
   mocks.activity.mockResolvedValue({ items: [], nextBefore: null });
   mocks.replyTarget.mockImplementation(async (_ticket, _conversation, parent) => parent);
   mocks.readDraft.mockResolvedValue(null);
@@ -163,6 +167,87 @@ it('retains the publication identity if the post succeeded but refreshing the dr
   await waitFor(() => expect(mocks.post).toHaveBeenCalledTimes(2));
   expect(mocks.post.mock.calls[1]).toEqual(mocks.post.mock.calls[0]);
   await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''));
+});
+
+function scheduledEmailFixture() {
+  const f = emailFixture();
+  const selected = { ...f.emailSide, storeTenant: 'owner', audience: 'requester', mailbox: { id: 'mailbox', tenant: 'owner' } };
+  mocks.session.user.tenant = 'owner'; mocks.query = 'conversation=private&conversationStore=owner';
+  mocks.load.mockResolvedValue({ conversations: [requester, selected], writeAudiences: ['requester'], actor: { tenant: 'owner', userId: 'author' } });
+  mocks.page.mockResolvedValue({ conversation: selected, items: [], nextBefore: null });
+  mocks.capabilities.mockResolvedValue({ resolution: true, scheduling: true, closeStatuses: [{ value: 'closed', label: 'Resolved' }] });
+  mocks.prepareEmail.mockImplementation(async (_ticket, _ref, request) => ({ operationId: request.operationId, status: 'reviewed', review: f.preview, publicationOptions: f.draft().publicationOptions }));
+  return f;
+}
+it('privately restores scheduling, blocks invalid timing and reviews before accepting a scheduled email', async () => {
+  const f = scheduledEmailFixture();
+  const send = mocks.sendEmail.getMockImplementation()!;
+  mocks.sendEmail.mockImplementation(async (...args) => ({ ...await send(...args), status: 'scheduled' }));
+  const first = render(<Harness />); await writeEmail();
+  fireEvent.click(screen.getByLabelText('Mark as resolution'));
+  fireEvent.change(screen.getByLabelText('After sending'), { target: { value: 'closed' } });
+  fireEvent.click(screen.getByLabelText('Schedule'));
+  await waitFor(() => expect(f.draft().publicationOptions?.schedule).toBeTruthy());
+  expect(f.draft().publicationOptions.close).toBeUndefined();
+  const timing = f.draft().publicationOptions.schedule;
+  first.unmount(); render(<Harness />);
+  expect(await screen.findByLabelText('Schedule')).toBeChecked();
+  expect(screen.getByLabelText('Mark as resolution')).toBeChecked();
+  expect(screen.queryByLabelText('After sending')).toBeNull();
+  fireEvent.change(screen.getByLabelText(/Publish at/), { target: { value: '' } });
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeDisabled());
+  fireEvent.click(screen.getAllByRole('button', { name: /Requester/ })[0]);
+  expect(mocks.push).not.toHaveBeenCalled(); expect(f.draft().publicationOptions.schedule).toEqual(timing);
+  fireEvent.click(screen.getByLabelText('Schedule'));
+  fireEvent.click(screen.getByLabelText('Schedule'));
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
+  const confirm = await screen.findByRole('button', { name: 'Schedule email' });
+  expect(screen.getByRole('dialog')).toHaveTextContent('Scheduled replies keep the current ticket status.');
+  expect(mocks.sendEmail).not.toHaveBeenCalled();
+  const reads = mocks.schedules.mock.calls.length;
+  fireEvent.click(confirm);
+  await waitFor(() => expect(screen.getByLabelText('Schedule')).not.toBeChecked());
+  await waitFor(() => expect(mocks.schedules.mock.calls.length).toBeGreaterThan(reads));
+  expect(screen.getByLabelText('Message')).toHaveValue(''); expect(mocks.sendEmail).toHaveBeenCalledOnce();
+});
+it('pages accepted replies and reschedules or cancels without replacing the composer draft', async () => {
+  scheduledEmailFixture();
+  const at = new Date(Date.now() + 7200000).toISOString();
+  const row = (commentId: string) => ({ commentId, note: `${commentId} accepted body`, markdown: null, at, timeZone: 'UTC', isResolution: false,
+    email: { subject: 'Reviewed subject', to: [{ email: 'recipient@example.test' }], cc: [] }, files: [{ name: 'Selected report.txt', size: 10 }] });
+  mocks.schedules.mockImplementation(async (_ticket, _conversation, after) => ({ items: [row(after ? 'second' : 'first')], next: after ? null : { at, commentId: 'first' } }));
+  render(<Harness />); await writeEmail();
+  await screen.findByText('first accepted body');
+  expect(mocks.schedules).toHaveBeenCalledWith(ticket, { storeTenant: 'owner', conversationId: 'private' }, undefined);
+  fireEvent.click(screen.getByRole('button', { name: 'Load more' })); await screen.findByText('second accepted body');
+  expect(mocks.schedules.mock.calls.at(-1)[2]).toEqual({ at, commentId: 'first' });
+  fireEvent.click(within(screen.getByText('second accepted body').closest('article')!).getByRole('button', { name: 'Reschedule' }));
+  const wall = new Date(Date.now() + 10800000).toISOString().slice(0, 16);
+  fireEvent.change(screen.getByLabelText(/Publish at/), { target: { value: wall } });
+  fireEvent.click(screen.getByRole('button', { name: 'Save schedule' }));
+  await waitFor(() => expect(mocks.reschedule).toHaveBeenCalledWith('second', new Date(wall + ':00.000Z').toISOString(), 'UTC'));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(screen.getByLabelText('Message')).toHaveValue('Selected vendor question');
+  await screen.findByText('first accepted body');
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel scheduled reply' }));
+  expect(mocks.cancelSchedule).not.toHaveBeenCalled();
+  mocks.schedules.mockResolvedValue({ items: [], next: null });
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm cancellation' }));
+  await waitFor(() => expect(mocks.cancelSchedule).toHaveBeenCalledWith('first'));
+  await waitFor(() => expect(screen.queryByText('first accepted body')).toBeNull());
+  expect(screen.getByLabelText('Message')).toHaveValue('Selected vendor question');
+});
+it('drops late scheduled rows after the author changes', async () => {
+  scheduledEmailFixture(); const old = deferred();
+  mocks.schedules.mockReturnValueOnce(old.promise);
+  const view = render(<Harness />); await screen.findByLabelText('Message');
+  await waitFor(() => expect(mocks.schedules).toHaveBeenCalledOnce());
+  mocks.session = { session_id: 'new-session', user: { tenant: 'owner', id: 'second-author' } };
+  view.rerender(<Harness />);
+  await waitFor(() => expect(mocks.schedules).toHaveBeenCalledTimes(2));
+  await act(async () => old.resolve({ items: [{ commentId: 'old', note: 'Old author schedule', at: new Date().toISOString(), timeZone: 'UTC', files: [] }], next: null }));
+  expect(screen.queryByText('Old author schedule')).toBeNull();
 });
 
 function emailFixture(selected = true) {

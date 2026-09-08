@@ -1,5 +1,8 @@
 'use client';
 
+import { ConversationSchedulePicker } from './ConversationSchedulePicker';
+import { NamedScheduledReplies } from './NamedScheduledReplies';
+import { getUserTimeZone } from '@alga-psa/core';
 import { useConversationReplyLink } from './useConversationReplyLink';
 import { ConversationDraftFiles } from './ConversationDraftFiles';
 import type { ConversationEditorFile } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
@@ -296,6 +299,8 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const [email, setEmail] = useState<ConversationEmailDraft>({ subject: '', to: [], cc: [] });
   const [emailLocked, setEmailLocked] = useState(false);
   const [publicationOptions, setPublicationOptions] = useState<RequesterPublicationOptions | null>(null);
+  const [canSchedule, setCanSchedule] = useState(false);
+  const invalidSchedule = useRef(false);
   const [canMarkResolution, setCanMarkResolution] = useState(false);
   const [closeStatuses, setCloseStatuses] = useState<{ value: string; label: string }[]>([]);
   const [canOverrideClose, setCanOverrideClose] = useState(false);
@@ -321,7 +326,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     const defaults = isEmail && !draft?.email ? await actions.getNamedConversationEmailDefaultsAction(ticket, reference(conversation)) : null;
     if (!state.current.alive || generation !== readGeneration.current) return;
     const content = draft?.content ?? null;
-    setCanMarkResolution(capabilities.resolution);
+    setCanMarkResolution(capabilities.resolution); setCanSchedule(Boolean(capabilities.scheduling)); invalidSchedule.current = false;
     setCloseStatuses(capabilities.closeStatuses ?? []); setCanOverrideClose(Boolean(capabilities.canOverrideClose));
     state.current.publicationOptions = draft?.publicationOptions ?? null; setPublicationOptions(state.current.publicationOptions);
     state.current.revision = draft?.revision ?? 0; state.current.content = content;
@@ -342,14 +347,14 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     return () => { state.current.alive = false; };
   }, [read]);
   const save = useCallback((): Promise<boolean> => {
-    if (state.current.invalid || invalidEmail.current) return Promise.resolve(false);
+    if (state.current.invalid || invalidEmail.current || invalidSchedule.current) return Promise.resolve(false);
     if (flight.current) return flight.current;
     const task = async () => {
       await Promise.resolve(); // Install the flight before a clean draft can resolve synchronously.
       setSaving(true);
       try {
         while (state.current.alive && (state.current.dirty || pending.current)) {
-          if (!pending.current && (state.current.invalid || invalidEmail.current)) return false;
+          if (!pending.current && (state.current.invalid || invalidEmail.current || invalidSchedule.current)) return false;
           pending.current ??= { generation: state.current.generation, request: { operationId: crypto.randomUUID(), expectedRevision: state.current.revision,
             expectedConversationRevision: state.current.conversationRevision, content: state.current.content, publicationOptions: state.current.publicationOptions, parent: state.current.parent, email: state.current.email, attachments: state.current.attachments.map(file => ({ attachmentId: file.attachmentId })) } };
           const sent = pending.current;
@@ -429,6 +434,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.dirty = true; state.current.generation++; onDirty(true); void save();
   };
   const reviewDraft = async () => {
+    if (state.current.publicationOptions?.schedule && Date.parse(state.current.publicationOptions.schedule.at) <= Date.now()) { setError('scheduleInvalid'); return null; }
     if (disabled || !loaded || fileLock.current || !await save()) return null;
     return { operationId: crypto.randomUUID(), expectedConversationRevision: state.current.conversationRevision, expectedDraftRevision: state.current.revision };
   };
@@ -450,15 +456,34 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   let nonempty = false;
   try { snapshotConversationDocument(document); nonempty = true; } catch { /* An empty editor is a draft, not a message. */ }
   return <div className="space-y-3 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
+    {loaded && canSchedule && <NamedScheduledReplies id={id} ticket={ticket} conversation={conversation} revision={epoch} disabled={disabled || posting || emailLocked || fileLocked} />}
     {replyLinkError && <p role="alert" className="text-sm text-destructive">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
     <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? conversation.audience === 'requester' ? t('namedConversations.requesterEmail', 'Requester email') : t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
     {canMarkResolution && <div className="flex items-center gap-2">
       <Switch id={`${id}-resolution`} checked={Boolean(publicationOptions?.isResolution)} disabled={disabled || !loaded || posting || emailLocked || fileLocked}
-        onCheckedChange={checked => changePublicationOptions(checked ? { isResolution: true } : null)} />
+        onCheckedChange={checked => changePublicationOptions(checked ? { ...publicationOptions, isResolution: true } : publicationOptions?.schedule ? { schedule: publicationOptions.schedule } : null)} />
       <Label htmlFor={`${id}-resolution`}>{t('namedConversations.markResolution', 'Mark as resolution')}</Label>
     </div>}
-    {publicationOptions?.isResolution && closeStatuses.length > 0 && <CustomSelect id={`${id}-close-status`}
+    {canSchedule && <div className="space-y-2">
+      <div className="flex items-center gap-2"><Switch id={`${id}-schedule`} checked={Boolean(publicationOptions?.schedule)} disabled={disabled || !loaded || posting || emailLocked || fileLocked}
+        onCheckedChange={checked => {
+          invalidSchedule.current = false;
+          changePublicationOptions(checked ? { ...(publicationOptions?.isResolution ? { isResolution: true } : {}),
+            schedule: { at: new Date(Math.ceil((Date.now() + 3600000) / 60000) * 60000).toISOString(), timeZone: getUserTimeZone() } }
+            : publicationOptions?.isResolution ? { isResolution: true } : null);
+        }} /><Label htmlFor={`${id}-schedule`}>{t('conversation.schedule', 'Schedule')}</Label></div>
+      {publicationOptions?.schedule && <>
+        <ConversationSchedulePicker id={`${id}-scheduled-publish-at`} value={publicationOptions.schedule} disabled={disabled || posting || emailLocked || fileLocked}
+          onChange={schedule => {
+            invalidSchedule.current = !schedule;
+            if (schedule) changePublicationOptions({ ...(state.current.publicationOptions?.isResolution ? { isResolution: true } : {}), schedule });
+            else { state.current.dirty = true; onDirty(true); setError('scheduleInvalid'); }
+          }} />
+        <p className="text-xs text-muted-foreground">{t('namedConversations.scheduleKeepsStatus', 'Scheduled replies keep the current ticket status.')}</p>
+      </>}
+    </div>}
+    {publicationOptions?.isResolution && !publicationOptions.schedule && closeStatuses.length > 0 && <CustomSelect id={`${id}-close-status`}
       label={t('namedConversations.closeStatus', 'After sending')} value={publicationOptions.close?.statusId ?? '__no_close__'}
       disabled={disabled || !loaded || posting || emailLocked || fileLocked}
       options={[{ value: '__no_close__', label: t('namedConversations.keepStatus', 'Keep the current ticket status') }, ...closeStatuses]}
@@ -493,8 +518,8 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
         state.current.dirty = true; state.current.generation++; onDirty(true);
         return save();
       }} />}
-    {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
-    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} closeStatuses={closeStatuses} ready={!disabled && !fileLocked && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
+    {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'scheduleInvalid' ? 'Choose a future publication time before reviewing this email.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
+    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} closeStatuses={closeStatuses} ready={!disabled && !fileLocked && !invalidSchedule.current && (!publicationOptions?.schedule || Date.parse(publicationOptions.schedule.at) > Date.now()) && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
       saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); await onPosted(); }} />}
     <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={disabled || !loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}

@@ -207,7 +207,7 @@ function canMarkRequesterResolution(context: ConversationAuthority, conversation
   return !context.shared && context.actor.tenant === context.ticket.tenant && conversation.audience === 'requester' && conversation.transport === 'email' &&
     !isCoManagedReadFieldHidden(context.hidden, ['is_resolution', 'resolution', 'comments.is_resolution', 'comments.resolution']);
 }
-function canScheduleRequester(context: NamedConversationPolicyContext, conversation: NamedTicketConversation) {
+export function canScheduleRequester(context: NamedConversationPolicyContext, conversation: NamedTicketConversation) {
   return !context.shared && context.actor.tenant === context.ticket.tenant && conversation.audience === 'requester' && conversation.transport === 'email' &&
     !isCoManagedReadFieldHidden(context.hidden, ['publish_state', 'scheduled_publish_at', 'scheduled_publish_tz',
       'comments.publish_state', 'comments.scheduled_publish_at', 'comments.scheduled_publish_tz']);

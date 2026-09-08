@@ -1909,6 +1909,22 @@
       "checklist_incomplete": "11111",
       "open_children": "11111",
       "required_fields": "11111"
-    }
+    },
+    "scheduledReplies": "111111111 1111111",
+    "refresh": "1111111",
+    "scheduleLoading": "1111111 111111111 1111111…",
+    "scheduleLoadFailed": "11111 111 1111 111111111 1111111. 1111111 11 11111 1111111 111111.",
+    "scheduleChangeFailed": "11111 111 1111111 111 111111. 1111111 11 11111 111 1111111 11111111 111111 111111 11111.",
+    "awaitingPublication": "11111111 11111111111",
+    "cancelScheduledReply": "111111 111111111 11111",
+    "loadMore": "1111 1111",
+    "back": "1111",
+    "confirmScheduleCancel": "1111111 111111111111",
+    "saveSchedule": "1111 11111111",
+    "cancelScheduleDescription": "1111 11111 1111 111 11 111111111 11 1111111.",
+    "scheduleEmail": "11111111 11111",
+    "scheduleReview": "1111111 111 11111 11:",
+    "scheduleKeepsStatus": "111111111 1111111 1111 111 1111111 111111 111111.",
+    "scheduleInvalid": "111111 1 111111 11111111111 1111 111111 111111111 1111 11111."
   }
 }
