@@ -1,3 +1,5 @@
+import { namedConversationFileStorage } from './conversationFileStorage';
+import { prepareNamedConversationPublicationFiles } from '@alga-psa/co-managed';
 import type { Knex } from 'knex';
 import { v5 as uuidv5 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -10,8 +12,9 @@ import type { CoManagedCommentInsert } from '@alga-psa/co-managed';
 import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent, publishQualifiedNamedConversationEvent } from './nativeConversationEvents';
 import { buildTicketCommunicationWorkflowEvents } from './workflowTicketCommunicationEvents';
 
-export function postNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+export async function postNamedTicketConversation(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   reference: TicketConversationReference, request: NamedConversationPostRequest) {
+  await prepareNamedConversationPublicationFiles(db, actor, ticket, reference, request, 'post', namedConversationFileStorage);
   return postNamedTicketConversationDraft(db, actor, ticket, reference, request, applyNamedTicketConversationPost);
 }
 

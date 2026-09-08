@@ -12,7 +12,7 @@ import type { CoManagedConversationItem } from './ticketConversation';
 
 const deny = (): never => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
 type Context = { trx: Knex.Transaction; ticket: ConversationTicketReference; conversation: NamedTicketConversation; hidden: readonly string[] };
-async function messageContext(context: Context, commentId: string, threadId: string) {
+export async function namedConversationMessageFileContext(context: Context, commentId: string, threadId: string) {
   if (![commentId, threadId].every(conversationUuid) || isCoManagedReadFieldHidden(context.hidden,
     [...coManagedConversationAttachmentSources, ...coManagedConversationBodySources])) return deny();
   const { trx, conversation, ticket } = context, owner = tenantDb(trx, conversation.storeTenant);
@@ -41,7 +41,7 @@ export async function attachNamedConversationFiles(context: Context, items: CoMa
   for (const item of items) {
     if (item.deleted || item.storeTenant !== context.conversation.storeTenant) continue;
     try {
-      const selected = await messageContext(context, item.commentId, item.threadId);
+      const selected = await namedConversationMessageFileContext(context, item.commentId, item.threadId);
       item.attachments = await listPublishedCoManagedAttachments(selected);
     } catch (error) {
       // Deleted or unavailable roots keep their existing history projection,
@@ -57,7 +57,7 @@ export function downloadNamedConversationAttachment(db: Knex, actor: CoManagedSe
     Object.keys(file).some(key => !['attachmentId', 'commentId', 'threadId'].includes(key))) return Promise.reject(new TicketConversationError('CONVERSATION_INVALID'));
   const selected = { attachmentId: file.attachmentId.toLowerCase(), commentId: file.commentId.toLowerCase(), threadId: file.threadId.toLowerCase() };
   return withNamedTicketConversation(db, actor, ticket, ref, 'read', async context => {
-    const source = await messageContext(context, selected.commentId, selected.threadId);
+    const source = await namedConversationMessageFileContext(context, selected.commentId, selected.threadId);
     return readPublishedCoManagedAttachment(source, selected.attachmentId, download);
   });
 }

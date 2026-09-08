@@ -1872,6 +1872,17 @@
       "blocked": "Email was not sent. The sender or delivery settings need attention.",
       "reviewed": "",
       "received": "Email received."
-    }
+    },
+    "files": "Attachments",
+    "fileOptionsFailed": "Could not load file upload options. Reload this conversation to try again.",
+    "fileUploadUnknown": "The upload result is uncertain. Retry this file or cancel before switching conversations.",
+    "fileUploadFailed": "Could not attach this file. Check its type, size and your access.",
+    "fileSelectionFailed": "Could not save the file selection. Retry the draft save before sending.",
+    "fileLimit": "Choose up to 20 files within the upload size limit and 25 MiB total.",
+    "fileMax": "Up to {{size}} MiB per upload. Files stay private until you post or send.",
+    "removeFile": "Remove",
+    "uploadingFile": "Attaching {{name}}…",
+    "retryFile": "Retry attachment",
+    "cancelFile": "Cancel attachment"
   }
 }

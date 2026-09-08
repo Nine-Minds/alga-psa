@@ -1,5 +1,8 @@
 'use client';
 
+import { ConversationDraftFiles } from './ConversationDraftFiles';
+import type { ConversationEditorFile } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
+
 import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -217,12 +220,15 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const isEmail = conversation.transport === 'email';
   const [email, setEmail] = useState<ConversationEmailDraft>({ subject: '', to: [], cc: [] });
   const [emailLocked, setEmailLocked] = useState(false);
+  const [files, setFiles] = useState<ConversationEditorFile[]>([]), [fileLocked, setFileLocked] = useState(false);
+  const fileLock = useRef(false);
+  const lockFiles = (locked: boolean) => { fileLock.current = locked; setFileLocked(locked); };
   const emailLock = useRef(false), invalidEmail = useRef(false);
   const currentConversation = useRef(conversation); currentConversation.current = conversation;
   const lockEmail = (locked: boolean) => { emailLock.current = locked; setEmailLocked(locked); };
   const [parent, setParent] = useState<ConversationDraftParent | null>(null);
   const [saving, setSaving] = useState(false), [posting, setPosting] = useState(false), [error, setError] = useState<string | null>(null);
-  const state = useRef({ revision: 0, content: null as CoManagedConversationContent | null, generation: 0, dirty: false, alive: true, conversationRevision: conversation.revision, invalid: false, parent: null as ConversationDraftParent | null, email: null as ConversationEmailDraft | null });
+  const state = useRef({ revision: 0, attachments: [] as ConversationEditorFile[], content: null as CoManagedConversationContent | null, generation: 0, dirty: false, alive: true, conversationRevision: conversation.revision, invalid: false, parent: null as ConversationDraftParent | null, email: null as ConversationEmailDraft | null });
   const pending = useRef<{ request: EditorDraftSaveRequest<CoManagedConversationContent>; generation: number } | null>(null);
   const flight = useRef<Promise<boolean> | null>(null);
   const postRequest = useRef<Parameters<typeof actions.postNamedTicketConversationAction>[2] | null>(null);
@@ -234,6 +240,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     if (!state.current.alive || generation !== readGeneration.current) return;
     const content = draft?.content ?? null;
     state.current.revision = draft?.revision ?? 0; state.current.content = content;
+    state.current.attachments = draft?.attachments ?? []; setFiles(state.current.attachments);
     state.current.dirty = Boolean(content && draft?.conversationRevision !== currentConversation.current.revision);
     state.current.generation++;
     state.current.parent = draft?.parent ?? null; setParent(state.current.parent);
@@ -243,7 +250,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.conversationRevision = currentConversation.current.revision;
     state.current.invalid = false; invalidEmail.current = false;
     setDocument(content?.document ?? (content?.text ? conversationDocument(content.text) ?? [] : []));
-    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.email || state.current.parent || (content && (content.document || content.text))));
+    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.attachments.length || state.current.email || state.current.parent || (content && (content.document || content.text))));
   }, [ticket, conversation.conversationId]);
   useEffect(() => {
     state.current.alive = true;
@@ -260,7 +267,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
         while (state.current.alive && (state.current.dirty || pending.current)) {
           if (!pending.current && (state.current.invalid || invalidEmail.current)) return false;
           pending.current ??= { generation: state.current.generation, request: { operationId: crypto.randomUUID(), expectedRevision: state.current.revision,
-            expectedConversationRevision: state.current.conversationRevision, content: state.current.content, parent: state.current.parent, email: state.current.email } };
+            expectedConversationRevision: state.current.conversationRevision, content: state.current.content, parent: state.current.parent, email: state.current.email, attachments: state.current.attachments.map(file => ({ attachmentId: file.attachmentId })) } };
           const sent = pending.current;
           const saved = await actions.saveNamedConversationEditorDraftAction(ticket, reference(conversation), sent.request);
           if (!state.current.alive) return false;
@@ -275,11 +282,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     flight.current = task(); return flight.current;
   }, [ticket, conversation.conversationId]);
   const changeParent = useCallback(async (next: ConversationDraftParent | null) => {
-    if (!loaded || posting || emailLock.current || postRequest.current || !await save()) return false;
+    if (!loaded || posting || emailLock.current || fileLock.current || postRequest.current || !await save()) return false;
     state.current.parent = next; setParent(next);
     state.current.content ??= { text: '' };
     state.current.dirty = true; state.current.generation++;
-    onDirty(Boolean(state.current.email || next || state.current.content.document || state.current.content.text));
+    onDirty(Boolean(state.current.attachments.length || state.current.email || next || state.current.content.document || state.current.content.text));
     const saved = await save();
     if (saved && state.current.alive) {
       const editor = window.document.getElementById(`${id}-composer`);
@@ -290,11 +297,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   }, [loaded, posting, save, id, onDirty]);
   useEffect(() => {
     if (reply) reply.current = changeParent;
-    onReplyReady?.(loaded && !posting && !emailLocked && !postRequest.current);
+    onReplyReady?.(loaded && !posting && !emailLocked && !fileLocked && !postRequest.current);
     return () => { if (reply?.current === changeParent) reply.current = null; onReplyReady?.(false); };
-  }, [reply, changeParent, loaded, posting, emailLocked, error, onReplyReady]);
+  }, [reply, changeParent, loaded, posting, emailLocked, fileLocked, error, onReplyReady]);
   useEffect(() => {
-    const flushDraft = () => emailLock.current ? Promise.resolve(false) : save();
+    const flushDraft = () => emailLock.current || fileLock.current ? Promise.resolve(false) : save();
     flush.current = flushDraft; return () => { if (flush.current === flushDraft) flush.current = async () => true; };
   }, [flush, save]);
   useEffect(() => {
@@ -303,11 +310,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     if (state.current.content) { state.current.dirty = true; state.current.generation++; void save(); }
   }, [conversation.revision, loaded, save]);
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (state.current.dirty || pending.current || postRequest.current || emailLock.current) { event.preventDefault(); event.returnValue = ''; } };
+    const warn = (event: BeforeUnloadEvent) => { if (state.current.dirty || pending.current || postRequest.current || emailLock.current || fileLock.current) { event.preventDefault(); event.returnValue = ''; } };
     window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn);
   }, []);
   const change = (value: CoManagedRichTextDocument) => {
-    if (posting || emailLock.current || postRequest.current) return;
+    if (posting || emailLock.current || fileLock.current || postRequest.current) return;
     setDocument(value);
     let content: CoManagedConversationContent;
     try {
@@ -316,10 +323,10 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
       state.current.invalid = false;
     } catch { state.current.invalid = true; state.current.dirty = true; setError('invalid'); onDirty(true); return; }
     state.current.content = content; state.current.dirty = true; state.current.generation++;
-    onDirty(Boolean(state.current.email || state.current.parent || content.document || content.text)); void save();
+    onDirty(Boolean(state.current.attachments.length || state.current.email || state.current.parent || content.document || content.text)); void save();
   };
   const changeEmail = (next: ConversationEmailDraft) => {
-    if (!loaded || emailLock.current) return;
+    if (!loaded || emailLock.current || fileLock.current) return;
     setEmail(next);
     invalidEmail.current = next.subject.length > 255 || [next.to, next.cc].some(values => values.length > 100 || values.some(value => value.length > 500 || /[\r\n\0]/.test(value)));
     if (invalidEmail.current) { state.current.dirty = true; setError('invalid'); onDirty(true); return; }
@@ -327,11 +334,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.dirty = true; state.current.generation++; onDirty(true); void save();
   };
   const reviewDraft = async () => {
-    if (!loaded || !await save()) return null;
+    if (!loaded || fileLock.current || !await save()) return null;
     return { operationId: crypto.randomUUID(), expectedConversationRevision: state.current.conversationRevision, expectedDraftRevision: state.current.revision };
   };
   const submit = async () => {
-    if (posting || !loaded || !await save()) return;
+    if (posting || !loaded || fileLock.current || !await save() || fileLock.current) return;
     setPosting(true); setError(null);
     try {
       postRequest.current ??= { operationId: crypto.randomUUID(), expectedConversationRevision: state.current.conversationRevision,
@@ -351,22 +358,29 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
     {isEmail && <div className="space-y-3">
-      <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={!loaded || emailLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
-      <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={!loaded || emailLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />
+      <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={!loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
+      <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={!loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />
       <p className="text-xs text-muted-foreground">{t('namedConversations.addressHelp', 'Separate email addresses with semicolons.')}</p>
-      <Input id={`${id}-email-subject`} label={t('namedConversations.subject', 'Subject')} value={email.subject} disabled={!loaded || emailLocked} maxLength={255} onChange={event => changeEmail({ ...email, subject: event.target.value })} />
+      <Input id={`${id}-email-subject`} label={t('namedConversations.subject', 'Subject')} value={email.subject} disabled={!loaded || emailLocked || fileLocked} maxLength={255} onChange={event => changeEmail({ ...email, subject: event.target.value })} />
     </div>}
     {parent && <div className="flex items-center justify-between gap-2 rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2 text-sm">
       <div className="min-w-0"><p>{t('namedConversations.replying', 'Replying to a message in this conversation')}</p>
         {parentMessage && <p className="mt-1 truncate text-xs text-muted-foreground">{parentMessage.author?.displayName ? `${parentMessage.author.displayName}: ` : ''}{parentMessage.deleted ? t('namedConversations.deleted', 'Message deleted') : conversationText(parentMessage.note, parentMessage.markdown)}</p>}
       </div>
-      <Button id={`${id}-clear-reply`} variant="ghost" size="sm" disabled={posting || emailLocked || Boolean(postRequest.current)} onClick={() => void changeParent(null)}>{t('namedConversations.clearReply', 'New message instead')}</Button>
+      <Button id={`${id}-clear-reply`} variant="ghost" size="sm" disabled={posting || emailLocked || fileLocked || Boolean(postRequest.current)} onClick={() => void changeParent(null)}>{t('namedConversations.clearReply', 'New message instead')}</Button>
     </div>}
-    {loaded && <Document key={epoch} id={`${id}-composer`} document={document} editable={!posting && !emailLocked && !postRequest.current} onChange={change} />}
+    {loaded && <Document key={epoch} id={`${id}-composer`} document={document} editable={!posting && !emailLocked && !fileLocked && !postRequest.current} onChange={change} />}
+    {loaded && <ConversationDraftFiles id={id} ticket={ticket} conversation={reference(conversation)} files={files}
+      disabled={posting || emailLocked || Boolean(postRequest.current)} onLock={lockFiles} onChange={async next => {
+        if (emailLock.current || posting || postRequest.current) return false;
+        state.current.attachments = next; setFiles(next); state.current.content ??= { text: '' };
+        state.current.dirty = true; state.current.generation++; onDirty(true);
+        return save();
+      }} />}
     {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
-    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} ready={nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
+    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} ready={!fileLocked && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
       saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); onPosted(); }} />}
-    <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={!loaded || !nonempty || posting} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
+    <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={!loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}
       <span className="text-xs text-muted-foreground">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</span></div>
   </div>;

@@ -25,6 +25,7 @@ export interface ProtectedConversationFileBinding {
   actor_tenant: string; actor_user_id: string | null; external_author_email?: string | null;
   thread_id: string | null; comment_id: string | null; draft_operation_id: string | null;
   named_editor_store_tenant?: string | null; named_editor_conversation_id?: string | null;
+  named_publication_operation_id?: string | null;
 }
 export interface ProtectedConversationFileAuthority { trx: Knex.Transaction; assertWriteAuthority: () => Promise<void> }
 /** Shared byte-transfer mechanics. The caller supplies one typed, immutable

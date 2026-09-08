@@ -85,3 +85,5 @@ export { listNamedReplyReviews, getNamedReplyReview, resolveNamedReplyReview,
   type NamedReplyReviewDestination, type ResolveNamedReplyReviewRequest } from './inboundNamedConversationReview';
 
 export { uploadNamedConversationEditorFile, downloadNamedConversationEditorFile } from './namedConversationEditorFiles';
+
+export { prepareNamedConversationPublicationFiles, readNamedConversationFileBytes, type NamedConversationFileStorage, type NamedConversationEmailFile } from './namedConversationPublicationFiles';

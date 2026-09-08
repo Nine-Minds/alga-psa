@@ -3,9 +3,10 @@ import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  getNamedConversationUploadOptionsAction: mocks.uploadOptions, uploadNamedConversationEditorFileAction: mocks.uploadFile,
   listNamedConversationMailboxesAction: mocks.mailboxes, selectNamedConversationMailboxAction: mocks.selectMailbox, getLatestNamedTicketEmailSendAction: mocks.latestSend,
   prepareNamedTicketEmailAction: mocks.prepareEmail, sendNamedTicketEmailAction: mocks.sendEmail, getNamedTicketEmailOperationAction: mocks.emailStatus,
   getNamedConversationEmailDefaultsAction: mocks.emailDefaults,
@@ -38,6 +39,7 @@ beforeEach(() => {
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
   mocks.readDraft.mockResolvedValue(null);
+  mocks.uploadOptions.mockResolvedValue({ maxBytes: 1048576 });
   mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => ({ content: request.content, revision: request.expectedRevision + 1, conversationRevision: 1 }));
   mocks.post.mockResolvedValue({ commentId: 'posted' });
   mocks.mailboxes.mockResolvedValue([{ id: 'mailbox', tenant: 'home', email: 'support@example.test', name: 'Support' }]);
@@ -158,10 +160,10 @@ function emailFixture(selected = true) {
   mocks.readDraft.mockImplementation(async () => draft);
   mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => draft = { ...request, revision: request.expectedRevision + 1 });
   const preview = { senderRevision: 'sender', messageHash: 'review-hash', from: { email: 'resolved@example.test' }, replyTo: { email: 'support@example.test' },
-    to: [{ email: 'vendor@example.test' }], cc: [{ email: 'colleague@example.test' }], subject: 'Connection failure', html: '<p>Selected vendor question</p>', text: 'Selected vendor question', files: [] };
+    to: [{ email: 'vendor@example.test' }], cc: [{ email: 'colleague@example.test' }], subject: 'Connection failure', html: '<p>Selected vendor question</p>', text: 'Selected vendor question', files: [] as Array<{ filename: string; contentType: string; size: number }> };
   mocks.prepareEmail.mockImplementation(async (_ticket, _ref, request) => ({ operationId: request.operationId, status: 'reviewed', review: preview }));
   mocks.sendEmail.mockImplementation(async (_ticket, _ref, operationId) => { draft = { content: null, email: null, revision: draft.revision + 1 }; return { operationId, status: 'delivered', errorCode: null }; });
-  return { emailSide, draft: () => draft };
+  return { emailSide, preview, draft: () => draft };
 }
 async function writeEmail() {
   fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Selected vendor question' } });
@@ -170,7 +172,8 @@ async function writeEmail() {
   fireEvent.change(screen.getByLabelText('Subject'), { target: { value: 'Connection failure' } });
 }
 it('restores the email envelope and reviews the resolved sender without sending until confirmation', async () => {
-  const f = emailFixture(); const first = render(<Harness />); await writeEmail();
+  const f = emailFixture(); f.preview.files = [{ filename: 'Reviewed report.txt', contentType: 'text/plain', size: 1536 }];
+  const first = render(<Harness />); await writeEmail();
   fireEvent.click(screen.getByRole('button', { name: /Requester/ }));
   await waitFor(() => expect(mocks.push).toHaveBeenCalledTimes(1));
   expect(f.draft().email).toEqual({ to: ['vendor@example.test'], cc: ['colleague@example.test'], subject: 'Connection failure' });
@@ -180,6 +183,7 @@ it('restores the email envelope and reviews the resolved sender without sending 
   await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
   fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
   await screen.findByText('resolved@example.test'); expect(mocks.sendEmail).not.toHaveBeenCalled();
+  expect(screen.getByRole('dialog')).toHaveTextContent('Reviewed report.txt (2 KiB)');
   expect(mocks.prepareEmail.mock.calls[0][2].expectedDraftRevision).toBe(f.draft().revision);
   expect(screen.getByLabelText('Message')).toBeDisabled(); expect(screen.getByLabelText('To')).toBeDisabled();
   expect(screen.getByTitle('Email body preview').getAttribute('sandbox')).toBe('');
@@ -258,4 +262,36 @@ it('links received files to the qualified conversation download without exposing
   expect(url.pathname).toBe('/api/tickets/conversation-attachments/file');
   expect(Object.fromEntries(url.searchParams)).toEqual({ ticketTenant: 'owner', ticketId: 'ticket', conversationId: 'private', storeTenant: 'home', threadId: 'root', commentId: 'message' });
   expect(link.hasAttribute('download')).toBe(true);
+});
+
+
+it('retries the same private upload, preserves file selection through edits and reload, then removes it through the draft writer', async () => {
+  const file = { attachmentId: 'uploaded', fileName: 'diagnosis.txt', mimeType: 'text/plain', size: 12, contentHash: 'digest' };
+  let draft: any = null;
+  mocks.readDraft.mockImplementation(async () => draft);
+  mocks.saveDraft.mockImplementation(async (_ticket, _ref, request) => draft = { ...request, revision: request.expectedRevision + 1,
+    conversationRevision: 1, attachments: request.attachments.map((value: any) => ({ ...file, attachmentId: value.attachmentId })) });
+  mocks.uploadFile.mockResolvedValueOnce({ ok: false, code: 'unknownOutcome' }).mockImplementation(async (_ticket, _ref, id) => ({ ok: true, attachment: { ...file, attachmentId: id } }));
+  const first = render(<Harness />);
+  const input = await screen.findByLabelText('Attachments'); await waitFor(() => expect(input).toBeEnabled());
+  const bytes = new File(['private text'], file.fileName, { type: file.mimeType });
+  fireEvent.change(input, { target: { files: [bytes] } });
+  await screen.findByText('The upload result is uncertain. Retry this file or cancel before switching conversations.');
+  expect(screen.getByLabelText('Message')).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: /Requester/ })); expect(mocks.push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry attachment' }));
+  await screen.findByRole('link', { name: /diagnosis.txt/ });
+  expect(mocks.uploadFile.mock.calls[0][2]).toBe(mocks.uploadFile.mock.calls[1][2]);
+  expect(mocks.uploadFile.mock.calls[1][3].get('file')).toBe(bytes);
+  await waitFor(() => expect(screen.getByLabelText('Message')).toBeEnabled());
+  fireEvent.change(screen.getByLabelText('Message'), { target: { value: 'Edited with attachment' } });
+  await waitFor(() => expect(draft.content.document[0].content[0].text).toBe('Edited with attachment'));
+  expect(draft.attachments).toHaveLength(1);
+  first.unmount(); render(<Harness />);
+  const link = await screen.findByRole('link', { name: /diagnosis.txt/ });
+  expect(link.getAttribute('href')).toContain('/api/tickets/conversation-editor-files/');
+  expect(link.getAttribute('href')).toContain('conversationId=private');
+  fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+  await waitFor(() => expect(draft.attachments).toEqual([]));
+  expect(screen.queryByRole('link', { name: /diagnosis.txt/ })).toBeNull();
 });

@@ -1,6 +1,5 @@
 import { snapshotConversationEditorFiles } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
 import { snapshotConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
-import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { assertCoManagedOperationalWrite, getCoManagedOperationalState, isCoManagedLifecycleError } from '@alga-psa/licensing';
@@ -246,8 +245,8 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
   return withTicketAuthority(db, actor, ticket, 'update', async context => {
     const { conversation } = await authorizedConversation(context, reference);
     const { trx } = context, store = tenantDb(trx, reference.storeTenant), home = tenantDb(trx, context.actor.tenant);
-    const hash = createHash('sha256').update(JSON.stringify({ actor: { tenant: context.actor.tenant, userId: context.actor.userId },
-      ticket: context.ticket, reference, request, mode })).digest('hex');
+    const { namedConversationPublicationHash, assertNamedConversationPublicationFiles } = await import('./namedConversationPublicationFiles');
+    const hash = namedConversationPublicationHash(context.actor, context.ticket, reference, request, mode);
     const receipt = (row: any) => ({ ...reference, operationId: row.operation_id, threadId: row.thread_id, commentId: row.comment_id });
     const previous = await store.table('ticket_conversation_publications').where('operation_id', request.operationId).forShare().first();
     if (previous) {
@@ -261,7 +260,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
       conversation_store_tenant: reference.storeTenant, conversation_id: reference.conversationId,
       ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId }).forUpdate().first();
     if (!draft || draft.revision !== request.expectedDraftRevision || draft.conversation_revision !== conversation.revision) throw new TicketConversationError('CONVERSATION_CONFLICT');
-    if (!draft.content || !Array.isArray(draft.attachment_manifest) || draft.attachment_manifest.length) throw new TicketConversationError('CONVERSATION_INVALID');
+    if (!draft.content || !Array.isArray(draft.attachment_manifest)) throw new TicketConversationError('CONVERSATION_INVALID');
     let content: CoManagedConversationContent;
     try { content = snapshotConversationContent(draft.content); } catch { throw new TicketConversationError('CONVERSATION_INVALID'); }
     const privateStore = reference.storeTenant !== context.ticket.tenant;
@@ -270,6 +269,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
       throw new TicketConversationError('CONVERSATION_CONFLICT');
     const threadId = parent?.threadId ?? request.operationId;
     if (parent) await assertConversationReplyParent(context, conversation, parent);
+    await assertNamedConversationPublicationFiles({ ...context, conversation, scope: { trx, ticket: context.ticket, storeTenant: reference.storeTenant } }, draft, request, mode);
     if (privateStore) {
       await mutateCoManagedPrivateTicketComment(trx, context.actor,
         { kind: 'ticket', tenant: context.ticket.tenant, id: context.ticket.ticketId, relationshipId: context.ticket.relationshipId! },

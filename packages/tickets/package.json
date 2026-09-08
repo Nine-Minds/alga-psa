@@ -60,7 +60,8 @@
     "date-fns": "^3.6.0",
     "zod": "^3.22.4",
     "@alga-psa/licensing": "*",
-    "@alga-psa/event-schemas": "*"
+    "@alga-psa/event-schemas": "*",
+    "@alga-psa/storage": "*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",

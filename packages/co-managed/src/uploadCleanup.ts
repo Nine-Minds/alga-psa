@@ -49,6 +49,15 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
       await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') });
       result.discardedFiles++;
     }
+    const acceptedPublication = owner.table('ticket_conversation_publications as p').whereRaw('p.operation_id = f.named_publication_operation_id');
+    const publicationFiles = await owner.table(FILES + ' as f').where('status', 'ready').whereNotNull('named_publication_operation_id')
+      .whereNotExists(acceptedPublication).whereNull('discarded_at').modify(expired).orderBy('last_activity_at').orderBy('attachment_id')
+      .limit(limit).forUpdate().skipLocked();
+    for (const row of publicationFiles) {
+      if (await owner.table('ticket_conversation_publications').where('operation_id', row.named_publication_operation_id).first()) continue;
+      await owner.table(FILES).where('attachment_id', row.attachment_id).update({ discarded_at: trx.raw('clock_timestamp()') });
+      result.discardedFiles++;
+    }
   });
   const candidates = await tenantDb(db, tenant).table(FILES).whereNotNull('discarded_at').whereNull('purged_at').where('cleanup_next_attempt_at', '<=', db.raw('clock_timestamp()'))
     .orderBy('cleanup_next_attempt_at').orderBy('attachment_id').limit(limit).select('attachment_id');
@@ -65,6 +74,8 @@ export async function cleanupCoManagedUploads(db: Knex, tenant: string, remove: 
           if (!draft || draft.customer_tenant !== row.customer_tenant || draft.relationship_id !== row.relationship_id || draft.ticket_id !== row.ticket_id ||
             draft.thread_id !== row.thread_id || draft.operation_id !== row.comment_id ||
             (explicitRemoval ? draft.status !== 'published' || draft.abandoned_at : draft.status !== 'draft' || !draft.abandoned_at)) throw new Error('Invalid cleanup draft');
+        } else if (row.named_publication_operation_id && !explicitRemoval) {
+          if (await owner.table('ticket_conversation_publications').where('operation_id', row.named_publication_operation_id).first()) throw new Error('Published attachments require explicit deletion');
         } else if (row.named_editor_conversation_id) {
           if (row.comment_id || row.thread_id || row.tenant !== row.actor_tenant || !row.actor_user_id) throw new Error('Invalid editor cleanup binding');
         } else if (row.status !== 'pending' && !explicitRemoval) throw new Error('Published attachments require explicit deletion');

@@ -108,3 +108,31 @@ export const getNamedConversationEmailDefaultsAction = withAuth(async (user, { t
   const { getNamedConversationEmailDefaults } = await import('@alga-psa/co-managed');
   return getNamedConversationEmailDefaults(knex, actor, ticket, conversation);
 });
+
+
+export const getNamedConversationUploadOptionsAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  await getNamedTicketConversation(knex, actor, ticket, conversation);
+  const { coManagedAttachmentUploadLimit } = await import('../lib/conversationAttachmentUploadLimit');
+  return { maxBytes: coManagedAttachmentUploadLimit() };
+});
+export const uploadNamedConversationEditorFileAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  conversation: TicketConversationReference, attachmentId: string, form: FormData) => {
+  const { uploadNamedConversationEditorFile, CoManagedAttachmentError, CoManagedSharedWorkError } = await import('@alga-psa/co-managed');
+  const { TicketConversationError } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+  const { coManagedAttachmentUploadLimit } = await import('../lib/conversationAttachmentUploadLimit');
+  const { namedConversationFileStorage } = await import('../lib/conversationFileStorage');
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    const file = form.get('file');
+    if (!file || typeof file === 'string' || typeof file.arrayBuffer !== 'function' || file.size > coManagedAttachmentUploadLimit()) return { ok: false as const, code: 'invalid' as const };
+    const attachment = await uploadNamedConversationEditorFile(knex, actor, ticket, conversation,
+      { attachmentId, fileName: file.name, mimeType: file.type || 'application/octet-stream', content: new Uint8Array(await file.arrayBuffer()) },
+      (path, bytes, mime) => namedConversationFileStorage.upload(actor.tenant, path, bytes, mime));
+    return { ok: true as const, attachment };
+  } catch (error) {
+    if (error instanceof CoManagedAttachmentError) return { ok: false as const, code: 'invalid' as const };
+    if (error instanceof TicketConversationError || error instanceof CoManagedSharedWorkError) return { ok: false as const, code: 'forbidden' as const };
+    return { ok: false as const, code: 'unknownOutcome' as const };
+  }
+});

@@ -104,7 +104,13 @@ function visibleAttachmentQuery(context: CoManagedAttachmentReadContext) {
       'd.ticket_id': context.resource.id, 'd.thread_id': context.comment.threadId, 'd.operation_id': context.comment.commentId })
     .whereRaw('d.operation_id = co_management_conversation_attachments.draft_operation_id')
     .whereRaw('d.relationship_id = co_management_conversation_attachments.relationship_id');
-  return attachmentQuery(context).whereNull('discarded_at').where(query => query.whereNull('draft_operation_id').orWhereExists(published));
+  const named = tenantDb(context.trx, context.comment.storeTenant).table('ticket_conversation_publications as p')
+    .where({ 'p.ticket_tenant': context.resource.tenant, 'p.ticket_id': context.resource.id,
+      'p.thread_id': context.comment.threadId, 'p.comment_id': context.comment.commentId })
+    .whereRaw('p.operation_id = co_management_conversation_attachments.named_publication_operation_id')
+    .whereRaw('p.actor_tenant = co_management_conversation_attachments.actor_tenant AND p.actor_user_id = co_management_conversation_attachments.actor_user_id');
+  return attachmentQuery(context).whereNull('discarded_at').where(query => query.whereNull('draft_operation_id').orWhereExists(published))
+    .where(query => query.whereNull('named_publication_operation_id').orWhereExists(named));
 }
 
 /** Reserve an immutable upload before transport. Lost acknowledgements leave a

@@ -136,6 +136,9 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
           {review.review.cc.length > 0 && <><dt>{t('namedConversations.cc', 'CC')}</dt><dd>{review.review.cc.map(address).join('; ')}</dd></>}
           <dt>{t('namedConversations.subject', 'Subject')}</dt><dd>{review.review.subject}</dd>
         </dl>
+        {review.review.files.length > 0 && <div><h4 className="text-sm font-medium">{t('namedConversations.files', 'Attachments')}</h4>
+          <ul className="mt-1 space-y-1 text-sm">{review.review.files.map((file, index) => <li key={index}>{file.filename} ({Math.ceil(file.size / 1024)} KiB)</li>)}</ul>
+        </div>}
         <iframe title={t('namedConversations.emailPreview', 'Email body preview')} sandbox="" className="min-h-64 w-full rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]"
           srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src data:; style-src 'unsafe-inline'">${review.review.html}`} />
         <p className="text-xs text-muted-foreground">{t('namedConversations.recipientAccess', 'These recipients receive this email. Adding a recipient does not give them access to the ticket.')}</p>

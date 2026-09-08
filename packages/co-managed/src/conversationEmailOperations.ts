@@ -1,3 +1,4 @@
+import { assertNamedConversationDeliveryFiles, selectedNamedConversationEditorFiles, assertNamedConversationPublicationFiles, prepareNamedConversationPublicationFiles, type NamedConversationEmailFile, type NamedConversationFileStorage } from './namedConversationPublicationFiles';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
@@ -19,10 +20,10 @@ import type { CoManagedConversationItem } from './ticketConversation';
 export interface NamedConversationEmailRequest { operationId: string; expectedDraftRevision: number; expectedConversationRevision: number }
 export interface ConversationEmailPayload {
   from: ReviewedEmailAddress; replyTo: ReviewedEmailAddress; to: ReviewedEmailAddress[]; cc: ReviewedEmailAddress[];
-  subject: string; html: string; text: string; headers: Record<string, string>;
+  subject: string; html: string; text: string; headers: Record<string, string>; files?: NamedConversationEmailFile[];
 }
 export interface NamedConversationEmailTransport {
-  prepare(input: { mailbox: ConversationMailbox; content: CoManagedConversationContent;
+  prepare(input: { mailbox: ConversationMailbox; content: CoManagedConversationContent; files: NamedConversationEmailFile[];
     envelope: { subject: string; to: ReviewedEmailAddress[]; cc: ReviewedEmailAddress[] }; headers: Record<string, string>; replyToken: string }): Promise<{ payload: ConversationEmailPayload; review: ReviewedEmailPreview }>;
   recheck(payload: ConversationEmailPayload, mailbox: ConversationMailbox): Promise<ReviewedEmailPreview>;
   send(payload: ConversationEmailPayload, review: ReviewedEmailPreview, mailbox: ConversationMailbox): Promise<{
@@ -81,7 +82,8 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
     if (!draft?.content || !draft.email || draft.revision !== request.expectedDraftRevision || draft.conversationRevision !== request.expectedConversationRevision) return conflict();
     const raw = await tenantDb(context.trx, context.actor.tenant).table('ticket_conversation_editor_drafts')
       .where({ actor_user_id: context.actor.userId, conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).forShare().first('attachment_manifest');
-    if (!raw || !Array.isArray(raw.attachment_manifest) || raw.attachment_manifest.length) return invalid();
+    if (!raw) return invalid();
+    const files = await selectedNamedConversationEditorFiles(context, raw);
     const content = snapshotConversationContent(draft.content);
     const ownRoutes = await tenantDb(context.trx, mailbox.tenant).table('email_providers').select('mailbox');
     const envelope = reviewConversationEmailDraft(draft.email, ownRoutes.map(row => row.mailbox));
@@ -93,8 +95,8 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
     const priorId = latest?.envelope?.messageId ?? prior?.email_envelope?.messageId;
     const references = [...new Set([prior?.email_envelope?.messageId, priorId].filter(Boolean))].join(' ');
     const headers = { 'Message-ID': messageId, ...(priorId ? { 'In-Reply-To': priorId, References: references } : {}) };
-    const prepared = await transport.prepare({ mailbox, content, envelope, headers, replyToken: token });
-    if (prepared.review.files.length || !/^[0-9a-f]{64}$/.test(prepared.review.senderRevision) || !/^[0-9a-f]{64}$/.test(prepared.review.messageHash)) return invalid();
+    const prepared = await transport.prepare({ mailbox, content, envelope, headers, replyToken: token, files });
+    if (hash(prepared.payload.files ?? []) !== hash(files) || hash(prepared.review.files) !== hash(files.map(f => ({ filename: f.fileName, contentType: f.mimeType, size: f.size }))) || !/^[0-9a-f]{64}$/.test(prepared.review.senderRevision) || !/^[0-9a-f]{64}$/.test(prepared.review.messageHash)) return invalid();
     if (prepared.review.providerType === 'microsoft' && prepared.review.from.email.toLowerCase() !== mailbox.email.toLowerCase()) return invalid();
     const [row] = await tenantDb(context.trx, context.actor.tenant).table(TABLE).insert({ tenant: context.actor.tenant, operation_id: request.operationId,
       actor_user_id: context.actor.userId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, relationship_id: context.ticket.relationshipId ?? null,
@@ -106,12 +108,26 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
 }
 /** Confirmation commits the reviewed message, immutable envelope, inbound route,
  * publication receipt and draft cleanup together. No network delivery occurs here. */
-export function confirmNamedConversationEmail(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference,
+export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference,
   operationId: string, reviewHash: string, transport: NamedConversationEmailTransport,
-  publish: (context: NamedConversationPostContext, comment: CoManagedCommentInsert) => Promise<void>) {
+  publish: (context: NamedConversationPostContext, comment: CoManagedCommentInsert) => Promise<void>, storage?: NamedConversationFileStorage) {
   const ref = snapshotConversationReference(input);
   if (!conversationUuid(operationId) || !/^[0-9a-f]{64}$/.test(reviewHash)) return Promise.reject(new TicketConversationError('CONVERSATION_INVALID'));
   const id = operationId.toLowerCase();
+  if (storage) {
+    const prepare = await withNamedTicketConversation(db, actor, ticket, ref, 'update', async context => {
+      const row = await operation(context, id).forUpdate().first();
+      if (!row || row.review.messageHash !== reviewHash) return conflict();
+      if (row.status !== 'reviewed') return null;
+      return withNamedConversationMailbox(context.trx, context.actor, context.ticket, ref, row.conversation_revision, async (current, mailbox) => {
+        admitVendor(current);
+        if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
+        unchanged(row.review, await transport.recheck(row.payload, mailbox));
+        return { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision };
+      });
+    });
+    if (prepare) await prepareNamedConversationPublicationFiles(db, actor, ticket, ref, prepare, 'send', storage);
+  }
   return withNamedTicketConversation(db, actor, ticket, ref, 'update', async context => {
     const row = await operation(context, id).forUpdate().first();
     if (!row || row.review.messageHash !== reviewHash) return conflict();
@@ -120,6 +136,13 @@ export function confirmNamedConversationEmail(db: Knex, actor: CoManagedSessionA
       admitVendor(current);
       if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
       unchanged(row.review, await transport.recheck(row.payload, mailbox));
+      const draft = await tenantDb(current.trx, current.actor.tenant).table('ticket_conversation_editor_drafts').where({ actor_user_id: current.actor.userId,
+        conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId, ticket_tenant: current.ticket.tenant, ticket_id: current.ticket.ticketId }).forUpdate().first();
+      if (!draft || draft.revision !== row.draft_revision || draft.conversation_revision !== row.conversation_revision) return conflict();
+      const publishedFiles = await assertNamedConversationPublicationFiles(current, draft,
+        { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision }, 'send');
+      const payload = { ...row.payload, ...(publishedFiles.length ? { files: publishedFiles } : {}) };
+      unchanged(row.review, await transport.recheck(payload, mailbox));
       await sendNamedTicketConversationDraft(current.trx, current.actor, current.ticket, ref,
         { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision }, publish);
       const envelope = { from: row.review.from, replyTo: row.review.replyTo, to: row.review.to, cc: row.review.cc, subject: row.review.subject,
@@ -132,7 +155,7 @@ export function confirmNamedConversationEmail(db: Knex, actor: CoManagedSessionA
         conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId };
       await tenantDb(current.trx, mailbox.tenant).table('ticket_conversation_email_routes').insert(route);
       await rememberNamedConversationCorrespondents(current.trx, route, [...envelope.to, ...envelope.cc]);
-      const [saved] = await operation(current, id).update({ status: 'pending' }).returning('*');
+      const [saved] = await operation(current, id).update({ status: 'pending', payload: JSON.stringify(payload) }).returning('*');
       return state(saved);
     });
   });
@@ -202,6 +225,7 @@ export async function deliverNamedConversationEmail(db: Knex, inputActor: CoMana
     if (row.status !== 'pending') return { ready: false as const, result: state(row) };
     return withNamedConversationMailbox(context.trx, context.actor, context.ticket, ref, row.conversation_revision, async (current, mailbox) => {
       if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
+      await assertNamedConversationDeliveryFiles(current, id, row.payload.files);
       unchanged(row.review, await transport.recheck(row.payload, mailbox));
       await operation(current, id).update({ status: 'sending', attempt_id: attemptId, attempted_at: current.trx.fn.now() });
       return { ready: true as const, revision: row.conversation_revision };
@@ -213,6 +237,7 @@ export async function deliverNamedConversationEmail(db: Knex, inputActor: CoMana
   return withNamedConversationMailbox(db, actor, ticket, ref, claimed.revision, async (context, mailbox) => {
     const row = await operation(context, id).forUpdate().first();
     if (!row || row.attempt_id !== attemptId || row.status !== 'sending') return conflict();
+    await assertNamedConversationDeliveryFiles(context, id, row.payload.files);
     let status: 'delivered' | 'unknown' | 'blocked', errorCode: string | null = null;
     try {
       const result = await transport.send(row.payload, row.review, mailbox);

@@ -508,3 +508,10 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `conversationAttachments.ts`, `protectedConversationFileTransfer.ts`, `namedConversationEditorFiles.ts`, and editable draft manifests.
 - **Gate:** Existing received/published transfers and real author-private draft uploads share stable byte reservation, digest, and retry behavior. Their authority/bindings differ. ACT / bounded-now within the approved ticket-conversation attachment scope.
 - **Status:** revised. The byte-transfer engine accepts immutable domain bindings; published and editor adapters retain separate authority checks. Editor files have actual home-author/destination keys and nullable comment/thread keys, with an exclusive database binding constraint. No fabricated publication or user identities. Existing request fingerprints and storage-path denial semantics are retained. Outbound publication/copy integration remains required by the plan.
+
+
+## conversation-object-upload — pattern
+- **What:** Draft uploads and publication copies need the same tenant storage policy and exact provider acknowledgment as existing protected comment attachments.
+- **Where:** Ticket composer storage adapter and the server's co-managed attachment/disclosure adapters.
+- **Gate:** Stable existing transport contract; real author-home staging and content-owner publication consumers. ACT / bounded-now within ticket conversation file delivery.
+- **Status:** revised for these host consumers. The ticket package owns the existing helper and multipart limit parser; server compatibility exports retain established callers. Durable inbound worker admission remains separately composed. No generic document/file rows are introduced.

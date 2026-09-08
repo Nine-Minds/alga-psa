@@ -1,3 +1,5 @@
+import { namedConversationFileStorage } from './conversationFileStorage';
+import { readNamedConversationFileBytes, type NamedConversationEmailFile } from '@alga-psa/co-managed';
 import type { Knex } from 'knex';
 import { TenantEmailService } from '@alga-psa/email';
 import { convertBlockNoteToHTML } from '@alga-psa/formatting/blocknoteUtils';
@@ -8,23 +10,27 @@ import type { ConversationTicketReference, TicketConversationReference } from '@
 import { extractTicketRichTextPlainText } from './ticketRichText';
 import { applyNamedTicketConversationPost } from './postNamedTicketConversation';
 
+async function emailFiles(files: NamedConversationEmailFile[] = []) {
+  return Promise.all(files.map(async file => ({ filename: file.fileName, contentType: file.mimeType,
+    content: await readNamedConversationFileBytes(file, namedConversationFileStorage) })));
+}
 /** The renderer sees one selected draft, never a ticket's or vendor's history. */
 export const namedConversationEmailTransport: NamedConversationEmailTransport = {
-  async prepare({ mailbox, content, envelope, headers, replyToken }) {
+  async prepare({ mailbox, content, envelope, headers, replyToken, files }) {
     const { note } = encodeConversationContent(content);
     const text = extractTicketRichTextPlainText(note);
     const payload = { from: { email: mailbox.email, ...(mailbox.name ? { name: mailbox.name } : {}) }, replyTo: { email: mailbox.email },
-      ...envelope, headers,
+      ...envelope, headers, ...(files.length ? { files } : {}),
       html: `<div data-alga-reply-boundary="true"></div>${convertBlockNoteToHTML(note)}<div style="display:none" data-alga-reply-token="${replyToken}"></div>`,
       text: `--- Please reply above this line ---\n\n${text}\n\n[ALGA-REPLY-TOKEN ${replyToken}]` };
-    const review = await TenantEmailService.getInstance(mailbox.tenant).prepareReviewedEmail({ ...payload, tenantId: mailbox.tenant, threading: 'conversation' });
+    const review = await TenantEmailService.getInstance(mailbox.tenant).prepareReviewedEmail({ ...payload, attachments: await emailFiles(payload.files), tenantId: mailbox.tenant, threading: 'conversation' });
     return { payload, review };
   },
-  recheck(payload, mailbox) {
-    return TenantEmailService.getInstance(mailbox.tenant).prepareReviewedEmail({ ...payload, tenantId: mailbox.tenant, threading: 'conversation' });
+  async recheck(payload, mailbox) {
+    return TenantEmailService.getInstance(mailbox.tenant).prepareReviewedEmail({ ...payload, attachments: await emailFiles(payload.files), tenantId: mailbox.tenant, threading: 'conversation' });
   },
-  send(payload, review, mailbox) {
-    return TenantEmailService.getInstance(mailbox.tenant).sendEmail({ ...payload, tenantId: mailbox.tenant,
+  async send(payload, review, mailbox) {
+    return TenantEmailService.getInstance(mailbox.tenant).sendEmail({ ...payload, attachments: await emailFiles(payload.files), tenantId: mailbox.tenant,
       threading: 'conversation', retryPolicy: 'caller', reviewed: review });
   },
 };
@@ -35,6 +41,6 @@ export function prepareNamedTicketEmail(db: Knex, actor: CoManagedSessionActor, 
 export async function sendNamedTicketEmail(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   ref: TicketConversationReference, operationId: string, reviewHash: string) {
   const confirmed = await confirmNamedConversationEmail(db, actor, ticket, ref, operationId, reviewHash,
-    namedConversationEmailTransport, applyNamedTicketConversationPost);
+    namedConversationEmailTransport, applyNamedTicketConversationPost, namedConversationFileStorage);
   return confirmed.status === 'pending' ? deliverNamedConversationEmail(db, actor, ticket, ref, operationId, namedConversationEmailTransport) : confirmed;
 }
