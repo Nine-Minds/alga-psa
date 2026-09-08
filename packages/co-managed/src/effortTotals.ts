@@ -1,3 +1,4 @@
+import { hasEffectiveSharedGrant } from './effectiveSharedGrant';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { withCoManagedCustomerTicket, withCoManagedCustomerProject } from './customerWork';
@@ -17,28 +18,6 @@ function visible(context: CoManagedSharedWorkContext, field: keyof Omit<CoManage
   return !isCoManagedReadFieldHidden(context.redactedFields, names.flatMap(name => [name, `values.${name}`, `tickets.${name}`, `project_tasks.${name}`, `projects.${name}`]));
 }
 
-/** Customer ownership permits local totals even after sharing is removed. It
- * does not permit continued reads of the MSP's private business records. */
-async function isCurrentlyShared(context: CoManagedSharedWorkContext): Promise<boolean> {
-  const { trx, resource } = context, owner = tenantDb(trx, resource.tenant);
-  if (resource.kind !== 'ticket') {
-    let projectId = resource.id;
-    if (resource.kind === 'project_task') {
-      const query = owner.table('project_tasks as task').where('task.task_id', resource.id);
-      owner.tenantJoin(query, 'project_phases as phase', 'task.phase_id', 'phase.phase_id');
-      projectId = (await query.first('phase.project_id'))?.project_id;
-    }
-    return !!await owner.table('co_management_project_scopes').where({ relationship_id: resource.relationshipId, project_id: projectId }).forShare().first();
-  }
-  // LEVERAGE: pattern shared-work-effective-grant — customer aggregate reads and MSP source admission require the same effective ticket/board visibility.
-  const work = await owner.table('co_management_ticket_work').where({ relationship_id: resource.relationshipId, ticket_id: resource.id }).forShare().first();
-  if (work && !work.grant_revoked_at) return true;
-  const relationship = await owner.table('co_management_relationships').where('relationship_id', resource.relationshipId).first('visibility_mode');
-  if (relationship?.visibility_mode !== 'board_scope') return false;
-  const ticket = await owner.table('tickets').where('ticket_id', resource.id).first('board_id');
-  return !!await owner.table('co_management_board_scopes').where({ relationship_id: resource.relationshipId, board_id: ticket?.board_id }).forShare().first();
-}
-
 /** Work-level aggregates intentionally require work read authority, not private
  * timesheet access. Approval, billing, authors and notes never enter this query. */
 export async function getCoManagedEffortTotals(db: Knex, inputActor: CoManagedSessionActor, inputResource: CoManagedSharedResource): Promise<CoManagedEffortTotals> {
@@ -51,7 +30,7 @@ export async function getCoManagedEffortTotals(db: Knex, inputActor: CoManagedSe
     const relationship = await owner.table('co_management_relationships').where('relationship_id', resource.relationshipId).first('sponsor_tenant', 'sponsor_client_id');
     if (!relationship) throw new CoManagedSharedWorkError();
     const customerIds: string[] = [], mspIds: string[] = [];
-    const shared = await isCurrentlyShared(context);
+    const shared = await hasEffectiveSharedGrant(context.trx, context.resource);
     let combinedVisible = visible(context, 'combinedMinutes');
     const collect = (current: CoManagedSharedWorkContext) => {
       combinedVisible &&= visible(current, 'combinedMinutes');

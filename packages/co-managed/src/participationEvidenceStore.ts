@@ -5,10 +5,11 @@ import { tenantDb } from '@alga-psa/db';
 export const participationEvidenceTable = 'co_managed_participation_evidence';
 export interface ParticipationEvidenceIdentity {
   tenant: string; customer_tenant: string; relationship_id: string; resource_type: 'ticket' | 'project_task'; resource_id: string;
-  source_type: 'ticket_handoff' | 'work_audit' | 'time_entry'; source_id: string;
+  source_type: 'ticket_handoff' | 'work_audit' | 'time_entry' | 'conversation'; source_id: string;
 }
 export interface ParticipationEvidenceContent {
-  client_id: string; operation_id: string; event_type: string; actor_tenant: string; actor_user_id: string;
+  client_id: string; operation_id: string; event_type: string; actor_tenant: string; actor_user_id: string | null;
+  actor_kind?: 'user' | 'contact' | 'system' | 'unknown'; actor_contact_id?: string | null;
   actor_name: string; actor_organization: string; occurred_at: string; payload: Record<string, unknown>;
 }
 
