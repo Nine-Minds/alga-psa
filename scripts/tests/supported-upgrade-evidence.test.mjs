@@ -25,3 +25,31 @@ for (const [name, mutate] of Object.entries({
   'skipped case': x => { x.report.suites[0].specs[0].tests[0].status = 'skipped'; },
   'missing execution': x => { x.report.suites.pop(); },
 })) test(`upgrade rejects ${name}`, () => { const x = input(); mutate(x); assert.equal(verifySupportedUpgrade(x).status, 'failed'); });
+
+function citusInput() {
+  const x = input();
+  x.expectedBackend = 'citus';
+  x.schema.backend = 'citus';
+  const rows = ['tenants', 'users', 'clients', 'tickets', 'contracts'].map(table_name => ({ table_name, partmethod: 'h', distribution_column: 'tenant' }));
+  rows.push(...['usage_tracking', 'time_entries'].map(table_name => ({ table_name, partmethod: null, distribution_column: null })));
+  x.schema.distribution = { baseline: rows, upgraded: structuredClone(rows) };
+  return x;
+}
+test('Citus upgrade requires both real distribution snapshots and browser execution', () => {
+  const result = verifySupportedUpgrade(citusInput());
+  assert.equal(result.status, 'passed');
+  assert.equal(result.backend, 'citus');
+});
+for (const [name, mutate] of Object.entries({
+  'Postgres substitution': x => { x.schema.backend = 'postgres'; },
+  'missing backend': x => { delete x.schema.backend; },
+  'unknown required backend': x => { x.expectedBackend = 'sqlite'; },
+  'missing baseline distribution': x => { delete x.schema.distribution.baseline; },
+  'missing upgraded distribution': x => { delete x.schema.distribution.upgraded; },
+  'lost ticket distribution': x => { x.schema.distribution.upgraded.find(row => row.table_name === 'tickets').partmethod = null; },
+  'missing retained billing table': x => { x.schema.distribution.upgraded.pop(); },
+  'failed browser': x => { x.exitCode = 1; },
+})) test(`Citus upgrade rejects ${name}`, () => {
+  const x = citusInput(); mutate(x);
+  assert.equal(verifySupportedUpgrade(x).status, 'failed');
+});

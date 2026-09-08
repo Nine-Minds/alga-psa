@@ -77,7 +77,7 @@ jobs:
     needs: [changes, browser-collection]
     if: needs.changes.outputs.run_tests == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
@@ -922,7 +922,7 @@ jobs:
           test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
           echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
           ready=false
-          for attempt in $(seq 1 60); do
+          for _attempt in $(seq 1 60); do
             if curl --fail --silent http://localhost:3000/api/health >/dev/null; then ready=true; break; fi
             sleep 2
           done
@@ -957,6 +957,96 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: supported-upgrade-diagnostics
+          path: e2e-tests/test-results/
+          retention-days: 7
+
+      - name: Start isolated Citus upgrade service
+        id: citus_upgrade_service
+        if: ${{ !cancelled() && matrix.edition == 'enterprise' && steps.api_database.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/citus-upgrade-compose.json" <<'JSON'
+          {"services":{"upgrade-citus":{"image":"citusdata/citus:12.1","command":["postgres","-c","password_encryption=md5"],"environment":{"POSTGRES_USER":"postgres","POSTGRES_PASSWORD":"placeholder-password","POSTGRES_DB":"postgres","POSTGRES_HOST_AUTH_METHOD":"md5"},"ports":["127.0.0.1:55433:5432"],"networks":["app-network"]},"server":{"environment":{"DB_HOST":"upgrade-citus","DB_PORT":"5432","DB_NAME_SERVER":"upgrade_citus_ci"}}}}
+          JSON
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
+          docker-compose -p alga-e2e-test up --no-build --no-deps -d upgrade-citus
+          ready=false
+          for _attempt in $(seq 1 60); do
+            if docker-compose -p alga-e2e-test exec -T upgrade-citus pg_isready -U postgres; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Prepare populated supported Citus upgrade
+        id: citus_upgrade_schema
+        if: ${{ !cancelled() && steps.citus_upgrade_service.outcome == 'success' }}
+        timeout-minutes: 20
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: '5432'
+          UPGRADE_DB_PORT: '55433'
+          DB_USER_ADMIN: postgres
+          DB_PASSWORD_ADMIN: placeholder-password
+          DB_USER_SERVER: app_user
+          UPGRADE_DB_BACKEND: citus
+          UPGRADE_DATABASE_ISOLATED: 'true'
+          UPGRADE_DB_NAME: upgrade_citus_ci
+          E2E_USER_EMAIL: ${{ steps.capture_creds.outputs.e2e_user_email }}
+        run: node scripts/prepare-supported-upgrade-ci.mjs
+
+      - name: Switch the same candidate image to upgraded Citus
+        id: citus_upgrade_server
+        if: ${{ !cancelled() && steps.citus_upgrade_schema.outcome == 'success' }}
+        timeout-minutes: 5
+        run: |
+          set -euo pipefail
+          image=alga-e2e-test_server_ee_local:latest
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "$image")" = "$GITHUB_SHA"
+          expected_image=$(docker image inspect --format '{{.Id}}' "$image")
+          export COMPOSE_FILE="$COMPOSE_FILE:$RUNNER_TEMP/citus-upgrade-compose.json"
+          docker-compose -p alga-e2e-test up --no-build --no-deps --force-recreate -d server
+          container=$(docker-compose -p alga-e2e-test ps -q server)
+          test "$(docker inspect --format '{{.Image}}' "$container")" = "$expected_image"
+          echo "UPGRADE_APPLICATION_REVISION=$GITHUB_SHA" >> "$GITHUB_ENV"
+          ready=false
+          for _attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:3000/api/health >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+
+      - name: Run supported Citus upgrade browser gate
+        id: citus_upgrade_browser
+        if: ${{ !cancelled() && steps.citus_upgrade_server.outcome == 'success' }}
+        timeout-minutes: 10
+        env:
+          UPGRADE_DB_BACKEND: citus
+          E2E_BASE_URL: http://localhost:3000
+          E2E_EDITION: enterprise
+          E2E_DATABASE_ISOLATED: 'true'
+          E2E_DB_HOST: 127.0.0.1
+          E2E_DB_PORT: '55433'
+          E2E_DB_NAME: upgrade_citus_ci
+          E2E_DB_USER: postgres
+          E2E_DB_PASSWORD: placeholder-password
+          E2E_USER_PASSWORD: ${{ steps.capture_creds.outputs.e2e_user_password }}
+        run: xvfb-run --auto-servernum node e2e-tests/run-upgrade.mjs
+
+      - name: Upload supported Citus upgrade evidence
+        if: ${{ always() && steps.citus_upgrade_browser.outcome != 'skipped' && matrix.edition == 'enterprise' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-citus-upgrade-execution
+          path: test-results/supported-upgrade/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload supported Citus upgrade diagnostics
+        if: ${{ always() && steps.citus_upgrade_server.outcome == 'success' && !env.ACT }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supported-citus-upgrade-diagnostics
           path: e2e-tests/test-results/
           retention-days: 7
 

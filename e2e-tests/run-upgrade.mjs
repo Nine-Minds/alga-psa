@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifySupportedUpgrade } from '../scripts/lib/supported-upgrade-evidence.mjs';
 import { testRevision } from '../scripts/lib/test-revision.mjs';
+import { verifyUpgradeDistribution } from '../scripts/lib/upgrade-citus.mjs';
 
 const cwd = fileURLToPath(new URL('.', import.meta.url)), root = path.resolve(cwd, '..');
 const output = path.join(root, 'test-results/supported-upgrade');
@@ -21,6 +22,14 @@ try {
   if (!process.env.UPGRADE_SCHEMA_EVIDENCE) throw new Error('UPGRADE_SCHEMA_EVIDENCE is required');
   const schema = read(process.env.UPGRADE_SCHEMA_EVIDENCE);
   save(files.schema, schema);
+  const expectedBackend = process.env.UPGRADE_DB_BACKEND || 'postgres';
+  if (!['postgres', 'citus'].includes(expectedBackend) || (schema.backend ?? 'postgres') !== expectedBackend) {
+    throw new Error('Upgrade database backend differs from required backend');
+  }
+  if (expectedBackend === 'citus') {
+    verifyUpgradeDistribution(schema.distribution?.baseline);
+    verifyUpgradeDistribution(schema.distribution?.upgraded);
+  }
   if (schema.status !== 'passed' || schema.source?.revision !== before.revision || schema.source?.dirty !== false
     || schema.sourceAfter?.revision !== before.revision || schema.sourceAfter?.dirty !== false
     || schema.database !== process.env.E2E_DB_NAME || process.env.UPGRADE_APPLICATION_REVISION !== before.revision) {
@@ -39,7 +48,8 @@ try {
   const result = run(['--reporter=list,json'], files.results);
   save(files.runner, { exitCode: result.status, database: process.env.E2E_DB_NAME, applicationRevision: process.env.UPGRADE_APPLICATION_REVISION });
   verdict = verifySupportedUpgrade({ revision: before.revision, schema, collected: read(files.collected), report: read(files.results),
-    exitCode: result.status, root, database: process.env.E2E_DB_NAME, applicationRevision: process.env.UPGRADE_APPLICATION_REVISION });
+    exitCode: result.status, root, database: process.env.E2E_DB_NAME, applicationRevision: process.env.UPGRADE_APPLICATION_REVISION,
+    expectedBackend: process.env.UPGRADE_DB_BACKEND || 'postgres' });
 } catch (error) {
   verdict = { schemaVersion: 1, scope: 'supported-upgrade', revision: before?.revision, status: 'failed', failures: [error.message] };
 }

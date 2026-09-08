@@ -26,10 +26,10 @@ function fixture() {
 }
 const evaluate = input => evaluateProductionReadiness(JSON.parse(JSON.stringify(input)));
 
-test('all required serialized workflow verdicts pass and preserve ten separate requirements', () => {
+test('all required serialized workflow verdicts pass and preserve eleven separate requirements', () => {
   const result = evaluate(fixture());
   assert.equal(result.status, 'passed', result.failures.join('\n'));
-  assert.equal(result.results.length, 10);
+  assert.equal(result.results.length, 11);
 });
 
 for (const outcome of ['failure', 'cancelled', 'skipped', undefined]) {
@@ -142,6 +142,16 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
   write(`${upgradeDirectory}/results.json`, rawBrowser);
   write(`${upgradeDirectory}/runner.json`, { exitCode: 0, database: 'upgrade_ci', applicationRevision: revision });
   write(`${upgradeDirectory}/evidence.json`, { status: 'passed', revision, source: { before: cleanSource, after: cleanSource } });
+  const citusDirectory = 'test-results/readiness-input/supported-citus-upgrade-execution';
+  for (const name of ['schema', 'collected', 'results', 'runner', 'evidence']) {
+    write(`${citusDirectory}/${name}.json`, JSON.parse(readFileSync(path.join(root, `${upgradeDirectory}/${name}.json`), 'utf8')));
+  }
+  const citusSchema = JSON.parse(readFileSync(path.join(root, `${citusDirectory}/schema.json`), 'utf8'));
+  const distribution = ['tenants', 'users', 'clients', 'tickets', 'contracts'].map(table_name => ({ table_name, partmethod: 'h', distribution_column: 'tenant' }));
+  distribution.push(...['usage_tracking', 'time_entries'].map(table_name => ({ table_name, partmethod: null, distribution_column: null })));
+  citusSchema.backend = 'citus';
+  citusSchema.distribution = { baseline: distribution, upgraded: structuredClone(distribution) };
+  write(`${citusDirectory}/schema.json`, citusSchema);
   const run = () => {
     const child = spawnSync(process.execPath, ['scripts/verify-production-readiness.mjs'], {
       cwd: root, encoding: 'utf8', timeout: 10000,
@@ -152,6 +162,9 @@ test('CLI reads candidate artifacts, fails on missing JSON, and rejects a dirty 
     return output;
   };
   { const result = run(); assert.equal(result.status, 'passed', result.failures.join('\n')); }
+  write(`${citusDirectory}/schema.json`, { ...citusSchema, backend: 'postgres' });
+  assert.equal(run().status, 'failed');
+  write(`${citusDirectory}/schema.json`, citusSchema);
   // A green recorded verdict cannot conceal a missing raw upgrade journey.
   const partial = structuredClone(rawBrowser); partial.suites.pop();
   write(`${upgradeDirectory}/results.json`, partial);

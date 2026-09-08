@@ -18,7 +18,7 @@ try {
   const selection = selectIntegration(changed);
   for (const { artifact, revisionSuffix, conditionalWorkflow, job } of readinessRequirements) {
     if (conditionalWorkflow && !selection.shouldRun && jobs[job]?.result === 'skipped') continue;
-    if (artifact === 'supported-upgrade-execution') {
+    if (['supported-upgrade-execution', 'supported-citus-upgrade-execution'].includes(artifact)) {
       if (!selection.shouldRun) {
         artifacts[artifact] = { schemaVersion: 1, revision: source.revision, scope: 'supported-upgrade',
           status: 'not-applicable', reason: selection.reason, failures: [] };
@@ -30,7 +30,8 @@ try {
         const runner = read('runner'), recorded = read('evidence');
         const verified = verifySupportedUpgrade({ revision: source.revision, root, schema: read('schema'),
           collected: read('collected'), report: read('results'), exitCode: runner.exitCode,
-          database: runner.database, applicationRevision: runner.applicationRevision });
+          database: runner.database, applicationRevision: runner.applicationRevision,
+          expectedBackend: artifact === 'supported-citus-upgrade-execution' ? 'citus' : 'postgres' });
         if (recorded.status !== 'passed' || recorded.revision !== source.revision
           || recorded.source?.before?.dirty !== false || recorded.source?.after?.dirty !== false
           || recorded.source?.before?.revision !== source.revision || recorded.source?.after?.revision !== source.revision) {

@@ -61,10 +61,15 @@ async function main() {
     verifyUpgradeRetention(before, await captureUpgradeRecords(db, fixture), baselineLedger, await ledger());
     if (backend === 'citus') report.distribution.upgraded = await captureUpgradeDistribution(db);
     if (process.env.DB_USER_SERVER) {
-      await db.raw('GRANT CONNECT ON DATABASE ?? TO ??', [database, process.env.DB_USER_SERVER]);
-      await db.raw('GRANT USAGE ON SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
-      await db.raw('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
-      await db.raw('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+      await db.transaction(async tx => {
+        // Keep the setting and grants on one connection. Mixed local/distributed
+        // catalogs reject these grants after parallel shard operations.
+        if (backend === 'citus') await tx.raw("SET LOCAL citus.multi_shard_modify_mode = 'sequential'");
+        await tx.raw('GRANT CONNECT ON DATABASE ?? TO ??', [database, process.env.DB_USER_SERVER]);
+        await tx.raw('GRANT USAGE ON SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+        await tx.raw('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+        await tx.raw('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ??', [process.env.DB_USER_SERVER]);
+      });
     }
     report.migrations = { baseline: baselineLedger.length, upgrade: applied, batch };
     report.status = 'passed';

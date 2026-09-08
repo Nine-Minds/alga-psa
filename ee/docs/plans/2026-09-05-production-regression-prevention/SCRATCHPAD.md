@@ -2909,3 +2909,30 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Read-only inspection confirms all1028baseline migrations applied; tenants/users/clients/tickets/contracts hash-distributed by tenant, usage_tracking/time_entries local. Previous all-seven distributed assertion was incorrect for pinned baseline. Historical company-to-client cleanup contains cascade undistribution; no claim of new product distribution defect established.
 - Require five confirmed distributed core tables, observe all seven table layouts via pg_class LEFT JOIN pg_dist_partition. Missing billing tables still fail; local rows are explicit nulls in evidence. Eleven verifier/retention tests pass; actual captureUpgradeDistribution query passes against preserved baseline and records both local tables. No evidence claim that local billing operations run on shards.
 - Next complete fresh full runner with corrected verifier; original failed DB remains preserved.
+
+### Supported Citus schema and retention pass
+
+- Runner97041 terminal0 atclean895319e527; DBupgrade_citus_layout_82cc_20260908. Baseline1028 migrations, two-tenant fixture seeded, candidate31 migrations applied, business-record and original-ledger retention passed. Required five tenant-distributed tables validated both stages; local billing table layout recorded explicitly.
+- Output /var/folders/8g/3xyjqdpd4hx2h39h4qb2lyvm0000gn/T/alga-supported-upgrade-8bErbY, log /tmp/alga-citus-upgrade-895319.log, durable evidence/host-citus-supported-upgrade-schema.json. No Docker builds.
+- Next run retained-ticket/AddUsage/invoice browser behavior against this DB using a current-source application build; then require Citus upgrade artifacts in CI and aggregate. Existing app53015/build58aa is older and points at PostgreSQL; do not label it matching current-source Citus evidence. F022 remains open.
+
+### Matching source Citus browser upgrade passed
+
+- Native enterprise webpack build56640 exited0 atclean895319e52762c4343203a77f0af36f2445ea5d26, distserver/.next/upgrade-citus. No inference missing-export warning, other dynamic-dependency warnings remain; type validation skipped by existing build config.
+- Stopped old app98321. Initial Citus app57524 reused wrong app_user credential; initial browser49481 terminal1 before successful business actions. Archived raw evidence /tmp/alga-citus-browser-auth-failure-895319. No shared role/password changed.
+- Created dedicated non-superuser upgrade_citus_82cc_app using private existing app credential. Mixed-table GRANT failed with Citus parallel-operation restriction; SET citus.multi_shard_modify_mode=sequential completed grants. Add this handling to future Citus setup.
+- Corrected app23711 active on53015 via /tmp/start-alga-upgrade-citus-host.sh; isolated DBupgrade_citus_layout_82cc_20260908, Redis prefixalga-upgrade-citus-82cc. Healthok, real app readiness passed. Browser75114 terminal0:3passed31.6s, no retries/skips; exact schema/build/browser revision895319. Raw test-results/supported-upgrade. Durable evidence/host-citus-supported-upgrade-browser.json.
+- Restored preserved evidence notes after clean-source verification. F022 native CI requirement remains incomplete; next require schema+browser Citus upgrade evidence in workflows and independent aggregate, with isolated app credentials and sequential grants. Existing fixture now consumed by invoice generation; full rerun requires fresh database.
+
+### Backend-specific upgrade evidence enforcement
+
+- verifySupportedUpgrade now takes consumer-owned expectedBackend (defaultpostgres), records backend and requires both valid distribution snapshots for Citus. Rejects Postgres substitution, absent backend/snapshots, lost ticket distribution, missing billing table and failed browser. Browser preflight enforces backend before consuming fixture.
+- Replayed existing raw895319 Citus schema/collection/results/runner through new verifier with expectedBackend=citus:passed. This validates the evidence consumer against historical raw results, not new app execution. Focused backend/distribution27tests passed; upgrade+readiness38tests passed.
+- Runner app grants now use one transaction with SET LOCAL citus.multi_shard_modify_mode=sequential, matching live diagnosis. CI orchestration still needs separate Citus service, source test-account/app-role credential wiring, reused-image switch, artifact upload and independent required aggregate entry. F022 remains open.
+
+### Citus upgrade CI orchestration wired locally
+
+- Enterprise fresh-install workflow starts isolated Citus12.1 onapp-network/host55433, matching source fixture MD5 auth, then reuses exact candidate imageID for upgraded DB. No additional app build. Job budget100min accommodates migration and browser phase.
+- prepare-supported-upgrade-ci reads synthetic account and app_user credential hash from original source Postgres; creates app_user only on fresh Citus, targetschildUPGRADE_DB_PORT. Hash is never printed. Existing roles fail provisioning rather than being overwritten. Sequential grants runner fix handles mixed table layout.
+- Raw supported-citus-upgrade-execution plus separate diagnostics artifacts added; parent download and independent expectedBackend=citus verification required. Readiness now11requirements. Consumer CLI fixture rejects a green-looking Citus artifact replaced with Postgres schema.
+- Upgrade/readiness38tests pass; actionlint bothworkflows passes; diffcheck clean. Native workflow execution and full current-source tooling remain pending; F022 still false until required CI result exists.

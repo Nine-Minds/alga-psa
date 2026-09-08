@@ -11,6 +11,7 @@ export const readinessRequirements = [
   { job: 'browser', artifact: 'fresh-install-execution-gate', scope: 'fresh-install-execution',
     members: ['vitest-community', 'playwright-community', 'vitest-enterprise', 'playwright-enterprise'], conditional: true },
   { job: 'browser', artifact: 'supported-upgrade-execution', scope: 'supported-upgrade', members: ['upgrade-schema', 'upgrade-browser'], conditional: true },
+  { job: 'browser', artifact: 'supported-citus-upgrade-execution', scope: 'supported-upgrade', members: ['upgrade-schema', 'upgrade-browser'], conditional: true },
   { job: 'temporal', conditionalWorkflow: true, artifact: 'temporal-execution-gate', scope: 'temporal-tests', members: ['temporal-readiness', 'temporal-engine'] },
   { job: 'citus', conditionalWorkflow: true, artifact: 'citus-aggregate', scope: 'citus-execution', members: ['citus-runtime', 'temporal-database'] },
 ];
