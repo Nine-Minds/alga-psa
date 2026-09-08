@@ -95,7 +95,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs', '20260908094308_retain_named_requester_close_intent.cjs', '20260908101532_retain_named_email_recovery_due.cjs', '20260908102605_retain_named_requester_schedule_intent.cjs', '20260908115747_create_ticket_conversation_attention.cjs', '20260908122807_retain_named_conversation_notification_receipts.cjs', '20260908125648_retain_named_conversation_email_notifications.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -6027,10 +6027,10 @@ it('recovers committed channels through the scheduled server job handler without
   await persist(db, event);
   expect(await sponsor.table('co_management_notification_deliveries').where('status', 'pending')).toHaveLength(6);
   const { coManagedNotificationRecoveryJobHandler } = await import('../../lib/jobs/handlers/coManagedNotificationRecoveryHandler');
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ namedNotifications: { processed: 0, failed: 0 }, namedEmails: { processed: 0, deferred: 0 }, schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ namedNotifications: { processed: 0, failed: 0 }, namedEmailNotifications: { processed: 0, failed: 0 }, namedEmails: { processed: 0, deferred: 0 }, schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 6, processed: 6 } });
   expect(observed).toHaveLength(2); expect(observed.every(item => item.committed)).toBe(true);
   expect(broadcast).toHaveBeenCalledTimes(2); expect(hooks).toHaveBeenCalledTimes(2);
-  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ namedNotifications: { processed: 0, failed: 0 }, namedEmails: { processed: 0, deferred: 0 }, schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 0, processed: 0 } });
+  expect(await coManagedNotificationRecoveryJobHandler({ data: { tenantId: principal.tenant } } as any)).toEqual({ namedNotifications: { processed: 0, failed: 0 }, namedEmailNotifications: { processed: 0, failed: 0 }, namedEmails: { processed: 0, deferred: 0 }, schedules: { processed: 0, failed: 0 }, events: { published: 0, cancelled: 0, failed: 0 }, consumers: { queued: 0, cancelled: 0, failed: 0 }, emails: { examined: 0, processed: 0 }, customerEmails: { examined: 0, processed: 0 }, requesterEmails: { examined: 0, processed: 0 }, notifications: { examined: 0, processed: 0 } });
 }));
 
 it('honors preferences changed after queue creation without hiding the already authorized inbox history', async () => withInAppCommentFixture(async ({
@@ -12037,7 +12037,7 @@ it('task email migration preserves rolling ticket writers, enrolls only pending 
   await sponsor.table('co_management_email_deliveries').insert({ tenant: principal.tenant, delivery_key: 'rolling-ticket', event_id: randomUUID(), recipient_user_id: principal.userId,
     customer_tenant: resource.tenant, relationship_id: resource.relationshipId, ticket_id: ticketId, comment_id: randomUUID(), thread_id: randomUUID(), audience: 'shared_it' });
   expect(await sponsor.table('co_management_email_deliveries').where('delivery_key', 'rolling-ticket').first()).toMatchObject({ resource_type: 'ticket', resource_id: ticketId });
-  await queue(pending); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained task email deliveries');
+  await queue(pending); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained task or conversation email deliveries');
   await expect(sponsor.table('co_management_email_deliveries').where('resource_type', 'project_task').update({ audience: 'organization_private' })).rejects.toMatchObject({ constraint: 'co_management_email_resource_check' });
 }));
 
@@ -16435,4 +16435,123 @@ it('named conversation notifications discover the new assignee and recheck prefe
   await f.sponsor.table('user_internal_notification_preferences').where('user_id', nextUser).update({ is_enabled: true });
   await f.sponsor.table('users').where('user_id', nextUser).update({ is_inactive: true });
   expect(await withNotificationDelivery(db, notification, async value => value)).toBeNull();
+});
+
+it.each(['native', 'shared_it', 'organization_private'] as const)('named conversation email alerts retain %s identities independently of inbox preferences and retry with current content', async kind => {
+  const f = await namedInboundFixture(kind === 'shared_it' ? 'shared_it' : 'organization_private', kind === 'native');
+  const { updateNamedConversationPreference } = await import('../../../../packages/co-managed/src/namedConversationAttention');
+  const { recoverNamedConversationEmailNotifications: enqueue, processCoManagedCommentEmailDeliveries: process } = await import('../../../../packages/co-managed/src/commentEmailDeliveries');
+  const { recoverNamedConversationNotifications } = await import('../../../../packages/notifications/src/lib/namedConversationNotificationFanout');
+  await updateNamedConversationPreference(db, f.principal, f.ticket, f.ref, { following: true });
+  const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+  await db('internal_notification_templates').insert({ name: 'ticket-comment-added', language_code: 'en', title: 'Ticket {{ticketId}}',
+    message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).ignore();
+  await f.sponsor.table('user_internal_notification_preferences').insert({ tenant: f.principal.tenant, user_id: f.principal.userId,
+    category_id: subtype.internal_category_id, subtype_id: subtype.internal_notification_subtype_id, is_enabled: false });
+  const input = await f.makeInput(), accepted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input));
+  if (!accepted || accepted.outcome !== 'replied') throw new Error('Expected vendor reply');
+  const store = tenantDb(db, f.ref.storeTenant);
+  expect((await recoverNamedConversationNotifications(db, f.ref.storeTenant)).failed).toBe(0);
+  expect(await f.sponsor.table('internal_notifications')).toHaveLength(0);
+  const fanout = await Promise.all([enqueue(db, f.ref.storeTenant), enqueue(db, f.ref.storeTenant)]);
+  expect(fanout.every(result => result.failed === 0)).toBe(true);
+  const rows = await f.sponsor.table('co_management_email_deliveries').where('comment_id', accepted.commentId);
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toMatchObject({ recipient_user_id: f.principal.userId, resource_type: 'ticket_conversation',
+    conversation_store_tenant: f.ref.storeTenant, conversation_id: f.ref.conversationId, attention_sequence: '2',
+    customer_tenant: f.ticket.tenant, relationship_id: kind === 'native' ? null : f.ticket.relationshipId });
+  expect(JSON.stringify(rows)).not.toContain('carrier fault'); expect(JSON.stringify(rows)).not.toContain('@example.test');
+  expect(await store.table('ticket_conversation_message_events').where('comment_id', accepted.commentId).first()).toMatchObject({
+    in_app_fanout_at: expect.any(Date), email_fanout_at: expect.any(Date) });
+  const send = vi.fn(async (_delivery: any) => ({ status: 'failed' as const, retryable: true, errorCode: 'provider_unavailable' }));
+  await process(db, f.principal.tenant, send);
+  expect(send).toHaveBeenCalledOnce();
+  expect(send.mock.calls[0][0]).toMatchObject({ message: { note: expect.stringContaining('We found a carrier fault.'), conversation: { name: 'Carrier exchange' }, ownerTicket: kind === 'native' } });
+  expect(send.mock.calls[0][0]).not.toHaveProperty('replyToken');
+  const messageId = send.mock.calls[0][0].messageId;
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ email: 'current-alert@example.test' });
+  await store.table('ticket_conversations').where('conversation_id', f.ref.conversationId).update({ name: 'Current vendor conversation' });
+  await f.sponsor.table('co_management_email_deliveries').where('status', 'pending').update({ next_attempt_at: new Date(0) });
+  const retry = vi.fn(async (_delivery: any) => ({ status: 'delivered' as const }));
+  await Promise.all([process(db, f.principal.tenant, retry), process(db, f.principal.tenant, retry)]);
+  expect(retry).toHaveBeenCalledOnce();
+  expect(retry.mock.calls[0][0]).toMatchObject({ email: 'current-alert@example.test', messageId, message: { conversation: { name: 'Current vendor conversation' } } });
+  await store.table('ticket_conversation_message_events').where('comment_id', accepted.commentId).update({ email_fanout_at: null });
+  expect((await enqueue(db, f.ref.storeTenant)).failed).toBe(0);
+  expect(await process(db, f.principal.tenant, retry)).toEqual({ examined: 0, processed: 0 });
+  expect(await f.sponsor.table('co_management_email_deliveries').where('comment_id', accepted.commentId)).toHaveLength(1);
+  if (kind === 'native') {
+    const migration = require('../../../migrations/20260908125648_retain_named_conversation_email_notifications.cjs');
+    const earlier = require('../../../migrations/20260907190000_qualify_co_managed_email_deliveries.cjs');
+    await migration.up(db); await earlier.up(db);
+    await expect(migration.down(db)).rejects.toThrow('Cannot discard retained conversation email notifications');
+    await expect(earlier.down(db)).rejects.toThrow('Cannot discard retained');
+    for (const invalid of [{ conversation_store_tenant: randomUUID() }, { attention_sequence: null }, { resource_type: 'ticket' }])
+      await expect(f.sponsor.table('co_management_email_deliveries').insert({ ...rows[0], delivery_key: randomUUID(), ...invalid })).rejects.toThrow('co_management_email_resource_check');
+  }
+});
+
+it.each(['email-opt-out', 'unfollow', 'access-revoked'] as const)('named conversation email alerts recheck %s after fanout without affecting inbox fanout', async guard => {
+  const f = await namedInboundFixture('shared_it');
+  const { updateNamedConversationPreference } = await import('../../../../packages/co-managed/src/namedConversationAttention');
+  const { recoverNamedConversationEmailNotifications: enqueue, processCoManagedCommentEmailDeliveries: process } = await import('../../../../packages/co-managed/src/commentEmailDeliveries');
+  const { recoverNamedConversationNotifications } = await import('../../../../packages/notifications/src/lib/namedConversationNotificationFanout');
+  const subtype = await db('internal_notification_subtypes').where('name', 'ticket-comment-added').first();
+  await db('internal_notification_templates').insert({ name: 'ticket-comment-added', language_code: 'en', title: 'Ticket {{ticketId}}',
+    message: '{{authorName}}: {{commentPreview}}', subtype_id: subtype.internal_notification_subtype_id }).onConflict(['name', 'language_code']).ignore();
+  await updateNamedConversationPreference(db, f.principal, f.ticket, f.ref, { following: true });
+  const input = await f.makeInput(), accepted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input));
+  if (!accepted || accepted.outcome !== 'replied') throw new Error('Expected vendor reply');
+  expect((await enqueue(db, f.ref.storeTenant)).failed).toBe(0);
+  if (guard === 'email-opt-out') {
+    const emailSubtype = await db('notification_subtypes').where('name', 'Ticket Comment Added').first();
+    await f.sponsor.table('user_notification_preferences').insert({ tenant: f.principal.tenant, user_id: f.principal.userId, subtype_id: emailSubtype.id, is_enabled: false });
+    expect((await recoverNamedConversationNotifications(db, f.ref.storeTenant)).failed).toBe(0);
+    expect(await f.sponsor.table('ticket_conversation_notification_receipts').where('comment_id', accepted.commentId).first()).toMatchObject({ outcome: 'created' });
+  } else if (guard === 'unfollow') {
+    await updateNamedConversationPreference(db, f.principal, f.ticket, f.ref, { following: false });
+    await f.sponsor.table('co_managed_ticket_references').where('ticket_id', f.ticket.ticketId).update({ assigned_to: null, assigned_team_id: null });
+  } else {
+    await f.customer.table('co_management_ticket_work').where('ticket_id', f.ticket.ticketId).update({ grant_revoked_at: new Date() });
+    await f.customer.table('co_management_board_scopes').where('relationship_id', f.ticket.relationshipId).del();
+    await expect(f.conversations.getNamedTicketConversation(db, f.principal, f.ticket, f.ref)).rejects.toThrow();
+  }
+  const send = vi.fn(async () => ({ status: 'delivered' as const }));
+  await process(db, f.principal.tenant, send);
+  expect(send).not.toHaveBeenCalled();
+  expect(await f.sponsor.table('co_management_email_deliveries').where('comment_id', accepted.commentId).first()).toMatchObject({ status: 'skipped' });
+});
+
+it('named conversation email alerts recover an independent failed fanout through the actual job for the current native assignee', async () => {
+  const f = await namedInboundFixture('organization_private', true);
+  const { recoverNamedConversationEmailNotifications: enqueue } = await import('../../../../packages/co-managed/src/commentEmailDeliveries');
+  const sourceUser = await f.sponsor.table('users').where('user_id', f.principal.userId).first();
+  const roles = await f.sponsor.table('user_roles').where('user_id', f.principal.userId), nextUser = randomUUID();
+  await f.sponsor.table('users').insert({ ...sourceUser, user_id: nextUser, username: `alert-${nextUser}`, email: 'assignee-alert@example.test' });
+  await f.sponsor.table('user_roles').insert(roles.map(role => ({ ...role, user_id: nextUser })));
+  const input = await f.makeInput(), accepted = await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input));
+  if (!accepted || accepted.outcome !== 'replied') throw new Error('Expected vendor reply');
+  await f.sponsor.table('tickets').where('ticket_id', f.ticket.ticketId).update({ assigned_to: nextUser, assigned_team_id: null });
+  const trigger = `named_email_failure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(`CREATE FUNCTION ??() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.resource_type = 'ticket_conversation' THEN RAISE EXCEPTION 'queue unavailable'; END IF; RETURN NEW; END $$`, [trigger]);
+  await db.raw('CREATE TRIGGER ?? BEFORE INSERT ON co_management_email_deliveries FOR EACH ROW EXECUTE FUNCTION ??()', [trigger, trigger]);
+  try {
+    expect((await enqueue(db, f.ref.storeTenant)).failed).toBeGreaterThan(0);
+    expect(await f.sponsor.table('co_management_email_deliveries')).toHaveLength(0);
+    expect(await f.sponsor.table('ticket_conversation_message_events').where('comment_id', accepted.commentId).first()).toMatchObject({ email_fanout_at: null });
+  } finally { await db.raw('DROP TRIGGER ?? ON co_management_email_deliveries', [trigger]); await db.raw('DROP FUNCTION ??()', [trigger]); }
+  await f.sponsor.table('ticket_conversation_message_events').update({ email_retry_at: new Date(0), in_app_fanout_at: new Date() });
+  const { coManagedNotificationRecoveryHandler: recover } = await import('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler');
+  const database = await import('@alga-psa/db'), transport = await import('@alga-psa/jobs/handlers/coManagedCommentEmailTransport');
+  const connection = vi.spyOn(database, 'getConnection').mockResolvedValue(db);
+  const send = vi.spyOn(transport, 'sendCoManagedCommentEmail').mockResolvedValue({ status: 'delivered' });
+  try {
+    const result = await recover({ tenantId: f.principal.tenant });
+    expect(result.namedNotifications).toEqual({ processed: 0, failed: 0 });
+    expect(result.namedEmailNotifications.failed).toBe(0);
+    const alerts = send.mock.calls.map(([delivery]) => delivery).filter(delivery => delivery.message.commentId === accepted.commentId);
+    expect(alerts).toHaveLength(1); expect(alerts[0]).toMatchObject({ recipientUserId: nextUser, email: 'assignee-alert@example.test' });
+    expect(await f.sponsor.table('sessions').where('user_id', nextUser)).toHaveLength(0);
+    expect(await f.sponsor.table('co_management_email_deliveries').where('comment_id', accepted.commentId).first()).toMatchObject({ status: 'delivered', recipient_user_id: nextUser });
+  } finally { send.mockRestore(); connection.mockRestore(); }
 });

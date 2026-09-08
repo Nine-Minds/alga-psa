@@ -88,7 +88,8 @@ const tenantsWithPendingCoManagedNotifications: TenantSelector = async db => {
   const customerEmails = await db.unscoped<{ tenant: string }>('co_management_customer_email_deliveries', 'maintenance fanout selects customers with pending technician email deliveries')
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
   const namedAttention = await db.unscoped<{ tenant: string }>('ticket_conversation_message_events', 'maintenance fanout selects pending conversation notification intents')
-    .whereNull('in_app_fanout_at').where('in_app_retry_at', '<=', new Date()).distinct('tenant');
+    .where(query => query.where(inner => inner.whereNull('in_app_fanout_at').where('in_app_retry_at', '<=', new Date()))
+      .orWhere(inner => inner.whereNull('email_fanout_at').where('email_retry_at', '<=', new Date()))).distinct('tenant');
   const requesterEmails = await db.unscoped<{ tenant: string }>('co_management_requester_email_deliveries', 'maintenance fanout selects customers with pending requester email deliveries')
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
   const schedules = await db.unscoped<{ tenant: string }>('comments', 'maintenance fanout selects co-managed schedules and legacy publication handoffs awaiting recovery')

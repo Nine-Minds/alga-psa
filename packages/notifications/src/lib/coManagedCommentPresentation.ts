@@ -8,10 +8,8 @@ export function coManagedCommentPresentation(message: CoManagedTicketCommentNoti
     : '—';
   const commentPreview = Array.from(extractTicketRichTextPlainText(message.note)).slice(0, 200).join('');
   if ('conversation' in message) {
-    const query = new URLSearchParams({ conversation: message.conversation.conversationId, conversationStore: message.conversation.storeTenant, message: message.commentId });
-    const path = message.ownerTicket ? `/msp/tickets/${message.resource.id}` : `/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`;
     return {
-      link: `${path}?${query}`,
+      link: namedConversationNotificationLink(message),
       data: { authorName, ticketId: message.ticketNumber ?? '—', commentPreview: `${message.conversation.name}: ${commentPreview}` },
       metadata: { coManaged: { version: 3, resource: message.resource, conversation: { storeTenant: message.conversation.storeTenant, conversationId: message.conversation.conversationId },
         commentId: message.commentId, threadId: message.threadId, sequence: message.sequence, deliveryKey, eventId: eventId.toLowerCase() } },
@@ -33,4 +31,10 @@ export function coManagedCommentPresentation(message: CoManagedTicketCommentNoti
     metadata: { coManaged: { version: 1, resource: message.resource, commentId: message.commentId, threadId: message.threadId,
       audience: message.audience, deliveryKey, eventId: eventId.toLowerCase(), ...(message.author ? { author: message.author } : {}) } },
   };
+}
+
+export function namedConversationNotificationLink(message: NamedConversationNotification): string {
+  const query = new URLSearchParams({ conversation: message.conversation.conversationId, conversationStore: message.conversation.storeTenant, message: message.commentId });
+  const path = message.ownerTicket ? `/msp/tickets/${message.resource.id}` : `/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`;
+  return `${path}?${query}`;
 }

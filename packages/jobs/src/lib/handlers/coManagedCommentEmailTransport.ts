@@ -1,3 +1,4 @@
+import { namedConversationNotificationLink } from '@alga-psa/notifications/lib/coManagedCommentPresentation';
 import { resolveCoManagedRequesterEmailRouting, resolveCoManagedTicketEmailMailbox } from './coManagedRequesterEmailRouting';
 import type { CoManagedEmailDelivery, CoManagedCustomerEmailDelivery, CoManagedRequesterEmailDelivery, CoManagedEmailDeliveryResult, CoManagedTaskCommentNotification, CoManagedTicketCommentNotification } from '@alga-psa/co-managed';
 import { TenantEmailService, StaticTemplateProcessor } from '@alga-psa/email';
@@ -33,6 +34,7 @@ const TASK_COPY: Record<string, { subject: string; open: string }> = {
 /** Worker-safe transport uses only the authority-filtered message supplied by
  * the queue. Its qualified link never impersonates a home-tenant ticket. */
 export async function sendCoManagedCommentEmail(delivery: CoManagedEmailDelivery): Promise<CoManagedEmailDeliveryResult> {
+  if ('conversation' in delivery.message) return sendAuthorizedCommentEmail(delivery, namedConversationNotificationLink(delivery.message), delivery.message.ownerTicket ? 'customerSubject' : 'subject');
   const source = delivery.message.resource;
   if (source.kind === 'project_task') {
     const message = delivery.message as CoManagedTaskCommentNotification;
@@ -66,7 +68,7 @@ async function sendAuthorizedCommentEmail(delivery: CoManagedEmailDelivery | CoM
   const { message } = delivery;
   const url = new URL(path, base.origin).toString();
   const subject = copy[subjectKey];
-  const title = (task ? [(message as CoManagedTaskCommentNotification).taskName, (message as CoManagedTaskCommentNotification).projectName]
+  const title = ('conversation' in message ? [message.ticketNumber, message.conversation.name] : task ? [(message as CoManagedTaskCommentNotification).taskName, (message as CoManagedTaskCommentNotification).projectName]
     : [(message as CoManagedTicketCommentNotification).ticketNumber, (message as CoManagedTicketCommentNotification).ticketTitle]).filter(Boolean).join(' — ');
   const author = message.author?.displayName ? [message.author.displayName, message.author.organizationName].filter(Boolean).join(' — ') : '—';
   const body = extractTicketRichTextPlainText(message.note);

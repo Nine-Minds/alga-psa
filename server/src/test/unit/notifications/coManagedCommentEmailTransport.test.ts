@@ -118,3 +118,19 @@ it('uses the admitted owner task path after separation and does not restore mask
   const content = await runtime.send.mock.calls[0][0].templateProcessor.process();
   expect(content.text).toContain(path); expect(content.text).not.toContain('/co-management/'); expect(content.text).not.toContain('Customer project'); expect(content.text).not.toContain('A < B');
 });
+
+it.each([true, false])('renders named conversation alerts with exact navigation and no borrowed reply capability (owner=%s)', async ownerTicket => {
+  const source = delivery(), storeTenant = ownerTicket ? source.tenant : source.message.resource.tenant, conversationId = randomUUID();
+  const item: CoManagedEmailDelivery = { ...source, message: { resource: { ...source.message.resource, kind: 'ticket', tenant: storeTenant },
+    commentId: source.message.commentId, threadId: source.message.threadId, note: source.message.note, audience: 'shared_it',
+    conversation: { storeTenant, conversationId, name: 'Vendor <exchange>', audience: 'shared_it' }, sequence: '2', ownerTicket } };
+  await sendCoManagedCommentEmail(item);
+  const params = runtime.send.mock.calls[0][0], content = await params.templateProcessor.process();
+  expect(content.text).toContain(`conversation=${conversationId}`);
+  expect(content.text).toContain(`conversationStore=${storeTenant}`);
+  expect(content.text).toContain(`message=${item.message.commentId}`);
+  expect(content.text).toContain(ownerTicket ? `/msp/tickets/${item.message.resource.id}` : `/msp/co-management/tickets/${storeTenant}/`);
+  expect(content.html).toContain('Vendor &lt;exchange&gt;');
+  expect(content.text).not.toContain('ALGA-REPLY-TOKEN'); expect(content.html).not.toContain('data-alga-reply-token');
+  expect(params.from).toBeUndefined(); expect(params.replyTo).toBeUndefined(); expect(runtime.mailbox).not.toHaveBeenCalled();
+});

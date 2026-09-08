@@ -102,3 +102,6 @@ export { getNamedConversationMessageDetails } from './namedConversationMessageDe
 export { recordNamedConversationAttention, getNamedConversationAttention, updateNamedConversationPreference } from './namedConversationAttention';
 
 export { withNamedConversationNotification, namedConversationNotificationCandidates, namedConversationNotificationKey, type NamedConversationNotification, type NamedConversationNotificationSource, type NamedNotificationContext } from './namedConversationNotifications';
+
+export { recoverNamedConversationAttention } from './namedConversationNotificationFanout';
+export { recoverNamedConversationEmailNotifications } from './commentEmailDeliveries';
