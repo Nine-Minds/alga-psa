@@ -2886,3 +2886,14 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Added scripts/tests/workflow-inference-bundle.test.mjs using Next's bundled webpack and the actual enterprise next.config callback. Only AI provider and notification side effects are stubbed; the entry resolves through production edition aliases and invokes the compiled inference service with a structured response.
 - Old EE re-export fails with the same missing inferWorkflowStructuredOutput export warning seen in the full app build. Restored fixed wiring passes without compilation errors or warnings and returns the expected validated object. Native execution completes in under one second; no Docker or full app rebuild required.
 - This proves the focused bundle boundary; the earlier full application build and upgrade evidence retain their original revision. Native current-source CI and publication remain pending.
+
+### Native tooling at inference bundle commit
+
+- Clean 67040b4b5ce6e840cfbcae6c24d603ece13b273e canonical tooling run passed all 64 required files; counts in evidence/host-tooling-inference-bundle.json. Five inference behavior tests also passed.
+- Initial sandbox run failed local server listen EPERM; terminal failure confirmed before rerun. Approved native-network rerun session95159 exited0 in137seconds. No source changes during execution, no Docker builds. Native GitHub publication remains pending.
+
+### Citus supported-upgrade mode started
+
+- Added explicit UPGRADE_DB_BACKEND=postgres|citus. Citus mode creates the extension in the runner-owned fresh DB, configures four shards before migration connections, and verifies core tables are tenant hash-distributed both at v1.5.0 and after candidate migration. Records backend and distribution snapshots. No existing database is adopted or reset.
+- Ten native metadata-validation and retention tests pass, including missing/reference/wrong-key/duplicate distribution rejection. These are verifier tests, not live database evidence. F022 remains false pending real Citus schema upgrade, business behavior and native CI integration.
+- Previous full tooling evidence at67040b remains scoped to that revision, before these runner changes.
