@@ -343,3 +343,26 @@ cases. Its headed-browser policy check proves first-failure artifacts survive
 and retry-only, skipped and expected-failure cases cannot satisfy a mandatory
 journey. Neither that policy probe nor a collection-only check establishes
 that the application journey itself passed.
+
+## Browser collection coverage
+
+`node scripts/collect-browser-test-inventory.mjs` runs the real Playwright
+`--list` command for the server, EE integration, EE deployment, and both
+production browser editions. It starts no browser, application, or Docker stack.
+The `Browser test discovery` job in `node-tests.yml` runs this on PRs and pushes.
+It requires both the root and `e2e-tests` lockfile dependencies and shared
+libraries imported by fixtures.
+
+The check compares Git's browser-file inventory (repository-wide
+`*.playwright.test/spec.*` plus `e2e-tests/tests/*.spec.*`) with actual collected
+files. Unmatched or empty files, broken imports, failed or empty collections,
+and changed/dirty candidate source fail the check. Raw reports, collection logs,
+source revision and disabled-case counts are retained under
+`test-results/browser-discovery/`.
+
+This is discovery evidence only: `executionVerified` is always false. Legacy
+browser execution is not made mandatory by collecting those files, and skipped
+registrations remain visible rather than counting as passed tests. The existing
+production execution gate still requires actual first-attempt results. This
+browser check does not replace the repository-wide inventory of all test types
+or establish effective GitHub branch protection.

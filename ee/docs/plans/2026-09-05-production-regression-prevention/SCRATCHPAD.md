@@ -2578,3 +2578,10 @@ Added four-attempt exponential backoff+jitter for Sheets GET reads on transient 
 Complete tooling at96d869f6bc passed508 tests/53 files in145.6s, with zero failures/skips/todos. An additional mock-transport probe exposed successful GET with malformed JSON causing PUT+POST; changed successful response parsing to throw/retry instead of treating it as empty header. Regression now requires four failed reads and no writes; focused metrics suites pass33. Full tooling will rerun at the new revision.
 
 Final canonical host tooling atcc29f6738e passed509 tests across53 required files in146.0s, zero failures/skips/todos/cancellations. One existing manual exclusion remains explicit. No Docker or app build. Pending publication diff from7b170294 has been queued in Codex review; explicit publication approval is still required after the earlier auto-review rejection. Tax-policy question remains pending.
+
+
+### Current browser discovery and CI collection gate
+
+Replaced reliance on the historical mixed-revision90-unmatched list with current real Playwright collection. EE integration53files/411cases, server15files/32cases, EEdeploy1file/2cases, productioncommunity19files/38cases. All88 current browser files are collected; several old unmatched paths were deleted. Collection does not prove legacy CI execution.
+
+Added canonical collect-browser-test-inventory.mjs and Browser test discovery CI job, using each runner's own configuration/version, both production editions, clean unchanged source, fresh raw artifacts and no filters. No browsers/app/Docker startup. Inventory uses repository-wide playwright.test/spec conventions plus production spec roots; global all-test discovery still remains open. Raw reports/disabled counts retained and executionVerified:false is explicit. Behavioral test uses actual Playwright in a temporary Git checkout; adds/moves/empty files/broken imports are rejected and skipped registrations stay visibly unexecuted. No broad F004/T004 completion claim or branch-protection claim.

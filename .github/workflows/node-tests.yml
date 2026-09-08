@@ -10,6 +10,40 @@ permissions:
   contents: read
 
 jobs:
+  browser-discovery:
+    name: Browser test discovery
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            e2e-tests/package-lock.json
+      - run: npm install -g npm@11
+      - run: npm ci
+      - run: npm --prefix e2e-tests ci
+      - name: Build shared libraries imported by test fixtures
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
+      - name: Collect browser files without starting applications or browsers
+        run: node scripts/collect-browser-test-inventory.mjs
+      - name: Preserve collection evidence and import diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-discovery-${{ github.sha }}
+          path: test-results/browser-discovery/
+          if-no-files-found: error
+          retention-days: 30
+
   node-tooling:
     name: Node tooling execution complete
     runs-on: ubuntu-latest
