@@ -167,10 +167,20 @@ test('an administrator authors a billed-time date sort and reopens its persisted
     try {
       // Historical fixtures deliberately alter only this generated invoice's
       // snapshots. They test rendering old data, not how new invoices are captured.
-      for (const history of ['current', 'v1', 'partial', 'none'] as const) {
+      for (const history of ['current', 'v1', 'fallbacks', 'partial', 'none'] as const) {
         for (const [index, snapshot] of snapshots.entries()) {
-          const workItemSnapshot = history === 'none' || (history === 'partial' && index === 0)
+          let workItemSnapshot = history === 'none' || (history === 'partial' && index === 0)
             ? null : history === 'v1' ? { ...snapshot.work_item_snapshot, version: 1 } : snapshot.work_item_snapshot;
+          if (history === 'fallbacks') {
+            // Disclosed legacy shapes, not a claim that today's authoring UI
+            // produces orphan work. Preserve the actual mixed overtime rate.
+            if (index === 0) workItemSnapshot = { ...workItemSnapshot, workItemType: 'ad_hoc',
+              workItemId: null, ticketNumber: null, title: null, description: 'Frozen historical public work' };
+            if (index === 1) workItemSnapshot = { ...workItemSnapshot, workItemType: 'project_task',
+              workItemId: snapshot.invoice_time_entry_id, ticketNumber: null, title: null, description: null };
+            if (index === 2) workItemSnapshot = { ...workItemSnapshot, ticketNumber: null, title: null, description: null };
+            if (workItemSnapshot.rateKind !== 'mixed') workItemSnapshot = { ...workItemSnapshot, version: 1 };
+          }
           await database('invoice_time_entries')
             .where({ tenant: tenant.tenantId, invoice_time_entry_id: snapshot.invoice_time_entry_id })
             .update({ work_item_snapshot: workItemSnapshot });
@@ -187,13 +197,19 @@ test('an administrator authors a billed-time date sort and reopens its persisted
             const localized = pdfText.replace(/\s/g, '');
             const french = locale === 'fr';
             if (history === 'current') expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
-            if (history === 'v1') expect(localized).toContain(french ? 'Tarifindisponible' : 'Rateunavailable');
+            if (history === 'v1' || history === 'fallbacks') expect(localized).toContain(french ? 'Tarifindisponible' : 'Rateunavailable');
             expect(localized).toContain(french ? '375,00' : '$375.00');
             expect(localized).toContain(new Intl.NumberFormat(french ? 'fr-FR' : 'en-US', {
               minimumFractionDigits: 2, maximumFractionDigits: 2,
             }).format(Number(invoice.total_amount) / 100).replace(/\s/g, ''));
             if (history === 'none') {
               expect(localized).not.toContain('Publicticket');
+            } else if (history === 'fallbacks') {
+              expect(localized).toContain(french ? 'Autretempsfacturé' : 'Otherbilledtime');
+              expect(localized).toContain(french ? 'Tâchedeprojet' : 'Projecttask');
+              // This authored template binds Description to title; legacy
+              // description is preserved in storage, not substituted for it.
+              expect(localized).toContain(french ? 'Tarifsvariables' : 'Mixedrates');
             } else {
               expect(localized).toContain('Publicticket0');
               expect(localized).toContain('Publicticket1');
