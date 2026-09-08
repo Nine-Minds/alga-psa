@@ -94,6 +94,17 @@ export async function exportCoManagedPortableOperational(db: Knex, inputActor: C
     }
     validateCoManagedPortableOperationalRecords(records);
     const requireVisible = (fields: readonly string[]) => { if (fields.length) throw new CoManagedSharedWorkError(); };
+    // Captured rows are locators until retained after their native source. In
+    // repeatable-read PostgreSQL rejects a lock on a row changed since capture,
+    // so a concurrent privacy/source change cannot authorize stale content.
+    const retainCaptured = async (table: CoManagedPortableOperationalTable, row: Record<string, unknown>, keys?: readonly string[]) => {
+      const columns = CO_MANAGED_PORTABLE_OPERATIONAL_COLUMNS[table];
+      const identity = keys ?? columns.slice(0, 1);
+      const query = own.table(table);
+      for (const key of identity) query.where(key, row[key]);
+      const retained = await query.forShare().first(...columns);
+      if (!retained || JSON.stringify(retained) !== JSON.stringify(row)) throw new CoManagedSharedWorkError();
+    };
     // Match native collection lock order: owners and sheets before work roots.
     await own.table('users').whereIn('user_id', [...new Set([...records.time_entries, ...records.time_sheets].map(row => row.user_id))]).orderBy('user_id').forShare().select('user_id');
     await own.table('time_sheets').orderBy('id').forShare().select('id');
@@ -108,14 +119,21 @@ export async function exportCoManagedPortableOperational(db: Knex, inputActor: C
         entry_id: String(row.entry_id), user_id: String(row.user_id), time_sheet_id: row.time_sheet_id as string,
         work_item_id: (row.work_item_id || '__non_billable__') as string, work_item_type: String(row.work_item_type),
       }, 'read');
+      await retainCaptured('time_entries', row);
       requireVisible(access.redactedSourceFields); requireVisible(access.redactedTimeFields); await access.assertCurrent();
+    }
+    for (const table of ['time_sheet_comments', 'time_entry_change_requests'] as const) {
+      for (const row of records[table]) await retainCaptured(table, row);
     }
     const canReadOthers = await hasCoManagedLocalPermission(current, verified, 'user_schedule', 'update', true);
     for (const row of records.schedule_entries) {
       const source = await retainScheduleSource(current, verified, subject, {
         entry_id: String(row.entry_id), work_item_id: row.work_item_id as string | null, work_item_type: String(row.work_item_type),
       });
-      const assignments = records.schedule_entry_assignees.filter(item => item.entry_id === row.entry_id).map(item => String(item.user_id));
+      await retainCaptured('schedule_entries', row);
+      const assignees = records.schedule_entry_assignees.filter(item => item.entry_id === row.entry_id);
+      for (const assignee of assignees) await retainCaptured('schedule_entry_assignees', assignee, ['entry_id', 'user_id']);
+      const assignments = assignees.map(item => String(item.user_id));
       if ((!canReadOthers || row.is_private) && !assignments.includes(verified.userId)) throw new CoManagedSharedWorkError();
       requireVisible(source.fields);
       requireVisible((await authorizeCoManagedLocalRecord(current, verified, subject, 'user_schedule', 'read', {
@@ -123,6 +141,7 @@ export async function exportCoManagedPortableOperational(db: Knex, inputActor: C
       })).redactedFields);
     }
     for (const row of records.user_work_schedules) {
+      await retainCaptured('user_work_schedules', row, ['user_id', 'day_of_week']);
       if (!canReadOthers && row.user_id !== verified.userId) throw new CoManagedSharedWorkError();
       requireVisible((await authorizeCoManagedLocalRecord(current, verified, subject, 'user_schedule', 'read', {
         id: String(row.user_id), ownerUserId: String(row.user_id), assignedUserIds: [String(row.user_id)],

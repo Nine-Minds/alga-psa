@@ -1,6 +1,8 @@
 import { randomUUID, createHash } from 'node:crypto';
 import type { Knex } from 'knex';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import * as timeAdmission from '../../../../packages/co-managed/src/nativeTimeEntryAccess';
+import * as scheduleAdmission from '../../../../packages/co-managed/src/nativeScheduleRead';
 import { exportCoManagedPortableOperational, validateCoManagedPortableOperationalRecords } from '../../../../packages/co-managed/src/portableOperationalExport';
 
 /** Registered by the schema-only bootstrap suite to reuse its real tracked
@@ -66,4 +68,64 @@ export function registerCoManagedPortableOperationalCases(getDb: () => Knex, cre
     await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ expires_at: new Date(Date.now() - 1000) });
     await expect(f.exportRecords()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   });
+
+  it.each(['privacy', 'assignment'] as const)('portable operational export retains canonical schedules against concurrent %s changes', async change => {
+    const f = await setup();
+    if (change === 'privacy') {
+      await f.customer.table('schedule_entries').where('entry_id', f.scheduleId).update({ is_private: false });
+      await f.customer.table('schedule_entry_assignees').where('entry_id', f.scheduleId).delete();
+    }
+    let reached!: () => void, resume!: () => void;
+    const atSource = new Promise<void>(resolve => { reached = resolve; });
+    const released = new Promise<void>(resolve => { resume = resolve; });
+    const retainSource = scheduleAdmission.retainScheduleSource;
+    const spy = vi.spyOn(scheduleAdmission, 'retainScheduleSource').mockImplementation(async (...args) => {
+      const result = await retainSource(...args);
+      if (args[3].entry_id === f.scheduleId) { reached(); await released; }
+      return result;
+    });
+    const exporting = f.exportRecords();
+    // Attach rejection handling immediately so an admission failure before the
+    // gate cannot hang the test or become an unhandled rejection.
+    const outcome = exporting.then(value => ({ value, error: undefined }), error => ({ value: undefined, error }));
+    try {
+      await Promise.race([atSource, outcome.then(result => { throw result.error ?? new Error('Export finished before source gate'); })]);
+      await f.db.transaction(async (trx: Knex.Transaction) => {
+        await trx.raw("SET LOCAL lock_timeout = '2s'");
+        if (change === 'privacy') await trx('schedule_entries').where({ tenant: f.actor.tenant, entry_id: f.scheduleId }).update({ is_private: true, notes: 'New private content' });
+        else await trx('schedule_entry_assignees').where({ tenant: f.actor.tenant, entry_id: f.scheduleId, user_id: f.actor.userId }).delete();
+      });
+      resume();
+      const result = await outcome;
+      expect(result.value).toBeUndefined();
+      expect(result.error).toMatchObject({ code: '40001' });
+    } finally { resume(); spy.mockRestore(); await outcome; }
+  });
+
+
+  it('portable operational export retains canonical time entries against concurrent work-source changes', async () => {
+    const f = await setup();
+    let reached!: () => void, resume!: () => void;
+    const atSource = new Promise<void>(resolve => { reached = resolve; });
+    const released = new Promise<void>(resolve => { resume = resolve; });
+    const admitSource = timeAdmission.admitCoManagedNativeTimeSource;
+    const spy = vi.spyOn(timeAdmission, 'admitCoManagedNativeTimeSource').mockImplementation(async (...args) => {
+      const result = await admitSource(...args);
+      if (args[2].entry_id === f.entryId) { reached(); await released; }
+      return result;
+    });
+    const outcome = f.exportRecords().then(value => ({ value, error: undefined }), error => ({ value: undefined, error }));
+    try {
+      await Promise.race([atSource, outcome.then(result => { throw result.error ?? new Error('Export finished before source gate'); })]);
+      await f.db.transaction(async (trx: Knex.Transaction) => {
+        await trx.raw("SET LOCAL lock_timeout = '2s'");
+        await trx('time_entries').where({ tenant: f.actor.tenant, entry_id: f.entryId }).update({ work_item_type: 'non_billable_category', work_item_id: null, notes: 'Changed work source' });
+      });
+      resume();
+      const result = await outcome;
+      expect(result.value).toBeUndefined();
+      expect(result.error).toMatchObject({ code: '40001' });
+    } finally { resume(); spy.mockRestore(); await outcome; }
+  });
+
 }
