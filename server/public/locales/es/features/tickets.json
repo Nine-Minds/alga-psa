@@ -1861,6 +1861,21 @@
         "AI_UNAVAILABLE": "La IA no está disponible en su espacio de trabajo. Su borrador se conserva; puede seguir redactando manualmente.",
         "AI_CANCELLED": "Se canceló la generación. Se conservó su borrador."
       }
+    },
+    "ai": {
+      "title": "Preguntar a la IA",
+      "publication": "Tu pregunta y la respuesta de la IA se publicarán juntas en esta conversación interna. Se conserva tu borrador manual.",
+      "sources": "Conversaciones que puede usar la IA",
+      "scope": "Solo se incluye contenido publicado permitido para esta audiencia. Desmarca conversaciones para limitar el contexto.",
+      "noSources": "La IA recibirá solo tu pregunta.",
+      "prompt": "Tu pregunta",
+      "uncertain": "No se pudo confirmar el resultado. Reintentar comprueba la misma solicitud; cerrar cancela cualquier generación pendiente.",
+      "cancelled": "Se canceló la generación. Tu borrador manual no cambia.",
+      "changed": "La conversación o la fuente cambió. Cierra y vuelve a abrir Preguntar a la IA para revisar el contexto actual.",
+      "unavailable": "La IA no está disponible para esta conversación. Puedes seguir escribiendo manualmente.",
+      "cancel": "Cancelar generación",
+      "generating": "Pensando…",
+      "contextTooLarge": "El contexto seleccionado supera la capacidad disponible de la IA. Reduce las fuentes e inténtalo de nuevo. No se publicó ninguna pregunta ni respuesta."
     }
   }
 }

@@ -10,9 +10,9 @@ import type { ConversationSynthesisSelection } from './ConversationSharingContex
 
 /** Mounted inside the host's identity-keyed, paused conversation panel. Neither
  * a capability response nor retained provenance can survive a persona change. */
-export function ConversationSynthesisControls({ id, ticket, conversation, refreshVersion, disabled, onSynthesize }: {
+export function ConversationSynthesisControls({ id, ticket, conversation, refreshVersion, disabled, onSynthesize, onAskAi }: {
   id: string; ticket: ConversationTicketReference; conversation: TicketConversationReference; refreshVersion: number;
-  disabled: boolean; onSynthesize: (selection: ConversationSynthesisSelection) => Promise<void>;
+  onAskAi?: () => Promise<void>; disabled: boolean; onSynthesize: (selection: ConversationSynthesisSelection) => Promise<void>;
 }) {
   const { t } = useTranslation('features/tickets');
   const [available, setAvailable] = useState(false);
@@ -41,6 +41,9 @@ export function ConversationSynthesisControls({ id, ticket, conversation, refres
       : t('namedConversations.synthesis.review', 'AI prepared this private draft. Review it before sending or posting.')}</p>
       : unavailable ? <p role="status">{t('namedConversations.synthesis.sourceUnavailable', 'Could not check this draft’s source. Refresh to check your access.')}</p> : <span />}
     {available && <div className="flex flex-wrap gap-2">
+      {onAskAi && <Button id={`${id}-ask-ai`} size="sm" variant="outline" disabled={disabled} onClick={() => void onAskAi()}>
+        <Sparkles className="mr-1.5 h-3.5 w-3.5" />{t('namedConversations.ai.title', 'Ask AI')}
+      </Button>}
       {draft && <Button id={`${id}-regenerate-synthesis`} size="sm" variant="outline" disabled={disabled}
         onClick={() => void onSynthesize({ kind: 'synthesis', conversation: draft.source, destination: conversation })}>
         {t('namedConversations.synthesis.regenerate', 'Regenerate summary…')}

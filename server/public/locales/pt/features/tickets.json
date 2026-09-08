@@ -1861,6 +1861,21 @@
         "AI_UNAVAILABLE": "A IA está indisponível no seu espaço de trabalho. O rascunho foi mantido; pode continuar a escrever manualmente.",
         "AI_CANCELLED": "A geração foi cancelada. O rascunho foi mantido."
       }
+    },
+    "ai": {
+      "title": "Perguntar à IA",
+      "publication": "A sua pergunta e a resposta da IA serão publicadas juntas nesta conversa interna. O seu rascunho manual será mantido.",
+      "sources": "Conversas que a IA pode usar",
+      "scope": "Apenas conteúdo publicado permitido para este público é incluído. Desmarque conversas para limitar o contexto.",
+      "noSources": "A IA receberá apenas a sua pergunta.",
+      "prompt": "A sua pergunta",
+      "uncertain": "Não foi possível confirmar o resultado. Tentar novamente verifica o mesmo pedido; fechar cancela qualquer geração pendente.",
+      "cancelled": "A geração foi cancelada. O seu rascunho manual permanece inalterado.",
+      "changed": "A conversa ou a fonte mudou. Feche e reabra Perguntar à IA para rever o contexto atual.",
+      "unavailable": "A IA está indisponível para esta conversa. Pode continuar a escrever manualmente.",
+      "cancel": "Cancelar geração",
+      "generating": "A pensar…",
+      "contextTooLarge": "O contexto selecionado excede a capacidade disponível da IA. Reduza as fontes e tente novamente. Nenhuma pergunta ou resposta foi publicada."
     }
   }
 }

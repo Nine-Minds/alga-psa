@@ -143,7 +143,7 @@ export async function discloseCoManagedPrivateTicketThread(db: Knex, inputActor:
       const actorRefs = new Map<string, string>();
       for (const comment of source.comments) {
         if (!mapping[comment.comment_id]) conflict();
-        if (!actorRefs.has(comment.actor_user_id)) {
+        if (comment.actor_kind !== 'ai' && !actorRefs.has(comment.actor_user_id)) {
           const previous = await customer.table('collaboration_actor_references').where({ actor_tenant: actor.tenant, actor_user_id: comment.actor_user_id }).forShare().first();
           let id = previous?.actor_reference_id;
           if (!id) {
@@ -169,8 +169,9 @@ export async function discloseCoManagedPrivateTicketThread(db: Knex, inputActor:
         if (index < 0) conflict(); ordered.push(...remaining.splice(index, 1));
       }
       for (const comment of ordered) await customer.table('comments').insert({ tenant: resource.tenant, comment_id: mapping[comment.comment_id], ticket_id: resource.id,
-        thread_id: operationId, parent_comment_id: comment.parent_comment_id ? mapping[comment.parent_comment_id] : null, user_id: null, contact_id: null, author_type: 'internal',
-        actor_reference_id: actorRefs.get(comment.actor_user_id), actor_display_name: comment.actor_display_name, actor_organization_name: comment.actor_organization_name,
+        thread_id: operationId, parent_comment_id: comment.parent_comment_id ? mapping[comment.parent_comment_id] : null, user_id: null, contact_id: null, author_type: comment.actor_kind === 'ai' ? 'ai' : 'internal',
+        ...(comment.actor_kind === 'ai' ? { is_system_generated: true } : { actor_reference_id: actorRefs.get(comment.actor_user_id),
+          actor_display_name: comment.actor_display_name, actor_organization_name: comment.actor_organization_name }),
         note: comment.deleted_at ? '' : comment.note, markdown_content: comment.deleted_at ? '' : comment.markdown_content, is_internal: request.audience !== 'requester',
         is_resolution: false, publish_state: 'published', created_at: comment.created_at_exact, updated_at: appliedAt, deleted_at: comment.deleted_at_exact });
       for (const file of source.files) {

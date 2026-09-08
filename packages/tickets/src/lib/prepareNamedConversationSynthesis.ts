@@ -20,7 +20,7 @@ type Context = Parameters<Parameters<typeof withNamedTicketConversation>[5]>[0];
 function binding(context: Context) {
   return { actor_user_id: context.actor.userId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId,
     relationship_id: context.ticket.relationshipId ?? null, destination_store_tenant: context.conversation.storeTenant,
-    destination_conversation_id: context.conversation.conversationId };
+    destination_conversation_id: context.conversation.conversationId, kind: 'synthesis' };
 }
 function draftQuery(context: Context) {
   // LEVERAGE: pattern qualified-editor-draft-scope — transformations need the same private-draft CAS as publication.

@@ -1861,6 +1861,21 @@
         "AI_UNAVAILABLE": "KI ist in Ihrem Arbeitsbereich derzeit nicht verfügbar. Ihr Entwurf bleibt erhalten; Sie können manuell weiterschreiben.",
         "AI_CANCELLED": "Die Generierung wurde abgebrochen. Ihr Entwurf blieb erhalten."
       }
+    },
+    "ai": {
+      "title": "KI fragen",
+      "publication": "Ihre Frage und die KI-Antwort werden gemeinsam in dieser internen Unterhaltung veröffentlicht. Ihr manueller Entwurf bleibt erhalten.",
+      "sources": "Unterhaltungen, die die KI verwenden darf",
+      "scope": "Nur veröffentlichte Inhalte, die für diesen Empfängerkreis zulässig sind, werden einbezogen. Deaktivieren Sie Unterhaltungen, um den Kontext einzugrenzen.",
+      "noSources": "Die KI erhält nur Ihre Frage.",
+      "prompt": "Ihre Frage",
+      "uncertain": "Das Ergebnis konnte nicht bestätigt werden. Erneut versuchen prüft dieselbe Anfrage; Schließen bricht ausstehende Generierungen ab.",
+      "cancelled": "Die Generierung wurde abgebrochen. Ihr manueller Entwurf bleibt unverändert.",
+      "changed": "Die Unterhaltung oder Quelle hat sich geändert. Schließen und öffnen Sie KI fragen erneut, um den aktuellen Kontext zu prüfen.",
+      "unavailable": "KI ist für diese Unterhaltung nicht verfügbar. Sie können manuell weiterschreiben.",
+      "cancel": "Generierung abbrechen",
+      "generating": "Denkt nach…",
+      "contextTooLarge": "Der ausgewählte Kontext überschreitet die verfügbare KI-Kapazität. Grenzen Sie die Quellen ein und versuchen Sie es erneut. Es wurde keine Frage oder Antwort veröffentlicht."
     }
   }
 }

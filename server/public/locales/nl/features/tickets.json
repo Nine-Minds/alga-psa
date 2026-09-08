@@ -1861,6 +1861,21 @@
         "AI_UNAVAILABLE": "AI is momenteel niet beschikbaar in uw werkruimte. Uw concept blijft behouden; u kunt handmatig verder schrijven.",
         "AI_CANCELLED": "Het genereren is geannuleerd. Uw concept is behouden."
       }
+    },
+    "ai": {
+      "title": "Vraag AI",
+      "publication": "Je vraag en het AI-antwoord worden samen in dit interne gesprek geplaatst. Je handmatige concept blijft bewaard.",
+      "sources": "Gesprekken die AI mag gebruiken",
+      "scope": "Alleen gepubliceerde inhoud die voor dit publiek is toegestaan, wordt meegenomen. Vink gesprekken uit om de context te beperken.",
+      "noSources": "AI ontvangt alleen je vraag.",
+      "prompt": "Je vraag",
+      "uncertain": "Het resultaat kon niet worden bevestigd. Opnieuw proberen controleert hetzelfde verzoek; sluiten annuleert een nog lopende generatie.",
+      "cancelled": "Het genereren is geannuleerd. Je handmatige concept is ongewijzigd.",
+      "changed": "Het gesprek of de bron is gewijzigd. Sluit Vraag AI en open het opnieuw om de huidige context te bekijken.",
+      "unavailable": "AI is niet beschikbaar voor dit gesprek. Je kunt handmatig verder schrijven.",
+      "cancel": "Genereren annuleren",
+      "generating": "Denkt na…",
+      "contextTooLarge": "De geselecteerde context overschrijdt de beschikbare AI-capaciteit. Beperk de bronnen en probeer het opnieuw. Er is geen vraag of antwoord geplaatst."
     }
   }
 }

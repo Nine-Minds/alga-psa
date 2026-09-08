@@ -1861,6 +1861,21 @@
         "AI_UNAVAILABLE": "L’IA non è al momento disponibile nel tuo spazio di lavoro. La bozza è conservata; puoi continuare a scrivere manualmente.",
         "AI_CANCELLED": "La generazione è stata annullata. La bozza è stata conservata."
       }
+    },
+    "ai": {
+      "title": "Chiedi all’IA",
+      "publication": "La tua domanda e la risposta dell’IA saranno pubblicate insieme in questa conversazione interna. La tua bozza manuale viene conservata.",
+      "sources": "Conversazioni utilizzabili dall’IA",
+      "scope": "Sono inclusi solo contenuti pubblicati consentiti per questo pubblico. Deseleziona le conversazioni per restringere il contesto.",
+      "noSources": "L’IA riceverà solo la tua domanda.",
+      "prompt": "La tua domanda",
+      "uncertain": "Impossibile confermare il risultato. Riprova verifica la stessa richiesta; chiudere annulla qualsiasi generazione in sospeso.",
+      "cancelled": "La generazione è stata annullata. La tua bozza manuale è invariata.",
+      "changed": "La conversazione o la fonte è cambiata. Chiudi e riapri Chiedi all’IA per controllare il contesto attuale.",
+      "unavailable": "L’IA non è disponibile per questa conversazione. Puoi continuare a scrivere manualmente.",
+      "cancel": "Annulla generazione",
+      "generating": "Elaborazione…",
+      "contextTooLarge": "Il contesto selezionato supera la capacità disponibile dell’IA. Riduci le fonti e riprova. Nessuna domanda o risposta è stata pubblicata."
     }
   }
 }

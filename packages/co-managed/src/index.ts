@@ -113,3 +113,4 @@ export { readNamedConversationShareSource, retainNamedConversationShareDraft, ge
 export { prepareNamedConversationShareFiles, assertNamedConversationShareFiles } from './namedConversationShareFiles';
 
 export { assertScheduledConversationSynthesisSource } from './conversationSynthesisPublication';
+export { publishNamedConversationAiExchange } from './conversationAiPublication';

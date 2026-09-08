@@ -1861,6 +1861,21 @@
         "AI_UNAVAILABLE": "L’IA est actuellement indisponible dans votre espace de travail. Votre brouillon est conservé ; vous pouvez continuer à rédiger manuellement.",
         "AI_CANCELLED": "La génération a été annulée. Votre brouillon a été conservé."
       }
+    },
+    "ai": {
+      "title": "Demander à l’IA",
+      "publication": "Votre question et la réponse de l’IA seront publiées ensemble dans cette conversation interne. Votre brouillon manuel est conservé.",
+      "sources": "Conversations accessibles à l’IA",
+      "scope": "Seul le contenu publié autorisé pour cette audience est inclus. Décochez des conversations pour limiter le contexte.",
+      "noSources": "L’IA recevra uniquement votre question.",
+      "prompt": "Votre question",
+      "uncertain": "Le résultat n’a pas pu être confirmé. Réessayer vérifie la même demande ; fermer annule toute génération en cours.",
+      "cancelled": "La génération a été annulée. Votre brouillon manuel est inchangé.",
+      "changed": "La conversation ou la source a changé. Fermez et rouvrez Demander à l’IA pour vérifier le contexte actuel.",
+      "unavailable": "L’IA est indisponible pour cette conversation. Vous pouvez continuer à rédiger manuellement.",
+      "cancel": "Annuler la génération",
+      "generating": "Réflexion…",
+      "contextTooLarge": "Le contexte sélectionné dépasse la capacité disponible de l’IA. Limitez les sources et réessayez. Aucune question ni réponse n’a été publiée."
     }
   }
 }

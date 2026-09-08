@@ -1989,6 +1989,21 @@
         "AI_UNAVAILABLE": "AI is unavailable in your workspace right now. Your existing draft is safe; you can continue writing manually.",
         "AI_CANCELLED": "Generation was cancelled. Your existing draft was kept."
       }
+    },
+    "ai": {
+      "title": "Ask AI",
+      "publication": "Your question and the AI reply will be posted together in this internal conversation. Your manual draft is kept.",
+      "sources": "Conversations AI can use",
+      "scope": "Only published content permitted for this audience is included. Uncheck conversations to narrow the context.",
+      "noSources": "AI will receive only your question.",
+      "prompt": "Your question",
+      "uncertain": "The result could not be confirmed. Retry checks the same request; closing cancels any pending generation.",
+      "cancelled": "Generation was cancelled. Your manual draft is unchanged.",
+      "changed": "The conversation or source changed. Close and reopen Ask AI to review the current context.",
+      "unavailable": "AI is unavailable for this conversation. You can continue composing manually.",
+      "cancel": "Cancel generation",
+      "generating": "Thinking…",
+      "contextTooLarge": "The selected context exceeds the available AI capacity. Narrow the source list and try again. No question or reply was posted."
     }
   }
 }

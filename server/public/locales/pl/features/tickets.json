@@ -2003,6 +2003,21 @@
         "AI_UNAVAILABLE": "AI jest obecnie niedostępna w Twoim obszarze roboczym. Szkic został zachowany; możesz kontynuować pisanie ręcznie.",
         "AI_CANCELLED": "Generowanie anulowano. Szkic został zachowany."
       }
+    },
+    "ai": {
+      "title": "Zapytaj AI",
+      "publication": "Twoje pytanie i odpowiedź AI zostaną opublikowane razem w tej wewnętrznej rozmowie. Twój ręczny szkic zostanie zachowany.",
+      "sources": "Rozmowy dostępne dla AI",
+      "scope": "Uwzględniana jest tylko opublikowana treść dozwolona dla tych odbiorców. Odznacz rozmowy, aby zawęzić kontekst.",
+      "noSources": "AI otrzyma tylko Twoje pytanie.",
+      "prompt": "Twoje pytanie",
+      "uncertain": "Nie udało się potwierdzić wyniku. Ponowienie sprawdzi to samo żądanie; zamknięcie anuluje oczekujące generowanie.",
+      "cancelled": "Generowanie anulowano. Twój ręczny szkic nie uległ zmianie.",
+      "changed": "Rozmowa lub źródło uległo zmianie. Zamknij i otwórz ponownie Zapytaj AI, aby sprawdzić aktualny kontekst.",
+      "unavailable": "AI jest niedostępne w tej rozmowie. Możesz kontynuować pisanie ręcznie.",
+      "cancel": "Anuluj generowanie",
+      "generating": "Myślenie…",
+      "contextTooLarge": "Wybrany kontekst przekracza dostępną pojemność AI. Ogranicz źródła i spróbuj ponownie. Nie opublikowano pytania ani odpowiedzi."
     }
   }
 }

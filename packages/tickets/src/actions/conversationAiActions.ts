@@ -69,3 +69,29 @@ export const getConversationAiSourcesAction = withAuth(async (user, { tenant }, 
     return { ok: true as const, sources: await getConversationAiSources(knex, actor, ticket, destination) };
   } catch (error) { return failure(error); }
 });
+
+export const invokeNamedConversationAiAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  destination: TicketConversationReference, request: import('../lib/invokeNamedConversationAi').NamedConversationAiRequest) => {
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    const { ticketConversationAiProvider } = await import('@product/chat/conversation-inference');
+    const { invokeNamedConversationAi } = await import('../lib/invokeNamedConversationAi');
+    return { ok: true as const, result: await invokeNamedConversationAi(knex, actor, ticket, destination, request, ticketConversationAiProvider) };
+  } catch (error) { return failure(error); }
+});
+export const cancelNamedConversationAiAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  destination: TicketConversationReference, operationId: string) => {
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    const { cancelNamedConversationAi } = await import('../lib/invokeNamedConversationAi');
+    return { ok: true as const, result: await cancelNamedConversationAi(knex, actor, ticket, destination, operationId) };
+  } catch (error) { return failure(error); }
+});
+export const getNamedConversationAiStatusAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference,
+  destination: TicketConversationReference, operationId: string) => {
+  try {
+    const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+    const { getNamedConversationAiStatus } = await import('../lib/invokeNamedConversationAi');
+    return { ok: true as const, result: await getNamedConversationAiStatus(knex, actor, ticket, destination, operationId) };
+  } catch (error) { return failure(error); }
+});

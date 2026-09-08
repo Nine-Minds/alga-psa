@@ -13,7 +13,7 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 export interface CoManagedConversationCursor { createdAt: string; storeTenant: string; commentId: string }
 export interface CoManagedConversationAuthor {
   tenant: string;
-  kind: 'user' | 'contact' | 'system' | 'unknown' | 'external';
+  kind: 'user' | 'contact' | 'system' | 'unknown' | 'external' | 'ai';
   id: string | null;
   displayName: string | null;
   organizationName: string | null;
@@ -115,9 +115,9 @@ async function readTicketConversationProjection(context: {
     audience, created_at: 'c.created_at', created_at_exact: timestamp(trx, 'c.created_at'), updated_at_exact: timestamp(trx, 'c.updated_at'),
     deleted_at: 'c.deleted_at', note: 'c.note', markdown: 'c.markdown_content', revision: trx.raw('NULL::integer'), is_resolution: 'c.is_resolution',
     actor_tenant: trx.raw('COALESCE(a.actor_tenant, c.tenant)'),
-    actor_kind: trx.raw("CASE WHEN c.actor_reference_id IS NOT NULL OR c.user_id IS NOT NULL THEN 'user' WHEN c.contact_id IS NOT NULL THEN 'contact' WHEN c.is_system_generated THEN 'system' ELSE 'unknown' END"),
+    actor_kind: trx.raw("CASE WHEN c.author_type::text = 'ai' THEN 'ai' WHEN c.actor_reference_id IS NOT NULL OR c.user_id IS NOT NULL THEN 'user' WHEN c.contact_id IS NOT NULL THEN 'contact' WHEN c.is_system_generated THEN 'system' ELSE 'unknown' END"),
     actor_id: trx.raw('COALESCE(a.actor_user_id, c.user_id, c.contact_id)'), actor_reference_id: 'c.actor_reference_id',
-    actor_display_name: trx.raw("CASE WHEN c.actor_reference_id IS NOT NULL THEN c.actor_display_name ELSE COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), contact.full_name) END"),
+    actor_display_name: trx.raw("CASE WHEN c.author_type::text = 'ai' THEN 'AI' WHEN c.actor_reference_id IS NOT NULL THEN c.actor_display_name ELSE COALESCE(NULLIF(trim(concat_ws(' ', u.first_name, u.last_name)), ''), contact.full_name) END"),
     actor_organization_name: trx.raw('CASE WHEN c.actor_reference_id IS NOT NULL THEN c.actor_organization_name ELSE ?::text END', [customerName]),
   });
   const queries = hideCustomer ? [] : [comments];

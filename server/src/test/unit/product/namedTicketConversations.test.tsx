@@ -2,17 +2,20 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { ConversationAiDialog } from '../../../../../packages/tickets/src/components/ticket/conversations/ConversationAiDialog';
 import { ConversationShareDialog } from '../../../../../packages/tickets/src/components/ticket/conversations/ConversationShareDialog';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { NativeRequesterConversation } from '../../../../../packages/tickets/src/components/ticket/conversations/NativeRequesterConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ aiCapability: vi.fn(), synthesis: vi.fn(), synthesisStatus: vi.fn(), synthesisCancel: vi.fn(), synthesisDraft: vi.fn(), share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ aiSources: vi.fn(), askAi: vi.fn(), aiStatus: vi.fn(), aiCancel: vi.fn(), aiCapability: vi.fn(), synthesis: vi.fn(), synthesisStatus: vi.fn(), synthesisCancel: vi.fn(), synthesisDraft: vi.fn(), share: vi.fn(), getConversation: vi.fn(), acknowledge: vi.fn(), preference: vi.fn(), details: vi.fn(), schedules: vi.fn(), reschedule: vi.fn(), cancelSchedule: vi.fn(), flag: true, onPublished: vi.fn(), requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
+vi.mock('../../../../../packages/tickets/src/components/ticket/conversations/conversationAiRequest', () => ({ requestConversationAi: mocks.askAi }));
 vi.mock('../../../../../packages/tickets/src/components/ticket/conversations/conversationSynthesisRequest', () => ({ requestConversationSynthesis: mocks.synthesis }));
 vi.mock('../../../../../packages/tickets/src/actions/conversationAiActions', () => ({
   getConversationAiCapabilityAction: mocks.aiCapability, prepareNamedConversationSynthesisAction: mocks.synthesis,
   getNamedConversationSynthesisStatusAction: mocks.synthesisStatus, cancelNamedConversationSynthesisAction: mocks.synthesisCancel,
-  getNamedConversationDraftSynthesisAction: mocks.synthesisDraft,
+  getNamedConversationDraftSynthesisAction: mocks.synthesisDraft, getConversationAiSourcesAction: mocks.aiSources,
+  getNamedConversationAiStatusAction: mocks.aiStatus, cancelNamedConversationAiAction: mocks.aiCancel,
 }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
   prepareNamedConversationShareAction: mocks.share, getNamedTicketConversationAction: mocks.getConversation,
@@ -74,7 +77,7 @@ function NativeHarness() {
 }
 const deferred = () => { let resolve!: (value: any) => void; const promise = new Promise<any>(done => { resolve = done; }); return { promise, resolve }; };
 beforeEach(() => {
-  vi.resetAllMocks(); mocks.aiCapability.mockResolvedValue({ available: false }); mocks.synthesisDraft.mockResolvedValue({ ok: true, result: null }); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
+  vi.resetAllMocks(); mocks.aiSources.mockResolvedValue({ ok: true, sources: [requester, side] }); mocks.aiCancel.mockResolvedValue({ ok: true, result: { status: 'cancelled' } }); mocks.aiCapability.mockResolvedValue({ available: false }); mocks.synthesisDraft.mockResolvedValue({ ok: true, result: null }); mocks.flag = true; mocks.query = 'conversation=private&conversationStore=home';
   mocks.share.mockResolvedValue({ ok: true, draft: { content: { text: 'Copied source' }, revision: 1, conversationRevision: 1 } });
   mocks.getConversation.mockImplementation(async (_ticket, ref) => ref.conversationId === requester.conversationId ? requester : side);
   mocks.acknowledge.mockResolvedValue({ changed: false });
@@ -1134,4 +1137,77 @@ it('cancels an uncertain synthesis before closing instead of leaving an unconfir
   expect(closed).not.toHaveBeenCalled();
   await act(async () => cancelled.resolve({ ok: true, result: { status: 'cancelled' } }));
   await waitFor(() => expect(closed).toHaveBeenCalledOnce());
+});
+
+it('flushes the manual draft before opening Ask AI and submits only the selected sources', async () => {
+  mocks.aiCapability.mockResolvedValue({ available: true });
+  mocks.askAi.mockResolvedValue({ ok: true, result: { status: 'completed', replyId: 'ai-reply' } });
+  render(<Harness />);
+  const editor = await screen.findByRole('textbox', { name: 'Message' });
+  await waitFor(() => expect((editor as HTMLTextAreaElement).disabled).toBe(false));
+  fireEvent.change(editor, { target: { value: 'Manual draft stays separate' } });
+  fireEvent.click(await screen.findByRole('button', { name: 'Ask AI' }));
+  const dialog = await screen.findByRole('dialog');
+  expect(mocks.saveDraft).toHaveBeenCalled();
+  await within(dialog).findByRole('checkbox', { name: 'Diagnostics' });
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Diagnostics' }));
+  fireEvent.change(within(dialog).getByRole('textbox', { name: 'Your question' }), { target: { value: 'Suggest the next diagnostic step' } });
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Ask AI' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(mocks.askAi).toHaveBeenCalledWith(ticket, { storeTenant: 'home', conversationId: 'private' }, expect.objectContaining({
+    expectedConversationRevision: 1, prompt: 'Suggest the next diagnostic step', sources: [{ storeTenant: 'owner', conversationId: 'requester' }],
+  }));
+  expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
+});
+
+it('retries uncertain AI requests with identical intent and waits for cancellation before closing', async () => {
+  const onClose = vi.fn(), cancellation = deferred();
+  mocks.askAi.mockResolvedValue({ ok: false, code: 'unknown' }); mocks.aiCancel.mockReturnValue(cancellation.promise);
+  render(<ConversationAiDialog id="ai" ticket={ticket} conversation={side as any} onClose={onClose} />);
+  await screen.findByRole('checkbox', { name: 'Diagnostics' });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Your question' }), { target: { value: 'Help diagnose this' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Ask AI' }));
+  await screen.findByRole('button', { name: 'Retry' });
+  expect((screen.getByRole('textbox', { name: 'Your question' }) as HTMLTextAreaElement).disabled).toBe(true);
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  await waitFor(() => expect(mocks.askAi).toHaveBeenCalledTimes(2));
+  expect(mocks.askAi.mock.calls[1]).toEqual(mocks.askAi.mock.calls[0]);
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel generation' }));
+  await waitFor(() => expect(mocks.aiCancel).toHaveBeenCalledTimes(1)); expect(onClose).not.toHaveBeenCalled();
+  expect(mocks.aiCancel.mock.calls[0][2]).toBe(mocks.askAi.mock.calls[0][2].operationId);
+  await act(async () => cancellation.resolve({ ok: true, result: { status: 'cancelled' } }));
+  expect(onClose).toHaveBeenCalledTimes(1);
+});
+
+it('ignores late AI completion after cancellation and never submits a manual post', async () => {
+  const inference = deferred(), onClose = vi.fn(); mocks.askAi.mockReturnValue(inference.promise);
+  render(<ConversationAiDialog id="ai" ticket={ticket} conversation={side as any} onClose={onClose} />);
+  await screen.findByRole('checkbox', { name: 'Diagnostics' });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Your question' }), { target: { value: 'Investigate' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Ask AI' }));
+  fireEvent.click(await screen.findByRole('button', { name: 'Cancel generation' }));
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+  await act(async () => inference.resolve({ ok: true, result: { status: 'completed', replyId: 'late' } }));
+  expect(onClose).toHaveBeenCalledOnce(); expect(mocks.post).not.toHaveBeenCalled(); expect(mocks.saveDraft).not.toHaveBeenCalled();
+});
+
+it('clears protected AI source names and prompt after source authority is lost', async () => {
+  const onClose = vi.fn(); mocks.askAi.mockResolvedValue({ ok: false, code: 'unavailable' });
+  render(<ConversationAiDialog id="ai" ticket={ticket} conversation={side as any} onClose={onClose} />);
+  await screen.findByRole('checkbox', { name: 'Diagnostics' });
+  fireEvent.change(screen.getByRole('textbox', { name: 'Your question' }), { target: { value: 'Private prompt' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Ask AI' }));
+  await screen.findByRole('alert');
+  expect(screen.queryByText('Diagnostics')).toBeNull(); expect(screen.queryByRole('textbox', { name: 'Your question' })).toBeNull();
+  expect(screen.queryByText('Requester')).toBeNull(); expect(mocks.post).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Cancel' })); expect(onClose).toHaveBeenCalledOnce();
+});
+
+it('offers no Ask AI action for email conversations or unavailable AI', async () => {
+  const view = render(<Harness />); await screen.findByRole('textbox', { name: 'Message' });
+  expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull();
+  view.unmount(); mocks.aiCapability.mockResolvedValue({ available: true });
+  mocks.load.mockResolvedValue({ conversations: [requester, { ...side, transport: 'email' }], writeAudiences: ['requester', 'organization_private'] });
+  render(<Harness />); await screen.findByRole('button', { name: 'Summarize with AI' });
+  expect(screen.queryByRole('button', { name: 'Ask AI' })).toBeNull();
 });
