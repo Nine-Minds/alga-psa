@@ -1,3 +1,4 @@
+import { portableRestoreUploadCleanupJobHandler, PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB } from './handlers/portableRestoreUploadCleanupHandler';
 import { coManagedSlaObservationJobHandler, CO_MANAGED_SLA_OBSERVATION_JOB, type CoManagedSlaObservationJobData } from './handlers/coManagedSlaObservationHandler';
 import { coManagedUploadCleanupJobHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB, type CoManagedUploadCleanupJobData } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
@@ -261,6 +262,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     });
 
     jobScheduler.registerJobHandler<CoManagedUploadCleanupJobData>(CO_MANAGED_UPLOAD_CLEANUP_JOB, async job => { await coManagedUploadCleanupJobHandler(job); });
+    jobScheduler.registerJobHandler(PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB, async () => { await portableRestoreUploadCleanupJobHandler(); });
     jobScheduler.registerJobHandler<CoManagedNotificationRecoveryJobData>(CO_MANAGED_NOTIFICATION_RECOVERY_JOB, async job => { await coManagedNotificationRecoveryJobHandler(job); });
     jobScheduler.registerJobHandler<CoManagedSlaObservationJobData>(CO_MANAGED_SLA_OBSERVATION_JOB, async job => { await coManagedSlaObservationJobHandler(job); });
 
@@ -1083,3 +1085,6 @@ export const scheduleCoManagedUploadCleanupJob = async (tenantId?: string, cronE
   const scheduler = await initializeScheduler();
   return scheduler.scheduleRecurringJob<CoManagedUploadCleanupJobData>(CO_MANAGED_UPLOAD_CLEANUP_JOB, cronExpression, { tenantId });
 };
+
+
+export { schedulePortableRestoreUploadCleanupJob } from './handlers/portableRestoreUploadCleanupHandler';

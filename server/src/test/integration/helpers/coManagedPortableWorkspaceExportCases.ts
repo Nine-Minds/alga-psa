@@ -256,8 +256,7 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     provider.upload.mockImplementationOnce(async (...args: Parameters<typeof upload>) => { await upload(...args); throw new Error('Provider failed after storing bytes'); });
     await expect(restorePortableWorkspaceForInstallation(db, { ...input, destinationTenant: failedTenant }, {}, createProvider)).rejects.toThrow('Provider failed');
     expect(objects.size).toBe(0); expect(await tenantDb(db, failedTenant).table('tenants').first()).toBeUndefined();
-    const { cleanupPortableRestoreUploads: cleanup, commitPortableRestoreUpload,
-      cleanupPortableRestoreUploadsForInstallation } = await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreUploads');
+    const { cleanupPortableRestoreUploads: cleanup, commitPortableRestoreUpload } = await import('../../../../../ee/server/src/lib/co-managed/portableWorkspaceRestoreUploads');
     const recovery = tenantDb(db, failedTenant), failedAttempt = await recovery.table('portable_workspace_restore_uploads').first();
     expect(failedAttempt.status).toBe('abandoned');
     const objectPath = (attempt: any) => `${failedTenant}/portable-restores/${attempt.attempt_id}/${attempt.file_ids[0]}`;
@@ -308,7 +307,12 @@ export function registerCoManagedPortableWorkspaceExportTests(getDb: () => Knex,
     await recovery.table('portable_workspace_restore_uploads').insert(globalAttempt);
     const globalPath = `${failedTenant}/portable-restores/${globalAttempt.attempt_id}/${failedAttempt.file_ids[0]}`;
     objects.set(globalPath, Buffer.from('No tenant was ever created for this destination'));
-    expect((await cleanupPortableRestoreUploadsForInstallation(db, provider)).cleaned).toBeGreaterThanOrEqual(1);
+    const { portableRestoreUploadCleanupHandler } = await import('@alga-psa/jobs/handlers/portableRestoreUploadCleanupHandler');
+    const admin = await import('@alga-psa/db/admin'), { StorageProviderFactory } = await import('@alga-psa/storage/StorageProviderFactory');
+    const connection = vi.spyOn(admin, 'getAdminConnection').mockResolvedValue(db);
+    const factory = vi.spyOn(StorageProviderFactory, 'createProvider').mockResolvedValue(provider as any);
+    try { expect(await portableRestoreUploadCleanupHandler()).toMatchObject({ schemaReady: true, cleaned: expect.any(Number) }); }
+    finally { connection.mockRestore(); factory.mockRestore(); }
     expect(objects.has(globalPath)).toBe(false);
     expect(objects.has(referencedPath)).toBe(true);
     await tenantDb(db, receipt.tenant).table('external_files').where('file_id', copyId).del();

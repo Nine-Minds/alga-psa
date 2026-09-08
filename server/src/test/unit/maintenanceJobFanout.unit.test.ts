@@ -53,6 +53,7 @@ vi.mock('@alga-psa/jobs/handlers/cleanupTemporaryFormsJob', () => ({ cleanupTemp
 vi.mock('@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupWebhookDeliveriesJob: (...a: unknown[]) => systemHandlerMock('cleanup-webhook-deliveries', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETING_SWEEP_JOB: 'sweep-teams-online-meetings', teamsMeetingSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-teams-online-meetings', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/coManagedUploadCleanupHandler', () => ({ CO_MANAGED_UPLOAD_CLEANUP_JOB: 'co-managed-upload-cleanup', coManagedUploadCleanupHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-upload-cleanup', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/portableRestoreUploadCleanupHandler', () => ({ PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB: 'portable-restore-upload-cleanup', portableRestoreUploadCleanupHandler: (...a: unknown[]) => systemHandlerMock('portable-restore-upload-cleanup', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler', () => ({ CO_MANAGED_NOTIFICATION_RECOVERY_JOB: 'co-managed-notification-recovery', coManagedNotificationRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-notification-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/coManagedSlaObservationHandler', () => ({ CO_MANAGED_SLA_OBSERVATION_JOB: 'co-managed-sla-observation', coManagedSlaObservationHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-sla-observation', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
@@ -62,6 +63,13 @@ vi.mock('@alga-psa/jobs/handlers/telephonyCallArtifactHandler', () => ({ TELEPHO
 import { runMaintenanceJob, isKnownMaintenanceJob } from '@alga-psa/jobs/fanout';
 
 describe('runMaintenanceJob', () => {
+  it('runs portable restore recovery once without enumerating or filtering tenants', async () => {
+    listTenantsMock.mockReturnValue([]);
+    const result = await runMaintenanceJob('portable-restore-upload-cleanup');
+    expect(result).toEqual({ jobName: 'portable-restore-upload-cleanup', scope: 'system', total: 1, succeeded: 1, failed: 0 });
+    expect(systemHandlerMock).toHaveBeenCalledWith('portable-restore-upload-cleanup');
+    expect(listTenantsMock).not.toHaveBeenCalled(); expect(suspendedFilter).not.toHaveBeenCalled();
+  });
   beforeEach(() => {
     tenantHandlerMock.mockReset();
     systemHandlerMock.mockReset();

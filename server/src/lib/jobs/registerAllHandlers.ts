@@ -1,3 +1,4 @@
+import { portableRestoreUploadCleanupJobHandler, PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB } from './handlers/portableRestoreUploadCleanupHandler';
 import { coManagedSlaObservationJobHandler, CO_MANAGED_SLA_OBSERVATION_JOB, type CoManagedSlaObservationJobData } from './handlers/coManagedSlaObservationHandler';
 import { coManagedUploadCleanupJobHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB, type CoManagedUploadCleanupJobData } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
@@ -732,6 +733,12 @@ export async function registerAllJobHandlers(
   // ============================================================================
   // INBOUND EMAIL RECOVERY (per-tenant durable sweep/backfill/mirror)
   // ============================================================================
+
+  JobHandlerRegistry.register<BaseJobData>({
+    name: PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB,
+    handler: async () => { await portableRestoreUploadCleanupJobHandler(); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
 
   JobHandlerRegistry.register<CoManagedUploadCleanupJobData & BaseJobData>({
     name: CO_MANAGED_UPLOAD_CLEANUP_JOB,

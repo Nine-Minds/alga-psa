@@ -760,3 +760,10 @@ Session licensing checkpoint (2026-09-08): inspection narrowed the suspected edi
 - **Where:** native provider base, portable file staging, restore coordinator and installation recovery command.
 - **Gate:** Lost COMMIT acknowledgement and process-exit recovery are distinct verified lifecycle gaps; cleanup cannot safely reconstruct provider location from current environment alone. ACT / bounded-now.
 - **Status:** revised native provider base to expose a credential-free location identity, fixed local base-path capture, and connected a durable restore-upload journal. Native reference publication retains the journal fence through a database trigger. Scheduled maintenance and local crash-staging cleanup remain separate work.
+
+
+## portable-recovery-runtime-placement — friction
+- **What:** Installation-wide maintenance needs the recovery engine without depending on an EE server runtime or active tenant discovery.
+- **Where:** portableRestoreUploads, maintenanceJobFanout system jobs, PG Boss/Temporal registration and operator compatibility entries.
+- **Gate:** A concrete scheduled caller exposed the wrong placement of an otherwise shared database/storage engine. ACT / bounded-now.
+- **Status:** moved recovery and installation authority to the shared co-managed package, retaining EE compatibility exports; used the existing system-maintenance dispatch instead of a separate timer.

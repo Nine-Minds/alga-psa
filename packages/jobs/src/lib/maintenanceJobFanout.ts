@@ -1,4 +1,5 @@
 import { coManagedSlaObservationHandler, CO_MANAGED_SLA_OBSERVATION_JOB } from './handlers/coManagedSlaObservationHandler';
+import { portableRestoreUploadCleanupHandler, PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB } from './handlers/portableRestoreUploadCleanupHandler';
 import { CO_MANAGED_UPLOAD_RETENTION_DAYS } from '@alga-psa/co-managed';
 import { coManagedUploadCleanupHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB } from './handlers/coManagedNotificationRecoveryHandler';
@@ -154,6 +155,7 @@ const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
   'cleanup-temporary-workflow-forms': { scope: 'system', run: () => cleanupTemporaryFormsJob() },
   'cleanup-webhook-deliveries': { scope: 'system', run: () => cleanupWebhookDeliveriesJob() },
   'cleanup-ai-session-keys': { scope: 'system', run: () => cleanupAiSessionKeysHandler() },
+  [PORTABLE_RESTORE_UPLOAD_CLEANUP_JOB]: { scope: 'system', run: () => portableRestoreUploadCleanupHandler() },
   [CO_MANAGED_UPLOAD_CLEANUP_JOB]: { scope: 'tenant', run: tenantId => coManagedUploadCleanupHandler({ tenantId }), tenants: tenantsWithAbandonedCoManagedUploads, concurrency: 3, includeSuspended: true },
   [CO_MANAGED_NOTIFICATION_RECOVERY_JOB]: { scope: 'tenant', run: tenantId => coManagedNotificationRecoveryHandler({ tenantId }), tenants: tenantsWithPendingCoManagedNotifications, concurrency: 3 },
   'inbound-email-recovery': { scope: 'tenant', run: (tenantId) => inboundEmailRecoveryHandler({ tenantId }), tenants: tenantsWithInboundEmail, concurrency: 3 },

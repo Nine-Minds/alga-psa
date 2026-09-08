@@ -127,3 +127,6 @@ export * from './independentUpgrade';
 export { getCoManagedTenantLicenseStatus, submitCoManagedTenantLicense } from './tenantLicenseManagement';
 export * from './independentUpgradeScreen';
 export * from './upgradePurchase';
+
+export * from './portableRestoreUploads';
+export { assertPortableRestoreInstallationAuthority } from './portableRestoreInstallationAuthority';
