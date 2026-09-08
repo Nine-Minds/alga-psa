@@ -1,5 +1,6 @@
 export * from './provisioning';
 export * from './acceptance';
+export * from './relationshipClosure';
 export * from './policy';
 export * from './sharedWork';
 export * from './sharedWorkRead';

@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -17923,3 +17923,83 @@ it('shared effort totals follow task moves between actual projects and retain cu
   await expect(totals(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   expect(await totals(db, f.customerPrincipal, newProject)).toMatchObject({ customerMinutes: 30, mspMinutes: null, combinedMinutes: null });
 }));
+
+it.each(['customer', 'sponsor'])('relationship closure by %s finalizes evidence before revocation and releases capacity exactly once under concurrent retries', async side => withMspSharedTimeSaveFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+  const entry = await f.save();
+  const finalize = vi.fn(async (context: any) => {
+    expect(context.trx.isTransaction).toBe(true);
+    expect(context).toMatchObject({ ...target, sponsorTenant: f.principal.tenant, operationId: request.operationId, cutoffAt: expect.any(Date) });
+    expect((await tenantDb(context.trx, f.resource.tenant).table('co_management_relationships').first()).state).toBe('active');
+    // Stand-in for the required production archive adapter: prove its retained
+    // write commits together with closure, not in an after-commit worker.
+    await tenantDb(context.trx, f.principal.tenant).table('co_managed_time_work_references').where('reference_id', f.referenceId).update({ title: 'Finalized retained work' });
+  });
+  const closingActor = side === 'customer' ? f.customerPrincipal : f.principal;
+  const [first, second] = await Promise.all([close(db, closingActor, target, request, finalize), close(db, closingActor, target, request, finalize)]);
+  expect(second).toEqual(first); expect(finalize).toHaveBeenCalledTimes(1);
+  expect(first).toMatchObject({ ...target, operationId: request.operationId, releasedSeats: allocation.seats, appliedRevision: relationship.revision + 1 });
+  expect(Date.parse(first.cutoffAt)).toBeLessThanOrEqual(Date.parse(first.closedAt));
+  expect(await f.customer.table('co_management_relationships').first()).toMatchObject({ state: 'terminated', ended_at: new Date(first.closedAt) });
+  expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toMatchObject({ state: 'released', released_at: new Date(first.closedAt) });
+  expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(1);
+  await expect((await import('../../../../packages/co-managed/src/sharedWorkRead')).getCoManagedSharedWorkSummary(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await getCoManagedOperationalState(db, f.resource.tenant)).toMatchObject({ state: 'terminated', canWrite: false });
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ entry_id: entry.entry_id, workItem: { name: 'Finalized retained work' } });
+  await expect(close(db, f.customerPrincipal, target, { ...request, reason: 'independent_upgrade' }, finalize)).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
+  await expect(close(db, f.customerPrincipal, target, { ...request, operationId: randomUUID() }, finalize)).rejects.toMatchObject({ code: 'RELATIONSHIP_CLOSED' });
+  const migration = require('../../../migrations/20260908102610_create_co_managed_relationship_closures.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('retained');
+}));
+
+it.each(['archive_failure', 'late_session_expiry'])('relationship closure rolls back evidence capacity and trust on %s', async failure => withMspSharedTimeSaveFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const before = await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first();
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const };
+  await expect(close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId }, request, async context => {
+    await tenantDb(context.trx, f.principal.tenant).table('co_managed_time_work_references').where('reference_id', f.referenceId).update({ title: 'Uncommitted archive' });
+    if (failure === 'archive_failure') throw new Error('Archive finalization failed');
+    await tenantDb(context.trx, f.resource.tenant).table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ expires_at: new Date(0) });
+  })).rejects.toThrow();
+  expect(await f.customer.table('co_management_relationships').first()).toEqual(relationship);
+  expect(await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).first()).toEqual(before);
+  expect((await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first()).state).toBe('active');
+  expect(await f.sponsor.table('co_managed_relationship_closures')).toHaveLength(0);
+}));
+
+it('relationship closure requires current administrator authority but remains available after license grace expires', async () => withMspSharedTimeSaveFixture(async f => {
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const target = { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId };
+  const request = { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' as const }, finalize = vi.fn(async () => {});
+  const permission = await f.sponsor.table('permissions').where({ resource: 'co_management', action: 'manage' }).first();
+  await f.sponsor.table('role_permissions').where('permission_id', permission.permission_id).del();
+  await expect(close(db, f.principal, target, request, finalize)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await expect(close(db, f.customerPrincipal, target, { ...request, expectedRevision: relationship.revision + 1 }, finalize)).rejects.toMatchObject({ code: 'CLOSURE_CHANGED' });
+  await expect(close(db, f.customerPrincipal, target, request, undefined as any)).rejects.toMatchObject({ code: 'INVALID_CLOSURE' });
+  expect(finalize).not.toHaveBeenCalled();
+  const lapseAt = new Date(Date.now() - 31 * 86400000);
+  await f.sponsor.table('co_managed_entitlements').update({ valid_until: lapseAt, lapse_started_at: lapseAt, read_only_after: new Date(lapseAt.getTime() + 30 * 86400000) });
+  expect(await getCoManagedOperationalState(db, f.resource.tenant)).toMatchObject({ canWrite: false });
+  await close(db, f.customerPrincipal, target, request, finalize); expect(finalize).toHaveBeenCalledTimes(1);
+}));
+
+it('relationship closure pauses the existing MSP SLA at the archive cutoff and blocks later observation', async () => {
+  const f = await dueMspSlaFixture();
+  const { closeCoManagedRelationship: close } = await import('../../../../packages/co-managed/src/relationshipClosure');
+  const relationship = await f.customer.table('co_management_relationships').first();
+  const beforeTicket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const result = await close(db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+    { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, async () => {});
+  const after = await f.read();
+  expect(after.clock.pauseReasons).toContain('customer_responsible');
+  expect(after.clock.observedAt).toBe(result.cutoffAt);
+  expect(await f.observeCoManagedTicketSla(db, f.identity)).toBe(false);
+  expect(await f.read()).toEqual(after);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(beforeTicket);
+});
