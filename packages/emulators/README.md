@@ -234,6 +234,15 @@ payload contracts, provider-specific auth errors and non-Microsoft providers
 still need independent contract coverage; a green emulator suite does not claim
 those contracts have been verified.
 
+Explicit delegated OAuth scope requests now receive a refresh token only when
+they include `offline_access` as a complete scope. App-only grants never create
+or return a refresh token. HTTP contract cases cover a valid offline scope,
+its omission, and a similarly named scope that must not match. This prevents a
+test application from getting persistent access merely because the emulator
+was more permissive than Entra. Legacy requests that omit the scope entirely
+still use the emulator's default mail/offline scope set; PKCE, consent and full
+scope validation remain outside this check.
+
 Unimplemented `/v1.0` Graph routes return HTTP 501 with
 `error.code: EmulatorUnsupportedOperation`. This is an emulator capability
 error, not a claim that Microsoft Graph returns the same response. Implemented

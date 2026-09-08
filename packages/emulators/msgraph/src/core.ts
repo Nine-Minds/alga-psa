@@ -508,7 +508,7 @@ export class MsGraphCore implements EmulatorCore {
 
   grantToken(input: TokenGrantInput): {
     access_token: string;
-    /** Absent for the app-only client_credentials grant, exactly like Entra. */
+    /** Delegated grants require offline_access; app-only grants never include it. */
     refresh_token?: string;
     expires_in: number;
     token_type: 'Bearer';
@@ -539,13 +539,11 @@ export class MsGraphCore implements EmulatorCore {
       // App-only flow used by the Teams bot connector
       // (scope https://api.botframework.com/.default) and by Graph
       // app tokens. No user, so no refresh token is issued.
-      const { refresh_token: issuedRefreshToken, ...appOnly } = this.issueTokens(
+      return this.issueTokens(
         String(input.client_id),
         undefined,
         { scope: input.scope || 'https://graph.microsoft.com/.default', appOnly: true },
       );
-      this.refreshTokens.delete(issuedRefreshToken);
-      return appOnly;
     }
     throw new GraphApiError(400, { error: 'unsupported_grant_type' });
   }
@@ -583,19 +581,21 @@ export class MsGraphCore implements EmulatorCore {
       aud: '00000003-0000-0000-c000-000000000000',
       exp: Math.floor((this.nowMs() + this.accessTokenTtlSeconds * 1000) / 1000),
     });
-    const refreshToken =
-      existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh');
+    const allowRefresh = !claims?.appOnly && scope.split(/\s+/).includes('offline_access');
+    const refreshToken = allowRefresh
+      ? (existingRefreshToken && !this.rotateRefreshTokens ? existingRefreshToken : this.newId('refresh'))
+      : undefined;
     this.accessTokens.set(accessToken, {
       clientId,
       expiresAt: this.nowMs() + this.accessTokenTtlSeconds * 1000,
     });
-    this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
+    if (refreshToken) this.refreshTokens.set(refreshToken, { clientId, revoked: false, scope });
     if (existingRefreshToken && existingRefreshToken !== refreshToken) {
       this.refreshTokens.delete(existingRefreshToken);
     }
     return {
       access_token: accessToken,
-      refresh_token: refreshToken,
+      ...(refreshToken ? { refresh_token: refreshToken } : {}),
       expires_in: this.accessTokenTtlSeconds,
       token_type: 'Bearer' as const,
       ...(claims?.nonce

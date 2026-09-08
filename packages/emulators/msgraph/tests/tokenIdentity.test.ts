@@ -10,7 +10,7 @@ it('keeps same-second access-token grants distinct and bound to their original c
   function signIn(clientId: string) {
     core.registerClient(clientId, 'synthetic-secret');
     const redirectUri = 'http://localhost/callback';
-    const code = core.authorize(clientId, redirectUri, { scope: 'Calendars.ReadWrite' });
+    const code = core.authorize(clientId, redirectUri, { scope: 'Calendars.ReadWrite offline_access' });
     return core.grantToken({
       client_id: clientId, client_secret: 'synthetic-secret', grant_type: 'authorization_code',
       code, redirect_uri: redirectUri,

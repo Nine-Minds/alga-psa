@@ -82,6 +82,31 @@ beforeEach(async () => {
   await controlPost('reset');
   await signIn();
 });
+
+// Microsoft documents refresh_token as conditional on requesting offline_access:
+// https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow
+it.each([
+  ['Calendars.ReadWrite offline_access', true],
+  ['Calendars.ReadWrite', false],
+  ['Calendars.ReadWrite offline_access_extra', false],
+])('issues a refresh token only for the offline_access scope (%s)', async (scope, expectedRefresh) => {
+  const redirectUri = 'http://localhost/scope-contract';
+  const authorization = await fetch(`${base}/common/oauth2/v2.0/authorize?${new URLSearchParams({
+    client_id: 'calendar-client', redirect_uri: redirectUri, response_type: 'code', scope: String(scope),
+  })}`, { redirect: 'manual' });
+  expect(authorization.status).toBe(302);
+  const code = new URL(authorization.headers.get('location')!).searchParams.get('code')!;
+  const response = await fetch(`${base}/common/oauth2/v2.0/token`, {
+    method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: 'calendar-client', client_secret: 'calendar-secret',
+      grant_type: 'authorization_code', code, redirect_uri: redirectUri }),
+  });
+  expect(response.status).toBe(200);
+  const tokens = await response.json();
+  expect(typeof tokens.access_token).toBe('string');
+  expect(Object.hasOwn(tokens, 'refresh_token')).toBe(expectedRefresh);
+  if (expectedRefresh) expect(tokens.refresh_token).toEqual(expect.any(String));
+});
 afterAll(async () => {
   await host?.stop();
   if (receiver) await new Promise<void>((resolve, reject) => receiver.close(error => error ? reject(error) : resolve()));
