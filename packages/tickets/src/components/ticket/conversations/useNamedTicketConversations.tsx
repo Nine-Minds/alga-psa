@@ -31,10 +31,10 @@ type Page = Awaited<ReturnType<typeof actions.getNamedTicketConversationMessages
 type Flush = MutableRefObject<() => Promise<boolean>>;
 const audienceLabels = { requester: 'Requester', shared_it: 'Shared IT', organization_private: 'Your organization only' };
 
-/** The host provides the established requester panel. Additional conversations
- * have their own history and composer; they never reuse a ticket-wide sender. */
+/** Hosts may retain their established requester history while attaching the
+ * shared private-draft composer. Every sender remains conversation-scoped. */
 export function useNamedTicketConversations(input: ConversationTicketReference | null, enabled: boolean, id: string,
-  options: { requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void }) => ReactNode } = {}) {
+  options: { requesterPanel?: (props: { conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; canWrite: boolean; onRefresh: () => void }) => ReactNode } = {}) {
   const { t } = useTranslation('features/tickets');
   const { data: session } = useSession(), router = useRouter(), params = useSearchParams();
   const ticket = useMemo(() => input ? { ...input } : null, [input?.tenant, input?.ticketId, input?.relationshipId]);
@@ -108,7 +108,7 @@ export function useNamedTicketConversations(input: ConversationTicketReference |
     {screen && <CreateConversation id={id} ticket={ticket} open={creating} audiences={screen.writeAudiences.filter(a => a !== 'requester')}
       onClose={() => setCreating(false)} onCreated={async value => { setCreating(false); refresh(); await select(value); }} />}
   </section>;
-  return { navigator, panel: !screen ? (error ? unavailable : loading) : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty })
+  return { navigator, panel: !screen ? (error ? unavailable : loading) : !selected ? unavailable : selected.defaultSlot === 'requester' ? options.requesterPanel?.({ conversation: selected, flush, onDirty: setDirty, canWrite: screen.writeAudiences.includes(selected.audience), onRefresh: refresh })
     : <NamedConversationPanel key={`${identity}:${keyOf(selected)}`} id={id} ticket={ticket} conversation={selected}
       canWrite={screen.writeAudiences.includes(selected.audience)} flush={flush} onDirty={setDirty} onRefresh={refresh} /> };
 }
@@ -214,8 +214,8 @@ function NamedConversationPanel({ id, ticket, conversation, canWrite, flush, onD
   </section>;
 }
 
-export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [] }: { id: string; ticket: ConversationTicketReference;
-  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items'] }) {
+export function NamedConversationComposer({ id, ticket, conversation, flush, onDirty, onPosted, onRefresh, reply, onReplyReady, replyItems = [], disabled = false }: { id: string; ticket: ConversationTicketReference;
+  conversation: NamedTicketConversation; flush: Flush; onDirty: (dirty: boolean) => void; onPosted: () => void; onRefresh?: () => void; reply?: MutableRefObject<((parent: ConversationDraftParent) => Promise<boolean>) | null>; onReplyReady?: (ready: boolean) => void; replyItems?: Page['items']; disabled?: boolean }) {
   const { t } = useTranslation('features/tickets');
   const [document, setDocument] = useState<CoManagedRichTextDocument>([]), [loaded, setLoaded] = useState(false), [epoch, setEpoch] = useState(0);
   const isEmail = conversation.transport === 'email';
@@ -246,12 +246,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.generation++;
     state.current.parent = draft?.parent ?? null; setParent(state.current.parent);
     state.current.email = draft?.email ?? defaults;
-    if (defaults) { state.current.content ??= { text: '' }; state.current.dirty = true; }
     setEmail(state.current.email ?? { subject: '', to: [], cc: [] });
     state.current.conversationRevision = currentConversation.current.revision;
     state.current.invalid = false; invalidEmail.current = false;
     setDocument(content?.document ?? (content?.text ? conversationDocument(content.text) ?? [] : []));
-    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.attachments.length || state.current.email || state.current.parent || (content && (content.document || content.text))));
+    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.attachments.length || draft?.email || state.current.parent || (content && (content.document || content.text))));
   }, [ticket, conversation.conversationId]);
   useEffect(() => {
     state.current.alive = true;
@@ -283,7 +282,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     flight.current = task(); return flight.current;
   }, [ticket, conversation.conversationId]);
   const changeParent = useCallback(async (next: ConversationDraftParent | null) => {
-    if (!loaded || posting || emailLock.current || fileLock.current || postRequest.current || !await save()) return false;
+    if (disabled || !loaded || posting || emailLock.current || fileLock.current || postRequest.current || !await save()) return false;
     state.current.parent = next; setParent(next);
     state.current.content ??= { text: '' };
     state.current.dirty = true; state.current.generation++;
@@ -295,12 +294,12 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
       (editor?.querySelector<HTMLElement>('[contenteditable="true"]') ?? editor)?.focus();
     }
     return saved;
-  }, [loaded, posting, save, id, onDirty]);
+  }, [disabled, loaded, posting, save, id, onDirty]);
   useEffect(() => {
     if (reply) reply.current = changeParent;
-    onReplyReady?.(loaded && !posting && !emailLocked && !fileLocked && !postRequest.current);
+    onReplyReady?.(!disabled && loaded && !posting && !emailLocked && !fileLocked && !postRequest.current);
     return () => { if (reply?.current === changeParent) reply.current = null; onReplyReady?.(false); };
-  }, [reply, changeParent, loaded, posting, emailLocked, fileLocked, error, onReplyReady]);
+  }, [disabled, reply, changeParent, loaded, posting, emailLocked, fileLocked, error, onReplyReady]);
   useEffect(() => {
     const flushDraft = () => emailLock.current || fileLock.current ? Promise.resolve(false) : save();
     flush.current = flushDraft; return () => { if (flush.current === flushDraft) flush.current = async () => true; };
@@ -315,7 +314,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     window.addEventListener('beforeunload', warn); return () => window.removeEventListener('beforeunload', warn);
   }, []);
   const change = (value: CoManagedRichTextDocument) => {
-    if (posting || emailLock.current || fileLock.current || postRequest.current) return;
+    if (disabled || posting || emailLock.current || fileLock.current || postRequest.current) return;
     setDocument(value);
     let content: CoManagedConversationContent;
     try {
@@ -327,7 +326,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     onDirty(Boolean(state.current.attachments.length || state.current.email || state.current.parent || content.document || content.text)); void save();
   };
   const changeEmail = (next: ConversationEmailDraft) => {
-    if (!loaded || emailLock.current || fileLock.current) return;
+    if (disabled || !loaded || emailLock.current || fileLock.current) return;
     setEmail(next);
     invalidEmail.current = next.subject.length > 255 || [next.to, next.cc].some(values => values.length > 100 || values.some(value => value.length > 500 || /[\r\n\0]/.test(value)));
     if (invalidEmail.current) { state.current.dirty = true; setError('invalid'); onDirty(true); return; }
@@ -335,11 +334,11 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.dirty = true; state.current.generation++; onDirty(true); void save();
   };
   const reviewDraft = async () => {
-    if (!loaded || fileLock.current || !await save()) return null;
+    if (disabled || !loaded || fileLock.current || !await save()) return null;
     return { operationId: crypto.randomUUID(), expectedConversationRevision: state.current.conversationRevision, expectedDraftRevision: state.current.revision };
   };
   const submit = async () => {
-    if (posting || !loaded || fileLock.current || !await save() || fileLock.current) return;
+    if (disabled || posting || !loaded || fileLock.current || !await save() || fileLock.current) return;
     setPosting(true); setError(null);
     try {
       postRequest.current ??= { operationId: crypto.randomUUID(), expectedConversationRevision: state.current.conversationRevision,
@@ -356,32 +355,32 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   let nonempty = false;
   try { snapshotConversationDocument(document); nonempty = true; } catch { /* An empty editor is a draft, not a message. */ }
   return <div className="space-y-3 border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-background))] p-4">
-    <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
+    <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? conversation.audience === 'requester' ? t('namedConversations.requesterEmail', 'Requester email') : t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
     {isEmail && <div className="space-y-3">
-      <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={!loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
-      <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={!loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />
+      <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
+      <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />
       <p className="text-xs text-muted-foreground">{t('namedConversations.addressHelp', 'Separate email addresses with semicolons.')}</p>
-      <Input id={`${id}-email-subject`} label={t('namedConversations.subject', 'Subject')} value={email.subject} disabled={!loaded || emailLocked || fileLocked} maxLength={255} onChange={event => changeEmail({ ...email, subject: event.target.value })} />
+      <Input id={`${id}-email-subject`} label={t('namedConversations.subject', 'Subject')} value={email.subject} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={255} onChange={event => changeEmail({ ...email, subject: event.target.value })} />
     </div>}
     {parent && <div className="flex items-center justify-between gap-2 rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2 text-sm">
       <div className="min-w-0"><p>{t('namedConversations.replying', 'Replying to a message in this conversation')}</p>
         {parentMessage && <p className="mt-1 truncate text-xs text-muted-foreground">{parentMessage.author?.displayName ? `${parentMessage.author.displayName}: ` : ''}{parentMessage.deleted ? t('namedConversations.deleted', 'Message deleted') : conversationText(parentMessage.note, parentMessage.markdown)}</p>}
       </div>
-      <Button id={`${id}-clear-reply`} variant="ghost" size="sm" disabled={posting || emailLocked || fileLocked || Boolean(postRequest.current)} onClick={() => void changeParent(null)}>{t('namedConversations.clearReply', 'New message instead')}</Button>
+      <Button id={`${id}-clear-reply`} variant="ghost" size="sm" disabled={disabled || posting || emailLocked || fileLocked || Boolean(postRequest.current)} onClick={() => void changeParent(null)}>{t('namedConversations.clearReply', 'New message instead')}</Button>
     </div>}
-    {loaded && <Document key={epoch} id={`${id}-composer`} document={document} editable={!posting && !emailLocked && !fileLocked && !postRequest.current} onChange={change} />}
+    {loaded && <Document key={epoch} id={`${id}-composer`} document={document} editable={!disabled && !posting && !emailLocked && !fileLocked && !postRequest.current} onChange={change} />}
     {loaded && <ConversationDraftFiles id={id} ticket={ticket} conversation={reference(conversation)} files={files}
-      disabled={posting || emailLocked || Boolean(postRequest.current)} onLock={lockFiles} onChange={async next => {
-        if (emailLock.current || posting || postRequest.current) return false;
+      disabled={disabled || posting || emailLocked || Boolean(postRequest.current)} onLock={lockFiles} onChange={async next => {
+        if (disabled || emailLock.current || posting || postRequest.current) return false;
         state.current.attachments = next; setFiles(next); state.current.content ??= { text: '' };
         state.current.dirty = true; state.current.generation++; onDirty(true);
         return save();
       }} />}
     {error && <p role="alert" className="text-sm text-destructive">{t(`namedConversations.${error}`, error === 'saveFailed' ? 'Could not save. Retry before switching conversations.' : error === 'postFailed' ? 'Could not confirm the post. Retry to check the same message.' : error === 'invalid' ? 'This draft contains unsupported content. Edit it before saving.' : 'This conversation is unavailable.')}</p>}
-    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} ready={!fileLocked && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
+    {isEmail && loaded && <ConversationEmailControls id={id} ticket={ticket} conversation={conversation} ready={!disabled && !fileLocked && nonempty && Boolean(email.subject.trim()) && email.to.some(value => value.trim())}
       saveDraft={reviewDraft} onLock={lockEmail} onMailbox={value => { state.current.conversationRevision = value.revision; if (state.current.content) { state.current.dirty = true; state.current.generation++; } onRefresh?.(); }} onSent={async () => { await read(); onPosted(); }} />}
-    <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={!loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
+    <div className="flex items-center gap-2">{!isEmail && <Button id={`${id}-post`} disabled={disabled || !loaded || !nonempty || posting || fileLocked} onClick={() => void submit()}>{postRequest.current ? t('namedConversations.retryPost', 'Retry post') : t('namedConversations.post', 'Post')}</Button>}
       {error === 'saveFailed' && <Button id={`${id}-save-retry`} variant="outline" disabled={saving} onClick={() => void save()}>{t('namedConversations.retry', 'Retry')}</Button>}
       <span className="text-xs text-muted-foreground">{t(`namedConversations.audiences.${conversation.audience}`, audienceLabels[conversation.audience])}</span></div>
   </div>;

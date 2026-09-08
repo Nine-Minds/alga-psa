@@ -54,6 +54,13 @@ export async function attachNamedConversationFiles(context: Context, items: CoMa
     }
   }
 }
+export function listNamedConversationAttachments(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
+  input: TicketConversationReference, comment: { commentId: string; threadId: string }) {
+  const ref = snapshotConversationReference(input);
+  const selected = { commentId: comment.commentId, threadId: comment.threadId };
+  return withNamedTicketConversation(db, actor, ticket, ref, 'read', async context =>
+    listPublishedCoManagedAttachments(await namedConversationMessageFileContext(context, selected.commentId, selected.threadId)));
+}
 export function downloadNamedConversationAttachment(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   input: TicketConversationReference, file: { attachmentId: string; commentId: string; threadId: string }, download: (path: string) => Promise<Uint8Array>) {
   const ref = snapshotConversationReference(input);

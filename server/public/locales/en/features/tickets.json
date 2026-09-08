@@ -1841,6 +1841,7 @@
     "postFailed": "Could not confirm the post. Retry to check the same message.",
     "invalid": "This draft contains unsupported content. Edit it before saving.",
     "kind": "Conversation type",
+    "requesterEmail": "Requester email",
     "vendorEmail": "Vendor email",
     "vendorHelp": "Choose a sending mailbox and recipients in the conversation. Every email is reviewed before sending.",
     "addressHelp": "Separate email addresses with semicolons.",

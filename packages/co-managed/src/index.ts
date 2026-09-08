@@ -80,7 +80,7 @@ export * from './nativeTimePeriod';
 export * from './nativeTimePeriodSettings';
 
 export { admitNamedConversationEmailReply } from './inboundNamedConversationEmail';
-export { downloadNamedConversationAttachment } from './namedConversationAttachments';
+export { downloadNamedConversationAttachment, listNamedConversationAttachments } from './namedConversationAttachments';
 export { listNamedReplyReviews, getNamedReplyReview, resolveNamedReplyReview,
   type NamedReplyReviewDestination, type ResolveNamedReplyReviewRequest } from './inboundNamedConversationReview';
 

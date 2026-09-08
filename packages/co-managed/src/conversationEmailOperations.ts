@@ -16,6 +16,8 @@ import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 import { coManagedConversationAuthorSources } from './conversationPolicy';
 import { rememberNamedConversationCorrespondents } from '@alga-psa/shared/services/email/namedConversationCorrespondents';
 import type { CoManagedConversationItem } from './ticketConversation';
+import { getClientContactVisibilityContext } from '@alga-psa/shared/lib/tickets/clientPortalVisibility.server';
+import { VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR } from '@alga-psa/shared/lib/tickets/clientPortalVisibility';
 
 export interface NamedConversationEmailRequest { operationId: string; expectedDraftRevision: number; expectedConversationRevision: number }
 export interface ConversationEmailPayload {
@@ -256,8 +258,42 @@ export function getNamedConversationEmailDefaults(db: Knex, actor: CoManagedSess
     if (context.conversation.transport !== 'email' || isCoManagedReadFieldHidden(context.hidden,
       [...coManagedConversationAuthorSources, 'email', 'email_envelope', 'recipients', 'from', 'to', 'cc', 'subject', 'ticket_conversation_publications', 'ticket_conversation_inbound_messages', 'proposed_recipients'])) return null;
     const row = await latestEmail(context);
-    if (!row) return null;
+    if (!row) return requesterEmailDefaults(context);
     const envelope = row.defaults;
     return { subject: envelope.subject, to: envelope.to.map((value: ReviewedEmailAddress) => value.email), cc: envelope.cc.map((value: ReviewedEmailAddress) => value.email) };
   });
+}
+
+/** Prefill an empty requester composer from the currently visible ticket, not
+ * from another conversation or an unpublished draft. These are editable hints;
+ * mailbox admission and reviewed Send still own external delivery. */
+async function requesterEmailDefaults(context: Context) {
+  if (context.conversation.audience !== 'requester' || isCoManagedReadFieldHidden(context.hidden,
+    ['title', 'ticket_number', 'client_id', 'contact_name_id', 'contacts', 'contact', 'contact_email', 'client_locations'])) return null;
+  const owner = tenantDb(context.trx, context.ticket.tenant);
+  const ticket = await owner.table('tickets').where('ticket_id', context.ticket.ticketId).forShare().first('title', 'ticket_number', 'client_id', 'contact_name_id', 'board_id');
+  if (!ticket?.client_id) return null;
+  const client = await owner.table('clients').where('client_id', ticket.client_id).forShare().first('is_inactive');
+  if (!client || client.is_inactive) return null;
+  // LEVERAGE: pattern current-requester-recipient — empty composer hints and legacy requester delivery retain the same primary-contact/location policy.
+  const contact = ticket.contact_name_id ? await owner.table('contacts').where({ contact_name_id: ticket.contact_name_id, client_id: ticket.client_id })
+    .forShare().first('email', 'is_inactive') : null;
+  if (ticket.contact_name_id) {
+    if (!contact || contact.is_inactive) return null;
+    let visibility;
+    try { visibility = await getClientContactVisibilityContext(context.trx, context.ticket.tenant, ticket.contact_name_id, { lock: true }); }
+    catch (error) {
+      if (error instanceof Error && [VISIBILITY_GROUP_MISMATCH_ERROR, VISIBILITY_GROUP_MISSING_ERROR].includes(error.message)) return null;
+      throw error;
+    }
+    if (visibility.clientId !== ticket.client_id || (visibility.visibleBoardIds !== null && !visibility.visibleBoardIds.includes(ticket.board_id))) return null;
+  }
+  let email = contact?.email?.trim();
+  if (!email) {
+    const locations = await owner.table('client_locations').where({ client_id: ticket.client_id, is_default: true, is_active: true }).forShare().select('email');
+    if (locations.length !== 1) return null;
+    email = locations[0].email?.trim();
+  }
+  if (!email || !/^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(email)) return null;
+  return { subject: `[Ticket #${ticket.ticket_number}] ${ticket.title ?? ''}`.slice(0, 255), to: [email], cc: [] as string[] };
 }

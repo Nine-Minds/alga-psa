@@ -6,23 +6,29 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import type { CoManagedSharedResource, CoManagedCommentReference, CoManagedConversationAttachment } from '@alga-psa/co-managed';
+import type { TicketConversationReference } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { getCoManagedAttachmentsScreenAction, uploadCoManagedAttachmentAction } from '@/lib/actions/coManagedAttachmentActions';
 
 import CoManagedAttachmentRemoval from './CoManagedAttachmentRemoval';
 
 type Screen = Awaited<ReturnType<typeof getCoManagedAttachmentsScreenAction>>;
-function downloadUrl(resource: CoManagedSharedResource, attachment: CoManagedConversationAttachment) {
+function downloadUrl(resource: CoManagedSharedResource, attachment: CoManagedConversationAttachment, conversation?: TicketConversationReference) {
+  if (conversation) {
+    const query = new URLSearchParams({ ticketTenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id,
+      conversationId: conversation.conversationId, storeTenant: attachment.storeTenant, threadId: attachment.threadId, commentId: attachment.commentId });
+    return `/api/tickets/conversation-attachments/${encodeURIComponent(attachment.attachmentId)}?${query}`;
+  }
   const query = new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id,
     storeTenant: attachment.storeTenant, threadId: attachment.threadId, commentId: attachment.commentId });
   return `/api/co-management/attachments/${encodeURIComponent(attachment.attachmentId)}?${query}`;
 }
-export default function CoManagedCommentAttachments({ resource, comment }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference }) {
+export default function CoManagedCommentAttachments({ resource, comment, conversation }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference; conversation?: TicketConversationReference }) {
   const { data: session } = useSession();
   const actor = { tenant: session?.user?.tenant, userId: session?.user?.id };
-  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${comment.storeTenant}:${comment.threadId}:${comment.commentId}:${actor.tenant}:${actor.userId}`;
-  return <Attachments key={identity} resource={resource} comment={comment} actor={actor} />;
+  const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${comment.storeTenant}:${comment.threadId}:${comment.commentId}:${actor.tenant}:${actor.userId}:${conversation?.storeTenant}:${conversation?.conversationId}`;
+  return <Attachments key={identity} resource={resource} comment={comment} actor={actor} conversation={conversation} />;
 }
-function Attachments({ resource, comment, actor }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference; actor: { tenant?: string; userId?: string } }) {
+function Attachments({ resource, comment, actor, conversation }: { resource: CoManagedSharedResource; comment: CoManagedCommentReference; actor: { tenant?: string; userId?: string }; conversation?: TicketConversationReference }) {
   const { t } = useTranslation('msp/licensing'), { formatNumber } = useFormatters();
   const target = useRef({ resource: { ...resource }, comment: { ...comment } });
   const [state, setState] = useState<Screen | null>(null), [readError, setReadError] = useState(false);
@@ -43,13 +49,15 @@ function Attachments({ resource, comment, actor }: { resource: CoManagedSharedRe
     if (loading.current) { queued.current = true; return; }
     const current = ++generation.current; loading.current = true;
     try {
-      const page = await getCoManagedAttachmentsScreenAction(target.current.resource, target.current.comment);
+      const page = conversation ? await getCoManagedAttachmentsScreenAction(target.current.resource, target.current.comment, conversation)
+        : await getCoManagedAttachmentsScreenAction(target.current.resource, target.current.comment);
       if (!mounted.current || current !== generation.current) return;
       if (page.actor.tenant !== actor.tenant || page.actor.userId !== actor.userId || page.attachments.some(file =>
         file.storeTenant !== comment.storeTenant || file.threadId !== comment.threadId || file.commentId !== comment.commentId)) throw new Error('Attachment session changed');
       setState(page); setReadError(false);
       if (!page.canUpload) clearFile();
-      if (!page.canRemove || (removalTarget.current && !page.attachments.some(file => file.attachmentId === removalTarget.current!.attachmentId))) selectRemoval(null);
+      if (!page.canRemove || (removalTarget.current && (!page.attachments.some(file => file.attachmentId === removalTarget.current!.attachmentId) ||
+        (conversation && !page.removableAttachmentIds?.includes(removalTarget.current.attachmentId))))) selectRemoval(null);
     } catch {
       if (mounted.current && current === generation.current) { setState(null); setReadError(true); clearFile(); selectRemoval(null); }
     } finally {
@@ -86,8 +94,8 @@ function Attachments({ resource, comment, actor }: { resource: CoManagedSharedRe
       <Button id={`${id}-reload`} size="sm" variant="ghost" onClick={() => void refresh()}>{t('coManaged.ticket.reload')}</Button></div>}
     {state && <>
       {state.attachments.length > 0 && <ul className="space-y-1">{state.attachments.map(attachment => <li key={attachment.attachmentId} className="flex items-center justify-between gap-2 text-sm">
-        <a id={`${id}-${attachment.attachmentId}-download`} className="break-words text-[rgb(var(--badge-info-text))] underline" href={downloadUrl(target.current.resource, attachment)} download>{attachment.fileName}</a>
-        {state.canRemove && <Button id={`${id}-${attachment.attachmentId}-remove`} variant="ghost" size="sm" disabled={busy || choosing || Boolean(removal)}
+        <a id={`${id}-${attachment.attachmentId}-download`} className="break-words text-[rgb(var(--badge-info-text))] underline" href={downloadUrl(target.current.resource, attachment, conversation)} download>{attachment.fileName}</a>
+        {state.canRemove && (!conversation || state.removableAttachmentIds?.includes(attachment.attachmentId)) && <Button id={`${id}-${attachment.attachmentId}-remove`} variant="ghost" size="sm" disabled={busy || choosing || Boolean(removal)}
           aria-label={t('coManaged.attachments.removeNamed', { name: attachment.fileName })} onClick={() => selectRemoval({ ...attachment })}>{t('coManaged.attachments.remove')}</Button>}
       </li>)}</ul>}
       {state.canUpload && !choosing && !removal && <Button id={`${id}-add`} size="sm" variant="ghost" onClick={() => setChoosing(true)}>{t('coManaged.attachments.add')}</Button>}

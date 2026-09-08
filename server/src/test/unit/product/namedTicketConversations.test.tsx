@@ -323,3 +323,70 @@ it('connects the shared ticket navigator to a scoped canonical Requester and pre
   expect(screen.getByText('Canonical Requester')).toBeInTheDocument(); expect(mocks.load).not.toHaveBeenCalled();
   expect(mocks.requesterProps.mock.calls.at(-1)?.[0].requester).toBeUndefined();
 });
+
+function requesterEmailFixture() {
+  const email = emailFixture();
+  mocks.query = '';
+  const selected = { ...requester, mailbox: { tenant: 'owner', id: 'mailbox' } };
+  mocks.load.mockResolvedValue({ conversations: [selected, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
+  mocks.mailboxes.mockResolvedValue([{ id: 'mailbox', tenant: 'owner', email: 'owner-support@example.test', name: 'Owner support' }]);
+  mocks.emailDefaults.mockResolvedValue({ to: ['requester@example.test'], cc: [], subject: 'Requester arrangements' });
+  const drafts = new Map<string, any>();
+  const key = (ref: any) => `${mocks.session.user.id}:${ref.storeTenant}:${ref.conversationId}`;
+  mocks.readDraft.mockImplementation(async (_ticket, ref) => drafts.get(key(ref)) ?? null);
+  mocks.saveDraft.mockImplementation(async (_ticket, ref, request) => {
+    const saved = { ...request, revision: request.expectedRevision + 1, conversationRevision: request.expectedConversationRevision };
+    drafts.set(key(ref), saved); return saved;
+  });
+  email.preview.from = { email: 'owner-support@example.test' };
+  email.preview.to = [{ email: 'requester@example.test' }]; email.preview.cc = []; email.preview.subject = 'Requester arrangements';
+  mocks.sendEmail.mockImplementation(async (_ticket, ref, operationId) => {
+    drafts.set(key(ref), { revision: drafts.get(key(ref)).revision + 1, content: null, email: null });
+    return { operationId, status: 'delivered' };
+  });
+  return { drafts, selected, resource: { kind: 'ticket' as const, tenant: 'owner', id: 'ticket', relationshipId: 'relationship' } };
+}
+
+it('co-managed Requester saves its own draft across navigation and reload without persisting untouched recipient defaults', async () => {
+  const f = requesterEmailFixture();
+  const view = render(<CoManagedNamedTicketConversation resource={f.resource} />);
+  const editor = await screen.findByLabelText('Message');
+  expect(screen.getByLabelText('To')).toHaveValue('requester@example.test');
+  expect(mocks.saveDraft).not.toHaveBeenCalled();
+  expect(screen.getByRole('navigation').querySelector('button')).not.toHaveTextContent('Draft');
+  fireEvent.change(editor, { target: { value: 'Requester-only draft' } });
+  await waitFor(() => expect(f.drafts.get('author:owner:requester')?.content.document[0].content[0].text).toBe('Requester-only draft'));
+  fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledOnce());
+  mocks.query = 'conversation=private&conversationStore=home'; view.rerender(<CoManagedNamedTicketConversation resource={f.resource} />);
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''));
+  mocks.query = ''; view.rerender(<CoManagedNamedTicketConversation resource={f.resource} />);
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue('Requester-only draft'));
+  view.unmount();
+  const restored = render(<CoManagedNamedTicketConversation resource={f.resource} />);
+  expect(await screen.findByLabelText('Message')).toHaveValue('Requester-only draft');
+  restored.unmount(); mocks.session.user.id = 'other-author';
+  render(<CoManagedNamedTicketConversation resource={f.resource} />);
+  expect(await screen.findByLabelText('Message')).toHaveValue('');
+  expect(mocks.sendEmail).not.toHaveBeenCalled(); expect(mocks.post).not.toHaveBeenCalled();
+});
+
+it('co-managed Requester replies through private drafts and reviewed Send while blocking history edits during review', async () => {
+  const f = requesterEmailFixture();
+  render(<CoManagedNamedTicketConversation resource={f.resource} />);
+  fireEvent.change(await screen.findByLabelText('Message'), { target: { value: 'Reviewed requester answer' } });
+  await waitFor(() => expect(mocks.requesterProps.mock.calls.at(-1)[0].composition.ready).toBe(true));
+  await act(async () => { expect(await mocks.requesterProps.mock.calls.at(-1)[0].composition.reply({ threadId: 'thread', commentId: 'source' })).toBe(true); });
+  expect(f.drafts.get('author:owner:requester').parent).toEqual({ threadId: 'thread', commentId: 'source' });
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
+  await screen.findByTitle('Email body preview');
+  expect(mocks.prepareEmail.mock.calls[0][1]).toEqual({ storeTenant: 'owner', conversationId: 'requester' });
+  expect(mocks.sendEmail).not.toHaveBeenCalled(); expect(screen.getByLabelText('Message')).toBeDisabled();
+  await act(async () => { expect(await mocks.requesterProps.mock.calls.at(-1)[0].composition.beforeEdit()).toBe(false); });
+  fireEvent.click(screen.getByRole('button', { name: /Diagnostics/ })); expect(mocks.push).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await screen.findByText('Email sent.');
+  await waitFor(() => expect(mocks.requesterProps.mock.calls.at(-1)[0].composition.refreshVersion).toBe(1));
+  expect(screen.getByLabelText('Message')).toHaveValue('');
+  expect(mocks.sendEmail).toHaveBeenCalledOnce(); expect(mocks.post).not.toHaveBeenCalled();
+});

@@ -296,3 +296,26 @@ it('keeps an incorrectly qualified transfer receipt uncertain for an exact retry
   fireEvent.click(screen.getByRole('button', { name: 'coManaged.disclosure.confirm' })); await screen.findByText('coManaged.disclosure.unknownOutcome');
   expect(screen.getByRole('button', { name: 'coManaged.ticket.cancel' })).toBeDisabled();
 });
+
+it('retains history editing while routing requester replies to the supplied composer and waiting for draft flush', async () => {
+  const row = { ...item(), audience: 'requester', email: { subject: 'Requester update', from: { email: 'desk@example.test' },
+    to: [{ email: 'requester@example.test' }], cc: [], delivery: 'delivered' } };
+  mocks.load.mockResolvedValue({ ...data(), items: [row], writeAudiences: ['requester'] });
+  const pending = deferred();
+  const composition = { ready: true, refreshVersion: 0, beforeEdit: vi.fn(() => pending.promise), reply: vi.fn(async () => true) };
+  render(<CoManagedTicketConversation resource={resource} requester={{ storeTenant: 'customer', conversationId: 'requester' }} composition={composition} />);
+  await screen.findByText('Shared content');
+  expect(screen.getByText('Requester update')).toBeInTheDocument();
+  expect(screen.getByText('requester@example.test')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'coManaged.conversation.new' })).toBeNull();
+  fireEvent.click(button('reply'));
+  expect(composition.reply).toHaveBeenCalledWith({ threadId: 'thread', commentId: 'comment' });
+  expect(mocks.create).not.toHaveBeenCalled(); expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
+  fireEvent.click(button('edit')); expect(composition.beforeEdit).toHaveBeenCalledOnce();
+  expect(screen.queryByLabelText('coManaged.conversation.message')).toBeNull();
+  await act(async () => pending.resolve(true));
+  fireEvent.change(message(), { target: { value: 'Updated existing message' } });
+  fireEvent.click(button('send'));
+  await waitFor(() => expect(mocks.mutate).toHaveBeenCalledOnce());
+  expect(mocks.mutate.mock.calls[0][1]).toMatchObject({ kind: 'edit', comment: { commentId: 'comment', threadId: 'thread' } });
+});

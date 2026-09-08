@@ -117,3 +117,21 @@ it('drops a selected file when the tracked session changes for the same home use
   await act(async () => { view.rerender(<CoManagedFeatureBoundary><Attachments resource={resource} comment={comment} /></CoManagedFeatureBoundary>); });
   expect(screen.queryByRole('dialog')).toBeNull(); expect(screen.queryByText(attachment.fileName)).toBeNull();
 });
+
+it('shows owner-received requester files once through named downloads and clears them after access revocation', async () => {
+  vi.useFakeTimers();
+  const received = { ...attachment, attachmentId: 'received', fileName: 'Requester reply.txt' };
+  const conversation = { storeTenant: 'customer', conversationId: 'requester' };
+  mocks.load.mockResolvedValue({ ...data(), attachments: [attachment, received], removableAttachmentIds: ['file'] });
+  await act(async () => { render(<Attachments resource={resource} comment={comment} conversation={conversation} />); });
+  expect(mocks.load).toHaveBeenCalledWith(resource, comment, conversation);
+  expect(screen.getAllByRole('link')).toHaveLength(2);
+  const url = new URL(screen.getByRole('link', { name: received.fileName }).getAttribute('href')!, 'https://alga.test');
+  expect(url.pathname).toBe('/api/tickets/conversation-attachments/received');
+  expect(Object.fromEntries(url.searchParams)).toEqual({ ticketTenant: 'customer', relationshipId: 'relationship', ticketId: 'ticket', conversationId: 'requester', ...comment });
+  expect(screen.getAllByRole('button', { name: 'coManaged.attachments.removeNamed' })).toHaveLength(1);
+  expect(add()).toBeEnabled();
+  mocks.load.mockRejectedValue(new Error('Access revoked'));
+  await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+  expect(screen.queryByRole('link')).toBeNull(); expect(screen.queryByRole('button', { name: 'coManaged.attachments.add' })).toBeNull();
+});

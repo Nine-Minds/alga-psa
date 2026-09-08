@@ -19,6 +19,7 @@ import { mutateCoManagedTicketCommentAction } from '@/lib/actions/coManagedTicke
 import { saveCoManagedPrivateTicketCommentAction } from '@/lib/actions/coManagedPrivateTicketCommentActions';
 import CoManagedThreadDisclosure from './CoManagedThreadDisclosure';
 import CoManagedCommentAttachments from './CoManagedCommentAttachments';
+import { ConversationEmailEnvelope } from '@alga-psa/tickets/components/ticket/conversations/ConversationEmailEnvelope';
 import { conversationText, conversationDocument } from './conversationText';
 
 const Document = dynamic(() => import('./CoManagedConversationDocument'), { ssr: false });
@@ -150,12 +151,18 @@ function Composer({ resource, actor, audiences, draftAttachments, draft, onSaved
   </form>;
 }
 
-export default function CoManagedTicketConversation({ resource, requester, onDraftState }: { resource: CoManagedSharedResource; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void }) {
+export interface CoManagedConversationComposition {
+  ready: boolean;
+  refreshVersion: number;
+  beforeEdit: () => Promise<boolean>;
+  reply: (parent: { threadId: string; commentId: string }) => Promise<boolean>;
+}
+export default function CoManagedTicketConversation({ resource, requester, onDraftState, composition }: { resource: CoManagedSharedResource; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void; composition?: CoManagedConversationComposition }) {
   const { data: session } = useSession();
   const identity = `${session?.session_id}:${resource.tenant}:${resource.relationshipId}:${resource.id}:${session?.user?.tenant}:${session?.user?.id}:${requester?.storeTenant}:${requester?.conversationId}`;
-  return <Conversation key={identity} resource={resource} requester={requester} onDraftState={onDraftState} homeTenant={session?.user?.tenant} userId={session?.user?.id} />;
+  return <Conversation key={identity} resource={resource} requester={requester} onDraftState={onDraftState} composition={composition} homeTenant={session?.user?.tenant} userId={session?.user?.id} />;
 }
-function Conversation({ resource, homeTenant, userId, requester, onDraftState }: { resource: CoManagedSharedResource; homeTenant?: string; userId?: string; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void }) {
+function Conversation({ resource, homeTenant, userId, requester, onDraftState, composition }: { resource: CoManagedSharedResource; homeTenant?: string; userId?: string; requester?: TicketConversationReference; onDraftState?: (active: boolean) => void; composition?: CoManagedConversationComposition }) {
   const { t } = useTranslation('msp/licensing'), { formatDate } = useFormatters();
   const [state, setState] = useState<Screen | null>(null), [error, setError] = useState(false), [busy, setBusy] = useState(true);
   const [disclosure, setDisclosure] = useState<CoManagedConversationItem | null>(null);
@@ -186,7 +193,14 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState }:
     const timer = setInterval(() => { void refresh(); }, 30000);
     return () => { mounted.current = false; generation.current++; loading.current = false; queued.current = false; clearInterval(timer); };
   }, [homeTenant, userId]);
+  useEffect(() => {
+    if (composition?.refreshVersion) { cursors.current = [undefined]; void refresh(); }
+  }, [composition?.refreshVersion]);
   const open = (next: Draft) => { setDraft(next); setRevision(value => value + 1); };
+  const edit = async (next: Draft) => {
+    if (composition && (!composition.ready || !await composition.beforeEdit())) return;
+    if (mounted.current) open(next);
+  };
   return <section className="space-y-4" aria-labelledby="co-conversation-title">
     <div className="flex flex-wrap items-center justify-between gap-2">
       <h2 id="co-conversation-title" className="font-semibold">{t('coManaged.conversation.title')}</h2>
@@ -196,7 +210,7 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState }:
     {error && <p role="alert">{t('coManaged.conversation.loadError')}</p>}
     {!state && busy && <p role="status">{t('coManaged.ticket.loading')}</p>}
     {state && <>
-      {state.writeAudiences.length > 0 && !draft && !disclosure && <Button id="co-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
+      {state.writeAudiences.length > 0 && !composition && !draft && !disclosure && <Button id="co-conversation-new" onClick={() => open({ kind: 'new' })}>{t('coManaged.conversation.new')}</Button>}
       {disclosure && <CoManagedThreadDisclosure resource={target.current} thread={{ storeTenant: disclosure.storeTenant, threadId: disclosure.threadId }} actor={state.actor}
         audiences={state.actor.tenant === resource.tenant ? state.writeAudiences : state.writeAudiences.filter(value => value !== 'organization_private')}
         onClosed={() => { setDisclosure(null); void refresh(); }} onSaved={() => { setDisclosure(null); void refresh(); }} />}
@@ -215,14 +229,16 @@ function Conversation({ resource, homeTenant, userId, requester, onDraftState }:
           </div>
           <p className="text-xs text-muted-foreground"><time dateTime={item.createdAt}>{formatDate(new Date(item.createdAt), { dateStyle: 'medium', timeStyle: 'short' })}</time>
             {item.parentCommentId && <span> · {t('coManaged.conversation.reply')}</span>}</p>
+          {!item.deleted && item.email && <ConversationEmailEnvelope email={item.email} />}
           {content ? <Document key={`${id}:${item.updatedAt}`} id={`${id}-body`} document={content} />
             : <p className="whitespace-pre-wrap break-words text-sm">{item.deleted ? t('coManaged.conversation.deleted') : conversationText(item.note, item.markdown)}</p>}
-          {!item.deleted && <CoManagedCommentAttachments resource={target.current} comment={reference(item)} />}
+          {!item.deleted && <CoManagedCommentAttachments resource={target.current} comment={reference(item)} conversation={requester} />}
           {writable && !draft && !disclosure && <div className="flex flex-wrap gap-2">
-            <Button id={`${id}-reply`} variant="ghost" size="sm" onClick={() => open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>
-            {own && content !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" onClick={() => open({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
+            <Button id={`${id}-reply`} variant="ghost" size="sm" disabled={composition && !composition.ready}
+              onClick={() => composition ? void composition.reply({ threadId: item.threadId, commentId: item.commentId }) : open({ kind: 'reply', item })}>{t('coManaged.conversation.reply')}</Button>
+            {own && content !== null && <Button id={`${id}-edit`} variant="ghost" size="sm" disabled={composition && !composition.ready} onClick={() => void edit({ kind: 'edit', item })}>{t('coManaged.conversation.edit')}</Button>}
             {own && !requester && !item.parentCommentId && <Button id={`${id}-audience`} variant="ghost" size="sm" onClick={() => setDisclosure(item)}>{t('coManaged.disclosure.title')}</Button>}
-            {own && <Button id={`${id}-delete`} variant="ghost" size="sm" onClick={() => open({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
+            {own && <Button id={`${id}-delete`} variant="ghost" size="sm" disabled={composition && !composition.ready} onClick={() => void edit({ kind: 'delete', item })}>{t('coManaged.conversation.delete')}</Button>}
           </div>}
         </li>;
       })}</ol>

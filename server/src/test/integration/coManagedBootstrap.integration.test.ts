@@ -15558,10 +15558,12 @@ it('named requester owner files remain readable to currently authorized MSP read
   for (const actor of [f.customerPrincipal, f.principal]) {
     const page = await api.getNamedTicketConversationMessages(db, actor, f.ticket, f.ref);
     expect(page.items.find(item => item.commentId === result.commentId)?.attachments).toMatchObject([{ attachmentId: row.attachment_id, fileName: 'confirmation.txt' }]);
+    expect(await files.listNamedConversationAttachments(db, actor, f.ticket, f.ref, file)).toMatchObject([{ attachmentId: row.attachment_id, fileName: 'confirmation.txt' }]);
     expect((await files.downloadNamedConversationAttachment(db, actor, f.ticket, f.ref, file, read)).content.toString()).toBe('Confirmed');
   }
   await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date() });
   read.mockClear();
+  await expect(files.listNamedConversationAttachments(db, f.principal, f.ticket, f.ref, file)).rejects.toThrow();
   await expect(files.downloadNamedConversationAttachment(db, f.principal, f.ticket, f.ref, file, read)).rejects.toThrow();
   expect(read).not.toHaveBeenCalled();
   expect((await files.downloadNamedConversationAttachment(db, f.customerPrincipal, f.ticket, f.ref, file, read)).content.toString()).toBe('Confirmed');
@@ -15600,4 +15602,43 @@ it('named requester publication cannot use internal Post to bypass reviewed Send
     { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 })).rejects.toMatchObject({ code: 'CONVERSATION_INVALID' });
   expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, ref))?.content).toEqual({ text: 'A public message still requires explicit reviewed Send.' });
   expect(await f.customer.table('ticket_conversation_publications').where('conversation_id', ref.conversationId)).toHaveLength(0);
+}));
+
+it.each(['contact', 'native', 'location', 'inactive', 'board_scope', 'inactive_location'] as const)('named requester empty composer derives %s recipient defaults without publishing or changing a draft', async scenario => withRequesterEmailAuthorityFixture(async f => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const { getNamedConversationEmailDefaults } = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const ticket = { tenant: f.resource.tenant, ticketId: f.resource.id, relationshipId: f.resource.relationshipId };
+  const [requester] = await api.listNamedTicketConversations(db, f.customerPrincipal, ticket);
+  const ref = { storeTenant: requester.storeTenant, conversationId: requester.conversationId };
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  if (scenario === 'native') {
+    await f.customer.table('tenants').update({ product_code: 'psa' });
+    delete (ticket as { relationshipId?: string }).relationshipId;
+  }
+  if (scenario === 'location' || scenario === 'inactive_location') {
+    await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ email: '' });
+    await f.customer.table('client_locations').where('client_id', f.operation.customer_client_id).update({ is_default: false });
+    await f.makeLocation({ email: 'location@example.test', active: scenario !== 'inactive_location' });
+  }
+  if (scenario === 'inactive') await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ is_inactive: true });
+  if (scenario === 'board_scope') {
+    const groupId = randomUUID();
+    await f.customer.table('client_portal_visibility_groups').insert({ tenant: f.resource.tenant, group_id: groupId, client_id: f.operation.customer_client_id, name: 'Other requester boards' });
+    await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ portal_visibility_group_id: groupId });
+  }
+  const expected = ['inactive', 'board_scope', 'inactive_location'].includes(scenario) ? null : {
+    subject: `[Ticket #${original.ticket_number}] ${original.title}`.slice(0, 255),
+    to: [scenario === 'location' ? 'location@example.test' : 'requester@example.test'], cc: [],
+  };
+  expect(await getNamedConversationEmailDefaults(db, f.customerPrincipal, ticket, ref)).toEqual(expected);
+  expect(await f.customer.table('ticket_conversation_editor_drafts')).toHaveLength(0);
+  expect(await f.customer.table('ticket_conversation_publications')).toHaveLength(0);
+  expect(await f.customer.table('ticket_conversation_email_operations')).toHaveLength(0);
+  if (expected) {
+    const custom = { subject: 'My edited subject', to: ['intentional@example.test'], cc: [] };
+    await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: requester.revision, content: { text: 'Private reply' }, email: custom });
+    await getNamedConversationEmailDefaults(db, f.customerPrincipal, ticket, ref);
+    expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref))?.email).toEqual(custom);
+  }
 }));
