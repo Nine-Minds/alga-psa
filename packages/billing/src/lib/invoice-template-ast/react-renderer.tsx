@@ -1,3 +1,7 @@
+import { resolveEvaluatedCollection } from './collectionResolution';
+import { TemplateEvaluationError } from './evaluator';
+import { localizeTimePresentation } from './timePresentationLocalization';
+import type { TemplateLabelTranslator } from './i18nLabels';
 import React from 'react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type {
@@ -38,6 +42,7 @@ type RenderScope = {
 };
 
 type RenderContext = {
+  ast: TemplateAst;
   locale: string;
   currencyCode: string;
 };
@@ -294,6 +299,11 @@ const buildAstCss = (ast: TemplateAst): string => {
   gap: 16px;
   padding: 2px 0;
 }
+@media print {
+  .invoice-template-root thead { display: table-header-group; }
+  .invoice-template-root tbody tr,
+  .invoice-template-root .ast-node-type-totals { break-inside: avoid; }
+}
 .invoice-template-root .ast-totals-value {
   text-align: right;
   white-space: nowrap;
@@ -339,7 +349,7 @@ const resolveExpressionValue = (
       const resolvedValue =
         rowValue !== undefined
           ? rowValue
-          : getPathValue(evaluation.bindings.invoice, parsedPath.path);
+          : getPathValue(scope.items, parsedPath.path) ?? getPathValue(evaluation.bindings.invoice, parsedPath.path);
 
       if (resolvedValue === undefined) {
         return undefined;
@@ -367,7 +377,7 @@ const resolveExpressionValue = (
             return String(rowValue);
           }
         }
-        const invoiceValue = getPathValue(evaluation.bindings.invoice, name);
+        const invoiceValue = getPathValue(scope.items, name) ?? getPathValue(evaluation.bindings.invoice, name);
         return String(invoiceValue ?? '');
       });
     }
@@ -392,27 +402,14 @@ const resolveExpressionValue = (
  * identically to before.
  */
 const resolveCollection = (
+  ast: TemplateAst,
   bindingId: string,
   evaluation: TemplateEvaluationResult,
   scope: RenderScope,
 ): UnknownRecord[] => {
-  const scopeItems = scope.items;
-  if (scopeItems && bindingId.includes('.')) {
-    const [head, ...rest] = bindingId.split('.');
-    if (head && Object.prototype.hasOwnProperty.call(scopeItems, head)) {
-      const scoped = getPathValue(scopeItems[head], rest.join('.'));
-      if (Array.isArray(scoped)) {
-        return scoped.filter(isRecord);
-      }
-      return [];
-    }
-  }
-
-  const value = evaluation.bindings[bindingId];
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value.filter(isRecord);
+  const { rows, diagnostic } = resolveEvaluatedCollection(ast, evaluation, bindingId, scope.items);
+  if (diagnostic) throw new TemplateEvaluationError('INVALID_SOURCE_COLLECTION', diagnostic);
+  return rows;
 };
 
 const renderNode = (
@@ -455,7 +452,7 @@ const renderNode = (
 
       if (node.repeat) {
         const itemBinding = node.repeat.itemBinding;
-        const repeatRows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation, scope);
+        const repeatRows = resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope);
         return (
           <div key={node.id} id={node.id} className={elementClassName || undefined} style={mergedStyle}>
             {repeatRows.map((row, index) => {
@@ -545,7 +542,7 @@ const renderNode = (
     case 'divider':
       return <hr key={node.id} id={node.id} className={elementClassName || undefined} style={style} />;
     case 'table': {
-      const rows = resolveCollection(node.sourceBinding.bindingId, evaluation, scope);
+      const rows = resolveCollection(ctx.ast, node.sourceBinding.bindingId, evaluation, scope);
       const { style: headerStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
@@ -575,7 +572,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { row }, ctx);
+                    const value = resolveExpressionValue(column.value, evaluation, { ...scope, row, items: { ...scope.items, [node.rowBinding]: row } }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -596,7 +593,7 @@ const renderNode = (
       );
     }
     case 'dynamic-table': {
-      const rows = resolveCollection(node.repeat.sourceBinding.bindingId, evaluation, scope);
+      const rows = resolveCollection(ctx.ast, node.repeat.sourceBinding.bindingId, evaluation, scope);
       const { style: dynamicHeaderStyle } = resolveStyleRef(node.headerStyle);
       return (
         <table key={node.id} id={node.id} className={elementClassName || undefined} style={style}>
@@ -626,7 +623,7 @@ const renderNode = (
               rows.map((row, index) => (
                 <tr key={`${node.id}-row-${index}`}>
                   {node.columns.map((column) => {
-                    const value = resolveExpressionValue(column.value, evaluation, { row }, ctx);
+                    const value = resolveExpressionValue(column.value, evaluation, { ...scope, row, items: { ...scope.items, [node.repeat.itemBinding]: row } }, ctx);
                     const { className: colClassName, style: colStyle } = resolveStyleRef(column.style);
                     const alignRight = column.format === 'currency' || column.format === 'number';
                     return (
@@ -684,6 +681,7 @@ export interface TemplateReactRendererProps {
    * currency so formatting never diverges from the language of the labels.
    */
   locale?: string;
+  t?: TemplateLabelTranslator;
 }
 
 export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast, evaluation, locale: localeOverride }) => {
@@ -697,7 +695,7 @@ export const TemplateAstRenderer: React.FC<TemplateReactRendererProps> = ({ ast,
 
   return (
     <div className="invoice-template-root">
-      {renderNode(ast.layout, evaluation, {}, { currencyCode, locale }, rootDocumentStyleOverride)}
+      {renderNode(ast.layout, evaluation, {}, { ast, currencyCode, locale }, rootDocumentStyleOverride)}
     </div>
   );
 };
@@ -710,6 +708,7 @@ export interface TemplateRenderOutput {
 export interface TemplateRenderOptions {
   /** The recipient's locale; falls back to `metadata.locale`, then `en-US`. */
   locale?: string;
+  t?: TemplateLabelTranslator;
 }
 
 export const renderEvaluatedTemplateAst = async (
@@ -723,7 +722,7 @@ export const renderEvaluatedTemplateAst = async (
   const normalizedAst = normalizeTemplateAstFieldBorderDefaults(ast);
   return {
     html: renderToStaticMarkup(
-      <TemplateAstRenderer ast={normalizedAst} evaluation={evaluation} locale={options.locale} />
+      <TemplateAstRenderer ast={normalizedAst} evaluation={localizeTimePresentation(evaluation, options.t)} locale={options.locale} />
     ),
     css: buildAstCss(normalizedAst),
   };

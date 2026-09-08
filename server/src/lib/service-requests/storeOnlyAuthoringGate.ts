@@ -1,18 +1,10 @@
 import type { ServiceRequestDefinitionEditorData } from './definitionEditor';
 import { storeOnlyExecutionProvider } from './providers/builtins/storeOnlyExecutionProvider';
 
-/**
- * PostHog feature flag that gates NEW authoring/selection of the store-only
- * execution provider server-side.
- *
- * Scope decision (XO design session): when the flag is disabled, tenants
- * cannot newly select the store-only execution provider while authoring a
- * service request definition. Everything that already exists keeps working:
- * published store-only definitions stay in the portal catalog, submissions
- * against them still execute, migrations are untouched, and historical
- * submission reads remain available.
+/** Shared release flag for server-fed editor options only.
+ * Existing definitions, submissions, and mutation actions remain operational.
  */
-export const SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG = 'service-request-store-only';
+export const SERVICE_REQUEST_STORE_ONLY_FEATURE_FLAG = 'release-v1-6-feature';
 
 /**
  * True when an authoring act must be rejected because it would newly adopt

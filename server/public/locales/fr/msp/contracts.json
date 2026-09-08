@@ -320,8 +320,15 @@
       "noContractLinesDescription": "Ajoutez des lignes de contrat pour définir ce qui est inclus dans ce contrat",
       "noContractLinesYet": "Aucune ligne de contrat pour le moment",
       "noServicesConfigured": "Aucun service configuré",
+      "billedOnRecordedUsage": "Facturé selon l'utilisation enregistrée",
       "serviceCountOne": "{{count}} service",
-      "serviceCountOther": "{{count}} services"
+      "serviceCountOther": "{{count}} services",
+      "previouslyConfiguredQuantity": "Quantité configurée précédemment : {{count}} — non utilisée pour la facturation",
+      "billedOnPeriodCount": "Facturé selon le décompte déclaré pour chaque période",
+      "recurringSeats": "{{count}} × {{rate}} (postes récurrents)",
+      "bundleAllocation": "Répartition du prix forfaitaire — ce ne sont pas des postes facturables",
+      "setUpRecurringSeats": "Configurer des postes récurrents",
+      "reportPeriodCount": "Déclarer un décompte de période"
     },
     "stats": {
       "contractLines": "Lignes de contrat",
@@ -331,7 +338,35 @@
       "variableSuffix": "+ variable (horaire/à l'usage)",
       "viewDetails": "Voir les détails"
     },
-    "title": "Ce qui est inclus"
+    "title": "Ce qui est inclus",
+    "legacyTransition": {
+      "recurringSeats": {
+        "title": "Configurer des postes récurrents",
+        "explanation": "Les postes récurrents facturent quantité × tarif unitaire à chaque période sans enregistrement de consommation ; ils appartiennent donc à une ligne de contrat fixe tarifée en postes/unités récurrents — pas à cette ligne de consommation.",
+        "nextStep": "Ouvrez les lignes de contrat, ajoutez (ou ouvrez) une ligne fixe, ajoutez ce service et choisissez « Postes/unités récurrents », puis confirmez la quantité et le tarif unitaire. Le changement prend effet à la prochaine période de service non facturée ; cette ligne de consommation et son historique restent inchangés jusqu'à ce que vous la supprimiez.",
+        "manualHandoff": "Ouvrez Lignes de contrat → Créer une ligne de contrat personnalisée, choisissez Fixe, ajoutez ce service et sélectionnez « Postes/unités récurrents ». Vérifiez la quantité, le tarif unitaire et le calendrier de facturation avant d'enregistrer. Cela crée un engagement récurrent distinct ; ce service de consommation n'est ni converti ni clôturé. Coordonnez son démarrage avec la fin de la facturation de la consommation et vérifiez la consommation restant à facturer avant d'activer les deux pour la même période."
+      },
+      "periodCount": {
+        "title": "Déclarer un décompte de période",
+        "explanation": "Déclarer un décompte de période fait passer ce service à un décompte remplaçable par période de service : corriger 10 en 12 facture 12, jamais 22, et le minimum s'applique une seule fois. La période suivante démarre non déclarée — aucun décompte n'est reporté.",
+        "nextStep": "La confirmation modifie uniquement la façon dont ce service est mesuré à partir de la prochaine période de service non facturée. Les saisies existantes restent additives et aucun décompte n'est créé — déclarez ensuite le décompte de la période dans le suivi de consommation."
+      },
+      "referenceHeading": "Référence non confirmée issue de la configuration précédente",
+      "referenceQuantity": "Quantité précédemment configurée : {{count}}",
+      "referenceRate": "Tarif enregistré : {{rate}}",
+      "referenceCaveat": "Ces valeurs n'ont jamais été facturées. Rien n'est enregistré ni facturé ici tant que vous n'avez pas confirmé vous-même les valeurs dans le parcours ci-dessous.",
+      "actions": {
+        "close": "Fermer",
+        "cancel": "Annuler",
+        "switching": "Changement…",
+        "confirmPeriodCount": "Passer aux décomptes de période"
+      },
+      "errors": {
+        "missingConfiguration": "Ce service n'a aucune configuration enregistrée à convertir. Actualisez et réessayez.",
+        "failed": "Impossible de modifier la façon dont ce service est mesuré."
+      },
+      "effectiveFrom": "Changement de mesure applicable à partir du"
+    }
   },
   "contractDialog": {
     "actions": {
@@ -389,7 +424,7 @@
       "noServicesConfigured": "Aucun service configuré pour ce préréglage",
       "notSet": "Non défini",
       "overrideBaseRate": "Remplacer le tarif de base",
-      "quantity": "Quantité",
+      "usageRecordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ces services.",
       "quantityShort": "Qté : {{quantity}}",
       "ratePerUnit": "Tarif (par unité)",
       "roundUpToNearestMinutes": "Arrondir au plus proche (minutes)",
@@ -559,7 +594,12 @@
       "typeLabel": "Service {{type}}",
       "unitOfMeasure": "Unité de mesure",
       "unitPlaceholder": "unité",
-      "unitRate": "Tarif unitaire"
+      "unitRate": "Tarif unitaire",
+      "effectiveFrom": "Modifications des postes récurrents applicables à partir du",
+      "prospectiveSeatHelp": "Les postes facturent quantité × tarif unitaire. Les modifications s'appliquent à cette limite de période de service ; les quantités et la tarification antérieures sont conservées.",
+      "recurringUnits": "Postes/unités récurrents",
+      "semanticsEffectiveFrom": "Modifications de tarification et de mesure du service applicables à partir du",
+      "prospectiveSemanticsHelp": "Les modifications s'appliquent à cette limite de période de service ; les quantités, la mesure et la tarification antérieures sont conservées. Changer la date recharge les paramètres applicables pour vérification."
     },
     "title": "Lignes de contrat"
   },
@@ -667,7 +707,7 @@
     "title": "Ajouter des lignes de contrat à partir des préréglages",
     "usageConfig": {
       "defaultRate": "Par défaut : ${{rate}}",
-      "quantity": "Quantité",
+      "recordDrivenNote": "Les services à l'utilisation sont facturés selon l'utilisation enregistrée dans le suivi d'utilisation pour chaque période de service. Une période sans enregistrement d'utilisation ne produit aucun frais : enregistrez l'utilisation (ou un zéro explicite) à chaque période pour facturer ces services.",
       "ratePerUnit": "Tarif (par unité)",
       "unitHint": "par ex., Go, appel API, utilisateur",
       "unitOfMeasure": "Unité de mesure",
@@ -692,7 +732,8 @@
       "hourlyDescription": "Facturer sur la base des entrées de temps approuvées.",
       "hourlyTitle": "Horaire",
       "usageDescription": "Facturer pour les unités consommées.",
-      "usageTitle": "À l'usage"
+      "usageTitle": "À l'usage",
+      "fixedSemantics": "Facturer un prix forfaitaire ou une quantité récurrente × tarif unitaire à chaque période."
     },
     "billingTiming": {
       "advance": "Par avance (facturer en début de période)",
@@ -758,8 +799,15 @@
       "unitOfMeasureRequired": "Service {{index}} : l'unité de mesure est requise",
       "unitRateRequired": "Service {{index}} : le tarif unitaire est requis",
       "usageServiceRequired": "Au moins un service à l'usage est requis",
-      "usageServiceSelectRequired": "Service {{index}} : veuillez sélectionner un service"
-    }
+      "usageServiceSelectRequired": "Service {{index}} : veuillez sélectionner un service",
+      "invalidQuantity": "La quantité doit être supérieure ou égale à zéro.",
+      "recurringUnitRateRequired": "Saisissez un tarif unitaire pour chaque service récurrent."
+    },
+    "fixedServicesPricingIntent": "Choisissez un prix forfaitaire ou des postes/unités récurrents pour chaque service.",
+    "fixedServicesPricingExplanation": "Les allocations au forfait se partagent le tarif de base de la ligne. Les postes récurrents facturent la quantité convenue × tarif unitaire à chaque période, sans enregistrement de consommation.",
+    "recurringQuantity": "Quantité récurrente",
+    "allocationQuantity": "Quantité allouée",
+    "bundleBaseRateHelp": "Frais récurrents pour les services au forfait. Les postes récurrents sont facturés à part, en quantité × tarif unitaire."
   },
   "pricingSchedules": {
     "list": {

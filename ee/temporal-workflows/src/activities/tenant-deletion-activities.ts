@@ -144,6 +144,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Ticket bundle mirrors (must be before comments due to FK on comments)
   'ticket_bundle_mirrors',
 
+  // Ticket comment attachment lifecycle (no FKs; rows reference comments,
+  // documents and tickets by id, so delete them before those tables)
+  'ticket_comment_attachment_challenges', 'ticket_comment_attachments',
+  'ticket_comment_email_deliveries',
+
   // Messages and comments
   // vectors and email_reply_tokens reference comments with NO ACTION, so they
   // must be deleted before comments to avoid FK violations.
@@ -303,6 +308,11 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'credit_allocations', 'credit_tracking',
   // bucket_usage_unmappable_archive is a pure leaf (no FKs in or out — it has to
   // outlive whatever made a usage row unmappable), so it can drop anywhere.
+  // Usage semantics stores are FK-less leaves (they reference contract lines,
+  // clients, and configs by id only), as are the seat-pricing revision store
+  // and the per-tenant billing-semantics lock row.
+  'usage_period_total_requests', 'usage_period_totals', 'usage_measurement_revisions',
+  'contract_line_unit_pricing_revisions', 'billing_semantics_locks',
   'usage_tracking', 'bucket_usage', 'bucket_usage_unmappable_archive', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)

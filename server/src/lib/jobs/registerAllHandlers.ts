@@ -1,3 +1,4 @@
+import { reconcileScheduledCommentPublications } from './handlers/publishScheduledCommentHandler';
 import { Job } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
@@ -205,6 +206,11 @@ export async function registerAllJobHandlers(
   const resolvedStorageService = storageService ?? new StorageService();
 
   const registerOpts = { force };
+  JobHandlerRegistry.register<BaseJobData>({
+    name: 'recover-comment-publications',
+    handler: async (_jobId, data) => reconcileScheduledCommentPublications(false, data.tenantId),
+    retry: { maxAttempts: 3 },
+  }, registerOpts);
 
   JobHandlerRegistry.register<PublishScheduledCommentJobData & BaseJobData>({
     name: PUBLISH_SCHEDULED_COMMENT_JOB,

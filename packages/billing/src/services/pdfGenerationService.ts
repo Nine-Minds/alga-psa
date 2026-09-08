@@ -735,7 +735,7 @@ export class PDFGenerationService {
         templateAst,
         await this.resolveRenderLocale({ invoiceId: options.invoiceId })
       );
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }
@@ -768,7 +768,7 @@ export class PDFGenerationService {
         templateAst,
         await this.resolveRenderLocale({ quoteId: options.quoteId })
       );
-      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale });
+      const rendered = await renderEvaluatedTemplateAst(localized.ast, evaluation, { locale: localized.locale, t: localized.t });
       return { html: rendered.html, css: rendered.css, templateAst };
     });
   }

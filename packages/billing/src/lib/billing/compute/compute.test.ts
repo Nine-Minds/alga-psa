@@ -351,6 +351,7 @@ describe("computeTimeBasedCharges", () => {
 
     expect(result.charges[0].duration).toBe(1.25);
     expect(result.charges[0].total).toBe(Math.round(1.25 * 15000));
+    expect(result.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 15000, billedMinutes: 75 });
     expect(result.explanations[0].markers).toContain("rounding_applied");
   });
 
@@ -384,6 +385,7 @@ describe("computeTimeBasedCharges", () => {
       TEN_PERCENT_PORTS,
     );
     expect(byUserType.charges[0].rate).toBe(18000);
+    expect(byUserType.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 18000 });
 
     const byCustomRate = await computeTimeBasedCharges(
       timeInputs({
@@ -393,6 +395,7 @@ describe("computeTimeBasedCharges", () => {
       TEN_PERCENT_PORTS,
     );
     expect(byCustomRate.charges[0].rate).toBe(20000);
+    expect(byCustomRate.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'uniform', uniformRate: 20000 });
   });
 
   it("splits hours over the overtime threshold at the overtime rate", async () => {
@@ -409,6 +412,7 @@ describe("computeTimeBasedCharges", () => {
     );
 
     expect(result.charges[0].total).toBe(Math.round(1 * 15000 + 1 * 22500));
+    expect(result.charges[0].workItemSnapshot).toMatchObject({ rateKind: 'mixed', uniformRate: null, netAmount: 37500 });
     expect(result.explanations[0].markers).toContain("overtime");
   });
 
@@ -450,7 +454,9 @@ describe("computeTimeBasedCharges", () => {
 
     const snapshot = result.charges[0].workItemSnapshot;
     expect(snapshot).toMatchObject({
-      version: 1,
+      version: 2,
+      rateKind: 'uniform',
+      uniformRate: 15000,
       workItemType: "ticket",
       workItemId: "ticket-1",
       ticketNumber: "T-20260818-002",
@@ -645,6 +651,63 @@ describe("computeUsageBasedCharges", () => {
         TEN_PERCENT_PORTS,
       ),
     ).toThrow(/Missing pricing for usage/);
+  });
+
+  // Usage billing is record-driven: only explicit usage records create
+  // charges. A period with no record produces nothing here (the engine
+  // reports it as missing usage); an explicit zero record is a valid charge.
+  it("produces no charges when the period has no usage records", async () => {
+    const result = await computeUsageBasedCharges(
+      usageInputs({ usageRecords: [] }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(0);
+    expect(result.explanations).toHaveLength(0);
+  });
+
+  it("bills an explicit zero-usage record as a valid zero-total charge", async () => {
+    const result = await computeUsageBasedCharges(
+      usageInputs({ usageRecords: [usageRecord({ quantity: 0 })] }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(1);
+    expect(result.charges[0]).toMatchObject({ quantity: 0, total: 0 });
+    expect(result.explanations[0].markers).not.toContain("minimum_applied");
+  });
+
+  it("floors an explicit zero-usage record to the configured minimum", async () => {
+    const config = {
+      ...USAGE_CONFIG,
+      config: { ...USAGE_CONFIG.config, minimum_usage: 5 },
+    };
+    const result = await computeUsageBasedCharges(
+      usageInputs({
+        serviceConfigMap: new Map([["svc-u", config]]),
+        usageRecords: [usageRecord({ quantity: 0 })],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0]).toMatchObject({ quantity: 5, total: 1250 });
+    expect(result.explanations[0].markers).toContain("minimum_applied");
+  });
+
+  it("cannot create a minimum charge without a usage record", async () => {
+    const config = {
+      ...USAGE_CONFIG,
+      config: { ...USAGE_CONFIG.config, minimum_usage: 25 },
+    };
+    const result = await computeUsageBasedCharges(
+      usageInputs({
+        serviceConfigMap: new Map([["svc-u", config]]),
+        usageRecords: [],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges).toHaveLength(0);
   });
 });
 

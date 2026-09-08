@@ -240,8 +240,9 @@
     },
     "summary": {
       "totalMRR": {
-        "title": "Totale MRR",
-        "subtitle": "Maandelijks terugkerende omzet"
+        "title": "Vaste MRR",
+        "subtitle": "Vaste maandelijks terugkerende omzet van actieve contracten",
+        "variableUsageNote": "{{count}} actieve contracten factureren ook variabel verbruik (niet inbegrepen)"
       },
       "ytdRevenue": {
         "title": "Omzet t/m heden",
@@ -302,7 +303,9 @@
       "revenueYtd": "Omzet (YTD)",
       "costYtd": "Kosten (YTD)",
       "profit": "Winst",
-      "margin": "Marge"
+      "margin": "Marge",
+      "plusVariableUsage": "+ variabel verbruik",
+      "variableUsage": "Variabel verbruik"
     },
     "statusValues": {
       "active": "Actief",

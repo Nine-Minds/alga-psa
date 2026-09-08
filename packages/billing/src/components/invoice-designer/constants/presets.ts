@@ -1,4 +1,5 @@
 import type { DesignerComponentType, DesignerContainerLayout, DesignerNodeStyle, Point, Size } from '../state/designerStore';
+import { BILLED_TIME_PRESETS } from './billedTimePresets';
 
 // Legacy preset layouts still use the pre-CSS cutover shape. We accept both so presets
 // can be migrated incrementally while the live designer uses CSS-like layout state.
@@ -33,6 +34,7 @@ export interface LayoutPresetNodeDefinition {
 }
 
 export interface LayoutPresetDefinition {
+  documentKind?: 'invoice' | 'quote' | 'sales-order';
   id: string;
   label: string;
   description: string;
@@ -42,6 +44,7 @@ export interface LayoutPresetDefinition {
 }
 
 export const LAYOUT_PRESETS: LayoutPresetDefinition[] = [
+  ...BILLED_TIME_PRESETS,
   {
     id: 'header-logo-address',
     label: 'Header: Logo + Address',

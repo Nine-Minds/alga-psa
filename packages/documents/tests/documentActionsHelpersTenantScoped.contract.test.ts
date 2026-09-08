@@ -6,7 +6,9 @@ const source = readFileSync(resolve(__dirname, '../src/actions/documentActions.t
 const helperSection = source.slice(
   source.indexOf('export const getDocumentAssociationClientsForPicker'),
   source.indexOf('export async function authorizeAndRedactDocuments')
-);
+) + readFileSync(resolve(__dirname, '../../../shared/lib/documentAuthorization.ts'), 'utf8').split(
+  'export async function authorizeAndRedactDocuments'
+)[0];
 
 describe('document action helper tenant-scoped query contract', () => {
   it('uses structural tenant scoping for picker and authorization helper roots', () => {

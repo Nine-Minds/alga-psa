@@ -17,6 +17,11 @@ import * as invoiceGenerationActions from '@alga-psa/billing/actions/invoiceGene
 import * as recurringBillingRunActions from '@alga-psa/billing/actions/recurringBillingRunActions';
 import type { IRecurringDueWorkInvoiceCandidate } from '@alga-psa/types';
 
+const releaseFlag = vi.hoisted(() => ({ enabled: true }));
+vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
+  useFeatureFlag: () => ({ enabled: releaseFlag.enabled, loading: false, error: null }),
+}));
+
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
     push: vi.fn(),
@@ -281,6 +286,7 @@ describe('Contract PO UI flows', () => {
   const getAvailableRecurringDueWorkMock = vi.spyOn(billingAndTaxActions, 'getAvailableRecurringDueWork');
 
   beforeEach(() => {
+    releaseFlag.enabled = true;
     // The jsdom URL persists across test files; drop any leaked
     // automaticClientFilter param so AutomaticInvoices renders all rows.
     window.history.replaceState({}, '', '/msp/billing?tab=invoicing&subtab=generate');

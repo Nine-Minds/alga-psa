@@ -266,12 +266,30 @@
         "label": "Alinhamento do Ciclo de Faturamento",
         "placeholder": "Selecione o alinhamento",
         "help": "Controla como a cobertura de período parcial é calculada quando a taxa recorrente precisa ser reduzida para menos do que um período de serviço completo."
+      },
+      "unitRate": {
+        "label": "Tarifa unitária",
+        "placeholder": "0,00",
+        "help": "Tarifa faturada por cada posto/unidade em cada período de serviço."
       }
     },
     "options": {
       "start": "Início do ciclo de faturamento",
       "end": "Fim do ciclo de faturamento",
       "prorated": "Cobertura Proporcional"
+    },
+    "pricingBasis": {
+      "label": "Como este serviço é precificado?",
+      "bundle": {
+        "label": "Preço do pacote",
+        "description": "O que é faturado é o total fixo da linha de contrato. As quantidades neste serviço apenas distribuem uma parte desse total para efeitos de relatório — não são postos faturáveis e alterá-las não altera o valor faturado.",
+        "allocationNote": "Quantidade de distribuição: {{quantity}} — usada para dividir o total do pacote nos relatórios, não faturada como postos."
+      },
+      "unit": {
+        "label": "Postos/unidades recorrentes",
+        "description": "Fatura quantidade × tarifa unitária em cada período, sem que nenhum total de linha tenha precedência. A mesma quantidade e tarifa voltam a ser faturadas no período seguinte até agendares uma alteração. Uma quantidade de zero fatura zero.",
+        "summary": "{{quantity}} × {{rate}} (postos recorrentes) = {{total}} por período"
+      }
     }
   },
   "hourlyConfig": {
@@ -319,6 +337,7 @@
   },
   "usageConfig": {
     "title": "Configuração baseada no uso",
+    "recordDrivenNote": "Os serviços baseados em uso são faturados com base no uso registrado no Rastreamento de uso para cada período de serviço. Um período sem registro de uso não gera cobrança — registre o uso (ou um zero explícito) em cada período para faturar este serviço.",
     "defaults": {
       "unitOfMeasure": "Unidade"
     },
@@ -332,8 +351,12 @@
       "minimumUsage": {
         "label": "Limite mínimo de uso",
         "placeholder": "0",
-        "help": "Uso mínimo faturável por período (0 sem mínimo)",
-        "errorNegative": "O uso mínimo não pode ser negativo"
+        "help": "Piso aplicado ao uso registrado (0 para nenhum mínimo). Só se aplica quando o período tem um registro de uso — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
+        "errorNegative": "O uso mínimo não pode ser negativo",
+        "labelAdditive": "Mínimo por lançamento",
+        "labelPeriodTotal": "Mínimo por informação de período",
+        "helpAdditive": "Piso aplicado a cada lançamento registrado (0 para nenhum mínimo). Só se aplica quando o período tem um registro de uso — mesmo um zero explícito — e nunca cria uma cobrança por si só.",
+        "helpPeriodTotal": "Piso aplicado uma vez à contagem informada do período (0 para nenhum mínimo). Só se aplica quando uma contagem é informada — mesmo um zero explícito — e nunca cria uma cobrança por si só."
       },
       "enableTieredPricing": "Habilitar preços diferenciados"
     },
@@ -352,6 +375,18 @@
         "upperGreaterThanLower": "O limite superior do nível precisa ser maior que o limite inferior",
         "rateNegative": "As taxas de nível não podem ser negativas"
       }
+    },
+    "measurementMode": {
+      "label": "Como o consumo é medido?",
+      "additive": {
+        "label": "Registrar o consumo à medida que ocorre",
+        "description": "Os lançamentos datados somam-se: lançamentos de 10 e 12 faturam 22. O mínimo e as faixas aplicam-se a cada lançamento. O período seguinte começa sem lançamentos."
+      },
+      "periodTotal": {
+        "label": "Informar uma contagem para cada período",
+        "description": "Uma contagem por período de serviço substitui a anterior: corrigir 10 para 12 fatura 12, nunca 22. O mínimo e as faixas aplicam-se uma vez a essa contagem. O período seguinte começa sem informação — nenhuma contagem é transportada."
+      },
+      "transitionNote": "A alteração do modo passa a valer a partir do próximo período de serviço não faturado. Lançamentos ou contagens já registados num período aberto têm de ser faturados ou removidos primeiro."
     }
   },
   "bucketConfig": {

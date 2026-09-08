@@ -387,7 +387,7 @@ export const copyPresetToContractLine = withAuth(async (
     presetId: string,
     overrides?: {
         base_rate?: number | null;
-        services?: Record<string, { quantity?: number; custom_rate?: number }>;
+        services?: Record<string, { custom_rate?: number }>;
         minimum_billable_time?: number;
         round_up_to_nearest?: number;
         cadence_owner?: CadenceOwner;
@@ -510,13 +510,17 @@ export const copyPresetToContractLine = withAuth(async (
                     // Determine configuration type based on contract line type
                     let configurationType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = preset.contract_line_type as any;
 
-                    // Create the base configuration
+                    // Create the base configuration.
+                    // Usage billing is record-driven: a configured quantity is never a billing
+                    // input, so new Usage configurations are created without one.
                     const baseConfig: Omit<IContractLineServiceConfiguration, 'config_id' | 'created_at' | 'updated_at'> = {
                         contract_line_id: contractLineId,
                         service_id: presetService.service_id,
                         configuration_type: configurationType,
                         custom_rate: serviceOverride?.custom_rate ?? presetService.custom_rate ?? undefined,
-                        quantity: serviceOverride?.quantity ?? presetService.quantity ?? 1,
+                        quantity: configurationType === 'Usage'
+                            ? undefined
+                            : presetService.quantity ?? 1,
                         instance_name: undefined,
                         tenant: tenantId
                     };
@@ -637,6 +641,11 @@ export interface CustomContractLineServiceConfig {
     quantity?: number;
     custom_rate?: number;  // Rate in cents
     unit_of_measure?: string;  // For usage-based services
+    measurement_mode?: 'additive' | 'period_total';
+    minimum_usage?: number;
+    enable_tiered_pricing?: boolean;
+    rate_tiers?: Array<{ min_quantity: number; max_quantity: number | null; rate: number }>;
+    pricing_basis?: 'bundle' | 'unit';
     bucket_overlay?: {
         total_minutes: number;
         overage_rate: number;
@@ -658,6 +667,7 @@ export interface CreateCustomContractLineInput {
     // Fixed-specific config
     base_rate?: number | null;  // For Fixed type, overall base rate
     enable_proration?: boolean;
+    billing_cycle_alignment?: 'start' | 'end' | 'prorated';
     // Hourly-specific config
     minimum_billable_time?: number;
     round_up_to_nearest?: number;
@@ -692,6 +702,23 @@ export const createCustomContractLine = withAuth(async (
                 throw new ContractLinePresetDomainError('At least one service is required');
             }
 
+            for (const service of input.services) {
+                if (service.measurement_mode != null && !['additive', 'period_total'].includes(service.measurement_mode)) {
+                    throw new ContractLinePresetDomainError('Choose additive consumption or a period total.');
+                }
+                if (service.pricing_basis != null && !['bundle', 'unit'].includes(service.pricing_basis)) {
+                    throw new ContractLinePresetDomainError('Choose bundle or recurring unit pricing.');
+                }
+                if (input.contract_line_type === 'Fixed' && service.pricing_basis === 'unit' &&
+                    (service.quantity == null || !Number.isFinite(service.quantity) || service.quantity < 0 ||
+                     service.custom_rate == null || !Number.isSafeInteger(service.custom_rate) || service.custom_rate < 0)) {
+                    throw new ContractLinePresetDomainError('Recurring units require a nonnegative quantity and a unit rate in minor units.');
+                }
+                if (service.minimum_usage != null && (!Number.isFinite(service.minimum_usage) || service.minimum_usage < 0)) {
+                    throw new ContractLinePresetDomainError('Usage minimum must be zero or greater.');
+                }
+            }
+
             // 2. Create the contract line
             const minBillableTime = input.contract_line_type === 'Hourly'
                 ? (input.minimum_billable_time ?? 15)
@@ -705,6 +732,7 @@ export const createCustomContractLine = withAuth(async (
                 defaultCadenceOwner: DEFAULT_RECURRING_AUTHORING_CADENCE_OWNER,
                 billingTiming: input.billing_timing,
                 enableProration: input.enable_proration,
+                billingCycleAlignment: input.billing_cycle_alignment,
             });
 
             const contractLineData: Omit<IContractLine, 'contract_line_id' | 'tenant' | 'created_at' | 'updated_at'> = {
@@ -767,7 +795,7 @@ export const createCustomContractLine = withAuth(async (
                     service_id: serviceConfig.service_id,
                     configuration_type: input.contract_line_type,
                     custom_rate: serviceConfig.custom_rate ?? undefined,
-                    quantity: serviceConfig.quantity ?? 1,
+                    quantity: input.contract_line_type === 'Usage' ? undefined : serviceConfig.quantity ?? 1,
                     instance_name: undefined,
                     tenant: tenantId
                 };
@@ -785,13 +813,24 @@ export const createCustomContractLine = withAuth(async (
                     typeConfig = {
                         unit_of_measure: serviceConfig.unit_of_measure || 'unit',
                         base_rate: serviceConfig.custom_rate,
-                        enable_tiered_pricing: false,
-                        minimum_usage: undefined
+                        measurement_mode: serviceConfig.measurement_mode ?? 'additive',
+                        enable_tiered_pricing: serviceConfig.enable_tiered_pricing ?? false,
+                        minimum_usage: serviceConfig.minimum_usage ?? 0
                     };
                 }
 
-                // Create the configuration record
-                await configService.createConfiguration(baseConfig, typeConfig);
+                if (input.contract_line_type === 'Fixed') {
+                    typeConfig = {
+                        pricing_basis: serviceConfig.pricing_basis ?? 'bundle',
+                        base_rate: serviceConfig.custom_rate ?? null,
+                    };
+                }
+
+                // Persist semantic intent and prices together in the creation transaction.
+                await configService.createConfiguration(baseConfig, typeConfig,
+                    input.contract_line_type === 'Usage'
+                        ? serviceConfig.rate_tiers?.map(tier => ({ ...tier, max_quantity: tier.max_quantity ?? undefined, tenant: tenantId }))
+                        : undefined);
 
                 // Handle bucket overlay if present
                 if (serviceConfig.bucket_overlay &&

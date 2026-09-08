@@ -1,3 +1,6 @@
+import { resolveUsageMeasurementRevision, setUsageMeasurementModeInTransaction } from '../lib/billing/usageMeasurementTransitions';
+import { lockTenantBilling } from '../lib/billing/billingMutationLock';
+import { resolveNextUnbilledSeatBoundary, resolveEffectiveSeatPricing, scheduleSeatRevisionInTransaction } from '../lib/billing/seatRevisions';
 import { Knex } from 'knex';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import {
@@ -70,7 +73,7 @@ export class ContractLineServiceConfigurationService {
   /**
    * Get a plan service configuration with its type-specific configuration
    */
-  async getConfigurationWithDetails(configId: string): Promise<{
+  async getConfigurationWithDetails(configId: string, effectiveDate?: string): Promise<{
     baseConfig: IContractLineServiceConfiguration;
     typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
     rateTiers?: IContractLineServiceRateTier[];
@@ -109,6 +112,20 @@ export class ContractLineServiceConfigurationService {
         break;
     }
     
+    if (effectiveDate && baseConfig.configuration_type === 'Fixed' && (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis === 'unit') {
+      const effective = await resolveEffectiveSeatPricing({trx: this.knex as Knex.Transaction, tenant: this.tenant,
+        contractLineId: baseConfig.contract_line_id, serviceId: baseConfig.service_id, configId, boundary: effectiveDate});
+      baseConfig.quantity = effective.quantity;
+      typeConfig = {...typeConfig, base_rate: effective.unitRateCents} as IContractLineServiceFixedConfig;
+    }
+    if (effectiveDate && baseConfig.configuration_type === 'Usage') {
+      const revision = await resolveUsageMeasurementRevision(this.knex, this.tenant, configId, effectiveDate);
+      if (revision) {
+        Object.assign(baseConfig, revision.pricing?.baseConfig ?? {});
+        typeConfig = {...typeConfig, ...revision.pricing?.typeConfig, measurement_mode: revision.measurement_mode} as IContractLineServiceUsageConfig;
+        rateTiers = revision.pricing?.rateTiers ?? rateTiers;
+      }
+    }
     return {
       baseConfig,
       typeConfig,
@@ -145,6 +162,7 @@ export class ContractLineServiceConfigurationService {
           await fixedConfigModel.create({
             config_id: configId,
             base_rate: (typeConfig as IContractLineServiceFixedConfig)?.base_rate ?? null,
+            pricing_basis: (typeConfig as IContractLineServiceFixedConfig)?.pricing_basis ?? 'bundle',
             // enable_proration: (typeConfig as IContractLineServiceFixedConfig)?.enable_proration ?? false, // Removed: Handled in contract_line_fixed_config
             // billing_cycle_alignment: (typeConfig as IContractLineServiceFixedConfig)?.billing_cycle_alignment ?? 'start', // Removed: Handled in contract_line_fixed_config
             tenant: this.tenant
@@ -173,6 +191,7 @@ export class ContractLineServiceConfigurationService {
           await usageConfigModel.create({
             config_id: configId,
             unit_of_measure: (typeConfig as IContractLineServiceUsageConfig)?.unit_of_measure ?? 'Unit',
+            measurement_mode: (typeConfig as IContractLineServiceUsageConfig)?.measurement_mode ?? 'additive',
             enable_tiered_pricing: (typeConfig as IContractLineServiceUsageConfig)?.enable_tiered_pricing ?? false,
             minimum_usage: (typeConfig as IContractLineServiceUsageConfig)?.minimum_usage ?? 0,
             base_rate: (typeConfig as IContractLineServiceUsageConfig)?.base_rate ?? null,
@@ -242,14 +261,55 @@ export class ContractLineServiceConfigurationService {
   ): Promise<boolean> {
     await this.initKnex();
     
-    // Get current configuration to determine type
-    const currentConfig = await this.planServiceConfigModel.getById(configId);
-    if (!currentConfig) {
-      throw new Error(`Configuration with ID ${configId} not found`);
-    }
-    
-    // Use transaction to ensure all operations succeed or fail together
     return await this.knex.transaction(async (trx) => {
+      await lockTenantBilling(trx, this.tenant);
+      const currentConfig = await new ContractLineServiceConfiguration(trx, this.tenant).getById(configId);
+      if (!currentConfig) throw new Error(`Configuration with ID ${configId} not found`);
+      if (currentConfig.configuration_type === 'Usage' && (typeConfig !== undefined || baseConfig?.custom_rate !== undefined || rateTiers !== undefined)) {
+        const incoming = (typeConfig ?? {}) as Partial<IContractLineServiceUsageConfig>;
+        const transition = await setUsageMeasurementModeInTransaction({ trx, tenant: this.tenant, input: {
+          config_id: configId, contract_line_id: currentConfig.contract_line_id, service_id: currentConfig.service_id,
+          measurement_mode: incoming.measurement_mode ?? undefined, effective_period_start: incoming.effective_period_start,
+          pricing: {
+            typeConfig: {
+              unit_of_measure: incoming.unit_of_measure,
+              minimum_usage: incoming.minimum_usage,
+              enable_tiered_pricing: incoming.enable_tiered_pricing,
+              base_rate: incoming.base_rate,
+            },
+            baseConfig: {custom_rate: baseConfig?.custom_rate},
+            rateTiers,
+          },
+        }});
+        // `=== false` (not `!`): ee/server compiles with strictNullChecks off,
+        // where truthiness checks do not narrow discriminated unions.
+        if (transition.ok === false) throw new Error(transition.error);
+        if (transition.effective_period_start) {
+          // The dated revision owns the new price and mode; retain the baseline.
+          return true;
+        }
+        const { measurement_mode, effective_period_start, ...rest } = incoming;
+        typeConfig = rest;
+      }
+      if (currentConfig.configuration_type === 'Fixed') {
+        const fixed = await tenantDb(trx, this.tenant).table('contract_line_service_fixed_config').where('config_id', configId).first();
+        const incoming = typeConfig as Partial<IContractLineServiceFixedConfig> | undefined;
+        if (fixed?.pricing_basis === 'unit' && (baseConfig?.quantity !== undefined || baseConfig?.custom_rate !== undefined || incoming?.base_rate !== undefined)) {
+          const boundary = incoming?.effective_period_start ?? await resolveNextUnbilledSeatBoundary({ trx, tenant: this.tenant, contractLineId: currentConfig.contract_line_id });
+          if (boundary) {
+            const effective = await resolveEffectiveSeatPricing({ trx, tenant: this.tenant, contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId, boundary });
+            const scheduled = await scheduleSeatRevisionInTransaction({ trx, tenant: this.tenant, userId: null,
+              contractLineId: currentConfig.contract_line_id, serviceId: currentConfig.service_id, configId,
+              quantity: Number(baseConfig?.quantity ?? effective.quantity),
+              unitRateCents: Number(incoming?.base_rate ?? baseConfig?.custom_rate ?? effective.unitRateCents), effectivePeriodStart: boundary });
+            if (scheduled.ok === false) throw new Error(scheduled.error);
+            const { quantity, custom_rate, ...restBase } = baseConfig ?? {};
+            baseConfig = restBase;
+            const { base_rate, effective_period_start, ...restFixed } = incoming ?? {};
+            typeConfig = restFixed;
+          }
+        }
+      }
       // Create models with transaction
       const planServiceConfigModel = new ContractLineServiceConfiguration(trx, this.tenant);
       const fixedConfigModel = new ContractLineServiceFixedConfig(trx, this.tenant);
@@ -269,6 +329,7 @@ export class ContractLineServiceConfigurationService {
             // Proration and alignment fields are no longer part of IContractLineServiceFixedConfig
             // The typeConfig passed in should already only contain allowed fields (like base_rate)
             const fixedUpdateData = { ...typeConfig } as Partial<IContractLineServiceFixedConfig>;
+            delete fixedUpdateData.effective_period_start;
             // delete fixedUpdateData.enable_proration; // Removed as property no longer exists
             // delete fixedUpdateData.billing_cycle_alignment; // Removed as property no longer exists
             // Only update if there are other fields left (e.g., base_rate)
