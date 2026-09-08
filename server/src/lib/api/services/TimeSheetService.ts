@@ -30,7 +30,7 @@ import { publishEvent } from 'server/src/lib/eventBus/publishers';
 import { TimePeriod } from '@alga-psa/scheduling/models/timePeriod';
 import { hasPermission } from '../../auth/rbac';
 import { BadRequestError, ConflictError, ForbiddenError, NotFoundError } from '../middleware/apiMiddleware';
-import { NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
+import { readCoManagedNativeSchedules, NativeTimePeriodSettingsError, readCoManagedNativeTimePeriodSettings, commandCoManagedNativeTimePeriodSettings, readCoManagedNativeTimePeriods, commandCoManagedNativeTimePeriods, generateTimePeriodCalendar, NativeTimeSheetError, createCoManagedNativeTimeSheet, editCoManagedNativeTimeSheet, CoManagedSharedWorkError, NativeTimeReviewError, readCoManagedNativeTimeSheet, listCoManagedNativeTimeSheets, commandCoManagedNativeTimeSheets, deleteCoManagedNativeTimeSheet, addCoManagedNativeTimeSheetComment } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
 import { exportTimeSheetProjections, timeSheetStatistics, timeSheetDto, timeSheetCommentDto, filterTimeSheets, sortTimeSheets } from './timeSheetCollection';
 
@@ -76,9 +76,9 @@ export class TimeSheetService extends BaseService<any> {
     return { kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId };
   }
 
-  private async withSheetErrors<T>(work: () => Promise<T>): Promise<T> {
+  private async withSheetErrors<T>(work: () => Promise<T>, resource = 'time sheet'): Promise<T> {
     try { return await work(); } catch (error) {
-      if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError('Permission denied: Cannot access this time sheet');
+      if (error instanceof CoManagedSharedWorkError) throw new ForbiddenError(`Permission denied: Cannot access this ${resource}`);
       if (error instanceof CoManagedLifecycleError) throw Object.assign(new ForbiddenError(error.message), { code: error.code });
       if (error instanceof NativeTimePeriodSettingsError) {
         if (error.code === 'SETTINGS_INVALID') throw new BadRequestError(error.message);
@@ -1076,9 +1076,15 @@ export class TimeSheetService extends BaseService<any> {
 
 
 
+  private currentSchedules(knex: Knex, context: ServiceContext, options: { id?: string; start?: string; end?: string; userId?: string } = {}) {
+    return this.withSheetErrors(() => readCoManagedNativeSchedules(knex, context.tenant, async () => this.sheetActor(context), options), 'schedule');
+  }
+
   // Schedule entries
   async getScheduleEntries(context: ServiceContext, filters?: any): Promise<any[]> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSchedules(knex, context, { start: filters?.start_date, end: filters?.end_date, userId: filters?.user_id });
+      if (current.handled) return current.entries;
       const db = tenantDb(knex, context.tenant);
       
       let query = db.table('schedule_entries');
@@ -1541,6 +1547,8 @@ export class TimeSheetService extends BaseService<any> {
 
   async getScheduleEntry(id: string, context: ServiceContext): Promise<any> {
       const { knex } = await this.getKnex();
+      const current = await this.currentSchedules(knex, context, { id });
+      if (current.handled) return current.entries[0] ?? null;
       
       const entry = await tenantDb(knex, context.tenant).table('schedule_entries')
         .where({ entry_id: id })

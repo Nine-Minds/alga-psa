@@ -324,18 +324,19 @@ export const scheduleEntryResponseSchema = z.object({
   notes: z.string().nullable(),
   is_private: z.boolean(),
   status: z.string(),
-  recurrence_pattern: z.string().nullable(),
-  created_by: uuidSchema,
-  created_at: z.string().datetime(),
-  updated_at: z.string().datetime(),
+  recurrence_pattern: z.union([z.string(), z.record(z.unknown())]).nullable(),
+  created_by: uuidSchema.optional(),
+  created_at: z.string().datetime().optional(),
+  updated_at: z.string().datetime().optional(),
   tenant: uuidSchema,
   
+  assigned_user_ids: z.array(uuidSchema).optional(),
   // Assigned users
   assigned_users: z.array(z.object({
     user_id: uuidSchema,
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.string()
+    first_name: z.string().optional(),
+    last_name: z.string().optional(),
+    email: z.string().optional()
   })).optional(),
   
   // Work item details
@@ -343,7 +344,7 @@ export const scheduleEntryResponseSchema = z.object({
     id: uuidSchema,
     title: z.string(),
     type: z.string()
-  }).optional(),
+  }).nullable().optional(),
   
   // Computed fields
   duration_hours: z.number().optional(),

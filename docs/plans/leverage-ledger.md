@@ -507,3 +507,15 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `timePeriodJob`, scheduling `timePeriodAutomation`/`timePeriodCadence`, `TimePeriodSuggester`, native generation and scheduler registration.
 - **Gate:** An actual persisted system job supplies bounded worker authority; the existing calendar engine serializes work and shared pure date math removes divergent period-end calculations. ACT / bounded-now.
 - **Status:** Worker admission retains processing job/queue identity and current product/lifecycle; active settings are loaded under the calendar lock and final authority changes roll dates back. Native generation and suggestions share exclusive ends and compatible profile boundaries. Six focused scenarios verified across initial and corrected assertion runs; broader calendar, worker integration and Citus/browser coverage remain deferred.
+
+## native-schedule-read-authority — pattern
+- **What:** Native detail and API list/detail had divergent private-entry filtering and no common retained source/credential boundary; API enrichment returned placeholder work titles and unadmitted assignee PII.
+- **Where:** `nativeScheduleRead`, schedule detail actions and `TimeSheetService` schedule readers.
+- **Gate:** Three real consumers share stable read admission and high disclosure cost. ACT / bounded-now within approved scheduling work.
+- **Status:** Retained credentials, actual assignments, schedule/source scope and explicit projections now govern these readers; five focused scenarios verified across initial/follow-up/expiry runs. Native recurring collections and all schedule command adapters remain pending.
+
+## native-operational-source-admission — pattern
+- **What:** Time and schedule readers retain the same project/task/ticket/interaction roots but apply different operation permissions.
+- **Where:** `nativeTimeEntryAccess` and `nativeScheduleRead`.
+- **Gate:** Real duplication with meaningful lock/field-projection cost; schedule commands and recurrence are still evolving. WAIT for the command boundary before extracting a shared work-source engine.
+- **Status:** Watching; source authority is explicit in both domains, and scheduling does not require time-entry permission.

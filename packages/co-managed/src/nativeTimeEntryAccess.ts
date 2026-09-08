@@ -113,6 +113,7 @@ async function admitNativeTimeAccess(trx: Knex.Transaction, inputActor: CoManage
 
   const records = new Map<string, AuthorizationRecord>();
   const projections = new Map<string, IWorkItem>(), projectedClients = new Map<string, string | null>(), redactedTimeFields: string[] = [], redactedSourceFields: string[] = [];
+  // LEVERAGE: pattern native-operational-source-admission — schedule reads retain these work roots too, with distinct operation permissions.
   const uniqueSources = [...new Map(sources.map(source => [`${source.work_item_type}:${source.work_item_id}`, source])).entries()].sort(([a], [b]) => a.localeCompare(b));
   for (const [key, source] of uniqueSources) {
     let resourceType: string | null = null, record: AuthorizationRecord = {}, fields: string[] = [];

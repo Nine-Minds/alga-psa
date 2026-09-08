@@ -1,5 +1,7 @@
 'use server'
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
+import { readCoManagedNativeSchedules } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 import { IScheduleEntry, IEditScope, DeletionValidationResult } from '@alga-psa/types';
 import { WorkItemType } from '@alga-psa/types';
 import { withAuth, hasPermission } from '@alga-psa/auth';
@@ -1161,6 +1163,11 @@ export const getScheduleEntryById = withAuth(async (
 ): Promise<IScheduleEntry | null | ScheduleActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const current = await readCoManagedNativeSchedules(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { id: entryId });
+    if (current.handled) {
+      const entry = current.entries[0];
+      return entry ? { ...entry, scheduled_start: new Date(entry.scheduled_start), scheduled_end: new Date(entry.scheduled_end) } : null;
+    }
     return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant) as any;
 

@@ -14120,3 +14120,91 @@ it('customer period jobs and native generation share semi-monthly and seasonal a
     expect(TimePeriodSuggester.suggestNewTimePeriod(settings.map((setting: any) => ({ ...setting, effective_to: end })), periods).success).toBe(false);
   }
 });
+
+async function withScheduleReadFixture(work: (fixture: any) => Promise<void>) {
+  await withTimeSheetApiFixture(async (fixture: any) => {
+    const { customer, context, resource } = fixture;
+    const ownId = randomUUID(), busyId = randomUUID(), taskId = randomUUID();
+    const base = { tenant: context.tenant, scheduled_start: '2026-09-07T09:00:00Z', scheduled_end: '2026-09-07T10:30:00Z', status: 'scheduled', notes: 'Private schedule notes', work_item_type: 'ad_hoc' };
+    await customer.table('schedule_entries').insert([
+      { ...base, entry_id: ownId, title: 'Own appointment', is_private: false, work_item_id: null },
+      { ...base, entry_id: busyId, title: 'Sensitive appointment', is_private: true, work_item_id: null },
+      { ...base, entry_id: taskId, title: 'Rollout appointment', is_private: false, work_item_type: 'project_task', work_item_id: resource.id },
+    ]);
+    await customer.table('schedule_entry_assignees').insert([ownId, taskId].map(entry_id => ({ tenant: context.tenant, entry_id, user_id: context.userId })));
+    const native = await import('../../../../packages/scheduling/src/actions/scheduleActions');
+    await work({ ...fixture, ownId, busyId, taskId, native });
+  });
+}
+
+it('customer schedule reads share private detail projections and actual work titles across native and API', async () => withScheduleReadFixture(async ({ sheetService, context, resource, ownId, busyId, taskId, native }: any) => {
+  const rows = await sheetService.getScheduleEntries(context);
+  expect(rows).toHaveLength(3);
+  const own = await sheetService.getScheduleEntry(ownId, context);
+  expect(own).toMatchObject({ title: 'Own appointment', notes: 'Private schedule notes', duration_hours: 1.5, assigned_users: [{ user_id: context.userId }], work_item: null });
+  expect(await native.getScheduleEntryById(ownId)).toMatchObject({ title: own.title, notes: own.notes, scheduled_start: new Date(own.scheduled_start) });
+  const busy = await sheetService.getScheduleEntry(busyId, context);
+  expect(busy).toMatchObject({ title: 'Busy', notes: '', work_item_id: null, recurrence_pattern: null });
+  expect(await native.getScheduleEntryById(busyId)).toMatchObject({ title: 'Busy', notes: '', work_item_id: null });
+  expect(await sheetService.getScheduleEntry(taskId, context)).toMatchObject({ work_item: { id: resource.id, title: 'Verify rollout', type: 'project_task' } });
+  const { scheduleEntryResponseSchema } = await import('../../lib/api/schemas/timeSheet');
+  for (const row of rows) scheduleEntryResponseSchema.parse(row);
+  expect(await sheetService.getScheduleEntries(context, { user_id: context.userId })).toHaveLength(2);
+  expect(await sheetService.getScheduleEntries(context, { start_date: '2026-09-07T10:00:00Z' })).toEqual([]);
+  expect(await sheetService.getScheduleEntry(randomUUID(), context)).toBeNull();
+}));
+
+it('customer schedule reads require actual assignment and current source permission without time-entry permission', async () => withScheduleReadFixture(async ({ sheetService, context, customer, ownId, busyId, taskId, native }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where('resource', 'time_entry').select('permission_id')).del();
+  expect(await sheetService.getScheduleEntry(taskId, context)).toMatchObject({ entry_id: taskId });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect(await sheetService.getScheduleEntries(context)).toHaveLength(2);
+  await expect(sheetService.getScheduleEntry(busyId, context)).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'project', action: 'read' }).select('permission_id')).del();
+  expect((await sheetService.getScheduleEntries(context)).map((row: any) => row.entry_id)).toEqual([ownId]);
+  await expect(sheetService.getScheduleEntry(taskId, context)).rejects.toMatchObject({ statusCode: 403 });
+  await expect(native.getScheduleEntryById(taskId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer schedule reads retain key-specific bundle masks independently of browser authority', async () => withScheduleReadFixture(async ({ sheetService, context, customer, resource, user, ownId, taskId, native }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: resource.tenant, name: 'Schedule field scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['notes', 'duration_hours'] } });
+  await bundles.upsertBundleRule(db, { tenant: resource.tenant, bundleId, revisionId, resourceType: 'project', action: 'read', templateKey: 'selected_clients', config: { selectedClientIds: [(await customer.table('projects').first('client_id')).client_id], redactedFields: ['task_name'] } });
+  await bundles.publishBundleRevision(db, { tenant: resource.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: resource.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const own = await sheetService.getScheduleEntry(ownId, context);
+  expect(own.notes).toBe(''); expect(own.duration_hours).toBeUndefined();
+  const task = await sheetService.getScheduleEntry(taskId, context);
+  expect(task).toMatchObject({ title: '', notes: '', work_item: null });
+  expect(await sheetService.getScheduleEntries(context)).toHaveLength(2);
+  expect(await native.getScheduleEntryById(taskId)).toMatchObject({ title: 'Rollout appointment', notes: 'Private schedule notes' });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(sheetService.getScheduleEntries(context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule reads retain lapse history and reject missing credentials or suspended workspaces', async () => withScheduleReadFixture(async ({ sheetService, context, principal, customer, ownId }: any) => {
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await sheetService.getScheduleEntry(ownId, context)).toMatchObject({ entry_id: ownId });
+  await expect(sheetService.getScheduleEntries({ ...context, apiKeyId: undefined })).rejects.toMatchObject({ statusCode: 403 });
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  await expect(sheetService.getScheduleEntry(ownId, context)).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('customer schedule reads reject the whole collection when its key expires while retaining a work root', async () => withScheduleReadFixture(async ({ context, customer, resource }: any) => {
+  const { readCoManagedNativeSchedules } = await import('../../../../packages/co-managed/src/nativeScheduleRead');
+  const blocker = await db.transaction();
+  await tenantDb(blocker, context.tenant).table('project_tasks').where('task_id', resource.id).forUpdate().first();
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ expires_at: new Date(Date.now() + 1500) });
+  let pid: number | undefined;
+  const reading = withTransaction(db, async trx => {
+    pid = Number((await trx.raw('SELECT pg_backend_pid() AS pid')).rows[0].pid);
+    return readCoManagedNativeSchedules(trx, context.tenant, async () => ({ kind: 'api_key', tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId }));
+  });
+  const rejected = expect(reading).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  try {
+    await vi.waitFor(async () => { expect(pid).toBeDefined(); expect((await db('pg_stat_activity').where('pid', pid!).first('wait_event_type'))?.wait_event_type).toBe('Lock'); });
+    await db.raw('SELECT pg_sleep(1.6)');
+  } finally { await blocker.rollback(); }
+  await rejected;
+}));
