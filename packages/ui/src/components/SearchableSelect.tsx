@@ -225,16 +225,19 @@ export function SearchableSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open, disabled]);
 
-  // Escape closes only the dropdown. Radix dialogs/drawers listen for Escape on
-  // document in the capture phase, so a React onKeyDown cannot stop them from
-  // closing too; window capture runs before document capture, so claim it there.
+  // Escape belongs to the top-most layer: while this dropdown is open it must
+  // dismiss the list only. Radix dismissable layers (Dialog, Drawer) listen for
+  // Escape on `document` in the capture phase, so a React handler on the input
+  // or the trigger cannot stop them and the surrounding dialog closed too -
+  // taking any unsaved edits with it. A window-capture listener runs first.
   useEffect(() => {
     if (!open || disabled) return;
 
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      event.stopPropagation();
       event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation();
       setOpen(false);
       triggerRef.current?.focus();
     };
