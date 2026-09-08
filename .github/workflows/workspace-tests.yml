@@ -241,6 +241,9 @@ jobs:
         if: always()
         with:
           path: test-results/workspace-gate-input
+          # This reusable workflow shares a run with multi-GB browser images.
+          # Fetch only the reports consumed by verify-workspace-execution.mjs.
+          pattern: '{workspace-unit-*,workspace-runtime-*,server-colocated-*,nx-tooling-*,ui-kit-showcase-*,enterprise-integration-*,ai-gateway-*,enterprise-unit-shard-*}'
       - name: Reconcile all required workspace reports and source identities
         if: always()
         run: node scripts/verify-workspace-execution.mjs
