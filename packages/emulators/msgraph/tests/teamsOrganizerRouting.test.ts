@@ -17,6 +17,17 @@ vi.mock('@alga-psa/auth/rbac', () => ({ hasPermission: async () => true }));
 vi.mock('@alga-psa/auth', () => ({ getSSORegistry: vi.fn(() => {
   throw new Error('Organizer routing must not invoke SSO');
 }) }));
+// Notification delivery is imported by the EE settings module, but saving an
+// organizer does not publish notifications. Fail if that boundary is crossed;
+// do not require unrelated event-schema dist artifacts just to load the action.
+vi.mock('@alga-psa/workflow-streams', () => {
+  const unexpectedNotification = () => { throw new Error('Organizer routing must not build notifications'); };
+  return { buildNotificationDeliveredPayload: unexpectedNotification,
+    buildNotificationFailedPayload: unexpectedNotification, buildNotificationSentPayload: unexpectedNotification };
+});
+vi.mock('@alga-psa/event-bus/publishers', () => ({ publishWorkflowEvent: () => {
+  throw new Error('Organizer routing must not publish workflow events');
+} }));
 vi.mock('@alga-psa/core/secrets', () => ({ getSecretProviderInstance: async () => ({
   getTenantSecret: async (tenant: string, key: string) => hoisted.secrets.get(`${tenant}:${key}`) ?? null,
 }) }));

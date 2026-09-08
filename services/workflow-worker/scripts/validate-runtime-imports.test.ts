@@ -54,6 +54,45 @@ describe('validate-runtime-imports', () => {
     expect(result.stdout).toContain('validation passed');
   });
 
+  it('ignores bundled JSDoc import types and string examples while validating executable imports', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': [
+        "/** @type {import('./get')} */",
+        "const example = \"import '@shared/example'\";",
+        "export const valid = true;",
+      ].join('\n'),
+    });
+    tempDirs.push(distRoot);
+    const run = () => spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist') }, encoding: 'utf8',
+    });
+    const valid = run();
+    expect(valid.status, valid.stderr).toBe(0);
+    await fs.appendFile(path.join(distRoot, 'dist/src/index.js'), "\nawait import('./missing.js');\n");
+    const missing = run();
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain('relative import does not resolve');
+  });
+
+  it('accepts existing JSON modules and enforces literal template dynamic imports', async () => {
+    const distRoot = await createDistFixture({
+      'dist/src/index.js': "import data from './data.json' with { type: 'json' };\nexport { data };",
+      'dist/src/data.json': JSON.stringify({ message: 'import("./not-code")' }),
+    });
+    tempDirs.push(distRoot);
+    const run = () => spawnSync(process.execPath, [scriptPath], {
+      env: { ...process.env, WORKFLOW_WORKER_VALIDATE_DIST_ROOT: path.join(distRoot, 'dist') }, encoding: 'utf8',
+    });
+    const valid = run();
+    expect(valid.status, valid.stderr).toBe(0);
+    const runtime = spawnSync(process.execPath, [path.join(distRoot, 'dist/src/index.js')], { encoding: 'utf8' });
+    expect(runtime.status, runtime.stderr).toBe(0);
+    await fs.appendFile(path.join(distRoot, 'dist/src/index.js'), "\nawait import(`./missing.js`);\n");
+    const missing = run();
+    expect(missing.status).not.toBe(0);
+    expect(missing.stderr).toContain('relative import does not resolve');
+  });
+
   it('fails when unresolved @shared alias appears in runtime startup graph', async () => {
     const distRoot = await createDistFixture({
       'dist/src/index.js': "import '@shared/task-inbox';\n",

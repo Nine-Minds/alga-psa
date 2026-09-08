@@ -115,7 +115,7 @@
     "picomatch": ">=2.3.2",
     "postcss": ">=8.5.23",
     "ws": ">=8.21.0",
-    "dompurify": ">=3.4.12",
+    "dompurify": "$dompurify",
     "follow-redirects": ">=1.16.0",
     "ip-address": ">=10.3.1",
     "vite": ">=6.4.2",
