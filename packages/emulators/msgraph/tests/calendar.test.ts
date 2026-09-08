@@ -318,3 +318,15 @@ it.each(['2026-03-08T02:30:00', '2026-11-01T01:30:00'])('refuses to guess an amb
   expect(response.status).toBe(400);
   expect((await response.json()).error.code).toBe('InvalidArgument');
 });
+
+it('distinguishes unsupported Graph operations from missing items on supported routes', async () => {
+  const unsupported = await graph('/me/calendars/unsupported-calendar/events');
+  expect(unsupported.status).toBe(501);
+  expect(await unsupported.json()).toEqual({ error: {
+    code: 'EmulatorUnsupportedOperation',
+    message: 'This Graph operation is not implemented by the emulator.',
+  } });
+  const missing = await graph('/me/calendar/events/missing-event');
+  expect(missing.status).toBe(404);
+  expect((await missing.json()).error.code).not.toBe('EmulatorUnsupportedOperation');
+});

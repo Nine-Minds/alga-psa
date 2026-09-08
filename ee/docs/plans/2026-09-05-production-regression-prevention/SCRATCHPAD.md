@@ -3043,3 +3043,10 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - Active integration, distinct Microsoft tenant id and two OAuth links are fixture preconditions, explicitly not SSO coverage. Synthetic bot credentials/trust origins are configured only in Teams CI development environment and local host launcher. GET route warmup must return405 before the emulator bounded POST delivery; product POSTs both returned200.
 - Browser6999 terminal0:1passed~1.9min; actual app45744 remains on53016 with12GiB/no Node source maps, no logged memory restart. Evidence/host-teams-product-bot.json records dirty source. No Docker build.
 - F034 description permits explicitly excluded unsupported SSO paths; T028 explicitly forbids counting prelinked fixtures as SSO tests. Keep the capability boundary accurate, and require current-source CI before broad completion claims.
+
+### Unsupported Graph route false-positive fix
+
+- Capability audit found unsupported Graph URLs fell through to generic404. Actual Teams delete adapter deliberately treats404 as already-deleted success, so a misspelled/unsupported endpoint passed falsely. Added runtime regression, reproduced red (deleted instead of failed) before changing the emulator.
+- Added terminal v1.0 Graph router fallback501/error.code EmulatorUnsupportedOperation. Known handlers retain their real resource404 errors. Added wire assertion distinguishing unsupported named-calendar operations from missing events; existing fictional per-call list check now expects the explicit diagnostic.
+- Full native Graph suite17120 terminal0:70passed/7files,1.14sec. Evidence/graph-unsupported-operation-regression.json contains red/green log hashes. Initial full rerun needed corrected test route (calendar-list metadata is supported) and updated unsupported-operation expectation; downstream dependent call-record cases then recovered.
+- Diagnostic501 is emulator-specific and must not be cited as Graph protocol parity. Running local Graph host was not rebuilt/restarted and still uses earlier bundle; no current-source browser or CI pass is claimed for this change.

@@ -120,3 +120,16 @@ it('reports Graph throttling and recovers on the next creation', async () => {
     expect.objectContaining({ id: recovered.meeting.eventId, subject: input.subject }),
   ]);
 });
+
+it('does not mistake an unsupported provider route for an already-deleted meeting', async () => {
+  // A client URL regression must fail visibly. A generic router 404 would be
+  // interpreted by the real adapter as successful idempotent deletion.
+  vi.stubEnv('MICROSOFT_GRAPH_BASE_URL', `${base}/v1.0/unsupported-namespace`);
+  expect(
+    await deleteTeamsMeetingWithResult({
+      tenantId: input.tenantId,
+      meetingId: 'existing-meeting',
+      eventId: 'existing-event',
+    }),
+  ).toMatchObject({ status: 'failed', errorCode: 'graph_server_error' });
+});

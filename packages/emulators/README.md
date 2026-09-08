@@ -203,6 +203,16 @@ linked. For local testing, plant the link directly — one row in
 `user_auth_accounts` (`provider='microsoft'`, `provider_account_id=<the
 teams-user id>`, `user_id=<PSA user>`); the bot then runs commands as that user.
 
+### Unsupported Graph operations
+
+Unimplemented `/v1.0` Graph routes return HTTP 501 with
+`error.code: EmulatorUnsupportedOperation`. This is an emulator capability
+error, not a claim that Microsoft Graph returns the same response. Implemented
+routes still return 404 when the requested item does not exist. Keeping these
+cases distinct prevents clients from treating a misspelled or unimplemented
+DELETE route as successful idempotent deletion. Named-calendar operations and
+other unsupported paths must not be counted as covered by a passing request.
+
 ### Primary calendar synchronization
 
 Shared and enterprise calendar adapters use `MICROSOFT_GRAPH_BASE_URL` and

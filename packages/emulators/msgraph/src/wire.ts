@@ -524,6 +524,18 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.status(204).end();
   });
 
+  // A missing route is an emulator capability gap, not a missing Graph item.
+  // Returning 404 here can turn a client's misspelled DELETE URL into a false
+  // idempotent success. Known routes still return their normal resource errors.
+  graph.use((_req, res) => {
+    res.status(501).json({
+      error: {
+        code: 'EmulatorUnsupportedOperation',
+        message: 'This Graph operation is not implemented by the emulator.',
+      },
+    });
+  });
+
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof GraphApiError) {
       res.status(err.status).json(err.body);

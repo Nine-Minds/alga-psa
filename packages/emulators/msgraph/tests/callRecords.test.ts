@@ -206,7 +206,9 @@ describe('msgraph call records', { shuffle: false }, () => {
 
     // The per-call list endpoint is FICTION — real Graph has no such route,
     // and serving it is how endpoint bugs get validated locally.
-    expect((await fetch(`${adhocCall}/recordings`, { headers })).status).toBe(404);
+    const unsupportedList = await fetch(`${adhocCall}/recordings`, { headers });
+    expect(unsupportedList.status).toBe(501);
+    expect((await unsupportedList.json()).error.code).toBe('EmulatorUnsupportedOperation');
 
     // Nothing recorded yet is the normal case: empty getAll collections.
     expect((await (await fetch(getAll('getAllRecordings'), { headers })).json()).value).toEqual([]);
