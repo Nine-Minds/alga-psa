@@ -1605,15 +1605,15 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     // non-breaking space between the currency symbol and the amount).
     const managerCall = sendEmailMock.mock.calls.find((c) => c[0].to === 'manager@example.com');
     expect(managerCall).toBeDefined();
-    expect(managerCall[0].locale).toBe('nl');
-    expect(managerCall[0].context.alert.threshold).toBe(`€\u00A050,00`);
+    expect(managerCall![0].locale).toBe('nl');
+    expect(managerCall![0].context.alert.threshold).toBe(`€\u00A050,00`);
 
     // Client email formatted in the client's de locale: "50,00 €" (de also
     // uses a non-breaking space before the currency symbol).
     const clientCall = sendEmailMock.mock.calls.find((c) => c[0].to === 'client-billing@example.com');
     expect(clientCall).toBeDefined();
-    expect(clientCall[0].locale).toBe('de');
-    expect(clientCall[0].context.alert.threshold).toBe(`50,00\u00A0€`);
+    expect(clientCall![0].locale).toBe('de');
+    expect(clientCall![0].context.alert.threshold).toBe(`50,00\u00A0€`);
 
     // Internal notification follows the recipient user's locale (nl), including
     // the locale-formatted threshold in the rendered message.
@@ -1670,10 +1670,10 @@ describe('prepaid balance alert scan (DB-backed)', () => {
     const deStart = new Intl.DateTimeFormat('de', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodStartDate);
     const deEnd = new Intl.DateTimeFormat('de', { dateStyle: 'medium', timeZone: 'UTC' }).format(periodEndDate);
 
-    expect(managerCall[0].locale).toBe('nl');
-    expect(managerCall[0].context.alert).toMatchObject({ periodStart: nlStart, periodEnd: nlEnd });
-    expect(clientCall[0].locale).toBe('de');
-    expect(clientCall[0].context.alert).toMatchObject({ periodStart: deStart, periodEnd: deEnd });
+    expect(managerCall![0].locale).toBe('nl');
+    expect(managerCall![0].context.alert).toMatchObject({ periodStart: nlStart, periodEnd: nlEnd });
+    expect(clientCall![0].locale).toBe('de');
+    expect(clientCall![0].context.alert).toMatchObject({ periodStart: deStart, periodEnd: deEnd });
 
     const notification = await tenantDb(db, tenantId).table('internal_notifications')
       .where({ tenant: tenantId, user_id: managerId })
