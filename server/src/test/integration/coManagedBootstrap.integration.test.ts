@@ -16900,3 +16900,64 @@ it('MSP SLA ticket API source failures roll back both the response state and its
     expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
   } finally { failure.mockRestore(); }
 }));
+
+async function withBundleSlaFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeCommentFixture(async f => {
+    const { title_index: _generated, ...original } = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    await f.mutate({ status_id: f.closedStatusId });
+    const closed = await f.sponsor.table('sla_organization_obligations').first();
+    const childId = randomUUID();
+    await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-BUNDLE-CHILD', master_ticket_id: f.resource.id });
+    await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'link_only', reopen_on_child_reply: true });
+    const { addTicketCommentWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const reply = (ticketId = childId) => f.run(() => addTicketCommentWithCache(ticketId, 'Customer technician has an update', false, false));
+    await work({ ...f, childId, original, closed, reply });
+  });
+}
+
+it('MSP SLA bundle child reply reopens its actual master board with one new obligation', async () => withBundleSlaFixture(async f => {
+  // A competing board default must never become the master's new status.
+  const board = await f.customer.table('boards').where('board_id', f.original.board_id).first();
+  const otherBoardId = randomUUID();
+  await f.customer.table('boards').insert({ ...board, board_id: otherBoardId, board_name: 'Competing SLA bundle board' });
+  const openStatus = await f.customer.table('statuses').where({ board_id: f.original.board_id, is_closed: false }).first();
+  await f.customer.table('statuses').insert({ ...openStatus, status_id: randomUUID(), board_id: otherBoardId, is_default: true, order_number: -999 });
+  expect(await f.reply()).toMatchObject({ comment_id: expect.any(String) });
+  const master = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  expect(master).toMatchObject({ board_id: f.original.board_id, is_closed: false, closed_at: null, closed_by: null });
+  expect(await f.customer.table('statuses').where('status_id', master.status_id).first()).toMatchObject({ board_id: master.board_id, is_closed: false });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(f.closed); expect(rows[1]).toMatchObject({ generation: 2, clock: { elapsedMilliseconds: 0, response: { completedAt: null }, resolution: { completedAt: null } } });
+  await f.reply();
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('generation')).toEqual(rows);
+}));
+
+it.each(['handed-back', 'revoked'] as const)('MSP SLA bundle child reply does not restart %s master obligations', async reason => withBundleSlaFixture(async f => {
+  const { handBackCoManagedTicket, revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  if (reason === 'handed-back') await handBackCoManagedTicket(db, f.principal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Customer investigation' });
+  else await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private investigation' });
+  const before = await f.sponsor.table('sla_organization_obligations').first();
+  await f.reply();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: false });
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([before]);
+}));
+
+it('MSP SLA bundle child reply missing reopen setup rolls back the master and child comment together', async () => withBundleSlaFixture(async f => {
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const childBefore = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  await expect(f.reply()).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toEqual(childBefore);
+  expect(await f.customer.table('comments').where('ticket_id', f.childId)).toHaveLength(0);
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([f.closed]);
+}));
+
+it('MSP SLA bundle child reply concurrent siblings create only one genuine reopen generation', async () => withBundleSlaFixture(async f => {
+  const secondChild = randomUUID();
+  await f.customer.table('tickets').insert({ ...f.original, ticket_id: secondChild, ticket_number: 'SLA-BUNDLE-SECOND', master_ticket_id: f.resource.id });
+  await Promise.all([f.reply(), f.reply(secondChild)]);
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(clocks).toHaveLength(2); expect(clocks[0]).toEqual(f.closed);
+  expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.resource.id, event_type: 'TICKET_BUNDLE_REOPENED' })).toHaveLength(1);
+}));
