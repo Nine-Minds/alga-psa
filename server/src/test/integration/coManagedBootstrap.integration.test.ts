@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs', '20260908123721_create_co_managed_archive_manifests.cjs', '20260908124921_retain_co_managed_work_snapshots.cjs', '20260908131037_create_tenant_license_state.cjs', '20260908134800_create_co_managed_independent_upgrades.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -18966,4 +18966,105 @@ it('PSA capability backfills join the co-managed upgrade transaction and preserv
   }
   expect(await f.sponsor.table('permissions')).toEqual(sponsorPermissions);
   expect((await f.customer.table('co_management_relationships').first()).state).toBe('active');
+});
+
+it('independent PSA upgrade atomically converts an active customer with its own license and closes live trust exactly once', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense, resolveTenantTier } = await import('@alga-psa/licensing');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    const { getCoManagedSharedWorkSummary } = await import('../../../../packages/co-managed/src/sharedWorkRead');
+    await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Keep this shared history' });
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
+    const token = sign({ aud: f.resource.tenant, seats: 10 });
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, token));
+    const install = await db('license_state').first(), entitlement = await f.sponsor.table('co_managed_entitlements').first();
+    const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    const [first, retry] = await Promise.all([
+      upgrade(db, f.customerPrincipal, f.target, request, log), upgrade(db, f.customerPrincipal, f.target, request, log),
+    ]);
+    expect(retry).toEqual(first);
+    expect(first).toMatchObject({ operationId: request.operationId, customerTenant: f.resource.tenant, closureOperationId: request.operationId, productCode: 'psa', seats: 10 });
+    expect(await f.customer.table('tenants').first()).toMatchObject({ product_code: 'psa', plan: 'pro', billing_source: 'manual', licensed_user_count: 10 });
+    expect(await resolveTenantTier(f.resource.tenant)).toBe('pro');
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+    expect((await f.customer.table('roles').where({ role_name: 'Finance', msp: true })).length).toBe(1);
+    expect(await f.customer.table('co_managed_independent_upgrades')).toHaveLength(1);
+    expect((await f.sponsor.table('co_managed_relationship_closures').where('operation_id', request.operationId).first()).released_seats).toBe(allocation.seats);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toMatchObject({ state: 'released' });
+    const seal = await f.sponsor.table('co_managed_archive_manifests').where('operation_id', request.operationId).first();
+    expect(seal.manifest.evidence.length).toBeGreaterThan(0);
+    await expect(getCoManagedSharedWorkSummary(db, f.principal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await db('license_state').first()).toEqual(install);
+    expect(await f.sponsor.table('co_managed_entitlements').first()).toEqual(entitlement);
+    expect((await f.customer.table('tenant_license_state').first()).license_token).toBe(token);
+    await expect(upgrade(db, f.customerPrincipal, f.target, { ...request, expectedRevision: request.expectedRevision + 1 }, log)).rejects.toMatchObject({ code: 'UPGRADE_CHANGED' });
+    await f.customer.table('sessions').where('session_id', f.customerPrincipal.sessionId).update({ revoked_at: new Date() });
+    await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    const migration = require('../../../migrations/20260908134800_create_co_managed_independent_upgrades.cjs');
+    await migration.up(db); await expect(migration.down(db)).rejects.toThrow('independent upgrade receipts');
+    await expect(f.customer.table('co_managed_independent_upgrades').update({ seats: 100 })).rejects.toThrow('immutable');
+  });
+});
+
+it('independent PSA upgrade after departure preserves the original seal and never reopens or recaptures customer sources', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense } = await import('@alga-psa/licensing');
+    const { closeCoManagedRelationship, finalizeCoManagedArchive } = await import('@alga-psa/co-managed');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const closed = await closeCoManagedRelationship(db, f.customerPrincipal, f.target,
+      { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+    const seal = await f.sponsor.table('co_managed_archive_manifests').where('operation_id', closed.operationId).first();
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Private after departure' });
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+    const request = { operationId: randomUUID(), expectedRevision: closed.appliedRevision };
+    const result = await upgrade(db, f.customerPrincipal, f.target, request, log);
+    expect(result.closureOperationId).toBe(closed.operationId);
+    expect(await upgrade(db, f.customerPrincipal, f.target, request, log)).toEqual(result);
+    expect(await f.sponsor.table('co_managed_archive_manifests').where('operation_id', closed.operationId).first()).toEqual(seal);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(1);
+    expect((await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).title).toBe('Private after departure');
+    expect(JSON.stringify(await f.sponsor.table('co_managed_participation_evidence').where('customer_tenant', f.resource.tenant))).not.toContain('Private after departure');
+  });
+});
+
+it('independent PSA upgrade rejects MSP actors and missing or insufficient customer entitlement and rolls final write failure back', async () => {
+  const f = await ticketHandoffFixture();
+  await withTenantLicenseFixture(async sign => {
+    const { activateTenantPsaLicense, countCoManagedCommittedSeats } = await import('@alga-psa/licensing');
+    const { upgradeCoManagedWorkspaceWithTenantLicense: upgrade } = await import('../../../../ee/temporal-workflows/src/db/co-managed-upgrade-operations');
+    const relationship = await f.customer.table('co_management_relationships').first();
+    const request = { operationId: randomUUID(), expectedRevision: relationship.revision };
+    const allocation = await f.sponsor.table('co_managed_allocations').where('customer_tenant', f.resource.tenant).first();
+    const roles = await f.customer.table('roles');
+    await expect(upgrade(db, f.principal, f.target, request, log)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toThrow('independent paid PSA license');
+    const role = await f.customer.table('roles').where({ role_name: 'Technician', msp: true }).first();
+    await f.customer.table('user_invitations').insert({ tenant: f.resource.tenant, invitation_id: randomUUID(),
+      email: `pending-${randomUUID()}@example.test`, first_name: 'Pending', last_name: 'Technician', role_id: role.role_id,
+      token: randomUUID(), expires_at: new Date(Date.now() + 3600000) });
+    const seats = await db.transaction(trx => countCoManagedCommittedSeats(trx, f.resource.tenant));
+    expect(seats).toBeGreaterThan(1);
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: seats - 1 })));
+    await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toMatchObject({ code: 'INSUFFICIENT_PSA_SEATS' });
+    await db.transaction(trx => activateTenantPsaLicense(trx, f.resource.tenant, sign({ aud: f.resource.tenant, seats: 10 })));
+    await db.raw('ALTER TABLE co_managed_independent_upgrades ADD CONSTRAINT test_reject_upgrade CHECK (false) NOT VALID');
+    try { await expect(upgrade(db, f.customerPrincipal, f.target, request, log)).rejects.toThrow('test_reject_upgrade'); }
+    finally { await db.raw('ALTER TABLE co_managed_independent_upgrades DROP CONSTRAINT test_reject_upgrade'); }
+    expect((await f.customer.table('tenants').first()).product_code).toBe('co_managed');
+    expect(await f.customer.table('roles')).toEqual(roles);
+    expect(await f.customer.table('co_management_relationships').first()).toEqual(relationship);
+    expect(await f.sponsor.table('co_managed_allocations').where('allocation_id', allocation.allocation_id).first()).toEqual(allocation);
+    expect(await f.customer.table('co_managed_independent_upgrades')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_relationship_closures').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_archive_manifests').where('customer_tenant', f.resource.tenant)).toHaveLength(0);
+    expect((await upgrade(db, f.customerPrincipal, f.target, request, log)).productCode).toBe('psa');
+  });
 });

@@ -48,3 +48,24 @@ export async function getTenantSelfHostLicenseState(tenant: string, connection?:
   // Retain legacy installation licensing for tenants without an independent row.
   return await db<LicenseStateRow>('license_state').orderBy('id').first() ?? null;
 }
+
+/** Paid upgrade admission reads only an independently staged tenant license.
+ * The installation token and trial state can never satisfy this requirement. */
+export async function retainTenantPsaLicense(trx: Knex.Transaction, tenant: string): Promise<{
+  reference: string; seats: number | null; validUntil: Date;
+}> {
+  if (!trx.isTransaction || !uuid.test(tenant)) throw new Error('Tenant license admission requires a tenant transaction');
+  const owner = tenantDb(trx, tenant);
+  if (!await owner.table('tenants').forUpdate().first('tenant')) throw new Error('License tenant does not exist');
+  if (!await trx('license_state').forShare().first('id')) throw new Error('Tenant license admission requires self-hosted licensing');
+  const own = await owner.table<TenantLicenseStateRow>('tenant_license_state').forShare().first();
+  if (!own) throw new Error('An independent paid PSA license is required');
+  const verified = verifyLicense(own.license_token);
+  if (isLicenseVerifyFailure(verified) || verified.claims.aud !== tenant || verified.claims.tier !== 'pro')
+    throw new Error('A valid PSA license bound to this tenant is required');
+  const now = new Date((await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at);
+  if (verified.claims.exp * 1000 <= now.getTime()) throw new Error('The tenant license has expired');
+  const seats = verified.claims.seats ?? null;
+  if (seats !== null && (!Number.isSafeInteger(seats) || seats < 1 || seats > 2147483647)) throw new Error('A paid PSA technician seat is required');
+  return { reference: verified.claims.sub, seats, validUntil: new Date(verified.claims.exp * 1000) };
+}

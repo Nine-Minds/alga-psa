@@ -121,3 +121,5 @@ export { retainCoManagedTimeParticipation } from './timeParticipationEvidence';
 export { storeCoManagedArchiveFiles } from './archiveFiles';
 export { listCoManagedArchiveWork, getCoManagedArchiveHistory, listCoManagedArchiveFiles, downloadCoManagedArchiveFile } from './archiveReads';
 export type { CoManagedArchiveWork, CoManagedArchiveEntry, CoManagedArchiveFile, CoManagedArchiveHistory } from './archiveReads';
+
+export * from './independentUpgrade';
