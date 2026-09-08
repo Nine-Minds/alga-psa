@@ -4,7 +4,7 @@ import { tenantDb, withTransaction, computeWorkDateFields, resolveUserTimeZone, 
 import { productTimeEntryMode, type TimeEntryBillingMode } from '@alga-psa/types';
 import { getCoManagedOperationalState, assertCoManagedOperationalWrite } from '@alga-psa/licensing';
 import { lockCoManagedLocalAuthentication, snapshotCoManagedAuthenticatedActor, type CoManagedAuthenticatedActor } from './localAuthentication';
-import { admitCoManagedNativeTimeSource, isNativeTimeFieldHidden, type CoManagedNativeTimeAccess } from './nativeTimeEntryAccess';
+import { admitCoManagedNativeTimeSource, assertCoManagedTimeSaveFields, isNativeTimeFieldHidden, type CoManagedNativeTimeAccess } from './nativeTimeEntryAccess';
 import { operationalTimeEntryFields } from './timeEntryBillingMode';
 import { isCoManagedUuid, CoManagedSharedWorkError } from './sharedWorkIdentity';
 
@@ -95,9 +95,11 @@ export async function startNativeTimeTracking(db: Knex, actor: CoManagedAuthenti
     const sessionId = (await trx.raw('SELECT gen_random_uuid() AS id')).rows[0].id;
     const start = await now(trx), zone = await resolveUserTimeZone(trx, home.tenant, home.userId);
     const fields = { tenant: home.tenant, session_id: sessionId, user_id: home.userId, work_item_id: input.work_item_id || null,
+      co_managed_work_reference_id: input.work_item_type === 'co_managed' ? input.work_item_id : null,
       work_item_type: input.work_item_type, start_time: start, ...computeWorkDateFields(start, zone), billing_mode: mode,
       service_id: mode === 'operational' ? null : input.service_id, notes: input.notes || '' };
     const access = await admitCoManagedNativeTimeSource(trx, home, source(fields), 'create');
+    assertCoManagedTimeSaveFields(access, fields.work_item_type);
     const [clock] = await owner.table(TABLE).insert(fields).returning('*');
     const result = await presentClock(trx, clock, access); await access.assertCurrent(); return result;
   });
@@ -136,6 +138,7 @@ export async function stopNativeTimeTracking(db: Knex, actor: CoManagedAuthentic
     await assertCoManagedOperationalWrite(trx, home.tenant);
     const access = await admitCoManagedNativeTimeSource(trx, home, source(clock), 'update');
     assertVisibleClock(access);
+    assertCoManagedTimeSaveFields(access, clock.work_item_type);
     const endTime = command.data.end_time ? new Date(command.data.end_time) : await now(trx);
     if (endTime < new Date(clock.start_time)) throw new NativeTimeTrackingError('TIMER_INVALID_INPUT');
     if (clock.billing_mode === 'operational') operationalTimeEntryFields({ service_id: command.data.service_id });

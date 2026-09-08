@@ -7,18 +7,22 @@ import { authorizeCoManagedWorkRecord, CoManagedSharedWorkError, isCoManagedUuid
 import type { CoManagedAuthenticatedActor } from './localAuthentication';
 import { isCoManagedReadFieldHidden } from './sharedWorkRedaction';
 
-/** New contributions use live collaboration authority. Retained time is an
- * MSP business record and can be read/reviewed after revocation, under current
- * home work/time permissions, without querying newly private customer data. */
+/** New contributions use live collaboration authority. Retained time or an
+ * actually started, owned clock is evidence of the MSP's existing effort.
+ * It remains usable after revocation under current home work/time permissions,
+ * without querying newly private customer data. */
 export async function admitCoManagedTimeWorkSource(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor, subject: AuthorizationSubject,
-  referenceId: string, existingEntryId?: string | null) {
+  referenceId: string, existingEffortId?: string | null) {
   if (!trx.isTransaction || !isCoManagedUuid(referenceId)) throw new CoManagedSharedWorkError();
   const home = tenantDb(trx, actor.tenant);
   const reference = await home.table('co_managed_time_work_references').where('reference_id', referenceId).first();
   if (!reference) throw new CoManagedSharedWorkError();
   const resource: CoManagedSharedResource = { tenant: reference.customer_tenant, relationshipId: reference.relationship_id, kind: reference.source_kind, id: reference.source_id };
-  const retainedEntry = existingEntryId ? await home.table('time_entries').where({ entry_id: existingEntryId, work_item_type: 'co_managed',
+  const retainedEntry = existingEffortId ? await home.table('time_entries').where({ entry_id: existingEffortId, work_item_type: 'co_managed',
     work_item_id: referenceId, co_managed_work_reference_id: referenceId }).first('entry_id') : null;
+  const retainedClock = existingEffortId && !retainedEntry ? await home.table('native_time_tracking_sessions').where({
+    session_id: existingEffortId, user_id: actor.userId, work_item_type: 'co_managed', work_item_id: referenceId,
+    co_managed_work_reference_id: referenceId }).whereNull('completed_entry_id').forShare().first('session_id') : null;
   const localRecord = async (): Promise<AuthorizationRecord> => {
     const referenceTable = resource.kind === 'ticket' ? 'co_managed_ticket_references' : 'co_managed_project_task_references';
     const route = await home.table(referenceTable).where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
@@ -44,7 +48,7 @@ export async function admitCoManagedTimeWorkSource(trx: Knex.Transaction, actor:
     if (!current || ['customer_tenant', 'relationship_id', 'source_kind', 'source_id', 'client_id', 'billing_profile_id'].some(key => current[key] !== reference[key])) throw new CoManagedSharedWorkError();
     return current;
   };
-  if (retainedEntry) {
+  if (retainedEntry || retainedClock) {
     const current = await retainReference(false);
     const record = await localRecord();
     const decision = await authorizeCoManagedWorkRecord(trx, actor, subject, resource.kind === 'ticket' ? 'ticket' : 'project', 'read', record);

@@ -19,6 +19,14 @@ interface TimeSaveInput {
 }
 export interface CoManagedNativeTimeAccess { subject: AuthorizationSubject; record: AuthorizationRecord; redactedSourceFields: readonly string[]; clientId?: string | null; billingProfileId?: string | null; workItem: IWorkItem; subjectUserId: string; redactedTimeFields: readonly string[]; assertCurrent(): Promise<void> }
 
+/** Shared commercial writers return these persisted values, so a caller must
+ * be allowed to see them before choosing or replacing financial details. */
+export function assertCoManagedTimeSaveFields(access: CoManagedNativeTimeAccess, workItemType: string) {
+  if (workItemType === 'co_managed' && isNativeTimeFieldHidden(access.redactedTimeFields,
+    ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'co_managed_work_reference_id', 'start_time', 'end_time', 'work_date', 'work_timezone',
+      'created_at', 'updated_at', 'approval_status', 'service_id', 'tax_region', 'tax_rate_id', 'contract_line_id', 'contract_line_source', 'billable_duration', 'invoiced', 'billing'])) throw new CoManagedSharedWorkError();
+}
+
 /** Retain actual local work, entry ownership and editable sheets through the
  * native save. Source locators are hints until their parent and entry locks
  * confirm them. No trust or MSP actor can substitute for this home credential. */

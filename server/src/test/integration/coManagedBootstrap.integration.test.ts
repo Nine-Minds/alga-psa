@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -17604,4 +17604,75 @@ it('MSP shared time deletion retains the source reference and prevents deleting 
   expect(await f.sponsor.table('time_entries')).toHaveLength(0);
   expect(await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId)).toHaveLength(1);
   expect(await f.customer.table('tickets').where('ticket_id', f.resource.id)).toHaveLength(1);
+}));
+
+
+async function withMspSharedTimerFixture(work: (fixture: any) => Promise<void>) {
+  return withMspSharedTimeSaveFixture(async f => {
+    const apiKeyId = randomUUID();
+    await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, user_id: f.principal.userId, api_key: randomUUID(), active: true });
+    const context = { tenant: f.principal.tenant, userId: f.principal.userId, apiKeyId, user: f.user };
+    const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService');
+    const service = new TimeEntryService();
+    const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: context.tenant });
+    const today = Date.now();
+    await f.sponsor.table('time_periods').update({ start_date: new Date(today - 7 * 86400_000).toISOString().slice(0, 10), end_date: new Date(today + 7 * 86400_000).toISOString().slice(0, 10) });
+    const start = (extra: any = {}) => service.startTimeTracking({ work_item_type: 'co_managed', work_item_id: f.referenceId, service_id: f.serviceId, notes: 'MSP running effort', ...extra }, context);
+    const stop = (timer: any, extra: any = {}) => service.stopTimeTracking(timer.session_id, { end_time: new Date(new Date(timer.start_time).getTime() + 30 * 60000).toISOString(), ...extra }, context);
+    try { await work({ ...f, apiKeyId, context, service, start, stop }); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it('MSP shared timers retain running effort after revocation and stop exactly once into owned time', async () => withMspSharedTimerFixture(async f => {
+  const timer = await f.start();
+  expect(timer).toMatchObject({ work_item_type: 'co_managed', work_item_id: f.referenceId, work_item_title: 'Customer issue', billing_mode: 'commercial' });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Already running effort stays MSP-owned' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'New private customer title' });
+  expect(await f.service.getActiveSession(f.context.userId, f.context)).toMatchObject({ session_id: timer.session_id, work_item_title: 'Customer issue' });
+  const results = await Promise.all([f.stop(timer), f.stop(timer)]);
+  for (const result of results) expect(result).toMatchObject({ entry_id: timer.session_id, co_managed_work_reference_id: f.referenceId,
+    work_item_type: 'co_managed', billing_mode: 'commercial', billable_duration: 30, service_id: f.serviceId, work_item_title: 'Customer issue' });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(1);
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+  expect(await f.service.getActiveSession(f.context.userId, f.context)).toBeNull();
+  await expect(f.stop(timer, { notes: 'Changed retry' })).rejects.toMatchObject({ statusCode: 409 });
+  await expect(f.start()).rejects.toMatchObject({ statusCode: 403 });
+}));
+
+it('MSP shared timers require current home credentials and financial visibility through completion', async () => withMspSharedTimerFixture(async f => {
+  const timer = await f.start();
+  await f.sponsor.table('api_keys').where('api_key_id', f.apiKeyId).update({ active: false });
+  await expect(f.stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  await f.sponsor.table('api_keys').where('api_key_id', f.apiKeyId).update({ active: true });
+  const bundles = await import('@alga-psa/authorization');
+  const relation = await f.customer.table('co_management_relationships').first();
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Timer financial scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields: ['billing'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  expect(await f.service.getActiveSession(f.context.userId, f.context)).toMatchObject({ service_id: null });
+  await expect(f.stop(timer)).rejects.toMatchObject({ statusCode: 403 });
+  expect(await f.sponsor.table('native_time_tracking_sessions').first()).toMatchObject({ completed_entry_id: null });
+  await f.service.cancelTimeTracking(timer.session_id, f.context);
+  await expect(f.start()).rejects.toMatchObject({ statusCode: 403 });
+  expect(await f.sponsor.table('native_time_tracking_sessions')).toHaveLength(0);
+}));
+
+it('MSP shared timer references retain local integrity and cannot be removed by migration rollback', async () => withMspSharedTimerFixture(async f => {
+  await expect(f.start({ work_item_id: f.resource.id })).rejects.toMatchObject({ statusCode: 403 });
+  const timer = await f.start();
+  const clock = await f.sponsor.table('native_time_tracking_sessions').where('session_id', timer.session_id).first();
+  expect(clock.co_managed_work_reference_id).toBe(f.referenceId);
+  const migration = require('../../../migrations/20260908091756_allow_co_managed_time_tracking.cjs');
+  await migration.up(db);
+  await expect(migration.down(db)).rejects.toThrow('Cannot discard retained co-managed timer');
+  await expect(f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId).del()).rejects.toMatchObject({ code: '23503' });
+  await f.service.cancelTimeTracking(timer.session_id, f.context);
+  await expect(f.sponsor.table('native_time_tracking_sessions').insert({ ...clock, session_id: randomUUID(),
+    work_item_id: f.resource.id, co_managed_work_reference_id: f.resource.id })).rejects.toMatchObject({ code: '23503' });
 }));

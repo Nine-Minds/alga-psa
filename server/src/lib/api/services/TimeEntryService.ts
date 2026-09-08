@@ -26,7 +26,7 @@ import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'se
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication, isNativeTimeFieldHidden,
+import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication, assertCoManagedTimeSaveFields,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
   NativeTimeTrackingError, NativeTimeDeletionError, NativeTimeReviewError, reviewCoManagedNativeTimeEntry, openCoManagedNativeTimeSheet, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
@@ -93,9 +93,7 @@ export class TimeEntryService extends BaseService<any> {
           if (!source.time_sheet_id || data.start_time) source.time_sheet_id = await service.getOrCreateTimeSheetForWorkDate(source.work_date, source.user_id, context);
           const workId = source.work_item_type === 'non_billable_category' && !source.work_item_id ? '__non_billable__' : source.work_item_id;
           access = await admitCoManagedNativeTimeSave(trx, actor, { ...source, work_item_id: workId });
-          if (source.work_item_type === 'co_managed' && isNativeTimeFieldHidden(access.redactedTimeFields,
-            ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'co_managed_work_reference_id', 'start_time', 'end_time', 'work_date', 'work_timezone',
-              'created_at', 'updated_at', 'approval_status', 'service_id', 'tax_region', 'tax_rate_id', 'contract_line_id', 'contract_line_source', 'billable_duration', 'invoiced', 'billing'])) throw new CoManagedSharedWorkError();
+          assertCoManagedTimeSaveFields(access, source.work_item_type);
           source.work_item_id = workId === '__non_billable__' ? null : workId;
           await service.assertTimeSheetPeriod(source, context);
           await credential.assertCurrent();

@@ -52,7 +52,7 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, isNativeTimeFieldHidden, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, assertCoManagedTimeSaveFields, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
@@ -331,9 +331,7 @@ export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<I
       if (timeEntry.work_item_type === 'co_managed' || stored?.work_item_type === 'co_managed' || currentMode === 'operational' || stored?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, tenant)) {
         access = await admitCoManagedNativeTimeSave(trx, await resolveNativeTimeBrowserActor(user, tenant), timeEntry);
       }
-      if (access && timeEntry.work_item_type === 'co_managed' && isNativeTimeFieldHidden(access.redactedTimeFields,
-        ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'co_managed_work_reference_id', 'start_time', 'end_time', 'work_date', 'work_timezone',
-          'created_at', 'updated_at', 'approval_status', 'service_id', 'tax_region', 'tax_rate_id', 'contract_line_id', 'contract_line_source', 'billable_duration', 'invoiced', 'billing'])) throw new CoManagedSharedWorkError();
+      if (access) assertCoManagedTimeSaveFields(access, timeEntry.work_item_type);
       const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
       const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
       await access?.assertCurrent();
