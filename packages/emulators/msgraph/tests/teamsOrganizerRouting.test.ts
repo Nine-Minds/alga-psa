@@ -53,7 +53,12 @@ describe('Teams organizer provider routing', () => {
     hoisted.tables = { microsoft_profiles: [], teams_integrations: teamsIntegrations, microsoft_profile_consumer_bindings: [] };
     tenantSecrets.clear();
   });
-  it.each(['workspace', 'enterprise'] as const)('%s saves the organizer validated by real Graph HTTP', async implementation => {
+  it.each([
+    { implementation: 'workspace', scenario: 'save' },
+    { implementation: 'enterprise', scenario: 'save' },
+    { implementation: 'workspace', scenario: 'unknown organizer recovery' },
+    { implementation: 'enterprise', scenario: 'unknown organizer recovery' },
+  ] as const)('T072: $implementation $scenario through real Graph HTTP', async ({ implementation, scenario }) => {
     const host = new EmulatorHost({ emulators: [msgraph], controlPort: 0, ports: { msgraph: 0 } });
     const keys = ['MICROSOFT_GRAPH_BASE_URL', 'MICROSOFT_LOGIN_BASE_URL', 'TEAMS_EMULATOR_MODE', 'NODE_ENV', 'NEXT_PUBLIC_EDITION'] as const;
     const previous = Object.fromEntries(keys.map(key => [key, process.env[key]]));
@@ -93,12 +98,48 @@ describe('Teams organizer provider routing', () => {
       tenantSecrets.set('tenant-1:organizer-secret-ref', 'organizer-secret');
       const input = { selectedProfileId: 'profile-1', installStatus: 'install_pending' as const,
         defaultMeetingOrganizerUpn: 'scheduler@acme.com' };
-      const result = implementation === 'workspace' ? await saveTeamsIntegrationSettings(input)
-        : await (await import('../../../../ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions'))
-          .saveTeamsIntegrationSettingsImpl(hoisted.state.mockUser, hoisted.state.mockCtx, input);
+      const save = async (settings: typeof input & { sendMeetingInvites?: boolean }) => implementation === 'workspace'
+        ? saveTeamsIntegrationSettings(settings)
+        : (await import('../../../../ee/packages/microsoft-teams/src/lib/actions/integrations/teamsActions'))
+          .saveTeamsIntegrationSettingsImpl(hoisted.state.mockUser, hoisted.state.mockCtx, settings);
+      const result = await save(input);
       expect(blocked).toEqual([]);
-      expect(result).toMatchObject({ success: true, integration: { defaultMeetingOrganizerObjectId: 'organizer-object' } });
-      expect(teamsIntegrations[0]).toMatchObject({ default_meeting_organizer_object_id: 'organizer-object' });
+      expect(result).toMatchObject({ success: true, integration: {
+        defaultMeetingOrganizerUpn: 'scheduler@acme.com', defaultMeetingOrganizerObjectId: 'organizer-object',
+      } });
+      expect(teamsIntegrations).toHaveLength(1);
+      expect(teamsIntegrations[0]).toMatchObject({ default_meeting_organizer_upn: 'scheduler@acme.com',
+        default_meeting_organizer_object_id: 'organizer-object' });
+      if (scenario === 'unknown organizer recovery') {
+        const originalRows = structuredClone(teamsIntegrations);
+        const changed = { ...input, defaultMeetingOrganizerUpn: 'replacement@acme.com', sendMeetingInvites: false };
+        const failed = await save(changed);
+        expect(failed).toEqual({ success: false, error: 'Microsoft could not find the configured meeting organizer' });
+        expect(teamsIntegrations).toEqual(originalRows);
+        const failedJournal = await (await nativeFetch(`${control}/control/msgraph/requests`)).json();
+        expect(failedJournal.result.complete).toBe(true);
+        expect(failedJournal.result.requests).toEqual(expect.arrayContaining([
+          expect.objectContaining({ method: 'GET', path: '/v1.0/users/replacement%40acme.com', status: 404 }),
+        ]));
+        await seed('directory-user', { id: 'replacement-object', displayName: 'Replacement',
+          userPrincipalName: 'replacement@acme.com', mail: 'replacement@acme.com', accountEnabled: true });
+        expect(await save(changed)).toMatchObject({ success: true, integration: {
+          defaultMeetingOrganizerUpn: 'replacement@acme.com', defaultMeetingOrganizerObjectId: 'replacement-object',
+          sendMeetingInvites: false,
+        } });
+        expect(teamsIntegrations).toHaveLength(1);
+        expect(teamsIntegrations[0]).toMatchObject({ selected_profile_id: 'profile-1',
+          default_meeting_organizer_upn: 'replacement@acme.com', default_meeting_organizer_object_id: 'replacement-object',
+          send_meeting_invites: false });
+        const recoveredJournal = await (await nativeFetch(`${control}/control/msgraph/requests`)).json();
+        expect(recoveredJournal.result.complete).toBe(true);
+        expect(recoveredJournal.result.requests.filter((request: { path: string }) => request.path === '/v1.0/users/replacement%40acme.com'))
+          .toEqual([
+            expect.objectContaining({ method: 'GET', status: 404 }),
+            expect.objectContaining({ method: 'GET', status: 200 }),
+          ]);
+        expect(blocked).toEqual([]);
+      }
       const journal = await (await nativeFetch(`${control}/control/msgraph/requests`)).json();
       expect(journal.result.complete).toBe(true);
       expect(journal.result.requests).toEqual(expect.arrayContaining([

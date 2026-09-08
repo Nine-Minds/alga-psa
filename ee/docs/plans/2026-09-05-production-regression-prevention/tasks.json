@@ -293,6 +293,65 @@
       ],
       "owner": "coordinator",
       "notes": "Implemented common UID1000 and fullowned shared secret root in CI, failclosed emptyvolume initializer, actualprovider crossprocessprobe in candidatecontainers. Native initializer8/8; sourceprovider37passed/6existingplatformskips; stagedcompiledpackage3process roundtrip passes. Image build/startup/currentCI still pending."
+    },
+    {
+      "id": "R036",
+      "title": "Execute a real authored workflow through the compiled native worker",
+      "status": "done",
+      "dependsOn": [
+        "R031"
+      ],
+      "owner": "stripe_protocol",
+      "notes": "Actual compiledworker+productiondispatcher execute real pinnedstate.set/control.return definition. TemporalCOMPLETED, DB SUCCEEDED, exacttwo projectedstepsSUCCEEDED and persistedstate proven. FinalnativeCLIrun cleanlystoppedworker/Redis anddroppedownDB. Existingcompiledartifacts reused; candidateCIhelper next."
+    },
+    {
+      "id": "R037",
+      "title": "Cover QBO unauthorized response refresh and bounded retry through actual consumer",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Actual QboClientService over nativeHTTP:401\u2192refresh\u2192successfulretry/persistedreplacement, revokedrefresh withoutoverwrite/replay, repeated401 stopsafterone refresh. FullQBO29/29 andtypecheckpass; privatecredential/disconnectinfra mocks, no productfix."
+    },
+    {
+      "id": "R038",
+      "title": "Cover Teams organizer lookup failure with preserved settings and recovery",
+      "status": "done",
+      "dependsOn": [
+        "R029"
+      ],
+      "owner": "calendar_review",
+      "notes": "Both actual save actions return actionable404 failure without changing existingrow; seededlookup recovery persists one row. All4casespass actualpackage andserverrunners. No productfixneeded."
+    },
+    {
+      "id": "R039",
+      "title": "Retain candidate-bound provider readiness evidence for each application process",
+      "status": "in_progress",
+      "dependsOn": [
+        "R034"
+      ],
+      "owner": "coordinator",
+      "notes": "Candidate/process-bound JSON readiness records inCIlogs afterrealHTTP+freshjournalchecks. Peerreview reproduced redirect+historicaljournal and stalejournal falsepasses; both fixed. All10nativecasespass; currentCIpending."
+    },
+    {
+      "id": "R040",
+      "title": "Replace obsolete Teams source-string contract with actual HTTP behavior",
+      "status": "done",
+      "dependsOn": [
+        "R038"
+      ],
+      "owner": "calendar_review",
+      "notes": "CI14895passed with one source-onlyT072 failure and3taxTODO. Removed brittlehardcodedURL assertions; T072ID now onactualHTTP organizercases, explicitreturned/persistedUPN+objectID. Package4/4 andserver7/7pass."
+    },
+    {
+      "id": "R041",
+      "title": "Gate real authored workflow execution in candidate worker containers",
+      "status": "in_progress",
+      "dependsOn": [
+        "R035",
+        "R036"
+      ],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Production-only scenariohelper for runningownedCI DB/Temporal/worker, uniquetenant/run plus scopedcleanup; no database drops or newservices. Nativevalidation required beforeCIwiring."
     }
   ]
 }
