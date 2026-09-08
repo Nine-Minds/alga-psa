@@ -10,7 +10,8 @@
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { type TenantTier, resolveTier } from '@alga-psa/types';
-import { getLicenseStateRow, resolveSelfHostTier } from './license-state';
+import { getTenantSelfHostLicenseState } from './tenant-license-state';
+import { resolveSelfHostTier } from './license-state';
 
 export function hasActiveSoloProTrial(value?: string | null): boolean {
   if (!value) return false;
@@ -22,6 +23,12 @@ export function hasActiveSoloProTrial(value?: string | null): boolean {
  * CE (where every compiled-in feature is available) check the edition first.
  */
 export async function resolveTenantTier(tenantId: string): Promise<TenantTier> {
+  const knex = await getAdminConnection();
+  const tenantRecord = await tenantDb(knex, tenantId).table('tenants').select('plan', 'product_code').first();
+  // Co-managed operational surface is Pro; lifecycle admission separately
+  // controls writes during acceptance, capacity lapse and termination.
+  if (tenantRecord?.product_code === 'co_managed') return 'pro';
+
   // Self-host mode: a license_state row supersedes tenants.plan (offline
   // Pro license / trial / 'essentials' floor). Guard against the table not existing
   // yet (rolling deploy hitting an un-migrated DB) — fall through to the SaaS
@@ -30,18 +37,15 @@ export async function resolveTenantTier(tenantId: string): Promise<TenantTier> {
     // Pass the request's tenant so a tenant-bound license that was issued for a
     // different install resolves to essentials (license_wrong_tenant) instead of
     // unlocking its tier here.
-    const selfHost = resolveSelfHostTier(await getLicenseStateRow(), tenantId);
+    const selfHost = resolveSelfHostTier(await getTenantSelfHostLicenseState(tenantId, knex), tenantId);
     if (selfHost !== null) {
       return selfHost.tier;
     }
-  } catch {
-    // license_state unavailable; fall through to plan/Stripe resolution.
+  } catch (error) {
+    // Only an older schema may fall through. A failed license read must not
+    // revive an independent paid tier from a stale tenants.plan value.
+    if ((error as { code?: string }).code !== '42P01') throw error;
   }
-
-  const knex = await getAdminConnection();
-  const tenantRecord = await tenantDb(knex, tenantId).table('tenants')
-    .select('plan')
-    .first();
 
   const resolvedTier = resolveTier(tenantRecord?.plan).tier;
   if (resolvedTier !== 'solo') {

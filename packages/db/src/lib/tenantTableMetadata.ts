@@ -42,6 +42,7 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   co_managed_participation_evidence: { scope: 'tenant' },
   co_managed_archive_files: { scope: 'tenant' },
   co_managed_archive_manifests: { scope: 'tenant' },
+  tenant_license_state: { scope: 'tenant' },
   co_management_notification_deliveries: { scope: 'tenant' },
   co_management_in_app_receipts: { scope: 'tenant' },
   co_management_private_comments: { scope: 'tenant' },

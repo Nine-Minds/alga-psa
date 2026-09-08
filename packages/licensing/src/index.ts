@@ -19,4 +19,5 @@ export * from './lib/co-managed-lifecycle';
 export * from './lib/verify-license';
 export * from './lib/license-state';
 export * from './lib/tenant-tier';
+export * from './lib/tenant-license-state';
 export { LICENSE_PUBLIC_KEYS } from './lib/license-keys';

@@ -33,6 +33,8 @@ export interface LicenseStateRow {
   last_checkin_at: Date | null;
 }
 
+export type SelfHostLicenseInput = Pick<LicenseStateRow, 'edition_choice' | 'trial_started_at' | 'license_token'>;
+
 /** Derived licensing state for an install. */
 export type LicenseStateKind =
   | 'ce'            // Community Edition chosen — always essentials
@@ -116,7 +118,7 @@ export async function upsertLicenseState(
  * always has the session tenant at activation time).
  */
 export function resolveSelfHostTier(
-  row: LicenseStateRow | null,
+  row: SelfHostLicenseInput | null,
   expectedTenantId?: string,
 ): ResolvedLicenseState | null {
   if (!row) return null;
