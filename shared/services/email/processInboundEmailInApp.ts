@@ -1069,48 +1069,8 @@ export async function processInboundEmailInApp(
 
   const skipInlineArtifacts = Boolean(durableExecution);
 
-  // Fast-path: if we've already created a ticket for this email, never create a second one.
+  // Reserve qualified evidence before any legacy lookup can select a ticket.
   const reservedQualifiedToken = qualifiedReplyTokenFromBody(emailData.body);
-  // Named replies use their own qualified destination writer. An unconfigured
-  // composition retains them in protected review without legacy matching.
-  if (durableExecution?.namedConversationReplyAdmission) {
-    const named = await durableExecution.namedConversationReplyAdmission(durableExecution.trx, {
-      tenant: tenantId, providerId, inboxId: durableExecution.inboxId, email: emailData, senderAuth: senderAuthResults,
-    });
-    if (named) return named;
-  }
-  if (hasNamedConversationReplyHint(emailData)) {
-    return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: hasNamedConversationReplyHint({ body: emailData.body }) ? 'reply_token' : 'thread_headers' };
-  }
-  if (durableExecution && !durableExecution.namedConversationReplyAdmission) {
-    if (await hasAcceptedNamedConversationReference(durableExecution.trx, tenantId, providerId, emailData))
-      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'thread_headers' };
-    if (!reservedQualifiedToken && await isNamedConversationCorrespondent(durableExecution.trx, tenantId, providerId, emailData.from.email))
-      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'correspondent' };
-  }
-  const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
-    tenantId,
-    providerId,
-    messageId: emailData.id,
-    sourceSha256: emailData.sourceSha256,
-  });
-  if (existingTicket) {
-    const diagnostics = options.collectDiagnostics
-      ? buildDiagnostics({
-          emailData,
-          senderEmail,
-        })
-      : undefined;
-    if (diagnostics) {
-      diagnostics.threading.matchedTicketId = existingTicket.ticketId;
-      diagnostics.threading.failureReason = 'deduped';
-    }
-    return withDiagnostics({
-      outcome: 'deduped',
-      dedupeKey,
-      ticketId: existingTicket.ticketId,
-    }, diagnostics);
-  }
 
   const {
     parseEmailReplyBody,
@@ -1211,7 +1171,7 @@ export async function processInboundEmailInApp(
       })
     : undefined;
 
-  if (conversationToken && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
+  if (conversationToken && !hasNamedConversationReplyHint(emailData) && !hasSubstantiveReplyContent(parsedEmail, emailData)) {
     console.info('processInboundEmailInApp: skipping token-only inbound email with no reply content', {
       tenantId,
       providerId,
@@ -1967,9 +1927,14 @@ export async function processInboundEmailInApp(
     ...helperExtraArgs('ticket', qualifiedReply?.kind === 'customer_technician' ? qualifiedReply.userId : undefined)
   );
 
+  const followupConversation = qualifiedReply?.prepareFollowupConversation
+    ? await qualifiedReply.prepareFollowupConversation({ ticketId: ticketResult.ticket_id, clientId: targetClientId!, boardId: defaults.board_id })
+    : undefined;
+
   const commentId = await createCommentFromEmail(
     {
       ticket_id: ticketResult.ticket_id,
+      conversation_id: followupConversation?.conversationId,
       content: serializedBlocks,
       collaboration_audience: qualifiedReply?.audience,
       source: 'email',
@@ -2034,6 +1999,54 @@ export async function processInboundEmailInApp(
     commentId,
   }, diagnostics);
   };
+
+  // Named vendor replies keep their own writer. Named requester admission uses
+  // the canonical engine below, preserving reopen/follow-up policy and effects.
+  // Rejected named evidence never proceeds to legacy dedupe or matching.
+  if (durableExecution?.namedConversationReplyAdmission) {
+    const named = await durableExecution.namedConversationReplyAdmission(durableExecution.trx, {
+      tenant: tenantId, providerId, inboxId: durableExecution.inboxId, email: emailData, senderAuth: senderAuthResults,
+    }, async (qualifiedReply, matchedBy = 'reply_token') => {
+      if (qualifiedReply.audience !== 'requester') throw new Error('Named requester admission cannot apply requester lifecycle to a side conversation');
+      const reply = await handleThreadedReply({ ticketId: qualifiedReply.ticketId, parentCommentId: qualifiedReply.parentCommentId,
+        matchedBy, qualifiedReply });
+      return reply ?? handleNewTicket(qualifiedReply);
+    });
+    if (named) return named;
+  }
+  if (hasNamedConversationReplyHint(emailData)) {
+    return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: hasNamedConversationReplyHint({ body: emailData.body }) ? 'reply_token' : 'thread_headers' };
+  }
+  if (durableExecution && !durableExecution.namedConversationReplyAdmission) {
+    if (await hasAcceptedNamedConversationReference(durableExecution.trx, tenantId, providerId, emailData))
+      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'thread_headers' };
+    if (!reservedQualifiedToken && await isNamedConversationCorrespondent(durableExecution.trx, tenantId, providerId, emailData.from.email))
+      return { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'correspondent' };
+  }
+  const existingTicket = reservedQualifiedToken ? null : await findExistingEmailTicket({
+    tenantId,
+    providerId,
+    messageId: emailData.id,
+    sourceSha256: emailData.sourceSha256,
+  });
+  if (existingTicket) {
+    const diagnostics = options.collectDiagnostics
+      ? buildDiagnostics({
+          emailData,
+          senderEmail,
+        })
+      : undefined;
+    if (diagnostics) {
+      diagnostics.threading.matchedTicketId = existingTicket.ticketId;
+      diagnostics.threading.failureReason = 'deduped';
+    }
+    return withDiagnostics({
+      outcome: 'deduped',
+      dedupeKey,
+      ticketId: existingTicket.ticketId,
+    }, diagnostics);
+  }
+
 
   const token = conversationToken;
   if (isQualifiedReplyToken(token)) {

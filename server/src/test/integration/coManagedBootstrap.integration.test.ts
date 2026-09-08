@@ -8652,7 +8652,7 @@ it.each(['address', 'audience', 'revocation', 'preferences'] as const)('rechecks
 }));
 
 async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters<typeof withRequesterReplyTokenFixture>[0]>[0] & {
-  inbox: any; emailData: any; run: () => Promise<import('../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
+  inbox: any; emailData: any; requesterToken: string; run: (named?: import('../../../../shared/services/email/namedConversationReplyAdmission').NamedConversationReplyAdmission) => Promise<import('../../../../shared/services/email/inboundEmailCoreProcessor').InboundInboxDisposition>;
   nativeTokenLookup: ReturnType<typeof vi.spyOn>; nativeThreadLookup: ReturnType<typeof vi.spyOn>;
 }) => Promise<void>) {
   await withRequesterReplyTokenFixture(async fixture => {
@@ -8672,9 +8672,9 @@ async function withRequesterInboundFixture(work: (fixture: Parameters<Parameters
     const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
     const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
     try {
-      await work({ ...fixture, inbox, emailData, nativeTokenLookup, nativeThreadLookup,
-        run: () => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(),
-          leaseTtlMs: 30_000, mode: 'enforce', qualifiedReplyAdmission: admitCoManagedRequesterReply, retainConversationEvent: retainCoManagedInboundCommentEvent }) });
+      await work({ ...fixture, inbox, emailData, requesterToken: issued!.token, nativeTokenLookup, nativeThreadLookup,
+        run: named => processInboundInbox({ tenantId: fixture.resource.tenant, inboxId: inbox.inbox_id, owner: randomUUID(),
+          leaseTtlMs: 30_000, mode: 'enforce', qualifiedReplyAdmission: admitCoManagedRequesterReply, namedConversationReplyAdmission: named, retainConversationEvent: retainCoManagedInboundCommentEvent }) });
     } finally { nativeTokenLookup.mockRestore(); nativeThreadLookup.mockRestore(); intake.process.mockReset(); intake.read.mockReset(); intake.parse.mockReset(); }
   });
 }
@@ -15247,4 +15247,73 @@ it('named requester publication adapter preserves canonical response effects and
   expect(commentEvent.payload.suppressInternalNotifications).not.toBe(true);
   expect(publish.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_RESPONSE_STATE_CHANGED', 'TICKET_COMMENT_ADDED']);
   expect(workflow.mock.calls.map(([event]: any[]) => event.eventType)).toEqual(['TICKET_MESSAGE_ADDED']);
+}));
+
+
+it.each(['reply', 'followup', 'revoked', 'foreign_container'] as const)('named requester engine callback preserves canonical %s processing without legacy fallback', async scenario => withRequesterInboundFixture(async ({
+  customer, customerPrincipal, resource, operation, contactId, commentId, inbox, emailData, requesterToken, nativeTokenLookup, nativeThreadLookup, run,
+}) => {
+  // This tests the engine's trusted named-admission port. Reuse a real issued
+  // requester credential for authority; named tc1 route discovery is separate.
+  const { admitCoManagedRequesterReply } = await import('../../../../packages/co-managed/src/inboundRequesterReply');
+  let followupConversationId: string | undefined;
+  const named: import('../../../../shared/services/email/namedConversationReplyAdmission').NamedConversationReplyAdmission = async (trx, input, write) => {
+    expect(write).toBeTypeOf('function');
+    const admitted = await admitCoManagedRequesterReply(trx, { tenant: input.tenant, token: requesterToken,
+      senderEmail: input.email.from.email, senderAuth: input.senderAuth }, reply => write!({ ...reply,
+        prepareFollowupConversation: async destination => {
+          expect(destination).toMatchObject({ clientId: operation.customer_client_id, boardId: operation.customer_board_id });
+          const owner = tenantDb(trx, input.tenant);
+          if (scenario === 'foreign_container') {
+            const { ensureDefaultTicketConversation } = await import('@alga-psa/shared/lib/tickets/namedConversations');
+            return ensureDefaultTicketConversation({ trx, storeTenant: input.tenant, ticket: { tenant: input.tenant, ticketId: resource.id } }, 'requester');
+          }
+          followupConversationId = randomUUID();
+          await owner.table('ticket_conversations').insert({ tenant: input.tenant, ticket_tenant: input.tenant, ticket_id: destination.ticketId,
+            conversation_id: followupConversationId, name: 'Delivery arrangements', audience: 'requester', transport: 'email' });
+          return { conversationId: followupConversationId };
+        },
+      }));
+    return admitted.admitted ? admitted.result : { outcome: 'quarantined', reason: 'conversation_reply_requires_admission', matchedBy: 'reply_token' };
+  };
+  emailData.body.text = `Here is the requester answer.\n\n[ALGA-REPLY-TOKEN tc1:${'A'.repeat(43)}]`;
+  if (scenario === 'revoked') await customer.table('co_management_requester_reply_tokens').update({ revoked_at: new Date() });
+  const status = await customer.table('statuses').where({ status_type: 'ticket', is_closed: false }).first();
+  const priority = await customer.table('priorities').first();
+  const defaults = { client_id: operation.customer_client_id, board_id: operation.customer_board_id, status_id: status.status_id,
+    priority_id: priority.priority_id, entered_by: customerPrincipal.userId };
+  if (scenario === 'followup' || scenario === 'foreign_container') {
+    await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: '2020-01-01T00:00:00Z' });
+    await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+  }
+  const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+  const provider = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
+  const effective = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
+  const before = await customer.table('comments').count('* as count').first();
+  const ticketCount = await customer.table('tickets').count('* as count').first();
+  try {
+    const result = await run(named);
+    if (scenario === 'foreign_container') {
+      expect(result).toMatchObject({ disposition: 'retry' });
+      expect(await customer.table('tickets').count('* as count').first()).toEqual(ticketCount);
+      expect(await customer.table('comments').count('* as count').first()).toEqual(before);
+      expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    } else if (scenario === 'revoked') {
+      expect(result).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:conversation_reply_requires_admission' });
+      expect(await customer.table('comments').count('* as count').first()).toEqual(before);
+      expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+    } else {
+      expect(result).toMatchObject({ disposition: 'ack', outcome: scenario === 'reply' ? 'replied' : 'created' });
+      const written = await customer.table('comments').where('comment_id', (result as any).commentId).first();
+      expect(written).toMatchObject({ contact_id: contactId, user_id: null, author_type: 'client', is_internal: false });
+      if (scenario === 'reply') expect(written).toMatchObject({ ticket_id: resource.id, parent_comment_id: commentId });
+      else {
+        expect(written.ticket_id).not.toBe(resource.id);
+        expect(await customer.table('comment_threads').where('thread_id', written.thread_id).first()).toMatchObject({ conversation_id: followupConversationId });
+      }
+      expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(scenario === 'reply' ? 1 : 2);
+      expect(await run(named)).toMatchObject({ disposition: 'ack', outcome: scenario === 'reply' ? 'replied' : 'created', reason: 'terminal_replay' });
+    }
+    expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
+  } finally { provider.mockRestore(); effective.mockRestore(); }
 }));
