@@ -1,3 +1,4 @@
+import { recoverNamedConversationNotifications } from '@alga-psa/notifications/lib/namedConversationNotificationFanout';
 import { recoverCoManagedScheduledComments } from './publishScheduledComment';
 import { recoverNativeNamedConversationEmails } from '@alga-psa/co-managed';
 import { namedConversationEmailTransport } from '@alga-psa/tickets/lib/namedConversationEmail';
@@ -9,6 +10,7 @@ import { recoverCoManagedNotificationDeliveries } from '@alga-psa/notifications/
 export const CO_MANAGED_NOTIFICATION_RECOVERY_JOB = 'co-managed-notification-recovery';
 export async function coManagedNotificationRecoveryHandler(input: { tenantId: string; limit?: number }) {
   const db = await getConnection(input.tenantId);
+  const namedNotifications = await recoverNamedConversationNotifications(db, input.tenantId, input.limit);
   const namedEmails = await recoverNativeNamedConversationEmails(db, input.tenantId, namedConversationEmailTransport, input.limit);
   const schedules = await recoverCoManagedScheduledComments(db, input.tenantId, input.limit);
   const events = await dispatchCoManagedConversationEvents(db, input.tenantId, publishCoManagedConversationEvent, { limit: input.limit });
@@ -16,5 +18,5 @@ export async function coManagedNotificationRecoveryHandler(input: { tenantId: st
   const emails = await processCoManagedCommentEmailDeliveries(db, input.tenantId, sendCoManagedCommentEmail, { limit: input.limit });
   const customerEmails = await processCoManagedCustomerEmailDeliveries(db, input.tenantId, sendCoManagedCustomerCommentEmail, { limit: input.limit });
   const requesterEmails = await processCoManagedRequesterEmailDeliveries(db, input.tenantId, sendCoManagedRequesterCommentEmail, { limit: input.limit });
-  return { namedEmails, schedules, events, consumers, emails, customerEmails, requesterEmails, notifications: await recoverCoManagedNotificationDeliveries(input.tenantId, input.limit) };
+  return { namedNotifications, namedEmails, schedules, events, consumers, emails, customerEmails, requesterEmails, notifications: await recoverCoManagedNotificationDeliveries(input.tenantId, input.limit) };
 }

@@ -9,7 +9,7 @@ import { withNamedTicketConversation } from './namedTicketConversations';
 import type { CoManagedSessionActor } from './sharedWorkIdentity';
 
 const EVENTS = 'ticket_conversation_message_events', PREFS = 'ticket_conversation_preferences';
-const attentionSources = [...coManagedConversationBodySources, EVENTS, PREFS,
+export const namedConversationAttentionSources = [...coManagedConversationBodySources, EVENTS, PREFS,
   'attention', 'attention_version', 'last_read_version', 'unread_count', 'following'];
 type Context = { trx: Knex.Transaction; ticket: ConversationTicketReference; conversation: NamedTicketConversation; hidden: readonly string[] };
 const invalid = (): never => { throw new TicketConversationError('CONVERSATION_INVALID'); };
@@ -55,7 +55,7 @@ export function getNamedConversationAttention(db: Knex, actor: CoManagedSessionA
 /** Reuse the current ticket admission for the navigator; a body mask also
  * withholds activity sequence metadata, not just the unread total. */
 export async function readNamedConversationAttention(context: Context & { actor: { tenant: string; userId: string } }) {
-  if (isCoManagedReadFieldHidden(context.hidden, attentionSources)) return null;
+  if (isCoManagedReadFieldHidden(context.hidden, namedConversationAttentionSources)) return null;
   const store = tenantDb(context.trx, context.conversation.storeTenant);
   const preference = await store.table(PREFS).where({ conversation_id: context.conversation.conversationId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId }).first();
   const current = await store.table('ticket_conversations').where('conversation_id', context.conversation.conversationId).forShare().first('attention_version');
@@ -80,7 +80,7 @@ export function updateNamedConversationPreference(db: Knex, actor: CoManagedSess
     (input.readThrough !== undefined && (typeof input.readThrough !== 'string' || !/^(0|[1-9][0-9]{0,18})$/.test(input.readThrough) || BigInt(input.readThrough) > 9223372036854775807n))) return invalid();
   const request = { ...input };
   return withNamedTicketConversation(db, actor, ticket, reference, 'read', async context => {
-    if (isCoManagedReadFieldHidden(context.hidden, attentionSources)) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
+    if (isCoManagedReadFieldHidden(context.hidden, namedConversationAttentionSources)) throw new TicketConversationError('CONVERSATION_FORBIDDEN');
     await assertCoManagedOperationalWrite(context.trx, context.conversation.storeTenant);
     const store = tenantDb(context.trx, context.conversation.storeTenant), key = { conversation_id: context.conversation.conversationId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId };
     const current = await store.table('ticket_conversations').where('conversation_id', context.conversation.conversationId).first('attention_version');

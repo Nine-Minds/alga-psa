@@ -6,7 +6,9 @@ import type { Knex } from 'knex';
 export function coManagedNotificationPredicate(db: Knex) {
   return db.raw(`(jsonb_exists(COALESCE(internal_notifications.metadata::jsonb, '{}'::jsonb), 'coManaged') OR EXISTS (
     SELECT 1 FROM co_management_in_app_receipts cir WHERE cir.tenant = internal_notifications.tenant
-      AND cir.notification_id = internal_notifications.internal_notification_id) OR (
+      AND cir.notification_id = internal_notifications.internal_notification_id) OR EXISTS (
+    SELECT 1 FROM ticket_conversation_notification_receipts ncr WHERE ncr.tenant = internal_notifications.tenant
+      AND ncr.notification_id = internal_notifications.internal_notification_id) OR (
     (internal_notifications.template_name = 'task-comment-added' OR
       (internal_notifications.template_name = 'user-mentioned' AND (
         internal_notifications.metadata->>'contextType' = 'task' OR

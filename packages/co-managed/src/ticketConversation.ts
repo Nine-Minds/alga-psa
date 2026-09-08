@@ -62,6 +62,25 @@ export async function readAuthorizedTicketConversationPage(context: {
   resource: { tenant: string; id: string; relationshipId?: string };
   redactedFields: readonly string[];
 }, cursor?: CoManagedConversationCursor, selected?: NamedTicketConversation): Promise<Pick<CoManagedTicketConversation, 'items' | 'nextBefore'>> {
+  const page = await readTicketConversationProjection(context, cursor, selected);
+  await assertCoManagedSessionUnexpired(context.trx, { ...context.actor, kind: 'session', sessionId: context.sessionId });
+  return page;
+}
+
+/** Single-message projection for a caller retaining current recipient/resource
+ * and named source authority. Receiving a notification never fabricates a session. */
+export async function readAuthorizedTicketConversationMessage(context: {
+  trx: Knex.Transaction; actor: { tenant: string; userId: string };
+  resource: { tenant: string; id: string; relationshipId?: string }; redactedFields: readonly string[];
+}, selected: NamedTicketConversation, message: { commentId: string; threadId: string }) {
+  if (![message.commentId, message.threadId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
+  return (await readTicketConversationProjection(context, undefined, selected, message)).items[0] ?? null;
+}
+
+async function readTicketConversationProjection(context: {
+  trx: Knex.Transaction; actor: { tenant: string; userId: string };
+  resource: { tenant: string; id: string; relationshipId?: string }; redactedFields: readonly string[];
+}, cursor?: CoManagedConversationCursor, selected?: NamedTicketConversation, only?: { commentId: string; threadId: string }): Promise<Pick<CoManagedTicketConversation, 'items' | 'nextBefore'>> {
   const { trx, actor, resource, redactedFields } = context;
   const foreign = actor.tenant !== resource.tenant;
   if (!trx.isTransaction || (foreign && !resource.relationshipId)) throw new CoManagedSharedWorkError();
@@ -122,10 +141,10 @@ export async function readAuthorizedTicketConversationPage(context: {
       actor_id: 'c.actor_user_id', actor_reference_id: trx.raw('NULL::uuid'), actor_display_name: 'c.actor_display_name', actor_organization_name: 'c.actor_organization_name' });
     queries.push(privateComments);
   }
+  if (only) for (const source of queries) source.where({ 'c.comment_id': only.commentId, 'c.thread_id': only.threadId });
   const query = trx.from(trx.queryBuilder().unionAll(queries, true).as('history')).orderBy('created_at', 'desc').orderBy('store_tenant', 'desc').orderBy('comment_id', 'desc').limit(26);
   if (cursor) query.whereRaw('(created_at, store_tenant, comment_id) < (?::timestamptz, ?::uuid, ?::uuid)', [cursor.createdAt, cursor.storeTenant, cursor.commentId]);
   const rows = await query;
-  await assertCoManagedSessionUnexpired(trx, { ...actor, kind: 'session', sessionId: context.sessionId });
   const hideAuthor = isCoManagedReadFieldHidden(redactedFields, authorSources);
   const items: CoManagedConversationItem[] = rows.slice(0, 25).map(row => ({
     storeTenant: row.store_tenant, commentId: row.comment_id, threadId: row.thread_id, parentCommentId: row.parent_comment_id,

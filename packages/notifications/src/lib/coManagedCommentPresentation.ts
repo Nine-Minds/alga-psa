@@ -1,12 +1,22 @@
-import type { CoManagedTicketCommentNotification, CoManagedTaskCommentNotification } from '@alga-psa/co-managed';
+import type { CoManagedTicketCommentNotification, CoManagedTaskCommentNotification, NamedConversationNotification } from '@alga-psa/co-managed';
 // LEVERAGE: friction shared-rich-text-preview — this pure text reader belongs below the ticket feature.
 import { extractTicketRichTextPlainText } from '@alga-psa/tickets/lib/ticketRichText';
 
-export function coManagedCommentPresentation(message: CoManagedTicketCommentNotification | CoManagedTaskCommentNotification, eventId: string, deliveryKey: string) {
+export function coManagedCommentPresentation(message: CoManagedTicketCommentNotification | CoManagedTaskCommentNotification | NamedConversationNotification, eventId: string, deliveryKey: string) {
   const authorName = message.author?.displayName
     ? [message.author.displayName, message.author.organizationName ? `(${message.author.organizationName})` : ''].filter(Boolean).join(' ')
     : '—';
   const commentPreview = Array.from(extractTicketRichTextPlainText(message.note)).slice(0, 200).join('');
+  if ('conversation' in message) {
+    const query = new URLSearchParams({ conversation: message.conversation.conversationId, conversationStore: message.conversation.storeTenant, message: message.commentId });
+    const path = message.ownerTicket ? `/msp/tickets/${message.resource.id}` : `/msp/co-management/tickets/${message.resource.tenant}/${message.resource.relationshipId}/${message.resource.id}`;
+    return {
+      link: `${path}?${query}`,
+      data: { authorName, ticketId: message.ticketNumber ?? '—', commentPreview: `${message.conversation.name}: ${commentPreview}` },
+      metadata: { coManaged: { version: 3, resource: message.resource, conversation: { storeTenant: message.conversation.storeTenant, conversationId: message.conversation.conversationId },
+        commentId: message.commentId, threadId: message.threadId, sequence: message.sequence, deliveryKey, eventId: eventId.toLowerCase() } },
+    };
+  }
   if (message.resource.kind === 'project_task') {
     const task = message as CoManagedTaskCommentNotification;
     return {

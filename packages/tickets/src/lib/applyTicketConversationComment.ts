@@ -84,6 +84,7 @@ export async function publishTicketConversationCommentEffects(context: TicketCon
     // Reviewed Send owns its exact external envelope. Reuse the existing
     // suppression contract so generic contact/watch-list email cannot resend it.
     ...(context.externalDelivery === 'reviewed_email' ? { suppressContactNotifications: true } : {}),
+    ...(context.conversationId && context.audience !== 'requester' ? { suppressInternalNotifications: true } : {}),
     ticketId: context.resource.id, ...(reference ? {} : { userId: context.actor.userId }), commentId: comment.comment_id,
     thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id, is_reply: Boolean(comment.parent_comment_id),
     comment: { id: comment.comment_id, content: saved.note, author: displayName, authorType: 'internal', isInternal: comment.is_internal,
