@@ -36,6 +36,7 @@
     "./models/tagModel.js": "./dist/models/tagModel.js",
     "./models/ticketModel.js": "./dist/models/ticketModel.js",
     "./models/userModel.js": "./dist/models/userModel.js",
+    "./utils/appointmentDateTime": { "types": "./utils/appointmentDateTime.ts", "import": "./utils/appointmentDateTime.ts" },
     "./utils/recurrenceUtils": "./dist/utils/recurrenceUtils.js",
     "./utils/recurrenceUtils.js": "./dist/utils/recurrenceUtils.js",
     "./extensions/domain.js": "./dist/extensions/domain.js",

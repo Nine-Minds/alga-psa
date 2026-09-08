@@ -23,6 +23,7 @@ export interface ApproverConfigJson {
  * Extract the configured approver user IDs and team IDs from a `config_json` blob,
  * falling back to the legacy single `default_approver_id` when the arrays are empty.
  */
+// LEVERAGE: pattern appointment-approver-config — retained co-managed request admission decodes this same persisted configuration at a lower layer.
 export function readApproverIdsFromConfig(
   config: ApproverConfigJson | null | undefined
 ): { userIds: string[]; teamIds: string[] } {

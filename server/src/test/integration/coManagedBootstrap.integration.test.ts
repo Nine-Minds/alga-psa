@@ -14641,3 +14641,115 @@ it('customer schedule meeting sync retains the actual operation through provider
   expect(await run({ operationId: next.co_managed_sync_operation_id })).toEqual({ status: 'synchronized' });
   expect(deliver.mock.lastCall[0]).toMatchObject({ startDateTime: '2026-09-16T09:00:00.000Z' });
 }));
+
+async function withAppointmentAuthorityFixture(work: (fixture: any) => Promise<void>) {
+  return withScheduleAppointmentFixture(async (fixture: any) => {
+    const { customer, requestId, context } = fixture;
+    await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ description: 'Private appointment description', requester_name: 'Appointment requester', requester_email: 'requester@example.invalid' });
+    const appointment = await import('../../../../packages/scheduling/src/actions/appointmentRequestManagementActions');
+    const domain = await import('@alga-psa/co-managed');
+    const actor = async () => ({ kind: 'api_key' as const, tenant: context.tenant, userId: context.userId, apiKeyId: context.apiKeyId });
+    const read = (options: any = {}) => domain.readCoManagedNativeAppointmentRequests(db, context.tenant, actor, options);
+    await work({ ...fixture, appointment, domain, actor, read });
+  });
+}
+
+it('customer appointment authority applies the same actual technician scope to list and detail', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, context, requestId }: any) => {
+  const base = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+  const otherId = randomUUID();
+  await customer.table('appointment_requests').insert({ ...base, appointment_request_id: otherId, preferred_assigned_user_id: null, schedule_entry_id: null });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where(builder => builder.where({ resource: 'user_schedule', action: 'update' }).orWhere({ resource: 'user', action: 'read' })).select('permission_id')).del();
+  expect((await appointment.getAppointmentRequests()).data.map((row: any) => row.appointment_request_id)).toEqual([requestId]);
+  expect(await appointment.getAppointmentRequestById(requestId)).toMatchObject({ success: true, data: { appointment_request_id: requestId, requested_date: '2026-09-07', description: 'Private appointment description' } });
+  expect(await appointment.getAppointmentRequestById(otherId)).toMatchObject({ success: false });
+  expect(await appointment.getAppointmentRequestsByTicketId(randomUUID())).toMatchObject({ success: false });
+  await customer.table('availability_settings').insert({ tenant: context.tenant, setting_type: 'general_settings', config_json: { approver_user_ids: [context.userId] } });
+  expect((await appointment.getAppointmentRequests()).data).toHaveLength(2);
+  expect(await appointment.getAppointmentRequestById(otherId)).toMatchObject({ success: true });
+}));
+
+it('customer appointment authority filters projected fields and keeps API-key masks separate from native sessions', async () => withAppointmentAuthorityFixture(async ({ read, appointment, context, requestId, user, customer }: any) => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Appointment field scope', actorUserId: user.user_id });
+  await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action: 'read', templateKey: 'assigned', config: { redactedFields: ['description', 'requester_email', 'requested_date'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  const result = await read({ id: requestId });
+  expect(result.requests[0]).not.toHaveProperty('description'); expect(result.requests[0]).not.toHaveProperty('requester_email');
+  expect((await read({ filters: { search_query: 'Private appointment description' } })).requests).toEqual([]);
+  expect((await read({ filters: { start_date: '2026-09-01' } })).requests).toEqual([]);
+  expect(await appointment.getAppointmentRequestById(requestId)).toMatchObject({ success: true, data: { description: 'Private appointment description' } });
+  await customer.table('api_keys').where('api_key_id', context.apiKeyId).update({ active: false });
+  await expect(read()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('customer appointment authority declines approved bookings with atomic request meeting and conflict cleanup', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, context, requestId, ownId, busyId, meetingId, events }: any) => {
+  await customer.table('schedule_conflicts').insert({ tenant: context.tenant, entry_id_1: ownId, entry_id_2: busyId, conflict_type: 'overlap' });
+  events.mockClear();
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Please choose another appointment' })).toEqual({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId)).toEqual([]);
+  expect(await customer.table('schedule_conflicts')).toEqual([]);
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'declined', declined_reason: 'Please choose another appointment', schedule_entry_id: null, online_meeting_id: null, approved_by_user_id: context.userId });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'cancelled', co_managed_sync_action: 'delete' });
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_DELETED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Duplicate' })).toMatchObject({ success: false });
+}));
+
+it('customer appointment authority honors current configured approvers while rejecting unapproved technicians', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, context, requestId }: any) => {
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Not permitted' })).toMatchObject({ success: false });
+  const id = randomUUID();
+  await customer.table('availability_settings').insert({ tenant: context.tenant, availability_setting_id: id, setting_type: 'user_hours', user_id: context.userId, config_json: { default_approver_id: context.userId } });
+  expect(await appointment.declineAppointmentRequest({ appointment_request_id: requestId, decline_reason: 'Configured approver' })).toMatchObject({ success: true });
+}));
+
+it('customer appointment authority rolls decline back on final credential expiry and defers writes during lapse', async () => withAppointmentAuthorityFixture(async ({ domain, actor, customer, context, requestId, ownId, meetingId, principal }: any) => {
+  const publish = vi.fn();
+  const decline = () => domain.declineCoManagedNativeAppointment(db, context.tenant, { id: requestId, reason: 'Cannot make it' }, actor, publish);
+  await db.raw(`CREATE FUNCTION expire_appointment_decline_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_appointment_decline_key AFTER UPDATE ON appointment_requests FOR EACH ROW EXECUTE FUNCTION expire_appointment_decline_key()');
+  try {
+    await expect(decline()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'approved', schedule_entry_id: ownId });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId)).toHaveLength(1);
+    expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'scheduled', co_managed_sync_operation_id: null });
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_appointment_decline_key ON appointment_requests'); await db.raw('DROP FUNCTION expire_appointment_decline_key()'); }
+  await expireCoManagedEntitlement(principal.tenant);
+  await expect(decline()).rejects.toMatchObject({ name: 'CoManagedLifecycleError' });
+}));
+
+it('customer appointment rescheduling keeps requester wall-clock calendar and meeting intent consistent', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, requestId, ownId, meetingId, events, context }: any) => {
+  events.mockClear();
+  const result = await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: '2026-09-18', new_time: '14:00', new_timezone: 'Asia/Tokyo', new_duration: 45 });
+  expect(result).toMatchObject({ success: true, data: { requested_date: '2026-09-18', requested_time: '14:00:00', requester_timezone: 'Asia/Tokyo', requested_duration: 45, status: 'approved' } });
+  const schedule = await customer.table('schedule_entries').where('entry_id', ownId).first();
+  expect(schedule.scheduled_start.toISOString()).toBe('2026-09-18T05:00:00.000Z');
+  expect(schedule.scheduled_end.toISOString()).toBe('2026-09-18T05:45:00.000Z');
+  const meeting = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(meeting).toMatchObject({ co_managed_sync_action: 'update', subject: 'Previously disclosed appointment' });
+  expect(meeting.start_time.toISOString()).toBe(schedule.scheduled_start.toISOString());
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+}));
+
+it('customer appointment rescheduling supports pending requests without approving them and rejects impossible local times', async () => withAppointmentAuthorityFixture(async ({ appointment, customer, requestId, ownId, meetingId }: any) => {
+  await customer.table('online_meetings').where('meeting_id', meetingId).del();
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ status: 'pending', online_meeting_id: null, online_meeting_provider: null, online_meeting_url: null });
+  for (const [date, time] of [['2026-02-30', '12:00'], ['2026-03-08', '02:30']]) expect(await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: date, new_time: time, new_timezone: 'America/New_York' })).toMatchObject({ success: false });
+  expect(await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: '2026-09-19', new_time: '10:00' })).toMatchObject({ success: true, data: { status: 'pending', requested_date: '2026-09-19', requested_time: '10:00:00' } });
+  expect((await customer.table('schedule_entries').where('entry_id', ownId).first()).scheduled_start.toISOString()).toBe('2026-09-19T14:00:00.000Z');
+  expect(await customer.table('online_meetings')).toHaveLength(0);
+}));
+
+it('customer appointment rescheduling rolls back request calendar and meeting updates when final credentials expire', async () => withAppointmentAuthorityFixture(async ({ domain, actor, customer, context, requestId, ownId, meetingId }: any) => {
+  const publish = vi.fn();
+  await db.raw(`CREATE FUNCTION expire_appointment_reschedule_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_appointment_reschedule_key AFTER UPDATE ON online_meetings FOR EACH ROW EXECUTE FUNCTION expire_appointment_reschedule_key()');
+  try {
+    await expect(domain.rescheduleCoManagedNativeAppointment(db, context.tenant, { id: requestId, date: '2026-09-18', time: '10:00' }, actor, publish)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect((await customer.table('schedule_entries').where('entry_id', ownId).first()).scheduled_start.toISOString()).toBe('2026-09-07T09:00:00.000Z');
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ requested_time: '05:00:00', status: 'approved' });
+    expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: null });
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_appointment_reschedule_key ON online_meetings'); await db.raw('DROP FUNCTION expire_appointment_reschedule_key()'); }
+}));

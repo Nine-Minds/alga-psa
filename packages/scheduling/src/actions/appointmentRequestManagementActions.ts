@@ -1,5 +1,8 @@
 'use server';
 
+import { readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
+import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
+
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
 import { withTransaction, resolveEffectiveTimeZone } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -301,6 +304,8 @@ export const getAppointmentRequestById = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await readCoManagedNativeAppointmentRequests(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { id: appointmentRequestId });
+    if (admitted.handled) return admitted.requests[0] ? { success: true, data: admitted.requests[0] } : { success: false, error: 'Appointment request not found' };
 
     // Check permissions - use same permission as schedule actions
     const canRead = await hasPermission(user, 'user_schedule', 'read', db) || await hasPermission(user, 'user_schedule', 'update', db);
@@ -371,6 +376,8 @@ export const getAppointmentRequests = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await readCoManagedNativeAppointmentRequests(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { filters: filters ? appointmentRequestFilterSchema.parse(filters) : {} });
+    if (admitted.handled) return { success: true, data: admitted.requests };
 
     // Check permissions - use same permission as schedule actions
     const canRead = await hasPermission(user, 'user_schedule', 'read', db) || await hasPermission(user, 'user_schedule', 'update', db);
@@ -535,6 +542,8 @@ export const getAppointmentRequestsByTicketId = withAuth(async (
 ): Promise<AppointmentRequestResult<IAppointmentRequest[]>> => {
   try {
     const { knex: db } = await createTenantKnex();
+    const admitted = await readCoManagedNativeAppointmentRequests(db, tenant, () => resolveNativeTimeBrowserActor(user, tenant), { ticketId });
+    if (admitted.handled) return { success: true, data: admitted.requests };
 
     // Check permissions - use same permission as schedule actions
     const canRead = await hasPermission(user, 'user_schedule', 'read', db) || await hasPermission(user, 'user_schedule', 'update', db);
@@ -1331,6 +1340,8 @@ export const declineAppointmentRequest = withAuth(async (
     const validatedData = declineAppointmentRequestSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const admitted = await declineCoManagedNativeAppointment(db, tenant, { id: validatedData.appointment_request_id, reason: validatedData.decline_reason }, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) return { success: true };
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request. The latter is checked inside the transaction so we can
@@ -1558,6 +1569,8 @@ export const updateAppointmentRequestDateTime = withAuth(async (
     const validatedData = updateAppointmentRequestDateTimeSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const admitted = await rescheduleCoManagedNativeAppointment(db, tenant, { id: validatedData.appointment_request_id, date: validatedData.new_date, time: validatedData.new_time, timezone: validatedData.new_timezone, duration: validatedData.new_duration }, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) return { success: true, data: admitted.request };
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request.

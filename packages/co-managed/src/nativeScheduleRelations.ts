@@ -16,18 +16,20 @@ function localAppointmentDate(start: unknown, timezone: string) {
 
 /** Runs only inside an admitted schedule command. Provider work is represented
  * by a durable pending operation on the actual retained meeting row; no Graph
- * call or requester message runs before the schedule transaction commits. */
+ * call or requester message runs before the schedule transaction commits.
+ * An explicitly admitted appointment command may identify an unlinked request
+ * for cancellation, or reschedule that same pending request without approval. */
 export async function applyNativeScheduleRelations(trx: Knex.Transaction, actor: CoManagedAuthenticatedActor,
-  before: any | null, after: any | null, previousAssignments: string[], assignments: string[]) {
+  before: any | null, after: any | null, previousAssignments: string[], assignments: string[], requestId?: string, pendingRescheduleRequestId?: string) {
   if (!trx.isTransaction) throw new CoManagedSharedWorkError();
   const owner = tenantDb(trx, actor.tenant), entryIds = [...new Set([before?.entry_id, after?.entry_id].filter(Boolean))];
-  const requestIds = [...new Set([before, after].filter(row => row?.work_item_type === 'appointment_request').map(row => row.work_item_id))];
+  const requestIds = [...new Set([...(requestId ? [requestId] : []), ...[before, after].filter(row => row?.work_item_type === 'appointment_request').map(row => row.work_item_id)])];
   const requests = await owner.table('appointment_requests').where(query => query.whereIn('appointment_request_id', requestIds).orWhereIn('schedule_entry_id', entryIds)).orderBy('appointment_request_id').forUpdate();
   // Calendar mutation cannot silently adopt another request's slot or approve
   // a pending request; approval remains an explicit appointment operation.
   for (const request of requests) {
     if (!requestIds.includes(request.appointment_request_id) || (request.schedule_entry_id && !entryIds.includes(request.schedule_entry_id))) throw new NativeScheduleRelationError();
-    if (after?.work_item_type === 'appointment_request' && after.work_item_id === request.appointment_request_id && !cancelled(after) && (request.status !== 'approved' || after.is_recurring)) throw new NativeScheduleRelationError();
+    if (after?.work_item_type === 'appointment_request' && after.work_item_id === request.appointment_request_id && !cancelled(after) && ((request.status !== 'approved' && !(request.status === 'pending' && pendingRescheduleRequestId === request.appointment_request_id)) || after.is_recurring)) throw new NativeScheduleRelationError();
   }
   if (requests.length !== requestIds.length) throw new NativeScheduleRelationError();
   const meetings = await owner.table('online_meetings').where(query => query.whereIn('schedule_entry_id', entryIds).orWhereIn('appointment_request_id', requestIds)).orderBy('meeting_id').forUpdate();
@@ -41,6 +43,7 @@ export async function applyNativeScheduleRelations(trx: Knex.Transaction, actor:
   // row. Retain those IDs before clearing the request's live join fields.
   for (const request of requests) if (request.online_meeting_provider === 'teams' && request.online_meeting_id && !meetings.some(meeting => meeting.appointment_request_id === request.appointment_request_id && meeting.provider_meeting_id === request.online_meeting_id)) {
     const bound = before ?? after;
+    if (!bound) throw new NativeScheduleRelationError();
     const collision = await owner.table('online_meetings').where({ provider: 'teams', provider_meeting_id: request.online_meeting_id }).forUpdate().first('meeting_id');
     if (collision) throw new NativeScheduleRelationError();
     const [meeting] = await owner.table('online_meetings').insert({ tenant: actor.tenant, provider: 'teams', provider_meeting_id: request.online_meeting_id,
