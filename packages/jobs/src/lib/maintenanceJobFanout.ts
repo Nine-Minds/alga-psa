@@ -93,10 +93,12 @@ const tenantsWithPendingCoManagedNotifications: TenantSelector = async db => {
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
   const requesterEmails = await db.unscoped<{ tenant: string }>('co_management_requester_email_deliveries', 'maintenance fanout selects customers with pending requester email deliveries')
     .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
+  const workflowEmails = await db.unscoped<{ tenant: string }>('co_management_workflow_ticket_emails', 'maintenance fanout selects committed workflow closure emails awaiting delivery')
+    .where('status', 'pending').where('next_attempt_at', '<=', new Date()).distinct('tenant');
   const schedules = await db.unscoped<{ tenant: string }>('comments', 'maintenance fanout selects co-managed schedules and legacy publication handoffs awaiting recovery')
     .whereRaw("(scheduled_publish_retry_at IS NULL OR scheduled_publish_retry_at <= clock_timestamp()) AND ((publish_state = 'scheduled' AND scheduled_publish_at <= clock_timestamp()) OR (publish_state = 'published' AND scheduled_publish_event_id IS NOT NULL AND (scheduled_publish_dispatched_at IS NULL OR (scheduled_response_event_id IS NOT NULL AND scheduled_response_dispatched_at IS NULL))))")
     .whereRaw("(EXISTS (SELECT 1 FROM tenants WHERE tenants.tenant = comments.tenant AND tenants.product_code = 'co_managed') OR EXISTS (SELECT 1 FROM co_management_relationships WHERE co_management_relationships.tenant = comments.tenant))").distinct('tenant');
-  return [...new Set([...notifications, ...events, ...consumers, ...emails, ...customerEmails, ...requesterEmails, ...schedules].map(row => row.tenant))].map(tenant => ({ tenant }));
+  return [...new Set([...notifications, ...events, ...consumers, ...emails, ...customerEmails, ...requesterEmails, ...workflowEmails, ...schedules].map(row => row.tenant))].map(tenant => ({ tenant }));
 };
 
 const tenantsWithInboundEmail: TenantSelector = (db) => db

@@ -108,3 +108,5 @@ export { fanoutCoManagedSlaNotification, withCoManagedSlaNotification, type CoMa
 export { withCoManagedStoredSlaNotification, type CoManagedStoredSlaNotification } from './storedSlaNotification';
 
 export { processCoManagedSlaEmailDeliveries, type CoManagedSlaEmailDelivery } from './slaEmailDeliveries';
+
+export { processCoManagedWorkflowTicketEmails, type CoManagedWorkflowTicketEmail } from './workflowTicketEmails';

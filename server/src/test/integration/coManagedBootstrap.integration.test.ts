@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -17220,4 +17220,130 @@ it.each(['assigned_to', 'priority.name'] as const)('co-managed workflow assignme
   await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
   if (field === 'assigned_to') await expect(f.assign()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
   else expect(await f.assign()).toMatchObject({ assigned_to: f.userIds[0] });
+}));
+
+async function withWorkflowCloseFixture(work: (fixture: any) => Promise<void>) {
+  return withWorkflowSlaFixture(async f => {
+    const contact = await f.customer.table('contacts').where('client_id', f.operation.customer_client_id).first();
+    const contactId = randomUUID();
+    await f.customer.table('contacts').insert({ ...contact, contact_name_id: contactId, email: 'workflow-requester@example.test', is_inactive: false });
+    await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: contactId, response_state: 'awaiting_client' });
+    const { processCoManagedWorkflowTicketEmails } = await import('../../../../packages/co-managed/src/workflowTicketEmails');
+    const send = vi.fn().mockResolvedValue({ status: 'delivered' });
+    const close = (extra: any = {}) => f.act('tickets.close', { ticket_id: f.resource.id, resolution: { code: 'Fixed <safe>' }, notify_requester: true, ...extra });
+    const recover = () => processCoManagedWorkflowTicketEmails(db, f.resource.tenant, send);
+    await work({ ...f, contactId, close, recover, send, emails: () => f.customer.table('co_management_workflow_ticket_emails') });
+  });
+}
+
+it('co-managed workflow close commits canonical closure and one MSP resolution before durable requester delivery', async () => withWorkflowCloseFixture(async f => {
+  await f.customer.table('board_close_rules').insert({ tenant: f.resource.tenant, board_id: (await f.customer.table('tickets').first()).board_id, required_fields: JSON.stringify(['assigned_to']) });
+  const result = await f.close({ public_note: 'Done', internal_note: 'Internal closure detail' });
+  expect(result).toMatchObject({ ticket_id: f.resource.id, final_status_id: f.closedStatusId, resolution_code: 'Fixed <safe>' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null, closed_by: f.customerPrincipal.userId });
+  expect((await f.sponsor.table('sla_organization_obligations').first()).clock.resolution.completedAt).not.toBeNull();
+  expect(await f.customer.table('ticket_audit_logs').where('event_type', 'TICKET_CLOSE_RULES_BYPASSED')).toHaveLength(1);
+  expect(await f.customer.table('comments').where('ticket_id', f.resource.id)).toHaveLength(2);
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'pending', contact_id: f.contactId, attempt_count: 0 })]);
+  expect(f.send).not.toHaveBeenCalled();
+  await f.customer.table('workflow_runs').where('run_id', f.runId).update({ status: 'SUCCEEDED', lease_expires_at: new Date(0) });
+  expect(await f.recover()).toEqual({ examined: 1, processed: 1 });
+  expect(f.send).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ email: 'workflow-requester@example.test', html: expect.stringContaining('Fixed &lt;safe&gt;') }));
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'delivered', attempt_count: 1 })]);
+  expect(await f.recover()).toEqual({ examined: 0, processed: 0 });
+}));
+
+it.each(['expired_lease', 'missing_role', 'missing_composition', 'lapsed_license'] as const)
+('co-managed workflow close rejects %s without closure, SLA, audit or email intents', async reason => withWorkflowCloseFixture(async f => {
+  if (reason === 'expired_lease') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+  if (reason === 'missing_role') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'missing_composition') f.mutationRegistry.resetWorkflowTicketMutationAdapter();
+  if (reason === 'lapsed_license') await f.sponsor.table('co_managed_allocations').del();
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(f.close()).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+  expect(await f.emails()).toHaveLength(0);
+}));
+
+it('co-managed workflow close rolls back an enqueued email on final lease failure', async () => withWorkflowCloseFixture(async f => {
+  const adapter = (await import('../../../../packages/co-managed/src/workflowTicketMutation')).withCoManagedWorkflowTicketMutation;
+  f.mutationRegistry.registerWorkflowTicketMutationAdapter((trx: any, input: any, write: any) => adapter(trx, input, async effects => {
+    const result = await write(effects);
+    expect(await tenantDb(trx, f.resource.tenant).table('co_management_workflow_ticket_emails')).toHaveLength(1);
+    await tenantDb(trx, f.resource.tenant).table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+    return result;
+  }));
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(f.close()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+  expect(await f.emails()).toHaveLength(0);
+  expect(await f.customer.table('audit_logs').where({ record_id: f.runId, operation: 'workflow_action:tickets.close' })).toHaveLength(0);
+  expect(f.send).not.toHaveBeenCalled();
+}));
+
+it.each(['requester_changed', 'contact_inactive', 'board_hidden', 'author_revoked', 'reopened', 'cancelled', 'notifications_disabled'] as const)
+('co-managed workflow close email suppresses current %s delivery', async reason => withWorkflowCloseFixture(async f => {
+  await f.close();
+  if (reason === 'requester_changed') await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: null });
+  if (reason === 'contact_inactive') await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ is_inactive: true });
+  if (reason === 'board_hidden') {
+    const groupId = randomUUID();
+    await f.customer.table('client_portal_visibility_groups').insert({ tenant: f.resource.tenant, group_id: groupId, client_id: f.operation.customer_client_id, name: 'No boards' });
+    await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ portal_visibility_group_id: groupId });
+  }
+  if (reason === 'author_revoked') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'reopened') await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ status_id: (await f.customer.table('statuses').where('is_closed', false).first()).status_id, closed_at: null, is_closed: false });
+  if (reason === 'cancelled') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ status: 'CANCELED' });
+  if (reason === 'notifications_disabled') {
+    if (await f.customer.table('notification_settings').first()) await f.customer.table('notification_settings').update({ is_enabled: false });
+    else await f.customer.table('notification_settings').insert({ tenant: f.resource.tenant, is_enabled: false });
+  }
+  await f.recover();
+  expect(f.send).not.toHaveBeenCalled();
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'skipped' })]);
+}));
+
+it('co-managed workflow close email retries with stable identity and reloads current address and escaped template data', async () => withWorkflowCloseFixture(async f => {
+  await f.close({ email: { subject: 'Closed {{ticket.resolutionCode}}\r\nnext', html: '<p>{{ticket.resolutionCode}}</p>', text: '{{ticket.resolutionCode}}' } });
+  f.send.mockResolvedValueOnce({ status: 'failed', retryable: true, errorCode: 'provider_down' });
+  await f.recover();
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'pending', attempt_count: 1, error_code: 'provider_down' })]);
+  expect(f.send.mock.calls[0][0]).toMatchObject({ subject: 'Closed Fixed <safe> next', html: '<p>Fixed &lt;safe&gt;</p>', text: 'Fixed <safe>' });
+  await f.customer.table('contacts').where('contact_name_id', f.contactId).update({ email: 'current-requester@example.test' });
+  await f.emails().update({ next_attempt_at: new Date(0) });
+  await f.recover();
+  expect(f.send.mock.calls[1][0]).toMatchObject({ email: 'current-requester@example.test', messageId: f.send.mock.calls[0][0].messageId });
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'delivered', attempt_count: 2 })]);
+}));
+
+it.each(['attributes.resolution_code', 'response_state', 'contact_name_id'] as const)
+('co-managed workflow close rejects hidden %s source fields before queuing a message', async field => withWorkflowCloseFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant, name: 'Closure restriction', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await expect(f.close()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+  expect(await f.emails()).toHaveLength(0);
+}));
+
+it('co-managed workflow close email concurrent recovery sends one committed command once', async () => withWorkflowCloseFixture(async f => {
+  await f.close();
+  await Promise.all([f.recover(), f.recover()]);
+  expect(f.send).toHaveBeenCalledTimes(1);
+  expect(await f.emails()).toEqual([expect.objectContaining({ status: 'delivered', attempt_count: 1 })]);
+}));
+
+it('co-managed workflow close without notification needs no requester and queues no email', async () => withWorkflowCloseFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ contact_name_id: null });
+  await f.close({ notify_requester: false });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null });
+  expect(await f.emails()).toHaveLength(0);
 }));

@@ -1203,10 +1203,16 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Close a ticket with resolution and optional notification'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
+      tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId,
+      fields: ['status_id', 'resolution_code', 'resolution_text', ...(input.public_note || input.internal_note ? ['conversation', 'comments', 'note'] : [])],
+      readFields: ['ticket_id', 'closed_at', 'resolution_code', 'attributes.resolution_code', 'status_id',
+        ...(input.notify_requester ? ['contact_name_id', 'client_id', 'title', 'ticket_number', 'resolution_text', 'attributes.resolution_text'] : [])],
+      closeRulesAudited: true,
+    }, async (effects) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
-      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+      const ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).forUpdate().first();
       if (!ticket) {
         throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Ticket not found', details: { ticket_id: input.ticket_id } });
       }
@@ -1222,7 +1228,7 @@ export function registerTicketActions(): void {
             status_type: 'ticket',
             board_id: ticket.board_id,
           })
-          .first()
+          .forShare().first()
         : null;
       if (currentStatus?.is_closed) {
         throwActionError(ctx, { category: 'ActionError', code: 'CONFLICT', message: 'Ticket is already in a closed status', details: { status_id: ticket.status_id } });
@@ -1237,7 +1243,7 @@ export function registerTicketActions(): void {
         .andWhere('is_closed', true)
         .orderBy('is_default', 'desc')
         .orderBy('order_number', 'asc')
-        .first();
+        .forShare().first();
       if (!closedStatus) {
         throwActionError(ctx, { category: 'ActionError', code: 'INTERNAL_ERROR', message: 'No closed ticket status configured' });
       }
@@ -1271,6 +1277,7 @@ export function registerTicketActions(): void {
         .update({
           status_id: closedStatus.status_id,
           is_closed: true,
+          response_state: null,
           closed_at: nowIso,
           closed_by: tx.actorUserId,
           attributes: mergedAttributes,
@@ -1316,7 +1323,9 @@ export function registerTicketActions(): void {
         );
       }
 
-      if (input.notify_requester) {
+      if (input.notify_requester && effects.deferRequesterCloseEmail) {
+        await effects.deferRequesterCloseEmail({ operationKey: `${ctx.stepPath}:${ctx.idempotencyKey}`, email: input.email });
+      } else if (input.notify_requester) {
         const contactId = (ticket.contact_name_id as string | null) ?? null;
         if (!contactId) {
           throwActionError(ctx, { category: 'ValidationError', code: 'VALIDATION_ERROR', message: 'Ticket has no requester contact to notify' });
@@ -1363,7 +1372,7 @@ export function registerTicketActions(): void {
         resolution_code: persistedResolutionCode,
         final_status_id: closedStatus.status_id as string
       };
-    })
+    }))
   });
 
   // ---------------------------------------------------------------------------

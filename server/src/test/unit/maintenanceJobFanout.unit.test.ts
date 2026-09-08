@@ -160,7 +160,7 @@ describe('runMaintenanceJob', () => {
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob(jobName);
     expect(selectorTablesSeen).toEqual(jobName === 'co-managed-notification-recovery'
-      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'comments']
+      ? [table, 'co_management_event_outbox', 'co_management_event_consumers', 'co_management_email_deliveries', 'co_management_customer_email_deliveries', 'co_management_requester_email_deliveries', 'co_management_workflow_ticket_emails', 'comments']
       : jobName === 'co-managed-sla-observation' ? [table, 'sla_organization_notification_events', 'sla_organization_notification_recipients'] : [table]);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith(jobName, { tenantId: 't2' });

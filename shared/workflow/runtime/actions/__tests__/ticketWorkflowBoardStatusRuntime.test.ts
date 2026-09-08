@@ -78,6 +78,8 @@ import { TicketModel } from '../../../../models/ticketModel';
 import { registerTicketActions } from '../businessOperations/tickets';
 
 class FakeQueryBuilder {
+  forUpdate(): this { return this; }
+  forShare(): this { return this; }
   private conditions: Record<string, any> = {};
   private comparisons: Array<{ column: string; operator: string; value: any }> = [];
   private orderings: Array<{ column: string; direction: 'asc' | 'desc' }> = [];
