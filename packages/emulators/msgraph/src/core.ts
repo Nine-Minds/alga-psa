@@ -979,6 +979,7 @@ export class MsGraphCore implements EmulatorCore {
   }
 
   createCalendarEvent(organizerUserId: string, body: Record<string, unknown>): GraphCalendarEvent {
+    this.validateCalendarBoundaries(body);
     const isOnlineMeeting = body.isOnlineMeeting === true;
     const subject = typeof body.subject === 'string' ? body.subject : null;
     const start = (body.start as { dateTime?: string } | undefined) ?? null;
@@ -1024,6 +1025,7 @@ export class MsGraphCore implements EmulatorCore {
 
   updateCalendarEvent(eventId: string, patch: Record<string, unknown>): GraphCalendarEvent {
     const event = this.getCalendarEvent(eventId);
+    this.validateCalendarBoundaries({ ...event, ...patch });
     if (typeof patch.subject === 'string') event.subject = patch.subject;
     if (patch.start !== undefined) event.start = patch.start;
     if (patch.end !== undefined) event.end = patch.end;
@@ -1034,6 +1036,21 @@ export class MsGraphCore implements EmulatorCore {
     }
     event.lastModifiedDateTime = this.env.clock.now().toISOString();
     return event;
+  }
+
+  private validateCalendarBoundaries(body: Record<string, unknown>): void {
+    const boundaries = ['start', 'end'].map(key => {
+      const value = body[key] as { dateTime?: unknown; timeZone?: unknown; date?: unknown } | undefined;
+      if (!value || typeof value.dateTime !== 'string' || typeof value.timeZone !== 'string'
+        || !value.timeZone || value.date !== undefined || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value.dateTime)) {
+        throw new GraphApiError(400, { error: { code: 'UnableToDeserializePostBody', message: `${key} must be a dateTimeTimeZone value.` } });
+      }
+      return { dateTime: value.dateTime, timeZone: value.timeZone };
+    });
+    if (body.isAllDay === true && (boundaries[0].timeZone !== boundaries[1].timeZone
+      || boundaries.some(value => !/T00:00:00(?:\.0+)?(?:Z|[+-]00:00)?$/.test(value.dateTime)))) {
+      throw new GraphApiError(400, { error: { code: 'ErrorInvalidRequest', message: 'All-day start and end must be midnight in the same time zone.' } });
+    }
   }
 
   deleteCalendarEvent(eventId: string): void {

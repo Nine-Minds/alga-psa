@@ -34,6 +34,78 @@ const event = {
   start: { dateTime: '2026-09-20T10:00:00', timeZone: 'UTC' },
   end: { dateTime: '2026-09-20T11:00:00', timeZone: 'UTC' },
 };
+
+// Graph requires dateTimeTimeZone values even for all-day events.
+// https://learn.microsoft.com/en-us/graph/api/resources/event?view=graph-rest-1.0
+it.each(['POST', 'PATCH'])('rejects Google-style all-day dates atomically on %s (#3348)', async method => {
+  const created = method === 'PATCH' ? await createEvent() : undefined;
+  const path = `/me/calendar/events${created ? `/${created.id}` : ''}`;
+  const response = await graph(path, method, {
+    subject: 'Must not persist', isAllDay: true,
+    start: { date: '2026-09-17', timeZone: 'UTC' },
+    end: { date: '2026-09-18', timeZone: 'UTC' },
+  });
+  expect(response.status).toBe(400);
+  graphErrorResponse.parse({ status: response.status, body: await response.json() });
+  const saved = (await (await graph('/me/calendar/events')).json()).value;
+  expect(saved).toEqual(created ? [expect.objectContaining({ id: created.id, subject: event.subject, start: event.start, end: event.end })] : []);
+});
+
+it.each([
+  { start: { dateTime: '2026-09-20T10:00:00', timeZone: 'UTC' }, end: { dateTime: '2026-09-21T00:00:00', timeZone: 'UTC' } },
+  { start: { dateTime: '2026-09-20T00:00:00', timeZone: 'UTC' }, end: { dateTime: '2026-09-21T00:00:00', timeZone: 'Pacific Standard Time' } },
+])('requires all-day midnight boundaries in the same timezone: %j', async boundaries => {
+  const response = await graph('/me/calendar/events', 'POST', { ...event, ...boundaries, isAllDay: true });
+  expect(response.status).toBe(400);
+});
+
+it('preserves an all-day exclusive end through a title-only update', async () => {
+  const boundaries = {
+    start: { dateTime: '2026-09-20T00:00:00', timeZone: 'UTC' },
+    end: { dateTime: '2026-09-21T00:00:00', timeZone: 'UTC' },
+  };
+  const created = await createEvent({ ...boundaries, isAllDay: true });
+  const response = await graph(`/me/calendar/events/${created.id}`, 'PATCH', { subject: 'Renamed all-day event' });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toMatchObject({ ...boundaries, isAllDay: true, subject: 'Renamed all-day event' });
+});
+
+it('round-trips all-day dates through the real Microsoft adapter and can convert back to timed', async () => {
+  const previous = process.env.MICROSOFT_GRAPH_BASE_URL;
+  process.env.MICROSOFT_GRAPH_BASE_URL = `${base}/v1.0`;
+  try {
+    const { MicrosoftCalendarAdapter } = await import('../../../integrations/src/services/calendar/providers/MicrosoftCalendarAdapter');
+    const adapter = new MicrosoftCalendarAdapter({
+      id: 'calendar-contract', tenant: 'isolated-calendar-contract', provider_type: 'microsoft',
+      provider_config: { accessToken: token, refreshToken: 'unused', tokenExpiresAt: new Date(Date.now() + 3600_000).toISOString() },
+    } as any);
+    const dates = { start: { date: '2026-09-17', timeZone: 'UTC' }, end: { date: '2026-09-18', timeZone: 'UTC' } };
+    const created = await adapter.createEvent({ ...dates, title: 'All day', provider: 'microsoft' } as any);
+    expect(created).toMatchObject(dates);
+    expect(created.start.dateTime).toBeUndefined();
+    const updated = await adapter.updateEvent(created.id!, { ...dates, title: 'Title edited' });
+    expect(updated).toMatchObject({ ...dates, title: 'Title edited' });
+    const saved = await (await graph(`/me/calendar/events/${created.id}`)).json();
+    expect(saved).toMatchObject({ isAllDay: true, start: { dateTime: '2026-09-17T00:00:00' }, end: { dateTime: '2026-09-18T00:00:00' } });
+    await adapter.updateEvent(created.id!, { start: event.start, end: event.end });
+    expect(await (await graph(`/me/calendar/events/${created.id}`)).json()).toMatchObject({ isAllDay: false, start: event.start, end: event.end });
+    await adapter.updateEvent(created.id!, dates);
+    const titleOnly = await adapter.updateEvent(created.id!, { title: 'Only the title changed' });
+    expect(titleOnly).toMatchObject({ ...dates, title: 'Only the title changed' });
+    const inbound = await createEvent({
+      isAllDay: true,
+      start: { dateTime: '2026-10-25T00:00:00.0000000', timeZone: 'W. Europe Standard Time' },
+      end: { dateTime: '2026-10-26T00:00:00.0000000', timeZone: 'W. Europe Standard Time' },
+    });
+    expect(await adapter.getEvent(inbound.id)).toMatchObject({
+      start: { date: '2026-10-25', timeZone: 'W. Europe Standard Time' },
+      end: { date: '2026-10-26', timeZone: 'W. Europe Standard Time' },
+    });
+  } finally {
+    if (previous === undefined) delete process.env.MICROSOFT_GRAPH_BASE_URL;
+    else process.env.MICROSOFT_GRAPH_BASE_URL = previous;
+  }
+}, 20_000);
 const range = new URLSearchParams({ $filter: "start/dateTime ge '2026-09-20T09:00:00Z' and end/dateTime le '2026-09-20T12:00:00Z'" });
 
 beforeAll(async () => {
