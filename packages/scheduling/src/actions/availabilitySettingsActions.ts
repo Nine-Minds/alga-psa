@@ -578,8 +578,12 @@ export const getAvailabilitySettings = withAuth(async (
 
     const settings = await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
+      // A day can hold several shifts; the trailing keys keep which one the
+      // editor hydrates stable across refreshes.
       let query = scopedDb.table('availability_settings')
-        .orderBy('created_at', 'desc');
+        .orderBy('created_at', 'desc')
+        .orderBy('start_time')
+        .orderBy('availability_setting_id');
 
       if (!access.hasSystemAccess) {
         query = query.where({ setting_type: 'user_hours' })

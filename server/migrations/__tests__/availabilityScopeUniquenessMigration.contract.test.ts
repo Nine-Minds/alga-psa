@@ -12,14 +12,25 @@ describe('availability scope uniqueness migration', () => {
     const sql = raw.mock.calls.map(([statement]) => statement.replace(/\s+/g, ' ').trim()).join('\n');
 
     expect(sql).toContain('ORDER BY updated_at DESC, created_at DESC, availability_setting_id DESC');
-    expect(sql).toContain('PARTITION BY tenant, user_id, day_of_week');
+    expect(sql).toContain('PARTITION BY tenant, user_id, day_of_week, start_time');
     expect(sql).toContain('PARTITION BY tenant, service_id');
     expect(sql).toContain('PARTITION BY tenant ORDER BY');
-    expect(sql).toContain('UNIQUE INDEX IF NOT EXISTS availability_settings_user_day_unique ON availability_settings (tenant, user_id, day_of_week)');
+    expect(sql).toContain('UNIQUE INDEX IF NOT EXISTS availability_settings_user_day_unique ON availability_settings (tenant, user_id, day_of_week, start_time)');
     expect(sql).toContain('UNIQUE INDEX IF NOT EXISTS availability_settings_service_unique ON availability_settings (tenant, service_id)');
     expect(sql).toContain('UNIQUE INDEX IF NOT EXISTS availability_settings_general_unique ON availability_settings (tenant)');
     expect(raw.mock.calls.findIndex(([statement]) => statement.includes('DELETE FROM availability_settings')))
       .toBeLessThan(raw.mock.calls.findIndex(([statement]) => statement.includes('CREATE UNIQUE INDEX')));
+  });
+
+  it('keys user hours by start_time so split shifts are neither deleted nor blocked', async () => {
+    const raw = vi.fn().mockResolvedValue({ rows: [] });
+    await migration.up({ raw });
+    const sql = raw.mock.calls.map(([statement]) => statement.replace(/\s+/g, ' ').trim()).join('\n');
+
+    // A morning and an afternoon block on the same day are two real shifts the
+    // booking engine offers slots from, so day alone must never be the key.
+    expect(sql).not.toContain('PARTITION BY tenant, user_id, day_of_week ORDER BY');
+    expect(sql).not.toContain('availability_settings (tenant, user_id, day_of_week)');
   });
 
   // availability_settings is distributed on `tenant`; Citus rejects DDL on a

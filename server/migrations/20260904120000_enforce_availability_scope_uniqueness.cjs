@@ -2,6 +2,11 @@
  * Collapse ambiguous availability scopes and prevent them from recurring.
  * The newest row wins deterministically, with IDs breaking timestamp ties.
  *
+ * User hours are keyed by start_time as well as day, because a day may
+ * legitimately hold several shifts (a morning and an afternoon block) and the
+ * booking engine offers slots from each. Only rows that repeat the very same
+ * shift are redundant, so those are what gets collapsed and blocked.
+ *
  * Runs untransacted: availability_settings is distributed on `tenant`, and
  * Citus refuses DDL on a distributed table that was already modified in the
  * same transaction. Every statement is idempotent (the deletes only ever
@@ -16,7 +21,7 @@ exports.up = async function up(knex) {
     WITH ranked AS (
       SELECT tenant, availability_setting_id,
         row_number() OVER (
-          PARTITION BY tenant, user_id, day_of_week
+          PARTITION BY tenant, user_id, day_of_week, start_time
           ORDER BY updated_at DESC, created_at DESC, availability_setting_id DESC
         ) AS scope_rank
       FROM availability_settings
@@ -65,7 +70,7 @@ exports.up = async function up(knex) {
 
   await knex.raw(`
     CREATE UNIQUE INDEX IF NOT EXISTS availability_settings_user_day_unique
-    ON availability_settings (tenant, user_id, day_of_week)
+    ON availability_settings (tenant, user_id, day_of_week, start_time)
     WHERE setting_type = 'user_hours' AND user_id IS NOT NULL AND day_of_week IS NOT NULL
   `);
   await knex.raw(`
