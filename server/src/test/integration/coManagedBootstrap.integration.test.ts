@@ -90,7 +90,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908011054_add_co_managed_meeting_sync_intents.cjs', '20260908021208_create_co_managed_meeting_creation_operations.cjs', '20260908043851_allow_co_managed_assignment_before_escalation.cjs', '20260908050419_create_organization_sla_obligations.cjs', '20260908051552_create_co_managed_sla_priority_mappings.cjs', '20260908062358_create_organization_sla_notification_events.cjs', '20260908063356_create_organization_sla_notification_recipients.cjs', '20260908065525_add_organization_sla_email_retry_state.cjs', '20260908081909_create_co_managed_workflow_ticket_emails.cjs', '20260908084034_create_co_managed_time_work_references.cjs', '20260908091756_allow_co_managed_time_tracking.cjs', '20260908102610_create_co_managed_relationship_closures.cjs', '20260908103849_create_co_managed_participation_evidence.cjs', '20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908111943_create_co_managed_archive_files.cjs', '20260908115957_retain_co_managed_private_history.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -7304,7 +7304,8 @@ it('transfers a confirmed MSP-private thread and files atomically with historica
   const archivedHistory = await sponsor.table('co_managed_participation_evidence').where({ resource_id: resource.id, source_type: 'conversation' });
   expect(archivedHistory).toHaveLength(3); expect(JSON.stringify(archivedHistory)).not.toContain('Deleted private secret');
   expect(archivedHistory.find(row => row.payload.deleted).payload).not.toHaveProperty('note');
-  expect(await sponsor.table('co_managed_archive_files').where('ticket_id', resource.id)).toHaveLength(1);
+  expect(await sponsor.table('co_managed_archive_files').where({ ticket_id: resource.id, source_tenant: resource.tenant })).toHaveLength(1);
+  expect(await sponsor.table('co_managed_archive_files').where({ ticket_id: resource.id, source_tenant: principal.tenant })).toHaveLength(1);
   const former = comments.find(row => row.actor_display_name === 'Former colleague');
   expect(await customer.table('collaboration_actor_references').where('actor_reference_id', former.actor_reference_id).first()).toMatchObject({ actor_tenant: principal.tenant, actor_user_id: formerUser });
   expect(await customer.table('users').whereIn('user_id', [principal.userId, formerUser])).toEqual([]);
@@ -18368,4 +18369,73 @@ it('archive reads download route binds the actual MSP session and returns non-ca
     session.mockResolvedValue({ session_id: f.customerPrincipal.sessionId, user: { tenant: f.resource.tenant, id: f.customerPrincipal.userId, user_type: 'internal' } } as any);
     expect((await GET(request, { params: Promise.resolve({ archiveFileId: file.archive_file_id }) })).status).toBe(404);
   } finally { session.mockRestore(); override.mockRestore(); connection.mockRestore(); }
+}));
+
+it('MSP-private archive retains actual task revisions and tombstones without publishing customer history', async () => withTaskConversationFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads');
+  const request = { kind: 'create', operationId: randomUUID(), audience: 'organization_private', text: 'Original MSP diagnosis' };
+  const root = await f.write(f.principal, request); await f.write(f.principal, request);
+  await f.sponsor.table('users').where('user_id', f.principal.userId).update({ first_name: 'Renamed', last_name: 'Technician' });
+  await f.write(f.principal, { kind: 'edit', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 1, text: 'Revised MSP diagnosis' });
+  await f.write(f.principal, { kind: 'delete', operationId: randomUUID(), comment: f.ref(root), expectedRevision: 2 });
+  const records = await f.sponsor.table('co_managed_participation_evidence').where('source_type', 'private_conversation').orderBy('occurred_at');
+  expect(records).toHaveLength(3); expect(records.map(row => row.payload.revision)).toEqual([1, 2, 3]);
+  expect(records[1].actor_name).toBe(records[0].actor_name); expect(records[1].actor_name).not.toContain('Renamed');
+  expect(records[2].payload).toMatchObject({ audience: 'organization_private', deleted: true }); expect(records[2].payload).not.toHaveProperty('note');
+  expect(await f.customer.table('project_task_comments')).toHaveLength(0); expect(await f.customer.table('co_management_event_outbox')).toHaveLength(0);
+  expect((await f.read(f.customerPrincipal)).items).toHaveLength(0);
+  const history = await archive.getCoManagedArchiveHistory(db, f.principal, f.resource); expect(history.entries).toHaveLength(3);
+  expect(history.entries.every(entry => entry.kind === 'private_conversation' && entry.audience === 'organization_private')).toBe(true);
+  expect((await archive.listCoManagedArchiveWork(db, f.principal)).items.map(work => work.resource)).toContainEqual(f.resource);
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.customer.table('project_tasks').where('task_id', f.resource.id).del();
+  await f.sponsor.table('co_management_private_comments').where('thread_id', root.threadId).del();
+  expect(await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).toEqual(history);
+  await expect(archive.getCoManagedArchiveHistory(db, f.customerPrincipal, f.resource)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  for (const file of ['20260908105022_allow_co_managed_time_participation.cjs', '20260908110522_retain_co_managed_conversation_participation.cjs', '20260908115957_retain_co_managed_private_history.cjs']) await require('../../../migrations/' + file).up(db);
+  await expect(require('../../../migrations/20260908115957_retain_co_managed_private_history.cjs').down(db)).rejects.toThrow('retained MSP-private history');
+}));
+
+it('MSP-private archive captures published draft files and keeps private and shared policies independent', async () => withConversationDraftFixture(async f => {
+  const archive = await import('../../../../packages/co-managed/src/archiveReads'), bundles = await import('@alga-psa/authorization');
+  const part = f.file('MSP-private bytes');
+  const draft = await f.drafts.beginCoManagedConversationDraft(db, f.principal, f.resource,
+    { operationId: randomUUID(), audience: 'organization_private', content: { text: 'MSP-only draft note' }, files: [part.descriptor] });
+  await f.drafts.uploadCoManagedDraftAttachment(db, f.principal, f.resource, draftRef(draft), part.descriptor.attachmentId, part.content, f.upload);
+  expect(await f.sponsor.table('co_managed_archive_files')).toHaveLength(0);
+  const privateNote = await f.drafts.publishCoManagedConversationDraft(db, f.principal, f.resource, draftRef(draft), f.publishCustomer);
+  const sharedNote = await f.publishCustomer(db, f.principal, f.resource, { operationId: randomUUID(), audience: 'shared_it', text: 'Shared customer note' });
+  await f.attachments.uploadCoManagedConversationAttachment(db, f.principal, f.resource,
+    { attachmentId: part.descriptor.attachmentId, comment: attachmentComment(sharedNote), fileName: 'Shared.txt', mimeType: 'text/plain', content: Buffer.from('Shared bytes') }, f.upload);
+  const files = (await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items; expect(files).toHaveLength(2);
+  const privateFile = files.find(file => file.audience === 'organization_private')!, sharedFile = files.find(file => file.audience === 'shared_it')!;
+  expect(privateFile.archiveFileId).not.toBe(sharedFile.archiveFileId);
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, privateFile.archiveFileId)).content).toEqual(part.content);
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'Private archive scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'ticket', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['co_management_private_comments'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([sharedFile]);
+  expect((await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).entries.every(entry => entry.kind !== 'private_conversation')).toBe(true);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, privateFile.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.sponsor.table('authorization_bundle_rules').where({ bundle_id: bundleId, resource_type: 'ticket', action: 'read' }).update({ config: { selectedClientIds: [f.operation.request.clientId], redactedFields: ['comments'] } });
+  expect((await archive.listCoManagedArchiveFiles(db, f.principal, f.resource)).items).toEqual([privateFile]);
+  expect((await archive.getCoManagedArchiveHistory(db, f.principal, f.resource)).entries.some(entry => entry.kind === 'private_conversation')).toBe(true);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, sharedFile.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  await f.sponsor.table('co_management_conversation_attachments').where('thread_id', privateNote.threadId).del();
+  await f.sponsor.table('co_management_private_comments').where('thread_id', privateNote.threadId).del();
+  expect((await archive.downloadCoManagedArchiveFile(db, f.principal, f.resource, privateFile.archiveFileId)).content).toEqual(part.content);
+  await expect(archive.downloadCoManagedArchiveFile(db, f.customerPrincipal, f.resource, privateFile.archiveFileId)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+}));
+
+it('MSP-private archive capture rolls back with a private writer that expires after retaining evidence', async () => withTaskConversationFixture(async f => {
+  const module = await import('../../../../packages/co-managed/src/privateParticipationEvidence'), original = module.retainCoManagedPrivateParticipation;
+  const capture = vi.spyOn(module, 'retainCoManagedPrivateParticipation').mockImplementation(async (...args) => {
+    await original(...args); await tenantDb(args[0].trx, f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+  });
+  try { await expect(f.add(f.principal, 'organization_private', 'Rollback private diagnosis')).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' }); }
+  finally { capture.mockRestore(); }
+  for (const table of ['co_management_private_comments', 'co_management_private_threads', 'co_management_private_command_receipts', 'co_managed_participation_evidence']) expect(await f.sponsor.table(table)).toHaveLength(0);
 }));

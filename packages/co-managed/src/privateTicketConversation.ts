@@ -1,3 +1,4 @@
+import { retainCoManagedPrivateParticipation } from './privateParticipationEvidence';
 import { encodeConversationContent, snapshotConversationContent, type CoManagedConversationContent } from './conversationContent';
 import { createHash } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -116,6 +117,8 @@ async function mutateCoManagedPrivateResourceComment(db: Knex, inputActor: CoMan
           customer_tenant: resource.tenant, relationship_id: resource.relationshipId, resource_type: resource.kind, resource_id: resource.id,
           actor_user_id: actor.userId, command_type: request.kind, request_hash: hash, thread_id: threadId, comment_id: commentId, revision,
           applied_at: trx.raw('clock_timestamp()') }).returning('*');
+        await retainCoManagedPrivateParticipation(context, request.operationId);
+        await assertWrite();
         return receipt(saved);
       }));
   } catch (error) {

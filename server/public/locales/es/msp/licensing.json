@@ -719,14 +719,16 @@
         "handed_back": "Devuelto al equipo de TI del cliente",
         "access_revoked": "Uso compartido finalizado",
         "work_audit": "Trabajo actualizado",
-        "time_entry": "Tiempo registrado"
+        "time_entry": "Tiempo registrado",
+        "private_conversation": "Nota privada del MSP"
       },
       "changes": {
         "task_name": "Nombre de la tarea",
         "due_date": "Fecha de vencimiento",
         "project_status_mapping_id": "Estado modificado",
         "msp_assignment": "Asignación del MSP modificada"
-      }
+      },
+      "privateFile": "Archivo privado del MSP"
     }
   }
 }

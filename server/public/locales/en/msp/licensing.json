@@ -784,7 +784,7 @@
     },
     "archive": {
       "title": "Shared work archive",
-      "description": "Retained shared history and files from work your organization participated in.",
+      "description": "Retained history and files from work your organization participated in.",
       "error": "The archive is unavailable. Refresh to check your current access.",
       "work": "Retained work",
       "empty": "No retained work is available on this page.",
@@ -806,14 +806,16 @@
         "handed_back": "Returned to customer IT",
         "access_revoked": "Sharing ended",
         "work_audit": "Work updated",
-        "time_entry": "Time recorded"
+        "time_entry": "Time recorded",
+        "private_conversation": "MSP-private note"
       },
       "changes": {
         "task_name": "Task name",
         "due_date": "Due date",
         "project_status_mapping_id": "Status changed",
         "msp_assignment": "MSP assignment changed"
-      }
+      },
+      "privateFile": "MSP-private file"
     }
   }
 }

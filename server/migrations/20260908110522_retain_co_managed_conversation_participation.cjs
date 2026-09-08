@@ -1,5 +1,10 @@
 const TABLE = 'co_managed_participation_evidence';
 async function sources(knex, conversation) {
+  if (conversation) {
+    const current = await knex('pg_constraint').whereRaw('conrelid = ?::regclass', [TABLE]).where('conname', 'co_participation_evidence_source_type_check')
+      .first(knex.raw('pg_get_constraintdef(oid) AS definition'));
+    if (current?.definition.includes("'conversation'")) return; // Preserve later source expansions on replay.
+  }
   await knex.raw('ALTER TABLE ?? DROP CONSTRAINT IF EXISTS co_participation_evidence_source_type_check', [TABLE]);
   await knex.raw(`ALTER TABLE ?? ADD CONSTRAINT co_participation_evidence_source_type_check CHECK (source_type IN ('ticket_handoff', 'work_audit', 'time_entry'${conversation ? ", 'conversation'" : ''}))`, [TABLE]);
 }

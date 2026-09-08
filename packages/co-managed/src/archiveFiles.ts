@@ -6,6 +6,7 @@ import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { assertCoManagedAttachmentPath } from './attachmentStoragePath';
 import { hasEffectiveSharedGrant } from './effectiveSharedGrant';
 import { participationEvidenceTable } from './participationEvidenceStore';
+import type { CoManagedSharedResource } from './sharedWork';
 import { CoManagedSharedWorkError, isCoManagedUuid } from './sharedWorkIdentity';
 
 const TABLE = 'co_managed_archive_files';
@@ -42,26 +43,57 @@ export async function stageCoManagedConversationFiles(trx: Knex.Transaction, ten
     await sponsor.table('co_managed_ticket_references').where({ ...workKey, ticket_id: ticketId, client_id: relationship.sponsor_client_id }).forShare().first('reference_id');
   if (!participated && (!comment.actor_reference_id || !await owner.table('collaboration_actor_references')
     .where({ actor_reference_id: comment.actor_reference_id, actor_tenant: relationship.sponsor_tenant }).forShare().first('actor_reference_id'))) return;
-  const publishedDraft = owner.table('co_management_conversation_drafts as d').where({ 'd.status': 'published', 'd.customer_tenant': tenant,
-    'd.relationship_id': resource.relationshipId, 'd.ticket_id': ticketId, 'd.thread_id': comment.thread_id, 'd.operation_id': commentId })
+  const files = await publishedFiles(trx, tenant, resource, comment.thread_id, commentId, supplied?.attachmentId);
+  await stageFiles(trx, relationship.sponsor_tenant, relationship.sponsor_client_id, comment.audience, files, supplied?.content);
+}
+
+/** Own private notes remain an MSP business record. Their persisted work proof
+ * supplies the client identity; no customer content or grant is reopened. */
+export async function stageCoManagedPrivateConversationFiles(trx: Knex.Transaction, tenant: string, resource: CoManagedSharedResource, commentId: string,
+  uploaded?: { attachmentId: string; content: Uint8Array }): Promise<void> {
+  if (!trx.isTransaction || resource.kind !== 'ticket' || tenant === resource.tenant || ![tenant, resource.tenant, resource.relationshipId, resource.id, commentId].every(isCoManagedUuid)) throw new CoManagedSharedWorkError();
+  const supplied = uploaded ? { attachmentId: uploaded.attachmentId, content: Buffer.from(uploaded.content) } : undefined;
+  const owner = tenantDb(trx, tenant), query = owner.table('co_management_private_comments as c').where('c.comment_id', commentId).whereNull('c.deleted_at');
+  owner.tenantJoin(query, 'co_management_private_threads as t', 'c.thread_id', 't.thread_id');
+  owner.tenantJoin(query, 'co_management_private_comments as root', 't.root_comment_id', 'root.comment_id', { on: join => join.andOn('root.thread_id', '=', 't.thread_id') });
+  const comment = await query.where({ 't.customer_tenant': resource.tenant, 't.relationship_id': resource.relationshipId, 't.resource_type': 'ticket', 't.resource_id': resource.id })
+    .whereNull('t.disclosure_operation_id').forShare('c', 't', 'root').first('c.thread_id');
+  if (!comment) return;
+  const evidence = await owner.table(participationEvidenceTable).where({ customer_tenant: resource.tenant, relationship_id: resource.relationshipId,
+    resource_type: 'ticket', resource_id: resource.id }).distinct('client_id').limit(2);
+  if (evidence.length !== 1) throw new CoManagedSharedWorkError();
+  const files = await publishedFiles(trx, tenant, resource, comment.thread_id, commentId, supplied?.attachmentId);
+  await stageFiles(trx, tenant, evidence[0].client_id, 'organization_private', files, supplied?.content);
+}
+
+async function publishedFiles(trx: Knex.Transaction, storeTenant: string, resource: CoManagedSharedResource, threadId: string, commentId: string, attachmentId?: string) {
+  const owner = tenantDb(trx, storeTenant);
+  const publishedDraft = owner.table('co_management_conversation_drafts as d').where({ 'd.status': 'published', 'd.customer_tenant': resource.tenant,
+    'd.relationship_id': resource.relationshipId, 'd.ticket_id': resource.id, 'd.thread_id': threadId, 'd.operation_id': commentId })
     .whereRaw('d.operation_id = f.draft_operation_id').whereNull('d.abandoned_at');
-  const files = await owner.table('co_management_conversation_attachments as f').where({ 'f.customer_tenant': tenant, 'f.relationship_id': resource.relationshipId,
-    'f.ticket_id': ticketId, 'f.thread_id': comment.thread_id, 'f.comment_id': commentId, 'f.status': 'ready' }).whereNull('f.discarded_at').whereNull('f.purged_at')
+  return owner.table('co_management_conversation_attachments as f').where({ 'f.customer_tenant': resource.tenant, 'f.relationship_id': resource.relationshipId,
+    'f.ticket_id': resource.id, 'f.thread_id': threadId, 'f.comment_id': commentId, 'f.status': 'ready' }).whereNull('f.discarded_at').whereNull('f.purged_at')
     .where(q => q.whereNull('f.draft_operation_id').orWhereExists(publishedDraft))
-    .modify(q => { if (supplied) q.where('f.attachment_id', supplied.attachmentId); }).orderBy('f.attachment_id').forShare('f').select('f.*');
+    .modify(q => { if (attachmentId) q.where('f.attachment_id', attachmentId); }).orderBy('f.attachment_id').forShare('f').select('f.*');
+}
+
+/** Source adapters own publication/audience admission; both use one immutable
+ * byte snapshot and retry protocol after proving that source. */
+async function stageFiles(trx: Knex.Transaction, tenant: string, clientId: string, audience: string, files: any[], supplied?: Uint8Array) {
+  const owner = tenantDb(trx, tenant);
   for (const file of files) {
-    const key = { ...workKey, source_tenant: tenant, attachment_id: file.attachment_id };
-    const retained = await sponsor.table(TABLE).where(key).first('content_hash');
+    const key = { customer_tenant: file.customer_tenant, relationship_id: file.relationship_id, source_tenant: file.tenant, attachment_id: file.attachment_id };
+    const retained = await owner.table(TABLE).where(key).first('content_hash');
     if (retained) {
       if (retained.content_hash !== file.content_hash) throw new Error('Retained archive file identity was reused');
       continue;
     }
     const path = assertCoManagedAttachmentPath(file);
-    const bytes = supplied ? supplied.content : Buffer.from(await (await StorageProviderFactory.createProvider()).download(path));
+    const bytes = supplied ? Buffer.from(supplied) : Buffer.from(await (await StorageProviderFactory.createProvider()).download(path));
     if (bytes.length !== file.file_size || checksum(bytes) !== file.content_hash) throw new Error('Archive source attachment failed integrity verification');
-    await sponsor.table(TABLE).insert({ tenant: relationship.sponsor_tenant, archive_file_id: randomUUID(), ...key,
-      client_id: relationship.sponsor_client_id, ticket_id: ticketId, thread_id: comment.thread_id, comment_id: commentId,
-      audience: comment.audience, file_name: file.file_name, mime_type: file.mime_type, file_size: file.file_size, content_hash: file.content_hash,
+    await owner.table(TABLE).insert({ tenant, archive_file_id: randomUUID(), ...key,
+      client_id: clientId, ticket_id: file.ticket_id, thread_id: file.thread_id, comment_id: file.comment_id,
+      audience, file_name: file.file_name, mime_type: file.mime_type, file_size: file.file_size, content_hash: file.content_hash,
       staged_bytes: bytes, captured_at: trx.raw('clock_timestamp()') }).onConflict(['tenant', ...Object.keys(key)]).ignore();
   }
 }

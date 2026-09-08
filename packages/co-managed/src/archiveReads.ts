@@ -13,14 +13,15 @@ import { coManagedArchiveFilePath } from './archiveFiles';
 
 export interface CoManagedArchiveWork { resource: CoManagedSharedResource; clientId: string; clientName: string | null; title: string | null; ticketNumber: string | null }
 export interface CoManagedArchiveEntry {
-  id: string; kind: 'conversation' | 'ticket_handoff' | 'work_audit' | 'time_entry'; event: string; occurredAt: string;
+  id: string; kind: 'conversation' | 'ticket_handoff' | 'work_audit' | 'time_entry' | 'private_conversation'; event: string; occurredAt: string;
   author?: { tenant: string; kind: string; id: string | null; name: string; organization: string };
   audience: string; note: string | null; markdown: string | null; deleted: boolean;
   changes?: Record<string, string | null>;
 }
-export interface CoManagedArchiveFile { archiveFileId: string; commentId: string; fileName: string; mimeType: string; size: number }
+export interface CoManagedArchiveFile { archiveFileId: string; commentId: string; fileName: string; mimeType: string; size: number; audience: 'requester' | 'shared_it' | 'organization_private' }
 export interface CoManagedArchiveHistory { work: CoManagedArchiveWork; entries: CoManagedArchiveEntry[]; nextPage: number | null }
-const fileSources = [...coManagedConversationBodySources, ...coManagedConversationAttachmentSources, 'comments', 'comment_threads', 'co_managed_archive_files', 'archive_files'];
+const fileSources = [...coManagedConversationBodySources, ...coManagedConversationAttachmentSources, 'co_managed_archive_files', 'archive_files'];
+const fileNoteSources = (privateFile: boolean) => privateFile ? ['co_management_private_comments', 'co_management_private_threads'] : ['comments', 'comment_threads'];
 const authorSources = [...coManagedConversationAuthorSources, 'actor_kind', 'actor_contact_id', 'actor_name', 'actor_organization'];
 const pageNumber = (value: number) => { if (!Number.isSafeInteger(value) || value < 0 || value > 1000000) throw new CoManagedSharedWorkError(); return value; };
 function resourceSnapshot(input: CoManagedSharedResource): CoManagedSharedResource {
@@ -96,6 +97,7 @@ export async function getCoManagedArchiveHistory(db: Knex, inputActor: CoManaged
       let rowFields = fields;
       if (row.source_type === 'conversation' && hidden(fields, ['comments', 'comment_threads', 'project_task_comments', ...coManagedConversationBodySources.flatMap(name => [`comments.${name}`, `project_task_comments.${name}`])])) continue;
       if (row.source_type === 'ticket_handoff' && hidden(fields, coManagedConversationBodySources.map(name => `co_management_ticket_handoffs.${name}`))) continue;
+      if (row.source_type === 'private_conversation' && hidden(fields, ['co_management_private_comments', 'co_management_private_threads', ...coManagedConversationBodySources.flatMap(name => [`co_management_private_comments.${name}`, `co_management_private_threads.${name}`])])) continue;
       if (row.source_type === 'time_entry') {
         try { const decision = await authorizeCoManagedLocalRecord(trx, actor, credential.subject, 'time_entry', 'read', { ...record, id: row.source_id,
           ownerUserId: row.actor_user_id, assignedUserIds: [row.actor_user_id] });
@@ -108,7 +110,8 @@ export async function getCoManagedArchiveHistory(db: Knex, inputActor: CoManaged
       const entry: CoManagedArchiveEntry = { id: row.evidence_id, kind: row.source_type, event: row.event_type, occurredAt: new Date(row.occurred_at).toISOString(),
         audience: payload.audience, deleted, note: !deleted && typeof payload.note === 'string' ? payload.note : null,
         markdown: !deleted && typeof payload.markdown === 'string' ? payload.markdown : null };
-      if (!evidenceHidden(rowFields, [...authorSources, ...authorSources.flatMap(name => [`comments.${name}`, `project_task_comments.${name}`, `co_management_ticket_handoffs.${name}`])])) entry.author = { tenant: row.actor_tenant, kind: row.actor_kind,
+      const authorTables = row.source_type === 'private_conversation' ? ['co_management_private_comments'] : row.source_type === 'ticket_handoff' ? ['co_management_ticket_handoffs'] : ['comments', 'project_task_comments'];
+      if (!evidenceHidden(rowFields, [...authorSources, ...authorSources.flatMap(name => authorTables.map(table => `${table}.${name}`))])) entry.author = { tenant: row.actor_tenant, kind: row.actor_kind,
         id: row.actor_user_id ?? row.actor_contact_id, name: row.actor_name, organization: row.actor_organization };
       if (row.source_type === 'work_audit' && payload.changes) {
         entry.changes = {};
@@ -131,8 +134,11 @@ export async function listCoManagedArchiveFiles(db: Knex, inputActor: CoManagedA
     const items: CoManagedArchiveFile[] = [];
     if (resource.kind !== 'ticket' || filesHidden(fields)) return { items, nextPage: null };
     const rows = await tenantDb(trx, actor.tenant).table('co_managed_archive_files').where(fileKey(resource)).orderBy('captured_at').orderBy('archive_file_id')
-      .offset(page * 50).limit(51).select('archive_file_id', 'comment_id', 'file_name', 'mime_type', 'file_size');
-    for (const row of rows.slice(0, 50)) items.push({ archiveFileId: row.archive_file_id, commentId: row.comment_id, fileName: row.file_name, mimeType: row.mime_type, size: row.file_size });
+      .modify(query => {
+        if (hidden(fields, fileNoteSources(false))) query.whereNot('source_tenant', resource.tenant);
+        if (hidden(fields, fileNoteSources(true))) query.whereNot('source_tenant', actor.tenant);
+      }).offset(page * 50).limit(51).select('archive_file_id', 'comment_id', 'file_name', 'mime_type', 'file_size', 'audience');
+    for (const row of rows.slice(0, 50)) items.push({ archiveFileId: row.archive_file_id, commentId: row.comment_id, fileName: row.file_name, mimeType: row.mime_type, size: row.file_size, audience: row.audience });
     await credential.assertCurrent();
     return { items, nextPage: rows.length > 50 ? page + 1 : null };
   });
@@ -145,7 +151,7 @@ export async function downloadCoManagedArchiveFile(db: Knex, inputActor: CoManag
     const credential = await lockCoManagedLocalAuthentication(trx, actor), { fields } = await admit(trx, credential, resource);
     if (filesHidden(fields)) throw new CoManagedSharedWorkError();
     const row = await tenantDb(trx, actor.tenant).table('co_managed_archive_files').where({ ...fileKey(resource), archive_file_id: fileId }).forShare().first();
-    if (!row) throw new CoManagedSharedWorkError();
+    if (!row || hidden(fields, fileNoteSources(row.source_tenant === actor.tenant))) throw new CoManagedSharedWorkError();
     const content = row.status === 'pending' ? Buffer.from(row.staged_bytes) : Buffer.from(await (await StorageProviderFactory.createProvider()).download(coManagedArchiveFilePath(actor.tenant, row.archive_file_id)));
     if (content.length !== row.file_size || createHash('sha256').update(content).digest('hex') !== row.content_hash) throw new Error('Retained archive file failed integrity verification');
     await credential.assertCurrent();

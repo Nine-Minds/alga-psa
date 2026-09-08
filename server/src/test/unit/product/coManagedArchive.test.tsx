@@ -45,3 +45,12 @@ it('clears the selected archive when moving between work pages', async () => {
   fireEvent.click(document.getElementById('co-archive-work-next')!); await screen.findByText('coManaged.archive.empty');
   expect(screen.queryByText('Retained shared reply')).toBeNull(); expect(mocks.list).toHaveBeenLastCalledWith(1);
 });
+
+it('labels retained MSP-private notes and files explicitly', async () => {
+  mocks.history.mockResolvedValue({ ...history, entries: [{ ...history.entries[0], kind: 'private_conversation', audience: 'organization_private', note: 'Private retained note' }] });
+  mocks.files.mockResolvedValue({ items: [{ archiveFileId: 'private-file', commentId: 'private-comment', fileName: 'Private.txt', mimeType: 'text/plain', size: 8, audience: 'organization_private' }], nextPage: null });
+  render(<CoManagedArchive />); fireEvent.click(await screen.findByRole('button', { name: /Retained issue/ }));
+  await screen.findByText('Private retained note'); expect(screen.getByText('coManaged.archive.events.private_conversation')).toBeInTheDocument();
+  expect(screen.getByText('coManaged.archive.privateFile')).toBeInTheDocument();
+  expect(screen.getByRole('link', { name: 'Private.txt' })).toHaveAttribute('href', expect.stringContaining('/archive-files/private-file?'));
+});

@@ -717,14 +717,16 @@
         "handed_back": "55555",
         "access_revoked": "55555",
         "work_audit": "55555",
-        "time_entry": "55555"
+        "time_entry": "55555",
+        "private_conversation": "55555"
       },
       "changes": {
         "task_name": "55555",
         "due_date": "55555",
         "project_status_mapping_id": "55555",
         "msp_assignment": "55555"
-      }
+      },
+      "privateFile": "55555"
     }
   }
 }

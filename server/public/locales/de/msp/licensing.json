@@ -717,14 +717,16 @@
         "handed_back": "An Kunden-IT zurückgegeben",
         "access_revoked": "Freigabe beendet",
         "work_audit": "Arbeit aktualisiert",
-        "time_entry": "Zeit erfasst"
+        "time_entry": "Zeit erfasst",
+        "private_conversation": "Private MSP-Notiz"
       },
       "changes": {
         "task_name": "Aufgabenname",
         "due_date": "Fälligkeitsdatum",
         "project_status_mapping_id": "Status geändert",
         "msp_assignment": "MSP-Zuweisung geändert"
-      }
+      },
+      "privateFile": "Private MSP-Datei"
     }
   }
 }

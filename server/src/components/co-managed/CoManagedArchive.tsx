@@ -86,6 +86,7 @@ function ArchiveDetail({ resource }: { resource: CoManagedSharedResource }) {
       <ul className="space-y-2">{data.files.items.map(file => <li key={file.archiveFileId}>
         <a id={`co-archive-file-${file.archiveFileId}`} className="break-words text-primary underline" href={`/api/co-management/archive-files/${file.archiveFileId}?${new URLSearchParams({ customerTenant: resource.tenant, relationshipId: resource.relationshipId, ticketId: resource.id })}`}>{file.fileName}</a>
         <span className="ml-2 text-sm text-muted-foreground">{t('coManaged.archive.bytes', { value: formatNumber(file.size) })}</span>
+        {file.audience === 'organization_private' && <span className="ml-2 text-sm font-medium">{t('coManaged.archive.privateFile')}</span>}
       </li>)}</ul>
       <div className="flex gap-2"><Button id="co-archive-files-previous" type="button" variant="ghost" disabled={filePage === 0} onClick={() => pageFiles(filePage - 1)}>{t('coManaged.provisioning.previous')}</Button>
         <Button id="co-archive-files-next" type="button" variant="ghost" disabled={data.files.nextPage === null} onClick={() => pageFiles(data.files.nextPage!)}>{t('coManaged.provisioning.next')}</Button></div>

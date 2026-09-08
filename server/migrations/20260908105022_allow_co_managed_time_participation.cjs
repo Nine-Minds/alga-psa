@@ -6,7 +6,12 @@ async function constraint(knex, values) {
   const literals = values.map(value => knex.raw('?', [value]).toQuery()).join(', ');
   await knex.raw(`ALTER TABLE ?? ADD CONSTRAINT co_participation_evidence_source_type_check CHECK (source_type IN (${literals}))`, [TABLE]);
 }
-exports.up = async knex => constraint(knex, ['ticket_handoff', 'work_audit', 'time_entry']);
+exports.up = async knex => {
+  const current = await knex('pg_constraint').whereRaw('conrelid = ?::regclass', [TABLE]).where('conname', 'co_participation_evidence_source_type_check')
+    .first(knex.raw('pg_get_constraintdef(oid) AS definition'));
+  if (current?.definition.includes("'time_entry'")) return; // Preserve later source expansions on replay.
+  await constraint(knex, ['ticket_handoff', 'work_audit', 'time_entry']);
+};
 exports.down = async knex => {
   if (await knex(TABLE).where('source_type', 'time_entry').first()) throw new Error('Cannot remove retained time participation evidence');
   await constraint(knex, ['ticket_handoff', 'work_audit']);

@@ -721,14 +721,16 @@
         "handed_back": "Zwrócono do IT klienta",
         "access_revoked": "Zakończono udostępnianie",
         "work_audit": "Zaktualizowano pracę",
-        "time_entry": "Zarejestrowano czas"
+        "time_entry": "Zarejestrowano czas",
+        "private_conversation": "Prywatna notatka MSP"
       },
       "changes": {
         "task_name": "Nazwa zadania",
         "due_date": "Termin",
         "project_status_mapping_id": "Zmieniono status",
         "msp_assignment": "Zmieniono przypisanie MSP"
-      }
+      },
+      "privateFile": "Prywatny plik MSP"
     }
   }
 }
