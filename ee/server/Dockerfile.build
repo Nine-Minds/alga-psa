@@ -134,8 +134,11 @@ COPY --from=builder /app/server/src/ ./server/src/
 # tenant/admin. Without it the appliance install fails ERR_MODULE_NOT_FOUND.
 COPY --from=builder /app/server/scripts/ ./server/scripts/
 COPY --from=builder /app/secrets ./secrets
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/server/node_modules ./server/node_modules
+# The early deps stage lacks workspace manifests, so its install omits packages
+# such as @microsoft/teams-js. Reuse the full install that compiled the app;
+# source-mounted development validation also needs these workspace dependencies.
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/server/node_modules ./server/node_modules
 
 # Copy EE migrations (they get merged during build-enterprise.sh)
 COPY --from=builder /app/ee/server/migrations/ ./server/migrations/

@@ -2993,3 +2993,16 @@ Built3smallnativeemulatorbundles; accountinghostsession81018 QBO56105/Xero56106/
 - ConsumerCLIbehaviorrejects missingTeamsrawexecution despitegreenrecordedverdict and rejectsreleaseValidationtrue.27readiness/Teamsverifier/entrypointtestspass; actionlintbothworkflowspass.
 - FixedoptionalartifactdownloadsemanticsforCitus: downloadcontinue-on-error allows independentgate to justifydocs-onlyNA or fail missingmandatoryapp-changeevidence, consistentwithotherdownloads. This doesnotmakeCitusrequirementoptional.
 - Nextfullnativecurrenttooling+globalinventory, then nativeCIpublicationwhenauthorized. NativeCIcompositionstillunverified; nofullgoalcompletionclaim.
+
+### Native validation of Teams CI enforcement
+
+- Clean revision ef84b1bfffa7a64c28de8a6bff48ce7e5658fba0: full native tooling passed 646 tests across 67 files, with zero failures, skips, TODOs or cancellations. Evidence: evidence/host-tooling-teams-ci.json. No Docker builds.
+- Full browser discovery passed (session 47543); collection does not establish browser execution.
+- Read-only PR refresh: PR 3343 remains open and draft at 7b170294a755dfebba34cb8bbfc1069b6d8ba8bc. Current local changes remain unpublished; native current-source CI is unverified.
+- User reconfirmed v1.5.0 as the supported-upgrade baseline; the documented pinned baseline remains unchanged.
+
+### Teams runtime dependency gap
+
+- Reproduced the EE image deps-stage manifest layout in a temporary directory and resolved it using npm install --package-lock-only --ignore-scripts --no-audit --no-fund. Resolution succeeded and omitted node_modules/@microsoft/teams-js, which exists in the full repository lockfile and is dynamically imported by the Teams tab sign-in and popup-completion pages. The earlier offline attempt failed ENOTCACHED and is not evidence of a dependency failure.
+- EE runtime image now copies root/server node_modules from the existing builder stage, after the full-workspace install, rather than the incomplete deps stage. This adds no image build stage. Native source mounts alone could not supply the missing dependency.
+- This is a dependency-resolution finding; no image build or Teams sign-in execution has validated the correction yet. Runtime image size may increase because it now includes dependencies from the full workspace install. No source-string tests were added.
