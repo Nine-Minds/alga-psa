@@ -110,7 +110,7 @@ test('collector envelope flows into promotion with target and freshness policy i
   const runtimeEvidence = collectKubernetesRelease(expectedTarget, { execute: (_command, args) => JSON.stringify(
     args.includes('pods,replicasets') ? { kind: 'List', items: [...input.pods, ...input.replicaSets] } : input.workloads[0]) });
   const revision = 'a'.repeat(40), edition = 'enterprise';
-  const manifest = { schemaVersion: 1, revision, edition, components: kubernetesReleaseObservations(input) };
+  const manifest = { schemaVersion: 1, revision, edition, components: kubernetesReleaseObservations(input).map(component => ({ ...component, revision, build: { provider: 'host-fixture', runId: 1 } })) };
   const policy = { revision, edition, manifest, expectedTarget, maxObservationAgeSeconds: 300,
     requiredComponents: manifest.components.map(component => component.name), requiredChecks: ['smoke'] };
   const manifestDigest = releaseManifestDigest(policy);

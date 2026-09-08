@@ -17,6 +17,21 @@ function canonical(value) {
 export function releaseManifestDigest(input) {
   const validation = validateReleaseManifest(input);
   if (validation.status !== 'passed') throw new Error(validation.failures.join('\n'));
+  for (const component of input.manifest.components) {
+    if (typeof component.revision !== 'string' || !/^[a-f0-9]{40}$/.test(component.revision)) {
+      throw new Error(`Component ${component.name} requires an explicit source revision`);
+    }
+    const build = component.build;
+    const runId = build?.runId;
+    const validRunId = typeof runId === 'string' ? Boolean(runId.trim()) && runId.trim() === runId
+      : Number.isSafeInteger(runId) && runId > 0;
+    if (!build || typeof build.provider !== 'string' || !build.provider.trim() || build.provider.trim() !== build.provider || !validRunId) {
+      throw new Error(`Component ${component.name} requires a build identity (provider and runId)`);
+    }
+    if (build.attempt !== undefined && (!Number.isSafeInteger(build.attempt) || build.attempt <= 0)) {
+      throw new Error(`Component ${component.name} has an invalid build attempt`);
+    }
+  }
   const normalized = { ...input.manifest, components: [...input.manifest.components].sort((a, b) => a.name.localeCompare(b.name)) };
   return `sha256:${createHash('sha256').update(canonical(normalized)).digest('hex')}`;
 }

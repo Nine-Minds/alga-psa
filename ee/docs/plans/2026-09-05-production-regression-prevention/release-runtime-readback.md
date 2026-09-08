@@ -13,6 +13,14 @@ node scripts/collect-kubernetes-release.mjs target.json observations.json
 node scripts/verify-release-promotion.mjs policy.json manifest.json test-evidence.json observations.json promotion.json
 ```
 
+Each manifest component must include `name`, immutable `image`, a full 40-character
+lowercase Git `revision`, and `build: {"provider":"github-actions","runId":123}`.
+A build run ID may also be a nonempty provider-specific string. An optional
+`build.attempt` must be a positive integer. Component revisions may differ when
+explicitly recorded; the manifest digest binds every component's source and
+build metadata. These fields identify the asserted build but do not authenticate
+that assertion: release CI must produce them from its actual build records.
+
 The consumer-owned policy supplies revision, edition, requiredComponents, requiredChecks, expectedTarget (the approved context/namespace/workload list), and a positive maxObservationAgeSeconds (for example 300). Component names match renderedReleaseComponents: namespace/kind/workload/containers-or-initContainers/container. Compare that independent rendered release inventory with the collector target; omitting a required workload must fail promotion. The collector queries only the named live workloads and Pods/ReplicaSets in the explicit context/namespace. It emits a single versioned envelope containing image observations, target, and observedAt; it never deploys or changes Kubernetes objects. Promotion rejects mismatched target, stale/future timestamps and legacy bare observation arrays. observedAt is recorded before API reads, conservatively aging the earliest snapshot. It clears stale observation output before a query, and failed collection must block subsequent promotion.
 
 Ownership follows controller UID references, including Deployment → ReplicaSet → Pod. Regular containers must be running and ready; ordinary init containers must exit0; restartable init sidecars must be running and ready. Jobs require observed completion and successful terminated containers. Replica count must be positive and complete, controllers must have observed the current generation, and all observed replicas must agree on each image. Rollouts with extra/missing/terminating/mixed-image pods are rejected until stable.

@@ -128,3 +128,22 @@ test('matching tested/deployed images still fail promotion for stale or wrong-ta
     assert.equal(verifyReleasePromotion(input).status, 'failed');
   }
 });
+
+test('every release component requires an explicit source revision and identifiable build', () => {
+  for (const component of ['server', 'email-service', 'worker']) {
+    for (const mutate of [
+      x => { delete x.revision; },
+      x => { x.revision = 'main'; },
+      x => { delete x.build; },
+      x => { x.build.provider = ''; },
+      x => { delete x.build.runId; },
+      x => { x.build.runId = 0; },
+      x => { x.build.runId = ' '; },
+      x => { x.build.attempt = -1; },
+    ]) {
+      const input = fixture(); mutate(input.manifest.components.find(item => item.name === component));
+      assert.throws(() => releaseManifestDigest(input), /source revision|build identity|build attempt/);
+      assert.equal(verifyReleasePromotion(input).status, 'failed');
+    }
+  }
+});
