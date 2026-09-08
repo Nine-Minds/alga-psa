@@ -471,7 +471,6 @@ export async function runTenantCreationOrchestration(
             stripeSubscriptionId: stripeDetails.stripeSubscriptionId!,
             tenantName: input.tenantName,
             companyName: tenantCompanyName,
-            productCode: input.productCode,
           }],
           parentClosePolicy: ParentClosePolicy.ABANDON,
           workflowExecutionTimeout: '60 days',

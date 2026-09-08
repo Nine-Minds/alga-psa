@@ -152,7 +152,6 @@ export async function trialPaymentReminderWorkflow(
       tenantName: input.companyName ?? input.tenantName,
       trialEndIso: currentTrialEndIso,
       companyName: input.companyName,
-      productCode: input.productCode,
     });
 
     log.info('Trial payment reminder workflow completed', {

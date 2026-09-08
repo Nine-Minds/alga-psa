@@ -128,7 +128,6 @@ describe('sendTrialPaymentReminderEmail', () => {
     tenantId: 'tenant-1',
     tenantName: 'Acme MSP',
     trialEndIso: '2026-03-14T12:00:00.000Z',
-    productCode: 'psa' as const,
   };
 
   it('resolves the current admin at send time and tags the email type', async () => {
@@ -136,7 +135,7 @@ describe('sendTrialPaymentReminderEmail', () => {
 
     const result = await sendTrialPaymentReminderEmail(input, {
       log,
-      loadTenantRow: async () => ({ client_name: 'Acme MSP', product_code: 'psa' }),
+      loadTenantRow: async () => ({ client_name: 'Acme MSP' }),
       loadAdminUser: async () => ({
         user_id: 'user-1',
         email: 'ada@acme.test',

@@ -24,7 +24,6 @@ const baseInput: TrialPaymentReminderWorkflowInput = {
   stripeSubscriptionId: 'sub_trial',
   tenantName: 'Acme MSP',
   companyName: 'Acme MSP',
-  productCode: 'psa',
 };
 
 interface ReminderCalls {
@@ -118,7 +117,6 @@ describe('trialPaymentReminderWorkflow', () => {
       tenantId: 'tenant-1',
       tenantName: 'Acme MSP',
       trialEndIso,
-      productCode: 'psa',
     });
 
     // The verification (and therefore the email) happens at trial end minus two days.

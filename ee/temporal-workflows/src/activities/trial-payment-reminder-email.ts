@@ -6,6 +6,9 @@
  * buttons, dark slate footer) so the two hosted lifecycle emails read as one
  * family. Kept out of the activity modules' export surface: it is a pure
  * template builder, not a Temporal activity.
+ *
+ * AlgaPSA-only copy on purpose: AlgaDesk is sold without a trial, so it never
+ * reaches this reminder (tenant creation does not schedule one for it).
  */
 
 export interface TrialPaymentReminderEmailInput {
@@ -13,7 +16,6 @@ export interface TrialPaymentReminderEmailInput {
   trialEndIso: string;
   recipientFirstName?: string;
   recipientLastName?: string;
-  productCode?: 'psa' | 'algadesk';
 }
 
 export interface TrialPaymentReminderEmailContent {
@@ -42,25 +44,10 @@ const PSA_REMINDER_COPY: TrialReminderCopy = {
     'Your MSP operations — tickets, clients, projects, billing, and team activity — continue uninterrupted after the trial ends.',
 };
 
-const ALGADESK_REMINDER_COPY: TrialReminderCopy = {
-  productName: 'AlgaDesk',
-  headerTitle: 'Your trial ends in 2 days',
-  taglineText:
-    'Nothing to do — your help desk keeps running when the trial becomes a subscription. AlgaDesk by Nine Minds keeps your tickets, knowledge base, and client portal exactly where you left them.',
-  workspaceEmoji: '🎫',
-  workspaceCardTitle: 'AlgaDesk Workspace',
-  workspaceCardDescription:
-    'Your support tickets, clients, contacts, and help desk team continue uninterrupted after the trial ends.',
-};
-
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
-
-function selectReminderCopy(productCode?: 'psa' | 'algadesk'): TrialReminderCopy {
-  return productCode === 'algadesk' ? ALGADESK_REMINDER_COPY : PSA_REMINDER_COPY;
-}
 
 /**
  * Format the payment date in UTC without depending on the runtime's ICU data,
@@ -77,7 +64,7 @@ export function formatTrialEndDate(trialEndIso: string): string {
 export function createTrialPaymentReminderEmailContent(
   input: TrialPaymentReminderEmailInput,
 ): TrialPaymentReminderEmailContent {
-  const copy = selectReminderCopy(input.productCode);
+  const copy = PSA_REMINDER_COPY;
   const defaultLoginUrl = process.env.APPLICATION_URL || process.env.NEXTAUTH_URL || '';
   const accountUrl = defaultLoginUrl ? `${defaultLoginUrl.replace(/\/+$/, '')}/msp/account` : '';
 

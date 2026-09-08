@@ -68,18 +68,6 @@ describe('createTrialPaymentReminderEmailContent', () => {
     expect(textBody).toContain('Nine Minds Support Portal');
   });
 
-  it('uses AlgaDesk copy for algadesk tenants', () => {
-    const { subject, htmlBody } = createTrialPaymentReminderEmailContent({
-      tenantName: 'Acme Helpdesk',
-      trialEndIso: '2026-03-14T12:00:00.000Z',
-      productCode: 'algadesk',
-    });
-
-    expect(subject).toContain('AlgaDesk trial ends soon');
-    expect(htmlBody).toContain('AlgaDesk Workspace');
-    expect(htmlBody).not.toContain('AlgaPSA Workspace');
-  });
-
   it('omits the account link when no application URL is configured', () => {
     delete process.env.APPLICATION_URL;
     const previousNextAuthUrl = process.env.NEXTAUTH_URL;

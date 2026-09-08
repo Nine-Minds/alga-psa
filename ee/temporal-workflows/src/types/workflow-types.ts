@@ -208,13 +208,13 @@ export interface TenantCreationUpdateSignal {
 //
 // Scheduled as an abandoned child of tenant creation: it waits until two days
 // before the Stripe trial converts to a paid subscription, re-checks that the
-// tenant is still billable, and only then emails the admin.
+// tenant is still billable, and only then emails the admin. AlgaPSA only —
+// AlgaDesk is sold without a trial, so no reminder is scheduled for it.
 export interface TrialPaymentReminderWorkflowInput {
   tenantId: string;
   stripeSubscriptionId: string; // Stripe external id (sub_...)
   tenantName: string;
   companyName?: string;
-  productCode?: 'psa' | 'algadesk';
 }
 
 export type TrialPaymentReminderSkipReason =
@@ -261,7 +261,6 @@ export interface SendTrialPaymentReminderActivityInput {
   tenantName: string;
   trialEndIso: ISO8601String;
   companyName?: string;
-  productCode?: 'psa' | 'algadesk';
 }
 
 export interface SendTrialPaymentReminderActivityResult {

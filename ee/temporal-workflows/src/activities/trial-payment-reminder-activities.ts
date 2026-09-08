@@ -41,7 +41,6 @@ export interface TrialReminderStripeClient {
 export interface TrialReminderTenantRow {
   tenant?: string;
   client_name?: string;
-  product_code?: 'psa' | 'algadesk';
   suspended_at?: Date | string | null;
 }
 
@@ -226,7 +225,6 @@ export async function sendTrialPaymentReminderEmail(
     trialEndIso: input.trialEndIso,
     recipientFirstName: adminUser.first_name,
     recipientLastName: adminUser.last_name,
-    productCode: input.productCode ?? tenant?.product_code,
   });
 
   const needsEmailService = !dependencies.validateEmail || !dependencies.sendEmail;
