@@ -65,9 +65,9 @@ export async function retainNativeAppointmentRequest(trx: Knex.Transaction, acto
     fields.push(...decision.redactedFields);
   }
   if (isAppointmentFieldHidden(fields, ['tenant', 'appointment_request_id', 'status'])) throw new CoManagedSharedWorkError();
-  const authorizeSchedule = async (schedule: any, assignments: string[]) => {
+  const authorizeSchedule = async (schedule: any, assignments: string[], mutationAction: 'create' | 'update' = 'update') => {
     const scheduleFields = [...fields];
-    for (const action of writing ? ['read', 'update'] : ['read']) {
+    for (const action of writing ? ['read', mutationAction] : ['read']) {
       const scheduleRecord = { ...source.record, id: schedule.entry_id, ownerUserId: assignments.length === 1 ? assignments[0] : undefined, assignedUserIds: assignments };
       const decision = await kernel.authorizeResource({ knex: trx, subject, resource: { type: 'user_schedule', action, id: schedule.entry_id }, record: scheduleRecord });
       if (!decision.allowed || !matchesCoManagedScopeConstraints(decision.scope.constraints, scheduleRecord)) throw new CoManagedSharedWorkError();

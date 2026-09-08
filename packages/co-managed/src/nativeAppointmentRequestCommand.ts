@@ -22,6 +22,7 @@ export async function declineCoManagedNativeAppointment(db: Knex, tenant: string
     const retained = await retainNativeAppointmentRequest(trx, actor, credential.subject, input.id, true), request = retained.request;
     if (!['pending', 'approved'].includes(request.status)) throw new NativeScheduleRelationError();
     if (retained.source.fields.length || isAppointmentFieldHidden(retained.fields, ['declined_reason', 'schedule_entry_id', 'approved_by_user_id', 'approved_at', 'online_meeting_id', 'online_meeting_url'])) throw new CoManagedSharedWorkError();
+    // LEVERAGE: pattern native-appointment-schedule-admission — approval/association share this actual request-to-calendar binding and assignee admission.
     const schedule = request.schedule_entry_id ? await owner.table('schedule_entries').where('entry_id', request.schedule_entry_id).forUpdate().first() : null;
     if (request.schedule_entry_id && (!schedule || schedule.work_item_type !== 'appointment_request' || schedule.work_item_id !== input.id || schedule.is_recurring)) throw new NativeScheduleRelationError();
     const assignments: string[] = schedule ? (await owner.table('schedule_entry_assignees').where('entry_id', schedule.entry_id).orderBy('user_id').forUpdate().select('user_id')).map(row => row.user_id) : [];
@@ -61,6 +62,7 @@ export async function rescheduleCoManagedNativeAppointment(db: Knex, tenant: str
     if (retained.source.fields.length || isAppointmentFieldHidden(retained.fields, ['requested_date', 'requested_time', 'requested_duration', 'requester_timezone', 'schedule_entry_id'])) throw new CoManagedSharedWorkError();
     const timezone = input.timezone ?? request.requester_timezone ?? 'UTC', duration = input.duration ?? request.requested_duration;
     const { start, end } = appointmentDateTime(input.date, input.time, timezone, duration);
+    // LEVERAGE: pattern native-appointment-schedule-admission — approval/association share this actual request-to-calendar binding and assignee admission.
     const schedule = request.schedule_entry_id ? await owner.table('schedule_entries').where('entry_id', request.schedule_entry_id).forUpdate().first() : null;
     if (request.schedule_entry_id && (!schedule || schedule.work_item_type !== 'appointment_request' || schedule.work_item_id !== input.id || schedule.is_recurring)) throw new NativeScheduleRelationError();
     const assignments: string[] = schedule ? (await owner.table('schedule_entry_assignees').where('entry_id', schedule.entry_id).orderBy('user_id').forUpdate().select('user_id')).map(row => row.user_id) : [];

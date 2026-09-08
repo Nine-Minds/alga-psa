@@ -75,7 +75,7 @@ export async function applyNativeScheduleRelations(trx: Knex.Transaction, actor:
     const cancel = cancelled(current);
     if (!cancel && (meeting.status === 'cancelled' || (!moved && !assignmentChanged))) continue;
     const patch: Record<string, unknown> = cancel ? { status: 'cancelled' } : { start_time: current.scheduled_start, end_time: current.scheduled_end };
-    if (meeting.provider === 'teams') Object.assign(patch, { co_managed_sync_operation_id: trx.raw('gen_random_uuid()'), co_managed_sync_action: cancel ? 'delete' : 'update',
+    if (meeting.provider === 'teams' && meeting.provider_meeting_id) Object.assign(patch, { co_managed_sync_operation_id: trx.raw('gen_random_uuid()'), co_managed_sync_action: cancel ? 'delete' : 'update',
       co_managed_sync_requested_at: trx.fn.now(), co_managed_sync_attempts: 0, co_managed_sync_attempted_at: null, co_managed_sync_last_error: null });
     await owner.table('online_meetings').where('meeting_id', meeting.meeting_id).update({ ...patch, updated_at: trx.fn.now() });
   }

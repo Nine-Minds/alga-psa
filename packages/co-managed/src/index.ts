@@ -84,3 +84,5 @@ export * from './nativeScheduleMeetingSync';
 
 export * from './nativeAppointmentRequest';
 export * from './nativeAppointmentRequestCommand';
+
+export * from './nativeAppointmentApproval';

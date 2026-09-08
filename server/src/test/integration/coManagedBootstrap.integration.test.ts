@@ -14753,3 +14753,93 @@ it('customer appointment rescheduling rolls back request calendar and meeting up
     expect(publish).not.toHaveBeenCalled();
   } finally { await db.raw('DROP TRIGGER expire_appointment_reschedule_key ON online_meetings'); await db.raw('DROP FUNCTION expire_appointment_reschedule_key()'); }
 }));
+
+async function withAppointmentApprovalFixture(work: (fixture: any) => Promise<void>) {
+  return withAppointmentAuthorityFixture(async (fixture: any) => {
+    const { customer, requestId, meetingId, context } = fixture;
+    await customer.table('online_meetings').where('meeting_id', meetingId).del();
+    await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ status: 'pending', online_meeting_id: null, online_meeting_provider: null, online_meeting_url: null, approved_at: null, approved_by_user_id: null });
+    const approve = (extra: any = {}) => fixture.appointment.approveAppointmentRequest({ appointment_request_id: requestId, assigned_user_id: context.userId, ...extra });
+    await work({ ...fixture, approve });
+  });
+}
+
+it('customer appointment approval retains pending calendar identity and requester-local time without exposing internal notes', async () => withAppointmentApprovalFixture(async ({ approve, customer, requestId, ownId, context, events }: any) => {
+  events.mockClear();
+  const result = await approve({ internal_notes: 'IT approval note' });
+  expect(result).toMatchObject({ success: true, data: { status: 'approved', schedule_entry_id: ownId, preferred_assigned_user_id: context.userId, requested_date: '2026-09-07', requested_time: '05:00:00', requester_timezone: 'America/New_York' } });
+  expect(JSON.stringify(result)).not.toContain('IT approval note');
+  const schedule = await customer.table('schedule_entries').where('entry_id', ownId).first();
+  expect(schedule).toMatchObject({ title: 'Appointment: IT appointment', notes: 'Private appointment description\n\nIT approval note', work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(schedule.scheduled_start.toISOString()).toBe('2026-09-07T09:00:00.000Z');
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_UPDATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: ownId } });
+  expect(await approve()).toMatchObject({ success: false });
+  expect(await customer.table('schedule_entries')).toHaveLength(3);
+}));
+
+it('customer appointment approval creates one actual allocation for an unlinked request and honors UTC form overrides', async () => withAppointmentApprovalFixture(async ({ approve, customer, requestId, ownId, context, events }: any) => {
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ schedule_entry_id: null });
+  await customer.table('schedule_entry_assignees').where('entry_id', ownId).del();
+  await customer.table('schedule_entries').where('entry_id', ownId).del();
+  events.mockClear();
+  const outcomes = await Promise.all([approve({ final_date: '2026-09-21', final_time: '09:30' }), approve({ final_date: '2026-09-21', final_time: '09:30' })]);
+  expect(outcomes.map(outcome => outcome.success).sort()).toEqual([false, true]);
+  const request = await customer.table('appointment_requests').where('appointment_request_id', requestId).first();
+  const rows = await customer.table('schedule_entries').where({ work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(rows).toHaveLength(1); expect(rows[0].entry_id).toBe(request.schedule_entry_id);
+  expect(rows[0].scheduled_start.toISOString()).toBe('2026-09-21T09:30:00.000Z');
+  expect(request.requested_time).toBe('05:30:00');
+  expect(events).toHaveBeenCalledWith({ eventType: 'SCHEDULE_ENTRY_CREATED', payload: { tenantId: context.tenant, userId: context.userId, entryId: rows[0].entry_id } });
+}));
+
+it('customer appointment approval requires current approver scope active assignees and unmasked fields', async () => withAppointmentApprovalFixture(async ({ approve, customer, context, requestId, user, domain, actor }: any) => {
+  expect(await approve({ assigned_user_id: randomUUID() })).toMatchObject({ success: false });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'user_schedule', action: 'update' }).select('permission_id')).del();
+  expect(await approve()).toMatchObject({ success: false });
+  await customer.table('availability_settings').insert({ tenant: context.tenant, setting_type: 'general_settings', config_json: { approver_user_ids: [context.userId] } });
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: context.tenant, name: 'Approval content scope', actorUserId: user.user_id });
+  for (const action of ['read', 'update']) await bundles.upsertBundleRule(db, { tenant: context.tenant, bundleId, revisionId, resourceType: 'user_schedule', action, templateKey: 'assigned', config: { redactedFields: ['description'] } });
+  await bundles.publishBundleRevision(db, { tenant: context.tenant, bundleId, revisionId, actorUserId: user.user_id });
+  await bundles.createBundleAssignment(db, { tenant: context.tenant, bundleId, targetType: 'api_key', targetId: context.apiKeyId });
+  await expect(domain.approveCoManagedNativeAppointment(db, context.tenant, { id: requestId, assignedUserId: context.userId }, actor, vi.fn())).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await approve()).toMatchObject({ success: true });
+}));
+
+it('customer appointment association preserves canonical appointment identity and permits later rescheduling', async () => withAppointmentApprovalFixture(async ({ appointment, approve, customer, requestId, ownId }: any) => {
+  const ticket = await customer.table('tickets').first('ticket_id');
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: ticket.ticket_id })).toEqual({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'appointment_request', work_item_id: requestId });
+  expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ ticket_id: ticket.ticket_id });
+  expect(await approve()).toMatchObject({ success: true });
+  expect(await appointment.updateAppointmentRequestDateTime({ appointment_request_id: requestId, new_date: '2026-09-21', new_time: '10:00' })).toMatchObject({ success: true });
+}));
+
+it('customer appointment association rejects cross-client links and repairs only its actual legacy ticket allocation', async () => withAppointmentApprovalFixture(async ({ appointment, customer, requestId, ownId, context }: any) => {
+  const ticket = await customer.table('tickets').first();
+  const clientId = randomUUID(), otherTicketId = randomUUID();
+  await customer.table('clients').insert({ tenant: context.tenant, client_id: clientId, client_name: 'Another client' });
+  await customer.table('tickets').insert({ tenant: context.tenant, ticket_id: otherTicketId, ticket_number: 'OTHER-APPOINTMENT', title: 'Other client appointment', client_id: clientId, board_id: ticket.board_id, status_id: ticket.status_id, priority_id: ticket.priority_id, entered_by: context.userId });
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: otherTicketId })).toMatchObject({ success: false });
+  await customer.table('appointment_requests').where('appointment_request_id', requestId).update({ ticket_id: ticket.ticket_id });
+  await customer.table('schedule_entries').where('entry_id', ownId).update({ work_item_type: 'ticket', work_item_id: ticket.ticket_id });
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: ticket.ticket_id })).toMatchObject({ success: true });
+  expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ work_item_type: 'appointment_request', work_item_id: requestId });
+  await customer.table('role_permissions').whereIn('permission_id', customer.table('permissions').where({ resource: 'ticket', action: 'read' }).select('permission_id')).del();
+  expect(await appointment.associateRequestToTicket({ appointment_request_id: requestId, ticket_id: ticket.ticket_id })).toMatchObject({ success: false });
+}));
+
+it('customer appointment approval and association roll back assignments and bindings on final credential expiry', async () => withAppointmentApprovalFixture(async ({ domain, actor, customer, context, requestId, ownId, events }: any) => {
+  const ticket = await customer.table('tickets').first('ticket_id');
+  const publish = vi.fn();
+  await db.raw(`CREATE FUNCTION expire_appointment_approval_key() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN UPDATE api_keys SET expires_at = clock_timestamp() - interval '1 second' WHERE tenant = NEW.tenant AND api_key_id = '${context.apiKeyId}'::uuid; RETURN NEW; END $$`);
+  await db.raw('CREATE TRIGGER expire_appointment_approval_key AFTER UPDATE ON appointment_requests FOR EACH ROW EXECUTE FUNCTION expire_appointment_approval_key()');
+  try {
+    await expect(domain.approveCoManagedNativeAppointment(db, context.tenant, { id: requestId, assignedUserId: context.userId, finalDate: '2026-09-21', finalTime: '09:30' }, actor, publish)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    await expect(domain.associateCoManagedNativeAppointmentTicket(db, context.tenant, { id: requestId, ticketId: ticket.ticket_id }, actor, publish)).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await customer.table('appointment_requests').where('appointment_request_id', requestId).first()).toMatchObject({ status: 'pending', ticket_id: null, approved_at: null });
+    expect(await customer.table('schedule_entries').where('entry_id', ownId).first()).toMatchObject({ title: 'Own appointment', work_item_type: 'appointment_request', work_item_id: requestId });
+    expect(await customer.table('schedule_entry_assignees').where('entry_id', ownId)).toHaveLength(1);
+    expect(publish).not.toHaveBeenCalled();
+  } finally { await db.raw('DROP TRIGGER expire_appointment_approval_key ON appointment_requests'); await db.raw('DROP FUNCTION expire_appointment_approval_key()'); }
+}));

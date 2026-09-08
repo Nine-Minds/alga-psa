@@ -1,6 +1,6 @@
 'use server';
 
-import { readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
+import { approveCoManagedNativeAppointment, associateCoManagedNativeAppointmentTicket, readCoManagedNativeAppointmentRequests, declineCoManagedNativeAppointment, rescheduleCoManagedNativeAppointment } from '@alga-psa/co-managed';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
 
 import { createTenantKnex, tenantDb, User } from '@alga-psa/db';
@@ -598,6 +598,11 @@ export const approveAppointmentRequest = withAuth(async (
     const validatedData = approveAppointmentRequestSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    if (!validatedData.generate_teams_meeting) {
+      const admitted = await approveCoManagedNativeAppointment(db, tenant, { id: validatedData.appointment_request_id, assignedUserId: validatedData.assigned_user_id, finalDate: validatedData.final_date, finalTime: validatedData.final_time, ticketId: validatedData.ticket_id, internalNotes: validatedData.internal_notes }, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent);
+      if (admitted.handled) return { success: true, data: admitted.request };
+    }
+
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request. The latter is checked inside the transaction so we can
@@ -1806,6 +1811,9 @@ export const associateRequestToTicket = withAuth(async (
     const validatedData = associateRequestToTicketSchema.parse(data);
 
     const { knex: db } = await createTenantKnex();
+    const admitted = await associateCoManagedNativeAppointmentTicket(db, tenant, { id: validatedData.appointment_request_id, ticketId: validatedData.ticket_id }, () => resolveNativeTimeBrowserActor(user, tenant), publishEvent);
+    if (admitted.handled) return { success: true };
+
 
     // Permission gate: either the global schedule perm, or being a configured approver
     // for this specific request.
