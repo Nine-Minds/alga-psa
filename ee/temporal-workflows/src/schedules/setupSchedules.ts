@@ -494,6 +494,7 @@ export async function setupSchedules() {
       { jobName: 'inbound-email-recovery', cron: '*/1 * * * *' },
       { jobName: 'co-managed-upload-cleanup', cron: '*/15 * * * *' },
       { jobName: 'co-managed-notification-recovery', cron: '*/1 * * * *' },
+      { jobName: 'co-managed-sla-observation', cron: '*/1 * * * *' },
     ];
 
     for (const { jobName, cron } of MAINTENANCE_FANOUT_SCHEDULES) {

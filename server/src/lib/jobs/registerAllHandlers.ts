@@ -1,3 +1,4 @@
+import { coManagedSlaObservationJobHandler, CO_MANAGED_SLA_OBSERVATION_JOB, type CoManagedSlaObservationJobData } from './handlers/coManagedSlaObservationHandler';
 import { coManagedUploadCleanupJobHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB, type CoManagedUploadCleanupJobData } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
 import { Job } from 'pg-boss';
@@ -741,6 +742,12 @@ export async function registerAllJobHandlers(
   JobHandlerRegistry.register<CoManagedNotificationRecoveryJobData & BaseJobData>({
     name: CO_MANAGED_NOTIFICATION_RECOVERY_JOB,
     handler: async (_jobId, data) => { await coManagedNotificationRecoveryJobHandler({ data } as any); },
+    retry: { maxAttempts: 3 }, timeoutMs: 300000,
+  }, registerOpts);
+
+  JobHandlerRegistry.register<CoManagedSlaObservationJobData & BaseJobData>({
+    name: CO_MANAGED_SLA_OBSERVATION_JOB,
+    handler: async (_jobId, data) => { await coManagedSlaObservationJobHandler({ data } as any); },
     retry: { maxAttempts: 3 }, timeoutMs: 300000,
   }, registerOpts);
 

@@ -16157,3 +16157,62 @@ it('MSP SLA shared edit checks the initiating session after its final close rece
     expect(await f.customer.table('co_management_command_receipts').where('command_type', 'ticket_edit')).toEqual([]);
   } finally { await db.raw('DROP TRIGGER expire_sla_edit_session ON co_management_command_receipts'); await db.raw('DROP FUNCTION expire_sla_edit_session()'); }
 }));
+
+async function dueMspSlaFixture() {
+  const f = await ticketHandoffFixture();
+  const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await escalateCoManagedTicket(db, f.customerPrincipal, f.resource, { operationId: randomUUID(), expectedRevision: 0, note: 'Please investigate' });
+  const row = await f.sponsor.table('sla_organization_obligations').first();
+  const { startOrganizationSlaClock } = await import('../../../../shared/lib/sla/organizationSlaClock');
+  const clock = startOrganizationSlaClock(row.clock.identity, row.clock.schedule, { responseMinutes: 60, resolutionMinutes: 480 },
+    new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString());
+  await f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).update({ clock: JSON.stringify(clock) });
+  const read = () => f.sponsor.table('sla_organization_obligations').where('obligation_id', row.obligation_id).first();
+  const observer = await import('../../../../packages/co-managed/src/ticketSla');
+  return { ...f, identity: clock.identity, read, ...observer };
+}
+
+it('MSP SLA observation records one due breach under concurrent workers and leaves customer SLA fields intact', async () => {
+  const f = await dueMspSlaFixture();
+  const customerBefore = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const before = await f.read();
+  expect((await Promise.all([f.observeCoManagedTicketSla(db, f.identity), f.observeCoManagedTicketSla(db, f.identity)])).sort())
+    .toEqual([false, true]);
+  const after = await f.read();
+  expect(after.revision).toBe(before.revision + 1);
+  expect(after.clock.response).toMatchObject({ breached: true, breachedAt: before.clock.response.dueAt, completedAt: null });
+  expect(after.clock.resolution.breached).toBe(false);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(customerBefore);
+  expect(await f.observeDueCoManagedTicketSlas(db, f.identity.tenant, 1)).toEqual({ observed: 0, skipped: 0 });
+});
+
+it.each(['revoked', 'handback', 'terminated', 'suspended', 'read-only', 'wrong-owner', 'wrong-obligation'] as const)
+('MSP SLA observation does not advance %s work', async reason => {
+  const f = await dueMspSlaFixture();
+  const { revokeCoManagedTicketGrant, handBackCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  if (reason === 'revoked') await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Remove access' });
+  if (reason === 'handback') await handBackCoManagedTicket(db, f.principal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Please verify' });
+  if (reason === 'terminated') await f.customer.table('co_management_relationships').update({ state: 'terminated', ended_at: new Date() });
+  if (reason === 'suspended') await f.customer.table('tenants').update({ suspended_at: new Date() });
+  if (reason === 'read-only') await f.sponsor.table('co_managed_allocations').del();
+  const before = await f.read();
+  const identity = { ...f.identity };
+  if (reason === 'wrong-owner') identity.tenant = randomUUID();
+  if (reason === 'wrong-obligation') identity.obligationId = randomUUID();
+  expect(await f.observeCoManagedTicketSla(db, identity)).toBe(false);
+  expect(await f.read()).toEqual(before);
+});
+
+it('MSP SLA observation keyset scan reaches due work beyond a skipped historical candidate', async () => {
+  const f = await dueMspSlaFixture();
+  const row = await f.read();
+  const historicalId = '00000000-0000-4000-8000-000000000001';
+  const sourceTenant = randomUUID();
+  const historical = { ...row, obligation_id: historicalId, source_tenant: sourceTenant,
+    clock: JSON.stringify({ ...row.clock, identity: { ...row.clock.identity, obligationId: historicalId, sourceTenant } }) };
+  await f.sponsor.table('sla_organization_obligations').insert(historical);
+  expect(await f.observeDueCoManagedTicketSlas(db, f.identity.tenant, 1)).toEqual({ observed: 1, skipped: 1 });
+  expect((await f.read()).clock.response.breached).toBe(true);
+});

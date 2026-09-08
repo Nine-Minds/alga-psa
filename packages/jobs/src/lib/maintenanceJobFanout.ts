@@ -1,3 +1,4 @@
+import { coManagedSlaObservationHandler, CO_MANAGED_SLA_OBSERVATION_JOB } from './handlers/coManagedSlaObservationHandler';
 import { CO_MANAGED_UPLOAD_RETENTION_DAYS } from '@alga-psa/co-managed';
 import { coManagedUploadCleanupHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB } from './handlers/coManagedNotificationRecoveryHandler';
@@ -119,6 +120,9 @@ const tenantsWithPendingCallArtifacts: TenantSelector = (db) => db
 // per tenant; here a single global run fans them out across all tenants. System
 // jobs run once. Edition gating lives in the schedule wiring, not here.
 const MAINTENANCE_JOBS: Record<string, MaintenanceJobDef> = {
+  [CO_MANAGED_SLA_OBSERVATION_JOB]: { scope: 'tenant', run: tenantId => coManagedSlaObservationHandler({ tenantId }), concurrency: 3,
+    tenants: db => db.unscoped<{ tenant: string }>('sla_organization_obligations', 'SLA observation discovers policy owners with unfinished obligations')
+      .whereRaw("clock #>> '{resolution,completedAt}' IS NULL").distinct('tenant') },
   'expired-credits': { scope: 'tenant', run: (tenantId) => expiredCreditsHandler({ tenantId }) },
   'expiring-credits-notification': { scope: 'tenant', run: (tenantId) => expiringCreditsNotificationHandler({ tenantId }) },
   [PREPAID_BALANCE_ALERT_SCAN_JOB]: { scope: 'tenant', run: (tenantId) => prepaidBalanceAlertScanHandler({ tenantId }) },

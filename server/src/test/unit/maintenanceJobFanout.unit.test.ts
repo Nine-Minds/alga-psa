@@ -54,6 +54,7 @@ vi.mock('@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob', () => ({ cleanupW
 vi.mock('@alga-psa/jobs/handlers/teamsMeetingSweepHandler', () => ({ TEAMS_MEETING_SWEEP_JOB: 'sweep-teams-online-meetings', teamsMeetingSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-teams-online-meetings', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/coManagedUploadCleanupHandler', () => ({ CO_MANAGED_UPLOAD_CLEANUP_JOB: 'co-managed-upload-cleanup', coManagedUploadCleanupHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-upload-cleanup', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/coManagedNotificationRecoveryHandler', () => ({ CO_MANAGED_NOTIFICATION_RECOVERY_JOB: 'co-managed-notification-recovery', coManagedNotificationRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-notification-recovery', ...a) }));
+vi.mock('@alga-psa/jobs/handlers/coManagedSlaObservationHandler', () => ({ CO_MANAGED_SLA_OBSERVATION_JOB: 'co-managed-sla-observation', coManagedSlaObservationHandler: (...a: unknown[]) => tenantHandlerMock('co-managed-sla-observation', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/inboundEmailRecoveryHandler', () => ({ inboundEmailRecoveryHandler: (...a: unknown[]) => tenantHandlerMock('inbound-email-recovery', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallNotificationHandler', () => ({ renewTelephonyCallSubscriptions: (...a: unknown[]) => tenantHandlerMock('renew-telephony-call-subscriptions', ...a) }));
 vi.mock('@alga-psa/jobs/handlers/telephonyCallArtifactHandler', () => ({ TELEPHONY_CALL_ARTIFACT_SWEEP_JOB: 'sweep-telephony-call-artifacts', telephonyCallArtifactSweepHandler: (...a: unknown[]) => tenantHandlerMock('sweep-telephony-call-artifacts', ...a) }));
@@ -110,11 +111,11 @@ describe('runMaintenanceJob', () => {
     expect(selectTenantsMock).not.toHaveBeenCalled();
   });
 
-  it('narrows the Teams sweep to tenants with an active integration', async () => {
+  it('narrows the Teams sweep to active integrations and retained meeting recovery', async () => {
     listTenantsMock.mockReturnValue([{ tenant: 't1' }, { tenant: 't2' }, { tenant: 't3' }]);
     selectTenantsMock.mockReturnValue([{ tenant: 't2' }]);
     const result = await runMaintenanceJob('sweep-teams-online-meetings');
-    expect(selectorTablesSeen).toEqual(['teams_integrations']);
+    expect(selectorTablesSeen).toEqual(['teams_integrations', 'co_managed_meeting_creation_operations']);
     expect(tenantHandlerMock).toHaveBeenCalledTimes(1);
     expect(tenantHandlerMock).toHaveBeenCalledWith('sweep-teams-online-meetings', { tenantId: 't2' });
     expect(result).toEqual({ jobName: 'sweep-teams-online-meetings', scope: 'tenant', total: 1, succeeded: 1, failed: 0 });
@@ -150,6 +151,7 @@ describe('runMaintenanceJob', () => {
 
   it.each([
     ['co-managed-notification-recovery', 'co_management_notification_deliveries'],
+    ['co-managed-sla-observation', 'sla_organization_obligations'],
     ['renew-teams-meeting-artifact-subscriptions', 'teams_integrations'],
     ['renew-telephony-call-subscriptions', 'telephony_providers'],
     ['sweep-telephony-call-artifacts', 'telephony_call_records'],

@@ -1,12 +1,81 @@
 import { randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { getCoManagedOperationalState } from '@alga-psa/licensing/lifecycle';
+import type { OrganizationSlaIdentity, OrganizationSlaClock } from '@alga-psa/shared/lib/sla/organizationSlaClock';
 import { resolveSlaPolicy, getBusinessHoursSchedule } from '@alga-psa/shared/lib/sla/slaPolicyResolver';
 import { startOrganizationSlaObligation, applyOrganizationSlaEvent } from '@alga-psa/shared/lib/sla/organizationSlaStore';
 import { acquireOrganizationSlaLock } from '@alga-psa/shared/lib/sla/organizationSlaLock';
 import { commentAudienceSql } from '@alga-psa/shared/lib/commentAudience';
 import { CoManagedSharedWorkError } from './sharedWorkIdentity';
 import type { CoManagedSharedResource, CoManagedSharedWorkContext } from './sharedWork';
+import { isCoManagedUuid } from './sharedWorkIdentity';
+
+/** Scheduled observation is an internal worker operation. Queue identities are
+ * hints: retain lifecycle and source work before the organization lock and time,
+ * just as synchronous handoffs do. Never observe a retained participation archive. */
+export async function observeCoManagedTicketSla(db: Knex, input: OrganizationSlaIdentity): Promise<boolean> {
+  if (!input || ![input.tenant, input.obligationId, input.sourceTenant, input.ticketId].every(isCoManagedUuid)) {
+    throw new Error('A qualified organization SLA identity is required');
+  }
+  const identity = { ...input };
+  return db.transaction(async trx => {
+    const source = await tenantDb(trx, identity.sourceTenant).table('tenants').first('tenant');
+    if (!source) return false;
+    const lifecycle = await getCoManagedOperationalState(trx, identity.sourceTenant);
+    if (!lifecycle.canWrite || lifecycle.state === 'independent') return false;
+    const retained = await currentTicketObligation(trx, identity.sourceTenant, identity.ticketId);
+    if (!retained || retained.identity.tenant !== identity.tenant || retained.identity.obligationId !== identity.obligationId ||
+        retained.work.responsibility !== 'msp') return false;
+    const clock: OrganizationSlaClock = retained.obligation.clock;
+    if (clock.resolution.completedAt || clock.pauseReasons.length) return false;
+    const at = (await trx.select({ at: trx.raw('clock_timestamp()') }).first()).at as Date;
+    if (![clock.response, clock.resolution].some(target => !target.completedAt && !target.breached &&
+        target.dueAt && new Date(target.dueAt).getTime() <= at.getTime())) return false;
+    await applyOrganizationSlaEvent(trx, retained.identity, randomUUID(), { kind: 'observed', occurredAt: at.toISOString() });
+    // Grace can expire while waiting for the ticket or organization lock.
+    if (!(await getCoManagedOperationalState(trx, identity.sourceTenant)).canWrite) {
+      throw new Error('Co-managed SLA lifecycle changed during observation');
+    }
+    return true;
+  });
+}
+
+/** Keyset pages avoid both an unbounded materialized queue and starvation by
+ * revoked/deleted candidates. Each candidate is requalified in its own transaction. */
+export async function observeDueCoManagedTicketSlas(db: Knex, tenant: string, pageSize = 100) {
+  if (!isCoManagedUuid(tenant) || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 500) {
+    throw new Error('Invalid organization SLA scan');
+  }
+  const scanAt = (await db.select({ at: db.raw('clock_timestamp()') }).first()).at as Date;
+  let cursor: string | undefined;
+  const result = { observed: 0, skipped: 0 };
+  const failures: unknown[] = [];
+  for (;;) {
+    const query = tenantDb(db, tenant).table('sla_organization_obligations')
+      .whereRaw("clock #>> '{resolution,completedAt}' IS NULL")
+      .whereRaw("clock -> 'pauseReasons' = '[]'::jsonb")
+      .where(q => {
+        for (const target of ['response', 'resolution']) q.orWhere(inner => inner
+          .whereRaw(`clock #>> '{${target},completedAt}' IS NULL`)
+          .whereRaw(`clock #>> '{${target},breached}' = 'false'`)
+          .whereRaw(`(clock #>> '{${target},dueAt}')::timestamptz <= ?`, [scanAt]));
+      }).orderBy('obligation_id').limit(pageSize).select('obligation_id', 'source_tenant', 'ticket_id');
+    if (cursor) query.where('obligation_id', '>', cursor);
+    const rows = await query;
+    for (const row of rows) {
+      try {
+        const observed = await observeCoManagedTicketSla(db, { tenant, obligationId: row.obligation_id,
+          sourceTenant: row.source_tenant, ticketId: row.ticket_id });
+        result[observed ? 'observed' : 'skipped']++;
+      } catch (error) { failures.push(error); }
+    }
+    if (rows.length < pageSize) break;
+    cursor = rows[rows.length - 1].obligation_id;
+  }
+  if (failures.length) throw new AggregateError(failures, 'Some organization SLA observations failed; retry the scan');
+  return result;
+}
 
 export class CoManagedSlaSetupError extends Error {
   readonly code = 'CO_MANAGED_SLA_SETUP_REQUIRED';

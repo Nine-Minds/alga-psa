@@ -1,3 +1,4 @@
+import { coManagedSlaObservationJobHandler, CO_MANAGED_SLA_OBSERVATION_JOB, type CoManagedSlaObservationJobData } from './handlers/coManagedSlaObservationHandler';
 import { coManagedUploadCleanupJobHandler, CO_MANAGED_UPLOAD_CLEANUP_JOB, type CoManagedUploadCleanupJobData } from './handlers/coManagedUploadCleanupHandler';
 import { coManagedNotificationRecoveryJobHandler, CO_MANAGED_NOTIFICATION_RECOVERY_JOB, type CoManagedNotificationRecoveryJobData } from './handlers/coManagedNotificationRecoveryHandler';
 import { Job } from 'pg-boss';
@@ -261,6 +262,7 @@ export const initializeScheduler = async (storageService?: StorageService) => {
 
     jobScheduler.registerJobHandler<CoManagedUploadCleanupJobData>(CO_MANAGED_UPLOAD_CLEANUP_JOB, async job => { await coManagedUploadCleanupJobHandler(job); });
     jobScheduler.registerJobHandler<CoManagedNotificationRecoveryJobData>(CO_MANAGED_NOTIFICATION_RECOVERY_JOB, async job => { await coManagedNotificationRecoveryJobHandler(job); });
+    jobScheduler.registerJobHandler<CoManagedSlaObservationJobData>(CO_MANAGED_SLA_OBSERVATION_JOB, async job => { await coManagedSlaObservationJobHandler(job); });
 
     // Register inbound email recovery handler (per-tenant durable sweep/backfill/mirror)
     jobScheduler.registerJobHandler<InboundEmailRecoveryJobData>(INBOUND_EMAIL_RECOVERY_JOB, async (job: Job<InboundEmailRecoveryJobData>) => {
@@ -970,6 +972,21 @@ export const scheduleCoManagedNotificationRecoveryJob = async (
   const scheduler = await initializeScheduler();
   return await scheduler.scheduleRecurringJob<CoManagedNotificationRecoveryJobData>(
     CO_MANAGED_NOTIFICATION_RECOVERY_JOB,
+    cronExpression,
+    { tenantId }
+  );
+};
+
+export const scheduleCoManagedSlaObservationJob = async (
+  tenantId?: string,
+  cronExpression: string = '*/1 * * * *' // Every minute
+): Promise<string | null> => {
+  if (isEnterpriseWorkflowEdition()) {
+    return null; // EE runs this via the Temporal maintenance fanout
+  }
+  const scheduler = await initializeScheduler();
+  return await scheduler.scheduleRecurringJob<CoManagedSlaObservationJobData>(
+    CO_MANAGED_SLA_OBSERVATION_JOB,
     cronExpression,
     { tenantId }
   );

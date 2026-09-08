@@ -99,3 +99,5 @@ export * from './nativeMeetingRead';
 export * from './nativeInteractionRead';
 
 export * from './nativeInteractionCommand';
+
+export { observeCoManagedTicketSla, observeDueCoManagedTicketSlas } from './ticketSla';
