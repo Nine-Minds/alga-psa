@@ -220,9 +220,12 @@ describe('optimized ticket action tenant-scoped authorization SQL contract', () 
     const commentSection = source.slice(commentStart, commentEnd);
     const bundleSection = source.slice(bundleStart, bundleEnd);
 
-    expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_settings', tenant)");
+    expect(commentSection).toContain('applyTicketBundleCommentEffects(trx, tenant, newCommentId');
     expect(commentSection).toContain("tenantScopedTable(trx, 'tickets', tenant)");
-    expect(commentSection).toContain("tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)");
+    const effects = fs.readFileSync(path.resolve(__dirname, '../lib/ticketBundleCommentEffects.ts'), 'utf8');
+    expect(effects).toContain('const store = tenantDb(trx, tenant)');
+    expect(effects).toContain("store.table('ticket_bundle_settings')");
+    expect(effects).toContain("store.table('ticket_bundle_mirrors')");
     expect(commentSection).not.toContain('.where({ tenant, master_ticket_id: ticketId })');
     expect(commentSection).not.toContain('.where({\n              tenant,\n              source_comment_id');
 

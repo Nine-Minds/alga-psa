@@ -9,6 +9,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { Mail, MessageSquare, LockKeyhole, Plus, Check, ChevronRight } from 'lucide-react';
+import { Switch } from '@alga-psa/ui/components/Switch';
+import { Label } from '@alga-psa/ui/components/Label';
+import type { RequesterPublicationOptions } from '@alga-psa/shared/lib/tickets/requesterPublicationOptions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
@@ -292,6 +295,8 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const isEmail = conversation.transport === 'email';
   const [email, setEmail] = useState<ConversationEmailDraft>({ subject: '', to: [], cc: [] });
   const [emailLocked, setEmailLocked] = useState(false);
+  const [publicationOptions, setPublicationOptions] = useState<RequesterPublicationOptions | null>(null);
+  const [canMarkResolution, setCanMarkResolution] = useState(false);
   const [files, setFiles] = useState<ConversationEditorFile[]>([]), [fileLocked, setFileLocked] = useState(false);
   const fileLock = useRef(false);
   const lockFiles = (locked: boolean) => { fileLock.current = locked; setFileLocked(locked); };
@@ -300,17 +305,22 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
   const lockEmail = (locked: boolean) => { emailLock.current = locked; setEmailLocked(locked); };
   const [parent, setParent] = useState<ConversationDraftParent | null>(null);
   const [saving, setSaving] = useState(false), [posting, setPosting] = useState(false), [error, setError] = useState<string | null>(null);
-  const state = useRef({ revision: 0, attachments: [] as ConversationEditorFile[], content: null as CoManagedConversationContent | null, generation: 0, dirty: false, alive: true, conversationRevision: conversation.revision, invalid: false, parent: null as ConversationDraftParent | null, email: null as ConversationEmailDraft | null });
+  const state = useRef({ revision: 0, publicationOptions: null as RequesterPublicationOptions | null, attachments: [] as ConversationEditorFile[], content: null as CoManagedConversationContent | null, generation: 0, dirty: false, alive: true, conversationRevision: conversation.revision, invalid: false, parent: null as ConversationDraftParent | null, email: null as ConversationEmailDraft | null });
   const pending = useRef<{ request: EditorDraftSaveRequest<CoManagedConversationContent>; generation: number } | null>(null);
   const flight = useRef<Promise<boolean> | null>(null);
   const postRequest = useRef<Parameters<typeof actions.postNamedTicketConversationAction>[2] | null>(null);
   const readGeneration = useRef(0);
   const read = useCallback(async () => {
     const generation = ++readGeneration.current;
-    const draft = await actions.getNamedConversationEditorDraftAction(ticket, reference(conversation));
+    const [draft, capabilities] = await Promise.all([
+      actions.getNamedConversationEditorDraftAction(ticket, reference(conversation)),
+      actions.getNamedTicketConversationPublicationCapabilitiesAction(ticket, reference(conversation)),
+    ]);
     const defaults = isEmail && !draft?.email ? await actions.getNamedConversationEmailDefaultsAction(ticket, reference(conversation)) : null;
     if (!state.current.alive || generation !== readGeneration.current) return;
     const content = draft?.content ?? null;
+    setCanMarkResolution(capabilities.resolution);
+    state.current.publicationOptions = draft?.publicationOptions ?? null; setPublicationOptions(state.current.publicationOptions);
     state.current.revision = draft?.revision ?? 0; state.current.content = content;
     state.current.attachments = draft?.attachments ?? []; setFiles(state.current.attachments);
     state.current.dirty = Boolean(content && draft?.conversationRevision !== currentConversation.current.revision);
@@ -321,7 +331,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.conversationRevision = currentConversation.current.revision;
     state.current.invalid = false; invalidEmail.current = false;
     setDocument(content?.document ?? (content?.text ? conversationDocument(content.text) ?? [] : []));
-    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.attachments.length || draft?.email || state.current.parent || (content && (content.document || content.text))));
+    setEpoch(n => n + 1); setLoaded(true); onDirty(Boolean(state.current.publicationOptions || state.current.attachments.length || draft?.email || state.current.parent || (content && (content.document || content.text))));
   }, [ticket, conversation.conversationId]);
   useEffect(() => {
     state.current.alive = true;
@@ -338,7 +348,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
         while (state.current.alive && (state.current.dirty || pending.current)) {
           if (!pending.current && (state.current.invalid || invalidEmail.current)) return false;
           pending.current ??= { generation: state.current.generation, request: { operationId: crypto.randomUUID(), expectedRevision: state.current.revision,
-            expectedConversationRevision: state.current.conversationRevision, content: state.current.content, parent: state.current.parent, email: state.current.email, attachments: state.current.attachments.map(file => ({ attachmentId: file.attachmentId })) } };
+            expectedConversationRevision: state.current.conversationRevision, content: state.current.content, publicationOptions: state.current.publicationOptions, parent: state.current.parent, email: state.current.email, attachments: state.current.attachments.map(file => ({ attachmentId: file.attachmentId })) } };
           const sent = pending.current;
           const saved = await actions.saveNamedConversationEditorDraftAction(ticket, reference(conversation), sent.request);
           if (!state.current.alive) return false;
@@ -357,7 +367,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     state.current.parent = next; setParent(next);
     state.current.content ??= { text: '' };
     state.current.dirty = true; state.current.generation++;
-    onDirty(Boolean(state.current.attachments.length || state.current.email || next || state.current.content.document || state.current.content.text));
+    onDirty(Boolean(state.current.publicationOptions || state.current.attachments.length || state.current.email || next || state.current.content.document || state.current.content.text));
     const saved = await save();
     if (saved && state.current.alive) {
       const editor = window.document.getElementById(`${id}-composer`);
@@ -398,7 +408,7 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
       state.current.invalid = false;
     } catch { state.current.invalid = true; state.current.dirty = true; setError('invalid'); onDirty(true); return; }
     state.current.content = content; state.current.dirty = true; state.current.generation++;
-    onDirty(Boolean(state.current.attachments.length || state.current.email || state.current.parent || content.document || content.text)); void save();
+    onDirty(Boolean(state.current.publicationOptions || state.current.attachments.length || state.current.email || state.current.parent || content.document || content.text)); void save();
   };
   const changeEmail = (next: ConversationEmailDraft) => {
     if (disabled || !loaded || emailLock.current || fileLock.current) return;
@@ -433,6 +443,18 @@ export function NamedConversationComposer({ id, ticket, conversation, flush, onD
     {replyLinkError && <p role="alert" className="text-sm text-destructive">{t('namedConversations.replyUnavailable', 'This reply target is unavailable. Your saved draft is unchanged.')}</p>}
     <div className="flex justify-between gap-2"><h3 className="text-sm font-medium">{isEmail ? conversation.audience === 'requester' ? t('namedConversations.requesterEmail', 'Requester email') : t('namedConversations.vendorEmail', 'Vendor email') : t('namedConversations.internalMessage', 'Internal message')}</h3>
       <span role="status" className="text-xs text-muted-foreground">{saving ? t('namedConversations.saving', 'Saving draft…') : loaded ? t('namedConversations.privateDraft', 'Draft visible only to you') : t('namedConversations.loading', 'Loading conversations…')}</span></div>
+    {canMarkResolution && <div className="flex items-center gap-2">
+      <Switch id={`${id}-resolution`} checked={Boolean(publicationOptions?.isResolution)} disabled={disabled || !loaded || posting || emailLocked || fileLocked}
+        onCheckedChange={checked => {
+          if (disabled || !loaded || posting || emailLock.current || fileLock.current) return;
+          const next: RequesterPublicationOptions | null = checked ? { isResolution: true } : null;
+          state.current.publicationOptions = next; setPublicationOptions(next); state.current.content ??= { text: '' };
+          state.current.dirty = true; state.current.generation++;
+          onDirty(Boolean(next || state.current.attachments.length || state.current.email || state.current.parent || state.current.content.text || state.current.content.document));
+          void save();
+        }} />
+      <Label htmlFor={`${id}-resolution`}>{t('namedConversations.markResolution', 'Mark as resolution')}</Label>
+    </div>}
     {isEmail && <div className="space-y-3">
       <Input id={`${id}-email-to`} label={t('namedConversations.to', 'To')} value={email.to.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, to: event.target.value.split(';') })} />
       <Input id={`${id}-email-cc`} label={t('namedConversations.cc', 'CC')} value={email.cc.join(';')} disabled={disabled || !loaded || emailLocked || fileLocked} maxLength={50000} onChange={event => changeEmail({ ...email, cc: event.target.value.split(';') })} />

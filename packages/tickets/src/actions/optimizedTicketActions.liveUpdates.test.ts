@@ -128,8 +128,14 @@ vi.mock('../lib/validateTicketClosure', () => ({
   enforceTicketCloseRules: vi.fn(async () => undefined),
 }));
 
-vi.mock('./ticketBundleUtils', () => ({
-  maybeReopenBundleMasterFromChildReply: vi.fn(async () => undefined),
+// This suite checks after-commit notification/live-update effects. Container
+// binding and bundle publication execute against real schema in the DB suite.
+vi.mock('@alga-psa/shared/lib/tickets/namedConversations', async importOriginal => ({
+  ...await importOriginal<typeof import('@alga-psa/shared/lib/tickets/namedConversations')>(),
+  attachNativeRootToConversation: vi.fn(async () => undefined),
+}));
+vi.mock('../lib/ticketBundleCommentEffects', () => ({
+  applyTicketBundleCommentEffects: vi.fn(async () => undefined),
 }));
 
 import {

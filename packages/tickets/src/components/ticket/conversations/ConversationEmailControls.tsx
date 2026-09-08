@@ -129,6 +129,7 @@ export function ConversationEmailControls({ id, ticket, conversation, ready, sav
         {confirmed.current ? <Button id={`${id}-review-check`} disabled={busy} onClick={() => void check()}>{t('namedConversations.checkDelivery', 'Check delivery')}</Button>
           : <Button id={`${id}-confirm-send`} disabled={busy} onClick={() => void confirm()}>{t('namedConversations.send', 'Send email')}</Button>}</>}>
       <DialogContent>{review && <div className="space-y-3">
+        {review.publicationOptions?.isResolution && <p className="text-sm font-medium">{t('namedConversations.resolutionReview', 'This message will be marked as a resolution.')}</p>}
         <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 break-words text-sm">
           <dt>{t('namedConversations.from', 'From')}</dt><dd>{address(review.review.from)}</dd>
           <dt>{t('namedConversations.replyTo', 'Replies to')}</dt><dd>{review.review.replyTo ? address(review.review.replyTo) : address(review.review.from)}</dd>

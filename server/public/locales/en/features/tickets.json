@@ -1847,6 +1847,8 @@
     "noActivity": "No conversation activity yet.",
     "resolution": "Resolution",
     "replyUnavailable": "This reply target is unavailable. Your saved draft is unchanged.",
+    "markResolution": "Mark as resolution",
+    "resolutionReview": "This message will be marked as a resolution.",
     "vendorEmail": "Vendor email",
     "vendorHelp": "Choose a sending mailbox and recipients in the conversation. Every email is reviewed before sending.",
     "addressHelp": "Separate email addresses with semicolons.",

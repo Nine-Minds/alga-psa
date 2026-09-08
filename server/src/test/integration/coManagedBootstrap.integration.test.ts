@@ -95,7 +95,7 @@ beforeAll(async () => {
     '20260906080000_create_co_management_relationship_events.cjs',
     '20260906100000_add_external_file_metadata.cjs',
     '20260906110000_add_kb_import_batch_identity.cjs',
-    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs']) {
+    '20260906120000_create_co_management_collaboration_policy.cjs', '20260906130000_create_co_management_ticket_handoffs.cjs', '20260906140000_create_collaboration_actor_references.cjs', '20260906150000_create_co_management_command_receipts.cjs', '20260906160000_create_co_management_content_audiences.cjs', '20260906170000_create_co_management_private_command_receipts.cjs', '20260906180000_create_co_management_in_app_receipts.cjs', '20260906190000_create_co_management_notification_deliveries.cjs', '20260906200000_create_co_management_conversation_attachments.cjs', '20260906210000_create_co_management_conversation_drafts.cjs', '20260906220000_add_co_managed_upload_cleanup.cjs', '20260906230000_add_co_managed_attachment_removal.cjs', '20260907000000_create_co_management_thread_transfers.cjs', '20260907010000_create_co_management_event_outbox.cjs', '20260907020000_create_co_management_event_consumers.cjs', '20260907030000_create_co_management_email_deliveries.cjs', '20260907040000_create_co_management_customer_email_deliveries.cjs', '20260907050000_create_co_management_requester_reply_tokens.cjs', '20260907060000_create_co_management_requester_email_deliveries.cjs', '20260907070000_add_co_management_requester_email_consumer.cjs', '20260907080000_create_co_management_customer_reply_tokens.cjs', '20260907122957_create_co_management_inbound_reply_receipts.cjs', '20260907124147_link_inbound_artifacts_to_conversation_attachments.cjs', '20260907135115_add_scheduled_comment_recovery.cjs', '20260907150600_preserve_explicit_audit_tenant.cjs', '20260907154500_create_co_managed_task_references.cjs', '20260907163000_add_project_task_collaboration_comments.cjs', '20260907171500_qualify_co_managed_conversation_events.cjs', '20260907183000_qualify_co_managed_notification_receipts.cjs', '20260907190000_qualify_co_managed_email_deliveries.cjs', '20260907192000_preserve_operational_time_entries.cjs', '20260907210000_create_native_time_tracking_sessions.cjs', '20260907233000_add_time_sheet_notes.cjs', '20260907234500_create_time_period_calendar_locks.cjs', '20260908013607_create_named_ticket_conversations.cjs', '20260908015652_create_ticket_conversation_editor_drafts.cjs', '20260908022249_scope_ticket_conversation_defaults_to_relationship.cjs', '20260908024119_create_ticket_conversation_publications.cjs', '20260908030840_retain_ticket_conversation_draft_reply_target.cjs', '20260908033011_create_ticket_conversation_sender_grants.cjs', '20260908034701_create_ticket_conversation_email_operations.cjs', '20260908042702_create_ticket_conversation_inbound_receipts.cjs', '20260908045632_track_named_conversation_correspondents.cjs', '20260908051006_retain_named_reply_review_resolutions.cjs', '20260908052731_extend_conversation_files_to_native_vendor_replies.cjs', '20260908054601_retain_named_editor_file_bindings.cjs', '20260908060651_retain_named_file_publication_operations.cjs', '20260908091259_retain_named_requester_publication_options.cjs']) {
     await require('../../../migrations/' + file).up(db);
   }
   for (const table of ['standard_statuses', 'standard_priorities', 'countries', 'notification_categories',
@@ -15691,4 +15691,129 @@ it('portal named requester files bind the selected container and reject sibling 
   await expect(portal.listPortalConversationAttachments(db, requester, target)).rejects.toThrow();
   await expect(portal.downloadPortalConversationAttachment(db, requester, target, saved.attachmentId, download)).rejects.toThrow();
   expect(download).not.toHaveBeenCalled();
+}));
+
+it.each(['publish', 'changed_draft', 'shared_guard', 'private_guard'] as const)('named requester resolution options %s preserve reviewed intent and canonical publication', async scenario => withNamedRequesterInboundFixture(async f => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const ticket = scenario === 'shared_guard' ? f.ticket : { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId };
+  if (scenario !== 'shared_guard') await f.customer.table('tenants').update({ product_code: 'psa' });
+  const ref = scenario === 'private_guard' ? await api.createNamedTicketConversation(db, f.customerPrincipal, ticket,
+    { operationId: randomUUID(), name: 'Private work', audience: 'organization_private', transport: 'internal' }).then(row => ({ storeTenant: row.storeTenant, conversationId: row.conversationId })) : f.ref;
+  const conversation = await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, ref);
+  const prior = await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref);
+  const options = { isResolution: true } as const;
+  const request = { operationId: randomUUID(), expectedRevision: prior?.revision ?? 0, expectedConversationRevision: conversation.revision,
+    content: { text: 'The issue has been resolved.' }, publicationOptions: options,
+    ...(scenario !== 'private_guard' ? { email: { subject: 'Resolution', to: ['requester@example.test'], cc: [] } } : {}) };
+  if (scenario.endsWith('_guard')) {
+    expect(await api.getNamedTicketConversationPublicationCapabilities(db, f.customerPrincipal, ticket, ref)).toEqual({ resolution: false });
+    await expect(api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, request)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
+    expect(await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref)).toEqual(prior); return;
+  }
+  expect(await api.getNamedTicketConversationPublicationCapabilities(db, f.customerPrincipal, ticket, ref)).toEqual({ resolution: true });
+  const draft = await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, request);
+  expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref))?.publicationOptions).toEqual(options);
+  // Older autosavers preserve an omitted option; explicit null clears it.
+  const retained = await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref,
+    { ...request, operationId: randomUUID(), expectedRevision: draft.revision, publicationOptions: undefined });
+  expect(retained.publicationOptions).toEqual(options);
+  const send = { operationId: randomUUID(), expectedDraftRevision: retained.revision, expectedConversationRevision: conversation.revision };
+  const reviewed = await email.prepareNamedConversationEmail(db, f.customerPrincipal, ticket, ref, send, f.transport);
+  expect(reviewed.publicationOptions).toEqual(options);
+  expect(reviewed.review.text).not.toContain('isResolution');
+  const before = await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first('status_id', 'is_closed');
+  if (scenario === 'changed_draft') {
+    const cleared = await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref,
+      { ...request, operationId: randomUUID(), expectedRevision: retained.revision, publicationOptions: null });
+    expect(cleared.publicationOptions).toBeUndefined();
+    await expect(email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, ref, send.operationId, reviewed.review.messageHash, f.transport, applyNamedTicketConversationPost)).rejects.toMatchObject({ code: 'CONVERSATION_CONFLICT' });
+    expect(await f.customer.table('comments').where('comment_id', send.operationId).first()).toBeUndefined(); return;
+  }
+  await email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, ref, send.operationId, reviewed.review.messageHash, f.transport, applyNamedTicketConversationPost);
+  await email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, ref, send.operationId, reviewed.review.messageHash, f.transport, applyNamedTicketConversationPost);
+  expect(await f.customer.table('comments').where('comment_id', send.operationId)).toMatchObject([{ is_resolution: true, is_internal: false, publish_state: 'published' }]);
+  expect(await f.customer.table('ticket_conversation_publications').where('operation_id', send.operationId).first()).toMatchObject({ publication_options: options });
+  expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref))?.publicationOptions).toBeUndefined();
+  expect(await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first('status_id', 'is_closed')).toEqual(before);
+  expect((await api.getNamedTicketConversationMessages(db, f.customerPrincipal, ticket, ref)).items.find(item => item.commentId === send.operationId)?.isResolution).toBe(true);
+  const migration = require('../../../migrations/20260908091259_retain_named_requester_publication_options.cjs');
+  await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained requester publication options');
+}));
+
+it.each(['mirror', 'reopen', 'scope_guard', 'side'] as const)('native named requester bundle %s retains legacy effects only within admitted default conversations', async scenario => withNamedRequesterInboundFixture(async f => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const { applyTicketBundleCommentEffects } = await import('../../../../packages/tickets/src/lib/ticketBundleCommentEffects');
+  await f.customer.table('tenants').update({ product_code: 'psa' });
+  const ticket = { tenant: f.ticket.tenant, ticketId: f.ticket.ticketId };
+  const source = await f.customer.table('tickets').where('ticket_id', ticket.ticketId).first();
+  const { title_index: _generated, ...copy } = source;
+  const relatedId = randomUUID();
+  const closed = await f.customer.table('statuses').where({ status_type: 'ticket', is_closed: true }).first();
+  const reopening = scenario === 'reopen';
+  const otherClient = randomUUID();
+  if (scenario === 'scope_guard') await f.customer.table('clients').insert({ tenant: ticket.tenant, client_id: otherClient, client_name: 'Separate customer' });
+  await f.customer.table('tickets').insert({ ...copy, ticket_id: relatedId, ticket_number: 'BUNDLE-TARGET',
+    client_id: scenario === 'scope_guard' ? otherClient : source.client_id,
+    master_ticket_id: reopening ? null : ticket.ticketId,
+    ...(reopening ? { status_id: closed.status_id, is_closed: true, closed_at: new Date().toISOString() } : {}) });
+  if (reopening) await f.customer.table('tickets').where('ticket_id', ticket.ticketId).update({ master_ticket_id: relatedId });
+  await f.customer.table('ticket_bundle_settings').insert({ tenant: ticket.tenant,
+    master_ticket_id: reopening ? relatedId : ticket.ticketId, mode: 'sync_updates', reopen_on_child_reply: true });
+  const selected = scenario === 'side' ? await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, f.ref)
+    : (await api.listNamedTicketConversations(db, f.customerPrincipal, ticket)).find(row => row.defaultSlot === 'requester')!;
+  const ref = { storeTenant: selected.storeTenant, conversationId: selected.conversationId };
+  if (!selected.mailbox) await mail.selectNamedConversationMailbox(db, f.customerPrincipal, ticket, ref, selected.revision, f.inbox.provider_id);
+  const conversation = await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, ref);
+  const prior = await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref);
+  const draft = await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, { operationId: randomUUID(),
+    expectedRevision: prior?.revision ?? 0, expectedConversationRevision: conversation.revision,
+    content: { text: 'The shared incident is resolved.' }, publicationOptions: { isResolution: true },
+    email: { subject: 'Incident update', to: ['requester@example.test'], cc: [] } });
+  const request = { operationId: randomUUID(), expectedDraftRevision: draft.revision, expectedConversationRevision: conversation.revision };
+  const prepared = await email.prepareNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request, f.transport);
+  const confirm = () => email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request.operationId, prepared.review.messageHash, f.transport, applyNamedTicketConversationPost);
+  if (scenario === 'scope_guard') {
+    const bundles = await import('@alga-psa/authorization');
+    const bundle = await bundles.createAuthorizationBundle(db, { tenant: ticket.tenant, name: 'Requester scope', actorUserId: f.customerPrincipal.userId });
+    await bundles.upsertBundleRule(db, { tenant: ticket.tenant, ...bundle, resourceType: 'ticket', action: 'update', templateKey: 'selected_clients', config: { selectedClientIds: [source.client_id] } });
+    await bundles.publishBundleRevision(db, { tenant: ticket.tenant, ...bundle, actorUserId: f.customerPrincipal.userId });
+    await bundles.createBundleAssignment(db, { tenant: ticket.tenant, bundleId: bundle.bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+    await expect(confirm()).rejects.toThrow();
+    expect(await f.customer.table('comments').where('comment_id', request.operationId).first()).toBeUndefined();
+    expect(await f.customer.table('ticket_bundle_mirrors').where('source_comment_id', request.operationId)).toEqual([]);
+    expect(await api.getNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref)).toEqual(draft);
+    expect(await f.customer.table('ticket_conversation_email_routes').where('operation_id', request.operationId)).toEqual([]);
+    expect(f.transport.send).toHaveBeenCalledOnce(); return;
+  }
+  await confirm(); await confirm();
+  const mirrors = await f.customer.table('ticket_bundle_mirrors').where('source_comment_id', request.operationId);
+  if (scenario === 'mirror') {
+    expect(mirrors).toHaveLength(1);
+    const child = await f.customer.table('comments').where('comment_id', mirrors[0].child_comment_id).first();
+    expect(child).toMatchObject({ ticket_id: relatedId, is_resolution: true, is_internal: false, is_system_generated: true });
+    const childDefault = (await api.listNamedTicketConversations(db, f.customerPrincipal, { tenant: ticket.tenant, ticketId: relatedId })).find(row => row.defaultSlot === 'requester')!;
+    expect((await api.getNamedTicketConversationMessages(db, f.customerPrincipal, { tenant: ticket.tenant, ticketId: relatedId },
+      { storeTenant: ticket.tenant, conversationId: childDefault.conversationId })).items).toEqual([expect.objectContaining({ commentId: child.comment_id, isResolution: true })]);
+    await withTransaction(db, trx => applyTicketBundleCommentEffects(trx, ticket.tenant, request.operationId, f.customerPrincipal.userId));
+    expect(await f.customer.table('ticket_bundle_mirrors').where('source_comment_id', request.operationId)).toHaveLength(1);
+  } else {
+    expect(mirrors).toEqual([]);
+    if (reopening) expect(await f.customer.table('tickets').where('ticket_id', relatedId).first()).toMatchObject({ is_closed: false, closed_at: null });
+    else {
+      // Even a replay through the shared engine cannot turn an additional
+      // Requester conversation into a child-reply trigger.
+      await f.customer.table('tickets').where('ticket_id', relatedId).update({ master_ticket_id: null, status_id: closed.status_id, is_closed: true });
+      await f.customer.table('tickets').where('ticket_id', ticket.ticketId).update({ master_ticket_id: relatedId });
+      await f.customer.table('ticket_bundle_settings').insert({ tenant: ticket.tenant, master_ticket_id: relatedId, mode: 'sync_updates', reopen_on_child_reply: true });
+      await withTransaction(db, trx => applyTicketBundleCommentEffects(trx, ticket.tenant, request.operationId, f.customerPrincipal.userId));
+      expect(await f.customer.table('tickets').where('ticket_id', relatedId).first()).toMatchObject({ is_closed: true, status_id: closed.status_id });
+    }
+  }
+  // Bundle history copies do not add recipients or invoke external transport.
+  expect(f.transport.send).toHaveBeenCalledOnce();
 }));

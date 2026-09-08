@@ -131,7 +131,7 @@ export async function readAuthorizedTicketConversationPage(context: {
     storeTenant: row.store_tenant, commentId: row.comment_id, threadId: row.thread_id, parentCommentId: row.parent_comment_id,
     audience: row.audience, createdAt: row.created_at_exact, updatedAt: row.updated_at_exact, deleted: row.deleted_at != null,
     revision: isCoManagedReadFieldHidden(redactedFields, ['revision']) ? null : row.revision,
-    ...(!isCoManagedReadFieldHidden(redactedFields, ['is_resolution', 'resolution']) && row.is_resolution ? { isResolution: true } : {}),
+    ...(!isCoManagedReadFieldHidden(redactedFields, ['is_resolution', 'resolution', 'comments.is_resolution', 'comments.resolution']) && row.is_resolution ? { isResolution: true } : {}),
     note: row.deleted_at == null ? row.note : null, markdown: row.deleted_at == null ? row.markdown : null,
     ...(hideAuthor ? {} : { author: { tenant: row.actor_tenant, kind: row.actor_kind, id: row.actor_id, displayName: row.actor_display_name,
       organizationName: row.actor_organization_name, referenceId: row.actor_reference_id } }),

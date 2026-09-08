@@ -148,3 +148,9 @@ export const getNamedTicketConversationReplyTargetAction = withAuth(async (user,
   const { getNamedTicketConversationReplyTarget } = await import('@alga-psa/co-managed');
   return getNamedTicketConversationReplyTarget(knex, actor, ticket, conversation, parent);
 });
+
+export const getNamedTicketConversationPublicationCapabilitiesAction = withAuth(async (user, { tenant }, ticket: ConversationTicketReference, conversation: TicketConversationReference) => {
+  const actor = await coManagedBrowserActor(user, tenant), { knex } = await createTenantKnex(tenant);
+  const { getNamedTicketConversationPublicationCapabilities } = await import('@alga-psa/co-managed');
+  return getNamedTicketConversationPublicationCapabilities(knex, actor, ticket, conversation);
+});

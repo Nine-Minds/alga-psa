@@ -523,3 +523,9 @@ Inline markers are the per-site ledger; `grep -rn "LEVERAGE:"` is the count.
 - **Where:** `createTicketComment.ts`, `postNamedTicketConversation.ts`, `applyTicketConversationComment.ts`.
 - **Gate:** Two concrete writers with stable shared mutation/event contracts and high correctness cost. Their native versus qualified event retention remains explicit. ACT / bounded-now within the approved requester composer integration; do not generalize unrelated native comment actions or inbound policy.
 - **Status:** revised. Both adapters use the canonical ticket-package writer, preserving receipt/event identities and named-side exclusion from requester state/activity. Named reviewed email uses the existing contact-notification suppression contract; internal recipients retain their existing preference and authorization checks. The 921-case regression passed after extraction and 44 focused DB cases passed with the final classification. Requester email admission stays closed until its inbound correlation is ready.
+
+## ticket-bundle-comment-effects — pattern
+- **What:** Reviewed native Requester publication needs the same published-comment bundle reopen/mirror behavior already implemented inline by the optimized comment action.
+- **Where:** `optimizedTicketActions.ts`, `postNamedTicketConversation.ts`, `ticketBundleCommentEffects.ts`.
+- **Gate:** Two concrete callers, stable legacy effects and a high cost of skipping bundle behavior when migrating the default composer. ACT / bounded-now within the approved native Requester integration.
+- **Status:** extracted. Both paths use the same persisted-source engine; named publication supplies current per-target authority. Additional Requester and private/vendor conversations are excluded. Four representative real-schema cases cover mirror/history/retry, reopen, target-scope rollback and side exclusion. No generic event, inbound or ticket mutation framework introduced.

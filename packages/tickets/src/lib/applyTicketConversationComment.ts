@@ -21,6 +21,7 @@ export interface TicketConversationCommentContext {
   actorReferenceId?: string;
   audience: CommentAudience;
   conversationId?: string;
+  publicationOptions?: import('@alga-psa/shared/lib/tickets/requesterPublicationOptions').RequesterPublicationOptions | null;
   canUpdateResponseState: boolean;
   assertWriteAuthority: (trx: Knex.Transaction) => Promise<void>;
   publication: 'native' | 'qualified';
@@ -28,8 +29,9 @@ export interface TicketConversationCommentContext {
 }
 export async function applyTicketConversationComment(context: TicketConversationCommentContext, comment: CoManagedCommentInsert): Promise<void> {
   const { trx } = context, owner = tenantDb(trx, context.resource.tenant);
-  await Comment.insert(trx, context.resource.tenant, comment, { ticketId: context.resource.id, actorTenant: context.actor.tenant, actorUserId: context.actor.userId,
-    actorReferenceId: context.actorReferenceId, audience: context.audience, conversationId: context.conversationId, assertWriteAuthority: context.assertWriteAuthority });
+  if (context.publicationOptions && (context.publication !== 'native' || context.audience !== 'requester' || context.actor.tenant !== context.resource.tenant || context.actorReferenceId)) throw new CoManagedSharedWorkError();
+  await Comment.insert(trx, context.resource.tenant, { ...comment, is_resolution: Boolean(context.publicationOptions?.isResolution) }, { ticketId: context.resource.id, actorTenant: context.actor.tenant, actorUserId: context.actor.userId,
+    requesterPublicationOptions: context.publicationOptions, actorReferenceId: context.actorReferenceId, audience: context.audience, conversationId: context.conversationId, assertWriteAuthority: context.assertWriteAuthority });
   const saved = await owner.table('comments').where('comment_id', comment.comment_id).first();
   const occurredAt = saved.created_at instanceof Date ? saved.created_at.toISOString() : String(saved.created_at);
   const reference = context.actorReferenceId ? collaborationActorReferenceSchema.parse({ ownerTenantId: context.resource.tenant, referenceId: context.actorReferenceId,
@@ -64,7 +66,7 @@ export async function applyTicketConversationComment(context: TicketConversation
   if (!context.conversationId || context.audience === 'requester') await writeTicketActivity(trx, { tenant: context.resource.tenant, ticketId: context.resource.id,
     eventType: context.audience === 'requester' ? 'TICKET_MESSAGE_ADDED' : 'TICKET_INTERNAL_NOTE_ADDED', entityType: 'comment', entityId: comment.comment_id,
     actor: { actorType: 'user', ...(reference ? { actorReferenceId: reference.referenceId } : { userId: context.actor.userId, displayName }) },
-    source: 'ui', occurredAt, details: { is_internal: comment.is_internal, collaboration_audience: context.audience, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id } });
+    source: 'ui', occurredAt, details: { is_internal: comment.is_internal, ...(saved.is_resolution ? { is_resolution: true } : {}), collaboration_audience: context.audience, thread_id: comment.thread_id, parent_comment_id: comment.parent_comment_id } });
   await publish('TICKET_COMMENT_ADDED', {
     // Reviewed Send owns its exact external envelope. Reuse the existing
     // suppression contract so generic contact/watch-list email cannot resend it.

@@ -18,6 +18,7 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
 export interface CommentCollaborationContext {
   /** Authorized named destination, supplied only by the command adapter. */
   conversationId?: string;
+  requesterPublicationOptions?: import('@alga-psa/shared/lib/tickets/requesterPublicationOptions').RequesterPublicationOptions | null;
   ticketId: string;
   actorTenant: string;
   actorUserId: string;
@@ -32,7 +33,8 @@ async function collaborationAttribution(trx: Knex.Transaction, tenant: string, c
   context: CommentCollaborationContext) {
   if (!trx.isTransaction || comment.ticket_id !== context.ticketId || !['requester', 'shared_it', 'organization_private'].includes(context.audience) ||
       comment.author_type !== 'internal' || comment.contact_id != null || Boolean(comment.is_internal) !== (context.audience !== 'requester') ||
-      comment.is_resolution || (comment as any).is_system_generated || (comment.publish_state != null && comment.publish_state !== 'published') ||
+      (Boolean(comment.is_resolution) !== Boolean(context.requesterPublicationOptions?.isResolution)) ||
+      (context.requesterPublicationOptions && (context.actorTenant !== tenant || context.audience !== 'requester' || context.actorReferenceId)) || (comment as any).is_system_generated || (comment.publish_state != null && comment.publish_state !== 'published') ||
       comment.scheduled_publish_at || comment.metadata != null) throw new Error('Invalid collaboration comment context');
   await context.assertWriteAuthority(trx);
   if (context.actorTenant === tenant) {

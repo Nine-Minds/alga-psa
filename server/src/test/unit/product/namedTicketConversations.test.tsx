@@ -4,9 +4,10 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-libra
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import CoManagedNamedTicketConversation from '../../../components/co-managed/CoManagedNamedTicketConversation';
 import { useNamedTicketConversations } from '../../../../../packages/tickets/src/components/ticket/conversations/useNamedTicketConversations';
-const mocks = vi.hoisted(() => ({ flag: true, requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
+const mocks = vi.hoisted(() => ({ flag: true, requesterProps: vi.fn(), uploadOptions: vi.fn(), uploadFile: vi.fn(), load: vi.fn(), page: vi.fn(), activity: vi.fn(), capabilities: vi.fn(), replyTarget: vi.fn(), replace: vi.fn(), readDraft: vi.fn(), saveDraft: vi.fn(), post: vi.fn(), create: vi.fn(), status: vi.fn(), push: vi.fn(), mailboxes: vi.fn(), selectMailbox: vi.fn(), latestSend: vi.fn(), prepareEmail: vi.fn(), sendEmail: vi.fn(), emailStatus: vi.fn(), emailDefaults: vi.fn(),
   query: '', session: { session_id: 'session', user: { tenant: 'home', id: 'author' } } }));
 vi.mock('../../../../../packages/tickets/src/actions/namedTicketConversationActions', () => ({
+  getNamedTicketConversationPublicationCapabilitiesAction: mocks.capabilities,
   getNamedTicketConversationActivityAction: mocks.activity, getNamedTicketConversationReplyTargetAction: mocks.replyTarget,
   getNamedConversationUploadOptionsAction: mocks.uploadOptions, uploadNamedConversationEditorFileAction: mocks.uploadFile,
   listNamedConversationMailboxesAction: mocks.mailboxes, selectNamedConversationMailboxAction: mocks.selectMailbox, getLatestNamedTicketEmailSendAction: mocks.latestSend,
@@ -28,6 +29,8 @@ vi.mock('next/dynamic', () => ({ default: () => ({ id, document, editable, onCha
       onChange={event => onChange([{ type: 'paragraph', content: [{ type: 'text', text: event.target.value, styles: {} }] }])} />
   : <div id={id}>{document.map((block: any) => block.content?.map((part: any) => part.text ?? '').join('') ?? '').join('\n')}</div> }));
 vi.mock('@alga-psa/ui/components/Button', () => ({ Button: ({ children, variant, size, ...props }: any) => <button {...props}>{children}</button> }));
+vi.mock('@alga-psa/ui/components/Switch', () => ({ Switch: ({ checked, onCheckedChange, ...props }: any) => <input type="checkbox" checked={checked} onChange={event => onCheckedChange(event.target.checked)} {...props} /> }));
+vi.mock('@alga-psa/ui/components/Label', () => ({ Label: ({ children, ...props }: any) => <label {...props}>{children}</label> }));
 vi.mock('@alga-psa/ui/components/Input', () => ({ Input: ({ label, ...props }: any) => <label>{label}<input {...props} /></label> }));
 vi.mock('@alga-psa/ui/components/Dialog', () => ({ Dialog: ({ isOpen, children, footer }: any) => isOpen ? <div role="dialog">{children}{footer}</div> : null, DialogContent: ({ children }: any) => <div>{children}</div> }));
 vi.mock('@alga-psa/ui/components/CustomSelect', () => ({ default: ({ options, value, onValueChange, label, ...props }: any) => <label>{label}<select {...props} value={value} onChange={event => onValueChange(event.target.value)}>{options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}</select></label> }));
@@ -45,6 +48,7 @@ beforeEach(() => {
   mocks.session = { session_id: 'session', user: { tenant: 'home', id: 'author' } };
   mocks.load.mockResolvedValue({ conversations: [requester, side], writeAudiences: ['requester', 'organization_private'], actor: { tenant: 'home', userId: 'author' } });
   mocks.page.mockResolvedValue({ conversation: side, items: [], nextBefore: null });
+  mocks.capabilities.mockResolvedValue({ resolution: false });
   mocks.activity.mockResolvedValue({ items: [], nextBefore: null });
   mocks.replyTarget.mockImplementation(async (_ticket, _conversation, parent) => parent);
   mocks.readDraft.mockResolvedValue(null);
@@ -478,4 +482,25 @@ it('keeps loaded All activity pages on refresh and clears their bodies after a d
   fireEvent.focus(window); await screen.findByRole('alert');
   expect(screen.queryByText('older message')).toBeNull(); expect(screen.queryByText('new message')).toBeNull();
   expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+});
+
+it('privately retains a native requester resolution marker and shows it in the locked email review', async () => {
+  const f = emailFixture();
+  const selected = { ...f.emailSide, storeTenant: 'owner', audience: 'requester', mailbox: { id: 'mailbox', tenant: 'owner' } };
+  mocks.session.user.tenant = 'owner'; mocks.query = 'conversation=private&conversationStore=owner';
+  mocks.load.mockResolvedValue({ conversations: [requester, selected], writeAudiences: ['requester'], actor: { tenant: 'owner', userId: 'author' } });
+  mocks.page.mockResolvedValue({ conversation: selected, items: [], nextBefore: null });
+  mocks.capabilities.mockResolvedValue({ resolution: true });
+  mocks.prepareEmail.mockImplementation(async (_ticket, _ref, request) => ({ operationId: request.operationId, status: 'reviewed', review: f.preview, publicationOptions: f.draft().publicationOptions }));
+  const first = render(<Harness />); await writeEmail();
+  fireEvent.click(screen.getByLabelText('Mark as resolution'));
+  await waitFor(() => expect(f.draft().publicationOptions).toEqual({ isResolution: true }));
+  expect(mocks.sendEmail).not.toHaveBeenCalled(); first.unmount(); render(<Harness />);
+  expect(await screen.findByLabelText('Mark as resolution')).toBeChecked();
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Review email' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Review email' }));
+  await screen.findByText('This message will be marked as a resolution.');
+  expect(screen.getByLabelText('Mark as resolution')).toBeDisabled(); expect(mocks.sendEmail).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole('button', { name: 'Send email' }));
+  await waitFor(() => expect(screen.getByLabelText('Mark as resolution')).not.toBeChecked());
 });

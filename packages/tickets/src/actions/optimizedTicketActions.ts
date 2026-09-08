@@ -66,7 +66,7 @@ import {
 } from '@alga-psa/shared/lib/ticketActivity';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { enforceTicketCloseRules, type CloseRuleBypassSource } from '../lib/validateTicketClosure';
-import { maybeReopenBundleMasterFromChildReply } from './ticketBundleUtils';
+import { applyTicketBundleCommentEffects } from '../lib/ticketBundleCommentEffects';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -3362,89 +3362,10 @@ export const addTicketCommentWithCache = withAuth(async (
       );
     }
 
-    // Bundle child→master reopen: a public reply on a bundled child can
-    // reopen the closed master when reopen_on_child_reply is set. This
-    // mirrors the wiring in commentActions.createComment so the optimized
-    // MSP-side comment path doesn't silently skip the reopen.
+    // The same publication engine serves reviewed named Requester sends.
+    // This legacy entry retains its existing tenant-wide comment admission.
     if (!isInternal && !isScheduled) {
-      await maybeReopenBundleMasterFromChildReply(trx, tenant, ticketId, user.user_id ?? null);
-    }
-
-    // If this is a bundle master in sync_updates mode, mirror public comments to children (idempotent).
-    if (!isInternal && !isScheduled) {
-      const bundleSettings = await tenantScopedTable(trx, 'ticket_bundle_settings', tenant)
-        .where({ master_ticket_id: ticketId })
-        .first();
-
-      if (bundleSettings?.mode === 'sync_updates') {
-        const children = await tenantScopedTable(trx, 'tickets', tenant)
-          .select('ticket_id')
-          .where({ master_ticket_id: ticketId });
-
-        const now = new Date().toISOString();
-        for (const child of children) {
-          const existingMirror = await tenantScopedTable(trx, 'ticket_bundle_mirrors', tenant)
-            .where({
-              source_comment_id: newComment.comment_id,
-              child_ticket_id: child.ticket_id,
-            })
-            .first();
-
-          if (existingMirror) {
-            continue;
-          }
-
-          const childIds = await trx.raw(
-            'SELECT gen_random_uuid() AS comment_id, gen_random_uuid() AS thread_id'
-          );
-          const childGenerated = childIds.rows?.[0] as
-            | { comment_id: string; thread_id: string }
-            | undefined;
-          if (!childGenerated?.comment_id || !childGenerated?.thread_id) {
-            throw new Error('Database UUID generation did not return mirrored comment/thread identifiers.');
-          }
-
-          await tenantDb(trx, tenant).table('comment_threads').insert({
-            tenant,
-            thread_id: childGenerated.thread_id,
-            ticket_id: child.ticket_id,
-            project_task_id: null,
-            root_comment_id: childGenerated.comment_id,
-            is_internal: false,
-            reply_count: 0,
-            last_activity_at: now,
-            created_at: now,
-            created_by: null,
-          });
-
-          await tenantDb(trx, tenant).table('comments').insert({
-            tenant,
-            comment_id: childGenerated.comment_id,
-            thread_id: childGenerated.thread_id,
-            ticket_id: child.ticket_id,
-            user_id: null,
-            author_type: 'unknown',
-            note: content,
-            is_internal: false,
-            is_resolution: isResolution,
-            is_system_generated: true,
-            markdown_content: markdownContent,
-            created_at: now,
-          });
-
-          await attachNativeRootToConversation({ trx, ticket: { tenant, ticketId: child.ticket_id }, storeTenant: tenant }, childGenerated.thread_id);
-
-          await tenantDb(trx, tenant).table('ticket_bundle_mirrors')
-            .insert({
-              tenant,
-              source_comment_id: newComment.comment_id,
-              child_ticket_id: child.ticket_id,
-              child_comment_id: childGenerated.comment_id,
-            })
-            .onConflict()
-            .ignore();
-        }
-      }
+      await applyTicketBundleCommentEffects(trx, tenant, newCommentId, user.user_id ?? null);
     }
 
     // Publish comment added event after the comment transaction commits.

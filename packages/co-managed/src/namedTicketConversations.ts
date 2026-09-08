@@ -1,3 +1,4 @@
+import { snapshotRequesterPublicationOptions, type RequesterPublicationOptions } from '@alga-psa/shared/lib/tickets/requesterPublicationOptions';
 import { snapshotConversationEditorFiles } from '@alga-psa/shared/lib/tickets/conversationEditorFiles';
 import { snapshotConversationEmailDraft } from '@alga-psa/shared/lib/tickets/conversationEmailEnvelope';
 import type { Knex } from 'knex';
@@ -207,24 +208,54 @@ function draftStore(context: ConversationAuthority, reference: TicketConversatio
   if (isCoManagedReadFieldHidden(context.hidden, ['drafts', 'content', 'ticket_conversation_editor_drafts'])) return forbidden();
   return { trx: context.trx, actor: context.actor, ticket: context.ticket, conversation: reference, conversationRevision: revision };
 }
+function canMarkRequesterResolution(context: ConversationAuthority, conversation: NamedTicketConversation) {
+  return !context.shared && context.actor.tenant === context.ticket.tenant && conversation.audience === 'requester' && conversation.transport === 'email' &&
+    !isCoManagedReadFieldHidden(context.hidden, ['is_resolution', 'resolution', 'comments.is_resolution', 'comments.resolution']);
+}
+export function admitNamedRequesterPublicationOptions(context: ConversationAuthority, conversation: NamedTicketConversation, input: unknown) {
+  const options = snapshotRequesterPublicationOptions(input);
+  if (options && !canMarkRequesterResolution(context, conversation)) return forbidden();
+  return options;
+}
+export function getNamedTicketConversationPublicationCapabilities(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference) {
+  const reference = snapshotConversationReference(input);
+  return withTicketAuthority(db, actor, ticket, 'update', async context => ({ resolution: canMarkRequesterResolution(context, (await authorizedConversation(context, reference)).conversation) }));
+}
+
+/** A native bundle is not authority for its other tickets. Named publication
+ * must admit each target under the author's current home identity and masks. */
+export function assertNamedTicketConversationBundleTarget(db: Knex, actor: CoManagedSessionActor,
+  ticket: ConversationTicketReference, effect: 'mirror' | 'reopen') {
+  return withTicketAuthority(db, actor, ticket, 'update', async context => {
+    if (context.shared) return forbidden();
+    destinationScope(context, 'requester');
+    const affected = effect === 'reopen'
+      ? ['status_id', 'is_closed', 'closed_at', 'closed_by', 'updated_by', 'updated_at']
+      : ['comments', 'comment_threads', 'is_resolution', 'comments.is_resolution', 'is_system_generated'];
+    if (isCoManagedReadFieldHidden(context.hidden, affected.flatMap(field => [field, `tickets.${field}`]))) return forbidden();
+  });
+}
 export function getNamedConversationEditorDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference, input: TicketConversationReference) {
   const reference = snapshotConversationReference(input);
   return withTicketAuthority(db, actor, ticket, 'read', async context => {
     const { conversation } = await authorizedConversation(context, reference);
     const draft = await readConversationEditorDraft<CoManagedConversationContent>(draftStore(context, reference, conversation.revision));
-    return draft && isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources) ? { ...draft, attachments: [] } : draft;
+    if (!draft) return draft;
+    return { ...draft, ...(draft.publicationOptions && !canMarkRequesterResolution(context, conversation) ? { publicationOptions: null } : {}),
+      ...(isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources) ? { attachments: [] } : {}) };
   });
 }
 export function saveNamedConversationEditorDraft(db: Knex, actor: CoManagedSessionActor, ticket: ConversationTicketReference,
   input: TicketConversationReference, inputRequest: EditorDraftSaveRequest<CoManagedConversationContent>) {
   const reference = snapshotConversationReference(input);
-  if (!inputRequest || Object.keys(inputRequest).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email', 'attachments'].includes(k))) {
+  if (!inputRequest || Object.keys(inputRequest).some(k => !['operationId', 'expectedRevision', 'expectedConversationRevision', 'content', 'parent', 'email', 'attachments', 'publicationOptions'].includes(k))) {
     throw new TicketConversationError('CONVERSATION_INVALID');
   }
   const attachments = inputRequest.attachments === undefined ? undefined : snapshotConversationEditorFiles(inputRequest.attachments);
   const parent = snapshotConversationDraftParent(inputRequest.parent);
   const email = snapshotConversationEmailDraft(inputRequest.email);
-  if (inputRequest.content === null && (parent || email || attachments?.length)) throw new TicketConversationError('CONVERSATION_INVALID');
+  const publicationOptions = snapshotRequesterPublicationOptions(inputRequest.publicationOptions);
+  if (inputRequest.content === null && (parent || email || attachments?.length || publicationOptions)) throw new TicketConversationError('CONVERSATION_INVALID');
   let content: CoManagedConversationContent | null = null;
   if (inputRequest.content !== null) {
     const body = inputRequest.content;
@@ -238,12 +269,15 @@ export function saveNamedConversationEditorDraft(db: Knex, actor: CoManagedSessi
   const request = { operationId: inputRequest.operationId, expectedRevision: inputRequest.expectedRevision,
     expectedConversationRevision: inputRequest.expectedConversationRevision, content,
     ...(attachments !== undefined ? { attachments } : {}),
+    ...(inputRequest.publicationOptions !== undefined ? { publicationOptions } : {}),
     ...(inputRequest.parent !== undefined ? { parent } : {}), ...(inputRequest.email !== undefined ? { email } : {}) };
   return withTicketAuthority(db, actor, ticket, 'update', async context => {
     const { conversation } = await authorizedConversation(context, reference);
     if (email && conversation.transport !== 'email') throw new TicketConversationError('CONVERSATION_INVALID');
     if (parent) await assertConversationReplyParent(context, conversation, parent);
     const scope = draftStore(context, reference, conversation.revision);
+    const retained = request.content !== null && request.publicationOptions === undefined ? (await readConversationEditorDraft(scope))?.publicationOptions : publicationOptions;
+    admitNamedRequesterPublicationOptions(context, conversation, retained);
     if (isCoManagedReadFieldHidden(context.hidden, coManagedConversationAttachmentSources) &&
       (attachments?.length || (await readConversationEditorDraft(scope))?.attachments.length)) return forbidden();
     return saveConversationEditorDraft(scope, request);
@@ -258,6 +292,7 @@ export interface NamedConversationPostRequest {
   parent?: { threadId: string; commentId: string };
 }
 export interface NamedConversationPostContext extends ConversationAuthority {
+  publicationOptions?: RequesterPublicationOptions | null;
   canUpdateResponseState: boolean;
   conversation: NamedTicketConversation;
   actorReferenceId?: string;
@@ -296,6 +331,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
       conversation_store_tenant: reference.storeTenant, conversation_id: reference.conversationId,
       ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId }).forUpdate().first();
     if (!draft || draft.revision !== request.expectedDraftRevision || draft.conversation_revision !== conversation.revision) throw new TicketConversationError('CONVERSATION_CONFLICT');
+    const publicationOptions = admitNamedRequesterPublicationOptions(context, conversation, draft.publication_options);
     if (!draft.content || !Array.isArray(draft.attachment_manifest)) throw new TicketConversationError('CONVERSATION_INVALID');
     let content: CoManagedConversationContent;
     try { content = snapshotConversationContent(draft.content); } catch { throw new TicketConversationError('CONVERSATION_INVALID'); }
@@ -320,7 +356,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
         await assertCoManagedSessionUnexpired(trx, context.actor);
         await assertCoManagedOperationalWrite(trx, context.ticket.tenant);
       };
-      await apply({ ...context, conversation, actorReferenceId, assertWriteAuthority,
+      await apply({ ...context, conversation, actorReferenceId, assertWriteAuthority, publicationOptions,
         canUpdateResponseState: !isCoManagedReadFieldHidden(context.hidden, ['response_state', 'tickets.response_state']) }, {
         comment_id: request.operationId, ticket_id: context.ticket.ticketId, thread_id: threadId,
         parent_comment_id: parent?.commentId ?? null, ...encodeConversationContent(content), is_internal: conversation.audience !== 'requester',
@@ -334,6 +370,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
     const [saved] = await store.table('ticket_conversation_publications').insert({ tenant: reference.storeTenant,
       operation_id: request.operationId, conversation_id: reference.conversationId, ticket_tenant: context.ticket.tenant,
       ticket_id: context.ticket.ticketId, actor_tenant: context.actor.tenant, actor_user_id: context.actor.userId,
+      publication_options: publicationOptions ? JSON.stringify(publicationOptions) : null,
       request_hash: hash, mode, thread_id: threadId, comment_id: request.operationId }).returning('*');
     return receipt(saved);
   });

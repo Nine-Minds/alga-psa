@@ -1,3 +1,5 @@
+import { admitNamedRequesterPublicationOptions } from './namedTicketConversations';
+import { snapshotRequesterPublicationOptions } from '@alga-psa/shared/lib/tickets/requesterPublicationOptions';
 import { assertNamedConversationDeliveryFiles, selectedNamedConversationEditorFiles, assertNamedConversationPublicationFiles, prepareNamedConversationPublicationFiles, type NamedConversationEmailFile, type NamedConversationFileStorage } from './namedConversationPublicationFiles';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Knex } from 'knex';
@@ -78,13 +80,15 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
     const previous = await operation(context, request.operationId).forUpdate().first();
     if (previous) {
       if (previous.request_hash !== requestHash) return conflict();
-      return { ...state(previous), review: previous.review as ReviewedEmailPreview };
+      const publicationOptions = admitNamedRequesterPublicationOptions(context, context.conversation, previous.publication_options);
+      return { ...state(previous), review: previous.review as ReviewedEmailPreview, ...(publicationOptions ? { publicationOptions } : {}) };
     }
     const draft = await getNamedConversationEditorDraft(context.trx, context.actor, context.ticket, ref);
     if (!draft?.content || !draft.email || draft.revision !== request.expectedDraftRevision || draft.conversationRevision !== request.expectedConversationRevision) return conflict();
     const raw = await tenantDb(context.trx, context.actor.tenant).table('ticket_conversation_editor_drafts')
-      .where({ actor_user_id: context.actor.userId, conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).forShare().first('attachment_manifest');
+      .where({ actor_user_id: context.actor.userId, conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId }).forShare().first('attachment_manifest', 'publication_options');
     if (!raw) return invalid();
+    const publicationOptions = admitNamedRequesterPublicationOptions(context, context.conversation, raw.publication_options);
     const files = await selectedNamedConversationEditorFiles(context, raw);
     const content = snapshotConversationContent(draft.content);
     const ownRoutes = await tenantDb(context.trx, mailbox.tenant).table('email_providers').select('mailbox');
@@ -104,8 +108,9 @@ export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSes
       actor_user_id: context.actor.userId, ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, relationship_id: context.ticket.relationshipId ?? null,
       conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId, mailbox_tenant: mailbox.tenant, mailbox_id: mailbox.id,
       draft_revision: draft.revision, conversation_revision: context.conversation.revision, request_hash: requestHash,
+      publication_options: publicationOptions ? JSON.stringify(publicationOptions) : null,
       review: JSON.stringify(prepared.review), payload: JSON.stringify(prepared.payload), reply_token_hash: tokenHash, rfc_message_id: messageId }).returning('*');
-    return { ...state(row), review: row.review as ReviewedEmailPreview };
+    return { ...state(row), review: row.review as ReviewedEmailPreview, ...(publicationOptions ? { publicationOptions } : {}) };
   });
 }
 /** Confirmation commits the reviewed message, immutable envelope, inbound route,
@@ -141,6 +146,8 @@ export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSe
       const draft = await tenantDb(current.trx, current.actor.tenant).table('ticket_conversation_editor_drafts').where({ actor_user_id: current.actor.userId,
         conversation_store_tenant: ref.storeTenant, conversation_id: ref.conversationId, ticket_tenant: current.ticket.tenant, ticket_id: current.ticket.ticketId }).forUpdate().first();
       if (!draft || draft.revision !== row.draft_revision || draft.conversation_revision !== row.conversation_revision) return conflict();
+      const publicationOptions = admitNamedRequesterPublicationOptions(current, current.conversation, row.publication_options);
+      if (hash(publicationOptions) !== hash(snapshotRequesterPublicationOptions(draft.publication_options))) return conflict();
       const publishedFiles = await assertNamedConversationPublicationFiles(current, draft,
         { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision }, 'send');
       const payload = { ...row.payload, ...(publishedFiles.length ? { files: publishedFiles } : {}) };
