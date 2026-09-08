@@ -31,6 +31,8 @@ export default defineConfig({
       'src/activities/__tests__/tenant-email-ingestion-activities.test.ts',
       'src/db/__tests__/tenant-operations.email-settings.test.ts',
       'src/activities/__tests__/product-upgrade-activities.test.ts',
+      'src/activities/__tests__/trial-payment-reminder-activities.test.ts',
+      'src/activities/__tests__/trial-payment-reminder-email.test.ts',
       'src/activities/__tests__/comment-recovery-forwarding.test.ts',
       'src/activities/__tests__/email-activities-simple.test.ts',
       'src/activities/__tests__/email-activities-standalone.test.ts',

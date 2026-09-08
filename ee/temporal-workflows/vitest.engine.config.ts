@@ -13,6 +13,7 @@ export default {
       'src/test-utils/test-connection.test.ts',
       'src/workflows/__tests__/generic-job-workflow.engine.test.ts',
       'src/workflows/__tests__/tenant-product-upgrade-workflow.test.ts',
+      'src/workflows/__tests__/trial-payment-reminder-workflow.test.ts',
       'src/workflows/__tests__/tenant-creation-appliance.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.test.ts',
       'src/workflows/__tests__/sla-ticket-workflow.integration.test.ts',

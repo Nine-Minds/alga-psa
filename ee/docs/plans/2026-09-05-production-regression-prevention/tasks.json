@@ -196,6 +196,14 @@
       "dependsOn": [],
       "owner": "coordinator",
       "notes": "Reviewed archive-before-load and actual image-after-load verification. All 22 producer/consumer tests and actionlint pass. Earlier same-run build attempts supported; actual CI execution pending."
+    },
+    {
+      "id": "R025",
+      "title": "Register trial reminder tests exposed by completed CI inventory",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol and coordinator",
+      "notes": "Two fast suites and one engine suite now registered and reconciled against actual collection. All 24 targeted tests and seven discovery tests pass; current-source CI pending."
     }
   ]
 }
