@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { TemplateAst, TemplateTotalsNode } from '@alga-psa/types';
 import { createAstDocument, findNodeById, getDocumentNode, roundTripAst } from './workspaceAst.roundtrip.helpers';
+import { exportWorkspaceToTemplateAst, importTemplateAstToWorkspace } from './workspaceAst';
 
 type InlineStyleCase = {
   key: string;
@@ -94,5 +96,109 @@ describe('workspaceAst roundtrip style matrix', () => {
       color: '#1f2937',
       fontWeight: 700,
     });
+  });
+});
+
+// alga-2026-0002355 — emphasized totals rows shipped with a hardcoded brand
+// color; the designer now exposes it as an editable Highlight Row Style.
+describe('workspaceAst totals highlight row colors', () => {
+  const createTotalsAst = (emphasisStyle?: Record<string, unknown>): TemplateAst =>
+    createAstDocument([
+      {
+        id: 'totals',
+        type: 'totals',
+        sourceBinding: { bindingId: 'lineItems' },
+        rows: [
+          { id: 'monthly-subtotal', label: 'Monthly', value: { type: 'path', path: 'recurring_subtotal' }, format: 'currency' },
+          {
+            id: 'monthly-total',
+            label: 'Monthly Total',
+            value: { type: 'path', path: 'recurring_total' },
+            format: 'currency',
+            emphasize: true,
+            ...(emphasisStyle ? { style: { inline: emphasisStyle } } : {}),
+          },
+          {
+            id: 'onetime-total',
+            label: 'One-time Total',
+            value: { type: 'path', path: 'onetime_total' },
+            format: 'currency',
+            emphasize: true,
+            ...(emphasisStyle ? { style: { inline: emphasisStyle } } : {}),
+          },
+        ],
+      } as TemplateTotalsNode,
+    ], {
+      bindings: {
+        values: {},
+        collections: { lineItems: { id: 'lineItems', kind: 'collection', path: 'line_items' } },
+      },
+    });
+
+  const purple = { backgroundColor: '#7c45d3', color: '#ffffff', padding: '4px 6px', borderRadius: '4px' };
+
+  const findTotalsNode = (ast: TemplateAst): TemplateTotalsNode => {
+    const node = findNodeById(getDocumentNode(ast), 'totals');
+    expect(node?.type).toBe('totals');
+    return node as TemplateTotalsNode;
+  };
+
+  it('round-trips the shipped emphasized row colors unchanged', () => {
+    const roundTripped = roundTripAst(createTotalsAst(purple));
+    const totals = findTotalsNode(roundTripped);
+
+    for (const row of totals.rows.filter((candidate) => candidate.emphasize)) {
+      expect(row.style?.inline).toMatchObject(purple);
+    }
+  });
+
+  it('seeds the inspector fields from the first emphasized row', () => {
+    const workspace = importTemplateAstToWorkspace(createTotalsAst(purple));
+    const totalsNode = Object.values(workspace.nodesById).find((node) => node.id === 'totals') as any;
+
+    expect(totalsNode?.props?.metadata?.totalsEmphasisBackgroundColor).toBe('#7c45d3');
+    expect(totalsNode?.props?.metadata?.totalsEmphasisColor).toBe('#ffffff');
+  });
+
+  it('exports edited highlight colors onto every emphasized row', () => {
+    const workspace = importTemplateAstToWorkspace(createTotalsAst(purple));
+    const totalsId = Object.values(workspace.nodesById).find((node) => node.id === 'totals')!.id;
+    const totalsNode = workspace.nodesById[totalsId]!;
+
+    workspace.nodesById[totalsId] = {
+      ...totalsNode,
+      props: {
+        ...totalsNode.props,
+        metadata: {
+          ...(totalsNode.props.metadata as Record<string, unknown>),
+          totalsEmphasisBackgroundColor: '#0f766e',
+          totalsEmphasisColor: '#f0fdfa',
+        },
+      },
+    };
+
+    const totals = findTotalsNode(exportWorkspaceToTemplateAst(workspace));
+    const emphasized = totals.rows.filter((row) => row.emphasize);
+    expect(emphasized.length).toBe(2);
+
+    for (const row of emphasized) {
+      expect(row.style?.inline?.backgroundColor).toBe('#0f766e');
+      expect(row.style?.inline?.color).toBe('#f0fdfa');
+      // Untouched decorations survive the overlay.
+      expect(row.style?.inline?.borderRadius).toBe('4px');
+    }
+
+    // Non-emphasized rows stay uncolored.
+    expect(totals.rows.find((row) => row.id === 'monthly-subtotal')?.style?.inline?.backgroundColor).toBeUndefined();
+  });
+
+  it('leaves templates without emphasized row colors untouched', () => {
+    const roundTripped = roundTripAst(createTotalsAst());
+    const totals = findTotalsNode(roundTripped);
+
+    for (const row of totals.rows) {
+      expect(row.style?.inline?.backgroundColor).toBeUndefined();
+      expect(row.style?.inline?.color).toBeUndefined();
+    }
   });
 });

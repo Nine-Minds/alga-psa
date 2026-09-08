@@ -1170,6 +1170,15 @@ const mapDesignerNodeToAstNode = (
         const metadata = getWorkspaceNodeMetadata(node);
         const sourceBindingPath = resolveCollectionPath(node, documentKind);
         const rowsSource = Array.isArray(metadata.totalsRows) ? metadata.totalsRows : [];
+        // Highlight Row Style: brand colors for every emphasized row (Total,
+        // Monthly Total, One-time Total), overlaid over whatever the imported
+        // template hardcoded.
+        const emphasisBackgroundColor = asTrimmedString(metadata.totalsEmphasisBackgroundColor);
+        const emphasisColor = asTrimmedString(metadata.totalsEmphasisColor);
+        const emphasisInline = {
+          ...(emphasisBackgroundColor.length > 0 ? { backgroundColor: emphasisBackgroundColor } : {}),
+          ...(emphasisColor.length > 0 ? { color: emphasisColor } : {}),
+        };
         const rows: TemplateTotalsRow[] =
           rowsSource
             .map((row, index): TemplateTotalsRow | null => {
@@ -1202,6 +1211,12 @@ const mapDesignerNodeToAstNode = (
               const rowStyle = mapTemplateNodeStyleRef(row.style);
               if (rowStyle) {
                 mappedRow.style = rowStyle;
+              }
+              if (mappedRow.emphasize && Object.keys(emphasisInline).length > 0) {
+                mappedRow.style = {
+                  ...(mappedRow.style ?? {}),
+                  inline: { ...(mappedRow.style?.inline ?? {}), ...emphasisInline },
+                };
               }
               return mappedRow;
             })
@@ -1937,6 +1952,17 @@ export const importTemplateAstToWorkspace = (
               ...(row.labelStyle ? { labelStyle: cloneJson(row.labelStyle) } : {}),
             };
           });
+          // Seed the Highlight Row Style inspector from the first emphasized
+          // row so the shipped brand color is editable instead of hardcoded.
+          const emphasizedRowStyle = inputNode.rows.find(
+            (row) => row.emphasize === true && (row.style?.inline?.backgroundColor || row.style?.inline?.color)
+          )?.style?.inline;
+          if (emphasizedRowStyle?.backgroundColor) {
+            metadata.totalsEmphasisBackgroundColor = emphasizedRowStyle.backgroundColor;
+          }
+          if (emphasizedRowStyle?.color) {
+            metadata.totalsEmphasisColor = emphasizedRowStyle.color;
+          }
         } else if (inputNode.type === 'image') {
           metadata.astSrcExpression = inputNode.src;
           if (inputNode.src.type === 'literal') {

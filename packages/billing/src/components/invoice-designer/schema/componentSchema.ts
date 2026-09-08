@@ -656,6 +656,33 @@ const SIGNATURE_INSPECTOR: DesignerInspectorSchema = {
   ],
 };
 
+const TOTALS_INSPECTOR: DesignerInspectorSchema = {
+  panels: [
+    {
+      // Emphasized rows (Total, Monthly Total, One-time Total) ship with a
+      // hardcoded brand color; these fields recolor every emphasized row.
+      id: 'totals-emphasis-style',
+      title: 'Highlight Row Style',
+      fields: [
+        {
+          kind: 'css-color',
+          id: 'totalsEmphasisBackgroundColor',
+          label: 'Background',
+          path: 'metadata.totalsEmphasisBackgroundColor',
+          placeholder: '#7c45d3',
+        },
+        {
+          kind: 'css-color',
+          id: 'totalsEmphasisColor',
+          label: 'Text color',
+          path: 'metadata.totalsEmphasisColor',
+          placeholder: '#ffffff',
+        },
+      ],
+    },
+  ],
+};
+
 const TABLE_INSPECTOR: DesignerInspectorSchema = {
   panels: [
     {
@@ -867,7 +894,7 @@ export const DESIGNER_COMPONENT_SCHEMAS: Record<DesignerComponentType, DesignerC
       allowedChildren: [],
       allowedParents: ['page', 'column', 'container', 'section'],
     },
-    inspector: COMMON_INSPECTOR,
+    inspector: mergeInspectorSchemas(COMMON_INSPECTOR, TOTALS_INSPECTOR),
   },
   table: {
     type: 'table',
