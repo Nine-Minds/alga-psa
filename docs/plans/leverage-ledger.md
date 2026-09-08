@@ -631,3 +631,7 @@ Organization SLA email checkpoint (2026-09-08): recipient preference gates reuse
 - **Where:** `packages/email/src/templateProcessors.ts` and `coManagedSlaEmailTransport.ts`.
 - **Gate:** High correctness cost but wide existing-caller impact. ACT / staged migration when revising the generic renderer; do not silently change every existing email template in an SLA delivery task.
 - **Status:** SLA transport loads existing template definitions without raw data substitution, then safely fills its flat admitted data. Existing processor semantics remain compatible; general engine revision remains staged work.
+
+## ticket-close-transition — pattern
+
+Primary ticket updates and bundle child propagation now both perform close-rule admission, closure fields, independent SLA effects, and audit. The full primary updater also owns notifications, so calling it recursively would duplicate the existing master-owned bundle close email behavior. Keep the per-child path explicit for now; a future extraction should separate the canonical lifecycle transition from notification ownership and retain each source transaction and actor's authority. Markers are in `packages/tickets/src/actions/optimizedTicketActions.ts`.

@@ -16961,3 +16961,100 @@ it('MSP SLA bundle child reply concurrent siblings create only one genuine reope
   expect(clocks).toHaveLength(2); expect(clocks[0]).toEqual(f.closed);
   expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.resource.id, event_type: 'TICKET_BUNDLE_REOPENED' })).toHaveLength(1);
 }));
+
+async function withBundlePropagationSlaFixture(work: (fixture: any) => Promise<void>) {
+  return withNativeCommentFixture(async f => {
+    const { title_index: _generated, ...original } = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+    const childPriorityId = randomUUID(), childId = randomUUID();
+    const priority = await f.customer.table('priorities').where('priority_id', original.priority_id).first();
+    await f.customer.table('priorities').insert({ ...priority, priority_id: childPriorityId, priority_name: 'Bundle child priority' });
+    const mapping = await f.sponsor.table('co_managed_sla_priority_mappings').where('customer_priority_id', original.priority_id).first();
+    await f.sponsor.table('co_managed_sla_priority_mappings').insert({ ...mapping, customer_priority_id: childPriorityId });
+    await f.customer.table('tickets').insert({ ...original, ticket_id: childId, ticket_number: 'SLA-PROPAGATED-CHILD', priority_id: childPriorityId });
+    const childResource = { ...f.resource, id: childId };
+    const { escalateCoManagedTicket } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+    await escalateCoManagedTicket(db, f.customerPrincipal, childResource, { operationId: randomUUID(), expectedRevision: 0, note: 'Escalated child' });
+    await f.customer.table('tickets').where('ticket_id', childId).update({ master_ticket_id: f.resource.id });
+    await f.customer.table('ticket_bundle_settings').insert({ tenant: f.resource.tenant, master_ticket_id: f.resource.id, mode: 'sync_updates' });
+    const { updateTicketWithCache } = await import('../../../../packages/tickets/src/actions/optimizedTicketActions');
+    const update = (patch: any) => f.run(() => updateTicketWithCache(f.resource.id, patch));
+    await work({ ...f, original, childId, childPriorityId, childResource, update });
+  });
+}
+
+it('MSP SLA bundle propagation closes and reopens each child with its own obligation and closure fields', async () => withBundlePropagationSlaFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.childId).update({ response_state: 'awaiting_client' });
+  f.workflow.mockClear();
+  expect(await f.update({ status_id: f.closedStatusId })).toBe('success');
+  const child = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  expect(child).toMatchObject({ status_id: f.closedStatusId, is_closed: true, response_state: null, closed_by: f.customerPrincipal.userId });
+  expect(child.closed_at).not.toBeNull();
+  const closed = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  expect(closed).toHaveLength(2); expect(closed.every(row => row.clock.resolution.completedAt !== null)).toBe(true);
+  expect(f.workflow.mock.calls.filter(([event]: any[]) => event.eventType === 'TICKET_CLOSED').map(([event]: any[]) => event.payload.ticketId)).toEqual([f.resource.id]);
+  expect(await f.update({ status_id: f.original.status_id })).toBe('success');
+  const reopened = await f.customer.table('tickets').where('ticket_id', f.childId).first();
+  expect(reopened).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id').orderBy('generation');
+  expect(rows).toHaveLength(4);
+  expect(rows.filter(row => row.generation === 1)).toEqual(closed);
+  expect(rows.filter(row => row.generation === 2).every(row => row.clock.resolution.completedAt === null)).toBe(true);
+  expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.childId, event_type: 'TICKET_CLOSED' })).toHaveLength(1);
+  expect(await f.customer.table('ticket_audit_logs').where({ ticket_id: f.childId, event_type: 'TICKET_REOPENED' })).toHaveLength(1);
+}));
+
+it('MSP SLA bundle propagation missing child reopen mapping rolls back the master and all child state', async () => withBundlePropagationSlaFixture(async f => {
+  await f.update({ status_id: f.closedStatusId });
+  const before = await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).orderBy('ticket_id');
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  await f.sponsor.table('co_managed_sla_priority_mappings').where('customer_priority_id', f.childPriorityId).del();
+  await expect(f.update({ status_id: f.original.status_id })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).orderBy('ticket_id')).toEqual(before);
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation leaves revoked child history frozen while customer IT closes the canonical child', async () => withBundlePropagationSlaFixture(async f => {
+  const { revokeCoManagedTicketGrant } = await import('../../../../packages/co-managed/src/ticketHandoffs');
+  await revokeCoManagedTicketGrant(db, f.customerPrincipal, f.childResource, { operationId: randomUUID(), expectedRevision: 1, note: 'Private child' });
+  const before = await f.sponsor.table('sla_organization_obligations').where('ticket_id', f.childId).first();
+  await f.update({ status_id: f.closedStatusId });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ is_closed: true });
+  expect(await f.sponsor.table('sla_organization_obligations').where('ticket_id', f.childId).first()).toEqual(before);
+}));
+
+it('MSP SLA bundle propagation rejects a foreign-board status before committing any ticket or obligation', async () => withBundlePropagationSlaFixture(async f => {
+  const board = await f.customer.table('boards').where('board_id', f.original.board_id).first();
+  const boardId = randomUUID();
+  await f.customer.table('boards').insert({ ...board, board_id: boardId, board_name: 'Child separate board' });
+  const status = await f.customer.table('statuses').where('status_id', f.original.status_id).first();
+  const statusId = randomUUID();
+  await f.customer.table('statuses').insert({ ...status, status_id: statusId, board_id: boardId });
+  await f.customer.table('tickets').where('ticket_id', f.childId).update({ board_id: boardId, status_id: statusId });
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  await expect(f.update({ status_id: f.closedStatusId })).rejects.toThrow('status from another board');
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ status_id: f.original.status_id });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ status_id: statusId });
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation enforces child close gates and rolls back the completed master', async () => withBundlePropagationSlaFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ assigned_to: f.customerPrincipal.userId });
+  await f.customer.table('tickets').where('ticket_id', f.childId).update({ assigned_to: null });
+  await f.customer.table('board_close_rules').insert({ tenant: f.resource.tenant, board_id: f.original.board_id, required_fields: JSON.stringify(['assigned_to']) });
+  const clocks = await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id');
+  expect(await f.update({ status_id: f.closedStatusId })).toMatchObject({ actionError: expect.stringContaining('Assignee') });
+  expect((await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId])).every(row => row.status_id === f.original.status_id)).toBe(true);
+  expect(await f.sponsor.table('sla_organization_obligations').orderBy('ticket_id')).toEqual(clocks);
+}));
+
+it('MSP SLA bundle propagation preserves additional resources when a child assignee is promoted', async () => withBundlePropagationSlaFixture(async f => {
+  const user = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first();
+  const incoming = randomUUID(), remaining = randomUUID();
+  for (const id of [incoming, remaining]) await f.customer.table('users').insert({ ...user, user_id: id, username: `bundle-${id}`, email: `${id}@example.test` });
+  await f.customer.table('tickets').whereIn('ticket_id', [f.resource.id, f.childId]).update({ assigned_to: user.user_id });
+  for (const id of [incoming, remaining]) await f.customer.table('ticket_resources').insert({ tenant: f.resource.tenant, assignment_id: randomUUID(), ticket_id: f.childId,
+    assigned_to: user.user_id, additional_user_id: id });
+  await f.update({ assigned_to: incoming });
+  expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ assigned_to: incoming });
+  expect(await f.customer.table('ticket_resources').where('ticket_id', f.childId)).toEqual([expect.objectContaining({ assigned_to: incoming, additional_user_id: remaining })]);
+}));

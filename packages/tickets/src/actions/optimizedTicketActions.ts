@@ -4,6 +4,7 @@ import { publishNativeCommentEvent, publishNativeCommentWorkflowEvent } from '..
 
 import { hasCommentCollaborationAttribution } from '../lib/commentAuthorResolution';
 import { assertCoManagedOperationalWrite } from '@alga-psa/licensing';
+import { prepareTicketResourceReassignment } from '@alga-psa/db/reassignTicketResources';
 import { recordCoManagedTicketResolution, recordCoManagedTicketReopened, syncCoManagedTicketAwaitingClientSla } from '@alga-psa/co-managed';
 import { formatCollaborationActorName } from '@alga-psa/event-schemas/collaboration';
 import { resolveTicketMutationCollaborator, type TicketMutationCollaborationContext } from '../lib/ticketMutationActor';
@@ -2630,14 +2631,15 @@ export async function updateTicketInTransaction(
       .where({
         status_id: currentTicket.status_id
       })
-      .first();
+      .forShare().first();
     const newStatus = updateData.status_id
       ? await tenantScopedTable(trx, 'statuses', tenant)
           .where({ status_id: updateData.status_id })
-          .first()
+          .forShare().first()
       : oldStatus;
     const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
+    // LEVERAGE: pattern ticket-close-transition — primary and bundle updates share close gates, closure fields, SLA effects and audit.
     // Pre-close validation gates: when this update flips the ticket from an
     // open to a closed status, enforce the board's close rules before any
     // writes. Throws TicketCloseValidationError (aborting the transaction)
@@ -3120,38 +3122,59 @@ export async function updateTicketInTransaction(
       if (Object.keys(propagateFields).length > 0) {
         if (collaboration) throw new Error('Shared bundle workflow edits require authority for every child ticket');
         const childTickets = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id })
-          .select(['ticket_id', ...Object.keys(propagateFields)]);
+          .where({ master_ticket_id: id }).orderBy('ticket_id').forUpdate().select('*');
 
-        const childPublishes = childTickets
-          .map((childTicket: Record<string, unknown>) => ({
-            ticketId: childTicket.ticket_id as string,
-            updatedFields: diffTicketFields(childTicket, propagateFields),
-          }))
-          .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
-            childPublish.updatedFields.length > 0);
-
-        const propagate: Record<string, any> = { ...propagateFields };
-        propagate.updated_by = user.user_id;
-        propagate.updated_at = new Date().toISOString();
-        await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ master_ticket_id: id })
-          .update(propagate);
-
-        for (const childPublish of childPublishes) {
-          registerAfterCommit(trx, () =>
+        for (const child of childTickets) {
+          const propagate: Record<string, any> = { ...propagateFields,
+            updated_by: isSystemActor ? null : user.user_id, updated_at: new Date().toISOString() };
+          let childClosing = false, childReopening = false;
+          if ('status_id' in propagateFields) {
+            if (!newStatus || newStatus.board_id !== child.board_id) {
+              throw new Error('A bundled ticket cannot use a status from another board');
+            }
+            const previousStatus = await tenantScopedTable(trx, 'statuses', tenant)
+              .where('status_id', child.status_id).forShare().first('is_closed');
+            if (!previousStatus) throw new Error('Bundled ticket status is unavailable');
+            childClosing = Boolean(newStatus.is_closed && !previousStatus.is_closed);
+            childReopening = Boolean(!newStatus.is_closed && previousStatus.is_closed);
+            propagate.is_closed = Boolean(newStatus.is_closed);
+            // LEVERAGE: pattern ticket-close-transition — child notification ownership prevents using the full primary update as-is.
+            if (childClosing) {
+              const merged = { ...child, ...propagateFields };
+              await enforceTicketCloseRules(trx, tenant, {
+                ticket: { ticket_id: child.ticket_id, board_id: merged.board_id, category_id: merged.category_id,
+                  subcategory_id: merged.subcategory_id, priority_id: merged.priority_id, assigned_to: merged.assigned_to },
+                override: options?.overrideCloseRules ? { requested: true, reason: options.overrideCloseRulesReason ?? null, user } : undefined,
+                bypass: options?.bypassCloseRules, actor: actorInfo,
+                source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+              });
+              Object.assign(propagate, { closed_at: propagate.updated_at, closed_by: isSystemActor ? null : user.user_id, response_state: null });
+            } else if (childReopening) Object.assign(propagate, { closed_at: null, closed_by: null });
+          }
+          const finalizeChildResources = 'assigned_to' in propagateFields && propagateFields.assigned_to !== child.assigned_to
+            ? await prepareTicketResourceReassignment(trx, tenant, child.ticket_id, child.assigned_to, propagateFields.assigned_to) : null;
+          await tenantScopedTable(trx, 'tickets', tenant).where('ticket_id', child.ticket_id).update(propagate);
+          if (finalizeChildResources) await finalizeChildResources();
+          if (childClosing) await recordCoManagedTicketResolution(trx, tenant, child.ticket_id);
+          else if (childReopening) await recordCoManagedTicketReopened(trx, tenant, child.ticket_id);
+          if (childClosing || childReopening) {
+            await writeTicketActivity(trx, {
+              tenant, ticketId: child.ticket_id,
+              eventType: childClosing ? TICKET_ACTIVITY_EVENT.CLOSED : TICKET_ACTIVITY_EVENT.REOPENED,
+              entityType: TICKET_ACTIVITY_ENTITY.TICKET, entityId: child.ticket_id, actor: actorInfo,
+              source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
+              occurredAt: propagate.updated_at,
+              changes: { status_id: { old: child.status_id, new: propagate.status_id }, closed_at: { old: child.closed_at, new: propagate.closed_at } },
+              details: { bundle_master_ticket_id: id },
+            });
+          }
+          const childUpdatedFields = diffTicketFields(child, propagate);
+          if (!isSystemActor && childUpdatedFields.length) registerAfterCommit(trx, () =>
             publishTicketUpdate({
-              tenantId: tenant,
-              ticketId: childPublish.ticketId,
-              updatedFields: childPublish.updatedFields,
-              updatedBy: {
-                userId: user.user_id,
-                displayName: formatLiveUpdateDisplayName(user),
-              },
+              tenantId: tenant, ticketId: child.ticket_id, updatedFields: childUpdatedFields,
+              updatedBy: { userId: user.user_id, displayName: formatLiveUpdateDisplayName(user) },
               updatedAt: propagate.updated_at,
-            }),
-            `ticket-live-update ticket=${childPublish.ticketId}`
-          );
+            }), `ticket-live-update ticket=${child.ticket_id}`);
         }
         // Child closes publish no TICKET_CLOSED of their own — silent or not.
         // The master's TICKET_CLOSED carries the suppression flags, and the
@@ -3160,6 +3183,8 @@ export async function updateTicketInTransaction(
         // on silent closes made the silent path noisier than a normal close.
       }
     }
+
+    await assertCoManagedOperationalWrite(trx, tenant);
 
     // Revalidate paths to update UI
     registerAfterCommit(trx, () => revalidatePath(`/msp/tickets/${id}`), `ticket-update ticket=${id}`);
