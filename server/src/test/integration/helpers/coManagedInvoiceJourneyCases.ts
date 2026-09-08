@@ -144,4 +144,43 @@ export function registerCoManagedInvoiceJourneyTests(getDb: () => Knex, withTime
     expect(await f.sponsor.table('invoices')).toHaveLength(1);
     expect(await f.sponsor.table('invoice_time_entries')).toHaveLength(1);
   }));
+
+  it('shared invoice journey retains rendered MSP invoice and archive after actual customer tenant deletion', async () => withBilling(async f => {
+    const b = f.billing, shared = await f.save();
+    await b.approve(shared.entry_id);
+    const invoice = await b.generate([shared.entry_id]);
+    expect(invoice).toHaveProperty('invoice_id');
+    const originalLinks = await f.sponsor.table('invoice_time_entries').where('invoice_id', invoice.invoice_id);
+    const sourceTitle = originalLinks[0].work_item_snapshot.title;
+    const { Context } = await import('@temporalio/activity');
+    const context = vi.spyOn(Context, 'current').mockReturnValue({ log: { info() {}, warn() {}, error() {}, debug() {} } } as any);
+    try {
+      const { closeCoManagedRelationship } = await import('../../../../../packages/co-managed/src/relationshipClosure');
+      const { finalizeCoManagedArchive } = await import('../../../../../packages/co-managed/src/archiveFinalization');
+      const relationship = await f.customer.table('co_management_relationships').where('relationship_id', f.resource.relationshipId).first();
+      await closeCoManagedRelationship(b.db, f.customerPrincipal, { customerTenant: f.resource.tenant, relationshipId: f.resource.relationshipId },
+        { operationId: randomUUID(), expectedRevision: relationship.revision, reason: 'departure' }, finalizeCoManagedArchive);
+      const beforeArchive = await f.sponsor.table('co_managed_participation_evidence').where('customer_tenant', f.resource.tenant);
+      expect(beforeArchive.length).toBeGreaterThan(0);
+      const { deleteTenantData } = await import('../../../../../ee/temporal-workflows/src/activities/tenant-deletion-activities');
+      const deletion = await deleteTenantData(f.resource.tenant, randomUUID());
+      expect(deletion, JSON.stringify(deletion)).toMatchObject({ success: true });
+      expect(await f.customer.table('tenants')).toHaveLength(0);
+      expect(await f.customer.table('tickets')).toHaveLength(0);
+      expect(await f.sponsor.table('tenants')).toHaveLength(1);
+      expect(await f.sponsor.table('invoice_time_entries').where('invoice_id', invoice.invoice_id)).toEqual(originalLinks);
+      expect(await f.sponsor.table('time_entries').where('entry_id', shared.entry_id).first()).toMatchObject({ invoiced: true });
+      expect(await f.sponsor.table('co_managed_participation_evidence').where('customer_tenant', f.resource.tenant)).toEqual(beforeArchive);
+      const { getCoManagedArchiveHistory } = await import('../../../../../packages/co-managed/src/archiveReads');
+      const archive = await getCoManagedArchiveHistory(b.db, f.principal, f.resource);
+      expect(archive.work.title).toBe(sourceTitle);
+      expect(archive.entries.length).toBeGreaterThan(0);
+      const { PDFGenerationService } = await import('../../../../../packages/billing/src/services/pdfGenerationService');
+      const { getStandardTemplateAstByCode } = await import('../../../../../packages/billing/src/lib/invoice-template-ast/standardTemplates');
+      const preview = await new PDFGenerationService(b.tenant).renderInvoicePreview({ invoiceId: invoice.invoice_id,
+        templateAst: getStandardTemplateAstByCode('standard-invoice-by-ticket')! });
+      expect(preview.html).toContain(sourceTitle);
+      expect(preview.html).toContain('120.00');
+    } finally { context.mockRestore(); }
+  }));
 }

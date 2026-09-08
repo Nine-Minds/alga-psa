@@ -973,3 +973,7 @@ Customers can approve an assigned MSP technician/team for one specific board dis
 ### Implementation checkpoint — provisioning cancellation (2026-09-08)
 
 Unclaimed workspace setup can now be cancelled and retried through a durable cleanup workflow. Cleanup rechecks reservation, relationship, and administrator claim under the existing admission locks; seats release only after transactional deletion and residual-data proof. Unexpected external-resource handles retain the reservation for recovery. Validation: 15 focused PostgreSQL cases, 23 server UI checks, and 22 enterprise action/workflow checks passed. Live Temporal dispatch remains a deployment smoke check.
+
+### Implementation checkpoint — customer deletion and retained billing (2026-09-08)
+
+A focused PostgreSQL journey now creates and approves MSP effort, generates its actual invoice, closes the relationship, finalizes the participation archive, and invokes the production customer tenant-deletion activity. After deletion, MSP time and immutable invoice references remain unchanged; the authorized archive reader returns retained history and the native invoice renderer produces the original work description and amount. The isolated database journey passed in 12.42 seconds. This validates actual deletion and HTML invoice rendering; browser/PDF download and distributed migration smoke remain deferred validation.
