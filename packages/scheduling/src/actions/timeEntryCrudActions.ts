@@ -52,7 +52,7 @@ import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { productTimeEntryMode, type IUser } from '@alga-psa/types';
 import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave,
-  CoManagedSharedWorkError, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
+  CoManagedSharedWorkError, isNativeTimeFieldHidden, reviewCoManagedNativeTimeEntry, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeSheet, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { hasCoManagedConversationOwnership } from '@alga-psa/co-managed/nativeConversationEvents';
 import { reverseDeletedTimeEntryBilling } from '../lib/timeEntryDeletionBilling';
 import { resolveNativeTimeBrowserActor } from '../lib/nativeTimeReader';
@@ -326,11 +326,14 @@ export const saveTimeEntry = withAuth(async (user, { tenant }, timeEntry: Omit<I
   try {
     return await withTransaction(knex, async trx => {
       const currentMode = await lockTimeEntryBillingMode(trx, tenant);
-      const stored = timeEntry.entry_id ? await tenantDb(trx, tenant).table('time_entries').where('entry_id', timeEntry.entry_id).first('billing_mode') : null;
+      const stored = timeEntry.entry_id ? await tenantDb(trx, tenant).table('time_entries').where('entry_id', timeEntry.entry_id).first('billing_mode', 'work_item_type') : null;
       let access: CoManagedNativeTimeAccess | null = null;
-      if (currentMode === 'operational' || stored?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, tenant)) {
+      if (timeEntry.work_item_type === 'co_managed' || stored?.work_item_type === 'co_managed' || currentMode === 'operational' || stored?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, tenant)) {
         access = await admitCoManagedNativeTimeSave(trx, await resolveNativeTimeBrowserActor(user, tenant), timeEntry);
       }
+      if (access && timeEntry.work_item_type === 'co_managed' && isNativeTimeFieldHidden(access.redactedTimeFields,
+        ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'co_managed_work_reference_id', 'start_time', 'end_time', 'work_date', 'work_timezone',
+          'created_at', 'updated_at', 'approval_status', 'service_id', 'tax_region', 'tax_rate_id', 'contract_line_id', 'contract_line_source', 'billable_duration', 'invoiced', 'billing'])) throw new CoManagedSharedWorkError();
       const mode = await lockTimeEntryBillingMode(trx, tenant, timeEntry.entry_id || undefined);
       const result = await saveTimeEntryWithConnection(user, tenant, timeEntry, trx, mode === 'operational', access);
       await access?.assertCurrent();
@@ -472,6 +475,7 @@ async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntr
     const cleanedEntry = {
       work_item_id,
       work_item_type,
+      co_managed_work_reference_id: work_item_type === 'co_managed' ? work_item_id : null,
       start_time: formatISO(startDate), // minute-truncated; keep stored instant in sync with duration
       end_time: formatISO(endDate),
       work_date,
@@ -511,7 +515,11 @@ async function saveTimeEntryWithConnection(user: IUser, tenant: string, timeEntr
         // narrowing costs no extra round trip.
         let workItemBillingProfileId: string | null = null;
 
-        if (work_item_type === 'project_task') {
+        if (work_item_type === 'co_managed') {
+          if (!access) throw new CoManagedSharedWorkError();
+          defaultContractClientId = access.record.clientId ?? null;
+          workItemBillingProfileId = access.billingProfileId ?? null;
+        } else if (work_item_type === 'project_task') {
           const projectTaskClientQuery = tenantScopedDb.table('project_tasks');
           tenantScopedDb.tenantJoin(
             projectTaskClientQuery,

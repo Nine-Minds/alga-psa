@@ -37,6 +37,8 @@ export interface ITimeEntry extends TenantEntity  {
   updated_by?: string | null;
   work_item_id: string;
   work_item_type: WorkItemType;
+  /** MSP-local binding for a qualified customer-owned ticket or task. */
+  co_managed_work_reference_id?: string | null;
   start_time: ISO8601String;
   end_time: ISO8601String;
   /**

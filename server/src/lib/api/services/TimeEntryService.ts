@@ -26,7 +26,7 @@ import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'se
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
 import { recalculateProjectTaskActualHoursForEntryChange, withTransaction, registerAfterCommit } from '@alga-psa/db';
-import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication,
+import { lockTimeEntryBillingMode, operationalTimeEntryFields, admitCoManagedNativeTimeSave, lockCoManagedLocalAuthentication, isNativeTimeFieldHidden,
   CoManagedSharedWorkError, TimeEntryBillingModeError, startNativeTimeTracking, stopNativeTimeTracking, getNativeActiveTimeTracking,
   NativeTimeTrackingError, NativeTimeDeletionError, NativeTimeReviewError, reviewCoManagedNativeTimeEntry, openCoManagedNativeTimeSheet, deleteCoManagedNativeTimeEntry, readCoManagedNativeTimeEntry, readCoManagedNativeTimeEntries, cancelNativeTimeTracking, admitCoManagedNativeTimeSource, type CoManagedNativeTimeAccess } from '@alga-psa/co-managed';
 import { CoManagedLifecycleError } from '@alga-psa/licensing';
@@ -73,7 +73,7 @@ export class TimeEntryService extends BaseService<any> {
         const currentMode = await lockTimeEntryBillingMode(trx, context.tenant), owner = tenantDb(trx, context.tenant);
         const existing = id ? await owner.table('time_entries').where('entry_id', id).first() : null;
         if (id && !existing) throw new NotFoundError('Time entry not found');
-        const guarded = currentMode === 'operational' || existing?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, context.tenant);
+        const guarded = data.work_item_type === 'co_managed' || existing?.work_item_type === 'co_managed' || currentMode === 'operational' || existing?.billing_mode === 'operational' || await hasCoManagedConversationOwnership(trx, context.tenant);
         const service = new TimeEntryService({ knex: trx, tenant: context.tenant });
         let access: CoManagedNativeTimeAccess | null = null, source: any = null;
         if (guarded) {
@@ -93,6 +93,9 @@ export class TimeEntryService extends BaseService<any> {
           if (!source.time_sheet_id || data.start_time) source.time_sheet_id = await service.getOrCreateTimeSheetForWorkDate(source.work_date, source.user_id, context);
           const workId = source.work_item_type === 'non_billable_category' && !source.work_item_id ? '__non_billable__' : source.work_item_id;
           access = await admitCoManagedNativeTimeSave(trx, actor, { ...source, work_item_id: workId });
+          if (source.work_item_type === 'co_managed' && isNativeTimeFieldHidden(access.redactedTimeFields,
+            ['entry_id', 'tenant', 'user_id', 'work_item_id', 'work_item_type', 'co_managed_work_reference_id', 'start_time', 'end_time', 'work_date', 'work_timezone',
+              'created_at', 'updated_at', 'approval_status', 'service_id', 'tax_region', 'tax_rate_id', 'contract_line_id', 'contract_line_source', 'billable_duration', 'invoiced', 'billing'])) throw new CoManagedSharedWorkError();
           source.work_item_id = workId === '__non_billable__' ? null : workId;
           await service.assertTimeSheetPeriod(source, context);
           await credential.assertCurrent();
@@ -146,7 +149,8 @@ export class TimeEntryService extends BaseService<any> {
 
   private admittedPersistFields(admission: TimeApiAdmission) {
     const { start_time, end_time, work_date, work_timezone, time_sheet_id, work_item_id, work_item_type } = admission.source;
-    return { start_time, end_time, work_date, work_timezone, time_sheet_id, work_item_id, work_item_type };
+    return { start_time, end_time, work_date, work_timezone, time_sheet_id, work_item_id, work_item_type,
+      co_managed_work_reference_id: work_item_type === 'co_managed' ? work_item_id : null };
   }
 
   private presentAdmittedTime(entry: any, admission: TimeApiAdmission) {

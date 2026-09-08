@@ -17478,3 +17478,130 @@ it('MSP time billing work keeps native ticket and task UUID collisions distinct 
   expect(rows.find(row => row.work_item_type === 'ticket')).toMatchObject({ ticket_title: 'Same UUID native ticket', project_task_name: null, project_id: null });
   expect(rows.find(row => row.work_item_type === 'project_task')).toMatchObject({ ticket_title: null, project_task_name: 'Verify rollout', project_id: f.project.project_id });
 }));
+
+async function withMspSharedTimeSaveFixture(work: (fixture: any) => Promise<void>) {
+  return withMspTimeWorkFixture(async f => {
+    const { referenceId } = await f.register();
+    for (const [resource, action] of [['time_entry', 'update'], ['time_entry', 'delete'], ['time_entry', 'approve'], ['time_sheet', 'read'], ['time_sheet', 'approve']]) {
+      const permission = await f.customer.table('permissions').where({ resource, action, msp: true, client: false }).first();
+      await f.sponsor.table('permissions').insert({ ...permission, tenant: f.principal.tenant });
+      await f.sponsor.table('role_permissions').insert({ tenant: f.principal.tenant, role_id: f.roleId, permission_id: permission.permission_id });
+    }
+    const periodId = randomUUID(), sheetId = randomUUID(), typeId = randomUUID(), serviceId = randomUUID();
+    await f.sponsor.table('time_periods').insert({ tenant: f.principal.tenant, period_id: periodId, start_date: '2026-09-07', end_date: '2026-09-14' });
+    await f.sponsor.table('time_sheets').insert({ tenant: f.principal.tenant, id: sheetId, period_id: periodId, user_id: f.principal.userId, approval_status: 'DRAFT' });
+    await f.sponsor.table('service_types').insert({ tenant: f.principal.tenant, id: typeId, name: 'Shared work labor' });
+    await f.sponsor.table('service_catalog').insert({ tenant: f.principal.tenant, service_id: serviceId, service_name: 'MSP labor', billing_method: 'hourly', custom_service_type_id: typeId, default_rate: 12000 });
+    const dbModule = await import('@alga-psa/db'), auth = await import('@alga-psa/auth');
+    const connection = vi.spyOn(dbModule, 'createTenantKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
+    const actions = await import('../../../../packages/scheduling/src/actions/timeEntryCrudActions');
+    const input = { entry_id: '', work_item_type: 'co_managed', work_item_id: referenceId, user_id: f.principal.userId, time_sheet_id: sheetId,
+      start_time: '2026-09-08T09:00:00Z', end_time: '2026-09-08T10:00:00Z', created_at: '2026-09-08T09:00:00Z', updated_at: '2026-09-08T09:00:00Z',
+      notes: 'MSP-owned work note', billable_duration: 60, approval_status: 'DRAFT', service_id: serviceId };
+    try { await withTrackedTaskBrowser(f.principal, f.sponsor, browser => auth.runWithApiKeyUser(f.user, () => runWithTenant(f.principal.tenant,
+      () => work({ ...f, ...browser, referenceId, sheetId, serviceId, input, actions, save: (extra: any = {}) => actions.saveTimeEntry({ ...input, ...extra } as any) })))); }
+    finally { connection.mockRestore(); }
+  });
+}
+
+it('MSP shared time save uses the existing writer and reads its own commercial effort without a copied ticket', async () => withMspSharedTimeSaveFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Current customer ticket' });
+  const entry = await f.save();
+  expect(entry).toMatchObject({ tenant: f.principal.tenant, work_item_type: 'co_managed', work_item_id: f.referenceId, co_managed_work_reference_id: f.referenceId,
+    billing_mode: 'commercial', service_id: f.serviceId, billable_duration: 60, workItem: { type: 'co_managed', name: 'Current customer ticket' } });
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+  expect(await f.sponsor.table('tickets')).toHaveLength(0);
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ entry_id: entry.entry_id, notes: 'MSP-owned work note', workItem: { name: 'Current customer ticket' } });
+  expect(await f.actions.fetchTimeEntriesForTimeSheet(f.sheetId)).toEqual([expect.objectContaining({ entry_id: entry.entry_id })]);
+  const changed = await f.save({ entry_id: entry.entry_id, end_time: '2026-09-08T10:30:00Z', billable_duration: 90 });
+  expect(changed).toMatchObject({ entry_id: entry.entry_id, billable_duration: 90 });
+  expect(await f.sponsor.table('time_entries')).toHaveLength(1);
+}));
+
+it('MSP shared time save retains existing effort after revocation and blocks fresh contributions', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Private customer work' });
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Private replacement title' });
+  await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ workItem: { name: 'Customer issue' } });
+  expect(await f.save({ entry_id: entry.entry_id, notes: 'Correct our retained time note' })).toMatchObject({ notes: 'Correct our retained time note' });
+  expect(JSON.stringify(await f.actions.fetchTimeEntriesForTimeSheet(f.sheetId))).not.toContain('Private replacement');
+}));
+
+it('MSP shared time save rechecks the session before committing source evidence and time', async () => withMspSharedTimeSaveFixture(async f => {
+  const allocation = await import('../../../../shared/billingClients/hourBlockService');
+  const original = allocation.allocateTimeEntry;
+  const late = vi.spyOn(allocation, 'allocateTimeEntry').mockImplementation(async (...args) => {
+    const result = await original(...args);
+    await tenantDb(args[0], f.principal.tenant).table('sessions').where('session_id', f.principal.sessionId).update({ expires_at: new Date(0) });
+    return result;
+  });
+  const before = await f.sponsor.table('co_managed_time_work_references').first();
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ title: 'Uncommitted evidence' });
+  try {
+    await expect(f.save()).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+    expect(await f.sponsor.table('co_managed_time_work_references').first()).toEqual(before);
+  } finally { late.mockRestore(); }
+}));
+
+it('MSP shared time save admits actual API credentials and preserves qualified work on updates and reads', async () => withMspSharedTimeSaveFixture(async f => {
+  const { TimeEntryService } = await import('../../lib/api/services/TimeEntryService'), service = new TimeEntryService();
+  const connection = vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: f.principal.tenant });
+  const apiKeyId = randomUUID();
+  await f.sponsor.table('api_keys').insert({ tenant: f.principal.tenant, api_key_id: apiKeyId, api_key: randomUUID(), user_id: f.principal.userId, active: true });
+  const context = { tenant: f.principal.tenant, userId: f.principal.userId, user: f.user, apiKeyId };
+  const input = { work_item_id: f.referenceId, work_item_type: 'co_managed', start_time: f.input.start_time, end_time: f.input.end_time,
+    notes: 'API MSP effort', service_id: f.serviceId, is_billable: true };
+  try {
+    const entry = await service.create(input as any, context);
+    expect(entry).toMatchObject({ tenant: f.principal.tenant, co_managed_work_reference_id: f.referenceId, billable_duration: 60, work_item_title: 'Customer issue' });
+    expect(await service.update(entry.entry_id, { notes: 'Edited API MSP effort' }, context)).toMatchObject({ entry_id: entry.entry_id, notes: 'Edited API MSP effort' });
+    expect(await service.getById(entry.entry_id, context)).toMatchObject({ entry_id: entry.entry_id, work_item_type: 'co_managed' });
+    await f.sponsor.table('api_keys').where('api_key_id', apiKeyId).update({ active: false });
+    await expect(service.update(entry.entry_id, { notes: 'Revoked API key' }, context)).rejects.toMatchObject({ statusCode: 403 });
+    expect((await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).first()).notes).toBe('Edited API MSP effort');
+  } finally { connection.mockRestore(); }
+}));
+
+it('MSP shared time save applies current home financial field restrictions to writes and reads', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  const bundles = await import('@alga-psa/authorization');
+  const relation = await f.customer.table('co_management_relationships').first();
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.principal.tenant, name: 'MSP time financial scope', actorUserId: f.principal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.principal.tenant, bundleId, revisionId, resourceType: 'time_entry', action: 'read', templateKey: 'selected_clients',
+    config: { selectedClientIds: [relation.sponsor_client_id], redactedFields: ['billing'] } });
+  await bundles.publishBundleRevision(db, { tenant: f.principal.tenant, bundleId, revisionId, actorUserId: f.principal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.principal.tenant, bundleId, targetType: 'user', targetId: f.principal.userId });
+  await expect(f.save({ entry_id: entry.entry_id, notes: 'Blind commercial edit' })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.actions.getTimeEntryById(entry.entry_id)).toMatchObject({ notes: 'MSP-owned work note', service_id: null, billable_duration: null });
+}));
+
+it('MSP shared time review preserves the native approval transitions and invoiced evidence', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  const review = (approvalStatus: 'SUBMITTED' | 'APPROVED' | 'DRAFT') => f.actions.updateTimeEntryApprovalStatus({ entryId: entry.entry_id, approvalStatus });
+  await expect(review('APPROVED')).rejects.toMatchObject({ code: 'TIME_REVIEW_STATE_CONFLICT' });
+  await review('SUBMITTED');
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'MSP retains its own commercial records' });
+  await review('APPROVED');
+  await review('APPROVED');
+  expect(await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).first()).toMatchObject({ approval_status: 'APPROVED', billable_duration: 60 });
+  await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ invoiced: true });
+  await expect(review('DRAFT')).rejects.toMatchObject({ code: 'TIME_REVIEW_BILLING_EVIDENCE' });
+  expect(await f.customer.table('time_entries')).toHaveLength(0);
+}));
+
+it('MSP shared time deletion retains the source reference and prevents deleting submitted effort', async () => withMspSharedTimeSaveFixture(async f => {
+  const entry = await f.save();
+  await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'SUBMITTED' });
+  await expect(f.actions.deleteTimeEntry(entry.entry_id)).rejects.toMatchObject({ code: 'TIME_DELETE_NOT_EDITABLE' });
+  await f.sponsor.table('time_entries').where('entry_id', entry.entry_id).update({ approval_status: 'DRAFT' });
+  await (await import('../../../../packages/co-managed/src/ticketHandoffs')).revokeCoManagedTicketGrant(db, f.customerPrincipal, f.resource,
+    { operationId: randomUUID(), expectedRevision: 1, note: 'Delete only our own draft time' });
+  await f.actions.deleteTimeEntry(entry.entry_id);
+  expect(await f.sponsor.table('time_entries')).toHaveLength(0);
+  expect(await f.sponsor.table('co_managed_time_work_references').where('reference_id', f.referenceId)).toHaveLength(1);
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id)).toHaveLength(1);
+}));

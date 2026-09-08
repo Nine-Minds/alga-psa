@@ -23,7 +23,7 @@ export async function commandCoManagedNativeTimeSheets(db: Knex, tenant: string,
   return withTransaction(db, async trx => {
     await getCoManagedOperationalState(trx, tenant);
     const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
-    const operational = await owner.table('time_entries').whereIn('time_sheet_id', ids).where('billing_mode', 'operational').first('entry_id');
+    const operational = await owner.table('time_entries').whereIn('time_sheet_id', ids).where(q => q.where('billing_mode', 'operational').orWhere('work_item_type', 'co_managed')).first('entry_id');
     if (workspace?.product_code !== 'co_managed' && !operational && !await hasCoManagedConversationOwnership(trx, tenant)) return { handled: false };
     if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
     await assertCoManagedOperationalWrite(trx, tenant);

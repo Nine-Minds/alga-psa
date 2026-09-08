@@ -647,3 +647,8 @@ Workflow closure checkpoint (2026-09-08): the existing ticket workflow admission
 ## normalized-time-billing-work — pattern (bounded extraction)
 
 The contract and catalog billing loaders duplicated native ticket/project joins and assumed a time owner also owned the work. The new shared work kind made those joins insufficient; both now use `timeEntryWorkContext.ts`. It produces one owner/type/id-qualified billing row from native work or an MSP-owned retained reference, keeps foreign project IDs out of local project billing rules, and leaves charge calculation in the existing engine. Invoice snapshots and grouping preserve the qualified source. The local conditional time-entry/reference FK deliberately uses an explicit nullable reference column plus a type/ID equality check, preserving real tenant-local referential integrity without a hidden ticket or foreign-tenant FK. General time UI/writer adoption is the next stage, not a second billing engine.
+
+
+## time-work-evidence — pattern
+
+Reference registration and admitted new time contributions capture the same allowlisted ticket/task descriptions. Both now carry an inline marker. Current time writes refresh local evidence only inside the retained source transaction, so failed writes cannot capture customer changes. Historical MSP time uses current home authority and retained evidence without live customer reads. A future common evidence projector should preserve those distinct admission and transaction contracts; it must not turn registration alone into participation or an archive entitlement. Native browser/API financial save-field requirements also repeat and should converge when the existing API billing stub is brought into native billing parity.

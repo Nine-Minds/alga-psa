@@ -26,7 +26,7 @@ export async function deleteCoManagedNativeTimeEntry(db: Knex, tenant: string, e
     await getCoManagedOperationalState(trx, tenant);
     const owner = tenantDb(trx, tenant), workspace = await owner.table('tenants').forShare().first('product_code', 'suspended_at');
     const hint = await owner.table('time_entries').where('entry_id', entryId).first();
-    if (workspace?.product_code !== 'co_managed' && hint?.billing_mode !== 'operational' && !await hasCoManagedConversationOwnership(trx, tenant)) return false;
+    if (workspace?.product_code !== 'co_managed' && hint?.billing_mode !== 'operational' && hint?.work_item_type !== 'co_managed' && !await hasCoManagedConversationOwnership(trx, tenant)) return false;
     if (!workspace || workspace.suspended_at || !productTimeEntryMode(workspace.product_code)) throw new CoManagedSharedWorkError();
     await assertCoManagedOperationalWrite(trx, tenant);
     const actor = snapshotCoManagedAuthenticatedActor(await identify());

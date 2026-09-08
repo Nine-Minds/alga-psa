@@ -13,7 +13,10 @@ import { tenantDb } from '@alga-psa/db';
  */
 export async function getClientIdForWorkItem(trx: Knex.Transaction, tenant: string, workItemId: string, workItemType: string): Promise<string | null> {
     const scopedDb = tenantDb(trx, tenant) as any;
-    if (workItemType === 'ticket') {
+    if (workItemType === 'co_managed') {
+        const reference = await scopedDb.table('co_managed_time_work_references').where('reference_id', workItemId).first('client_id');
+        return reference?.client_id ?? null;
+    } else if (workItemType === 'ticket') {
         const ticket = await scopedDb.table('tickets')
             .where({ ticket_id: workItemId })
             .first('client_id');
