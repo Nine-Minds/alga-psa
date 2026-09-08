@@ -1,4 +1,5 @@
-import { registerWorkflowConversationRetainer } from '@alga-psa/shared/workflow/runtime';
+import { withCoManagedWorkflowTicketMutation } from '@alga-psa/co-managed/workflowTicketMutation';
+import { registerWorkflowConversationRetainer, registerWorkflowTicketMutationAdapter } from '@alga-psa/shared/workflow/runtime';
 import { retainCoManagedWorkflowCommentEvent } from '@alga-psa/co-managed/workflowConversationEvents';
 import { isEnterprise } from './features';
 import { initializeEventBus, cleanupEventBus } from './eventBus/initialize';
@@ -149,6 +150,7 @@ export async function initializeApp() {
       getTenantEmailService: async (tenant) => TenantEmailService.getInstance(tenant),
     });
     registerWorkflowConversationRetainer(retainCoManagedWorkflowCommentEvent);
+    registerWorkflowTicketMutationAdapter(withCoManagedWorkflowTicketMutation);
     registerWorkflowEmailProvider({
       TenantEmailService: TenantEmailService as any,
       StaticTemplateProcessor: StaticTemplateProcessor as any,

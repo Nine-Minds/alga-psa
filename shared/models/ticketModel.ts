@@ -174,6 +174,7 @@ export interface UpdateTicketInput {
   location_id?: string | null;
   contact_name_id?: string | null;
   status_id?: string;
+  response_state?: 'awaiting_client' | 'awaiting_internal' | null;
   board_id?: string;
   category_id?: string | null;
   subcategory_id?: string | null;
@@ -969,7 +970,7 @@ export class TicketModel {
 
     const currentTicket = await db.table('tickets')
       .where({ ticket_id: ticketId })
-      .first();
+      .forUpdate().first();
 
     if (!currentTicket) {
       throw new Error('Ticket not found');
@@ -1035,6 +1036,18 @@ export class TicketModel {
           throw new Error(categoryResult.error);
         }
       }
+    }
+
+    // Canonical closure semantics also apply to workflow/model callers.
+    if (updateData.status_id) {
+      const previousStatus = await db.table('statuses').where('status_id', currentTicket.status_id).forShare().first('is_closed');
+      const nextStatus = await db.table('statuses').where('status_id', updateData.status_id).forShare().first('is_closed');
+      if (!nextStatus) throw new Error('Selected ticket status is unavailable');
+      updateData.is_closed = Boolean(nextStatus.is_closed);
+      if (nextStatus.is_closed && !previousStatus?.is_closed) Object.assign(updateData, {
+        closed_at: new Date(), closed_by: userId ?? updateData.updated_by ?? null, response_state: null,
+      });
+      else if (!nextStatus.is_closed && previousStatus?.is_closed) Object.assign(updateData, { closed_at: null, closed_by: null });
     }
 
     // Update the ticket

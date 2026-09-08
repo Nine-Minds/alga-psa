@@ -26,6 +26,10 @@
       "types": "./src/scheduledCommentCommands.ts",
       "import": "./dist/scheduledCommentCommands.js"
     },
+    "./workflowTicketMutation": {
+      "types": "./src/workflowTicketMutation.ts",
+      "import": "./dist/workflowTicketMutation.js"
+    },
     "./workflowConversationEvents": {
       "types": "./src/workflowConversationEvents.ts",
       "import": "./dist/workflowConversationEvents.js"

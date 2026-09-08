@@ -635,3 +635,7 @@ Organization SLA email checkpoint (2026-09-08): recipient preference gates reuse
 ## ticket-close-transition — pattern
 
 Primary ticket updates and bundle child propagation now both perform close-rule admission, closure fields, independent SLA effects, and audit. The full primary updater also owns notifications, so calling it recursively would duplicate the existing master-owned bundle close email behavior. Keep the per-child path explicit for now; a future extraction should separate the canonical lifecycle transition from notification ownership and retain each source transaction and actor's authority. Markers are in `packages/tickets/src/actions/optimizedTicketActions.ts`.
+
+## executing-workflow-authority — pattern
+
+Co-managed conversation retention and ticket field mutation retain the same executing workflow run/version, published actor, lifecycle, and current home permissions. Both now have inline markers. The runtime supplies these domain adapters through composition registries to avoid a shared-to-co-managed package cycle. A common retained workflow-authority layer should eventually cover other operational actions; do not substitute an unqualified run-user lookup or generic event payload for admission.

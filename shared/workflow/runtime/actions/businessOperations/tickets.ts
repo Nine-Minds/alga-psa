@@ -1,3 +1,4 @@
+import { withWorkflowTicketMutation } from '../../registries/workflowTicketMutationRegistry';
 import { WorkflowEventPublisher } from '../../../adapters/workflowEventPublisher';
 import { z } from 'zod';
 import type { Knex } from 'knex';
@@ -797,6 +798,7 @@ export function registerTicketActions(): void {
           dependencyPrefix: 'patch.assignment'
         }).optional().describe('Atomic assignment replacement'),
         title: z.string().min(1).optional().describe('New title'),
+        response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional().describe('Ticket response state'),
         category_id: withWorkflowPicker(
           uuidSchema.nullable().optional(),
           'Category id',
@@ -836,7 +838,9 @@ export function registerTicketActions(): void {
       category: 'Business Operations',
       description: 'Patch core ticket fields (status, priority, assignment, attributes)'
     },
-    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
+    handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => withWorkflowTicketMutation(tx.trx, {
+      tenant: tx.tenantId, ticketId: input.ticket_id, workflowRunId: ctx.runId, actorUserId: tx.actorUserId, fields: Object.keys(input.patch),
+    }, async () => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'update' });
 
       const current = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
@@ -932,6 +936,7 @@ export function registerTicketActions(): void {
         updated = await TicketModel.updateTicket(
           input.ticket_id,
           {
+            ...(input.patch.response_state !== undefined ? { response_state: input.patch.response_state } : {}),
             ...(input.patch.title ? { title: input.patch.title } : {}),
             ...(input.patch.status_id ? { status_id: input.patch.status_id } : {}),
             ...(input.patch.priority_id ? { priority_id: input.patch.priority_id } : {}),
@@ -1002,7 +1007,7 @@ export function registerTicketActions(): void {
         priority_id: (updated.priority_id as string | null) ?? null,
         tags: (after.tags as string[] | null) ?? null
       };
-    })
+    }))
   });
 
   // ---------------------------------------------------------------------------

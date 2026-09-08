@@ -14,6 +14,7 @@ export const retainCoManagedWorkflowCommentEvent: WorkflowConversationEventRetai
   if (!isCoManagedUuid(input.workflowRunId)) throw new CoManagedSharedWorkError();
   await assertCoManagedOperationalWrite(trx, input.tenant);
   const owner = tenantDb(trx, input.tenant);
+  // LEVERAGE: pattern executing-workflow-authority — ticket mutation admission uses the same retained run/version and actor.
   const activeRun = () => owner.table('workflow_runs').where('run_id', input.workflowRunId)
     .whereRaw("upper(status) = 'RUNNING'").where(query => query.whereNull('lease_expires_at').orWhere('lease_expires_at', '>', trx.raw('clock_timestamp()')));
   const run = await activeRun().forShare().first();

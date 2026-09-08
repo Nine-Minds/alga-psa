@@ -17058,3 +17058,86 @@ it('MSP SLA bundle propagation preserves additional resources when a child assig
   expect(await f.customer.table('tickets').where('ticket_id', f.childId).first()).toMatchObject({ assigned_to: incoming });
   expect(await f.customer.table('ticket_resources').where('ticket_id', f.childId)).toEqual([expect.objectContaining({ assigned_to: incoming, additional_user_id: remaining })]);
 }));
+
+async function withWorkflowSlaFixture(work: (fixture: any) => Promise<void>) {
+  return withWorkflowCommentFixture(async f => {
+    const registry = await import('../../../../shared/workflow/runtime/registries/workflowTicketMutationRegistry');
+    const { withCoManagedWorkflowTicketMutation } = await import('../../../../packages/co-managed/src/workflowTicketMutation');
+    registry.registerWorkflowTicketMutationAdapter(withCoManagedWorkflowTicketMutation);
+    const update = (patch: any) => f.act('tickets.update_fields', { ticket_id: f.resource.id, patch });
+    try { await work({ ...f, mutationRegistry: registry, update }); }
+    finally { registry.resetWorkflowTicketMutationAdapter(); }
+  });
+}
+
+it('MSP SLA workflow updates apply canonical response, close and reopen transitions under the executing version', async () => withWorkflowSlaFixture(async f => {
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.update({ response_state: 'awaiting_client' });
+  expect((await f.sponsor.table('sla_organization_obligations').first()).clock.pauseReasons).toEqual(['awaiting_client']);
+  await f.update({ status_id: f.closedStatusId });
+  const closed = await f.sponsor.table('sla_organization_obligations').first();
+  expect(closed.clock.resolution.completedAt).not.toBeNull();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: true, response_state: null, closed_by: f.customerPrincipal.userId });
+  await f.update({ status_id: original.status_id });
+  const rows = await f.sponsor.table('sla_organization_obligations').orderBy('generation');
+  expect(rows).toHaveLength(2); expect(rows[0]).toEqual(closed); expect(rows[1].clock.resolution.completedAt).toBeNull();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toMatchObject({ is_closed: false, closed_at: null, closed_by: null });
+}));
+
+it.each(['inactive_actor', 'missing_role', 'cancelled_run', 'expired_lease', 'missing_version', 'lapsed_license', 'missing_composition'] as const)
+('MSP SLA workflow updates reject %s before mutating canonical work', async reason => withWorkflowSlaFixture(async f => {
+  if (reason === 'inactive_actor') await f.customer.table('users').where('user_id', f.customerPrincipal.userId).update({ is_inactive: true });
+  if (reason === 'missing_role') await f.customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (reason === 'cancelled_run') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ status: 'CANCELLED' });
+  if (reason === 'expired_lease') await f.customer.table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+  if (reason === 'missing_version') await f.customer.table('workflow_definition_versions').where('workflow_id', f.workflowId).del();
+  if (reason === 'lapsed_license') await f.sponsor.table('co_managed_allocations').del();
+  if (reason === 'missing_composition') f.mutationRegistry.resetWorkflowTicketMutationAdapter();
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await expect(f.update({ status_id: f.closedStatusId })).rejects.toThrow();
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+}));
+
+it('MSP SLA workflow updates roll back canonical reopen on missing MSP setup', async () => withWorkflowSlaFixture(async f => {
+  const original = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await f.update({ status_id: f.closedStatusId });
+  const ticket = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  await f.sponsor.table('co_managed_sla_priority_mappings').del();
+  await expect(f.update({ status_id: original.status_id })).rejects.toMatchObject({ code: 'CO_MANAGED_SLA_SETUP_REQUIRED' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(ticket);
+  expect(await f.sponsor.table('sla_organization_obligations')).toEqual([clock]);
+}));
+
+it('MSP SLA workflow updates roll back source, clock and audit when the run expires during the writer', async () => withWorkflowSlaFixture(async f => {
+  const { TicketModel } = await import('../../../../shared/models/ticketModel');
+  const original = TicketModel.updateTicket;
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  const clock = await f.sponsor.table('sla_organization_obligations').first();
+  const writer = vi.spyOn(TicketModel, 'updateTicket').mockImplementationOnce(async (...args) => {
+    const result = await original.apply(TicketModel, args);
+    await tenantDb(args[3], f.resource.tenant).table('workflow_runs').where('run_id', f.runId).update({ lease_expires_at: new Date(0) });
+    return result;
+  });
+  try {
+    await expect(f.update({ status_id: f.closedStatusId })).rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+    expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+    expect(await f.sponsor.table('sla_organization_obligations').first()).toEqual(clock);
+    expect(await f.customer.table('audit_logs').where({ record_id: f.runId, operation: 'workflow_action:tickets.update_fields' })).toHaveLength(0);
+  } finally { writer.mockRestore(); }
+}));
+
+it.each(['response_state', 'priority.name'] as const)('MSP SLA workflow updates reject hidden %s mutation or returned data', async field => withWorkflowSlaFixture(async f => {
+  const bundles = await import('@alga-psa/authorization');
+  const { bundleId, revisionId } = await bundles.createAuthorizationBundle(db, { tenant: f.resource.tenant, name: 'Workflow field restriction', actorUserId: f.customerPrincipal.userId });
+  await bundles.upsertBundleRule(db, { tenant: f.resource.tenant, bundleId, revisionId, resourceType: 'ticket', action: field === 'response_state' ? 'update' : 'read',
+    templateKey: 'selected_clients', config: { selectedClientIds: [f.operation.customer_client_id], redactedFields: [field] } });
+  await bundles.publishBundleRevision(db, { tenant: f.resource.tenant, bundleId, revisionId, actorUserId: f.customerPrincipal.userId });
+  await bundles.createBundleAssignment(db, { tenant: f.resource.tenant, bundleId, targetType: 'user', targetId: f.customerPrincipal.userId });
+  const before = await f.customer.table('tickets').where('ticket_id', f.resource.id).first();
+  await expect(f.update(field === 'response_state' ? { response_state: 'awaiting_client' } : { title: 'Allowed write cannot return hidden fields' }))
+    .rejects.toMatchObject({ code: 'CO_MANAGED_SHARED_WORK_FORBIDDEN' });
+  expect(await f.customer.table('tickets').where('ticket_id', f.resource.id).first()).toEqual(before);
+}));
