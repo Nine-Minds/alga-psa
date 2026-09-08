@@ -64,14 +64,14 @@ function state(row: any) {
 function unchanged(review: ReviewedEmailPreview, current: ReviewedEmailPreview) {
   if (current.senderRevision !== review.senderRevision || current.messageHash !== review.messageHash) return conflict();
 }
-function admitVendor(context: Context) {
-  if (context.conversation.transport !== 'email' || context.conversation.audience === 'requester') return invalid();
+function admitEmailConversation(context: Context) {
+  if (context.conversation.transport !== 'email') return invalid();
 }
 export function prepareNamedConversationEmail(db: Knex, inputActor: CoManagedSessionActor, inputTicket: ConversationTicketReference,
   inputRef: TicketConversationReference, inputRequest: NamedConversationEmailRequest, transport: NamedConversationEmailTransport) {
   const actor = snapshotCoManagedSessionActor(inputActor), ticket = snapshotConversationTicket(inputTicket), ref = snapshotConversationReference(inputRef), request = snapshotRequest(inputRequest);
   return withNamedConversationMailbox(db, actor, ticket, ref, request.expectedConversationRevision, async (context, mailbox) => {
-    admitVendor(context);
+    admitEmailConversation(context);
     const requestHash = hash({ actor: { tenant: context.actor.tenant, userId: context.actor.userId }, ticket: context.ticket, ref, request });
     const previous = await operation(context, request.operationId).forUpdate().first();
     if (previous) {
@@ -120,7 +120,7 @@ export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSe
       if (!row || row.review.messageHash !== reviewHash) return conflict();
       if (row.status !== 'reviewed') return null;
       return withNamedConversationMailbox(context.trx, context.actor, context.ticket, ref, row.conversation_revision, async (current, mailbox) => {
-        admitVendor(current);
+        admitEmailConversation(current);
         if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
         unchanged(row.review, await transport.recheck(row.payload, mailbox));
         return { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision };
@@ -133,7 +133,7 @@ export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSe
     if (!row || row.review.messageHash !== reviewHash) return conflict();
     if (row.status !== 'reviewed') return state(row);
     return withNamedConversationMailbox(context.trx, context.actor, context.ticket, ref, row.conversation_revision, async (current, mailbox) => {
-      admitVendor(current);
+      admitEmailConversation(current);
       if (row.mailbox_tenant !== mailbox.tenant || row.mailbox_id !== mailbox.id) return conflict();
       unchanged(row.review, await transport.recheck(row.payload, mailbox));
       const draft = await tenantDb(current.trx, current.actor.tenant).table('ticket_conversation_editor_drafts').where({ actor_user_id: current.actor.userId,
@@ -146,7 +146,7 @@ export async function confirmNamedConversationEmail(db: Knex, actor: CoManagedSe
       await sendNamedTicketConversationDraft(current.trx, current.actor, current.ticket, ref,
         { operationId: id, expectedConversationRevision: row.conversation_revision, expectedDraftRevision: row.draft_revision }, publish);
       const envelope = { from: row.review.from, replyTo: row.review.replyTo, to: row.review.to, cc: row.review.cc, subject: row.review.subject,
-        messageId: row.rfc_message_id, mailbox: { tenant: mailbox.tenant, id: mailbox.id } };
+        messageId: row.rfc_message_id, mailbox: { tenant: mailbox.tenant, id: mailbox.id }, audience: current.conversation.audience };
       await tenantDb(current.trx, ref.storeTenant).table('ticket_conversation_publications').where({ operation_id: id, conversation_id: ref.conversationId })
         .update({ email_envelope: JSON.stringify(envelope) });
       const route = { tenant: mailbox.tenant, mailbox_id: mailbox.id,

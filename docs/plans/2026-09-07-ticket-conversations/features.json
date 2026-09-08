@@ -242,7 +242,7 @@
   {
     "id": "F031",
     "description": "Publish prepared content and attachments atomically through existing canonical comment operations.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "5. UX — option C"
     ]
@@ -402,7 +402,7 @@
   {
     "id": "F051",
     "description": "Maintain local and co-managed legacy requester/reply-token compatibility when adding conversation correlation.",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": [
       "6. Email, recipients and notification behavior"
     ]

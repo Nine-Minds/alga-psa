@@ -6,6 +6,7 @@ import { transitionArtifact } from '@alga-psa/shared/services/email/inboundEmail
 import { conversationUuid, TicketConversationError } from '@alga-psa/shared/lib/tickets/namedConversations';
 import { transferAuthorizedCoManagedAttachment, type CoManagedAttachmentTransferContext } from './conversationAttachments';
 import { readNamedConversationEmailDestination } from './inboundNamedConversationEmail';
+import { admitNamedRequesterReplyIdentity } from './namedRequesterReplyIdentity';
 
 const deny = (): never => { throw new TicketConversationError('CONVERSATION_FORBIDDEN'); };
 /** Accepted external mail supplies an organizational intake capability, never a
@@ -40,8 +41,12 @@ export const processNamedConversationReplyArtifact: QualifiedReplyArtifactProces
     if (!artifact || artifact.artifact_type !== input.payload.kind) return deny();
     const route = await scope.table('ticket_conversation_email_routes').where({ mailbox_id: receipt.provider_id,
       operation_tenant: receipt.route_operation_tenant, operation_id: receipt.route_operation_id }).forShare().first();
-    if (!route || ['ticket_tenant', 'ticket_id', 'relationship_id', 'conversation_store_tenant', 'conversation_id'].some(key => route[key] !== receipt[key])) return deny();
+    if (!route) return deny();
     const selected = await readNamedConversationEmailDestination(trx, route, receipt);
+    if (selected.conversation.audience === 'requester') await admitNamedRequesterReplyIdentity(trx, {
+      tenant: resource.tenant, ticketId: resource.id, parentCommentId: comment.commentId, senderEmail: receipt.envelope.from.email,
+      senderAuth: receipt.sender_auth, envelope: selected.source.email_envelope,
+    });
     const message = await selected.store.table('ticket_conversation_inbound_messages').where({ comment_id: comment.commentId, thread_id: comment.threadId,
       conversation_id: receipt.conversation_id, mailbox_tenant: input.tenant, mailbox_id: receipt.provider_id, inbox_id: input.inboxId }).forShare().first();
     if (!message || JSON.stringify(message.envelope) !== JSON.stringify(receipt.envelope)) return deny();

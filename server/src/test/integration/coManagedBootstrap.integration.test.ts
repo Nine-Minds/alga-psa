@@ -666,10 +666,10 @@ describe('ticket API lifecycle admission against PostgreSQL', () => {
   });
 });
 
-async function stagedCoManagedInbox(tenant: string) {
+async function stagedCoManagedInbox(tenant: string, existingProvider?: string) {
   const { upsertInbox, upsertIngress } = await import('../../../../shared/services/email/inboundEmailDurableStore');
-  const provider = randomUUID(), identity = randomUUID();
-  await tenantDb(db, tenant).table('email_providers').insert({ tenant, id: provider, provider_type: 'google',
+  const provider = existingProvider ?? randomUUID(), identity = randomUUID();
+  if (!existingProvider) await tenantDb(db, tenant).table('email_providers').insert({ tenant, id: provider, provider_type: 'google',
     provider_name: 'Customer Mail', mailbox: 'helpdesk@example.test', is_active: true, status: 'connected' });
   const ingress = await upsertIngress(db, { tenant, provider_id: provider, provider_type: 'google',
     ingress_key: identity, provider_pointer: { messageId: identity } });
@@ -14514,7 +14514,7 @@ describe('named ticket conversation mailbox authority against migrated PostgreSQ
   });
 });
 
-async function namedEmailFixture(audience: 'shared_it' | 'organization_private' = 'shared_it', native = false) {
+async function namedEmailFixture(audience: 'shared_it' | 'organization_private' | 'requester' = 'shared_it', native = false) {
   const fixture = await namedConversationFixture();
   if (native) {
     const source = await fixture.customer.table('tickets').where('ticket_id', fixture.ticket.ticketId).first();
@@ -15058,8 +15058,8 @@ describe('named ticket conversation private editor files against migrated Postgr
   });
 });
 
-async function namedPublicationFilesFixture(kind: 'shared_it' | 'organization_private' | 'native') {
-  const f = await namedEmailFixture(kind === 'shared_it' ? 'shared_it' : 'organization_private', kind === 'native');
+async function namedPublicationFilesFixture(kind: 'shared_it' | 'organization_private' | 'native' | 'requester') {
+  const f = await namedEmailFixture(kind === 'shared_it' ? 'shared_it' : kind === 'requester' ? 'requester' : 'organization_private', kind === 'native' || kind === 'requester');
   const files = await import('../../../../packages/co-managed/src/namedConversationEditorFiles');
   const publicationFiles = await import('../../../../packages/co-managed/src/namedConversationPublicationFiles');
   const objects = new Map<string, Buffer>();
@@ -15123,8 +15123,8 @@ describe('named ticket conversation file publication against migrated PostgreSQL
     await migration.up(db); await expect(migration.down(db)).rejects.toThrow('Cannot discard retained named publication files');
   });
 
-  it('reviews actual bytes, rejects changed content and sends independent published copies after private staging cleanup', async () => {
-    const f = await namedPublicationFilesFixture('shared_it');
+  it.each(['shared_it', 'requester'] as const)('reviews actual %s bytes, rejects changed content and sends independent published copies after private staging cleanup', async kind => {
+    const f = await namedPublicationFilesFixture(kind);
     const source = { attachmentId: randomUUID(), fileName: 'carrier.txt', mimeType: 'text/plain', content: Buffer.from('Exact reviewed attachment') };
     const file = await f.files.uploadNamedConversationEditorFile(db, f.principal, f.ticket, f.ref, source,
       (path, bytes) => f.storage.upload(f.principal.tenant, path, bytes));
@@ -15165,10 +15165,10 @@ describe('named ticket conversation file publication against migrated PostgreSQL
       await cleanupCoManagedUploads(db, f.principal.tenant, async path => { f.objects.delete(path); });
       expect(f.objects.has(path)).toBe(false);
       const copiedId = retained.payload.files[0].attachmentId;
-      await f.customer.table('co_management_conversation_attachments').where('attachment_id', copiedId).update({ discarded_at: new Date() });
+      await tenantDb(db, f.ref.storeTenant).table('co_management_conversation_attachments').where('attachment_id', copiedId).update({ discarded_at: new Date() });
       await expect(f.email.deliverNamedConversationEmail(db, f.principal, f.ticket, f.ref, request.operationId, transport)).rejects.toMatchObject({ code: 'CONVERSATION_FORBIDDEN' });
       expect(send).not.toHaveBeenCalled();
-      await f.customer.table('co_management_conversation_attachments').where('attachment_id', copiedId).update({ discarded_at: null });
+      await tenantDb(db, f.ref.storeTenant).table('co_management_conversation_attachments').where('attachment_id', copiedId).update({ discarded_at: null });
       expect((await f.email.deliverNamedConversationEmail(db, f.principal, f.ticket, f.ref, request.operationId, transport)).status).toBe('delivered');
       await f.email.deliverNamedConversationEmail(db, f.principal, f.ticket, f.ref, request.operationId, transport);
       expect(send).toHaveBeenCalledTimes(1);
@@ -15316,4 +15316,288 @@ it.each(['reply', 'followup', 'revoked', 'foreign_container'] as const)('named r
     }
     expect(nativeTokenLookup).not.toHaveBeenCalled(); expect(nativeThreadLookup).not.toHaveBeenCalled();
   } finally { provider.mockRestore(); effective.mockRestore(); }
+}));
+
+async function withNamedRequesterInboundFixture(work: (fixture: Parameters<Parameters<typeof withRequesterInboundFixture>[0]>[0] & {
+  named: import('../../../../shared/services/email/namedConversationReplyAdmission').NamedConversationReplyAdmission;
+  route: any; ref: { storeTenant: string; conversationId: string }; sent: any; ticket: any; transport: any;
+}) => Promise<void>) {
+  return withRequesterInboundFixture(async f => {
+    const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+    const mail = await import('../../../../packages/co-managed/src/conversationMailboxes');
+    const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+    const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+    const { previewReviewedEmail } = await import('../../../../packages/email/src/reviewedEmail');
+    const { admitNamedConversationEmailReply: named } = await import('../../../../packages/co-managed/src/inboundNamedConversationEmail');
+    const ticket = { tenant: f.resource.tenant, ticketId: f.resource.id, relationshipId: f.resource.relationshipId };
+    await f.customer.table('email_providers').insert({ tenant: f.resource.tenant, id: f.inbox.provider_id, provider_type: 'google',
+      provider_name: 'Requester intake', mailbox: 'helpdesk@example.test', is_active: true, status: 'connected' })
+      .onConflict(['tenant', 'id']).merge({ mailbox: 'helpdesk@example.test', is_active: true, status: 'connected' });
+    const selected = await api.createNamedTicketConversation(db, f.customerPrincipal, ticket,
+      { operationId: randomUUID(), name: 'Delivery arrangements', audience: 'requester', transport: 'email' });
+    const ref = { storeTenant: selected.storeTenant, conversationId: selected.conversationId };
+    await mail.selectNamedConversationMailbox(db, f.customerPrincipal, ticket, ref, 1, f.inbox.provider_id);
+    const technician = await f.customer.table('users').where('user_id', f.customerPrincipal.userId).first('email');
+    await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, { operationId: randomUUID(), expectedRevision: 0,
+      expectedConversationRevision: 2, content: { text: 'Please confirm these arrangements.' },
+      email: { subject: 'Delivery arrangements', to: [f.emailData.from.email], cc: ['external-recipient@example.test', technician.email] } });
+    const recheck = async (payload: any) => previewReviewedEmail(payload, { providerId: 'test-provider', providerType: 'smtp' }, 'a'.repeat(64));
+    const transport = { recheck, send: vi.fn(async () => ({ success: true, metadata: { deliveryStatus: 'delivered' } })),
+      prepare: async ({ mailbox, content, envelope, headers, replyToken }: any) => {
+        const payload = { from: { email: mailbox.email }, replyTo: { email: mailbox.email }, ...envelope, headers,
+          text: `${content.text}\n[ALGA-REPLY-TOKEN ${replyToken}]`, html: `<p>${content.text}</p>` };
+        return { payload, review: await recheck(payload) };
+      } };
+    const request = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 2 };
+    const prepared = await email.prepareNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request, transport);
+    const sent = await email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request.operationId, prepared.review.messageHash, transport, applyNamedTicketConversationPost);
+    await email.deliverNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request.operationId, transport);
+    expect(transport.send).toHaveBeenCalledOnce();
+    const route = await f.customer.table('ticket_conversation_email_routes').where('operation_id', request.operationId).first();
+    const operation = await f.customer.table('ticket_conversation_email_operations').where('operation_id', request.operationId).first();
+    const token = /\[ALGA-REPLY-TOKEN ([^\]]+)\]/.exec(operation.payload.text)![1];
+    f.emailData.body.text = `Here is the requester answer.\n\n[ALGA-REPLY-TOKEN ${token}]`;
+    f.emailData.inReplyTo = route.rfc_message_id;
+    const status = await f.customer.table('statuses').where({ status_type: 'ticket', is_closed: false }).first();
+    const priority = await f.customer.table('priorities').first();
+    const defaults = { client_id: f.operation.customer_client_id, board_id: f.operation.customer_board_id, status_id: status.status_id,
+      priority_id: priority.priority_id, entered_by: f.customerPrincipal.userId };
+    const workflow = await import('../../../../shared/workflow/actions/emailWorkflowActions');
+    const provider = vi.spyOn(workflow, 'resolveInboundTicketDefaults').mockResolvedValue(defaults as any);
+    const effective = vi.spyOn(workflow, 'resolveEffectiveInboundTicketDefaults').mockResolvedValue({ defaults, source: 'provider' } as any);
+    try { await work({ ...f, named, route, ref, sent, ticket, transport }); }
+    finally { provider.mockRestore(); effective.mockRestore(); }
+  });
+}
+
+it.each(['reply', 'headers', 'external', 'technician', 'dmarc_technician', 'weak_technician', 'revoked_technician', 'contact_alias', 'contact_board', 'foreign_contact', 'inactive_contact', 'not_addressed',
+  'followup', 'automated_cutoff', 'departed', 'native'] as const)('named requester reviewed Send and actual inbound %s preserve author, destination and canonical effects', async scenario => withNamedRequesterInboundFixture(async f => {
+  const { customer, resource, operation, emailData, inbox, run, named, route, ref } = f;
+  if (scenario === 'headers') emailData.body.text = 'Reply with only the accepted RFC reference.';
+  if (scenario === 'external' || scenario === 'not_addressed') emailData.from.email = scenario === 'external' ? 'external-recipient@example.test' : 'not-addressed@example.test';
+  const technician = ['technician', 'dmarc_technician', 'weak_technician', 'revoked_technician'].includes(scenario);
+  if (technician) {
+    emailData.from.email = (await customer.table('users').where('user_id', f.customerPrincipal.userId).first('email')).email;
+    const domain = emailData.from.email.split('@')[1];
+    emailData.headers['authentication-results'] = `mx.example.test; spf=pass smtp.mailfrom=${domain}${scenario !== 'weak_technician' ? `; dkim=pass header.d=${domain}` : ''}`;
+  }
+  if (scenario === 'dmarc_technician') emailData.headers['authentication-results'] = `mx.example.test; dmarc=pass header.from=${emailData.from.email.split('@')[1]}`;
+  if (scenario === 'revoked_technician') await customer.table('user_roles').where('user_id', f.customerPrincipal.userId).del();
+  if (scenario === 'contact_alias') {
+    await customer.table('contacts').where('contact_name_id', f.contactId).update({ email: 'updated-primary@example.test' });
+    await customer.table('contact_additional_email_addresses').insert({ tenant: resource.tenant, contact_name_id: f.contactId, email_address: emailData.from.email, canonical_type: 'work' });
+  }
+  if (scenario === 'contact_board') {
+    const groupId = randomUUID();
+    await customer.table('client_portal_visibility_groups').insert({ tenant: resource.tenant, group_id: groupId, client_id: operation.customer_client_id, name: 'Other boards' });
+    await customer.table('contacts').where('contact_name_id', f.contactId).update({ portal_visibility_group_id: groupId });
+  }
+  if (scenario === 'foreign_contact') {
+    const foreign = randomUUID();
+    await customer.table('clients').insert({ tenant: resource.tenant, client_id: foreign, client_name: 'Different client' });
+    await customer.table('contacts').where('contact_name_id', f.contactId).update({ client_id: foreign });
+  }
+  if (scenario === 'inactive_contact') await customer.table('contacts').where('contact_name_id', f.contactId).update({ is_inactive: true });
+  if (scenario === 'departed') await customer.table('co_management_relationships').where('relationship_id', resource.relationshipId).update({ state: 'terminated', ended_at: new Date() });
+  if (scenario === 'native' || scenario === 'departed') await customer.table('tenants').update({ product_code: 'psa' });
+  const followup = scenario === 'followup' || scenario === 'automated_cutoff';
+  if (followup) {
+    await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: '2020-01-01T00:00:00Z' });
+    await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+    if (scenario === 'automated_cutoff') emailData.headers['auto-submitted'] = 'auto-replied';
+  }
+  const before = await customer.table('comments').count('* as count').first();
+  const result = await run(named);
+  const rejected = ['weak_technician', 'revoked_technician', 'contact_board', 'foreign_contact', 'inactive_contact', 'not_addressed'].includes(scenario);
+  if (rejected) {
+    expect(result).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:conversation_reply_requires_admission' });
+    expect(await customer.table('comments').count('* as count').first()).toEqual(before);
+    expect(await customer.table('ticket_conversation_inbound_receipts')).toHaveLength(0);
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(0);
+  } else {
+    expect(result).toMatchObject({ disposition: 'ack', outcome: followup ? 'created' : 'replied' });
+    const actual = result as any;
+    const written = await customer.table('comments').where('comment_id', actual.commentId).first();
+    expect(written).toMatchObject({ is_internal: false, user_id: technician ? f.customerPrincipal.userId : null,
+      contact_id: technician || scenario === 'external' ? null : f.contactId });
+    const receipt = await customer.table('ticket_conversation_inbound_receipts').where('inbox_id', inbox.inbox_id).first();
+    expect(receipt).toMatchObject({ ticket_id: actual.ticketId, comment_id: actual.commentId, route_operation_id: route.operation_id });
+    if (followup) {
+      expect(actual.ticketId).not.toBe(resource.id);
+      expect(receipt.conversation_id).not.toBe(ref.conversationId);
+      expect(written.parent_comment_id).toBeNull();
+      expect(await customer.table('ticket_conversations').where('conversation_id', receipt.conversation_id).first()).toMatchObject({
+        ticket_id: actual.ticketId, name: 'Delivery arrangements', audience: 'requester', mailbox_tenant: resource.tenant, mailbox_id: inbox.provider_id,
+        created_by_user_id: null, default_slot: null });
+    } else {
+      expect(actual.ticketId).toBe(resource.id);
+      expect(receipt.conversation_id).toBe(ref.conversationId);
+      expect(written.parent_comment_id).toBe(f.route.operation_id);
+    }
+    const { readNamedConversationEmailDestination } = await import('../../../../packages/co-managed/src/inboundNamedConversationEmail');
+    await db.transaction(async trx => {
+      const selected = await readNamedConversationEmailDestination(trx, route, receipt);
+      expect(selected.conversation.conversationId).toBe(receipt.conversation_id);
+      expect(selected.source.comment_id).toBe(actual.commentId);
+    });
+    expect(await customer.table('inbound_email_effects').where('inbox_id', inbox.inbox_id)).toHaveLength(followup ? 2 : 1);
+    expect(await run(named)).toMatchObject({ disposition: 'ack', outcome: followup ? 'created' : 'replied', reason: 'terminal_replay' });
+  }
+  expect(f.nativeTokenLookup).not.toHaveBeenCalled(); expect(f.nativeThreadLookup).not.toHaveBeenCalled();
+}));
+
+it('named requester follow-ups retain RFC ancestry and files while rejecting sibling references and altered lineage', async () => withNamedRequesterInboundFixture(async f => {
+  const { customer, resource, operation, emailData, named, route } = f;
+  await customer.table('tickets').where('ticket_id', resource.id).update({ is_closed: true, closed_at: '2020-01-01T00:00:00Z' });
+  await customer.table('boards').where('board_id', operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+  emailData.attachments = [{ id: 'arrangements', name: 'arrangements.txt', contentType: 'text/plain', size: 9, content: Buffer.from('Confirmed').toString('base64') }];
+  const first = await f.run(named) as any;
+  expect(first).toMatchObject({ disposition: 'ack', outcome: 'created' });
+  const firstReceipt = await customer.table('ticket_conversation_inbound_receipts').where('inbox_id', f.inbox.inbox_id).first();
+  const { processNamedConversationReplyArtifact } = await import('../../../../packages/co-managed/src/inboundNamedConversationAttachments');
+  const { processInboundArtifactJob } = await import('../../../../shared/services/email/inboundEmailArtifactWorker');
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes, path) => ({ path, size: bytes.length }));
+  const artifacts = await customer.table('inbound_email_artifacts').where('inbox_id', f.inbox.inbox_id);
+  const processFile = (key: string) => processInboundArtifactJob({ version: 2, jobId: randomUUID(), tenantId: resource.tenant,
+    inboxId: f.inbox.inbox_id, recordId: key, workType: 'process_artifact', providerId: f.inbox.provider_id,
+    providerType: 'google', enqueuedAt: new Date().toISOString() } as any,
+    { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} }, undefined, processNamedConversationReplyArtifact);
+  const attachment = artifacts.find(row => row.artifact_type === 'attachment');
+  await customer.table('contacts').where('contact_name_id', f.contactId).update({ is_inactive: true });
+  expect(await processFile(attachment.artifact_key)).toMatchObject({ disposition: 'defer', reason: 'named_conversation_artifact_authority_unavailable' });
+  expect(artifactStorage.upload).not.toHaveBeenCalled();
+  await customer.table('contacts').where('contact_name_id', f.contactId).update({ is_inactive: false });
+  await customer.table('inbound_email_artifacts').where({ inbox_id: f.inbox.inbox_id, artifact_key: attachment.artifact_key }).update({ next_attempt_at: new Date(0) });
+  for (const artifact of artifacts) expect(await processFile(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(artifactStorage.upload).toHaveBeenCalledOnce();
+  expect(await customer.table('co_management_conversation_attachments').where('comment_id', first.commentId).first()).toMatchObject({
+    ticket_id: first.ticketId, comment_id: first.commentId, customer_tenant: resource.tenant, relationship_id: null, status: 'ready' });
+  for (const artifact of artifacts) expect(await processFile(artifact.artifact_key)).toMatchObject({ disposition: 'ack' });
+  expect(artifactStorage.upload).toHaveBeenCalledOnce();
+
+  const { processInboundInbox } = await import('../../../../shared/services/email/inboundEmailCoreProcessor');
+  const next = async (inReplyTo: string, references: string[] = [], body = 'Here is the next answer.') => {
+    const staged = await stagedCoManagedInbox(resource.tenant, f.inbox.provider_id);
+    Object.assign(emailData, { id: staged.provider_message_id, sourceSha256: staged.source_sha256, inReplyTo, references,
+      body: { text: body }, attachments: [] });
+    return { result: await processInboundInbox({ tenantId: resource.tenant, inboxId: staged.inbox_id, owner: randomUUID(), leaseTtlMs: 30000,
+      mode: 'enforce', namedConversationReplyAdmission: named, retainConversationEvent: retainCoManagedInboundCommentEvent }) as any, staged };
+  };
+  const continuation = await next(firstReceipt.envelope.messageId, [route.rfc_message_id]);
+  expect(continuation.result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: first.ticketId });
+  expect(await customer.table('comments').where('comment_id', continuation.result.commentId).first()).toMatchObject({ parent_comment_id: first.commentId });
+  // A subsequent human Send has its own route on the follow-up. Its References
+  // still include the ancestor ticket, so compare proven destinations, not UUID equality.
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const email = await import('../../../../packages/co-managed/src/conversationEmailOperations');
+  const { applyNamedTicketConversationPost } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const ticket = { tenant: resource.tenant, ticketId: first.ticketId };
+  const ref = { storeTenant: resource.tenant, conversationId: firstReceipt.conversation_id };
+  const convo = await api.getNamedTicketConversation(db, f.customerPrincipal, ticket, ref);
+  await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, ticket, ref, { operationId: randomUUID(), expectedRevision: 0,
+    expectedConversationRevision: convo.revision, content: { text: 'Please confirm the updated arrangements.' },
+    email: { subject: 'Updated arrangements', to: [emailData.from.email], cc: [] } });
+  const request = { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: convo.revision };
+  const review = await email.prepareNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request, f.transport);
+  await email.confirmNamedConversationEmail(db, f.customerPrincipal, ticket, ref, request.operationId, review.review.messageHash, f.transport, applyNamedTicketConversationPost);
+  const newRoute = await customer.table('ticket_conversation_email_routes').where('operation_id', request.operationId).first();
+  expect((await next(newRoute.rfc_message_id, [route.rfc_message_id, firstReceipt.envelope.messageId])).result)
+    .toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: first.ticketId });
+
+  const sibling = await next(route.rfc_message_id);
+  expect(sibling.result).toMatchObject({ disposition: 'ack', outcome: 'created' });
+  expect(sibling.result.ticketId).not.toBe(first.ticketId);
+  const siblingReceipt = await customer.table('ticket_conversation_inbound_receipts').where('inbox_id', sibling.staged.inbox_id).first();
+  expect((await next(newRoute.rfc_message_id, [siblingReceipt.envelope.messageId])).result)
+    .toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:conversation_reply_requires_admission' });
+  await customer.table('ticket_conversations').where('conversation_id', firstReceipt.conversation_id).update({ creation_hash: 'f'.repeat(64) });
+  expect((await next(firstReceipt.envelope.messageId, [route.rfc_message_id])).result)
+    .toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:conversation_reply_requires_admission' });
+}));
+
+it('named requester receipt failure rolls follow-up creation and effects back before one successful retry', async () => withNamedRequesterInboundFixture(async f => {
+  await f.customer.table('tickets').where('ticket_id', f.resource.id).update({ is_closed: true, closed_at: '2020-01-01T00:00:00Z' });
+  await f.customer.table('boards').where('board_id', f.operation.customer_board_id).update({ inbound_reply_reopen_enabled: true, inbound_reply_reopen_cutoff_hours: 1 });
+  const tickets = await f.customer.table('tickets').count('* as count').first();
+  const comments = await f.customer.table('comments').count('* as count').first();
+  const conversations = await f.customer.table('ticket_conversations').count('* as count').first();
+  const constraint = `requester_receipt_failure_${randomUUID().replaceAll('-', '')}`;
+  await db.raw(db.raw('ALTER TABLE ticket_conversation_inbound_receipts ADD CONSTRAINT ?? CHECK (inbox_id <> ?::uuid)', [constraint, f.inbox.inbox_id]).toQuery());
+  try {
+    expect(await f.run(f.named)).toMatchObject({ disposition: 'retry' });
+    expect(await f.customer.table('tickets').count('* as count').first()).toEqual(tickets);
+    expect(await f.customer.table('comments').count('* as count').first()).toEqual(comments);
+    expect(await f.customer.table('ticket_conversations').count('* as count').first()).toEqual(conversations);
+    for (const table of ['inbound_email_effects', 'inbound_email_outbox', 'ticket_conversation_inbound_receipts'])
+      expect(await f.customer.table(table).where('inbox_id', f.inbox.inbox_id)).toHaveLength(0);
+  } finally { await db.raw('ALTER TABLE ticket_conversation_inbound_receipts DROP CONSTRAINT ??', [constraint]); }
+  await f.customer.table('inbound_email_inbox').where('inbox_id', f.inbox.inbox_id).update({ next_attempt_at: new Date(0) });
+  const result = await f.run(f.named);
+  expect(result).toMatchObject({ disposition: 'ack', outcome: 'created' });
+  expect(await f.run(f.named)).toMatchObject({ disposition: 'ack', outcome: 'created', reason: 'terminal_replay' });
+  expect(await f.customer.table('ticket_conversation_inbound_receipts').where('inbox_id', f.inbox.inbox_id)).toHaveLength(1);
+}));
+
+it('named requester owner files remain readable to currently authorized MSP readers and disappear after revocation', async () => withNamedRequesterInboundFixture(async f => {
+  f.emailData.attachments = [{ id: 'confirmation', name: 'confirmation.txt', contentType: 'text/plain', size: 9, content: Buffer.from('Confirmed').toString('base64') }];
+  const result = await f.run(f.named) as any;
+  expect(result).toMatchObject({ disposition: 'ack', outcome: 'replied', ticketId: f.resource.id });
+  const { processNamedConversationReplyArtifact } = await import('../../../../packages/co-managed/src/inboundNamedConversationAttachments');
+  const { processInboundArtifactJob } = await import('../../../../shared/services/email/inboundEmailArtifactWorker');
+  artifactStorage.upload.mockReset().mockImplementation(async (bytes, path) => ({ path, size: bytes.length }));
+  const artifact = await f.customer.table('inbound_email_artifacts').where({ inbox_id: f.inbox.inbox_id, artifact_type: 'attachment' }).first();
+  expect(await processInboundArtifactJob({ version: 2, jobId: randomUUID(), tenantId: f.resource.tenant, inboxId: f.inbox.inbox_id,
+    recordId: artifact.artifact_key, workType: 'process_artifact', providerId: f.inbox.provider_id, providerType: 'google', enqueuedAt: new Date().toISOString() } as any,
+    { signal: new AbortController().signal, renew: async () => true, registerPostgresLease() {} }, undefined, processNamedConversationReplyArtifact)).toMatchObject({ disposition: 'ack' });
+  const row = await f.customer.table('co_management_conversation_attachments').where('comment_id', result.commentId).first();
+  expect(row).toMatchObject({ relationship_id: null, customer_tenant: f.resource.tenant, status: 'ready' });
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const files = await import('../../../../packages/co-managed/src/namedConversationAttachments');
+  const file = { attachmentId: row.attachment_id, commentId: row.comment_id, threadId: row.thread_id };
+  const read = vi.fn(async () => Buffer.from('Confirmed'));
+  for (const actor of [f.customerPrincipal, f.principal]) {
+    const page = await api.getNamedTicketConversationMessages(db, actor, f.ticket, f.ref);
+    expect(page.items.find(item => item.commentId === result.commentId)?.attachments).toMatchObject([{ attachmentId: row.attachment_id, fileName: 'confirmation.txt' }]);
+    expect((await files.downloadNamedConversationAttachment(db, actor, f.ticket, f.ref, file, read)).content.toString()).toBe('Confirmed');
+  }
+  await f.customer.table('co_management_ticket_work').where('ticket_id', f.resource.id).update({ grant_revoked_at: new Date() });
+  read.mockClear();
+  await expect(files.downloadNamedConversationAttachment(db, f.principal, f.ticket, f.ref, file, read)).rejects.toThrow();
+  expect(read).not.toHaveBeenCalled();
+  expect((await files.downloadNamedConversationAttachment(db, f.customerPrincipal, f.ticket, f.ref, file, read)).content.toString()).toBe('Confirmed');
+}));
+
+it('named requester admission cannot reinterpret a prior vendor Send after an audience change', async () => {
+  const f = await namedInboundFixture('organization_private', true);
+  const owner = f.sponsor;
+  await owner.table('ticket_conversations').where('conversation_id', f.ref.conversationId).update({ audience: 'requester' });
+  await owner.table('comment_threads').where('conversation_id', f.ref.conversationId).update({ collaboration_audience: 'requester', is_internal: false });
+  await owner.table('comments').where('comment_id', f.request.operationId).update({ is_internal: false });
+  const input = await f.makeInput({ from: { email: 'vendor@example.test' } });
+  const write = vi.fn(async () => ({ outcome: 'skipped' as const, reason: 'self_notification' as const }));
+  expect(await db.transaction(trx => f.admission.admitNamedConversationEmailReply(trx, input, write))).toMatchObject({ outcome: 'quarantined' });
+  expect(write).not.toHaveBeenCalled();
+  expect(await owner.table('ticket_conversation_inbound_receipts')).toHaveLength(0);
+});
+
+it('named requester admission retains the original reviewed audience after a requester conversation becomes internal', async () => withNamedRequesterInboundFixture(async f => {
+  await f.customer.table('ticket_conversations').where('conversation_id', f.ref.conversationId).update({ audience: 'organization_private' });
+  await f.customer.table('comment_threads').where('conversation_id', f.ref.conversationId).update({ collaboration_audience: 'organization_private', is_internal: true });
+  await f.customer.table('comments').where('comment_id', f.route.operation_id).update({ is_internal: true });
+  expect(await f.run(f.named)).toMatchObject({ disposition: 'ack', outcome: 'skipped', reason: 'quarantined:conversation_reply_requires_admission' });
+  expect(await f.customer.table('ticket_conversation_inbound_receipts')).toHaveLength(0);
+}));
+
+it('named requester publication cannot use internal Post to bypass reviewed Send', async () => withNamedRequesterInboundFixture(async f => {
+  const api = await import('../../../../packages/co-managed/src/namedTicketConversations');
+  const { postNamedTicketConversation } = await import('../../../../packages/tickets/src/lib/postNamedTicketConversation');
+  const selected = await api.createNamedTicketConversation(db, f.customerPrincipal, f.ticket,
+    { operationId: randomUUID(), name: 'Requester destination', audience: 'requester', transport: 'internal' });
+  const ref = { storeTenant: selected.storeTenant, conversationId: selected.conversationId };
+  await api.saveNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, ref, { operationId: randomUUID(), expectedRevision: 0,
+    expectedConversationRevision: 1, content: { text: 'A public message still requires explicit reviewed Send.' } });
+  await expect(postNamedTicketConversation(db, f.customerPrincipal, f.ticket, ref,
+    { operationId: randomUUID(), expectedDraftRevision: 1, expectedConversationRevision: 1 })).rejects.toMatchObject({ code: 'CONVERSATION_INVALID' });
+  expect((await api.getNamedConversationEditorDraft(db, f.customerPrincipal, f.ticket, ref))?.content).toEqual({ text: 'A public message still requires explicit reviewed Send.' });
+  expect(await f.customer.table('ticket_conversation_publications').where('conversation_id', ref.conversationId)).toHaveLength(0);
 }));

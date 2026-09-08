@@ -137,7 +137,7 @@
   {
     "id": "T011",
     "description": "Real migrated PostgreSQL: stage attachments and atomically publish a message; inject incomplete upload, conflicting operation ID, concurrent exact retries and lost acknowledgment; assert one message/file set/outbox intent with recoverable draft state.",
-    "implemented": false,
+    "implemented": true,
     "type": "integration",
     "featureIds": [
       "F030",

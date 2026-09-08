@@ -254,7 +254,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
       if (previous.request_hash !== hash) throw new TicketConversationError('CONVERSATION_CONFLICT');
       return receipt(previous);
     }
-    if (conversation.transport !== (mode === 'post' ? 'internal' : 'email') || conversation.audience === 'requester') throw new TicketConversationError('CONVERSATION_INVALID');
+    if (conversation.transport !== (mode === 'post' ? 'internal' : 'email') || (mode === 'post' && conversation.audience === 'requester')) throw new TicketConversationError('CONVERSATION_INVALID');
     if (conversation.revision !== request.expectedConversationRevision) throw new TicketConversationError('CONVERSATION_CONFLICT');
     const draftScope = draftStore(context, reference, conversation.revision);
     const draft = await home.table('ticket_conversation_editor_drafts').where({ actor_user_id: context.actor.userId,
@@ -288,7 +288,7 @@ function publishNamedTicketConversationDraft(db: Knex, actor: CoManagedSessionAc
       await apply({ ...context, conversation, actorReferenceId, assertWriteAuthority,
         canUpdateResponseState: !isCoManagedReadFieldHidden(context.hidden, ['response_state', 'tickets.response_state']) }, {
         comment_id: request.operationId, ticket_id: context.ticket.ticketId, thread_id: threadId,
-        parent_comment_id: parent?.commentId ?? null, ...encodeConversationContent(content), is_internal: true,
+        parent_comment_id: parent?.commentId ?? null, ...encodeConversationContent(content), is_internal: conversation.audience !== 'requester',
         is_resolution: false, author_type: 'internal', user_id: actorReferenceId ? null : context.actor.userId, publish_state: 'published',
       });
     }

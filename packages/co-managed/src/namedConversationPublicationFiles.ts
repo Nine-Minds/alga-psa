@@ -58,7 +58,7 @@ function copyIdentity(context: Context, draft: any, request: NamedConversationPo
 }
 async function admittedDraft(context: Context, request: NamedConversationPostRequest, mode: 'post' | 'send') {
   if (context.conversation.revision !== request.expectedConversationRevision) return conflict();
-  if (context.conversation.audience === 'requester' || context.conversation.transport !== (mode === 'post' ? 'internal' : 'email')) return invalid();
+  if (context.conversation.transport !== (mode === 'post' ? 'internal' : 'email') || (mode === 'post' && context.conversation.audience === 'requester')) return invalid();
   const draft = await tenantDb(context.trx, context.actor.tenant).table('ticket_conversation_editor_drafts').where({ actor_user_id: context.actor.userId,
     ticket_tenant: context.ticket.tenant, ticket_id: context.ticket.ticketId, conversation_store_tenant: context.conversation.storeTenant,
     conversation_id: context.conversation.conversationId }).forUpdate().first();

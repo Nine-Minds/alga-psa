@@ -31,7 +31,11 @@ export async function namedConversationMessageFileContext(context: Context, comm
       .whereNull('c.deleted_at').whereNull('root.deleted_at').forShare('c', 't', 'root').select({ audience: commentAudienceSql(trx, 't', 'root', 'c') }).first();
     if (!row || row.audience !== conversation.audience) return deny();
   }
-  return { trx, resource: { tenant: ticket.tenant, id: ticket.ticketId, relationshipId: ticket.relationshipId },
+  // Requester files belong to the ticket owner, including mail received without
+  // a relationship. Current named-ticket admission already authorizes the MSP
+  // reader; a relationship filter here would hide that owner's requester files.
+  const relationshipId = conversation.storeTenant === ticket.tenant && conversation.audience === 'requester' ? undefined : ticket.relationshipId;
+  return { trx, resource: { tenant: ticket.tenant, id: ticket.ticketId, relationshipId },
     comment: { storeTenant: conversation.storeTenant, commentId, threadId }, audience: conversation.audience };
 }
 /** The caller already selected this authorized conversation before pagination.
