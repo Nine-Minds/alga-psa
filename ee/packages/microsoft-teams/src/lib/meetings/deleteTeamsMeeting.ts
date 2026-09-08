@@ -11,6 +11,8 @@ export interface DeleteTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
   eventId?: string | null;
+  /** Original persisted organizer for reconciliation after configuration changes. */
+  organizerUserId?: string | null;
   appointmentRequestId?: string | null;
 }
 
@@ -52,9 +54,10 @@ export async function deleteTeamsMeetingWithResult(
     });
 
     const response = await fetch(
-      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
+      `${getMicrosoftGraphBaseUrl()}/users/${encodeURIComponent(input.organizerUserId ?? config.organizerUpn)}/events/${encodeURIComponent(input.eventId ?? input.meetingId)}`,
       {
         method: 'DELETE',
+        signal: AbortSignal.timeout(30_000),
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

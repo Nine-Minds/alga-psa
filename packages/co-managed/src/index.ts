@@ -79,3 +79,5 @@ export * from './timePeriodJob';
 export * from './nativeScheduleRead';
 export * from './nativeScheduleCommand';
 export * from './nativeScheduleRelations';
+
+export * from './nativeScheduleMeetingSync';

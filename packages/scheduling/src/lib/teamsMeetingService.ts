@@ -49,6 +49,7 @@ export interface UpdateTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
   eventId?: string | null;
+  organizerUserId?: string | null;
   startDateTime: string;
   endDateTime: string;
   subject?: string | null;
@@ -61,6 +62,7 @@ export interface DeleteTeamsMeetingInput {
   tenantId: string;
   meetingId: string;
   eventId?: string | null;
+  organizerUserId?: string | null;
   appointmentRequestId?: string | null;
 }
 

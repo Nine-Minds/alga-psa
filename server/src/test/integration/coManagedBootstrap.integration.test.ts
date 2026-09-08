@@ -14543,3 +14543,101 @@ it('customer schedule relations roll request meeting intents and conflict cleanu
     expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ status: 'scheduled', co_managed_sync_operation_id: null, co_managed_sync_action: null });
   } finally { await db.raw('DROP TRIGGER expire_schedule_relation_key ON online_meetings'); await db.raw('DROP FUNCTION expire_schedule_relation_key()'); }
 }));
+
+async function withScheduleMeetingSyncFixture(work: (fixture: any) => Promise<void>) {
+  return withScheduleAppointmentFixture(async (fixture: any) => {
+    const { native, ownId, customer, meetingId, context } = fixture;
+    await customer.table('online_meetings').where('meeting_id', meetingId).update({ organizer_user_id: 'original-organizer' });
+    expect(await native.updateScheduleEntry(ownId, { scheduled_start: new Date('2026-09-15T09:30:00Z'), scheduled_end: new Date('2026-09-15T11:00:00Z'), notes: 'Never send these private notes' })).toMatchObject({ success: true });
+    const { synchronizeNativeScheduleMeeting } = await import('@alga-psa/co-managed');
+    const identity = { tenant: context.tenant, meetingId, operationId: (await customer.table('online_meetings').where('meeting_id', meetingId).first()).co_managed_sync_operation_id };
+    const deliver = vi.fn().mockResolvedValue({ status: 'updated' });
+    const run = (extra: any = {}) => synchronizeNativeScheduleMeeting(db, { ...identity, ...extra }, deliver);
+    await work({ ...fixture, identity, deliver, run });
+  });
+}
+
+it('customer schedule meeting sync sends only committed provider identity and clock fields and clears confirmed intent', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, meetingId, context, requestId }: any) => {
+  expect(await run()).toEqual({ status: 'synchronized' });
+  expect(deliver).toHaveBeenCalledWith({ action: 'update', tenantId: context.tenant, meetingId: `provider-${meetingId}`, eventId: `event-${meetingId}`, organizerUserId: 'original-organizer', appointmentRequestId: requestId,
+    startDateTime: '2026-09-15T09:30:00.000Z', endDateTime: '2026-09-15T11:00:00.000Z' });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: null, co_managed_sync_action: null, co_managed_sync_requested_at: null, co_managed_sync_attempts: 1, co_managed_sync_last_error: null });
+  expect(await run()).toEqual({ status: 'obsolete' });
+  expect(deliver).toHaveBeenCalledTimes(1);
+}));
+
+it('customer schedule meeting sync retains failures with bounded backoff and replays provider deletion idempotently', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, native, ownId, meetingId, identity }: any) => {
+  deliver.mockRejectedValueOnce(new Error('Transport contained private URL and secret'));
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(await run()).toEqual({ status: 'deferred' });
+  expect(deliver).toHaveBeenCalledTimes(1);
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: identity.operationId, co_managed_sync_last_error: 'provider_exception', co_managed_sync_attempts: 1 });
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ co_managed_sync_attempted_at: db.raw("clock_timestamp() - interval '2 hours'") });
+  deliver.mockResolvedValueOnce({ status: 'skipped', reason: 'not_configured' });
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_last_error: 'skipped_not_configured' });
+  expect(await native.deleteScheduleEntry(ownId)).toMatchObject({ success: true });
+  expect(await run()).toEqual({ status: 'obsolete' });
+  const next = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  deliver.mockResolvedValueOnce({ status: 'deleted', alreadyDeleted: true });
+  expect(await run({ operationId: next.co_managed_sync_operation_id })).toEqual({ status: 'synchronized' });
+  expect(deliver.mock.lastCall[0]).toMatchObject({ action: 'delete', meetingId: `provider-${meetingId}` });
+}));
+
+it('customer schedule meeting sync serializes duplicate workers and rejects foreign stale or inconsistent operations', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, meetingId, principal }: any) => {
+  expect(await run({ tenant: principal.tenant })).toEqual({ status: 'obsolete' });
+  expect(await run({ operationId: randomUUID() })).toEqual({ status: 'obsolete' });
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ provider_event_id: null });
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_last_error: 'provider_binding_incomplete' });
+  expect(deliver).not.toHaveBeenCalled();
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ provider_event_id: `event-${meetingId}`, status: 'cancelled', co_managed_sync_attempted_at: null });
+  expect(await run()).toEqual({ status: 'retry' });
+  expect(deliver).not.toHaveBeenCalled();
+  await customer.table('online_meetings').where('meeting_id', meetingId).update({ status: 'scheduled', co_managed_sync_attempted_at: null });
+  const results = await Promise.all([run(), run()]);
+  expect(results.map(result => result.status).sort()).toEqual(['obsolete', 'synchronized']);
+  expect(deliver).toHaveBeenCalledTimes(1);
+}));
+
+it('customer schedule meeting sync defers suspended and read-only workspaces without dropping pending operations', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, principal, identity, meetingId }: any) => {
+  await customer.table('tenants').update({ suspended_at: db.fn.now() });
+  expect(await run()).toEqual({ status: 'deferred' });
+  await customer.table('tenants').update({ suspended_at: null });
+  await expireCoManagedEntitlement(principal.tenant);
+  expect(await run()).toEqual({ status: 'deferred' });
+  expect(deliver).not.toHaveBeenCalled();
+  expect(await customer.table('online_meetings').where('meeting_id', meetingId).first()).toMatchObject({ co_managed_sync_operation_id: identity.operationId, co_managed_sync_attempts: 0 });
+}));
+
+it('customer schedule meeting sync sweep uses the retained consumer and a successful replay does not call the provider twice', async () => withScheduleMeetingSyncFixture(async ({ customer, context, meetingId }: any) => {
+  const providerModule = await import('../../../../packages/scheduling/src/lib/teamsMeetingService');
+  const update = vi.fn().mockResolvedValue({ status: 'updated' }), remove = vi.fn();
+  const spy = vi.spyOn(providerModule, 'resolveTeamsMeetingService').mockResolvedValue({ updateTeamsMeetingWithResult: update, deleteTeamsMeetingWithResult: remove } as any);
+  try {
+    const { synchronizeCoManagedScheduleMeetings } = await import('../../../../packages/scheduling/src/lib/scheduleMeetingSynchronization');
+    expect(await synchronizeCoManagedScheduleMeetings(db, context.tenant)).toEqual([{ status: 'synchronized' }]);
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update.mock.lastCall[0]).toMatchObject({ organizerUserId: 'original-organizer', eventId: `event-${meetingId}` });
+    expect(update.mock.lastCall[0]).not.toHaveProperty('action');
+    expect(update.mock.lastCall[0]).not.toHaveProperty('attendees');
+    expect(await synchronizeCoManagedScheduleMeetings(db, context.tenant)).toEqual([]);
+    expect(update).toHaveBeenCalledTimes(1); expect(remove).not.toHaveBeenCalled();
+  } finally { spy.mockRestore(); }
+}));
+
+it('customer schedule meeting sync retains the actual operation through provider execution and leaves subsequent edits pending', async () => withScheduleMeetingSyncFixture(async ({ run, deliver, customer, native, ownId, meetingId, identity }: any) => {
+  deliver.mockImplementationOnce(async () => {
+    await expect(db.transaction(async trx => {
+      await tenantDb(trx, identity.tenant).table('online_meetings').where('meeting_id', meetingId).forUpdate().noWait().first();
+    })).rejects.toMatchObject({ code: '55P03' });
+    return { status: 'updated' };
+  });
+  expect(await run()).toEqual({ status: 'synchronized' });
+  expect(await native.updateScheduleEntry(ownId, { scheduled_start: new Date('2026-09-16T09:00:00Z'), scheduled_end: new Date('2026-09-16T10:00:00Z') })).toMatchObject({ success: true });
+  const next = await customer.table('online_meetings').where('meeting_id', meetingId).first();
+  expect(next.co_managed_sync_operation_id).not.toBe(identity.operationId);
+  expect(await run()).toEqual({ status: 'obsolete' });
+  expect(await run({ operationId: next.co_managed_sync_operation_id })).toEqual({ status: 'synchronized' });
+  expect(deliver.mock.lastCall[0]).toMatchObject({ startDateTime: '2026-09-16T09:00:00.000Z' });
+}));
