@@ -62,7 +62,7 @@ test('Microsoft mailbox OAuth receives a ticket, sends a UI reply through Graph 
       { timeout: 30000 }).toBe('webhook');
     const config = await database('microsoft_email_provider_config').where(configWhere).first();
     expect(await emulators.state('msgraph', 'subscriptions')).toContainEqual(expect.objectContaining({
-      id: config.webhook_subscription_id, notificationUrl: 'https://calendar-callback:3443/api/email/webhooks/microsoft',
+      id: config.webhook_subscription_id, notificationUrl: `${process.env.E2E_CALENDAR_CALLBACK_BASE_URL || 'https://calendar-callback:3443'}/api/email/webhooks/microsoft`,
     }));
 
     await page.goto('/msp/settings/email');

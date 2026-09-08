@@ -2730,3 +2730,10 @@ Calendar browserfixture accepts E2E_CALENDAR_CALLBACK_BASE_URL (defaultCompose u
 ### IANA delta fix closes complete host calendar fault journeys
 
 Added Temporal0.4.4 explicitworkspace dependency (already locked root) for delta event instant conversion. IANA wall clocks use suppliedtimezone with rejectambiguity; explicitoffset usesinstant; deltaoutputnormalizedUTC withoutmutatingstoredstate. Windowszones/recurrence/DSTambiguity and legacyUTC-onlylist remainexplicitlimits. Official GraphdateTimeTimeZone/deltadocs linked. Before3newwirecasesfail,20pass. Afterfullmsgraph60tests/5files pass1.22s,types/buildpass. Rebuiltonlymsgraphhostbundle; restartedemulator/proxy sameports session16479. Hostapps86483/56718unchanged. Browserall3faultcases session26795 terminalsuccess26.6s,0skip/flaky/retry:503/403/429 realOAuth/subscription/outboundcreate-delete/inboundcreate/failureUI/refresh/recovery/vendorcorrection/delete. Evidencehost-calendar-iana-delta.json. Appbuildc5938cdad5; no currentnativeCI,worker,SSO,releaseclaim. F034/F037 stayopenforremainingbroadscope. NoDocker/publication.
+
+
+### Complete Graph mailbox browser flow with native email worker
+
+Built actualemail-service tsc+tsc-alias successfully, noDocker. InstallednativeRedisviaHomebrew (no serviceenable); ownedloopback53079 passwordprotected/persistenceoff configprivate/tmp/alga-email-redis-82cc. FixedkeysmeanREDIS_PREFIXalone insufficientforqueues; bothapps restartedwithprivateRedisenv session19656(port53010),94569(port53011). Actualemailworker session46349/PID45619health53080 sharesPG,secrets,Graph,Redis,storage/webhooksecret. Redis session27545; emulator16479 unchanged.
+
+Mailbox callback assertion accepts hostHTTPSbase withComposefallback. Browser session23293 exit0:1casepassed11.4s noflaky/skip,realOAuth,inboundGraphmessage→emailworker→ticket,UIreplyaftertokenexpiry,capturedMIME,duplicatecallbacksdrainwithnoextra ticket/comment/reply. Evidencehost-microsoft-mailbox-real-worker.json. Hostappc5938cdad5, worker56e6a7e01c; no nativecurrentCI/Temporal/SSOclaim. Goalstillopen, publicationapprovalpending.
