@@ -1,6 +1,7 @@
 'use client';
 
 import { useFeatureFlag } from '@alga-psa/ui/hooks/useFeatureFlag';
+import { calendarDisplayDates, calendarStoredDates, moveCalendarStart } from '../../lib/calendarDateDisplay';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -127,8 +128,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     if (event) {
       return {
         ...event,
-        scheduled_start: new Date(event.scheduled_start),
-        scheduled_end: new Date(event.scheduled_end),
+        ...calendarDisplayDates(event),
         assigned_user_ids: event.assigned_user_ids,
         is_private: event.is_private || false,
       };
@@ -366,12 +366,12 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
       if (event) {
         setEntryData({
           ...event,
-          scheduled_start: new Date(event.scheduled_start),
-          scheduled_end: new Date(event.scheduled_end),
+          ...calendarDisplayDates(event),
           assigned_user_ids: event.assigned_user_ids,
           work_item_id: event.work_item_id,
         });
-        intendedDurationRef.current = durationBetween(event.scheduled_start, event.scheduled_end);
+        const displayDates = calendarDisplayDates(event);
+        intendedDurationRef.current = durationBetween(displayDates.scheduled_start, displayDates.scheduled_end);
 
         // Load recurrence pattern if it exists
         if (event.recurrence_pattern) {
@@ -892,6 +892,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
     // Prepare entry data
     const savedEntryData = {
       ...entryData,
+      ...calendarStoredDates(entryData, event),
       recurrence_pattern: recurrencePattern || null,
       work_item_id: entryData.work_item_type === 'ad_hoc' ? null : entryData.work_item_id,
       status: entryData.status || 'scheduled',
@@ -1402,7 +1403,7 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
                   setEntryData(prev => ({
                     ...prev,
                     scheduled_start: date,
-                    scheduled_end: new Date(date.getTime() + intendedDurationRef.current)
+                    scheduled_end: moveCalendarStart(date, prev, event, intendedDurationRef.current)
                   }));
                 }}
                 className="mt-1"

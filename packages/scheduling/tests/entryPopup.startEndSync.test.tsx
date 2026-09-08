@@ -36,6 +36,7 @@ vi.mock('@alga-psa/ui/hooks/useFeatureFlag', () => ({
 }));
 
 vi.mock('@alga-psa/scheduling/actions', () => ({
+  getScheduleEntryTeamsMeeting: vi.fn().mockResolvedValue({ success: true, data: null }),
   approveAppointmentRequest,
   declineAppointmentRequest,
   getTeamsMeetingCapability,
@@ -226,6 +227,31 @@ describe('EntryPopup start/end synchronisation', () => {
 
   afterEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('shows imported all-day boundaries at local midnight and preserves their UTC dates on save', () => {
+    const onSave = vi.fn();
+    const { container } = render(<EntryPopup
+      event={{ entry_id: 'all-day', title: 'Imported all-day', scheduled_start: new Date('2026-10-25T00:00:00Z'),
+        scheduled_end: new Date('2026-10-26T00:00:00Z'), assigned_user_ids: ['tech-1'], work_item_type: 'ad_hoc',
+        status: 'scheduled', tenant: 'test' } as any}
+      slot={null} onClose={vi.fn()} onSave={onSave} canAssignMultipleAgents={false}
+      users={[] as any} currentUserId="tech-1" canModifySchedule={true} focusedTechnicianId={null} canAssignOthers={true}
+    />);
+    expect((screen.getByTestId('scheduled_start') as HTMLInputElement).value).toBe(new Date(2026, 9, 25).toISOString());
+    expect((screen.getByTestId('scheduled_end') as HTMLInputElement).value).toBe(new Date(2026, 9, 26).toISOString());
+    fireEvent.change(container.querySelector('#title')!, { target: { value: 'Renamed all-day' } });
+    fireEvent.submit(container.querySelector('form')!);
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0][0].title).toBe('Renamed all-day');
+    expect(new Date(onSave.mock.calls[0][0].scheduled_start).toISOString()).toBe('2026-10-25T00:00:00.000Z');
+    expect(new Date(onSave.mock.calls[0][0].scheduled_end).toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    // Moving a 25-hour DST day must retain one calendar day, not 25 hours.
+    setPicker('scheduled_start', new Date(2026, 9, 26).toISOString());
+    expect((screen.getByTestId('scheduled_end') as HTMLInputElement).value).toBe(new Date(2026, 9, 27).toISOString());
+    fireEvent.submit(container.querySelector('form')!);
+    expect(new Date(onSave.mock.calls[1][0].scheduled_start).toISOString()).toBe('2026-10-26T00:00:00.000Z');
+    expect(new Date(onSave.mock.calls[1][0].scheduled_end).toISOString()).toBe('2026-10-27T00:00:00.000Z');
   });
 
   it('shifts the end forward, keeping the duration, when the start passes it', () => {
