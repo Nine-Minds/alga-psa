@@ -1,3 +1,4 @@
+import { coManagedPortableNativeFilePath } from './portableNativeFilePath';
 import { portableSnapshotTransaction, type CoManagedPortableSnapshot } from './portableSnapshot';
 import { validatePortableRecordSection } from './portableRecordValidation';
 import { createHash } from 'node:crypto';
@@ -14,7 +15,7 @@ import { authorizeCoManagedLocalRecord, CoManagedSharedWorkError, isCoManagedUui
 import { CO_MANAGED_PORTABLE_DOCUMENT_COLUMNS as COLUMNS, type CoManagedPortableDocumentRecords,
   type CoManagedPortableDocumentTable } from './portableDocumentCatalog';
 
-const REFERENCES = [
+export const CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES = [
   ['documents', 'type_id', 'document_types', 'type_id'], ['documents', 'shared_type_id', 'shared_document_types', 'type_id'],
   ['document_versions', 'document_id', 'documents', 'document_id'], ['document_content', 'document_id', 'documents', 'document_id'],
   ['document_block_content', 'document_id', 'documents', 'document_id'], ['document_block_content', 'version_id', 'document_versions', 'version_id'],
@@ -23,18 +24,10 @@ const REFERENCES = [
   ['kb_article_relations', 'target_article_id', 'kb_articles', 'article_id'], ['kb_article_reviewers', 'article_id', 'kb_articles', 'article_id'],
 ] as const;
 
-function validateRecords(records: CoManagedPortableDocumentRecords) {
-  validatePortableRecordSection(records, { columns: COLUMNS, references: REFERENCES });
+export function validateCoManagedPortableDocumentRecords(records: unknown): asserts records is CoManagedPortableDocumentRecords {
+  validatePortableRecordSection(records, { columns: COLUMNS, references: CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES });
 }
 
-function sourcePath(tenant: string, input: unknown): string {
-  if (typeof input !== 'string' || /[\\\x00-\x1f]/.test(input)) throw new CoManagedSharedWorkError();
-  const parts = input.replace(/^\//, '').split('/');
-  if (parts.some(part => !part || part === '.' || part === '..')) throw new CoManagedSharedWorkError();
-  // Current native uploads and generated PDF uploads use these two layouts.
-  if (!((parts[0] === tenant && parts.length >= 2) || (parts[0] === 'pdfs' && parts[1] === tenant && parts.length >= 3))) throw new CoManagedSharedWorkError();
-  return input;
-}
 
 interface SourceBlob { id: string; path: string; size: number; name: string; mimeType: string }
 interface FileBinding { documentId: string; field: 'file_id' | 'thumbnail_file_id' | 'preview_file_id'; blobId: string }
@@ -63,7 +56,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?
     }
     const meetings = await admitCoManagedMeetingDocuments(current, actor.tenant, documents.map(row => row.document_id), async () => actor);
     if (meetings.handled && meetings.deniedDocumentIds.length) throw new CoManagedSharedWorkError();
-    validateRecords(records);
+    validateCoManagedPortableDocumentRecords(records);
     const fileIds = new Set<string>();
     for (const row of records.documents) for (const column of ['file_id', 'thumbnail_file_id', 'preview_file_id']) {
       if (row[column] !== null) {
@@ -83,7 +76,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?
     for (const id of ids) {
       const file = files.get(id), size = Number(file?.file_size);
       if (!file || file.is_deleted || !Number.isSafeInteger(size) || size < 0) throw new Error('Portable document file is unavailable');
-      blobs.push({ id: `file:${id}`, path: sourcePath(actor.tenant, file.storage_path), size, name: file.original_name, mimeType: file.mime_type });
+      blobs.push({ id: `file:${id}`, path: coManagedPortableNativeFilePath(actor.tenant, file.storage_path), size, name: file.original_name, mimeType: file.mime_type });
     }
     for (const row of records.documents) for (const field of ['file_id', 'thumbnail_file_id', 'preview_file_id'] as const) {
       if (row[field]) bindings.push({ documentId: String(row.document_id), field, blobId: `file:${row[field]}` });
@@ -91,7 +84,7 @@ async function collect(db: Knex, actor: CoManagedSessionActor, databaseSnapshot?
     for (const row of legacyPaths) {
       const size = Number(row.file_size);
       if (row.file_size === null || !Number.isSafeInteger(size) || size < 0) throw new Error('Legacy portable document has no valid size');
-      blobs.push({ id: `document:${row.document_id}`, path: sourcePath(actor.tenant, row.storage_path), size, name: row.document_name, mimeType: row.mime_type || 'application/octet-stream' });
+      blobs.push({ id: `document:${row.document_id}`, path: coManagedPortableNativeFilePath(actor.tenant, row.storage_path), size, name: row.document_name, mimeType: row.mime_type || 'application/octet-stream' });
       bindings.push({ documentId: row.document_id, field: 'file_id', blobId: `document:${row.document_id}` });
     }
     if (meetings.handled && 'assertCurrent' in meetings) await meetings.assertCurrent?.();
@@ -114,7 +107,7 @@ export async function exportCoManagedPortableDocuments(db: Knex, inputActor: CoM
     const { files } = staged;
     if (checksum(await collect(db, actor)) !== original) throw new CoManagedSharedWorkError();
     const payload = JSON.parse(JSON.stringify({ kind: 'alga-workspace-documents', version: 1, packageId, sourceTenant: actor.tenant,
-      records: snapshot.records, references: REFERENCES, fileBindings: snapshot.bindings,
+      records: snapshot.records, references: CO_MANAGED_PORTABLE_DOCUMENT_REFERENCES, fileBindings: snapshot.bindings,
       blobs: snapshot.blobs.map(({ path: _path, ...blob }) => ({ ...blob, sha256: files.find(file => file.id === blob.id)!.sha256 })) }));
     return { component: { ...payload, sha256: checksum(payload) }, files, dispose: staged.dispose };
   } catch (error) { await staged.dispose(); throw error; }

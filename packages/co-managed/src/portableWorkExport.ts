@@ -14,6 +14,8 @@ export const CO_MANAGED_PORTABLE_WORK_REFERENCES = [
   ['statuses', 'board_id', 'boards', 'board_id'], ['categories', 'board_id', 'boards', 'board_id'],
   ['categories', 'parent_category', 'categories', 'category_id'],
   ['tickets', 'board_id', 'boards', 'board_id'], ['tickets', 'status_id', 'statuses', 'status_id'],
+  ['tickets', 'severity_id', 'severities', 'severity_id'], ['tickets', 'urgency_id', 'urgencies', 'urgency_id'],
+  ['tickets', 'impact_id', 'impacts', 'impact_id'],
   ['tickets', 'priority_id', 'priorities', 'priority_id'], ['tickets', 'category_id', 'categories', 'category_id'],
   ['tickets', 'subcategory_id', 'categories', 'category_id'], ['tickets', 'master_ticket_id', 'tickets', 'ticket_id'],
   ['tickets', 'client_id', 'clients', 'client_id'], ['tickets', 'contact_name_id', 'contacts', 'contact_name_id'],

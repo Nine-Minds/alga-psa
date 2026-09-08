@@ -1,3 +1,4 @@
+import { registerCoManagedPortableSupplementalFileCases } from './coManagedPortableSupplementalFiles.cases';
 import { registerCoManagedPortableEngagementCases } from './coManagedPortableEngagement.cases';
 import { registerCoManagedPortableWorkflowTests } from './helpers/coManagedPortableWorkflowCases';
 import { registerCoManagedPortableAssetTests } from './helpers/coManagedPortableAssetCases';
@@ -20013,3 +20014,54 @@ it('self-host AI gateway ownership never lends appliance credits to active depar
 registerCoManagedPortableWorkflowTests(() => db, ticketHandoffFixture);
 
 registerCoManagedPortableEngagementCases(() => db, ticketHandoffFixture, withSharedProjectTaskFixture);
+
+it('portable workspace graph validates cross-section identities and rejects dangling author service and configuration references', async () => withTaskConversationFixture(async f => {
+  const { withCoManagedPortableSnapshot } = await import('../../../../packages/co-managed/src/portableSnapshot');
+  const { validateCoManagedPortableWorkspaceRecords: validate } = await import('../../../../packages/co-managed/src/portableWorkspaceGraph');
+  const { exportCoManagedPortableCore } = await import('../../../../packages/co-managed/src/portableCoreExport');
+  const { exportCoManagedPortableWork } = await import('../../../../packages/co-managed/src/portableWorkExport');
+  const { exportCoManagedPortableDocuments } = await import('../../../../packages/co-managed/src/portableDocumentExport');
+  const { exportCoManagedPortableAssets } = await import('../../../../packages/co-managed/src/portableAssetExport');
+  const { exportCoManagedPortableOperational } = await import('../../../../packages/co-managed/src/portableOperationalExport');
+  const { exportCoManagedPortableWorkflows } = await import('../../../../packages/co-managed/src/portableWorkflowExport');
+  const { exportCoManagedPortableEngagement } = await import('../../../../packages/co-managed/src/portableEngagementExport');
+  await f.add(f.principal, 'shared_it', 'Foreign historical author');
+  await f.customer.table('availability_settings').insert({ tenant: f.actor.tenant, availability_setting_id: randomUUID(), setting_type: 'general_settings', config_json: { approver_user_ids: [f.customerPrincipal.userId] } });
+  await f.customer.table('documents').insert({ tenant: f.actor.tenant, document_id: randomUUID(), document_name: 'Historical rendered document', user_id: f.customerPrincipal.userId, created_by: f.customerPrincipal.userId, source_template_id: 'standard-invoice-by-location' });
+  const packageId = randomUUID();
+  await withCoManagedPortableSnapshot(db, async snapshot => {
+    const documents = await exportCoManagedPortableDocuments(db, f.customerPrincipal, packageId, snapshot);
+    try {
+      const sections = { documents: documents.component.records,
+        core: (await exportCoManagedPortableCore(db, f.customerPrincipal, packageId, snapshot)).records,
+        work: (await exportCoManagedPortableWork(db, f.customerPrincipal, packageId, snapshot)).records,
+        assets: (await exportCoManagedPortableAssets(db, f.customerPrincipal, packageId, snapshot)).records,
+        operational: (await exportCoManagedPortableOperational(db, f.customerPrincipal, packageId, snapshot)).records,
+        workflows: (await exportCoManagedPortableWorkflows(db, f.customerPrincipal, packageId, snapshot)).records,
+        engagement: (await exportCoManagedPortableEngagement(db, f.customerPrincipal, packageId, snapshot)).records };
+      expect(validate(sections, { sourceTenant: f.actor.tenant }).records.project_tasks.some(row => row.task_id === f.resource.id)).toBe(true);
+      expect(sections.documents.documents.some((row: any) => row.source_template_id === 'standard-invoice-by-location')).toBe(true);
+      const { sealPortableArchive, openPortableArchive } = await import('../../../../packages/co-managed/src/portableArchive');
+      const context = { packageId, sourceTenant: f.actor.tenant };
+      const encrypted = await sealPortableArchive({ context, manifest: { sections }, files: documents.files }, 'Customer-owned complete archive passphrase');
+      try {
+        const opened = await openPortableArchive(encrypted.path, 'Customer-owned complete archive passphrase', context);
+        try {
+          expect(validate(opened.manifest.sections, { sourceTenant: opened.context.sourceTenant }).records.project_tasks).toEqual(sections.work.project_tasks);
+        } finally { await opened.dispose(); }
+      } finally { await encrypted.dispose(); }
+
+      const badAuthor = structuredClone(sections); badAuthor.work.project_tasks[0].assigned_to = randomUUID();
+      expect(() => validate(badAuthor, { sourceTenant: f.actor.tenant })).toThrow('reference is missing');
+      const badService = structuredClone(sections); badService.work.project_tasks[0].service_id = randomUUID();
+      expect(() => validate(badService, { sourceTenant: f.actor.tenant })).toThrow('reference is missing');
+      const badPolicy = structuredClone(sections); badPolicy.work.boards[0].sla_policy_id = randomUUID();
+      expect(() => validate(badPolicy, { sourceTenant: f.actor.tenant })).toThrow('reference is missing');
+      const badApprover = structuredClone(sections); badApprover.engagement.availability_settings[0].config_json.approver_user_ids = [randomUUID()];
+      expect(() => validate(badApprover, { sourceTenant: f.actor.tenant })).toThrow('conditional reference is missing');
+      expect(() => validate({ ...sections, sessions: [] }, { sourceTenant: f.actor.tenant })).toThrow('sections');
+    } finally { await documents.dispose(); }
+  });
+}));
+
+registerCoManagedPortableSupplementalFileCases(() => db, ticketHandoffFixture, artifactStorage);
