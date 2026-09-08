@@ -41,7 +41,49 @@
   "validation": {
     "regressionBefore": "Real Playwright fixture incorrectly reported no unmatched upgrade file.",
     "regressionAfter": "Two actual-runner/gate tests pass, including added/moved/empty/broken-import coverage.",
-    "log": "/tmp/alga-upgrade-discovery-green.log"
+    "log": "/tmp/alga-upgrade-discovery-green.log",
+    "browserCollection": {
+      "revision": "8f4b62b709c165fab0014160c0b4b697c745dbcc",
+      "status": "passed",
+      "executionVerified": false,
+      "runners": [
+        {
+          "runner": "teams-development",
+          "files": 1,
+          "tests": 1
+        },
+        {
+          "runner": "supported-upgrade",
+          "files": 3,
+          "tests": 3
+        },
+        {
+          "runner": "server-legacy",
+          "files": 16,
+          "tests": 33
+        },
+        {
+          "runner": "enterprise-legacy",
+          "files": 53,
+          "tests": 411
+        },
+        {
+          "runner": "enterprise-deploy",
+          "files": 1,
+          "tests": 2
+        },
+        {
+          "runner": "production-community",
+          "files": 20,
+          "tests": 42
+        },
+        {
+          "runner": "production-enterprise",
+          "files": 20,
+          "tests": 46
+        }
+      ]
+    }
   },
   "limits": [
     "This is not a complete same-current-revision inventory or proof of execution.",

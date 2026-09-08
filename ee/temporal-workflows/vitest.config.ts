@@ -72,6 +72,8 @@ export default defineConfig({
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/index.ts') },
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/publishers/index.ts') },
       { find: /^@alga-psa\/event-bus\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/event-bus/src')}/$1` },
+      { find: /^@alga-psa\/event-schemas$/, replacement: path.resolve(__dirname, '../../packages/event-schemas/src/index.ts') },
+      { find: /^@alga-psa\/event-schemas\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/event-schemas/src')}/$1` },
       { find: /^@alga-psa\/core$/, replacement: path.resolve(__dirname, '../../packages/core/src/index.ts') },
       { find: /^@alga-psa\/core\/secrets$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/secrets/index.ts') },
       { find: /^@alga-psa\/core\/logger$/, replacement: path.resolve(__dirname, '../../packages/core/src/lib/logger.ts') },
