@@ -164,6 +164,38 @@
       "dependsOn": [],
       "owner": "coordinator",
       "notes": "Rendered CE/EE compose confirms three revocation variables on server, email-service and workflow-worker. Probe syntax and actionlint pass. Actual running-process CI remains unverified."
+    },
+    {
+      "id": "R021",
+      "title": "Exercise real QBO callback cleanup against the emulator",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "qbo_protocol",
+      "notes": "Real QBO cleanup consumer passes three HTTP cases; destination guard and journal prevent silent fallback. Both accounting packages pass 48 tests together."
+    },
+    {
+      "id": "R022",
+      "title": "Exercise real Xero callback cleanup against the emulator",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "calendar_review",
+      "notes": "Real Xero cleanup consumer passes two HTTP cases with revoked state readback and failed-cleanup preservation. Both accounting packages pass 48 tests together."
+    },
+    {
+      "id": "R023",
+      "title": "Verify native workflow-worker startup requirements and packaging gaps",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "stripe_protocol",
+      "notes": "Native full worker typecheck and four startup tests pass. Concrete manifest-copy omissions documented. No clean image or running worker proof; F031 remains open."
+    },
+    {
+      "id": "R024",
+      "title": "Bind downloaded archives and loaded CI images to build records",
+      "status": "done",
+      "dependsOn": [],
+      "owner": "coordinator",
+      "notes": "Reviewed archive-before-load and actual image-after-load verification. All 22 producer/consumer tests and actionlint pass. Earlier same-run build attempts supported; actual CI execution pending."
     }
   ]
 }

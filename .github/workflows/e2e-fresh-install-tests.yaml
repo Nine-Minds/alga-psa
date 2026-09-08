@@ -384,6 +384,15 @@ jobs:
           path: ${{ runner.temp }}/fresh-install-images
           merge-multiple: true
 
+      - name: Download candidate image build records
+        if: steps.install_docker_compose.outcome == 'success'
+        uses: actions/download-artifact@v8.0.1
+        with:
+          digest-mismatch: error
+          pattern: fresh-install-build-record-*
+          path: ${{ runner.temp }}/fresh-install-build-records
+          merge-multiple: true
+
       - name: Download production server for this edition
         if: steps.install_docker_compose.outcome == 'success'
         uses: actions/download-artifact@v8.0.1
@@ -396,6 +405,7 @@ jobs:
         if: steps.install_docker_compose.outcome == 'success'
         env:
           IMAGE_DIRECTORY: ${{ runner.temp }}/fresh-install-images
+          BUILD_RECORD_DIRECTORY: ${{ runner.temp }}/fresh-install-build-records
           SERVER_ARCHIVE: ${{ matrix.server_archive }}
         run: |
           node e2e-tests/harness/create-calendar-callback-tls.mjs "$RUNNER_TEMP/calendar-callback-tls"
@@ -403,6 +413,7 @@ jobs:
           echo "E2E_CALLBACK_TLS_DIR=$E2E_CALLBACK_TLS_DIR" >> "$GITHUB_ENV"
           for service in "$SERVER_ARCHIVE" setup email-service hocuspocus redis pgbouncer algasim; do
             archive="$IMAGE_DIRECTORY/$service.tar.gz"
+            node scripts/verify-docker-archive-build.mjs archive "$archive" "$BUILD_RECORD_DIRECTORY/$service-build.json" "$service"
             docker load --input "$archive"
             rm "$archive"
           done
@@ -411,7 +422,11 @@ jobs:
           docker-compose -p alga-e2e-test config --format json > "$RUNNER_TEMP/fresh-install-compose.json"
           for service in server setup email-service hocuspocus redis pgbouncer algasim; do
             image=$(jq -r --arg service "$service" '.services[$service].image // (.name + "-" + $service)' "$RUNNER_TEMP/fresh-install-compose.json")
-            docker image inspect "$image" > /dev/null
+            record_service="$service"
+            if [ "$service" = server ]; then record_service="$SERVER_ARCHIVE"; fi
+            inspection="$RUNNER_TEMP/loaded-$service.json"
+            docker image inspect "$image" > "$inspection"
+            node scripts/verify-docker-archive-build.mjs loaded "$inspection" "$BUILD_RECORD_DIRECTORY/$record_service-build.json" "$record_service"
           done
 
       - name: Start and verify candidate service emulators
